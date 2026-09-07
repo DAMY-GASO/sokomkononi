@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  buyer
+  seller
+  admin
+}
+
+enum PropertyStatus {
+  pending_approval
+  active
+  reserved
+  sold
+  rejected
+}
+
+enum ReservationStatus {
+  pending
+  active
+  expired
+  completed
+  cancelled
+}
+
+enum WaitingListStatus {
+  waiting
+  notified
+  completed
+}
+
+enum TransactionType {
+  listing_fee
+  reservation
+  boost
+  leading
+  ad
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+enum PaymentMethod {
+  mpesa
+  tigopesa
+  airtelmoney
+  bank
+  other
+}
+
+enum InspectionDecision {
+  ready_for_final_payment
+  not_as_described
+  request_negotiation
+  cancel_transaction
+}
+
+enum NotificationAudience {
+  admin
+  seller
+  buyer
+  system
+}
+
+model User {
+  id             String   @id @default(uuid())
+  name           String
+  email          String   @unique
+  phone          String   @unique
+  password       String
+  role           Role     @default(buyer)
+  isVerified     Boolean  @default(false) @map("is_verified")
+  isSuspended    Boolean  @default(false) @map("is_suspended")
+  walletBalance  Decimal  @default(0) @map("wallet_balance") @db.Decimal(14, 2)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  properties     Property[]        @relation("SellerProperties")
+  reservations   Reservation[]     @relation("BuyerReservations")
+  waitingList    WaitingList[]     @relation("BuyerWaitingList")
+  transactions   Transaction[]
+  reviews        Review[]          @relation("ReviewAuthor")
+  notifications  Notification[]
+  dealRoomsAsBuyer  DealRoom[]     @relation("BuyerDealRooms")
+  dealRoomsAsSeller DealRoom[]     @relation("SellerDealRooms")
+  dealMessages   DealMessage[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  slug        String     @unique
+  extraFields Json?      @map("extra_fields") // schema ya fields za ziada za category hii
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  properties  Property[]
+
+  @@map("categories")
+}
+
+model Property {
+  id            String         @id @default(uuid())
+  sellerId      String         @map("seller_id")
+  seller        User           @relation("SellerProperties", fields: [sellerId], references: [id])
+  categoryId    String         @map("category_id")
+  category      Category       @relation(fields: [categoryId], references: [id])
+  title         String
+  description   String
+  price         Decimal        @db.Decimal(14, 2)
+  location      String
+  images        Json           // array ya URLs
+  attributes    Json?          // fields za ziada kulingana na category (bedrooms, mileage, n.k.)
+  contactHidden Boolean        @default(true) @map("contact_hidden")
+  status        PropertyStatus @default(pending_approval)
+  isBoosted     Boolean        @default(false) @map("is_boosted")
+  boostedUntil  DateTime?      @map("boosted_until")
+  isLeading     Boolean        @default(false) @map("is_leading")
+  leadingUntil  DateTime?      @map("leading_until")
+  isFeatured    Boolean        @default(false) @map("is_featured")
+  viewsCount    Int            @default(0) @map("views_count")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  reservations  Reservation[]
+  waitingList   WaitingList[]
+  reviews       Review[]
+  dealRooms     DealRoom[]
+
+  @@map("properties")
+}
+
+model DealRoom {
+  id           String      @id @default(uuid())
+  propertyId   String      @map("property_id")
+  property     Property    @relation(fields: [propertyId], references: [id])
+  buyerId      String      @map("buyer_id")
+  buyer        User        @relation("BuyerDealRooms", fields: [buyerId], references: [id])
+  sellerId     String      @map("seller_id")
+  seller       User        @relation("SellerDealRooms", fields: [sellerId], references: [id])
+  agreedPrice  Decimal?    @map("agreed_price") @db.Decimal(14, 2)
+  isAgreed     Boolean     @default(false) @map("is_agreed")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  messages     DealMessage[]
+  reservation  Reservation?
+
+  @@map("deal_rooms")
+}
+
+model DealMessage {
+  id          String   @id @default(uuid())
+  dealRoomId  String   @map("deal_room_id")
+  dealRoom    DealRoom @relation(fields: [dealRoomId], references: [id])
+  senderId    String   @map("sender_id")
+  sender      User     @relation(fields: [senderId], references: [id])
+  message     String
+  offerAmount Decimal? @map("offer_amount") @db.Decimal(14, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("deal_messages")
+}
+
+model Reservation {
+  id                String              @id @default(uuid())
+  dealRoomId        String              @unique @map("deal_room_id")
+  dealRoom          DealRoom            @relation(fields: [dealRoomId], references: [id])
+  propertyId        String              @map("property_id")
+  property          Property            @relation(fields: [propertyId], references: [id])
+  buyerId           String              @map("buyer_id")
+  buyer             User                @relation("BuyerReservations", fields: [buyerId], references: [id])
+  durationHours     Int                 @map("duration_hours") // 24 / 48 / 72 / custom
+  feePaid           Decimal             @map("fee_paid") @db.Decimal(14, 2)
+  status            ReservationStatus   @default(pending)
+  startsAt          DateTime?           @map("starts_at")
+  endsAt            DateTime?           @map("ends_at")           // Reservation Period
+  inspectionDeadline DateTime?          @map("inspection_deadline") // Inspection Period (dhana tofauti na endsAt)
+  inspectionDecision InspectionDecision? @map("inspection_decision")
+  paymentProofUrl   String?             @map("payment_proof_url")
+  sellerConfirmedAt DateTime?           @map("seller_confirmed_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+
+  waitingList       WaitingList[]
+
+  @@map("reservations")
+}
+
+model WaitingList {
+  id           String             @id @default(uuid())
+  propertyId   String             @map("property_id")
+  property     Property           @relation(fields: [propertyId], references: [id])
+  reservationId String?           @map("reservation_id")
+  reservation  Reservation?       @relation(fields: [reservationId], references: [id])
+  buyerId      String             @map("buyer_id")
+  buyer        User               @relation("BuyerWaitingList", fields: [buyerId], references: [id])
+  position     Int
+  status       WaitingListStatus  @default(waiting)
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  @@map("waiting_list")
+}
+
+model Transaction {
+  id            String             @id @default(uuid())
+  userId        String             @map("user_id")
+  user          User               @relation(fields: [userId], references: [id])
+  type          TransactionType
+  amount        Decimal            @db.Decimal(14, 2)
+  status        TransactionStatus  @default(pending)
+  reference     String             @unique
+  paymentMethod PaymentMethod?     @map("payment_method")
+  relatedId     String?            @map("related_id") // property_id / reservation_id, n.k.
+  createdAt     DateTime           @default(now()) @map("created_at")
+
+  @@map("transactions")
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  propertyId  String   @map("property_id")
+  property    Property @relation(fields: [propertyId], references: [id])
+  reviewerId  String   @map("reviewer_id")
+  reviewer    User     @relation("ReviewAuthor", fields: [reviewerId], references: [id])
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("reviews")
+}
+
+model Notification {
+  id        String                @id @default(uuid())
+  userId    String?               @map("user_id") // null = system-wide announcement
+  user      User?                 @relation(fields: [userId], references: [id])
+  audience  NotificationAudience
+  type      String                // mfano: reservation.created, payment.confirmed
+  relatedId String?               @map("related_id")
+  message   String
+  isRead    Boolean               @default(false) @map("is_read")
+  createdAt DateTime              @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+model FeeSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique // mfano: listing_fee_tiers, reservation_fee_24h, boost_fee, leading_fee
+  value     Json     // muundo unaobadilika kulingana na aina ya fee
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("fee_settings")
+}
