@@ -7,12 +7,17 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ emailOrPhone: "", password: "" });
+
+  const [form, setForm] = useState({ identifier: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!form.identifier.trim() || !form.password) {
+      setError(t("login_error_required"));
+      return;
+    }
     setError("");
     setLoading(true);
     try {
@@ -31,9 +36,9 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           className="w-full border border-ink-muted/40 rounded-md px-3 py-2.5 text-sm"
-          placeholder={t("login_emailphone_placeholder")}
-          value={form.emailOrPhone}
-          onChange={(e) => setForm({ ...form, emailOrPhone: e.target.value })}
+          placeholder={t("login_identifier_placeholder")}
+          value={form.identifier}
+          onChange={(e) => setForm({ ...form, identifier: e.target.value })}
         />
         <input
           type="password"
@@ -42,10 +47,15 @@ export default function LoginPage() {
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
+        <div className="text-right">
+          <Link to="/forgot-password" className="text-market text-sm font-medium">
+            {t("login_forgot_password")}
+          </Link>
+        </div>
         {error && <p className="text-rust text-sm">{error}</p>}
         <button
           disabled={loading}
-          className="w-full bg-gold hover:bg-gold-dark text-night py-2.5 rounded-md font-semibold text-sm"
+          className="w-full bg-gold hover:bg-gold-dark text-night py-2.5 rounded-md font-semibold text-sm disabled:opacity-60"
         >
           {loading ? t("login_submitting") : t("login_submit")}
         </button>
