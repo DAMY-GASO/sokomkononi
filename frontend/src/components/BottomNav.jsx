@@ -63,7 +63,6 @@ export default function BottomNav() {
       <Link to={authLink("/messages")} className={`nav-item ${isActive("/messages") ? "active" : ""}`}>
         <span className="relative">
           {icons.messages}
-          <span className="badge">2</span>
         </span>
         <span>Messages</span>
       </Link>
