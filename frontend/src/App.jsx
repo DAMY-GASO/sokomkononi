@@ -377,7 +377,7 @@ function HomePage() {
         <Link to="/" className="nav-item active"><span>🏠</span><span>Home</span></Link>
         <Link to="/saved" className="nav-item"><span>⭐</span><span>Saved</span></Link>
         <Link to="/register?intent=sell" className="nav-item sell-btn"><span>➕</span><span>Sell</span></Link>
-        <Link to="/messages" className="nav-item"><span>💬</span><span>Messages</span><span className="badge">2</span></Link>
+        <Link to="/messages" className="nav-item"><span>💬</span><span>Messages</span></Link>
         <Link to="/profile" className="nav-item"><span>👤</span><span>Profile</span></Link>
       </nav>
     </div>
