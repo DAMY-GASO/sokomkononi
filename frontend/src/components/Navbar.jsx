@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const [selectedLang, setSelectedLang] = useState("sw");
 
   const links = [
     { to: "/kategoria/nyumba", label: "Nyumba" },
@@ -10,6 +12,25 @@ export default function Navbar() {
     { to: "/kategoria/viwanja", label: "Viwanja" },
     { to: "/kategoria/biashara", label: "Biashara" },
   ];
+
+  const languages = [
+    { code: "en", label: "English", native: "English" },
+    { code: "sw", label: "Swahili", native: "Kiswahili" },
+  ];
+
+  const handleLanguageSelect = (code) => {
+    setSelectedLang(code);
+  };
+
+  const handleSaveLanguage = () => {
+    // TODO: Save language preference to localStorage or backend
+    localStorage.setItem("preferred_language", selectedLang);
+    setLangOpen(false);
+    // Reload page to apply language change
+    window.location.reload();
+  };
+
+  const currentLang = languages.find(l => l.code === selectedLang);
 
   return (
     <header className="sticky top-0 z-50 bg-night/95 backdrop-blur border-b border-white/10">
@@ -34,6 +55,60 @@ export default function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-4">
+          {/* Language Switcher */}
+          <div className="relative">
+            <button
+              onClick={() => setLangOpen(!langOpen)}
+              className="text-sand/60 hover:text-sand text-sm font-medium border border-white/15 rounded-md px-3 py-1.5 transition-colors flex items-center gap-1.5"
+            >
+              <span>{currentLang?.native || "Kiswahili"}</span>
+              <svg 
+                className={`w-4 h-4 transition-transform ${langOpen ? "rotate-180" : ""}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Dropdown */}
+            {langOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-night-2 border border-white/10 rounded-lg shadow-xl py-2">
+                <div className="px-4 py-2 border-b border-white/10">
+                  <p className="text-sand/50 text-xs font-semibold">Je, unapendelea lugha gani?</p>
+                </div>
+
+                {languages.map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => handleLanguageSelect(lang.code)}
+                    className={`w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors ${
+                      selectedLang === lang.code ? "bg-white/5" : ""
+                    }`}
+                  >
+                    <span className="text-sand text-sm font-medium">{lang.label}</span>
+                    <span className="text-sand/50 text-sm">{lang.native}</span>
+                    {selectedLang === lang.code && (
+                      <svg className="w-4 h-4 text-gold" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+
+                <div className="px-4 pt-2 border-t border-white/10 mt-1">
+                  <button
+                    onClick={handleSaveLanguage}
+                    className="w-full bg-gold hover:bg-gold-dark text-night font-semibold text-sm py-2 rounded-md transition-colors"
+                  >
+                    Hifadhi
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <Link
             to="/login"
             className="text-sand/80 hover:text-sand text-sm font-medium"
