@@ -51,7 +51,7 @@ function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* ============================================================ */}
-      {/* NAVBAR */}
+      {/* NAVBAR - NO LOGIN/POST BUTTONS ON DESKTOP */}
       {/* ============================================================ */}
       <header className="bg-[#101A2E] text-white border-b border-white/10 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -87,7 +87,7 @@ function HomePage() {
             ))}
           </nav>
 
-          {/* Right: Search + Language + Auth */}
+          {/* Right: Search + Language ONLY - No Login/Post buttons */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Search Icon */}
             <button className="text-white/60 hover:text-white p-1.5 transition-colors">
@@ -148,25 +148,12 @@ function HomePage() {
                 </div>
               )}
             </div>
-
-            {/* Desktop Auth Buttons */}
-            <div className="hidden sm:flex items-center gap-3">
-              <Link to="/login" className="text-white/80 hover:text-white text-sm font-medium">
-                Ingia
-              </Link>
-              <Link
-                to="/register?intent=sell"
-                className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold text-sm px-4 py-2 rounded-md transition-colors whitespace-nowrap"
-              >
-                Weka Tangazo
-              </Link>
-            </div>
           </div>
         </div>
       </header>
 
       {/* ============================================================ */}
-      {/* MOBILE MENU - SLIDES FROM RIGHT */}
+      {/* MOBILE MENU - SLIDES FROM RIGHT (WITH LOGIN & POST AD) */}
       {/* ============================================================ */}
       <div
         className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${
@@ -198,6 +185,24 @@ function HomePage() {
             <span className="text-white font-bold text-lg tracking-tight">SokoMkononi</span>
           </div>
 
+          {/* Auth buttons - ONLY IN MOBILE MENU */}
+          <div className="flex flex-col gap-3 mb-6 pb-6 border-b border-white/10">
+            <Link
+              to="/login"
+              onClick={() => setMenuOpen(false)}
+              className="w-full text-center text-white/80 text-base font-medium border border-white/15 rounded-md py-3 hover:bg-white/5 transition-colors"
+            >
+              {selectedLang === "sw" ? "🔑 Ingia" : "🔑 Login"}
+            </Link>
+            <Link
+              to="/register?intent=sell"
+              onClick={() => setMenuOpen(false)}
+              className="w-full text-center bg-[#E8A33D] text-[#101A2E] font-semibold text-base rounded-md py-3 hover:bg-[#B87A1F] transition-colors"
+            >
+              {selectedLang === "sw" ? "📢 Weka Tangazo" : "📢 Post Ad"}
+            </Link>
+          </div>
+
           {/* Navigation Links */}
           <nav className="flex flex-col gap-1">
             {links.map((l) => (
@@ -212,30 +217,11 @@ function HomePage() {
             ))}
           </nav>
 
-          {/* Divider */}
-          <div className="my-6 border-t border-white/10" />
-
-          {/* Auth buttons in menu */}
-          <div className="flex flex-col gap-3">
-            <Link
-              to="/login"
-              onClick={() => setMenuOpen(false)}
-              className="w-full text-center text-white/80 text-base font-medium border border-white/15 rounded-md py-3 hover:bg-white/5 transition-colors"
-            >
-              Ingia
-            </Link>
-            <Link
-              to="/register?intent=sell"
-              onClick={() => setMenuOpen(false)}
-              className="w-full text-center bg-[#E8A33D] text-[#101A2E] font-semibold text-base rounded-md py-3 hover:bg-[#B87A1F] transition-colors"
-            >
-              Weka Tangazo
-            </Link>
-          </div>
-
           {/* Language selector in menu */}
           <div className="mt-6 pt-6 border-t border-white/10">
-            <p className="text-white/50 text-xs font-semibold mb-3">Lugha</p>
+            <p className="text-white/50 text-xs font-semibold mb-3">
+              {selectedLang === "sw" ? "Lugha" : "Language"}
+            </p>
             <div className="flex gap-2">
               {languages.map((lang) => (
                 <button
