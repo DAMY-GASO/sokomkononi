@@ -1,6 +1,13 @@
-import client from "./client";
-
-export const fetchProperties = (params) => client.get("/properties", { params }).then((r) => r.data);
-export const fetchProperty = (id) => client.get(`/properties/${id}`).then((r) => r.data);
-export const fetchMyListings = () => client.get("/properties/mine").then((r) => r.data);
-export const createProperty = (data) => client.post("/properties", data).then((r) => r.data);
+export const fetchProperty = (id) => {
+  return Promise.resolve({
+    data: {
+      id,
+      title: "Nyumba ya Vyumba 3 Mbezi",
+      price: 85000000,
+      location: "Dar es Salaam",
+      description: "Nyumba nzuri yenye vyumba 3, sebule, jikoni, bafu mbili, na karakta. Iko katika eneo salama.",
+      status: "available",
+      seller: { id: "seller456", name: "Juma Mwalimu" }
+    }
+  });
+};
