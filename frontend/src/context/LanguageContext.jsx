@@ -6,7 +6,6 @@ const translations = {
   sw: {
     // Navbar
     nav_login: "Ingia",
-    nav_post_ad: "Weka Tangazo",
     nav_home: "Nyumbani",
     nav_saved: "Zilizohifadhiwa",
     nav_sell: "Uza",
@@ -14,11 +13,10 @@ const translations = {
     nav_profile: "Wasifu",
     
     // Hero
-    hero_eyebrow: "Soko la Kidijitali la Mali",
     hero_headline: "Nunua na Uza Mali kwa Urahisi",
     hero_subtext: "SokoMkononi ni jukwaa salama la kununua na kuuza nyumba, magari, viwanja na mali nyingine.",
     cta_buy: "Nunua Sasa",
-    cta_sell: "Uza Bidhaa",
+    cta_sell: "Uza Mali",
     hero_app_teaser: "⬇ Pakua App yetu",
 
     // Categories
@@ -92,11 +90,58 @@ const translations = {
     footer_tagline: "Jukwaa la kuaminika la kununua na kuuza mali nchini Tanzania.",
     footer_rights: "Haki zote zimehifadhiwa.",
     footer_payments_label: "Malipo yanakubaliwa:",
+
+    // Auth - Register
+    register_heading: "Fungua Akaunti",
+    register_name_placeholder: "Jina lako kamili",
+    register_email_placeholder: "Barua pepe",
+    register_phone_placeholder: "Namba ya simu",
+    register_password_placeholder: "Nenosiri",
+    register_continue: "Endelea",
+    register_sending_otp: "Inatuma msimbo...",
+    register_error_default: "Hitilafu imetokea. Tafadhali jaribu tena.",
+    register_error_name_required: "Tafadhali jaza jina lako.",
+    register_error_email_required: "Tafadhali jaza barua pepe yako.",
+    register_error_phone_required: "Tafadhali jaza namba yako ya simu.",
+    register_error_password_short: "Nenosiri lazima liwe na herufi 6 au zaidi.",
+    register_have_account: "Una akaunti tayari?",
+    register_login_link: "Ingia",
+
+    // Auth - Register OTP step
+    register_otp_heading: "Thibitisha Barua Pepe",
+    register_otp_subtext: "Tumetuma msimbo wa tarakimu kwenye:",
+    register_verifying: "Inathibitisha...",
+    register_verify_submit: "Thibitisha na Ujisajili",
+    register_resend_otp: "Tuma tena msimbo",
+    register_change_email: "Badilisha barua pepe",
+    register_error_otp_required: "Tafadhali weka msimbo uliotumwa kwenye barua pepe yako.",
+    register_error_otp_invalid: "Msimbo si sahihi au umeisha muda wake. Jaribu tena.",
+
+    // Auth - Login
+    login_heading: "Ingia kwenye Akaunti Yako",
+    login_identifier_placeholder: "Barua pepe au namba ya simu",
+    login_password_placeholder: "Nenosiri",
+    login_forgot_password: "Umesahau nenosiri?",
+    login_submitting: "Inaingia...",
+    login_submit: "Ingia",
+    login_error_required: "Tafadhali jaza sehemu zote.",
+    login_error_default: "Barua pepe/namba au nenosiri si sahihi.",
+    login_no_account: "Huna akaunti?",
+    login_register_link: "Jisajili",
+
+    // Waitlist (App ya simu)
+    waitlist_heading: "App Inakuja Hivi Karibuni",
+    waitlist_subtext: "Jiunge na waitlist yetu ili uwe wa kwanza kujua app ya SokoMkononi itakapopatikana.",
+    waitlist_email_placeholder: "Barua pepe yako",
+    waitlist_submit: "Jiunge na Waitlist",
+    waitlist_error_email: "Tafadhali weka barua pepe sahihi.",
+    waitlist_success_heading: "Umejiunga!",
+    waitlist_success_subtext: "Tutakutumia ujumbe pindi app itakapokuwa tayari kupakuliwa.",
+    waitlist_back_home: "← Rudi Nyumbani",
   },
   en: {
     // Navbar
     nav_login: "Login",
-    nav_post_ad: "Post Ad",
     nav_home: "Home",
     nav_saved: "Saved",
     nav_sell: "Sell",
@@ -104,7 +149,6 @@ const translations = {
     nav_profile: "Profile",
     
     // Hero
-    hero_eyebrow: "Digital Property Marketplace",
     hero_headline: "Buy and Sell Property Easily",
     hero_subtext: "SokoMkononi is a safe platform to buy and sell houses, cars, land and other properties.",
     cta_buy: "Buy Now",
@@ -182,6 +226,54 @@ const translations = {
     footer_tagline: "A trusted platform for buying and selling property in Tanzania.",
     footer_rights: "All rights reserved.",
     footer_payments_label: "Payments accepted:",
+
+    // Auth - Register
+    register_heading: "Create an Account",
+    register_name_placeholder: "Full name",
+    register_email_placeholder: "Email address",
+    register_phone_placeholder: "Phone number",
+    register_password_placeholder: "Password",
+    register_continue: "Continue",
+    register_sending_otp: "Sending code...",
+    register_error_default: "Something went wrong. Please try again.",
+    register_error_name_required: "Please enter your name.",
+    register_error_email_required: "Please enter your email.",
+    register_error_phone_required: "Please enter your phone number.",
+    register_error_password_short: "Password must be at least 6 characters.",
+    register_have_account: "Already have an account?",
+    register_login_link: "Login",
+
+    // Auth - Register OTP step
+    register_otp_heading: "Verify Your Email",
+    register_otp_subtext: "We've sent a verification code to:",
+    register_verifying: "Verifying...",
+    register_verify_submit: "Verify & Create Account",
+    register_resend_otp: "Resend code",
+    register_change_email: "Change email",
+    register_error_otp_required: "Please enter the code sent to your email.",
+    register_error_otp_invalid: "Invalid or expired code. Please try again.",
+
+    // Auth - Login
+    login_heading: "Login to Your Account",
+    login_identifier_placeholder: "Email or phone number",
+    login_password_placeholder: "Password",
+    login_forgot_password: "Forgot password?",
+    login_submitting: "Logging in...",
+    login_submit: "Login",
+    login_error_required: "Please fill in all fields.",
+    login_error_default: "Incorrect email/phone or password.",
+    login_no_account: "Don't have an account?",
+    login_register_link: "Register",
+
+    // Waitlist (Mobile app)
+    waitlist_heading: "The App Is Coming Soon",
+    waitlist_subtext: "Join our waitlist to be the first to know when the SokoMkononi app is available.",
+    waitlist_email_placeholder: "Your email",
+    waitlist_submit: "Join Waitlist",
+    waitlist_error_email: "Please enter a valid email.",
+    waitlist_success_heading: "You're In!",
+    waitlist_success_subtext: "We'll notify you as soon as the app is ready to download.",
+    waitlist_back_home: "← Back to Home",
   }
 };
 
