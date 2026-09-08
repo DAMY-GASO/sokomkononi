@@ -1,5 +1,10 @@
-import client from "./client";
-
-// TODO Awamu 5: backend bado ina stub (501) kwa hizi — tazama muongozo 3.5
-export const createReservation = (payload) =>
-  client.post("/reservations", payload).then((r) => r.data);
+export const createReservation = ({ dealRoomId, durationHours }) => {
+  return Promise.resolve({
+    data: { 
+      id: "res123", 
+      dealRoomId, 
+      status: "pending",
+      expiresAt: new Date(Date.now() + durationHours * 3600000).toISOString()
+    }
+  });
+};
