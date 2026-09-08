@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Footer from "./components/Footer.jsx";
 import BottomNav from "./components/BottomNav.jsx";
-import LoginPage from "./components/auth/LoginPage.jsx";
-import RegisterPage from "./components/auth/RegisterPage.jsx";
-import WaitlistPage from "./components/auth/WaitlistPage.jsx";
+import LoginPage from "./page/auth/LoginPage.jsx";
+import RegisterPage from "./page/auth/RegisterPage.jsx";
+import WaitlistPage from "./page/auth/WaitlistPage.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import "./index.css";
@@ -206,14 +206,22 @@ function HomePage() {
           {/* App Download Badges — huelekeza kwenye waitlist, app haijazinduliwa bado */}
           <div className="flex flex-wrap gap-3 justify-center mt-8">
             <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors">
-              <span className="text-lg">📱</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-white">
+                <path d="M4.5 3.5c-.4.4-.6.9-.6 1.5v14c0 .6.2 1.1.6 1.5l8.6-8.5-8.6-8.5Z" />
+                <path d="M15.8 12.1 5.4 21.7l10-5.7 2.7-1.5-2.3-2.4Z" opacity="0.7" />
+                <path d="M15.8 11.9 5.4 2.3l10 5.7 2.7 1.5-2.3 2.4Z" opacity="0.85" />
+                <path d="M20.2 10 17.9 8.7l-2.6 2.6-.6.7.6.7 2.6 2.6L20.2 14c.9-.5 1.5-1.2 1.5-2s-.6-1.5-1.5-2Z" opacity="0.55" />
+              </svg>
               <span className="text-xs text-left">
                 <span className="block text-white/50 text-[10px]">{selectedLang === "sw" ? "Pakua kwenye" : "Download on"}</span>
                 <span className="block font-semibold text-white">Google Play</span>
               </span>
             </Link>
             <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors">
-              <span className="text-lg">🍎</span>
+              <svg width="18" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-white">
+                <path d="M16.7 1.3c.1 1-.3 2-.9 2.8-.6.8-1.7 1.4-2.7 1.3-.1-1 .4-2 1-2.7.6-.8 1.7-1.3 2.6-1.4Z" />
+                <path d="M20.9 17c-.5 1.1-.7 1.6-1.3 2.6-.9 1.4-2.1 3.1-3.6 3.1-1.3 0-1.7-.9-3.5-.9s-2.2.9-3.5.9c-1.5 0-2.6-1.5-3.5-2.9C3.2 17 2.5 13 3.6 10.5c.7-1.6 2-2.6 3.4-2.6 1.3 0 2.2.9 3.3.9 1.1 0 1.7-.9 3.5-.9 1.3 0 2.7.7 3.7 1.9-3.2 1.8-2.7 6.5.4 7.2Z" />
+              </svg>
               <span className="text-xs text-left">
                 <span className="block text-white/50 text-[10px]">{selectedLang === "sw" ? "Pakua kwenye" : "Download on"}</span>
                 <span className="block font-semibold text-white">App Store</span>
