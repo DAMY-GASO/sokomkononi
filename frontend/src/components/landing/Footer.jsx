@@ -1,40 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import AppDownloadBadges from "./AppDownloadBadges.jsx";
-import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function Footer() {
-  const { t } = useLanguage();
-
-  const columns = [
-    {
-      heading: t("footer_company_heading"),
-      links: [
-        { to: "/kuhusu", label: t("footer_about") },
-        { to: "/mawasiliano", label: t("footer_contact") },
-        { to: "/kazi-kwetu", label: t("footer_careers") },
-      ],
-    },
-    {
-      heading: t("footer_categories_heading"),
-      links: [
-        { to: "/kategoria/nyumba", label: t("cat_nyumba") },
-        { to: "/kategoria/magari", label: t("cat_magari") },
-        { to: "/kategoria/viwanja", label: t("cat_viwanja") },
-        { to: "/kategoria/biashara", label: t("cat_biashara") },
-      ],
-    },
-    {
-      heading: t("footer_support_heading"),
-      links: [
-        { to: "/faq", label: t("footer_faq") },
-        { to: "/usalama", label: t("footer_safety") },
-        { to: "/vigezo-vya-matumizi", label: t("footer_terms") },
-        { to: "/faragha", label: t("footer_privacy") },
-      ],
-    },
-  ];
-
   return (
     <footer className="bg-night-2 text-sand border-t border-white/10">
       <div className="max-w-6xl mx-auto px-5 py-14 md:py-16">
@@ -47,39 +14,44 @@ export default function Footer() {
               <span className="font-bold text-lg tracking-tight">Soko</span>
             </Link>
             <p className="text-sand/60 text-sm mt-3 max-w-xs leading-relaxed">
-              {t("footer_tagline")}
+              Jukwaa la kuaminika la kununua na kuuza mali nchini Tanzania.
             </p>
-            <div className="mt-5">
-              <AppDownloadBadges variant="dark" />
-            </div>
           </div>
 
-          {columns.map((col) => (
-            <div key={col.heading}>
-              <p className="text-sand/50 text-xs font-semibold mb-4">{col.heading}</p>
-              <ul className="space-y-2.5">
-                {col.links.map((l) => (
-                  <li key={l.to}>
-                    <Link
-                      to={l.to}
-                      className="text-sand/75 hover:text-sand text-sm transition-colors"
-                    >
-                      {l.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div>
+            <p className="text-sand/50 text-xs font-semibold mb-4">Kampuni</p>
+            <ul className="space-y-2.5">
+              <li><Link to="/kuhusu" className="text-sand/75 hover:text-sand text-sm transition-colors">Kuhusu Sisi</Link></li>
+              <li><Link to="/mawasiliano" className="text-sand/75 hover:text-sand text-sm transition-colors">Wasiliana Nasi</Link></li>
+              <li><Link to="/kazi-kwetu" className="text-sand/75 hover:text-sand text-sm transition-colors">Kazi Kwetu</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sand/50 text-xs font-semibold mb-4">Kategoria</p>
+            <ul className="space-y-2.5">
+              <li><Link to="/kategoria/nyumba" className="text-sand/75 hover:text-sand text-sm transition-colors">Nyumba</Link></li>
+              <li><Link to="/kategoria/magari" className="text-sand/75 hover:text-sand text-sm transition-colors">Magari</Link></li>
+              <li><Link to="/kategoria/viwanja" className="text-sand/75 hover:text-sand text-sm transition-colors">Viwanja</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sand/50 text-xs font-semibold mb-4">Msaada</p>
+            <ul className="space-y-2.5">
+              <li><Link to="/faq" className="text-sand/75 hover:text-sand text-sm transition-colors">Maswali</Link></li>
+              <li><Link to="/usalama" className="text-sand/75 hover:text-sand text-sm transition-colors">Usalama</Link></li>
+              <li><Link to="/faragha" className="text-sand/75 hover:text-sand text-sm transition-colors">Sera ya Faragha</Link></li>
+            </ul>
+          </div>
         </div>
 
         <div className="mt-12 pt-6 border-t border-white/10 flex flex-col-reverse md:flex-row items-center justify-between gap-4">
           <p className="text-sand/40 text-xs">
-            © {new Date().getFullYear()} Soko. {t("footer_rights")}
+            © {new Date().getFullYear()} Soko. Haki zote zimehifadhiwa.
           </p>
-
           <div className="flex items-center gap-2 text-sand/40 text-xs">
-            <span>{t("footer_payments_label")}</span>
+            <span>Malipo yanakubaliwa:</span>
             <span className="text-sand/60 font-medium">M-Pesa</span>
             <span>·</span>
             <span className="text-sand/60 font-medium">Tigo Pesa</span>
