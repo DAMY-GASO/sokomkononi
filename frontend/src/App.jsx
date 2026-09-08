@@ -153,7 +153,7 @@ function HomePage() {
       </header>
 
       {/* ============================================================ */}
-      {/* MOBILE MENU - SLIDES FROM RIGHT */}
+      {/* MOBILE MENU - SLIDES FROM RIGHT WITH LOGO */}
       {/* ============================================================ */}
       <div
         className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${
@@ -177,7 +177,7 @@ function HomePage() {
         </button>
 
         <div className="pt-16 px-6">
-          {/* Logo in menu */}
+          {/* Logo in menu - visible on mobile when menu opens */}
           <div className="flex items-center gap-2 mb-8 pb-4 border-b border-white/10">
             <span className="w-8 h-8 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">
               S
@@ -286,7 +286,7 @@ function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* FOOTER - Imported from components/Footer.jsx */}
+      {/* FOOTER */}
       {/* ============================================================ */}
       <Footer selectedLang={selectedLang} />
 
@@ -309,6 +309,7 @@ function HomePage() {
         <Link to="/messages" className="nav-item">
           <span>💬</span>
           <span>Messages</span>
+          <span className="badge">2</span>
         </Link>
         <Link to="/profile" className="nav-item">
           <span>👤</span>
