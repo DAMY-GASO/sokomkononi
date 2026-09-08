@@ -108,7 +108,7 @@ export default function Footer({ selectedLang = "sw" }) {
               </li>
               <li className="text-white/50 text-sm flex items-center justify-center lg:justify-start gap-2">
                 <span className="text-[#E8A33D]">📞</span>
-                <span>0743 895 038 / 0785 785 004</span>
+                <span>0743 895 038</span>
               </li>
               <li className="text-white/50 text-sm flex items-center justify-center lg:justify-start gap-2">
                 <span className="text-[#E8A33D]">📍</span>
@@ -129,9 +129,15 @@ export default function Footer({ selectedLang = "sw" }) {
             <span>{selectedLang === "sw" ? "Malipo yanayokubaliwa:" : "Payments accepted:"}</span>
             <span className="text-white/50 font-medium">M-Pesa</span>
             <span className="text-white/20">|</span>
-            <span className="text-white/50 font-medium">Tigo Pesa</span>
+            <span className="text-white/50 font-medium">HaloPesa</span>
+            <span className="text-white/20">|</span>
+            <span className="text-white/50 font-medium">Mixx by Yas</span>
             <span className="text-white/20">|</span>
             <span className="text-white/50 font-medium">Airtel Money</span>
+            <span className="text-white/50 font-medium">NMB</span>
+            <span className="text-white/20">|</span>
+            <span className="text-white/50 font-medium">CRDB</span>
+            <span className="text-white/20">|</span>
             <span className="text-white/20">|</span>
             <span className="text-white/50 font-medium">Visa</span>
             <span className="text-white/20">|</span>
