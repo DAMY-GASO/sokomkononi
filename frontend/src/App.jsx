@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import "./index.css";
 import Footer from "./components/Footer.jsx";
+import "./index.css";
 
 function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -129,7 +129,6 @@ function HomePage() {
                         selectedLang === lang.code ? "bg-white/5" : ""
                       }`}
                     >
-                      {/* Onyesha jina la lugha mara MOJA tu */}
                       <span className="text-white text-sm font-medium">{lang.native}</span>
                       {selectedLang === lang.code && (
                         <svg className="w-4 h-4 text-[#E8A33D]" fill="currentColor" viewBox="0 0 20 20">
@@ -287,6 +286,11 @@ function HomePage() {
       </section>
 
       {/* ============================================================ */}
+      {/* FOOTER - Imported from components/Footer.jsx */}
+      {/* ============================================================ */}
+      <Footer selectedLang={selectedLang} />
+
+      {/* ============================================================ */}
       {/* BOTTOM NAVIGATION - MOBILE ONLY */}
       {/* ============================================================ */}
       <nav className="bottom-nav">
@@ -305,7 +309,6 @@ function HomePage() {
         <Link to="/messages" className="nav-item">
           <span>💬</span>
           <span>Messages</span>
-          <span className="badge">2</span>
         </Link>
         <Link to="/profile" className="nav-item">
           <span>👤</span>
