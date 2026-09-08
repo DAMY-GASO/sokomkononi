@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Footer from "./components/Footer.jsx";
+import BottomNav from "./components/BottomNav.jsx";
+import LoginPage from "./components/auth/LoginPage.jsx";
+import RegisterPage from "./components/auth/RegisterPage.jsx";
+import WaitlistPage from "./components/auth/WaitlistPage.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
+import { LanguageProvider } from "./context/LanguageContext.jsx";
 import "./index.css";
 
 function HomePage() {
@@ -88,7 +94,7 @@ function HomePage() {
                 <path d="M21 21l-4.35-4.35" strokeWidth="2" />
               </svg>
             </div>
-            
+
             {/* Search Icon - Mobile */}
             <button className="sm:hidden text-white/60 hover:text-white p-1.5 transition-colors">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -138,8 +144,8 @@ function HomePage() {
             </div>
 
             {/* Login/Register Button - Single button */}
-            <Link 
-              to="/login" 
+            <Link
+              to="/login"
               className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold text-sm px-4 py-2 rounded-md transition-colors whitespace-nowrap"
             >
               {selectedLang === "sw" ? "Ingia/Jisajili" : "Login/Register"}
@@ -196,17 +202,17 @@ function HomePage() {
               {selectedLang === "sw" ? "Uza Bidhaa" : "Sell Item"}
             </Link>
           </div>
-          
-          {/* App Download Badges */}
+
+          {/* App Download Badges — huelekeza kwenye waitlist, app haijazinduliwa bado */}
           <div className="flex flex-wrap gap-3 justify-center mt-8">
-            <Link to="/app" className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors">
+            <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors">
               <span className="text-lg">📱</span>
               <span className="text-xs text-left">
                 <span className="block text-white/50 text-[10px]">{selectedLang === "sw" ? "Pakua kwenye" : "Download on"}</span>
                 <span className="block font-semibold text-white">Google Play</span>
               </span>
             </Link>
-            <Link to="/app" className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors">
+            <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors">
               <span className="text-lg">🍎</span>
               <span className="text-xs text-left">
                 <span className="block text-white/50 text-[10px]">{selectedLang === "sw" ? "Pakua kwenye" : "Download on"}</span>
@@ -366,25 +372,26 @@ function HomePage() {
       {/* ============================================================ */}
       {/* BOTTOM NAVIGATION - MOBILE ONLY */}
       {/* ============================================================ */}
-      <nav className="bottom-nav">
-        <Link to="/" className="nav-item active"><span>🏠</span><span>Home</span></Link>
-        <Link to="/saved" className="nav-item"><span>⭐</span><span>Saved</span></Link>
-        <Link to="/register?intent=sell" className="nav-item sell-btn"><span>➕</span><span>Sell</span></Link>
-        <Link to="/messages" className="nav-item"><span>💬</span><span>Messages</span></Link>
-        <Link to="/profile" className="nav-item"><span>👤</span><span>Profile</span></Link>
-      </nav>
+      <BottomNav />
     </div>
   );
 }
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="*" element={<HomePage />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <LanguageProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/waitlist" element={<WaitlistPage />} />
+            <Route path="*" element={<HomePage />} />
+          </Routes>
+        </Router>
+      </LanguageProvider>
+    </AuthProvider>
   );
 }
 
