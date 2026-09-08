@@ -20,8 +20,23 @@ export default function Footer({ selectedLang = "sw" }) {
           </p>
           <div className="flex flex-wrap gap-3 justify-center mt-4">
             <Link to="/app" className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors">
-              <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0 fill-white" aria-hidden="true">
-                <path d="M17.523 15.3414c-.5511 0-.9997-.4486-.9997-.9997s.4486-.9997.9997-.9997.9997.4486.9997.9997-.4486.9997-.9997.9997m-11.046 0c-.5511 0-.9997-.4486-.9997-.9997s.4486-.9997.9997-.9997.9997.4486.9997.9997-.4486.9997-.9997.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.2439 13.8533 7.8508 12 7.8508s-3.5902.3931-5.1367 1.0989L4.8409 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396" />
+              <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0" aria-hidden="true">
+                <path
+                  d="M4.5 3.5c-.3.3-.5.7-.5 1.2v14.6c0 .5.2.9.5 1.2l.1.1L13 12.1v-.2L4.6 3.4l-.1.1z"
+                  fill="#00D2FF"
+                />
+                <path
+                  d="M15.9 15L13 12.1v-.2l2.9-2.9 6.5 3.7c.8.5.8 1.3 0 1.8l-6.5 3.7z"
+                  fill="#FFCE00"
+                />
+                <path
+                  d="M15.9 15L13 12l-8.4 8.5c.4.4 1 .4 1.7.1L15.9 15"
+                  fill="#FF3A44"
+                />
+                <path
+                  d="M15.9 9.1L6.3 3.6c-.7-.4-1.3-.3-1.7.1L13 12l2.9-2.9z"
+                  fill="#00F076"
+                />
               </svg>
               <span className="text-sm text-left">
                 <span className="block text-white/50 text-[10px]">{selectedLang === "sw" ? "Pakua kwenye" : "Get it on"}</span>
