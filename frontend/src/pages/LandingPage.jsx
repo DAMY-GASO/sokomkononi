@@ -9,12 +9,9 @@ import FAQAccordion from "../components/landing/FAQAccordion.jsx";
 import FinalCTA from "../components/landing/FinalCTA.jsx";
 import Footer from "../components/landing/Footer.jsx";
 
-// Navbar HAIKO hapa kwa makusudi — App.jsx tayari inaweka Navbar ya global
-// nje ya <Routes>, kwa hiyo inaonekana juu ya ukurasa huu moja kwa moja.
-// Footer inabaki hapa kwa sababu ni ya landing page pekee, si global.
 export default function LandingPage() {
   return (
-    <>
+    <div className="max-w-7xl mx-auto">
       <Hero />
       <StatsLedger />
       <CategoryStalls />
@@ -24,6 +21,6 @@ export default function LandingPage() {
       <FAQAccordion />
       <FinalCTA />
       <Footer />
-    </>
+    </div>
   );
 }
