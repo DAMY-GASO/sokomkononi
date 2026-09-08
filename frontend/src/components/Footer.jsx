@@ -34,11 +34,7 @@ export default function Footer({ selectedLang = "sw" }) {
               </span>
             </Link>
           </div>
-          <p className="text-white/30 text-xs mt-3">
-            {selectedLang === "sw" 
-              ? "Mobile App inakuja Phase 2 — bofya juu kupata taarifa na kujiunga na waitlist." 
-              : "Mobile App coming in Phase 2 — click above to get info and join the waitlist."}
-          </p>
+         
         </div>
 
         {/* ============================================================ */}
@@ -46,23 +42,23 @@ export default function Footer({ selectedLang = "sw" }) {
         {/* ============================================================ */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10">
           
-          {/* Column 1: Brand - Full width on mobile, normal on desktop */}
-          <div className="col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
+          {/* Column 1: Brand - Centered on mobile, left on desktop */}
+          <div className="col-span-2 lg:col-span-1 text-center lg:text-left">
+            <div className="flex items-center justify-center lg:justify-start gap-2 mb-4">
               <span className="w-8 h-8 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#0D1524] font-bold text-sm">
                 S
               </span>
               <span className="text-white font-bold text-lg tracking-tight">SokoMkononi</span>
             </div>
-            <p className="text-white/50 text-sm leading-relaxed max-w-xs">
+            <p className="text-white/50 text-sm leading-relaxed max-w-xs mx-auto lg:mx-0">
               {selectedLang === "sw" 
                 ? "SokoMkononi ni jukwaa lako la kidijitali linalokuletea soko kiganjani mwako. Tunakuunganisha na wauzaji na wanunuzi kwa urahisi, usalama na uaminifu." 
                 : "SokoMkononi is your digital marketplace bringing the market to your fingertips. We connect you with sellers and buyers with ease, security and trust."}
             </p>
           </div>
 
-          {/* Column 2: Quick Links - Head underlined */}
-          <div>
+          {/* Column 2: Quick Links - Centered on mobile, left on desktop */}
+          <div className="text-center lg:text-left">
             <h3 className="text-white font-semibold text-sm mb-4 underline underline-offset-4">
               {selectedLang === "sw" ? "VIUNGO VYA HARAKA" : "QUICK LINKS"}
             </h3>
@@ -75,8 +71,8 @@ export default function Footer({ selectedLang = "sw" }) {
             </ul>
           </div>
 
-          {/* Column 3: Safety - Head underlined */}
-          <div>
+          {/* Column 3: Safety - Centered on mobile, left on desktop */}
+          <div className="text-center lg:text-left">
             <h3 className="text-white font-semibold text-sm mb-4 underline underline-offset-4">
               {selectedLang === "sw" ? "USALAMA WETU" : "OUR SAFETY"}
             </h3>
@@ -88,8 +84,8 @@ export default function Footer({ selectedLang = "sw" }) {
             </ul>
           </div>
 
-          {/* Column 4: Legal & Privacy - Head underlined */}
-          <div>
+          {/* Column 4: Legal & Privacy - Centered on mobile, left on desktop */}
+          <div className="text-center lg:text-left">
             <h3 className="text-white font-semibold text-sm mb-4 underline underline-offset-4">
               {selectedLang === "sw" ? "SHERIA NA FARAGHA" : "LEGAL & PRIVACY"}
             </h3>
@@ -100,22 +96,22 @@ export default function Footer({ selectedLang = "sw" }) {
             </ul>
           </div>
 
-          {/* Column 5: Contact - Head underlined */}
-          <div>
+          {/* Column 5: Contact - Centered on mobile, left on desktop */}
+          <div className="text-center lg:text-left">
             <h3 className="text-white font-semibold text-sm mb-4 underline underline-offset-4">
               {selectedLang === "sw" ? "WASILIANA NASI" : "CONTACT US"}
             </h3>
             <ul className="space-y-3">
-              <li className="text-white/50 text-sm flex items-start gap-2">
-                <span className="text-[#E8A33D] mt-0.5">✉</span>
+              <li className="text-white/50 text-sm flex items-center justify-center lg:justify-start gap-2">
+                <span className="text-[#E8A33D]">✉</span>
                 <a href="mailto:info@sokomkononi.co.tz" className="hover:text-white transition-colors">info@sokomkononi.co.tz</a>
               </li>
-              <li className="text-white/50 text-sm flex items-start gap-2">
-                <span className="text-[#E8A33D] mt-0.5">📞</span>
+              <li className="text-white/50 text-sm flex items-center justify-center lg:justify-start gap-2">
+                <span className="text-[#E8A33D]">📞</span>
                 <span>0743 895 038 / 0785 785 004</span>
               </li>
-              <li className="text-white/50 text-sm flex items-start gap-2">
-                <span className="text-[#E8A33D] mt-0.5">📍</span>
+              <li className="text-white/50 text-sm flex items-center justify-center lg:justify-start gap-2">
+                <span className="text-[#E8A33D]">📍</span>
                 <span>Dar es Salaam, Tanzania</span>
               </li>
             </ul>
@@ -133,9 +129,7 @@ export default function Footer({ selectedLang = "sw" }) {
             <span>{selectedLang === "sw" ? "Malipo yanayokubaliwa:" : "Payments accepted:"}</span>
             <span className="text-white/50 font-medium">M-Pesa</span>
             <span className="text-white/20">|</span>
-            <span className="text-white/50 font-medium">Mixx by Yas</span>
-            <span className="text-white/20">|</span>
-             <span className="text-white/50 font-medium">Halopesa Pesa</span>
+            <span className="text-white/50 font-medium">Tigo Pesa</span>
             <span className="text-white/20">|</span>
             <span className="text-white/50 font-medium">Airtel Money</span>
             <span className="text-white/20">|</span>
