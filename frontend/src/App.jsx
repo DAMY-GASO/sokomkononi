@@ -140,6 +140,14 @@ function HomePage() {
                 </div>
               )}
             </div>
+
+            {/* Login/Register Button - Single button */}
+            <Link 
+              to="/login" 
+              className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold text-sm px-4 py-2 rounded-md transition-colors whitespace-nowrap"
+            >
+              {selectedLang === "sw" ? "Ingia/Jisajili" : "Login/Register"}
+            </Link>
           </div>
         </div>
       </header>
@@ -164,11 +172,8 @@ function HomePage() {
           </nav>
           <div className="my-6 border-t border-white/10" />
           <div className="flex flex-col gap-3">
-            <Link to="/login" onClick={() => setMenuOpen(false)} className="w-full text-center text-white/80 text-base font-medium border border-white/15 rounded-md py-3 hover:bg-white/5 transition-colors">
-              {selectedLang === "sw" ? "🔑 Ingia" : "🔑 Login"}
-            </Link>
-            <Link to="/register?intent=sell" onClick={() => setMenuOpen(false)} className="w-full text-center bg-[#E8A33D] text-[#101A2E] font-semibold text-base rounded-md py-3 hover:bg-[#B87A1F] transition-colors">
-              {selectedLang === "sw" ? "📢 Weka Tangazo" : "📢 Post Ad"}
+            <Link to="/login" onClick={() => setMenuOpen(false)} className="w-full text-center bg-[#E8A33D] text-[#101A2E] font-semibold text-base rounded-md py-3 hover:bg-[#B87A1F] transition-colors">
+              {selectedLang === "sw" ? "Ingia/Jisajili" : "Login/Register"}
             </Link>
           </div>
         </div>
@@ -240,30 +245,32 @@ function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* WHY SOKOMKONONI */}
+      {/* WHY SOKOMKONONI - Centered */}
       {/* ============================================================ */}
       <section className="py-16 px-4 max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-800">{selectedLang === "sw" ? "Kwa nini SokoMkononi?" : "Why SokoMkononi?"}</h2>
-          <p className="text-gray-600 mt-2 max-w-2xl mx-auto">
+          <h2 className="text-3xl font-bold text-gray-800 text-center">
+            {selectedLang === "sw" ? "Kwa nini SokoMkononi?" : "Why SokoMkononi?"}
+          </h2>
+          <p className="text-gray-600 mt-2 max-w-2xl mx-auto text-center">
             {selectedLang === "sw" ? "Jukwaa salama na la kuaminika la kununua na kuuza mali nchini Tanzania." : "A safe and trusted platform for buying and selling property in Tanzania."}
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="text-center p-6 bg-[#F5F3EC] rounded-xl">
             <div className="w-16 h-16 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mx-auto mb-4"><span className="text-3xl">🛡️</span></div>
-            <h3 className="font-bold text-lg text-gray-800">{selectedLang === "sw" ? "Salama na Inaaminika" : "Safe & Trusted"}</h3>
-            <p className="text-gray-600 text-sm mt-2">{selectedLang === "sw" ? "Kila muamala unathibitishwa na timu yetu kwa usalama wa pande zote." : "Every transaction is verified by our team for all parties' safety."}</p>
+            <h3 className="font-bold text-lg text-gray-800 text-center">{selectedLang === "sw" ? "Salama na Inaaminika" : "Safe & Trusted"}</h3>
+            <p className="text-gray-600 text-sm mt-2 text-center">{selectedLang === "sw" ? "Kila muamala unathibitishwa na timu yetu kwa usalama wa pande zote." : "Every transaction is verified by our team for all parties' safety."}</p>
           </div>
           <div className="text-center p-6 bg-[#F5F3EC] rounded-xl">
             <div className="w-16 h-16 bg-[#2F6D4F]/20 rounded-full flex items-center justify-center mx-auto mb-4"><span className="text-3xl">📱</span></div>
-            <h3 className="font-bold text-lg text-gray-800">{selectedLang === "sw" ? "Upatikanaji Rahisi" : "Easy Access"}</h3>
-            <p className="text-gray-600 text-sm mt-2">{selectedLang === "sw" ? "Pata mali yoyote popote ulipo nchini Tanzania kupitia app yetu." : "Find any property anywhere in Tanzania through our app."}</p>
+            <h3 className="font-bold text-lg text-gray-800 text-center">{selectedLang === "sw" ? "Upatikanaji Rahisi" : "Easy Access"}</h3>
+            <p className="text-gray-600 text-sm mt-2 text-center">{selectedLang === "sw" ? "Pata mali yoyote popote ulipo nchini Tanzania kupitia app yetu." : "Find any property anywhere in Tanzania through our app."}</p>
           </div>
           <div className="text-center p-6 bg-[#F5F3EC] rounded-xl">
             <div className="w-16 h-16 bg-[#C1502E]/20 rounded-full flex items-center justify-center mx-auto mb-4"><span className="text-3xl">💰</span></div>
-            <h3 className="font-bold text-lg text-gray-800">{selectedLang === "sw" ? "Bei za Ushindani" : "Competitive Prices"}</h3>
-            <p className="text-gray-600 text-sm mt-2">{selectedLang === "sw" ? "Pata bei nzuri na uwezo wa kujadili moja kwa moja na wauzaji." : "Get great prices and negotiate directly with sellers."}</p>
+            <h3 className="font-bold text-lg text-gray-800 text-center">{selectedLang === "sw" ? "Bei za Ushindani" : "Competitive Prices"}</h3>
+            <p className="text-gray-600 text-sm mt-2 text-center">{selectedLang === "sw" ? "Pata bei nzuri na uwezo wa kujadili moja kwa moja na wauzaji." : "Get great prices and negotiate directly with sellers."}</p>
           </div>
         </div>
       </section>
@@ -313,31 +320,35 @@ function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* TESTIMONIALS */}
+      {/* TESTIMONIALS - Centered */}
       {/* ============================================================ */}
       <section className="py-16 px-4 max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">{selectedLang === "sw" ? "Wanachosema Wateja Wetu" : "What Our Customers Say"}</h2>
+        <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
+          {selectedLang === "sw" ? "Wanachosema Wateja Wetu" : "What Our Customers Say"}
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="bg-[#F5F3EC] rounded-xl p-6">
-            <p className="text-gray-700 text-sm leading-relaxed">"{selectedLang === "sw" ? "Nilinunua nyumba yangu kwa urahisi kupitia SokoMkononi. Mchakato wote ulikuwa rahisi na salama." : "I bought my house easily through SokoMkononi. The whole process was simple and secure."}"</p>
-            <p className="text-[#E8A33D] font-semibold mt-3 text-sm">— Mary, Dar es Salaam</p>
+            <p className="text-gray-700 text-sm leading-relaxed text-center">"{selectedLang === "sw" ? "Nilinunua nyumba yangu kwa urahisi kupitia SokoMkononi. Mchakato wote ulikuwa rahisi na salama." : "I bought my house easily through SokoMkononi. The whole process was simple and secure."}"</p>
+            <p className="text-[#E8A33D] font-semibold mt-3 text-sm text-center">— Mary, Dar es Salaam</p>
           </div>
           <div className="bg-[#F5F3EC] rounded-xl p-6">
-            <p className="text-gray-700 text-sm leading-relaxed">"{selectedLang === "sw" ? "Nimeuza magari matatu kwa mwezi mmoja pekee! Jukwaa hili limebadilisha biashara yangu." : "I've sold three cars in just one month! This platform has transformed my business."}"</p>
-            <p className="text-[#E8A33D] font-semibold mt-3 text-sm">— Juma, Arusha</p>
+            <p className="text-gray-700 text-sm leading-relaxed text-center">"{selectedLang === "sw" ? "Nimeuza magari matatu kwa mwezi mmoja pekee! Jukwaa hili limebadilisha biashara yangu." : "I've sold three cars in just one month! This platform has transformed my business."}"</p>
+            <p className="text-[#E8A33D] font-semibold mt-3 text-sm text-center">— Juma, Arusha</p>
           </div>
           <div className="bg-[#F5F3EC] rounded-xl p-6">
-            <p className="text-gray-700 text-sm leading-relaxed">"{selectedLang === "sw" ? "Nilipata kiwanja bora kwa bei nzuri. Nashukuru SokoMkononi kwa uwazi wao." : "I found a great plot at a good price. Thank you SokoMkononi for your transparency."}"</p>
-            <p className="text-[#E8A33D] font-semibold mt-3 text-sm">— Fatima, Mwanza</p>
+            <p className="text-gray-700 text-sm leading-relaxed text-center">"{selectedLang === "sw" ? "Nilipata kiwanja bora kwa bei nzuri. Nashukuru SokoMkononi kwa uwazi wao." : "I found a great plot at a good price. Thank you SokoMkononi for your transparency."}"</p>
+            <p className="text-[#E8A33D] font-semibold mt-3 text-sm text-center">— Fatima, Mwanza</p>
           </div>
         </div>
       </section>
 
       {/* ============================================================ */}
-      {/* FAQ */}
+      {/* FAQ - Centered */}
       {/* ============================================================ */}
       <section className="py-16 px-4 max-w-3xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">{selectedLang === "sw" ? "Maswali Yanayoulizwa Sana" : "Frequently Asked Questions"}</h2>
+        <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
+          {selectedLang === "sw" ? "Maswali Yanayoulizwa Sana" : "Frequently Asked Questions"}
+        </h2>
         <div className="space-y-4">
           <div className="border border-gray-200 rounded-lg p-4">
             <h3 className="font-semibold text-gray-800">{selectedLang === "sw" ? "Je, SokoMkononi ni salama?" : "Is SokoMkononi safe?"}</h3>
