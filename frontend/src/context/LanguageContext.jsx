@@ -1,9 +1,18 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 const LanguageContext = createContext();
 
 const translations = {
   sw: {
+    // Navbar
+    nav_login: "Ingia",
+    nav_post_ad: "Weka Tangazo",
+    nav_home: "Nyumbani",
+    nav_saved: "Zilizohifadhiwa",
+    nav_sell: "Uza",
+    nav_messages: "Ujumbe",
+    nav_profile: "Wasifu",
+    
     // Hero
     hero_eyebrow: "Soko la Kidijitali la Mali",
     hero_headline: "Nunua na Uza Mali kwa Urahisi",
@@ -83,58 +92,18 @@ const translations = {
     footer_tagline: "Jukwaa la kuaminika la kununua na kuuza mali nchini Tanzania.",
     footer_rights: "Haki zote zimehifadhiwa.",
     footer_payments_label: "Malipo yanakubaliwa:",
-
-    // Navbar
-    nav_login: "Ingia",
-    nav_post_ad: "Weka Tangazo",
-    nav_dashboard: "Dashibodi",
-    nav_logout: "Toka",
-    nav_menu: "Menyu",
-
-    // Coming Soon
-    comingsoon_eyebrow: "Karibuni",
-    comingsoon_heading: "App Inakuja Hivi Karibuni",
-    comingsoon_body: "Tunatengeneza app ya simu ili kukurahisishia zaidi. Jiandikisha ili upate taarifa za kwanza.",
-    comingsoon_email_placeholder: "Barua pepe yako",
-    comingsoon_submit: "Jiandikisha",
-    comingsoon_success: "Asante! Tutakujulisha app inapotoka.",
-    comingsoon_android_soon: "Android inakuja",
-    comingsoon_ios_soon: "iOS inakuja",
-
-    // Dashboard
-    dash_buy_tab: "Ninunue",
-    dash_sell_tab: "Niuze",
-
-    // Deal Room
-    dealroom_loading: "Inapakia...",
-    dealroom_not_found: "Deal Room haikupatikana",
-    dealroom_product_label: "BIDHAA",
-    dealroom_seller_label: "MUZAJI",
-    dealroom_buyer_label: "MNUUNUZI",
-    dealroom_you_suffix: "(Wewe)",
-    dealroom_agreed_banner: "Bei Imekubaliwa: TZS {price}",
-    dealroom_create_transaction: "Anzisha Muamala",
-    dealroom_creating_transaction: "Inaanzisha...",
-    dealroom_transaction_pending_note: "Muamala utathibitishwa ndani ya saa 48.",
-    dealroom_negotiation_heading: "MAJADILIANO",
-    dealroom_empty_thread: "Hakuna ujumbe bado. Anza majadiliano!",
-    dealroom_agree_button: "Kubali Bei",
-    dealroom_agreeing: "Inakubali...",
-    dealroom_agreed_locked: "Bei imekubaliwa. Majadiliano yamefungwa.",
-    dealroom_message_placeholder: "Andika ujumbe...",
-    dealroom_offer_placeholder: "Bei (TZS)",
-    dealroom_send: "Tuma",
-    dealroom_sending: "Inatuma...",
-    dealroom_send_error: "Imeshindikana kutuma ujumbe.",
-    dealroom_agree_error: "Imeshindikana kukubali bei.",
-    dealroom_join_waiting: "Jiunge na Orodha ya Kusubiri",
-
-    // Property Detail
-    seller_label: "Muuzaji",
-    buy_now: "Nunua Sasa",
-    join_waiting_list: "Jiunge na Orodha ya Kusubiri",
   },
   en: {
+    // Navbar
+    nav_login: "Login",
+    nav_post_ad: "Post Ad",
+    nav_home: "Home",
+    nav_saved: "Saved",
+    nav_sell: "Sell",
+    nav_messages: "Messages",
+    nav_profile: "Profile",
+    
+    // Hero
     hero_eyebrow: "Digital Property Marketplace",
     hero_headline: "Buy and Sell Property Easily",
     hero_subtext: "SokoMkononi is a safe platform to buy and sell houses, cars, land and other properties.",
@@ -142,6 +111,7 @@ const translations = {
     cta_sell: "Sell Item",
     hero_app_teaser: "⬇ Download Our App",
 
+    // Categories
     categories_heading: "Popular Categories",
     cat_nyumba: "Houses",
     cat_viwanja: "Land",
@@ -150,10 +120,12 @@ const translations = {
     cat_mashine: "Machinery",
     cat_count_suffix: "+",
 
+    // Stats
     stats_sellers: "Sellers",
     stats_properties: "Properties",
     stats_deals: "Deals",
 
+    // Why Section
     why_heading: "Why SokoMkononi?",
     why_subtext: "We've built a platform that gives buyers and sellers confidence and convenience.",
     why_point1_title: "Safe & Trusted",
@@ -163,6 +135,7 @@ const translations = {
     why_point3_title: "Competitive Prices",
     why_point3_body: "Get great prices and negotiate directly with sellers.",
 
+    // Testimonials
     testimonials_heading: "What Our Customers Say",
     testimonial1_quote: "I bought my house easily through SokoMkononi. The whole process was simple and secure.",
     testimonial1_name: "— Mary, Dar es Salaam",
@@ -171,6 +144,7 @@ const translations = {
     testimonial3_quote: "I found a great plot at a good price. Thank you SokoMkononi for your transparency.",
     testimonial3_name: "— Fatima, Mwanza",
 
+    // App Download
     appsec_eyebrow: "Download Our App",
     appsec_heading: "Enjoy SokoMkononi Anywhere",
     appsec_body: "Download our app and buy or sell any property easily on your phone.",
@@ -179,6 +153,7 @@ const translations = {
     badge_download_on: "Download on",
     badge_app_store: "App Store",
 
+    // FAQ
     faq_heading: "Frequently Asked Questions",
     faq_q1: "Is SokoMkononi safe?",
     faq_a1: "Yes, SokoMkononi has a verification system for sellers and buyers, plus a secure payment system.",
@@ -189,9 +164,11 @@ const translations = {
     faq_q4: "How can I contact a seller?",
     faq_a4: "After expressing interest to buy, you can communicate directly in our 'Deal Room'.",
 
+    // Final CTA
     finalcta_heading: "Start Your Property Journey Today",
     finalcta_subtext: "Join thousands of buyers and sellers on our platform.",
 
+    // Footer
     footer_company_heading: "Company",
     footer_about: "About Us",
     footer_contact: "Contact Us",
@@ -205,56 +182,15 @@ const translations = {
     footer_tagline: "A trusted platform for buying and selling property in Tanzania.",
     footer_rights: "All rights reserved.",
     footer_payments_label: "Payments accepted:",
-
-    nav_login: "Login",
-    nav_post_ad: "Post Ad",
-    nav_dashboard: "Dashboard",
-    nav_logout: "Logout",
-    nav_menu: "Menu",
-
-    comingsoon_eyebrow: "Coming Soon",
-    comingsoon_heading: "App Coming Soon",
-    comingsoon_body: "We're building a mobile app to make things even easier. Sign up to be the first to know.",
-    comingsoon_email_placeholder: "Your email",
-    comingsoon_submit: "Sign Up",
-    comingsoon_success: "Thank you! We'll let you know when the app launches.",
-    comingsoon_android_soon: "Android coming",
-    comingsoon_ios_soon: "iOS coming",
-
-    dash_buy_tab: "Buy",
-    dash_sell_tab: "Sell",
-
-    dealroom_loading: "Loading...",
-    dealroom_not_found: "Deal Room not found",
-    dealroom_product_label: "PRODUCT",
-    dealroom_seller_label: "SELLER",
-    dealroom_buyer_label: "BUYER",
-    dealroom_you_suffix: "(You)",
-    dealroom_agreed_banner: "Price Agreed: TZS {price}",
-    dealroom_create_transaction: "Create Transaction",
-    dealroom_creating_transaction: "Creating...",
-    dealroom_transaction_pending_note: "Transaction will be confirmed within 48 hours.",
-    dealroom_negotiation_heading: "NEGOTIATION",
-    dealroom_empty_thread: "No messages yet. Start negotiating!",
-    dealroom_agree_button: "Agree to Price",
-    dealroom_agreeing: "Agreeing...",
-    dealroom_agreed_locked: "Price agreed. Negotiation closed.",
-    dealroom_message_placeholder: "Type a message...",
-    dealroom_offer_placeholder: "Price (TZS)",
-    dealroom_send: "Send",
-    dealroom_sending: "Sending...",
-    dealroom_send_error: "Failed to send message.",
-    dealroom_agree_error: "Failed to agree on price.",
-    dealroom_join_waiting: "Join Waiting List",
-
-    seller_label: "Seller",
-    buy_now: "Buy Now",
-    join_waiting_list: "Join Waiting List",
   }
 };
 
 export function LanguageProvider({ children }) {
-  const [lang, setLang] = useState("sw");
+  const [lang, setLang] = useState(() => {
+    // Load from localStorage
+    const saved = localStorage.getItem("preferred_language");
+    return saved || "sw";
+  });
 
   const t = (key, params = {}) => {
     let text = translations[lang]?.[key] || translations.sw[key] || key;
@@ -263,6 +199,10 @@ export function LanguageProvider({ children }) {
     });
     return text;
   };
+
+  useEffect(() => {
+    localStorage.setItem("preferred_language", lang);
+  }, [lang]);
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, t }}>
