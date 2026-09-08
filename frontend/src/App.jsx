@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import "./index.css";
+import Footer from "./components/Footer.jsx";
 
 function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
