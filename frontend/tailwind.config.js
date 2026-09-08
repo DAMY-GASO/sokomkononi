@@ -20,14 +20,13 @@ export default {
       fontFamily: {
         sans: ["Inter", "sans-serif"],
       },
-      fontSize: {
-        sm: ["14px", { lineHeight: "1.5" }],
-        base: ["16px", { lineHeight: "1.5" }],
-        lg: ["18px", { lineHeight: "1.5" }],
-        xl: ["20px", { lineHeight: "1.4" }],
-        "2xl": ["24px", { lineHeight: "1.4" }],
-        "3xl": ["30px", { lineHeight: "1.4" }],
-        "4xl": ["32px", { lineHeight: "1.4" }],
+      screens: {
+        'xs': '475px',
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+        '2xl': '1536px',
       },
     },
   },
