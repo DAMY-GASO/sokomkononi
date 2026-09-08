@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const icons = {
   home: (
@@ -32,11 +33,15 @@ const icons = {
 
 export default function BottomNav() {
   const location = useLocation();
+  const { user } = useAuth();
 
   const isActive = (path) => {
     if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
   };
+
+  // Kurasa zinazohitaji mtumiaji awe ame-login kwanza. Asipoingia, anapelekwa /login.
+  const authLink = (path) => (user ? path : "/login");
 
   return (
     <nav className="bottom-nav">
@@ -44,22 +49,26 @@ export default function BottomNav() {
         {icons.home}
         <span>Home</span>
       </Link>
-      <Link to="/saved" className={`nav-item ${isActive("/saved") ? "active" : ""}`}>
+
+      <Link to={authLink("/saved")} className={`nav-item ${isActive("/saved") ? "active" : ""}`}>
         {icons.saved}
         <span>Saved</span>
       </Link>
+
       <Link to="/register?intent=sell" className="nav-item sell-btn">
         {icons.sell}
         <span>Sell</span>
       </Link>
-      <Link to="/messages" className={`nav-item ${isActive("/messages") ? "active" : ""}`}>
+
+      <Link to={authLink("/messages")} className={`nav-item ${isActive("/messages") ? "active" : ""}`}>
         <span className="relative">
           {icons.messages}
           <span className="badge">2</span>
         </span>
         <span>Messages</span>
       </Link>
-      <Link to="/profile" className={`nav-item ${isActive("/profile") ? "active" : ""}`}>
+
+      <Link to={authLink("/profile")} className={`nav-item ${isActive("/profile") ? "active" : ""}`}>
         {icons.profile}
         <span>Profile</span>
       </Link>
