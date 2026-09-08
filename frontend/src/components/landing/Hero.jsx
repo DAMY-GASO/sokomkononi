@@ -1,6 +1,5 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import MarketRail from "./MarketRail.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function Hero() {
@@ -41,8 +40,6 @@ export default function Hero() {
           </Link>
         </div>
       </div>
-
-      <MarketRail />
     </section>
   );
 }
