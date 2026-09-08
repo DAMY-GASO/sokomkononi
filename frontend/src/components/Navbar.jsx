@@ -4,7 +4,9 @@ import { Link } from "react-router-dom";
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
-  const [selectedLang, setSelectedLang] = useState("sw");
+  const [selectedLang, setSelectedLang] = useState(() => {
+    return localStorage.getItem("preferred_language") || "sw";
+  });
 
   const links = [
     { to: "/kategoria/nyumba", label: "Nyumba" },
@@ -23,10 +25,8 @@ export default function Navbar() {
   };
 
   const handleSaveLanguage = () => {
-    // TODO: Save language preference to localStorage or backend
     localStorage.setItem("preferred_language", selectedLang);
     setLangOpen(false);
-    // Reload page to apply language change
     window.location.reload();
   };
 
@@ -34,15 +34,15 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-night/95 backdrop-blur border-b border-white/10">
-      <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2 shrink-0">
           <span className="w-7 h-7 rounded-md bg-gold flex items-center justify-center text-night font-bold text-sm">
             S
           </span>
-          <span className="text-sand font-bold text-lg tracking-tight">Soko</span>
+          <span className="text-sand font-bold text-lg tracking-tight hidden sm:block">Soko</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-7">
+        <nav className="hidden md:flex items-center gap-6 lg:gap-8">
           {links.map((l) => (
             <Link
               key={l.to}
@@ -54,14 +54,15 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden md:flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {/* Language Switcher */}
           <div className="relative">
             <button
               onClick={() => setLangOpen(!langOpen)}
-              className="text-sand/60 hover:text-sand text-sm font-medium border border-white/15 rounded-md px-3 py-1.5 transition-colors flex items-center gap-1.5"
+              className="text-sand/60 hover:text-sand text-sm font-medium border border-white/15 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
             >
-              <span>{currentLang?.native || "Kiswahili"}</span>
+              <span className="hidden xs:inline">{currentLang?.native || "Kiswahili"}</span>
+              <span className="xs:hidden">{currentLang?.code?.toUpperCase() || "SW"}</span>
               <svg 
                 className={`w-4 h-4 transition-transform ${langOpen ? "rotate-180" : ""}`} 
                 fill="none" 
@@ -72,9 +73,8 @@ export default function Navbar() {
               </svg>
             </button>
 
-            {/* Dropdown */}
             {langOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-night-2 border border-white/10 rounded-lg shadow-xl py-2">
+              <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-night-2 border border-white/10 rounded-lg shadow-xl py-2 z-50">
                 <div className="px-4 py-2 border-b border-white/10">
                   <p className="text-sand/50 text-xs font-semibold">Je, unapendelea lugha gani?</p>
                 </div>
@@ -111,15 +111,16 @@ export default function Navbar() {
 
           <Link
             to="/login"
-            className="text-sand/80 hover:text-sand text-sm font-medium"
+            className="hidden sm:inline text-sand/80 hover:text-sand text-sm font-medium"
           >
             Ingia
           </Link>
           <Link
             to="/register?intent=sell"
-            className="bg-gold hover:bg-gold-dark text-night font-semibold text-sm px-4 py-2 rounded-md transition-colors"
+            className="bg-gold hover:bg-gold-dark text-night font-semibold text-sm px-3 sm:px-4 py-2 rounded-md transition-colors whitespace-nowrap"
           >
-            Weka Tangazo
+            <span className="hidden xs:inline">Weka Tangazo</span>
+            <span className="xs:hidden">Tangazo</span>
           </Link>
         </div>
 
@@ -127,14 +128,12 @@ export default function Navbar() {
           onClick={() => setMobileOpen((v) => !v)}
           className="md:hidden text-sand p-1.5"
         >
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             {mobileOpen ? (
-              <path d="M5 5L17 17M17 5L5 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             ) : (
               <>
-                <path d="M3 6H19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                <path d="M3 11H19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                <path d="M3 16H19" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </>
             )}
           </svg>
@@ -142,31 +141,31 @@ export default function Navbar() {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden border-t border-white/10 bg-night px-5 py-5">
+        <div className="md:hidden border-t border-white/10 bg-night px-4 py-5 mobile-menu">
           <nav className="flex flex-col gap-4">
             {links.map((l) => (
               <Link
                 key={l.to}
                 to={l.to}
                 onClick={() => setMobileOpen(false)}
-                className="text-sand/80 text-sm font-medium"
+                className="text-sand/80 text-base font-medium py-2 border-b border-white/5"
               >
                 {l.label}
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-3 mt-5 pt-5 border-t border-white/10">
+          <div className="flex flex-col gap-3 mt-5 pt-5 border-t border-white/10">
             <Link
               to="/login"
               onClick={() => setMobileOpen(false)}
-              className="flex-1 text-center text-sand/80 text-sm font-medium border border-white/15 rounded-md py-2.5"
+              className="w-full text-center text-sand/80 text-base font-medium border border-white/15 rounded-md py-3"
             >
               Ingia
             </Link>
             <Link
               to="/register?intent=sell"
               onClick={() => setMobileOpen(false)}
-              className="flex-1 text-center bg-gold text-night font-semibold text-sm rounded-md py-2.5"
+              className="w-full text-center bg-gold text-night font-semibold text-base rounded-md py-3"
             >
               Weka Tangazo
             </Link>
