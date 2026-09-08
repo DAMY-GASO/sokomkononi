@@ -67,8 +67,11 @@ function HomePage() {
                 <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
               </svg>
             </button>
+            
+            {/* Logo - Desktop: with icon, Mobile: text only */}
             <div className="flex items-center gap-2">
-              <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">
+              {/* Icon - hidden on mobile, visible on desktop */}
+              <span className="hidden md:flex w-7 h-7 rounded-md bg-[#E8A33D] items-center justify-center text-[#101A2E] font-bold text-sm">
                 S
               </span>
               <span className="font-bold text-base sm:text-lg tracking-tight">SokoMkononi</span>
