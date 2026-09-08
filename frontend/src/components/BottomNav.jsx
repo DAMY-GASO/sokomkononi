@@ -1,6 +1,35 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 
+const icons = {
+  home: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5Z" />
+    </svg>
+  ),
+  saved: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2 15.09 8.26 22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z" />
+    </svg>
+  ),
+  sell: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  ),
+  messages: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
+    </svg>
+  ),
+  profile: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21v-1a7 7 0 0 1 14 0v1" />
+    </svg>
+  ),
+};
+
 export default function BottomNav() {
   const location = useLocation();
 
@@ -12,24 +41,26 @@ export default function BottomNav() {
   return (
     <nav className="bottom-nav">
       <Link to="/" className={`nav-item ${isActive("/") ? "active" : ""}`}>
-        <span>🏠</span>
+        {icons.home}
         <span>Home</span>
       </Link>
       <Link to="/saved" className={`nav-item ${isActive("/saved") ? "active" : ""}`}>
-        <span>⭐</span>
+        {icons.saved}
         <span>Saved</span>
       </Link>
       <Link to="/register?intent=sell" className="nav-item sell-btn">
-        <span>➕</span>
+        {icons.sell}
         <span>Sell</span>
       </Link>
       <Link to="/messages" className={`nav-item ${isActive("/messages") ? "active" : ""}`}>
-        <span>💬</span>
+        <span className="relative">
+          {icons.messages}
+          <span className="badge">2</span>
+        </span>
         <span>Messages</span>
-        <span className="badge">2</span>
       </Link>
       <Link to="/profile" className={`nav-item ${isActive("/profile") ? "active" : ""}`}>
-        <span>👤</span>
+        {icons.profile}
         <span>Profile</span>
       </Link>
     </nav>
