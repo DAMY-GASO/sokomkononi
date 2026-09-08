@@ -5,10 +5,10 @@ export default function Footer({ selectedLang = "sw" }) {
   return (
     <footer className="bg-[#0D1524] text-white/80 border-t border-white/10">
       <div className="max-w-7xl mx-auto px-4 py-12">
-        {/* Main Footer Grid - 2 columns on mobile and desktop */}
-        <div className="grid grid-cols-2 gap-8 md:gap-12">
+        {/* Main Footer Grid */}
+        {/* Mobile: 2 columns, Desktop: 4 columns */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-10">
           
-          {/* Row 1: Brand + Quick Links */}
           {/* Column 1: Brand */}
           <div className="text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
@@ -47,7 +47,7 @@ export default function Footer({ selectedLang = "sw" }) {
           </div>
 
           {/* Column 2: Quick Links (Haraka) */}
-          <div className="text-center">
+          <div className="text-center md:text-left">
             <h3 className="text-white font-semibold text-sm mb-4">
               {selectedLang === "sw" ? "Haraka" : "Quick Links"}
             </h3>
@@ -58,12 +58,9 @@ export default function Footer({ selectedLang = "sw" }) {
               <li><Link to="/kategoria/biashara" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Biashara" : "Business"}</Link></li>
             </ul>
           </div>
-        </div>
 
-        {/* Row 2: Company + Support */}
-        <div className="grid grid-cols-2 gap-8 md:gap-12 mt-10 pt-8 border-t border-white/10">
-          {/* Column 1: Company (Kampuni) */}
-          <div className="text-center">
+          {/* Column 3: Company (Kampuni) */}
+          <div className="text-center md:text-left">
             <h3 className="text-white font-semibold text-sm mb-4">
               {selectedLang === "sw" ? "Kampuni" : "Company"}
             </h3>
@@ -75,8 +72,8 @@ export default function Footer({ selectedLang = "sw" }) {
             </ul>
           </div>
 
-          {/* Column 2: Support (Msaada) */}
-          <div className="text-center">
+          {/* Column 4: Support (Msaada) */}
+          <div className="text-center md:text-left">
             <h3 className="text-white font-semibold text-sm mb-4">
               {selectedLang === "sw" ? "Msaada" : "Support"}
             </h3>
