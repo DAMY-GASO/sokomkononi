@@ -4,9 +4,9 @@ import { Link } from "react-router-dom";
 export default function Footer() {
   return (
     <footer className="bg-night-2 text-sand border-t border-white/10">
-      <div className="max-w-6xl mx-auto px-5 py-14 md:py-16">
-        <div className="grid md:grid-cols-[1.3fr_1fr_1fr_1fr] gap-10">
-          <div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-10">
+          <div className="col-span-2 md:col-span-1">
             <Link to="/" className="flex items-center gap-2">
               <span className="w-7 h-7 rounded-md bg-gold flex items-center justify-center text-night font-bold text-sm">
                 S
@@ -46,11 +46,11 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-white/10 flex flex-col-reverse md:flex-row items-center justify-between gap-4">
-          <p className="text-sand/40 text-xs">
+        <div className="mt-10 pt-6 border-t border-white/10 flex flex-col-reverse md:flex-row items-center justify-between gap-4">
+          <p className="text-sand/40 text-xs text-center md:text-left">
             © {new Date().getFullYear()} Soko. Haki zote zimehifadhiwa.
           </p>
-          <div className="flex items-center gap-2 text-sand/40 text-xs">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-sand/40 text-xs">
             <span>Malipo yanakubaliwa:</span>
             <span className="text-sand/60 font-medium">M-Pesa</span>
             <span>·</span>
