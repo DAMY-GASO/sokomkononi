@@ -5,9 +5,45 @@ export default function Footer({ selectedLang = "sw" }) {
   return (
     <footer className="bg-[#0D1524] text-white/80 border-t border-white/10">
       <div className="max-w-7xl mx-auto px-4 py-12">
-        {/* Main Footer Grid */}
-        {/* Mobile: brand full width, then 2 columns for others */}
-        {/* Desktop: 5 columns */}
+        
+        {/* ============================================================ */}
+        {/* APP DOWNLOAD SECTION - Separate from main footer */}
+        {/* ============================================================ */}
+        <div className="text-center mb-10 pb-8 border-b border-white/10">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">
+            {selectedLang === "sw" ? "PAKUA SOKOMKONONI APP" : "DOWNLOAD SOKOMKONONI APP"}
+          </h2>
+          <p className="text-white/50 text-sm max-w-2xl mx-auto">
+            {selectedLang === "sw" 
+              ? "Fanya biashara kwa urahisi zaidi ukiwa popote — pata taarifa za deals zako, tafuta mali, na wasiliana na Madalali/Wateja moja kwa moja kutoka simu yako." 
+              : "Do business more easily wherever you are — get deal notifications, search properties, and communicate with Agents/Customers directly from your phone."}
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center mt-4">
+            <Link to="/app" className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors">
+              <span className="text-2xl">📱</span>
+              <span className="text-sm text-left">
+                <span className="block text-white/50 text-[10px]">{selectedLang === "sw" ? "Pakua" : "Download"}</span>
+                <span className="block font-semibold text-white text-sm">Android App</span>
+              </span>
+            </Link>
+            <Link to="/app" className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors">
+              <span className="text-2xl">🍎</span>
+              <span className="text-sm text-left">
+                <span className="block text-white/50 text-[10px]">{selectedLang === "sw" ? "Pakua" : "Download"}</span>
+                <span className="block font-semibold text-white text-sm">iOS App</span>
+              </span>
+            </Link>
+          </div>
+          <p className="text-white/30 text-xs mt-3">
+            {selectedLang === "sw" 
+              ? "Mobile App inakuja Phase 2 — bofya juu kupata taarifa na kujiunga na waitlist." 
+              : "Mobile App coming in Phase 2 — click above to get info and join the waitlist."}
+          </p>
+        </div>
+
+        {/* ============================================================ */}
+        {/* MAIN FOOTER GRID */}
+        {/* ============================================================ */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10">
           
           {/* Column 1: Brand - Full width on mobile, normal on desktop */}
@@ -23,34 +59,6 @@ export default function Footer({ selectedLang = "sw" }) {
                 ? "SokoMkononi ni jukwaa lako la kidijitali linalokuletea soko kiganjani mwako. Tunakuunganisha na wauzaji na wanunuzi kwa urahisi, usalama na uaminifu." 
                 : "SokoMkononi is your digital marketplace bringing the market to your fingertips. We connect you with sellers and buyers with ease, security and trust."}
             </p>
-            
-            {/* App Download Badges */}
-            <div className="mt-4 space-y-2">
-              <p className="text-white/40 text-xs font-semibold">
-                {selectedLang === "sw" ? "PAKUA SOKOMKONONI APP" : "DOWNLOAD SOKOMKONONI APP"}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Link to="/app" className="flex items-center gap-2 border border-white/15 rounded-md px-3 py-1.5 hover:bg-white/5 transition-colors">
-                  <span className="text-lg">📱</span>
-                  <span className="text-xs">
-                    <span className="block text-white/50 text-[9px]">{selectedLang === "sw" ? "Pakua" : "Download"}</span>
-                    <span className="block font-semibold text-white text-[10px]">Android App</span>
-                  </span>
-                </Link>
-                <Link to="/app" className="flex items-center gap-2 border border-white/15 rounded-md px-3 py-1.5 hover:bg-white/5 transition-colors">
-                  <span className="text-lg">🍎</span>
-                  <span className="text-xs">
-                    <span className="block text-white/50 text-[9px]">{selectedLang === "sw" ? "Pakua" : "Download"}</span>
-                    <span className="block font-semibold text-white text-[10px]">iOS App</span>
-                  </span>
-                </Link>
-              </div>
-              <p className="text-white/30 text-[10px] mt-1">
-                {selectedLang === "sw" 
-                  ? "Mobile App inakuja Phase 2 — bofya juu kupata taarifa na kujiunga na waitlist." 
-                  : "Mobile App coming in Phase 2 — click above to get info and join the waitlist."}
-              </p>
-            </div>
           </div>
 
           {/* Column 2: Quick Links - Head underlined */}
@@ -125,7 +133,9 @@ export default function Footer({ selectedLang = "sw" }) {
             <span>{selectedLang === "sw" ? "Malipo yanayokubaliwa:" : "Payments accepted:"}</span>
             <span className="text-white/50 font-medium">M-Pesa</span>
             <span className="text-white/20">|</span>
-            <span className="text-white/50 font-medium">Tigo Pesa</span>
+            <span className="text-white/50 font-medium">Mixx by Yas</span>
+            <span className="text-white/20">|</span>
+             <span className="text-white/50 font-medium">Halopesa Pesa</span>
             <span className="text-white/20">|</span>
             <span className="text-white/50 font-medium">Airtel Money</span>
             <span className="text-white/20">|</span>
