@@ -17,19 +17,23 @@ function HomePage() {
   ];
 
   const languages = [
-    { code: "en", label: "English", native: "English" },
-    { code: "sw", label: "Swahili", native: "Kiswahili" },
+    { code: "en", native: "English" },
+    { code: "sw", native: "Kiswahili" },
   ];
 
   const categories = [
-    { name: "Nyumba na Viwanja", icon: "🏠", count: "3,200+" },
-    { name: "Mashamba", icon: "🌳", count: "2,100+" },
+    { name: "Nyumba", icon: "🏠", count: "3,200+" },
+    { name: "Viwanja", icon: "🌳", count: "2,100+" },
     { name: "Magari", icon: "🚗", count: "2,800+" },
     { name: "Pikipiki", icon: "🏍️", count: "1,500+" },
+    { name: "Mabasi", icon: "🚌", count: "800+" },
+    { name: "Malori", icon: "🚛", count: "600+" },
+    { name: "Trekta", icon: "🚜", count: "400+" },
+    { name: "Boti", icon: "⛵", count: "200+" },
+    { name: "Ndege", icon: "✈️", count: "50+" },
     { name: "Mashine", icon: "🔧", count: "900+" },
     { name: "Samani", icon: "🛋️", count: "1,200+" },
     { name: "Vifaa vya Elektroniki", icon: "💻", count: "2,000+" },
-    { name: "Vifaa vya umeme", icon:"", count:"1200" },
   ];
 
   const handleLanguageSelect = (code) => {
@@ -47,7 +51,7 @@ function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* ============================================================ */}
-      {/* NAVBAR - NO LOGIN/POST BUTTONS ON DESKTOP */}
+      {/* NAVBAR */}
       {/* ============================================================ */}
       <header className="bg-[#101A2E] text-white border-b border-white/10 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -83,7 +87,7 @@ function HomePage() {
             ))}
           </nav>
 
-          {/* Right: Search + Language ONLY - No Login/Post buttons */}
+          {/* Right: Search + Language */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Search Icon */}
             <button className="text-white/60 hover:text-white p-1.5 transition-colors">
@@ -124,8 +128,8 @@ function HomePage() {
                         selectedLang === lang.code ? "bg-white/5" : ""
                       }`}
                     >
-                      <span className="text-white text-sm font-medium">{lang.label}</span>
-                      <span className="text-white/50 text-sm">{lang.native}</span>
+                      {/* Onyesha jina la lugha mara MOJA tu */}
+                      <span className="text-white text-sm font-medium">{lang.native}</span>
                       {selectedLang === lang.code && (
                         <svg className="w-4 h-4 text-[#E8A33D]" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -149,7 +153,7 @@ function HomePage() {
       </header>
 
       {/* ============================================================ */}
-      {/* MOBILE MENU - SLIDES FROM RIGHT (WITH LOGIN & POST AD) */}
+      {/* MOBILE MENU - SLIDES FROM RIGHT */}
       {/* ============================================================ */}
       <div
         className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${
@@ -181,24 +185,6 @@ function HomePage() {
             <span className="text-white font-bold text-lg tracking-tight">SokoMkononi</span>
           </div>
 
-          {/* Auth buttons - ONLY IN MOBILE MENU */}
-          <div className="flex flex-col gap-3 mb-6 pb-6 border-b border-white/10">
-            <Link
-              to="/login"
-              onClick={() => setMenuOpen(false)}
-              className="w-full text-center text-white/80 text-base font-medium border border-white/15 rounded-md py-3 hover:bg-white/5 transition-colors"
-            >
-              {selectedLang === "sw" ? "🔑 Ingia" : "🔑 Login"}
-            </Link>
-            <Link
-              to="/register?intent=sell"
-              onClick={() => setMenuOpen(false)}
-              className="w-full text-center bg-[#E8A33D] text-[#101A2E] font-semibold text-base rounded-md py-3 hover:bg-[#B87A1F] transition-colors"
-            >
-              {selectedLang === "sw" ? "📢 Weka Tangazo" : "📢 Post Ad"}
-            </Link>
-          </div>
-
           {/* Navigation Links */}
           <nav className="flex flex-col gap-1">
             {links.map((l) => (
@@ -213,30 +199,25 @@ function HomePage() {
             ))}
           </nav>
 
-          {/* Language selector in menu */}
-          <div className="mt-6 pt-6 border-t border-white/10">
-            <p className="text-white/50 text-xs font-semibold mb-3">
-              {selectedLang === "sw" ? "Lugha" : "Language"}
-            </p>
-            <div className="flex gap-2">
-              {languages.map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => {
-                    setSelectedLang(lang.code);
-                    handleSaveLanguage();
-                    setMenuOpen(false);
-                  }}
-                  className={`flex-1 text-center text-sm font-medium py-2 rounded-md transition-colors ${
-                    selectedLang === lang.code
-                      ? "bg-[#E8A33D] text-[#101A2E]"
-                      : "text-white/60 border border-white/15 hover:bg-white/5"
-                  }`}
-                >
-                  {lang.native}
-                </button>
-              ))}
-            </div>
+          {/* Divider */}
+          <div className="my-6 border-t border-white/10" />
+
+          {/* Auth buttons - CHINI ya navigation links */}
+          <div className="flex flex-col gap-3">
+            <Link
+              to="/login"
+              onClick={() => setMenuOpen(false)}
+              className="w-full text-center text-white/80 text-base font-medium border border-white/15 rounded-md py-3 hover:bg-white/5 transition-colors"
+            >
+              {selectedLang === "sw" ? "🔑 Ingia" : "🔑 Login"}
+            </Link>
+            <Link
+              to="/register?intent=sell"
+              onClick={() => setMenuOpen(false)}
+              className="w-full text-center bg-[#E8A33D] text-[#101A2E] font-semibold text-base rounded-md py-3 hover:bg-[#B87A1F] transition-colors"
+            >
+              {selectedLang === "sw" ? "📢 Weka Tangazo" : "📢 Post Ad"}
+            </Link>
           </div>
         </div>
       </div>
