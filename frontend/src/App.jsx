@@ -22,18 +22,14 @@ function HomePage() {
   ];
 
   const categories = [
-    { name: "Nyumba", icon: "🏠", count: "3,200+" },
-    { name: "Viwanja", icon: "🌳", count: "2,100+" },
+    { name: "Nyumba na Viwanja", icon: "🏠", count: "3,200+" },
+    { name: "Mashamba", icon: "🌳", count: "2,100+" },
     { name: "Magari", icon: "🚗", count: "2,800+" },
     { name: "Pikipiki", icon: "🏍️", count: "1,500+" },
-    { name: "Mabasi", icon: "🚌", count: "800+" },
-    { name: "Malori", icon: "🚛", count: "600+" },
-    { name: "Trekta", icon: "🚜", count: "400+" },
-    { name: "Boti", icon: "⛵", count: "200+" },
-    { name: "Ndege", icon: "✈️", count: "50+" },
     { name: "Mashine", icon: "🔧", count: "900+" },
     { name: "Samani", icon: "🛋️", count: "1,200+" },
     { name: "Vifaa vya Elektroniki", icon: "💻", count: "2,000+" },
+    { name: "Vifaa vya umeme", icon:"", count:"1200" },
   ];
 
   const handleLanguageSelect = (code) => {
