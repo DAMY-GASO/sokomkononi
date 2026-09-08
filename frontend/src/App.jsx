@@ -28,10 +28,6 @@ function HomePage() {
     { name: "Magari", icon: "🚗", count: "2,800+" },
     { name: "Pikipiki", icon: "🏍️", count: "1,500+" },
     { name: "Mabasi", icon: "🚌", count: "800+" },
-    { name: "Malori", icon: "🚛", count: "600+" },
-    { name: "Trekta", icon: "🚜", count: "400+" },
-    { name: "Boti", icon: "⛵", count: "200+" },
-    { name: "Ndege", icon: "✈️", count: "50+" },
     { name: "Mashine", icon: "🔧", count: "900+" },
     { name: "Samani", icon: "🛋️", count: "1,200+" },
     { name: "Vifaa vya Elektroniki", icon: "💻", count: "2,000+" },
@@ -184,9 +180,6 @@ function HomePage() {
       {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-[#E8A33D] text-sm font-semibold tracking-wide">
-            {selectedLang === "sw" ? "Soko la Kidijitali la Mali" : "Digital Property Marketplace"}
-          </p>
           <h1 className="text-3xl md:text-4xl font-bold mt-3 leading-tight">
             {selectedLang === "sw" ? "Nunua na Uza Mali kwa Urahisi" : "Buy and Sell Property Easily"}
           </h1>
