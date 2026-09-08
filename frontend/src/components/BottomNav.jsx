@@ -1,18 +1,8 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useLanguage } from "../context/LanguageContext.jsx";
 
 export default function BottomNav() {
-  const { t } = useLanguage();
   const location = useLocation();
-
-  const navItems = [
-    { path: "/", icon: "🏠", label: "Home" },
-    { path: "/saved", icon: "⭐", label: "Saved" },
-    { path: "/sell", icon: "➕", label: "Sell", isSell: true },
-    { path: "/messages", icon: "💬", label: "Messages", badge: "2" },
-    { path: "/profile", icon: "👤", label: "Profile" },
-  ];
 
   const isActive = (path) => {
     if (path === "/") return location.pathname === "/";
@@ -21,34 +11,27 @@ export default function BottomNav() {
 
   return (
     <nav className="bottom-nav">
-      {navItems.map((item) => {
-        const active = isActive(item.path);
-        
-        if (item.isSell) {
-          return (
-            <Link
-              key={item.path}
-              to="/register?intent=sell"
-              className={`nav-item sell-btn ${active ? "active" : ""}`}
-            >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          );
-        }
-
-        return (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`nav-item ${active ? "active" : ""}`}
-          >
-            <span>{item.icon}</span>
-            <span>{item.label}</span>
-            {item.badge && <span className="badge">{item.badge}</span>}
-          </Link>
-        );
-      })}
+      <Link to="/" className={`nav-item ${isActive("/") ? "active" : ""}`}>
+        <span>🏠</span>
+        <span>Home</span>
+      </Link>
+      <Link to="/saved" className={`nav-item ${isActive("/saved") ? "active" : ""}`}>
+        <span>⭐</span>
+        <span>Saved</span>
+      </Link>
+      <Link to="/register?intent=sell" className="nav-item sell-btn">
+        <span>➕</span>
+        <span>Sell</span>
+      </Link>
+      <Link to="/messages" className={`nav-item ${isActive("/messages") ? "active" : ""}`}>
+        <span>💬</span>
+        <span>Messages</span>
+        <span className="badge">2</span>
+      </Link>
+      <Link to="/profile" className={`nav-item ${isActive("/profile") ? "active" : ""}`}>
+        <span>👤</span>
+        <span>Profile</span>
+      </Link>
     </nav>
   );
 }
