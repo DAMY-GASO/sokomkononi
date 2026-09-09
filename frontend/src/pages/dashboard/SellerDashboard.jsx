@@ -4,6 +4,7 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import DashboardShell from "./components/DashboardShell.jsx";
 import MyListings from "./components/MyListings.jsx";
 import PostPropertyForm from "./components/PostPropertyForm.jsx";
+import DealRoom, { DEAL_ROOMS } from "./components/DealRoom.jsx";
 
 // Mock data ya listings
 const MOCK_LISTINGS = [
@@ -71,6 +72,7 @@ export default function SellerDashboard() {
   const [activeView, setActiveView] = useState("listings");
   const [listings, setListings] = useState(MOCK_LISTINGS);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [dealRooms, setDealRooms] = useState(DEAL_ROOMS);
 
   // Handle removing a listing
   const handleRemoveListing = (id) => {
@@ -151,21 +153,7 @@ export default function SellerDashboard() {
           </div>
         );
       case "deals":
-        return (
-          <div className="p-6 text-center">
-            <h2 className="text-xl font-bold text-gray-800">Deal Rooms</h2>
-            <p className="text-gray-600 mt-2">Mazungumzo yako na wanunuzi</p>
-            <div className="mt-4 bg-white rounded-xl p-6 shadow-sm border">
-              <div className="py-8">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.5" className="mx-auto text-gray-300">
-                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                </svg>
-                <p className="text-gray-400 mt-2">Hakuna deal zilizoanzishwa bado</p>
-                <p className="text-gray-400 text-xs">Wanunuzi watakapowasiliana nawe, wataonekana hapa</p>
-              </div>
-            </div>
-          </div>
-        );
+        return <DealRoom userRole="seller" deals={dealRooms} />;
       case "transactions":
         return (
           <div className="p-6 text-center">
