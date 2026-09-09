@@ -34,9 +34,8 @@ export default function WaitlistPage() {
     setError("");
     setLoading(true);
     try {
-      // TODO: unganisha na backend halisi ya waitlist, mfano:
-      // await apiPost("/waitlist/join", { email });
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+      // TODO: unganisha na backend halisi ya waitlist
+      await new Promise(resolve => setTimeout(resolve, 1500));
       setSubmitted(true);
     } catch (err) {
       setError(t("waitlist_error_default") || "Something went wrong. Please try again.");
@@ -128,10 +127,10 @@ export default function WaitlistPage() {
                 </div>
 
                 <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">
-                  {t("waitlist_heading") || "App Inakuja Hivi Karibuni"}
+                  {t("waitlist_form_heading") || "Jiunge na Waitlist"}
                 </h1>
                 <p className="text-gray-500 text-sm mb-7 text-center">
-                  {t("waitlist_subtext") || "Jiunge na waitlist yetu ili uwe wa kwanza kujua app ya SokoMkononi itakapopatikana."}
+                  {t("waitlist_form_subtext") || "Weka barua pepe yako ili upate taarifa za app."}
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -162,7 +161,7 @@ export default function WaitlistPage() {
                     disabled={loading}
                     className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {loading ? t("waitlist_submitting") || "Inajiunga..." : t("waitlist_submit") || "Jiunge na Waitlist"}
+                    {loading ? t("waitlist_submitting") || "Inajiunga..." : t("waitlist_submit") || "Jiunge"}
                   </button>
                 </form>
 
