@@ -6,12 +6,16 @@ const translations = {
   sw: {
     // Navbar
     nav_login: "Ingia",
+    nav_login_register: "Ingia/Jisajili",
     nav_home: "Nyumbani",
     nav_saved: "Zilizohifadhiwa",
     nav_sell: "Uza",
     nav_messages: "Ujumbe",
     nav_profile: "Wasifu",
-    
+    nav_search_placeholder: "Tafuta mali...",
+    nav_search_cancel: "Ghairi",
+    lang_prompt: "Je, unapendelea lugha gani?",
+
     // Hero
     hero_headline: "Nunua na Uza Mali kwa Urahisi",
     hero_subtext: "SokoMkononi ni jukwaa salama la kununua na kuuza nyumba, magari, viwanja na mali nyingine.",
@@ -19,13 +23,22 @@ const translations = {
     cta_sell: "Uza Bidhaa",
     hero_app_teaser: "⬇ Pakua App yetu",
 
+    // Trending Properties
+    trending_heading: "Mali Zinazotrendi",
+    trending_view_all: "Tazama Zote →",
+
     // Categories
     categories_heading: "Kategoria Maarufu",
+    categories_view_all: "Tazama Yote →",
     cat_nyumba: "Nyumba",
     cat_viwanja: "Viwanja",
     cat_magari: "Magari",
     cat_biashara: "Biashara",
     cat_mashine: "Mashine",
+    cat_pikipiki: "Pikipiki",
+    cat_mabasi: "Mabasi",
+    cat_samani: "Samani",
+    cat_electronics: "Vifaa vya Elektroniki",
     cat_count_suffix: "+",
 
     // Stats
@@ -183,13 +196,17 @@ const translations = {
   en: {
     // Navbar
     nav_login: "Login",
+    nav_login_register: "Login/Register",
     nav_post_ad: "Post Ad",
     nav_home: "Home",
     nav_saved: "Saved",
     nav_sell: "Sell",
     nav_messages: "Messages",
     nav_profile: "Profile",
-    
+    nav_search_placeholder: "Search properties...",
+    nav_search_cancel: "Cancel",
+    lang_prompt: "Which language do you prefer?",
+
     // Hero
     hero_eyebrow: "Digital Property Marketplace",
     hero_headline: "Buy and Sell Property Easily",
@@ -198,13 +215,22 @@ const translations = {
     cta_sell: "Sell Item",
     hero_app_teaser: "⬇ Download Our App",
 
+    // Trending Properties
+    trending_heading: "Trending Properties",
+    trending_view_all: "View All →",
+
     // Categories
     categories_heading: "Popular Categories",
+    categories_view_all: "View All →",
     cat_nyumba: "Houses",
     cat_viwanja: "Land",
     cat_magari: "Cars",
     cat_biashara: "Business",
     cat_mashine: "Machinery",
+    cat_pikipiki: "Motorcycles",
+    cat_mabasi: "Buses",
+    cat_samani: "Furniture",
+    cat_electronics: "Electronics",
     cat_count_suffix: "+",
 
     // Stats
