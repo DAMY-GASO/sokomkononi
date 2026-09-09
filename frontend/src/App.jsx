@@ -10,7 +10,7 @@ import SafetyPage from "./pages/SafetyPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
-import ForgotPasswordPage from "./pages/auth/Forgotpasswordpage.jsx"; 
+import Forgotpasswordpage from "./pages/auth/Forgotpasswordpage.jsx"; 
 import "./index.css";
 
 function CategoryIcon({ type }) {
