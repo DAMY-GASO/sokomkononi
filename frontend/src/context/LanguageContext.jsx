@@ -207,12 +207,21 @@ const translations = {
     forgot_success_subtext: "Nenosiri lako jipya limehifadhiwa kwa mafanikio. Sasa unaweza kuingia kwenye akaunti yako kwa nenosiri hilo jipya.",
     forgot_go_to_login: "Ingia Sasa",
 
-    // Waitlist (App ya simu)
+    // ============================================================
+    // WAITLIST (APP YA SIMU) - ILIYOSASISHWA
+    // ============================================================
+    // Left Panel (Brand)
+    waitlist_panel_heading: "App Inakuja Hivi Karibuni",
+    waitlist_panel_subtext: "Jiunge na waitlist yetu ili uwe wa kwanza kujua app ya SokoMkononi itakapopatikana.",
+
+    // Right Panel (Form)
     waitlist_heading: "App Inakuja Hivi Karibuni",
     waitlist_subtext: "Jiunge na waitlist yetu ili uwe wa kwanza kujua app ya SokoMkononi itakapopatikana.",
     waitlist_email_placeholder: "Barua pepe yako",
     waitlist_submit: "Jiunge na Waitlist",
+    waitlist_submitting: "Inajiunga...",
     waitlist_error_email: "Tafadhali weka barua pepe sahihi.",
+    waitlist_error_default: "Hitilafu imetokea. Tafadhali jaribu tena.",
     waitlist_success_heading: "Umejiunga!",
     waitlist_success_subtext: "Tutakutumia ujumbe pindi app itakapokuwa tayari kupakuliwa.",
     waitlist_back_home: "← Rudi Nyumbani",
@@ -460,12 +469,21 @@ const translations = {
     forgot_success_subtext: "Your new password has been saved successfully. You can now log in to your account using your new password.",
     forgot_go_to_login: "Login Now",
 
-    // Waitlist (Mobile app)
+    // ============================================================
+    // WAITLIST (MOBILE APP) - UPDATED
+    // ============================================================
+    // Left Panel (Brand)
+    waitlist_panel_heading: "The App Is Coming Soon",
+    waitlist_panel_subtext: "Join our waitlist to be the first to know when the SokoMkononi app is available.",
+
+    // Right Panel (Form)
     waitlist_heading: "The App Is Coming Soon",
     waitlist_subtext: "Join our waitlist to be the first to know when the SokoMkononi app is available.",
     waitlist_email_placeholder: "Your email",
     waitlist_submit: "Join Waitlist",
+    waitlist_submitting: "Joining...",
     waitlist_error_email: "Please enter a valid email.",
+    waitlist_error_default: "Something went wrong. Please try again.",
     waitlist_success_heading: "You're In!",
     waitlist_success_subtext: "We'll notify you as soon as the app is ready to download.",
     waitlist_back_home: "← Back to Home",
