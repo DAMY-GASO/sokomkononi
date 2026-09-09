@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useLanguage } from "../context/LanguageContext.jsx";
 
 const icons = {
   home: (
@@ -34,6 +35,7 @@ const icons = {
 export default function BottomNav() {
   const location = useLocation();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const isActive = (path) => {
     if (path === "/") return location.pathname === "/";
@@ -47,29 +49,29 @@ export default function BottomNav() {
     <nav className="bottom-nav">
       <Link to="/" className={`nav-item ${isActive("/") ? "active" : ""}`}>
         {icons.home}
-        <span>Home</span>
+        <span>{t("nav_home")}</span>
       </Link>
 
       <Link to={authLink("/saved")} className={`nav-item ${isActive("/saved") ? "active" : ""}`}>
         {icons.saved}
-        <span>Saved</span>
+        <span>{t("nav_saved")}</span>
       </Link>
 
       <Link to="/register?intent=sell" className="nav-item sell-btn">
         {icons.sell}
-        <span>Sell</span>
+        <span>{t("nav_sell")}</span>
       </Link>
 
       <Link to={authLink("/messages")} className={`nav-item ${isActive("/messages") ? "active" : ""}`}>
         <span className="relative">
           {icons.messages}
         </span>
-        <span>Messages</span>
+        <span>{t("nav_messages")}</span>
       </Link>
 
       <Link to={authLink("/profile")} className={`nav-item ${isActive("/profile") ? "active" : ""}`}>
         {icons.profile}
-        <span>Profile</span>
+        <span>{t("nav_profile")}</span>
       </Link>
     </nav>
   );
