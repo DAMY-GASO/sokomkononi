@@ -35,7 +35,7 @@ export default function WaitlistPage() {
           </svg>
           <span className="text-left leading-tight">
             <span className="block text-[9px] text-white/60">
-              {t("waitlist_get_it_on") || "GET IT ON"}
+              {"GET IT ON"}
             </span>
             <span className="block text-sm font-semibold text-white">Google Play</span>
           </span>
@@ -50,7 +50,7 @@ export default function WaitlistPage() {
           </svg>
           <span className="text-left leading-tight">
             <span className="block text-[9px] text-white/60">
-              {t("waitlist_download_on") || "DOWNLOAD ON THE"}
+              {"DOWNLOAD ON THE"}
             </span>
             <span className="block text-sm font-semibold text-white">App Store</span>
           </span>
