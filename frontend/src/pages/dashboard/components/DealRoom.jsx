@@ -809,3 +809,5 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
     </div>
   );
 }
+export { DEAL_ROOMS };
+export default DealRoom;
