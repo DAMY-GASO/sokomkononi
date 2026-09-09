@@ -249,7 +249,7 @@ function HomePage() {
     {
       name: "Mary",
       region: "Dar es Salaam",
-      avatar: "/assets/testimonials/mary.jpg",
+      avatar: "/assets/testimonials/marry.jpg",
       quote: {
         sw: "Nilinunua nyumba yangu kwa urahisi kupitia SokoMkononi. Mchakato wote ulikuwa rahisi na salama.",
         en: "I bought my house easily through SokoMkononi. The whole process was simple and secure.",
