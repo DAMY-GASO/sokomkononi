@@ -86,9 +86,9 @@ export default function LoginPage() {
   const leftSubtext = "Jukwaa lako salama la kununua na kuuza mali nchini Tanzania.";
 
   const trustPoints = [
-    "✅ Muamala salama na wa uwazi",
-    "✅ Wauzaji na wanunuzi walioidhinishwa",
-    "✅ Msaada wa haraka na wa kuaminika"
+    " Muamala salama na wa uwazi",
+    " Wauzaji na wanunuzi walioidhinishwa",
+    " Msaada wa haraka na wa kuaminika"
   ];
 
   // ============================================
