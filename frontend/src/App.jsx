@@ -841,7 +841,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/Forgotpassword" element={<ForgotPasswordPage />} />
+            <Route path="/forgot-password" element={<Forgotpasswordpage />} />
             <Route path="/waitlist" element={<WaitlistPage />} />
             <Route path="/kuhusu" element={<AboutPage />} />
             <Route path="/usalama" element={<SafetyPage />} />
