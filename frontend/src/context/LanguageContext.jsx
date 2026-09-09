@@ -123,6 +123,7 @@ const translations = {
     register_heading_sell: "Jisajili Kuuza Mali",
     register_subtext_buy: "Fungua akaunti ili uanze kuvinjari na kuwasiliana na wauzaji.",
     register_subtext_sell: "Fungua akaunti ili uweke tangazo lako la kwanza la mali.",
+    register_subtext_default: "Fungua akaunti yako bure ndani ya dakika chache.",
 
     // Auth - Register OTP step
     register_otp_heading: "Thibitisha Barua Pepe",
@@ -145,6 +146,17 @@ const translations = {
     login_error_default: "Barua pepe/namba au nenosiri si sahihi.",
     login_no_account: "Huna akaunti?",
     login_register_link: "Jisajili",
+
+    // Auth - Login panel (jopo la kushoto kwenye desktop)
+    login_panel_heading: "Karibu Tena",
+    login_panel_subtext: "Ingia ili kuendelea kuvinjari, kuuza, na kudhibiti akaunti yako.",
+    login_trust1: "Akaunti zilizothibitishwa",
+    login_trust2: "Malipo salama",
+    login_trust3: "Msaada wa haraka",
+
+    // Auth - Legal footnote (Register/Login)
+    auth_legal_prefix: "Kwa kuendelea, unakubaliana na",
+    auth_legal_and: "na",
 
     // Waitlist (App ya simu)
     waitlist_heading: "App Inakuja Hivi Karibuni",
@@ -315,6 +327,7 @@ const translations = {
     register_heading_sell: "Sign Up to Sell Property",
     register_subtext_buy: "Create an account to start browsing and contacting sellers.",
     register_subtext_sell: "Create an account to post your first property listing.",
+    register_subtext_default: "Create your free account in just a few minutes.",
 
     // Auth - Register OTP step
     register_otp_heading: "Verify Your Email",
@@ -337,6 +350,17 @@ const translations = {
     login_error_default: "Incorrect email/phone or password.",
     login_no_account: "Don't have an account?",
     login_register_link: "Register",
+
+    // Auth - Login panel (left panel on desktop)
+    login_panel_heading: "Welcome Back",
+    login_panel_subtext: "Login to keep browsing, selling, and managing your account.",
+    login_trust1: "Verified accounts",
+    login_trust2: "Secure payments",
+    login_trust3: "Fast support",
+
+    // Auth - Legal footnote (Register/Login)
+    auth_legal_prefix: "By continuing, you agree to our",
+    auth_legal_and: "and",
 
     // Waitlist (Mobile app)
     waitlist_heading: "The App Is Coming Soon",
