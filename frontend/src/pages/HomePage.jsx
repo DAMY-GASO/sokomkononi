@@ -135,12 +135,12 @@ export default function HomePage() {
     sessionStorage.setItem("app_toast_dismissed", "1");
     setTimeout(() => setAppToastShouldRender(false), 300);
   }
-
-  // Trust Links - Usalama imeondolewa, sasa ni Matangazo kwenye Navbar
-  const trustLinks = [
-    { to: "/kuhusu", label: { sw: "Kuhusu Sisi", en: "About Us" } },
-    { to: "/mawasiliano", label: { sw: "Mawasiliano", en: "Contact" } },
-  ];
+  <Navbar 
+  lang={lang} 
+  setLang={setLang} 
+  categories={categories}
+  // trustLinks imeondolewa - inatumia default
+/>
 
   const categories = [
     { name: { sw: "Nyumba", en: "Houses" }, slug: "nyumba", count: "3,200+", icon: "house", img: "/assets/categories/nyumba.jpg" },
