@@ -10,6 +10,8 @@ import ForgotpasswordPage from "./pages/Auth/ForgotpasswordPage.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
+import SellerDashboard from "./pages/Dashboard/SellerDashboard.jsx";
+import BuyerDashboard from "./pages/Dashboard/BuyerDashboard.jsx";
 
 function App() {
   return (
