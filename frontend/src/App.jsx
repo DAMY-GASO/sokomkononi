@@ -539,10 +539,10 @@ function HomePage() {
           </p>
           <div className="flex flex-wrap gap-3 justify-center mt-6">
             <Link to="/register?intent=buy" className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold px-6 py-3 rounded-md transition-colors">
-              {lang === "sw" ? "Uza Sasa" : "Sell Now"}
+              {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
             </Link>
             <Link to="/register?intent=sell" className="bg-[#2F6D4F] hover:bg-[#245a41] text-white font-semibold px-6 py-3 rounded-md transition-colors">
-              {lang === "sw" ? "Nunua Mali" : "buy Property"}
+              {lang === "sw" ? "Uza Sasa" : "Sell Now"}
             </Link>
           </div>
 
