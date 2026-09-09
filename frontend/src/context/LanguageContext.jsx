@@ -237,6 +237,25 @@ const translations = {
     about_value3_title: "Ubunifu",
     about_value3_body: "Tunatumia teknolojia kurahisisha mchakato mzima wa kununua na kuuza mali.",
 
+    // admin login
+admin_panel_heading: "Dhibiti SokoMkononi",
+admin_panel_subtext: "Ingia kwenye paneli ya msimamizi ili kudhibiti mali, wateja na matangazo.",
+admin_feature1: "Dhibiti mali zote",
+admin_feature2: "Simamia wateja na wauzaji",
+admin_feature3: "Thibitisha matangazo",
+admin_feature4: "Angalia taarifa za mauzo",
+admin_login_heading: "Ingia kama Msimamizi",
+admin_login_subtext: "Ingiza barua pepe na nenosiri lako la msimamizi.",
+admin_login_email: "Barua pepe",
+admin_login_password: "Nenosiri",
+admin_login_submit: "Ingia kama Msimamizi",
+admin_login_submitting: "Inaingia...",
+admin_login_error_required: "Tafadhali jaza sehemu zote.",
+admin_login_error_default: "Barua pepe au nenosiri si sahihi.",
+admin_secure_access: "Mwamini Msimamizi tu ndiye anayepata mamlaka ya kuingia.",
+admin_back_to_user_login: "← Rudi kwenye Ingia la Mtumiaji",
+
+    
     // Safety Page
     safety_heading: "Usalama Wako ni Kipaumbele Chetu",
     safety_subtext: "Vidokezo na hatua tunazochukua kuhakikisha muamala wako ni salama.",
@@ -336,6 +355,24 @@ const translations = {
     badge_download_on: "Download on",
     badge_app_store: "App Store",
 
+// admin login
+admin_panel_heading: "Manage SokoMkononi",
+admin_panel_subtext: "Login to the admin panel to manage properties, customers and ads.",
+admin_feature1: "Manage all properties",
+admin_feature2: "Manage customers and sellers",
+admin_feature3: "Verify listings",
+admin_feature4: "View sales reports",
+admin_login_heading: "Admin Login",
+admin_login_subtext: "Enter your admin email and password.",
+admin_login_email: "Email",
+admin_login_password: "Password",
+admin_login_submit: "Login as Admin",
+admin_login_submitting: "Logging in...",
+admin_login_error_required: "Please fill in all fields.",
+admin_login_error_default: "Incorrect email or password.",
+admin_secure_access: "Only authorized admins can access this panel.",
+admin_back_to_user_login: "← Back to User Login",
+    
     // FAQ
     faq_heading: "Frequently Asked Questions",
     faq_q1: "Is SokoMkononi safe?",
