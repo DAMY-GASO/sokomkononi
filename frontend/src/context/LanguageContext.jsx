@@ -19,8 +19,8 @@ const translations = {
     // Hero
     hero_headline: "Nunua na Uza Mali kwa Urahisi",
     hero_subtext: "SokoMkononi ni jukwaa salama la kununua na kuuza nyumba, magari, viwanja na mali nyingine.",
-    cta_buy: "Uza Sasa",
-    cta_sell: "Nunua Mali",
+    cta_buy: "Nunua Sasa",
+    cta_sell: "Uza sas",
     hero_app_teaser: "⬇ Pakua App yetu",
 
     // Trending Properties
