@@ -207,15 +207,15 @@ function HomePage() {
   // Mali zinazotrendi — weka picha zako ndani ya /assets/trending/ kwa
   // majina haya haya. Badilisha jina/mkoa/bei kadri mali halisi zinavyoongezwa.
   const trendingProperties = [
-    { title: "Nyumba ya Vyumba 3, Mbezi", region: "Dar es Salaam", price: "TSh 35,000,000", img: "/assets/trending/dar-es-salaam.jpg" },
-    { title: "Gari Ndogo la Mjini, Njiro", region: "Arusha", price: "TSh 12,500,000", img: "/assets/trending/arusha.jpg" },
-    { title: "Pikipiki ya Boxer, Ilemela", region: "Mwanza", price: "TSh 2,800,000", img: "/assets/trending/mwanza.jpg" },
-    { title: "Basi la Abiria, Area D", region: "Dodoma", price: "TSh 95,000,000", img: "/assets/trending/dodoma.jpg" },
-    { title: "Trekta la Kilimo, Iyunga", region: "Mbeya", price: "TSh 68,000,000", img: "/assets/trending/mbeya.jpg" },
-    { title: "Kabati la Sebule, Kiembesamaki", region: "Zanzibar", price: "TSh 1,450,000", img: "/assets/trending/zanzibar.jpg" },
-    { title: "Shamba Tayari kwa Kilimo, Kilosa", region: "Morogoro", price: "TSh 15,000,000", img: "/assets/trending/morogoro.jpg" },
-    { title: "Shamba la Kilimo, Ismani", region: "Iringa", price: "TSh 18,500,000", img: "/assets/trending/iringa.jpg" },
-    { title: "Mbuzi wa Kienyeji, Ilongero", region: "Singida", price: "TSh 150,000", img: "/assets/trending/singida.jpg" },
+    { title: "Nyumba ya Vyumba 3, Mbezi", region: "Dar es Salaam", price: "TSh 35,000,000", img: "/assets/trendings/dar-es-salaam.jpg" },
+    { title: "Gari Ndogo la Mjini, Njiro", region: "Arusha", price: "TSh 12,500,000", img: "/assets/trendings/arusha.jpg" },
+    { title: "Pikipiki ya Boxer, Ilemela", region: "Mwanza", price: "TSh 2,800,000", img: "/assets/trendings/mwanza.jpg" },
+    { title: "Basi la Abiria, Area D", region: "Dodoma", price: "TSh 95,000,000", img: "/assets/trendings/dodoma.jpg" },
+    { title: "Trekta la Kilimo, Iyunga", region: "Mbeya", price: "TSh 68,000,000", img: "/assets/trendings/mbeya.jpg" },
+    { title: "Kabati la Sebule, Kiembesamaki", region: "Zanzibar", price: "TSh 450,000", img: "/assets/trendings/zanzibar.jpg" },
+    { title: "Shamba Tayari kwa Kilimo, Kilosa", region: "Morogoro", price: "TSh 1,500,000", img: "/assets/trendings/morogoro.jpg" },
+    { title: "Shamba la Kilimo, Ismani", region: "Iringa", price: "TSh 8,500,000", img: "/assets/trendings/iringa.jpg" },
+    { title: "Mbuzi wa Kienyeji, Ilongero", region: "Singida", price: "TSh 120,000", img: "/assets/trendings/singida.jpg" },
   ];
 
   // Placeholder pia — badilisha na picha halisi za wateja wenye ushuhuda.
