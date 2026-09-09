@@ -105,7 +105,7 @@ const translations = {
     footer_payments_label: "Malipo yanakubaliwa:",
 
     // ============================================================
-    // AUTH - REGISTER (ILIYOREKEBISHWA)
+    // AUTH - REGISTER
     // ============================================================
     // Left Panel (Brand)
     register_panel_heading_buy: "Nunua Mali kwa Urahisi",
@@ -123,7 +123,7 @@ const translations = {
     register_form_subtext_sell: "Jaza taarifa zako ili uanze kuuza mali yako.",
     register_form_subtext_default: "Und akaunti yako kwa sekunde chache.",
 
-    // Register Fields (zilizopo)
+    // Register Fields
     register_name_placeholder: "Jina lako kamili",
     register_email_placeholder: "Barua pepe",
     register_phone_placeholder: "Namba ya simu",
@@ -141,7 +141,7 @@ const translations = {
     register_have_account: "Una akaunti tayari?",
     register_login_link: "Ingia",
 
-    // Register OTP (zilizopo)
+    // Register OTP
     register_otp_heading: "Thibitisha Barua Pepe",
     register_otp_subtext: "Tumetuma msimbo wa tarakimu kwenye:",
     register_verifying: "Inathibitisha...",
@@ -152,7 +152,7 @@ const translations = {
     register_error_otp_invalid: "Msimbo si sahihi au umeisha muda wake. Jaribu tena.",
 
     // ============================================================
-    // AUTH - LOGIN (ILIYOREKEBISHWA)
+    // AUTH - LOGIN
     // ============================================================
     // Left Panel (Brand)
     login_panel_heading: "Karibu SokoMkononi",
@@ -174,12 +174,8 @@ const translations = {
     login_no_account: "Huna akaunti?",
     login_register_link: "Jisajili",
 
-    // Auth - Legal footnote (Register/Login)
-    auth_legal_prefix: "Kwa kuendelea, unakubaliana na",
-    auth_legal_and: "na",
-
     // ============================================================
-    // AUTH - FORGOT PASSWORD (zilizopo)
+    // AUTH - FORGOT PASSWORD
     // ============================================================
     forgot_panel_heading: "Weka Nenosiri Jipya",
     forgot_panel_subtext: "Tunakusaidia kurejesha akaunti yako kwa haraka na kwa usalama.",
@@ -208,23 +204,27 @@ const translations = {
     forgot_go_to_login: "Ingia Sasa",
 
     // ============================================================
-    // WAITLIST (APP YA SIMU) - ILIYOSASISHWA
+    // WAITLIST (APP YA SIMU) - ILIYOSASISHWA KABISA
     // ============================================================
     // Left Panel (Brand)
     waitlist_panel_heading: "App Inakuja Hivi Karibuni",
     waitlist_panel_subtext: "Jiunge na waitlist yetu ili uwe wa kwanza kujua app ya SokoMkononi itakapopatikana.",
 
     // Right Panel (Form)
-    waitlist_heading: "App Inakuja Hivi Karibuni",
-    waitlist_subtext: "Jiunge na waitlist yetu ili uwe wa kwanza kujua app ya SokoMkononi itakapopatikana.",
+    waitlist_form_heading: "Jiunge na Waitlist",
+    waitlist_form_subtext: "Weka barua pepe yako ili upate taarifa za app.",
     waitlist_email_placeholder: "Barua pepe yako",
-    waitlist_submit: "Jiunge na Waitlist",
+    waitlist_submit: "Jiunge",
     waitlist_submitting: "Inajiunga...",
     waitlist_error_email: "Tafadhali weka barua pepe sahihi.",
     waitlist_error_default: "Hitilafu imetokea. Tafadhali jaribu tena.",
     waitlist_success_heading: "Umejiunga!",
     waitlist_success_subtext: "Tutakutumia ujumbe pindi app itakapokuwa tayari kupakuliwa.",
     waitlist_back_home: "← Rudi Nyumbani",
+
+    // Auth - Legal footnote (Register/Login)
+    auth_legal_prefix: "Kwa kuendelea, unakubaliana na",
+    auth_legal_and: "na",
 
     // About Page
     about_heading: "Kuhusu SokoMkononi",
@@ -367,7 +367,7 @@ const translations = {
     footer_payments_label: "Payments accepted:",
 
     // ============================================================
-    // AUTH - REGISTER (UPDATED)
+    // AUTH - REGISTER
     // ============================================================
     // Left Panel (Brand)
     register_panel_heading_buy: "Buy Property Easily",
@@ -385,7 +385,7 @@ const translations = {
     register_form_subtext_sell: "Fill in your details to start selling your property.",
     register_form_subtext_default: "Create your account in a few seconds.",
 
-    // Register Fields (existing)
+    // Register Fields
     register_name_placeholder: "Full name",
     register_email_placeholder: "Email address",
     register_phone_placeholder: "Phone number",
@@ -403,7 +403,7 @@ const translations = {
     register_have_account: "Already have an account?",
     register_login_link: "Login",
 
-    // Register OTP (existing)
+    // Register OTP
     register_otp_heading: "Verify Your Email",
     register_otp_subtext: "We've sent a verification code to:",
     register_verifying: "Verifying...",
@@ -414,7 +414,7 @@ const translations = {
     register_error_otp_invalid: "Invalid or expired code. Please try again.",
 
     // ============================================================
-    // AUTH - LOGIN (UPDATED)
+    // AUTH - LOGIN
     // ============================================================
     // Left Panel (Brand)
     login_panel_heading: "Welcome to SokoMkononi",
@@ -436,12 +436,8 @@ const translations = {
     login_no_account: "Don't have an account?",
     login_register_link: "Register",
 
-    // Auth - Legal footnote (Register/Login)
-    auth_legal_prefix: "By continuing, you agree to our",
-    auth_legal_and: "and",
-
     // ============================================================
-    // AUTH - FORGOT PASSWORD (existing)
+    // AUTH - FORGOT PASSWORD
     // ============================================================
     forgot_panel_heading: "Set a New Password",
     forgot_panel_subtext: "We'll help you get back into your account quickly and safely.",
@@ -470,23 +466,27 @@ const translations = {
     forgot_go_to_login: "Login Now",
 
     // ============================================================
-    // WAITLIST (MOBILE APP) - UPDATED
+    // WAITLIST (MOBILE APP) - FULLY UPDATED
     // ============================================================
     // Left Panel (Brand)
     waitlist_panel_heading: "The App Is Coming Soon",
     waitlist_panel_subtext: "Join our waitlist to be the first to know when the SokoMkononi app is available.",
 
     // Right Panel (Form)
-    waitlist_heading: "The App Is Coming Soon",
-    waitlist_subtext: "Join our waitlist to be the first to know when the SokoMkononi app is available.",
+    waitlist_form_heading: "Join the Waitlist",
+    waitlist_form_subtext: "Enter your email to get notified about the app.",
     waitlist_email_placeholder: "Your email",
-    waitlist_submit: "Join Waitlist",
+    waitlist_submit: "Join",
     waitlist_submitting: "Joining...",
     waitlist_error_email: "Please enter a valid email.",
     waitlist_error_default: "Something went wrong. Please try again.",
     waitlist_success_heading: "You're In!",
     waitlist_success_subtext: "We'll notify you as soon as the app is ready to download.",
     waitlist_back_home: "← Back to Home",
+
+    // Auth - Legal footnote (Register/Login)
+    auth_legal_prefix: "By continuing, you agree to our",
+    auth_legal_and: "and",
 
     // About Page
     about_heading: "About SokoMkononi",
