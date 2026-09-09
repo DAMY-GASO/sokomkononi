@@ -145,13 +145,6 @@ function HomePage() {
         en: "Click the 'Sell' button and fill in your property details. Our team will review and list it.",
       },
     },
-    {
-      q: { sw: "Je, kuna ada ya matumizi?", en: "Are there any fees?" },
-      a: {
-        sw: "SokoMkononi inatoza ada ndogo baada ya mauzo kukamilika. Hakuna malipo ya awali.",
-        en: "SokoMkononi charges a small fee after a sale is completed. No upfront payments.",
-      },
-    },
   ];
 
   // Placeholder pia — badilisha na picha halisi za mali zilizowekwa na wauzaji
@@ -584,7 +577,7 @@ function HomePage() {
               </div>
               <div className="p-4">
                 <h3 className="font-semibold text-gray-800 text-sm truncate">Nyumba ya Vyumba 3, Mbezi</h3>
-                <p className="text-[#E8A33D] font-bold text-lg">TSh 85,000,000</p>
+                <p className="text-[#E8A33D] font-bold text-lg">TSh 35,000,000</p>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-gray-500 text-xs">📍 Dar es Salaam</span>
                   <span className="text-green-600 text-xs font-medium">● Available</span>
@@ -628,7 +621,7 @@ function HomePage() {
       {/* ============================================================ */}
       <section className="py-16 px-4 max-w-6xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
-          {selectedLang === "sw" ? "Wanachosema Wadau Wetu" : "What Our Customers Say"}
+          {selectedLang === "sw" ? "Wanachosema Wadau Wetu" : "What Our Contributors Say"}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="bg-[#F5F3EC] rounded-xl p-6">
