@@ -19,7 +19,7 @@ export default function Footer({ selectedLang = "sw" }) {
               : "Do business more easily wherever you are — get deal notifications, search properties, and communicate with Agents/Customers directly from your phone."}
           </p>
           <div className="flex flex-wrap gap-3 justify-center mt-4">
-            <Link to="/app" className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors">
+            <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors">
               <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0" aria-hidden="true">
                 <path
                   d="M4.5 3.5c-.3.3-.5.7-.5 1.2v14.6c0 .5.2.9.5 1.2l.1.1L13 12.1v-.2L4.6 3.4l-.1.1z"
@@ -43,7 +43,7 @@ export default function Footer({ selectedLang = "sw" }) {
                 <span className="block font-semibold text-white text-sm">Google Play</span>
               </span>
             </Link>
-            <Link to="/app" className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors">
+            <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors">
               <svg viewBox="0 0 384 512" className="w-6 h-6 shrink-0 fill-white" aria-hidden="true">
                 <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.3c0 26.2 4.8 53.3 14.4 81.3 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.8zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
               </svg>
@@ -152,8 +152,7 @@ export default function Footer({ selectedLang = "sw" }) {
             {selectedLang === "sw" ? " Haki zote zimehifadhiwa." : " All rights reserved."}
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <span className="text-white/30 text-xs">{selectedLang === "sw" ? "Malipo yanayokubaliwa:" : "Payments accepted:"}</span>
+          <div className="flex flex-wrap items-center justify-center gap-3 w-full md:w-auto">
             {[
               { file: "mpesa.svg", alt: "M-Pesa" },
               { file: "halopesa.svg", alt: "HaloPesa" },
