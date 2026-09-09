@@ -9,6 +9,7 @@ import WaitlistPage from "./pages/Auth/WaitlistPage.jsx";
 import ForgotpasswordPage from "./pages/Auth/ForgotpasswordPage.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
+import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
             <Route path="/waitlist" element={<WaitlistPage />} />
             <Route path="/kuhusu" element={<AboutPage />} />
             <Route path="/mawasiliano" element={<ContactPage />} />
+            <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="*" element={<HomePage />} />
           </Routes>
         </Router>
