@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import Footer from "../components/Footer.jsx"; // Ongeza hii
 
 export default function ContactPage() {
   const { t } = useLanguage();
@@ -99,6 +100,9 @@ export default function ContactPage() {
           {t("waitlist_back_home")}
         </Link>
       </div>
+
+      {/* Ongeza Footer hapa */}
+      <Footer />
     </div>
   );
 }
