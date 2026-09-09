@@ -104,8 +104,26 @@ const translations = {
     footer_rights: "Haki zote zimehifadhiwa.",
     footer_payments_label: "Malipo yanakubaliwa:",
 
-    // Auth - Register
-    register_heading: "Fungua Akaunti",
+    // ============================================================
+    // AUTH - REGISTER (ILIYOREKEBISHWA)
+    // ============================================================
+    // Left Panel (Brand)
+    register_panel_heading_buy: "Nunua Mali kwa Urahisi",
+    register_panel_heading_sell: "Uza Mali kwa Urahisi",
+    register_panel_heading_default: "SokoMkononi",
+    register_panel_subtext_buy: "Jisajili na uanze kununua mali yako inayotakiwa leo.",
+    register_panel_subtext_sell: "Jisajili na uanze kuuza mali yako kwa wateja wengi.",
+    register_panel_subtext_default: "Jisajili sasa na upate fursa za kibiashara.",
+
+    // Right Panel (Form)
+    register_form_heading_buy: "Anza Kununua",
+    register_form_heading_sell: "Anza Kuuza",
+    register_form_heading_default: "Jiunge Nasi",
+    register_form_subtext_buy: "Jaza taarifa zako ili uanze safari ya kununua mali.",
+    register_form_subtext_sell: "Jaza taarifa zako ili uanze kuuza mali yako.",
+    register_form_subtext_default: "Und akaunti yako kwa sekunde chache.",
+
+    // Register Fields (zilizopo)
     register_name_placeholder: "Jina lako kamili",
     register_email_placeholder: "Barua pepe",
     register_phone_placeholder: "Namba ya simu",
@@ -122,13 +140,8 @@ const translations = {
     register_error_terms_required: "Tafadhali kubali Vigezo vya Matumizi na Sera ya Faragha ili kuendelea.",
     register_have_account: "Una akaunti tayari?",
     register_login_link: "Ingia",
-    register_heading_buy: "Jisajili Kununua Mali",
-    register_heading_sell: "Jisajili Kuuza Mali",
-    register_subtext_buy: "Fungua akaunti ili uanze kuvinjari na kuwasiliana na wauzaji.",
-    register_subtext_sell: "Fungua akaunti ili uweke tangazo lako la kwanza la mali.",
-    register_subtext_default: "Fungua akaunti yako bure ndani ya dakika chache.",
 
-    // Auth - Register OTP step
+    // Register OTP (zilizopo)
     register_otp_heading: "Thibitisha Barua Pepe",
     register_otp_subtext: "Tumetuma msimbo wa tarakimu kwenye:",
     register_verifying: "Inathibitisha...",
@@ -138,8 +151,19 @@ const translations = {
     register_error_otp_required: "Tafadhali weka msimbo uliotumwa kwenye barua pepe yako.",
     register_error_otp_invalid: "Msimbo si sahihi au umeisha muda wake. Jaribu tena.",
 
-    // Auth - Login
+    // ============================================================
+    // AUTH - LOGIN (ILIYOREKEBISHWA)
+    // ============================================================
+    // Left Panel (Brand)
+    login_panel_heading: "Karibu SokoMkononi",
+    login_panel_subtext: "Jukwaa lako salama la kununua na kuuza mali nchini Tanzania.",
+    login_trust1: "Muamala salama na wa uwazi",
+    login_trust2: "Wauzaji na wanunuzi walioidhinishwa",
+    login_trust3: "Msaada wa haraka na wa kuaminika",
+
+    // Right Panel (Form)
     login_heading: "Ingia kwenye Akaunti Yako",
+    login_subtext: "Ingiza barua pepe na nenosiri lako ili uingie.",
     login_identifier_placeholder: "Barua pepe au namba ya simu",
     login_password_placeholder: "Nenosiri",
     login_forgot_password: "Umesahau nenosiri?",
@@ -150,18 +174,13 @@ const translations = {
     login_no_account: "Huna akaunti?",
     login_register_link: "Jisajili",
 
-    // Auth - Login panel (jopo la kushoto kwenye desktop)
-    login_panel_heading: "Karibu Tena",
-    login_panel_subtext: "Ingia ili kuendelea kuvinjari, kuuza, na kudhibiti akaunti yako.",
-    login_trust1: "Akaunti zilizothibitishwa",
-    login_trust2: "Malipo salama",
-    login_trust3: "Msaada wa haraka",
-
     // Auth - Legal footnote (Register/Login)
     auth_legal_prefix: "Kwa kuendelea, unakubaliana na",
     auth_legal_and: "na",
 
-    // Auth - Forgot Password
+    // ============================================================
+    // AUTH - FORGOT PASSWORD (zilizopo)
+    // ============================================================
     forgot_panel_heading: "Weka Nenosiri Jipya",
     forgot_panel_subtext: "Tunakusaidia kurejesha akaunti yako kwa haraka na kwa usalama.",
     forgot_heading: "Umesahau Nenosiri?",
@@ -338,8 +357,26 @@ const translations = {
     footer_rights: "All rights reserved.",
     footer_payments_label: "Payments accepted:",
 
-    // Auth - Register
-    register_heading: "Create an Account",
+    // ============================================================
+    // AUTH - REGISTER (UPDATED)
+    // ============================================================
+    // Left Panel (Brand)
+    register_panel_heading_buy: "Buy Property Easily",
+    register_panel_heading_sell: "Sell Property Easily",
+    register_panel_heading_default: "SokoMkononi",
+    register_panel_subtext_buy: "Sign up and start buying your desired property today.",
+    register_panel_subtext_sell: "Sign up and start selling your property to many customers.",
+    register_panel_subtext_default: "Sign up now and get business opportunities.",
+
+    // Right Panel (Form)
+    register_form_heading_buy: "Start Buying",
+    register_form_heading_sell: "Start Selling",
+    register_form_heading_default: "Join Us",
+    register_form_subtext_buy: "Fill in your details to start your property buying journey.",
+    register_form_subtext_sell: "Fill in your details to start selling your property.",
+    register_form_subtext_default: "Create your account in a few seconds.",
+
+    // Register Fields (existing)
     register_name_placeholder: "Full name",
     register_email_placeholder: "Email address",
     register_phone_placeholder: "Phone number",
@@ -356,13 +393,8 @@ const translations = {
     register_error_terms_required: "Please agree to the Terms of Use and Privacy Policy to continue.",
     register_have_account: "Already have an account?",
     register_login_link: "Login",
-    register_heading_buy: "Sign Up to Buy Property",
-    register_heading_sell: "Sign Up to Sell Property",
-    register_subtext_buy: "Create an account to start browsing and contacting sellers.",
-    register_subtext_sell: "Create an account to post your first property listing.",
-    register_subtext_default: "Create your free account in just a few minutes.",
 
-    // Auth - Register OTP step
+    // Register OTP (existing)
     register_otp_heading: "Verify Your Email",
     register_otp_subtext: "We've sent a verification code to:",
     register_verifying: "Verifying...",
@@ -372,8 +404,19 @@ const translations = {
     register_error_otp_required: "Please enter the code sent to your email.",
     register_error_otp_invalid: "Invalid or expired code. Please try again.",
 
-    // Auth - Login
+    // ============================================================
+    // AUTH - LOGIN (UPDATED)
+    // ============================================================
+    // Left Panel (Brand)
+    login_panel_heading: "Welcome to SokoMkononi",
+    login_panel_subtext: "Your safe platform to buy and sell property in Tanzania.",
+    login_trust1: "Safe and transparent transactions",
+    login_trust2: "Verified sellers and buyers",
+    login_trust3: "Fast and reliable support",
+
+    // Right Panel (Form)
     login_heading: "Login to Your Account",
+    login_subtext: "Enter your email and password to sign in.",
     login_identifier_placeholder: "Email or phone number",
     login_password_placeholder: "Password",
     login_forgot_password: "Forgot password?",
@@ -384,18 +427,13 @@ const translations = {
     login_no_account: "Don't have an account?",
     login_register_link: "Register",
 
-    // Auth - Login panel (left panel on desktop)
-    login_panel_heading: "Welcome Back",
-    login_panel_subtext: "Login to keep browsing, selling, and managing your account.",
-    login_trust1: "Verified accounts",
-    login_trust2: "Secure payments",
-    login_trust3: "Fast support",
-
     // Auth - Legal footnote (Register/Login)
     auth_legal_prefix: "By continuing, you agree to our",
     auth_legal_and: "and",
 
-    // Auth - Forgot Password
+    // ============================================================
+    // AUTH - FORGOT PASSWORD (existing)
+    // ============================================================
     forgot_panel_heading: "Set a New Password",
     forgot_panel_subtext: "We'll help you get back into your account quickly and safely.",
     forgot_heading: "Forgot Password?",
