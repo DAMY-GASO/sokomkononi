@@ -68,8 +68,33 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("auth_token");
   }
 
+  // Hatua ya 1 ya "umesahau nenosiri": mtumiaji ameshaandika email + nenosiri
+  // jipya. Server inahifadhi nenosiri hilo kwa muda (halijabadilishwa bado)
+  // na kutuma OTP kwenye email hiyo ili kuthibitisha ni mmiliki wa akaunti.
+  async function requestPasswordReset({ email, newPassword }) {
+    return apiPost("/auth/request-password-reset", { email, newPassword });
+  }
+
+  // Hatua ya 2: mtumiaji anathibitisha OTP aliyotumiwa, server inakamilisha
+  // mabadiliko ya nenosiri. Hatuweki session hapa kwa makusudi — baada ya
+  // kufanikiwa, mtumiaji anaelekezwa kuingia upya na nenosiri lake jipya.
+  async function confirmPasswordReset(email, otp) {
+    return apiPost("/auth/confirm-password-reset", { email, otp });
+  }
+
   return (
-    <AuthContext.Provider value={{ user, sendOtp, verifyOtp, register, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        sendOtp,
+        verifyOtp,
+        register,
+        login,
+        logout,
+        requestPasswordReset,
+        confirmPasswordReset,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
