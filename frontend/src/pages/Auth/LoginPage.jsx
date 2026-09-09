@@ -79,23 +79,12 @@ export default function LoginPage() {
     }
   }
 
-  // ============================================
-  // MAANDISHI YA UPANDE WA KUSHOTO (LEFT PANEL)
-  // ============================================
-  const leftHeading = "Karibu SokoMkononi";
-  const leftSubtext = "Jukwaa lako salama la kununua na kuuza mali nchini Tanzania.";
-
+  // Trust points - sasa zinatumia t() function
   const trustPoints = [
-    " Muamala salama na wa uwazi",
-    " Wauzaji na wanunuzi walioidhinishwa",
-    " Msaada wa haraka na wa kuaminika"
+    t("login_trust1"),
+    t("login_trust2"),
+    t("login_trust3")
   ];
-
-  // ============================================
-  // MAANDISHI YA UPANDE WA KULIA (RIGHT PANEL - FORM)
-  // ============================================
-  const formHeading = "Ingia kwenye Akaunti Yako";
-  const formSubtext = "Ingiza barua pepe na nenosiri lako ili uingie.";
 
   return (
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
@@ -108,8 +97,8 @@ export default function LoginPage() {
           </Link>
 
           <div className="relative z-10 max-w-sm mx-auto text-center py-8 md:py-0">
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">{leftHeading}</h2>
-            <p className="text-white/60 text-sm mt-3 leading-relaxed">{leftSubtext}</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">{t("login_panel_heading")}</h2>
+            <p className="text-white/60 text-sm mt-3 leading-relaxed">{t("login_panel_subtext")}</p>
 
             <ul className="mt-8 space-y-3 inline-flex flex-col items-start mx-auto">
               {trustPoints.map((point, i) => (
@@ -129,8 +118,8 @@ export default function LoginPage() {
         {/* ================= RIGHT PANEL - Form ================= */}
         <div className="flex items-center justify-center px-5 sm:px-10 py-10 md:py-12 bg-white">
           <div className="w-full max-w-sm">
-            <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{formHeading}</h1>
-            <p className="text-gray-500 text-sm mb-7 text-center">{formSubtext}</p>
+            <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{t("login_heading")}</h1>
+            <p className="text-gray-500 text-sm mb-7 text-center">{t("login_subtext")}</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
