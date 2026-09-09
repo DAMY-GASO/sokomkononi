@@ -86,7 +86,6 @@ export default function Footer({ selectedLang = "sw" }) {
               <li><Link to="/kategoria" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Kategoria za Bidhaa" : "Product Categories"}</Link></li>
               <li><Link to="/kuhusu" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Kuhusu Mfumo" : "About System"}</Link></li>
               <li><Link to="/bidhaa" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Bidhaa Zilizoorodheshwa" : "Listed Products"}</Link></li>
-              <li><Link to="/testimonials" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Watu Wanasema Nini" : "What People Say"}</Link></li>
             </ul>
           </div>
 
