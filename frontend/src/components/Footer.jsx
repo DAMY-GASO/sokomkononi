@@ -83,9 +83,12 @@ export default function Footer({ selectedLang = "sw" }) {
             </h3>
             <ul className="space-y-2.5">
               <li><Link to="/" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Nyumbani" : "Home"}</Link></li>
-              <li><Link to="/kategoria" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Kategoria za Bidhaa" : "Product Categories"}</Link></li>
+              {/* Kategoria - inaelekeza HomePage sehemu ya kategoria */}
+              <li><Link to="/#kategoria" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Kategoria za Bidhaa" : "Product Categories"}</Link></li>
+              {/* Kuhusu Mfumo - inaelekeza AboutPage */}
               <li><Link to="/kuhusu" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Kuhusu Mfumo" : "About System"}</Link></li>
-              <li><Link to="/matangazo" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Matangazo" : "Ads"}</Link></li>
+              {/* Matangazo - inaelekeza HomePage sehemu ya matangazo yanayotrend */}
+              <li><Link to="/#matangazo" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Matangazo" : "Ads"}</Link></li>
             </ul>
           </div>
 
@@ -95,8 +98,11 @@ export default function Footer({ selectedLang = "sw" }) {
               {selectedLang === "sw" ? "MSAADA" : "SUPPORT"}
             </h3>
             <ul className="space-y-2.5">
-              <li><Link to="/faq" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Maswali" : "FAQ"}</Link></li>
+              {/* Maswali - inaelekeza HomePage sehemu ya FAQ */}
+              <li><Link to="/#faq" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Maswali" : "FAQ"}</Link></li>
+              {/* Wasiliana Nasi - inaelekeza ContactPage */}
               <li><Link to="/mawasiliano" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Wasiliana Nasi" : "Contact Us"}</Link></li>
+              {/* Waitlist - inaelekeza WaitlistPage */}
               <li><Link to="/waitlist" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Waitlist ya App" : "App Waitlist"}</Link></li>
             </ul>
           </div>
@@ -109,7 +115,8 @@ export default function Footer({ selectedLang = "sw" }) {
             <ul className="space-y-2.5">
               <li><Link to="/sheria" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Sheria na Masharti" : "Terms & Conditions"}</Link></li>
               <li><Link to="/faragha" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Sera ya Faragha" : "Privacy Policy"}</Link></li>
-              <li><Link to="/usalama" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Usalama" : "Safety"}</Link></li>
+              {/* Usalama - inaelekeza AboutPage (kwa kuwa imeunganishwa) */}
+              <li><Link to="/kuhusu#usalama" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Usalama" : "Safety"}</Link></li>
             </ul>
           </div>
 
