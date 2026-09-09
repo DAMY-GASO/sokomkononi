@@ -27,10 +27,20 @@ const icons = {
       <path d="M8 10V7a4 4 0 0 1 8 0v3" />
     </svg>
   ),
+  eye: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
+  eyeOff: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <path d="M1 1l22 22" />
+    </svg>
+  ),
 };
 
-// Muundo wa mafanikio: skyline ya kufikirika inayowakilisha "mali" —
-// nyumba/viwanja/majengo — badala ya mfumo wa jumla wa gradient.
 function SkylineDecoration() {
   return (
     <svg viewBox="0 0 400 200" className="absolute bottom-0 left-0 w-full h-40 opacity-[0.18]" preserveAspectRatio="none">
@@ -48,37 +58,46 @@ function SkylineDecoration() {
 }
 
 function FieldInput({ icon, type = "text", value, onChange, label, inputMode, required }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === "password";
+  
   return (
     <div>
       <label className="block text-xs font-semibold text-gray-600 mb-1.5">{label}</label>
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">{icon}</span>
         <input
-          type={type}
+          type={isPassword && showPassword ? "text" : type}
           inputMode={inputMode}
           required={required}
-          className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+          className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
           value={value}
           onChange={onChange}
         />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? icons.eye : icons.eyeOff}
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 export default function RegisterPage() {
-  // NOTE: assumes useAuth() exposes sendOtp(email) and verifyOtp(email, otp)
-  // in addition to the existing register(form). Adjust names if yours differ.
   const { sendOtp, verifyOtp, register } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // "buy" | "sell" | null — huamua heading/subtext ya fomu na ya jopo,
-  // na huhifadhiwa kwenye akaunti ili mfumo ujue nia ya awali ya mtumiaji.
   const intent = searchParams.get("intent");
 
-  const [step, setStep] = useState("form"); // "form" | "otp"
+  const [step, setStep] = useState("form");
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [otp, setOtp] = useState("");
@@ -86,16 +105,34 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  function registerHeading() {
-    if (intent === "buy") return t("register_heading_buy");
-    if (intent === "sell") return t("register_heading_sell");
-    return t("register_heading");
+  // ============================================
+  // MAANDISHI YA UPANDE WA KUSHOTO (LEFT PANEL)
+  // ============================================
+  function leftHeading() {
+    if (intent === "buy") return "Nunua Mali kwa Urahisi";
+    if (intent === "sell") return "Uza Mali kwa Urahisi";
+    return "SokoMkononi";
   }
 
-  function registerSubtext() {
-    if (intent === "buy") return t("register_subtext_buy");
-    if (intent === "sell") return t("register_subtext_sell");
-    return t("register_subtext_default");
+  function leftSubtext() {
+    if (intent === "buy") return "Jisajili na uanze kununua mali yako inayotakiwa leo.";
+    if (intent === "sell") return "Jisajili na uanze kuuza mali yako kwa wateja wengi.";
+    return "Jisajili sasa na upate fursa za kibiashara.";
+  }
+
+  // ============================================
+  // MAANDISHI YA UPANDE WA KULIA (RIGHT PANEL - FORM)
+  // ============================================
+  function formHeading() {
+    if (intent === "buy") return "Anza Kununua";
+    if (intent === "sell") return "Anza Kuuza";
+    return "Jiunge Nasi";
+  }
+
+  function formSubtext() {
+    if (intent === "buy") return "Jaza taarifa zako ili uanze safari ya kununua mali.";
+    if (intent === "sell") return "Jaza taarifa zako ili uanze kuuza mali yako.";
+    return "Und akaunti yako kwa sekunde chache.";
   }
 
   function validateForm() {
@@ -118,8 +155,6 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      // Email ndiyo kitambulisho kinachotumika kutuma na kuthibitisha OTP,
-      // kwa hiyo lazima liwe sahihi na tayari limehakikiwa na validateForm().
       await sendOtp(form.email);
       setStep("otp");
       startResendCooldown();
@@ -142,8 +177,6 @@ export default function RegisterPage() {
       await verifyOtp(form.email, otp.trim());
       const { confirmPassword, ...payload } = form;
       await register({ ...payload, intent: intent || null });
-      // Mnunuzi anapelekwa moja kwa moja dashboard; muuzaji anapelekwa
-      // sehemu ya kuweka tangazo lake la kwanza.
       navigate(intent === "sell" ? "/dashboard?next=weka-tangazo" : "/dashboard");
     } catch (err) {
       setError(err?.response?.data?.message || t("register_error_otp_invalid"));
@@ -182,7 +215,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
-        {/* ================= TOP/LEFT — Branded panel ================= */}
+        {/* ================= LEFT PANEL - Branded ================= */}
         <div className="flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
@@ -190,8 +223,8 @@ export default function RegisterPage() {
           </Link>
 
           <div className="relative z-10 max-w-sm mx-auto text-center py-8 md:py-0">
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">{registerHeading()}</h2>
-            <p className="text-white/60 text-sm mt-3 leading-relaxed">{registerSubtext()}</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">{leftHeading()}</h2>
+            <p className="text-white/60 text-sm mt-3 leading-relaxed">{leftSubtext()}</p>
 
             <div className="flex items-center justify-center gap-6 mt-8">
               <div>
@@ -219,13 +252,13 @@ export default function RegisterPage() {
           <SkylineDecoration />
         </div>
 
-        {/* ================= BOTTOM/RIGHT — Form panel ================= */}
+        {/* ================= RIGHT PANEL - Form ================= */}
         <div className="flex items-center justify-center px-5 sm:px-10 py-10 md:py-12 bg-white">
           <div className="w-full max-w-sm animate-[fadeIn_0.4s_ease-out]">
             {step === "form" && (
               <>
-                <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{registerHeading()}</h1>
-                <p className="text-gray-500 text-sm mb-7 text-center">{registerSubtext()}</p>
+                <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{formHeading()}</h1>
+                <p className="text-gray-500 text-sm mb-7 text-center">{formSubtext()}</p>
 
                 <form onSubmit={handleSendOtp} className="space-y-4">
                   <FieldInput
