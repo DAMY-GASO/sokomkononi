@@ -12,6 +12,8 @@ import { LanguageProvider } from "./context/LanguageContext.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 import SellerDashboard from "./pages/Dashboard/SellerDashboard.jsx";
 import BuyerDashboard from "./pages/Dashboard/BuyerDashboard.jsx";
+import AdminDashboard from "./pages/Dashboard/AdminDashboard.jsx";
+
 
 function App() {
   return (
@@ -30,6 +32,8 @@ function App() {
             <Route path="/dashboard/seller" element={<SellerDashboard />} />
             <Route path="/dashboard/buyer" element={<BuyerDashboard />} />
             <Route path="/dashboard" element={<SellerDashboard />} /> 
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="*" element={<HomePage />} />
           </Routes>
         </Router>
