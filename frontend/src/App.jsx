@@ -10,7 +10,7 @@ import SafetyPage from "./pages/SafetyPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
-import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage.jsx"; 
+import ForgotPasswordPage from "./pages/auth/Forgotpasswordpage.jsx"; 
 import "./index.css";
 
 function CategoryIcon({ type }) {
@@ -841,7 +841,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/Forgotpassword" element={<ForgotPasswordPage />} />
             <Route path="/waitlist" element={<WaitlistPage />} />
             <Route path="/kuhusu" element={<AboutPage />} />
             <Route path="/usalama" element={<SafetyPage />} />
