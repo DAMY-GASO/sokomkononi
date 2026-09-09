@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Footer from "../components/Footer.jsx";
-import BottomNav from "../components/BottomNav.jsx"; // Ongeza hii
+import BottomNav from "../components/BottomNav.jsx";
+import Navbar from "../components/Navbar.jsx";
 
 export default function AboutSafetyPage() {
   const { t, lang } = useLanguage();
+  const [adsDropdownOpen, setAdsDropdownOpen] = useState(false);
 
   // Values from About page
   const values = [
@@ -14,16 +16,22 @@ export default function AboutSafetyPage() {
     { title: t("about_value3_title"), body: t("about_value3_body") },
   ];
 
-  // Tips from Safety page
-  const tips = [
-    { title: t("safety_tip1_title"), body: t("safety_tip1_body") },
-    { title: t("safety_tip2_title"), body: t("safety_tip2_body") },
-    { title: t("safety_tip3_title"), body: t("safety_tip3_body") },
-    { title: t("safety_tip4_title"), body: t("safety_tip4_body") },
+  // Matangazo menu items
+  const adMenuItems = [
+    { label: "Matangazo Mapya", link: "/matangazo/mapya" },
+    { label: "Matangazo ya Ofa", link: "/matangazo/ofa" },
+    { label: "Matangazo Yaliyothibitishwa", link: "/matangazo/yaliyothibitishwa" },
+    { label: "Matangazo ya Haraka", link: "/matangazo/haraka" },
+    { label: "Matangazo Yote", link: "/matangazo/yote" },
   ];
 
   return (
     <div className="min-h-screen bg-white">
+      {/* ============================================================ */}
+      {/* NAVBAR */}
+      {/* ============================================================ */}
+      <Navbar />
+
       {/* ============================================================ */}
       {/* HERO SECTION - About */}
       {/* ============================================================ */}
@@ -64,34 +72,72 @@ export default function AboutSafetyPage() {
       </div>
 
       {/* ============================================================ */}
-      {/* SAFETY SECTION */}
+      {/* MATANGAZO SECTION - Badala ya Usalama */}
       {/* ============================================================ */}
       <section className="py-14 px-4 max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <div className="w-14 h-14 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" strokeLinejoin="round" />
               <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">{t("safety_heading")}</h2>
-          <p className="text-gray-600 mt-2 max-w-xl mx-auto">{t("safety_subtext")}</p>
+          <h2 className="text-2xl font-bold text-gray-800">
+            {lang === "sw" ? "Matangazo" : "Advertisements"}
+          </h2>
+          <p className="text-gray-600 mt-2 max-w-xl mx-auto">
+            {lang === "sw" 
+              ? "Chagua aina ya tangazo unalotaka kuona" 
+              : "Choose the type of advertisement you want to see"}
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {tips.map((tip, i) => (
-            <div key={i} className="p-6 bg-[#F5F3EC] rounded-xl">
-              <h3 className="font-bold text-gray-800">{tip.title}</h3>
-              <p className="text-gray-600 text-sm mt-2">{tip.body}</p>
-            </div>
-          ))}
-        </div>
+        {/* Dropdown ya Matangazo */}
+        <div className="max-w-md mx-auto">
+          <div className="relative">
+            <button
+              onClick={() => setAdsDropdownOpen(!adsDropdownOpen)}
+              className="w-full flex items-center justify-between bg-white border border-gray-300 rounded-lg px-5 py-3 text-gray-700 hover:border-[#E8A33D] transition-colors focus:outline-none focus:ring-2 focus:ring-[#E8A33D] focus:border-transparent"
+            >
+              <span className="font-medium">
+                {lang === "sw" ? "Chagua Aina ya Tangazo" : "Select Ad Type"}
+              </span>
+              <svg 
+                className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${adsDropdownOpen ? "rotate-180" : ""}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-        <div className="mt-8 p-5 border border-[#C1502E]/30 bg-[#C1502E]/5 rounded-xl">
-          <p className="text-gray-700 text-sm">{t("safety_report_note")}</p>
+            {adsDropdownOpen && (
+              <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl py-2 z-50">
+                {adMenuItems.map((item, index) => (
+                  <Link
+                    key={index}
+                    to={item.link}
+                    onClick={() => setAdsDropdownOpen(false)}
+                    className="block px-5 py-3 text-gray-700 hover:bg-[#F5F3EC] hover:text-[#E8A33D] transition-colors border-b border-gray-100 last:border-0"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Info ya ziada */}
+          <div className="mt-6 p-5 border border-[#E8A33D]/30 bg-[#F5F3EC] rounded-xl text-center">
+            <p className="text-gray-600 text-sm">
+              {lang === "sw" 
+                ? "💡 Bonyeza dropdown ili uchague aina ya matangazo unayotaka kuona." 
+                : "💡 Click the dropdown to select the type of ads you want to see."}
+            </p>
+          </div>
         </div>
       </section>
-
 
       {/* ============================================================ */}
       {/* BOTTOM NAVIGATION - MOBILE ONLY */}
