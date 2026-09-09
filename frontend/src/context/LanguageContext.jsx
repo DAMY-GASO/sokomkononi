@@ -16,7 +16,7 @@ const translations = {
     hero_headline: "Nunua na Uza Mali kwa Urahisi",
     hero_subtext: "SokoMkononi ni jukwaa salama la kununua na kuuza nyumba, magari, viwanja na mali nyingine.",
     cta_buy: "Nunua Sasa",
-    cta_sell: "Uza Mali",
+    cta_sell: "Uza Bidhaa",
     hero_app_teaser: "⬇ Pakua App yetu",
 
     // Categories
@@ -106,6 +106,10 @@ const translations = {
     register_error_password_short: "Nenosiri lazima liwe na herufi 6 au zaidi.",
     register_have_account: "Una akaunti tayari?",
     register_login_link: "Ingia",
+    register_heading_buy: "Jisajili Kununua Mali",
+    register_heading_sell: "Jisajili Kuuza Mali",
+    register_subtext_buy: "Fungua akaunti ili uanze kuvinjari na kuwasiliana na wauzaji.",
+    register_subtext_sell: "Fungua akaunti ili uweke tangazo lako la kwanza la mali.",
 
     // Auth - Register OTP step
     register_otp_heading: "Thibitisha Barua Pepe",
@@ -138,10 +142,48 @@ const translations = {
     waitlist_success_heading: "Umejiunga!",
     waitlist_success_subtext: "Tutakutumia ujumbe pindi app itakapokuwa tayari kupakuliwa.",
     waitlist_back_home: "← Rudi Nyumbani",
+
+    // About Page
+    about_heading: "Kuhusu SokoMkononi",
+    about_subtext: "Tunaunganisha wanunuzi na wauzaji wa mali kote Tanzania kwa urahisi na uwazi.",
+    about_mission: "SokoMkononi ilianzishwa kwa lengo moja: kufanya ununuzi na uuzaji wa mali — nyumba, magari, viwanja na zaidi — kuwa rahisi, salama na wa kuaminika kwa kila Mtanzania, popote alipo.",
+    about_value1_title: "Uwazi",
+    about_value1_body: "Taarifa zote za mali na bei zinaonyeshwa wazi bila kuficha gharama za ziada.",
+    about_value2_title: "Usalama",
+    about_value2_body: "Kila muuzaji na mnunuzi anathibitishwa kabla ya kuruhusiwa kufanya muamala.",
+    about_value3_title: "Ubunifu",
+    about_value3_body: "Tunatumia teknolojia kurahisisha mchakato mzima wa kununua na kuuza mali.",
+
+    // Safety Page
+    safety_heading: "Usalama Wako ni Kipaumbele Chetu",
+    safety_subtext: "Vidokezo na hatua tunazochukua kuhakikisha muamala wako ni salama.",
+    safety_tip1_title: "Thibitisha Akaunti Kabla ya Kuendelea",
+    safety_tip1_body: "Kila mtumiaji anapitia uthibitishaji wa OTP kabla ya kuruhusiwa kuchapisha au kuwasiliana.",
+    safety_tip2_title: "Kutana Sehemu za Wazi",
+    safety_tip2_body: "Panga mikutano ya kuangalia mali sehemu za wazi na wakati wa mchana.",
+    safety_tip3_title: "Usilipe Kabla ya Kuona Mali",
+    safety_tip3_body: "Kamwe usitume malipo kabla ya kuthibitisha mali na hati zake halisi.",
+    safety_tip4_title: "Tumia 'Deal Room' Yetu",
+    safety_tip4_body: "Wasiliana na muuzaji ndani ya jukwaa letu ili mazungumzo yote yawe na kumbukumbu.",
+    safety_report_note: "Ukiona tangazo la udanganyifu au tabia ya kutiliwa shaka, ripoti mara moja kupitia ukurasa wa Mawasiliano ili timu yetu ichukue hatua.",
+
+    // Contact Page
+    contact_heading: "Wasiliana Nasi",
+    contact_subtext: "Una swali au changamoto? Timu yetu iko tayari kukusaidia.",
+    contact_email_label: "Barua Pepe",
+    contact_phone_label: "Simu",
+    contact_office_label: "Ofisi",
+    contact_name_placeholder: "Jina lako",
+    contact_email_placeholder: "Barua pepe yako",
+    contact_message_placeholder: "Andika ujumbe wako...",
+    contact_submit: "Tuma Ujumbe",
+    contact_success_heading: "Ujumbe Umetumwa!",
+    contact_success_subtext: "Asante kwa kuwasiliana nasi. Tutakujibu haraka iwezekanavyo.",
   },
   en: {
     // Navbar
     nav_login: "Login",
+    nav_post_ad: "Post Ad",
     nav_home: "Home",
     nav_saved: "Saved",
     nav_sell: "Sell",
@@ -149,6 +191,7 @@ const translations = {
     nav_profile: "Profile",
     
     // Hero
+    hero_eyebrow: "Digital Property Marketplace",
     hero_headline: "Buy and Sell Property Easily",
     hero_subtext: "SokoMkononi is a safe platform to buy and sell houses, cars, land and other properties.",
     cta_buy: "Buy Now",
@@ -242,6 +285,10 @@ const translations = {
     register_error_password_short: "Password must be at least 6 characters.",
     register_have_account: "Already have an account?",
     register_login_link: "Login",
+    register_heading_buy: "Sign Up to Buy Property",
+    register_heading_sell: "Sign Up to Sell Property",
+    register_subtext_buy: "Create an account to start browsing and contacting sellers.",
+    register_subtext_sell: "Create an account to post your first property listing.",
 
     // Auth - Register OTP step
     register_otp_heading: "Verify Your Email",
@@ -274,6 +321,43 @@ const translations = {
     waitlist_success_heading: "You're In!",
     waitlist_success_subtext: "We'll notify you as soon as the app is ready to download.",
     waitlist_back_home: "← Back to Home",
+
+    // About Page
+    about_heading: "About SokoMkononi",
+    about_subtext: "We connect property buyers and sellers across Tanzania with ease and transparency.",
+    about_mission: "SokoMkononi was founded with one goal: to make buying and selling property — houses, cars, land and more — simple, safe, and trustworthy for every Tanzanian, wherever they are.",
+    about_value1_title: "Transparency",
+    about_value1_body: "All property details and prices are shown clearly with no hidden extra costs.",
+    about_value2_title: "Safety",
+    about_value2_body: "Every seller and buyer is verified before being allowed to complete a transaction.",
+    about_value3_title: "Innovation",
+    about_value3_body: "We use technology to simplify the entire process of buying and selling property.",
+
+    // Safety Page
+    safety_heading: "Your Safety Is Our Priority",
+    safety_subtext: "Tips and measures we take to make sure your transaction is secure.",
+    safety_tip1_title: "Verify Your Account First",
+    safety_tip1_body: "Every user goes through OTP verification before they can post or contact others.",
+    safety_tip2_title: "Meet in Open Places",
+    safety_tip2_body: "Schedule property viewings in public places and during daylight hours.",
+    safety_tip3_title: "Never Pay Before Viewing",
+    safety_tip3_body: "Never send payment before verifying the property and its official documents.",
+    safety_tip4_title: "Use Our 'Deal Room'",
+    safety_tip4_body: "Communicate with sellers inside our platform so every conversation is recorded.",
+    safety_report_note: "If you see a fraudulent listing or suspicious behavior, report it immediately via our Contact page so our team can take action.",
+
+    // Contact Page
+    contact_heading: "Contact Us",
+    contact_subtext: "Have a question or an issue? Our team is here to help.",
+    contact_email_label: "Email",
+    contact_phone_label: "Phone",
+    contact_office_label: "Office",
+    contact_name_placeholder: "Your name",
+    contact_email_placeholder: "Your email",
+    contact_message_placeholder: "Write your message...",
+    contact_submit: "Send Message",
+    contact_success_heading: "Message Sent!",
+    contact_success_subtext: "Thanks for reaching out. We'll get back to you as soon as possible.",
   }
 };
 
