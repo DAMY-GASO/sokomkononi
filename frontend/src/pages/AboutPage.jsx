@@ -4,7 +4,7 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 import Footer from "../components/Footer.jsx"; // Ongeza hii
 
 export default function AboutPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage(); // Badilisha kutoka { t } kuwa { t, lang }
 
   const values = [
     { title: t("about_value1_title"), body: t("about_value1_body") },
@@ -40,8 +40,8 @@ export default function AboutPage() {
         </Link>
       </div>
 
-      {/* Ongeza Footer hapa */}
-      <Footer />
+      {/* Ongeza Footer hapa - inapitisha lang */}
+      <Footer selectedLang={lang} />
     </div>
   );
 }
