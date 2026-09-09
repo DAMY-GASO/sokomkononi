@@ -6,7 +6,6 @@ import LoginPage from "./pages/Auth/LoginPage.jsx";
 import RegisterPage from "./pages/Auth/RegisterPage.jsx";
 import WaitlistPage from "./pages/Auth/WaitlistPage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
-import SafetyPage from "./pages/SafetyPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
@@ -844,7 +843,6 @@ function App() {
             <Route path="/forgot-password" element={<ForgotpasswordPage />} />
             <Route path="/waitlist" element={<WaitlistPage />} />
             <Route path="/kuhusu" element={<AboutPage />} />
-            <Route path="/usalama" element={<SafetyPage />} />
             <Route path="/mawasiliano" element={<ContactPage />} />
             
             <Route path="*" element={<HomePage />} />
