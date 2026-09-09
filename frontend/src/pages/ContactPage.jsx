@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import Footer from "../components/Footer.jsx"; // Ongeza hii
+import Footer from "../components/Footer.jsx";
+import BottomNav from "../components/BottomNav.jsx";
 
 export default function ContactPage() {
-  const { t, lang } = useLanguage(); // Badilisha kutoka { t } kuwa { t, lang }
+  const { t, lang } = useLanguage();
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
 
@@ -16,11 +17,17 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* ============================================================ */}
+      {/* HERO SECTION */}
+      {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-14 px-4 text-center">
         <h1 className="text-3xl md:text-4xl font-bold">{t("contact_heading")}</h1>
         <p className="text-white/70 mt-3 max-w-xl mx-auto">{t("contact_subtext")}</p>
       </section>
 
+      {/* ============================================================ */}
+      {/* CONTACT SECTION */}
+      {/* ============================================================ */}
       <section className="py-14 px-4 max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* Contact details */}
         <div className="space-y-6">
@@ -61,7 +68,7 @@ export default function ContactPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <input
                 required
-                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm"
+                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8A33D] focus:border-transparent transition-colors"
                 placeholder={t("contact_name_placeholder")}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -69,7 +76,7 @@ export default function ContactPage() {
               <input
                 required
                 type="email"
-                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm"
+                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8A33D] focus:border-transparent transition-colors"
                 placeholder={t("contact_email_placeholder")}
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -77,7 +84,7 @@ export default function ContactPage() {
               <textarea
                 required
                 rows={4}
-                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm"
+                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8A33D] focus:border-transparent transition-colors"
                 placeholder={t("contact_message_placeholder")}
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
@@ -95,13 +102,23 @@ export default function ContactPage() {
         </div>
       </section>
 
+      {/* ============================================================ */}
+      {/* BACK TO HOME */}
+      {/* ============================================================ */}
       <div className="pb-16 text-center">
         <Link to="/" className="text-[#E8A33D] font-semibold text-sm hover:underline">
           {t("waitlist_back_home")}
         </Link>
       </div>
 
-      {/* Ongeza Footer hapa - inapitisha lang */}
+      {/* ============================================================ */}
+      {/* BOTTOM NAVIGATION - MOBILE ONLY */}
+      {/* ============================================================ */}
+      <BottomNav />
+
+      {/* ============================================================ */}
+      {/* FOOTER */}
+      {/* ============================================================ */}
       <Footer selectedLang={lang} />
     </div>
   );
