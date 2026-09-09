@@ -180,180 +180,177 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
-      {/* ================= LEFT — Branded panel (desktop only) ================= */}
-      <div className="hidden md:flex relative bg-[#101A2E] text-white flex-col justify-between p-10 lg:p-14 overflow-hidden">
-        <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
-          <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
-          <span className="font-bold tracking-tight">SokoMkononi</span>
-        </Link>
-
-        <div className="relative z-10 max-w-sm mx-auto text-center">
-          <h2 className="text-3xl lg:text-4xl font-bold leading-tight">{registerHeading()}</h2>
-          <p className="text-white/60 text-sm mt-3 leading-relaxed">{registerSubtext()}</p>
-
-          <div className="flex items-center justify-center gap-6 mt-8">
-            <div>
-              <p className="text-xl font-bold text-[#E8A33D]">5,000+</p>
-              <p className="text-white/40 text-xs">{t("stats_sellers")}</p>
-            </div>
-            <div className="w-px h-8 bg-white/10" />
-            <div>
-              <p className="text-xl font-bold text-[#E8A33D]">10,000+</p>
-              <p className="text-white/40 text-xs">{t("stats_properties")}</p>
-            </div>
-            <div className="w-px h-8 bg-white/10" />
-            <div>
-              <p className="text-xl font-bold text-[#E8A33D]">2,500+</p>
-              <p className="text-white/40 text-xs">{t("stats_deals")}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative z-10 border-t border-white/10 pt-6 max-w-sm mx-auto text-center">
-          <p className="text-white/70 text-sm italic leading-relaxed">"{t("testimonial1_quote")}"</p>
-          <p className="text-[#E8A33D] text-xs font-semibold mt-2">{t("testimonial1_name")}</p>
-        </div>
-
-        <SkylineDecoration />
-      </div>
-
-      {/* ================= RIGHT — Form panel ================= */}
-      <div className="flex items-center justify-center px-5 sm:px-10 py-12">
-        <div className="w-full max-w-sm animate-[fadeIn_0.4s_ease-out]">
-          <Link to="/" className="md:hidden flex items-center justify-center gap-2 mb-10 w-full">
+    <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
+      <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
+        {/* ================= TOP/LEFT — Branded panel ================= */}
+        <div className="flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
+          <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
-            <span className="font-bold text-[#101A2E] tracking-tight">SokoMkononi</span>
+            <span className="font-bold tracking-tight">SokoMkononi</span>
           </Link>
 
-          {step === "form" && (
-            <>
-              <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{registerHeading()}</h1>
-              <p className="text-gray-500 text-sm mb-7 text-center">{registerSubtext()}</p>
+          <div className="relative z-10 max-w-sm mx-auto text-center py-8 md:py-0">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">{registerHeading()}</h2>
+            <p className="text-white/60 text-sm mt-3 leading-relaxed">{registerSubtext()}</p>
 
-              <form onSubmit={handleSendOtp} className="space-y-4">
-                <FieldInput
-                  icon={icons.user}
-                  label={t("register_name_placeholder")}
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-                <FieldInput
-                  icon={icons.mail}
-                  type="email"
-                  required
-                  label={t("register_email_placeholder")}
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-                <FieldInput
-                  icon={icons.phone}
-                  type="tel"
-                  label={t("register_phone_placeholder")}
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-                <FieldInput
-                  icon={icons.lock}
-                  type="password"
-                  label={t("register_password_placeholder")}
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                />
-                <FieldInput
-                  icon={icons.lock}
-                  type="password"
-                  label={t("register_confirm_password_placeholder")}
-                  value={form.confirmPassword}
-                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                />
+            <div className="flex items-center justify-center gap-6 mt-8">
+              <div>
+                <p className="text-xl font-bold text-[#E8A33D]">5,000+</p>
+                <p className="text-white/40 text-xs">{t("stats_sellers")}</p>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div>
+                <p className="text-xl font-bold text-[#E8A33D]">10,000+</p>
+                <p className="text-white/40 text-xs">{t("stats_properties")}</p>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div>
+                <p className="text-xl font-bold text-[#E8A33D]">2,500+</p>
+                <p className="text-white/40 text-xs">{t("stats_deals")}</p>
+              </div>
+            </div>
+          </div>
 
-                <label className="flex items-start gap-2.5 text-xs text-gray-500 leading-relaxed cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={agreedToTerms}
-                    onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-[#E8A33D] focus:ring-[#E8A33D]/30 shrink-0"
+          <div className="relative z-10 border-t border-white/10 pt-6 max-w-sm mx-auto text-center">
+            <p className="text-white/70 text-sm italic leading-relaxed">"{t("testimonial1_quote")}"</p>
+            <p className="text-[#E8A33D] text-xs font-semibold mt-2">{t("testimonial1_name")}</p>
+          </div>
+
+          <SkylineDecoration />
+        </div>
+
+        {/* ================= BOTTOM/RIGHT — Form panel ================= */}
+        <div className="flex items-center justify-center px-5 sm:px-10 py-10 md:py-12 bg-white">
+          <div className="w-full max-w-sm animate-[fadeIn_0.4s_ease-out]">
+            {step === "form" && (
+              <>
+                <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{registerHeading()}</h1>
+                <p className="text-gray-500 text-sm mb-7 text-center">{registerSubtext()}</p>
+
+                <form onSubmit={handleSendOtp} className="space-y-4">
+                  <FieldInput
+                    icon={icons.user}
+                    label={t("register_name_placeholder")}
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
-                  <span>
-                    {t("auth_legal_prefix")}{" "}
-                    <Link to="/sheria" className="underline hover:text-gray-700">{t("footer_terms")}</Link>{" "}
-                    {t("auth_legal_and")}{" "}
-                    <Link to="/faragha" className="underline hover:text-gray-700">{t("footer_privacy")}</Link>
-                  </span>
-                </label>
+                  <FieldInput
+                    icon={icons.mail}
+                    type="email"
+                    required
+                    label={t("register_email_placeholder")}
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                  <FieldInput
+                    icon={icons.phone}
+                    type="tel"
+                    label={t("register_phone_placeholder")}
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                  <FieldInput
+                    icon={icons.lock}
+                    type="password"
+                    label={t("register_password_placeholder")}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  />
+                  <FieldInput
+                    icon={icons.lock}
+                    type="password"
+                    label={t("register_confirm_password_placeholder")}
+                    value={form.confirmPassword}
+                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                  />
 
-                {error && <p className="text-[#C1502E] text-sm">{error}</p>}
+                  <label className="flex items-start gap-2.5 text-xs text-gray-500 leading-relaxed cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded border-gray-300 text-[#E8A33D] focus:ring-[#E8A33D]/30 shrink-0"
+                    />
+                    <span>
+                      {t("auth_legal_prefix")}{" "}
+                      <Link to="/sheria" className="underline hover:text-gray-700">{t("footer_terms")}</Link>{" "}
+                      {t("auth_legal_and")}{" "}
+                      <Link to="/faragha" className="underline hover:text-gray-700">{t("footer_privacy")}</Link>
+                    </span>
+                  </label>
 
-                <button
-                  disabled={loading || !agreedToTerms}
-                  className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {loading ? t("register_sending_otp") : t("register_continue")}
-                </button>
-              </form>
+                  {error && <p className="text-[#C1502E] text-sm">{error}</p>}
 
-              <p className="mt-6 text-sm text-gray-500 text-center">
-                {t("register_have_account")}{" "}
-                <Link to="/login" className="text-[#2F6D4F] font-semibold hover:underline">
-                  {t("register_login_link")}
-                </Link>
-              </p>
-            </>
-          )}
-
-          {step === "otp" && (
-            <>
-              <div className="w-12 h-12 rounded-full bg-[#E8A33D]/15 flex items-center justify-center mb-5 mx-auto">
-                <span className="text-[#E8A33D]">{icons.mail}</span>
-              </div>
-
-              <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{t("register_otp_heading")}</h1>
-              <p className="text-gray-500 text-sm mb-7 text-center">
-                {t("register_otp_subtext")} <span className="font-semibold text-gray-800">{form.email}</span>
-              </p>
-
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
-                <input
-                  inputMode="numeric"
-                  maxLength={6}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-3 text-lg tracking-[0.5em] text-center font-semibold focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
-                  placeholder="••••••"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                />
-
-                {error && <p className="text-[#C1502E] text-sm">{error}</p>}
-
-                <button
-                  disabled={loading}
-                  className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
-                >
-                  {loading ? t("register_verifying") : t("register_verify_submit")}
-                </button>
-              </form>
-
-              <div className="mt-6 text-sm text-gray-500 text-center space-y-2">
-                <button
-                  onClick={handleResend}
-                  disabled={resendCooldown > 0}
-                  className="text-[#2F6D4F] font-semibold disabled:text-gray-400 disabled:cursor-not-allowed"
-                >
-                  {resendCooldown > 0
-                    ? `${t("register_resend_otp")} (${resendCooldown}s)`
-                    : t("register_resend_otp")}
-                </button>
-                <div>
                   <button
-                    onClick={() => { setStep("form"); setOtp(""); setError(""); }}
-                    className="text-gray-500 underline"
+                    disabled={loading || !agreedToTerms}
+                    className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {t("register_change_email")}
+                    {loading ? t("register_sending_otp") : t("register_continue")}
                   </button>
+                </form>
+
+                <p className="mt-6 text-sm text-gray-500 text-center">
+                  {t("register_have_account")}{" "}
+                  <Link to="/login" className="text-[#2F6D4F] font-semibold hover:underline">
+                    {t("register_login_link")}
+                  </Link>
+                </p>
+              </>
+            )}
+
+            {step === "otp" && (
+              <>
+                <div className="w-12 h-12 rounded-full bg-[#E8A33D]/15 flex items-center justify-center mb-5 mx-auto">
+                  <span className="text-[#E8A33D]">{icons.mail}</span>
                 </div>
-              </div>
-            </>
-          )}
+
+                <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{t("register_otp_heading")}</h1>
+                <p className="text-gray-500 text-sm mb-7 text-center">
+                  {t("register_otp_subtext")} <span className="font-semibold text-gray-800">{form.email}</span>
+                </p>
+
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <input
+                    inputMode="numeric"
+                    maxLength={6}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-3 text-lg tracking-[0.5em] text-center font-semibold focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+                    placeholder="••••••"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  />
+
+                  {error && <p className="text-[#C1502E] text-sm">{error}</p>}
+
+                  <button
+                    disabled={loading}
+                    className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
+                  >
+                    {loading ? t("register_verifying") : t("register_verify_submit")}
+                  </button>
+                </form>
+
+                <div className="mt-6 text-sm text-gray-500 text-center space-y-2">
+                  <button
+                    onClick={handleResend}
+                    disabled={resendCooldown > 0}
+                    className="text-[#2F6D4F] font-semibold disabled:text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {resendCooldown > 0
+                      ? `${t("register_resend_otp")} (${resendCooldown}s)`
+                      : t("register_resend_otp")}
+                  </button>
+                  <div>
+                    <button
+                      onClick={() => { setStep("form"); setOtp(""); setError(""); }}
+                      className="text-gray-500 underline"
+                    >
+                      {t("register_change_email")}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
