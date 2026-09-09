@@ -27,6 +27,9 @@ function App() {
             <Route path="/kuhusu" element={<AboutPage />} />
             <Route path="/mawasiliano" element={<ContactPage />} />
             <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route path="/dashboard/seller" element={<SellerDashboard />} />
+            <Route path="/dashboard/buyer" element={<BuyerDashboard />} />
+            <Route path="/dashboard" element={<SellerDashboard />} /> 
             <Route path="*" element={<HomePage />} />
           </Routes>
         </Router>
