@@ -124,9 +124,6 @@ function HomePage() {
   const [appToastShouldRender, setAppToastShouldRender] = useState(false);
   const [appToastVisible, setAppToastVisible] = useState(false);
 
-  // Floating notification ya app — inatokea mara moja baada ya ukurasa
-  // kufunguka, kisha inajifunga yenyewe. Haitokei tena ndani ya session
-  // hiyo hiyo ikiwa mtumiaji ameshaifunga.
   useEffect(() => {
     if (sessionStorage.getItem("app_toast_dismissed")) return;
     const showTimer = setTimeout(() => setAppToastShouldRender(true), 2500);
@@ -149,8 +146,6 @@ function HomePage() {
     setTimeout(() => setAppToastShouldRender(false), 300);
   }
 
-  // Kurasa za uaminifu — kwa sasa zinaelekea HomePage (route "*") mpaka
-  // kurasa halisi za /kuhusu, /usalama, /mawasiliano zijengwe.
   const trustLinks = [
     { to: "/kuhusu", label: { sw: "Kuhusu Sisi", en: "About Us" } },
     { to: "/usalama", label: { sw: "Usalama", en: "Safety" } },
@@ -162,8 +157,6 @@ function HomePage() {
     { code: "sw", native: "Kiswahili" },
   ];
 
-  // Picha za kategoria — weka faili zako ndani ya /assets/categories/
-  // kwa majina haya haya ili zionekane moja kwa moja.
   const categories = [
     { name: { sw: "Nyumba", en: "Houses" }, slug: "nyumba", count: "3,200+", icon: "house", img: "/assets/categories/nyumba.jpg" },
     { name: { sw: "Viwanja", en: "Plots & Land" }, slug: "viwanja", count: "2,100+", icon: "land", img: "/assets/categories/viwanja.jpg" },
@@ -229,8 +222,6 @@ function HomePage() {
     },
   ];
 
-  // Mali zinazotrendi — weka picha zako ndani ya /assets/trending/ kwa
-  // majina haya haya. Badilisha jina/mkoa/bei kadri mali halisi zinavyoongezwa.
   const trendingProperties = [
     { title: "Nyumba ya Vyumba 3, Mbezi", region: "Dar es Salaam", price: "TSh 35,000,000", img: "/assets/trendings/dar-es-salaam.jpg" },
     { title: "Gari Ndogo la Mjini, Njiro", region: "Arusha", price: "TSh 12,500,000", img: "/assets/trendings/arusha.jpg" },
@@ -243,8 +234,6 @@ function HomePage() {
     { title: "Mbuzi wa Kienyeji, Ilongero", region: "Singida", price: "TSh 120,000", img: "/assets/trendings/singida.jpg" },
   ];
 
-  // Placeholder pia — badilisha na picha halisi za wateja wenye ushuhuda.
-  // Weka faili zako ndani ya /assets/testimonials/ kwa majina haya haya.
   const testimonials = [
     {
       name: "Mary",
@@ -273,6 +262,15 @@ function HomePage() {
         en: "I found a great plot at a good price. Thank you SokoMkononi for your transparency.",
       },
     },
+    {
+      name: "David",
+      region: "Dodoma",
+      avatar: "/assets/testimonials/david.jpg",
+      quote: {
+        sw: "SokoMkononi imenisaidia kupata wateja wa kuaminika kwa bidhaa zangu za kilimo. Mapato yameongezeka mara mbili!",
+        en: "SokoMkononi has helped me find reliable customers for my agricultural products. My income has doubled!",
+      },
+    },
   ];
 
   const handleLanguageSelect = (code) => {
@@ -288,7 +286,6 @@ function HomePage() {
     e.preventDefault();
     const q = searchQuery.trim();
     if (!q) return;
-    // TODO: badilisha "/kategoria" na route halisi ya matokeo ya utafutaji ukishaitengeneza
     navigate(`/kategoria?tafuta=${encodeURIComponent(q)}`);
     setMobileSearchOpen(false);
   };
@@ -356,7 +353,6 @@ function HomePage() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Search Bar - Desktop */}
             <form onSubmit={handleSearchSubmit} className="relative hidden sm:block">
               <input
                 type="text"
@@ -373,7 +369,6 @@ function HomePage() {
               </button>
             </form>
 
-            {/* Search Icon - Mobile (inafungua search bar halisi) */}
             <button
               onClick={() => setMobileSearchOpen((prev) => !prev)}
               aria-expanded={mobileSearchOpen}
@@ -386,7 +381,6 @@ function HomePage() {
               </svg>
             </button>
 
-            {/* Language Switcher */}
             <div className="relative">
               <button
                 onClick={() => setLangOpen(!langOpen)}
@@ -421,7 +415,6 @@ function HomePage() {
               )}
             </div>
 
-            {/* Login/Register Button - Single button */}
             <Link
               to="/login"
               className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold text-sm px-4 py-2 rounded-md transition-colors whitespace-nowrap"
@@ -431,7 +424,6 @@ function HomePage() {
           </div>
         </div>
 
-        {/* Search Bar - Mobile (inatokea ubofyapo icon ya search) */}
         {mobileSearchOpen && (
           <div className="sm:hidden border-t border-white/10 px-4 py-3 bg-[#101A2E]">
             <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
@@ -546,7 +538,6 @@ function HomePage() {
             </Link>
           </div>
 
-          {/* App Download Badges — huelekeza kwenye waitlist, app haijazinduliwa bado */}
           <div className="flex flex-wrap gap-3 justify-center mt-8">
             <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors">
               <svg width="20" height="20" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
@@ -595,7 +586,7 @@ function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* WHY SOKOMKONONI - Centered */}
+      {/* WHY SOKOMKONONI */}
       {/* ============================================================ */}
       <section className="py-16 px-4 max-w-6xl mx-auto">
         <div className="text-center mb-12">
@@ -702,7 +693,7 @@ function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* TESTIMONIALS - Horizontal Carousel */}
+      {/* TESTIMONIALS - SASA INA 4 TESTIMONIALS! */}
       {/* ============================================================ */}
       <section className="py-16 px-4 max-w-7xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
@@ -733,7 +724,7 @@ function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* FAQ - Centered, accordion inayofunguka mtumiaji akibofya */}
+      {/* FAQ */}
       {/* ============================================================ */}
       <section className="py-16 px-4 max-w-3xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
@@ -780,10 +771,7 @@ function HomePage() {
       <Footer selectedLang={lang} />
 
       {/* ============================================================ */}
-      {/* BOTTOM NAVIGATION - MOBILE ONLY */}
-      {/* ============================================================ */}
-      {/* ============================================================ */}
-      {/* FLOATING APP NOTIFICATION - inaonekana mara moja, kisha inadisappear */}
+      {/* FLOATING APP NOTIFICATION */}
       {/* ============================================================ */}
       {appToastShouldRender && (
         <div
@@ -844,7 +832,6 @@ function App() {
             <Route path="/waitlist" element={<WaitlistPage />} />
             <Route path="/kuhusu" element={<AboutPage />} />
             <Route path="/mawasiliano" element={<ContactPage />} />
-            
             <Route path="*" element={<HomePage />} />
           </Routes>
         </Router>
