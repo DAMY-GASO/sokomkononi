@@ -4,7 +4,7 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 import Footer from "../components/Footer.jsx"; // Ongeza hii
 
 export default function ContactPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage(); // Badilisha kutoka { t } kuwa { t, lang }
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
 
@@ -101,8 +101,8 @@ export default function ContactPage() {
         </Link>
       </div>
 
-      {/* Ongeza Footer hapa */}
-      <Footer />
+      {/* Ongeza Footer hapa - inapitisha lang */}
+      <Footer selectedLang={lang} />
     </div>
   );
 }
