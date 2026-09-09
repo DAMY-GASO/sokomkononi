@@ -70,9 +70,9 @@ export default function AboutSafetyPage() {
       </div>
 
       {/* ============================================================ */}
-      {/* SAFETY SECTION */}
+      {/* SAFETY SECTION - IMEONGEZWA ID="usalama" */}
       {/* ============================================================ */}
-      <section className="py-14 px-4 max-w-4xl mx-auto">
+      <section id="usalama" className="py-14 px-4 max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <div className="w-14 h-14 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8">
@@ -97,8 +97,6 @@ export default function AboutSafetyPage() {
           <p className="text-gray-700 text-sm">{t("safety_report_note")}</p>
         </div>
       </section>
-
-     
 
       {/* ============================================================ */}
       {/* BOTTOM NAVIGATION - MOBILE ONLY */}
