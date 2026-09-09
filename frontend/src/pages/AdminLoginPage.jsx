@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useLanguage } from "../context/LanguageContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const icons = {
   mail: (
@@ -13,13 +14,6 @@ const icons = {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="4" y="10" width="16" height="10" rx="2" />
       <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-    </svg>
-  ),
-  admin: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2L2 7l10 5 10-5-10-5z" />
-      <path d="M2 17l10 5 10-5" />
-      <path d="M2 12l10 5 10-5" />
     </svg>
   ),
   shield: (
@@ -59,6 +53,7 @@ function SkylineDecoration() {
 }
 
 export default function AdminLoginPage() {
+  const { adminLogin } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -76,12 +71,10 @@ export default function AdminLoginPage() {
     setError("");
     setLoading(true);
     try {
-      // TODO: Unganisha na backend ya admin login
-      // await adminLogin(form);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await adminLogin(form);
       navigate("/admin/dashboard");
     } catch (err) {
-      setError(err?.response?.data?.message || t("admin_login_error_default") || "Barua pepe au nenosiri si sahihi.");
+      setError(err?.response?.data?.message || err.message || t("admin_login_error_default") || "Barua pepe au nenosiri si sahihi.");
     } finally {
       setLoading(false);
     }
@@ -94,10 +87,10 @@ export default function AdminLoginPage() {
   const leftSubtext = t("admin_panel_subtext") || "Ingia kwenye paneli ya msimamizi ili kudhibiti mali, wateja na matangazo.";
 
   const adminFeatures = [
-    t("admin_feature1") || "✅ Dhibiti mali zote",
-    t("admin_feature2") || "✅ Simamia wateja na wauzaji",
-    t("admin_feature3") || "✅ Thibitisha matangazo",
-    t("admin_feature4") || "✅ Angalia taarifa za mauzo"
+    t("admin_feature1") || "Dhibiti mali zote",
+    t("admin_feature2") || "Simamia wateja na wauzaji",
+    t("admin_feature3") || "Thibitisha matangazo",
+    t("admin_feature4") || "Angalia taarifa za mauzo"
   ];
 
   // ============================================
