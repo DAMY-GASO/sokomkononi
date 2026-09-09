@@ -1,17 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
-import Footer from "./components/Footer.jsx";
-import BottomNav from "./components/BottomNav.jsx";
-import Navbar from "./components/Navbar.jsx"; // Ongeza hii
-import LoginPage from "./pages/Auth/LoginPage.jsx";
-import RegisterPage from "./pages/Auth/RegisterPage.jsx";
-import WaitlistPage from "./pages/Auth/WaitlistPage.jsx";
-import AboutSafetyPage from "./pages/AboutSafetyPage.jsx"; // Badilisha kutoka AboutPage
-import ContactPage from "./pages/ContactPage.jsx";
-import { AuthProvider } from "./context/AuthContext.jsx";
-import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
-import ForgotpasswordPage from "./pages/Auth/ForgotpasswordPage.jsx"; 
-import "./index.css";
+import { Link, useNavigate } from "react-router-dom";
+import { useLanguage } from "../context/LanguageContext.jsx";
+import Footer from "../components/Footer.jsx";
+import BottomNav from "../components/BottomNav.jsx";
+import Navbar from "../components/Navbar.jsx";
 
 function CategoryIcon({ type }) {
   const common = { width: 44, height: 44, viewBox: "0 0 24 24", fill: "none", strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round" };
@@ -112,16 +104,9 @@ function CategoryIcon({ type }) {
   }
 }
 
-function HomePage() {
+export default function HomePage() {
   const navigate = useNavigate();
   const { lang, setLang } = useLanguage();
-  
-  // State za navbar ya ndani zimeondolewa - sasa zinashughulikiwa na Navbar component
-  // Zifuatazo zimeondolewa:
-  // - menuOpen
-  // - langOpen
-  // - catOpen
-  // - mobileCatOpen
   
   const [openFaq, setOpenFaq] = useState(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -151,15 +136,10 @@ function HomePage() {
     setTimeout(() => setAppToastShouldRender(false), 300);
   }
 
+  // Trust Links - Usalama imeondolewa, sasa ni Matangazo kwenye Navbar
   const trustLinks = [
     { to: "/kuhusu", label: { sw: "Kuhusu Sisi", en: "About Us" } },
-    // Usalama imeondolewa - imebadilishwa na Matangazo dropdown kwenye Navbar
     { to: "/mawasiliano", label: { sw: "Mawasiliano", en: "Contact" } },
-  ];
-
-  const languages = [
-    { code: "en", native: "English" },
-    { code: "sw", native: "Kiswahili" },
   ];
 
   const categories = [
@@ -301,10 +281,6 @@ function HomePage() {
         categories={categories}
         trustLinks={trustLinks}
       />
-
-      {/* ============================================================ */}
-      {/* MOBILE MENU - IMEONDOKA, SASA IKO NDANI YA Navbar COMPONENT */}
-      {/* ============================================================ */}
 
       {/* ============================================================ */}
       {/* HERO SECTION */}
@@ -463,7 +439,7 @@ function HomePage() {
           <Link to="/kategoria" className="text-[#E8A33D] text-sm font-semibold hover:underline">{lang === "sw" ? "Tazama Yote →" : "View All →"}</Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {categories.map((cat, index) => (
+          {categories.map((cat) => (
             <Link key={cat.slug} to={`/kategoria/${cat.slug}`} className="bg-white rounded-lg overflow-hidden text-center border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 group">
               <div className="h-36 sm:h-40 overflow-hidden bg-[#F5F3EC]">
                 <img
@@ -608,27 +584,3 @@ function HomePage() {
     </div>
   );
 }
-
-function App() {
-  return (
-    <AuthProvider>
-      <LanguageProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotpasswordPage />} />
-            <Route path="/waitlist" element={<WaitlistPage />} />
-            <Route path="/kuhusu" element={<AboutSafetyPage />} />
-            <Route path="/usalama" element={<AboutSafetyPage />} />
-            <Route path="/mawasiliano" element={<ContactPage />} />
-            <Route path="*" element={<HomePage />} />
-          </Routes>
-        </Router>
-      </LanguageProvider>
-    </AuthProvider>
-  );
-}
-
-export default App;
