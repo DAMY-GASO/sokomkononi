@@ -56,6 +56,28 @@ const translations = {
     why_point3_title: "Bei za Ushindani",
     why_point3_body: "Pata bei nzuri na uwezo wa kujadili moja kwa moja na wauzaji.",
 
+// deal room
+deal_room: "Deal Room",
+deal_rooms: "Deal Rooms",
+deal_active: "Inaendelea",
+deal_negotiating: "Inajadiliwa",
+deal_inspecting: "Inakaguliwa",
+deal_completed: "Imekamilika",
+deal_cancelled: "Imefutwa",
+deal_negotiation: "Negotiation",
+deal_inspection: "Inspection",
+deal_messages: "Ujumbe",
+deal_offer_price: "Ofa yako",
+deal_seller_price: "Bei ya Muuzaji",
+deal_counter_offer: "Counter Offer",
+deal_accept: "Kubali",
+deal_reject: "Kataa",
+deal_send: "Tuma",
+deal_no_deals: "Hakuna deal rooms",
+deal_select_deal: "Chagua Deal Room",
+deal_no_messages: "Hakuna ujumbe",
+
+
     // Testimonials
     testimonials_heading: "Wanachosema Wateja Wetu",
     testimonial1_quote: "Nilinunua nyumba yangu kwa urahisi kupitia SokoMkononi. Mchakato wote ulikuwa rahisi na salama.",
@@ -337,6 +359,28 @@ admin_back_to_user_login: "← Rudi kwenye Ingia la Mtumiaji",
     why_point3_title: "Competitive Prices",
     why_point3_body: "Get great prices and negotiate directly with sellers.",
 
+
+    // deal room
+deal_room: "Deal Room",
+deal_rooms: "Deal Rooms",
+deal_active: "Active",
+deal_negotiating: "Negotiating",
+deal_inspecting: "Inspection",
+deal_completed: "Completed",
+deal_cancelled: "Cancelled",
+deal_negotiation: "Negotiation",
+deal_inspection: "Inspection",
+deal_messages: "Messages",
+deal_offer_price: "Your Offer",
+deal_seller_price: "Seller's Price",
+deal_counter_offer: "Counter Offer",
+deal_accept: "Accept",
+deal_reject: "Reject",
+deal_send: "Send",
+deal_no_deals: "No deal rooms",
+deal_select_deal: "Select a Deal Room",
+deal_no_messages: "No messages",
+    
     // Testimonials
     testimonials_heading: "What Our Customers Say",
     testimonial1_quote: "I bought my house easily through SokoMkononi. The whole process was simple and secure.",
