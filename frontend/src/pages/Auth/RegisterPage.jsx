@@ -106,33 +106,33 @@ export default function RegisterPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   // ============================================
-  // MAANDISHI YA UPANDE WA KUSHOTO (LEFT PANEL)
+  // MAANDISHI YA UPANDE WA KUSHOTO (LEFT PANEL) - SASA YANATUMIA t()
   // ============================================
   function leftHeading() {
-    if (intent === "buy") return "Nunua Mali kwa Urahisi";
-    if (intent === "sell") return "Uza Mali kwa Urahisi";
-    return "SokoMkononi";
+    if (intent === "buy") return t("register_panel_heading_buy");
+    if (intent === "sell") return t("register_panel_heading_sell");
+    return t("register_panel_heading_default");
   }
 
   function leftSubtext() {
-    if (intent === "buy") return "Jisajili na uanze kununua mali yako inayotakiwa leo.";
-    if (intent === "sell") return "Jisajili na uanze kuuza mali yako kwa wateja wengi.";
-    return "Jisajili sasa na upate fursa za kibiashara.";
+    if (intent === "buy") return t("register_panel_subtext_buy");
+    if (intent === "sell") return t("register_panel_subtext_sell");
+    return t("register_panel_subtext_default");
   }
 
   // ============================================
-  // MAANDISHI YA UPANDE WA KULIA (RIGHT PANEL - FORM)
+  // MAANDISHI YA UPANDE WA KULIA (RIGHT PANEL - FORM) - SASA YANATUMIA t()
   // ============================================
   function formHeading() {
-    if (intent === "buy") return "Anza Kununua";
-    if (intent === "sell") return "Anza Kuuza";
-    return "Jiunge Nasi";
+    if (intent === "buy") return t("register_form_heading_buy");
+    if (intent === "sell") return t("register_form_heading_sell");
+    return t("register_form_heading_default");
   }
 
   function formSubtext() {
-    if (intent === "buy") return "Jaza taarifa zako ili uanze safari ya kununua mali.";
-    if (intent === "sell") return "Jaza taarifa zako ili uanze kuuza mali yako.";
-    return "Und akaunti yako kwa sekunde chache.";
+    if (intent === "buy") return t("register_form_subtext_buy");
+    if (intent === "sell") return t("register_form_subtext_sell");
+    return t("register_form_subtext_default");
   }
 
   function validateForm() {
