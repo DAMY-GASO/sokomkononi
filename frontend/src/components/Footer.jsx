@@ -61,7 +61,7 @@ export default function Footer({ selectedLang = "sw" }) {
         {/* ============================================================ */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10">
           
-          {/* Column 1: Brand - Centered on mobile, left on desktop */}
+          {/* Column 1: Brand */}
           <div className="col-span-2 lg:col-span-1 text-center lg:text-left">
             <div className="flex items-center justify-center lg:justify-start gap-2 mb-4">
               <span className="w-8 h-8 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#0D1524] font-bold text-sm">
@@ -76,7 +76,7 @@ export default function Footer({ selectedLang = "sw" }) {
             </p>
           </div>
 
-          {/* Column 2: Quick Links - Centered on mobile, left on desktop */}
+          {/* Column 2: Quick Links */}
           <div className="text-center lg:text-left">
             <h3 className="text-white font-semibold text-sm mb-4 underline underline-offset-4">
               {selectedLang === "sw" ? "VIUNGO VYA HARAKA" : "QUICK LINKS"}
@@ -85,24 +85,23 @@ export default function Footer({ selectedLang = "sw" }) {
               <li><Link to="/" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Nyumbani" : "Home"}</Link></li>
               <li><Link to="/kategoria" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Kategoria za Bidhaa" : "Product Categories"}</Link></li>
               <li><Link to="/kuhusu" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Kuhusu Mfumo" : "About System"}</Link></li>
-              <li><Link to="/bidhaa" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Bidhaa Zilizoorodheshwa" : "Listed Products"}</Link></li>
+              <li><Link to="/matangazo" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Matangazo" : "Ads"}</Link></li>
             </ul>
           </div>
 
-          {/* Column 3: Safety - Centered on mobile, left on desktop */}
+          {/* Column 3: Support / Msaada */}
           <div className="text-center lg:text-left">
             <h3 className="text-white font-semibold text-sm mb-4 underline underline-offset-4">
-              {selectedLang === "sw" ? "USALAMA WETU" : "OUR SAFETY"}
+              {selectedLang === "sw" ? "MSAADA" : "SUPPORT"}
             </h3>
             <ul className="space-y-2.5">
-              <li className="text-white/50 text-sm">✓ HTTPS / SSL</li>
-              <li className="text-white/50 text-sm">✓ {selectedLang === "sw" ? "Udhibiti wa Ufikiaji kwa Majukumu" : "Role-Based Access Control"}</li>
-              <li className="text-white/50 text-sm">✓ {selectedLang === "sw" ? "Ufungaji wa Nenosiri" : "Password Hashing"}</li>
-              <li className="text-white/50 text-sm">✓ {selectedLang === "sw" ? "Rekodi za Ukaguzi" : "Audit Logs"}</li>
+              <li><Link to="/faq" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Maswali" : "FAQ"}</Link></li>
+              <li><Link to="/mawasiliano" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Wasiliana Nasi" : "Contact Us"}</Link></li>
+              <li><Link to="/waitlist" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Waitlist ya App" : "App Waitlist"}</Link></li>
             </ul>
           </div>
 
-          {/* Column 4: Legal & Privacy - Centered on mobile, left on desktop */}
+          {/* Column 4: Legal & Privacy */}
           <div className="text-center lg:text-left">
             <h3 className="text-white font-semibold text-sm mb-4 underline underline-offset-4">
               {selectedLang === "sw" ? "SHERIA NA FARAGHA" : "LEGAL & PRIVACY"}
@@ -110,11 +109,11 @@ export default function Footer({ selectedLang = "sw" }) {
             <ul className="space-y-2.5">
               <li><Link to="/sheria" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Sheria na Masharti" : "Terms & Conditions"}</Link></li>
               <li><Link to="/faragha" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Sera ya Faragha" : "Privacy Policy"}</Link></li>
-              <li><Link to="/mawasiliano" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Wasiliana Nasi" : "Contact Us"}</Link></li>
+              <li><Link to="/usalama" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Usalama" : "Safety"}</Link></li>
             </ul>
           </div>
 
-          {/* Column 5: Contact - Centered on mobile, left on desktop */}
+          {/* Column 5: Contact */}
           <div className="text-center lg:text-left">
             <h3 className="text-white font-semibold text-sm mb-4 underline underline-offset-4">
               {selectedLang === "sw" ? "WASILIANA NASI" : "CONTACT US"}
