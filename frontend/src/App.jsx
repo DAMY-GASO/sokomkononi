@@ -22,7 +22,6 @@ function App() {
             <Route path="/forgot-password" element={<ForgotpasswordPage />} />
             <Route path="/waitlist" element={<WaitlistPage />} />
             <Route path="/kuhusu" element={<AboutPage />} />
-            <Route path="/usalama" element={<AboutPage />} /> {/* Zote zinaelekeza AboutPage */}
             <Route path="/mawasiliano" element={<ContactPage />} />
             <Route path="*" element={<HomePage />} />
           </Routes>
