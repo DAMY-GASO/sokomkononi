@@ -53,7 +53,7 @@ export default function ContactPage() {
             </svg>
             <div>
               <p className="font-semibold text-gray-800 text-sm">{t("contact_phone_label")}</p>
-              <p className="text-gray-600 text-sm">+255 700 000 000</p>
+              <p className="text-gray-600 text-sm">+255 743 895 038</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
