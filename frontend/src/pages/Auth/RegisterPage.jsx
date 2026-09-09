@@ -47,7 +47,7 @@ function SkylineDecoration() {
   );
 }
 
-function FieldInput({ icon, type = "text", value, onChange, label, inputMode }) {
+function FieldInput({ icon, type = "text", value, onChange, label, inputMode, required }) {
   return (
     <div>
       <label className="block text-xs font-semibold text-gray-600 mb-1.5">{label}</label>
@@ -56,6 +56,7 @@ function FieldInput({ icon, type = "text", value, onChange, label, inputMode }) 
         <input
           type={type}
           inputMode={inputMode}
+          required={required}
           className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
           value={value}
           onChange={onChange}
@@ -78,7 +79,8 @@ export default function RegisterPage() {
   const intent = searchParams.get("intent");
 
   const [step, setStep] = useState("form"); // "form" | "otp"
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -101,6 +103,8 @@ export default function RegisterPage() {
     if (!form.email.trim()) return t("register_error_email_required");
     if (!form.phone.trim()) return t("register_error_phone_required");
     if (!form.password || form.password.length < 6) return t("register_error_password_short");
+    if (form.confirmPassword !== form.password) return t("register_error_password_mismatch");
+    if (!agreedToTerms) return t("register_error_terms_required");
     return "";
   }
 
@@ -114,6 +118,8 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
+      // Email ndiyo kitambulisho kinachotumika kutuma na kuthibitisha OTP,
+      // kwa hiyo lazima liwe sahihi na tayari limehakikiwa na validateForm().
       await sendOtp(form.email);
       setStep("otp");
       startResendCooldown();
@@ -134,7 +140,8 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await verifyOtp(form.email, otp.trim());
-      await register({ ...form, intent: intent || null });
+      const { confirmPassword, ...payload } = form;
+      await register({ ...payload, intent: intent || null });
       // Mnunuzi anapelekwa moja kwa moja dashboard; muuzaji anapelekwa
       // sehemu ya kuweka tangazo lake la kwanza.
       navigate(intent === "sell" ? "/dashboard?next=weka-tangazo" : "/dashboard");
@@ -176,16 +183,16 @@ export default function RegisterPage() {
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
       {/* ================= LEFT — Branded panel (desktop only) ================= */}
       <div className="hidden md:flex relative bg-[#101A2E] text-white flex-col justify-between p-10 lg:p-14 overflow-hidden">
-        <Link to="/" className="inline-flex items-center gap-2 relative z-10 w-fit">
+        <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
           <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
           <span className="font-bold tracking-tight">SokoMkononi</span>
         </Link>
 
-        <div className="relative z-10 max-w-sm">
+        <div className="relative z-10 max-w-sm mx-auto text-center">
           <h2 className="text-3xl lg:text-4xl font-bold leading-tight">{registerHeading()}</h2>
           <p className="text-white/60 text-sm mt-3 leading-relaxed">{registerSubtext()}</p>
 
-          <div className="flex items-center gap-6 mt-8">
+          <div className="flex items-center justify-center gap-6 mt-8">
             <div>
               <p className="text-xl font-bold text-[#E8A33D]">5,000+</p>
               <p className="text-white/40 text-xs">{t("stats_sellers")}</p>
@@ -203,7 +210,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <div className="relative z-10 border-t border-white/10 pt-6 max-w-sm">
+        <div className="relative z-10 border-t border-white/10 pt-6 max-w-sm mx-auto text-center">
           <p className="text-white/70 text-sm italic leading-relaxed">"{t("testimonial1_quote")}"</p>
           <p className="text-[#E8A33D] text-xs font-semibold mt-2">{t("testimonial1_name")}</p>
         </div>
@@ -214,15 +221,15 @@ export default function RegisterPage() {
       {/* ================= RIGHT — Form panel ================= */}
       <div className="flex items-center justify-center px-5 sm:px-10 py-12">
         <div className="w-full max-w-sm animate-[fadeIn_0.4s_ease-out]">
-          <Link to="/" className="md:hidden inline-flex items-center gap-2 mb-10">
+          <Link to="/" className="md:hidden flex items-center justify-center gap-2 mb-10 w-full">
             <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
             <span className="font-bold text-[#101A2E] tracking-tight">SokoMkononi</span>
           </Link>
 
           {step === "form" && (
             <>
-              <h1 className="text-2xl font-bold text-gray-800 mb-1">{registerHeading()}</h1>
-              <p className="text-gray-500 text-sm mb-7">{registerSubtext()}</p>
+              <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{registerHeading()}</h1>
+              <p className="text-gray-500 text-sm mb-7 text-center">{registerSubtext()}</p>
 
               <form onSubmit={handleSendOtp} className="space-y-4">
                 <FieldInput
@@ -234,6 +241,7 @@ export default function RegisterPage() {
                 <FieldInput
                   icon={icons.mail}
                   type="email"
+                  required
                   label={t("register_email_placeholder")}
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -252,23 +260,38 @@ export default function RegisterPage() {
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                 />
+                <FieldInput
+                  icon={icons.lock}
+                  type="password"
+                  label={t("register_confirm_password_placeholder")}
+                  value={form.confirmPassword}
+                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                />
+
+                <label className="flex items-start gap-2.5 text-xs text-gray-500 leading-relaxed cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-[#E8A33D] focus:ring-[#E8A33D]/30 shrink-0"
+                  />
+                  <span>
+                    {t("auth_legal_prefix")}{" "}
+                    <Link to="/sheria" className="underline hover:text-gray-700">{t("footer_terms")}</Link>{" "}
+                    {t("auth_legal_and")}{" "}
+                    <Link to="/faragha" className="underline hover:text-gray-700">{t("footer_privacy")}</Link>
+                  </span>
+                </label>
 
                 {error && <p className="text-[#C1502E] text-sm">{error}</p>}
 
                 <button
-                  disabled={loading}
-                  className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
+                  disabled={loading || !agreedToTerms}
+                  className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {loading ? t("register_sending_otp") : t("register_continue")}
                 </button>
               </form>
-
-              <p className="mt-4 text-xs text-gray-400 text-center leading-relaxed">
-                {t("auth_legal_prefix")}{" "}
-                <Link to="/sheria" className="underline hover:text-gray-600">{t("footer_terms")}</Link>{" "}
-                {t("auth_legal_and")}{" "}
-                <Link to="/faragha" className="underline hover:text-gray-600">{t("footer_privacy")}</Link>
-              </p>
 
               <p className="mt-6 text-sm text-gray-500 text-center">
                 {t("register_have_account")}{" "}
@@ -281,12 +304,12 @@ export default function RegisterPage() {
 
           {step === "otp" && (
             <>
-              <div className="w-12 h-12 rounded-full bg-[#E8A33D]/15 flex items-center justify-center mb-5">
+              <div className="w-12 h-12 rounded-full bg-[#E8A33D]/15 flex items-center justify-center mb-5 mx-auto">
                 <span className="text-[#E8A33D]">{icons.mail}</span>
               </div>
 
-              <h1 className="text-2xl font-bold text-gray-800 mb-1">{t("register_otp_heading")}</h1>
-              <p className="text-gray-500 text-sm mb-7">
+              <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{t("register_otp_heading")}</h1>
+              <p className="text-gray-500 text-sm mb-7 text-center">
                 {t("register_otp_subtext")} <span className="font-semibold text-gray-800">{form.email}</span>
               </p>
 
