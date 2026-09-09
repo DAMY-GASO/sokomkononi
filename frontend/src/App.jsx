@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
 import Footer from "./components/Footer.jsx";
 import BottomNav from "./components/BottomNav.jsx";
+import Navbar from "./components/Navbar.jsx"; // Ongeza hii
 import LoginPage from "./pages/Auth/LoginPage.jsx";
 import RegisterPage from "./pages/Auth/RegisterPage.jsx";
 import WaitlistPage from "./pages/Auth/WaitlistPage.jsx";
-import AboutPage from "./pages/AboutPage.jsx";
+import AboutSafetyPage from "./pages/AboutSafetyPage.jsx"; // Badilisha kutoka AboutPage
 import ContactPage from "./pages/ContactPage.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
@@ -114,10 +115,14 @@ function CategoryIcon({ type }) {
 function HomePage() {
   const navigate = useNavigate();
   const { lang, setLang } = useLanguage();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
-  const [catOpen, setCatOpen] = useState(false);
-  const [mobileCatOpen, setMobileCatOpen] = useState(false);
+  
+  // State za navbar ya ndani zimeondolewa - sasa zinashughulikiwa na Navbar component
+  // Zifuatazo zimeondolewa:
+  // - menuOpen
+  // - langOpen
+  // - catOpen
+  // - mobileCatOpen
+  
   const [openFaq, setOpenFaq] = useState(null);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -148,7 +153,7 @@ function HomePage() {
 
   const trustLinks = [
     { to: "/kuhusu", label: { sw: "Kuhusu Sisi", en: "About Us" } },
-    { to: "/usalama", label: { sw: "Usalama", en: "Safety" } },
+    // Usalama imeondolewa - imebadilishwa na Matangazo dropdown kwenye Navbar
     { to: "/mawasiliano", label: { sw: "Mawasiliano", en: "Contact" } },
   ];
 
@@ -273,15 +278,6 @@ function HomePage() {
     },
   ];
 
-  const handleLanguageSelect = (code) => {
-    setLang(code);
-    setLangOpen(false);
-  };
-
-  const toggleFaq = (index) => {
-    setOpenFaq((prev) => (prev === index ? null : index));
-  };
-
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     const q = searchQuery.trim();
@@ -290,231 +286,25 @@ function HomePage() {
     setMobileSearchOpen(false);
   };
 
-  const currentLang = languages.find(l => l.code === lang);
+  const toggleFaq = (index) => {
+    setOpenFaq((prev) => (prev === index ? null : index));
+  };
 
   return (
     <div className="min-h-screen bg-white">
       {/* ============================================================ */}
-      {/* NAVBAR */}
+      {/* NAVBAR - SASA INATUMIA COMPONENT YA NJE */}
       {/* ============================================================ */}
-      <header className="bg-[#101A2E] text-white border-b border-white/10 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMenuOpen(true)}
-              className="md:hidden text-white p-1 hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-              </svg>
-            </button>
-            <div className="flex items-center gap-2">
-              <span className="hidden md:flex w-7 h-7 rounded-md bg-[#E8A33D] items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
-              <span className="font-bold text-base sm:text-lg tracking-tight">SokoMkononi</span>
-            </div>
-          </div>
-
-          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link to="/" className="text-white/70 hover:text-white text-sm font-medium transition-colors">
-              {lang === "sw" ? "Nyumbani" : "Home"}
-            </Link>
-
-            <div className="relative">
-              <button
-                onClick={() => setCatOpen((prev) => !prev)}
-                className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
-              >
-                {lang === "sw" ? "Kategoria" : "Categories"}
-                <svg className={`w-3.5 h-3.5 transition-transform ${catOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {catOpen && (
-                <div className="absolute left-0 mt-2 w-56 bg-[#182541] border border-white/10 rounded-lg shadow-xl py-2 z-50">
-                  {categories.map((cat) => (
-                    <Link
-                      key={cat.slug}
-                      to={`/kategoria/${cat.slug}`}
-                      onClick={() => setCatOpen(false)}
-                      className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
-                    >
-                      {lang === "sw" ? cat.name.sw : cat.name.en}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {trustLinks.map((l) => (
-              <Link key={l.to} to={l.to} className="text-white/70 hover:text-white text-sm font-medium transition-colors">
-                {lang === "sw" ? l.label.sw : l.label.en}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <form onSubmit={handleSearchSubmit} className="relative hidden sm:block">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={lang === "sw" ? "Tafuta mali..." : "Search properties..."}
-                className="bg-white/10 border border-white/15 rounded-md pl-3 pr-9 py-1.5 text-white text-sm placeholder-white/40 focus:outline-none focus:border-[#E8A33D] w-40 lg:w-56"
-              />
-              <button type="submit" aria-label={lang === "sw" ? "Tafuta" : "Search"} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <circle cx="11" cy="11" r="8" strokeWidth="2" />
-                  <path d="M21 21l-4.35-4.35" strokeWidth="2" />
-                </svg>
-              </button>
-            </form>
-
-            <button
-              onClick={() => setMobileSearchOpen((prev) => !prev)}
-              aria-expanded={mobileSearchOpen}
-              aria-label={lang === "sw" ? "Tafuta" : "Search"}
-              className="sm:hidden text-white/60 hover:text-white p-1.5 transition-colors"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-            </button>
-
-            <div className="relative">
-              <button
-                onClick={() => setLangOpen(!langOpen)}
-                className="text-white/60 hover:text-white text-sm font-medium border border-white/15 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
-              >
-                <span className="hidden sm:inline">{currentLang?.native || "Kiswahili"}</span>
-                <span className="sm:hidden">{currentLang?.code?.toUpperCase() || "SW"}</span>
-                <svg className={`w-4 h-4 transition-transform ${langOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {langOpen && (
-                <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-[#182541] border border-white/10 rounded-lg shadow-xl py-2 z-50">
-                  <div className="px-4 py-2 border-b border-white/10">
-                    <p className="text-white/50 text-xs font-semibold">Je, unapendelea lugha gani?</p>
-                  </div>
-                  {languages.map((l) => (
-                    <button
-                      key={l.code}
-                      onClick={() => handleLanguageSelect(l.code)}
-                      className={`w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors ${lang === l.code ? "bg-white/5" : ""}`}
-                    >
-                      <span className="text-white text-sm font-medium">{l.native}</span>
-                      {lang === l.code && (
-                        <svg className="w-4 h-4 text-[#E8A33D]" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <Link
-              to="/login"
-              className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold text-sm px-4 py-2 rounded-md transition-colors whitespace-nowrap"
-            >
-              {lang === "sw" ? "Ingia/Jisajili" : "Login/Register"}
-            </Link>
-          </div>
-        </div>
-
-        {mobileSearchOpen && (
-          <div className="sm:hidden border-t border-white/10 px-4 py-3 bg-[#101A2E]">
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <input
-                  autoFocus
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={lang === "sw" ? "Tafuta mali..." : "Search properties..."}
-                  className="w-full bg-white/10 border border-white/15 rounded-md pl-3 pr-9 py-2 text-white text-sm placeholder-white/40 focus:outline-none focus:border-[#E8A33D]"
-                />
-                <button type="submit" aria-label={lang === "sw" ? "Tafuta" : "Search"} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8" strokeWidth="2" />
-                    <path d="M21 21l-4.35-4.35" strokeWidth="2" />
-                  </svg>
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setMobileSearchOpen(false); setSearchQuery(""); }}
-                className="text-white/60 hover:text-white text-sm px-2 py-2"
-              >
-                {lang === "sw" ? "Ghairi" : "Cancel"}
-              </button>
-            </form>
-          </div>
-        )}
-      </header>
+      <Navbar 
+        lang={lang} 
+        setLang={setLang} 
+        categories={categories}
+        trustLinks={trustLinks}
+      />
 
       {/* ============================================================ */}
-      {/* MOBILE MENU */}
+      {/* MOBILE MENU - IMEONDOKA, SASA IKO NDANI YA Navbar COMPONENT */}
       {/* ============================================================ */}
-      <div className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`} onClick={() => setMenuOpen(false)} />
-      <div className={`fixed top-0 right-0 h-full w-72 max-w-[80%] bg-[#101A2E] z-50 transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "translate-x-full"}`}>
-        <button onClick={() => setMenuOpen(false)} className="absolute top-4 right-4 text-white/60 hover:text-white text-2xl p-2">✕</button>
-        <div className="pt-16 px-6">
-          <div className="flex items-center gap-2 mb-8 pb-4 border-b border-white/10">
-            <span className="w-8 h-8 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
-            <span className="text-white font-bold text-lg tracking-tight">SokoMkononi</span>
-          </div>
-          <nav className="flex flex-col gap-1">
-            <Link to="/" onClick={() => setMenuOpen(false)} className="text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors">
-              {lang === "sw" ? "Nyumbani" : "Home"}
-            </Link>
-
-            <button
-              onClick={() => setMobileCatOpen((prev) => !prev)}
-              aria-expanded={mobileCatOpen}
-              className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
-            >
-              <span>{lang === "sw" ? "Kategoria" : "Categories"}</span>
-              <svg className={`w-4 h-4 transition-transform ${mobileCatOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div
-              className={`grid transition-all duration-300 ease-in-out ${mobileCatOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-              style={{ display: "grid" }}
-            >
-              <div className="overflow-hidden pl-2">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat.slug}
-                    to={`/kategoria/${cat.slug}`}
-                    onClick={() => setMenuOpen(false)}
-                    className="block text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
-                  >
-                    {lang === "sw" ? cat.name.sw : cat.name.en}
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            <div className="my-2 border-t border-white/10" />
-
-            {trustLinks.map((l) => (
-              <Link key={l.to} to={l.to} onClick={() => setMenuOpen(false)} className="text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors">
-                {lang === "sw" ? l.label.sw : l.label.en}
-              </Link>
-            ))}
-          </nav>
-          <div className="my-6 border-t border-white/10" />
-          <div className="flex flex-col gap-3">
-            <Link to="/login" onClick={() => setMenuOpen(false)} className="w-full text-center bg-[#E8A33D] text-[#101A2E] font-semibold text-base rounded-md py-3 hover:bg-[#B87A1F] transition-colors">
-              {lang === "sw" ? "Ingia/Jisajili" : "Login/Register"}
-            </Link>
-          </div>
-        </div>
-      </div>
 
       {/* ============================================================ */}
       {/* HERO SECTION */}
@@ -693,7 +483,7 @@ function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* TESTIMONIALS - SASA INA 4 TESTIMONIALS! */}
+      {/* TESTIMONIALS */}
       {/* ============================================================ */}
       <section className="py-16 px-4 max-w-7xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
@@ -830,7 +620,8 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotpasswordPage />} />
             <Route path="/waitlist" element={<WaitlistPage />} />
-            <Route path="/kuhusu" element={<AboutPage />} />
+            <Route path="/kuhusu" element={<AboutSafetyPage />} />
+            <Route path="/usalama" element={<AboutSafetyPage />} />
             <Route path="/mawasiliano" element={<ContactPage />} />
             <Route path="*" element={<HomePage />} />
           </Routes>
