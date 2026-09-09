@@ -273,7 +273,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* ============================================================ */}
-      {/* NAVBAR - SASA INATUMIA COMPONENT YA NJE */}
+      {/* NAVBAR */}
       {/* ============================================================ */}
       <Navbar 
         lang={lang} 
@@ -283,7 +283,44 @@ export default function HomePage() {
       />
 
       {/* ============================================================ */}
-      {/* HERO SECTION */}
+      {/* MOBILE SEARCH BAR - Inaonekana chini ya navbar kwenye simu */}
+      {/* ============================================================ */}
+      {mobileSearchOpen && (
+        <div className="sm:hidden bg-[#101A2E] px-4 py-3 border-t border-white/10">
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                autoFocus
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={lang === "sw" ? "Tafuta mali..." : "Search properties..."}
+                className="w-full bg-white/10 border border-white/15 rounded-full pl-4 pr-10 py-2.5 text-white text-sm placeholder-white/40 focus:outline-none focus:border-[#E8A33D]"
+              />
+              <button 
+                type="submit" 
+                aria-label={lang === "sw" ? "Tafuta" : "Search"}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8" strokeWidth="2" />
+                  <path d="M21 21l-4.35-4.35" strokeWidth="2" />
+                </svg>
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setMobileSearchOpen(false); setSearchQuery(""); }}
+              className="text-white/60 hover:text-white text-sm px-2 py-2"
+            >
+              {lang === "sw" ? "Ghairi" : "Cancel"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* HERO SECTION - IKIWA NA SEARCH BAR */}
       {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
@@ -295,6 +332,32 @@ export default function HomePage() {
               ? "SokoMkononi ni jukwaa salama la kununua na kuuza nyumba, magari, viwanja na mali nyingine."
               : "SokoMkononi is a safe platform to buy and sell houses, cars, land and other properties."}
           </p>
+
+          {/* ============================================================ */}
+          {/* SEARCH BAR - Inaonekana kwenye desktop na mobile */}
+          {/* ============================================================ */}
+          <form onSubmit={handleSearchSubmit} className="max-w-2xl mx-auto mt-6">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={lang === "sw" ? "Tafuta nyumba, gari, kiwanja..." : "Search houses, cars, land..."}
+                className="w-full bg-white/10 border border-white/20 rounded-full pl-6 pr-14 py-3.5 text-white text-base placeholder-white/50 focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/30 transition-all"
+              />
+              <button 
+                type="submit" 
+                aria-label={lang === "sw" ? "Tafuta" : "Search"}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] p-2.5 rounded-full transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+          </form>
+
           <div className="flex flex-wrap gap-3 justify-center mt-6">
             <Link to="/register?intent=buy" className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold px-6 py-3 rounded-md transition-colors">
               {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
@@ -304,6 +367,7 @@ export default function HomePage() {
             </Link>
           </div>
 
+          {/* App Download Badges */}
           <div className="flex flex-wrap gap-3 justify-center mt-8">
             <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors">
               <svg width="20" height="20" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
