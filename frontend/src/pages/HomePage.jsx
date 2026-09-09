@@ -136,10 +136,6 @@ export default function HomePage() {
     setTimeout(() => setAppToastShouldRender(false), 300);
   }
 
-  // ============================================================
-  // TRUST LINKS - IMEONDOKA KABISA! Navbar inatumia default
-  // ============================================================
-
   const categories = [
     { name: { sw: "Nyumba", en: "Houses" }, slug: "nyumba", count: "3,200+", icon: "house", img: "/assets/categories/nyumba.jpg" },
     { name: { sw: "Viwanja", en: "Plots & Land" }, slug: "viwanja", count: "2,100+", icon: "land", img: "/assets/categories/viwanja.jpg" },
@@ -271,7 +267,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* ============================================================ */}
-      {/* NAVBAR - trustLinks imeondolewa, inatumia default */}
+      {/* NAVBAR */}
       {/* ============================================================ */}
       <Navbar 
         lang={lang} 
@@ -456,9 +452,9 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* PROPERTY CAROUSEL */}
+      {/* PROPERTY CAROUSEL - IMEONGEZWA ID="matangazo" */}
       {/* ============================================================ */}
-      <section className="py-8 px-4 max-w-7xl mx-auto">
+      <section id="matangazo" className="py-8 px-4 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">{lang === "sw" ? "Mali Zinazotrendi" : "Trending Properties"}</h2>
           <a href="#" className="text-[#E8A33D] text-sm font-semibold hover:underline">{lang === "sw" ? "Tazama Zote →" : "View All →"}</a>
@@ -488,9 +484,9 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* CATEGORIES */}
+      {/* CATEGORIES - IMEONGEZWA ID="kategoria" */}
       {/* ============================================================ */}
-      <section className="py-12 px-4 max-w-7xl mx-auto">
+      <section id="kategoria" className="py-12 px-4 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">{lang === "sw" ? "Kategoria Maarufu" : "Popular Categories"}</h2>
           <Link to="/kategoria" className="text-[#E8A33D] text-sm font-semibold hover:underline">{lang === "sw" ? "Tazama Yote →" : "View All →"}</Link>
@@ -547,9 +543,9 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* FAQ */}
+      {/* FAQ - IMEONGEZWA ID="faq" */}
       {/* ============================================================ */}
-      <section className="py-16 px-4 max-w-3xl mx-auto">
+      <section id="faq" className="py-16 px-4 max-w-3xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
           {lang === "sw" ? "Maswali Yanayoulizwa Sana" : "Frequently Asked Questions"}
         </h2>
