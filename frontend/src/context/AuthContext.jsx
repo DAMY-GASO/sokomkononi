@@ -2,104 +2,214 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 
-// TODO: badilisha hii kwa URL halisi ya backend yenu (au tumia Axios instance
-// yenu mliyoshaunda mahali pengine badala ya fetch moja kwa moja hapa).
-const API_BASE = import.meta.env.VITE_API_URL || "https://api.sokomkononi.co.tz";
-
-async function apiPost(path, body) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw { response: { data } };
-  }
-  return data;
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("auth_user");
-    if (stored) {
+    // Check if user is logged in
+    const token = localStorage.getItem("auth_token");
+    const userData = localStorage.getItem("user_data");
+    const adminStatus = localStorage.getItem("is_admin") === "true";
+    
+    if (token && userData) {
       try {
-        setUser(JSON.parse(stored));
-      } catch {
-        localStorage.removeItem("auth_user");
+        setUser(JSON.parse(userData));
+        setIsAdmin(adminStatus);
+      } catch (e) {
+        console.error("Error parsing user data:", e);
       }
     }
+    setLoading(false);
   }, []);
 
-  function persistSession(userData, token) {
-    setUser(userData);
-    localStorage.setItem("auth_user", JSON.stringify(userData));
-    if (token) localStorage.setItem("auth_token", token);
-  }
+  // User login
+  const login = async (credentials) => {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await api.post("/auth/login", credentials);
+      // const { user, token } = response.data;
+      
+      // Mock login - Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const mockUser = {
+        id: "u1",
+        name: "John Doe",
+        email: credentials.identifier || "john@email.com",
+        phone: "0743 895 038",
+        role: "buyer",
+      };
+      
+      localStorage.setItem("auth_token", "mock_token_" + Date.now());
+      localStorage.setItem("user_data", JSON.stringify(mockUser));
+      localStorage.setItem("is_admin", "false");
+      
+      setUser(mockUser);
+      setIsAdmin(false);
+      
+      return mockUser;
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    }
+  };
 
-  // Hatua ya 1 ya usajili: tuma OTP kwenye email ya mtumiaji.
-  async function sendOtp(email) {
-    return apiPost("/auth/send-otp", { email });
-  }
+  // Admin login
+  const adminLogin = async (credentials) => {
+    try {
+      // TODO: Replace with actual API call
+      // const response = await api.post("/auth/admin/login", credentials);
+      // const { user, token } = response.data;
+      
+      // Mock admin login - Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Admin credentials check (mock)
+      const adminEmail = "admin@sokomkononi.co.tz";
+      const adminPassword = "Admin123!";
+      
+      if (credentials.email !== adminEmail || credentials.password !== adminPassword) {
+        throw new Error("Invalid admin credentials");
+      }
+      
+      const adminUser = {
+        id: "admin1",
+        name: "Administrator",
+        email: credentials.email,
+        role: "admin",
+        permissions: ["all"],
+      };
+      
+      localStorage.setItem("auth_token", "admin_token_" + Date.now());
+      localStorage.setItem("user_data", JSON.stringify(adminUser));
+      localStorage.setItem("is_admin", "true");
+      
+      setUser(adminUser);
+      setIsAdmin(true);
+      
+      return adminUser;
+    } catch (error) {
+      console.error("Admin login error:", error);
+      throw error;
+    }
+  };
 
-  // Hatua ya 2: thibitisha OTP kabla ya kukamilisha usajili.
-  async function verifyOtp(email, otp) {
-    return apiPost("/auth/verify-otp", { email, otp });
-  }
+  // Register
+  const register = async (userData) => {
+    try {
+      // TODO: Replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const newUser = {
+        id: "u" + Date.now(),
+        name: userData.name,
+        email: userData.email,
+        phone: userData.phone,
+        role: userData.intent === "sell" ? "seller" : "buyer",
+      };
+      
+      localStorage.setItem("auth_token", "mock_token_" + Date.now());
+      localStorage.setItem("user_data", JSON.stringify(newUser));
+      localStorage.setItem("is_admin", "false");
+      
+      setUser(newUser);
+      setIsAdmin(false);
+      
+      return newUser;
+    } catch (error) {
+      console.error("Register error:", error);
+      throw error;
+    }
+  };
 
-  // Inaitwa BAADA TU ya verifyOtp kufanikiwa.
-  async function register(form) {
-    const data = await apiPost("/auth/register", form);
-    persistSession(data.user, data.token);
-    return data;
-  }
+  // Logout
+  const logout = async () => {
+    try {
+      // TODO: Replace with actual API call
+      // await api.post("/auth/logout");
+      
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user_data");
+      localStorage.removeItem("is_admin");
+      
+      setUser(null);
+      setIsAdmin(false);
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
 
-  async function login({ identifier, password }) {
-    const data = await apiPost("/auth/login", { identifier, password });
-    persistSession(data.user, data.token);
-    return data;
-  }
+  // Send OTP
+  const sendOtp = async (email) => {
+    try {
+      // TODO: Replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 800));
+      console.log(`OTP sent to ${email}`);
+      return { success: true };
+    } catch (error) {
+      console.error("Send OTP error:", error);
+      throw error;
+    }
+  };
 
-  function logout() {
-    setUser(null);
-    localStorage.removeItem("auth_user");
-    localStorage.removeItem("auth_token");
-  }
+  // Verify OTP
+  const verifyOtp = async (email, otp) => {
+    try {
+      // TODO: Replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Mock verification - accept any 6-digit code
+      if (otp.length < 4) {
+        throw new Error("Invalid OTP");
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Verify OTP error:", error);
+      throw error;
+    }
+  };
 
-  // Hatua ya 1 ya "umesahau nenosiri": mtumiaji ameshaandika email + nenosiri
-  // jipya. Server inahifadhi nenosiri hilo kwa muda (halijabadilishwa bado)
-  // na kutuma OTP kwenye email hiyo ili kuthibitisha ni mmiliki wa akaunti.
-  async function requestPasswordReset({ email, newPassword }) {
-    return apiPost("/auth/request-password-reset", { email, newPassword });
-  }
+  // Reset password
+  const resetPassword = async (email, newPassword) => {
+    try {
+      // TODO: Replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 800));
+      console.log(`Password reset for ${email}`);
+      return { success: true };
+    } catch (error) {
+      console.error("Reset password error:", error);
+      throw error;
+    }
+  };
 
-  // Hatua ya 2: mtumiaji anathibitisha OTP aliyotumiwa, server inakamilisha
-  // mabadiliko ya nenosiri. Hatuweki session hapa kwa makusudi — baada ya
-  // kufanikiwa, mtumiaji anaelekezwa kuingia upya na nenosiri lake jipya.
-  async function confirmPasswordReset(email, otp) {
-    return apiPost("/auth/confirm-password-reset", { email, otp });
-  }
+  const value = {
+    user,
+    setUser,
+    loading,
+    isAdmin,
+    login,
+    adminLogin,
+    register,
+    logout,
+    sendOtp,
+    verifyOtp,
+    resetPassword,
+  };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        sendOtp,
-        verifyOtp,
-        register,
-        login,
-        logout,
-        requestPasswordReset,
-        confirmPasswordReset,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }
