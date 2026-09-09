@@ -135,12 +135,10 @@ export default function HomePage() {
     sessionStorage.setItem("app_toast_dismissed", "1");
     setTimeout(() => setAppToastShouldRender(false), 300);
   }
-  <Navbar 
-  lang={lang} 
-  setLang={setLang} 
-  categories={categories}
-  // trustLinks imeondolewa - inatumia default
-/>
+
+  // ============================================================
+  // TRUST LINKS - IMEONDOKA KABISA! Navbar inatumia default
+  // ============================================================
 
   const categories = [
     { name: { sw: "Nyumba", en: "Houses" }, slug: "nyumba", count: "3,200+", icon: "house", img: "/assets/categories/nyumba.jpg" },
@@ -273,17 +271,16 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* ============================================================ */}
-      {/* NAVBAR */}
+      {/* NAVBAR - trustLinks imeondolewa, inatumia default */}
       {/* ============================================================ */}
       <Navbar 
         lang={lang} 
         setLang={setLang} 
         categories={categories}
-        trustLinks={trustLinks}
       />
 
       {/* ============================================================ */}
-      {/* MOBILE SEARCH BAR - Inaonekana chini ya navbar kwenye simu */}
+      {/* MOBILE SEARCH BAR */}
       {/* ============================================================ */}
       {mobileSearchOpen && (
         <div className="sm:hidden bg-[#101A2E] px-4 py-3 border-t border-white/10">
@@ -320,7 +317,7 @@ export default function HomePage() {
       )}
 
       {/* ============================================================ */}
-      {/* HERO SECTION - IKIWA NA SEARCH BAR */}
+      {/* HERO SECTION */}
       {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
@@ -333,9 +330,6 @@ export default function HomePage() {
               : "SokoMkononi is a safe platform to buy and sell houses, cars, land and other properties."}
           </p>
 
-          {/* ============================================================ */}
-          {/* SEARCH BAR - Inaonekana kwenye desktop na mobile */}
-          {/* ============================================================ */}
           <form onSubmit={handleSearchSubmit} className="max-w-2xl mx-auto mt-6">
             <div className="relative">
               <input
@@ -367,7 +361,6 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* App Download Badges */}
           <div className="flex flex-wrap gap-3 justify-center mt-8">
             <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors">
               <svg width="20" height="20" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
