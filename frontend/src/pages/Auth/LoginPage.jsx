@@ -21,6 +21,18 @@ const icons = {
       <path d="M20 6 9 17l-5-5" />
     </svg>
   ),
+  eye: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
+  eyeOff: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <path d="M1 1l22 22" />
+    </svg>
+  ),
 };
 
 function SkylineDecoration() {
@@ -47,6 +59,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ identifier: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -66,12 +79,28 @@ export default function LoginPage() {
     }
   }
 
-  const trustPoints = [t("login_trust1"), t("login_trust2"), t("login_trust3")];
+  // ============================================
+  // MAANDISHI YA UPANDE WA KUSHOTO (LEFT PANEL)
+  // ============================================
+  const leftHeading = "Karibu SokoMkononi";
+  const leftSubtext = "Jukwaa lako salama la kununua na kuuza mali nchini Tanzania.";
+
+  const trustPoints = [
+    "✅ Muamala salama na wa uwazi",
+    "✅ Wauzaji na wanunuzi walioidhinishwa",
+    "✅ Msaada wa haraka na wa kuaminika"
+  ];
+
+  // ============================================
+  // MAANDISHI YA UPANDE WA KULIA (RIGHT PANEL - FORM)
+  // ============================================
+  const formHeading = "Ingia kwenye Akaunti Yako";
+  const formSubtext = "Ingiza barua pepe na nenosiri lako ili uingie.";
 
   return (
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
-        {/* ================= TOP/LEFT — Branded panel ================= */}
+        {/* ================= LEFT PANEL - Branded ================= */}
         <div className="flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
@@ -79,8 +108,8 @@ export default function LoginPage() {
           </Link>
 
           <div className="relative z-10 max-w-sm mx-auto text-center py-8 md:py-0">
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">{t("login_panel_heading")}</h2>
-            <p className="text-white/60 text-sm mt-3 leading-relaxed">{t("login_panel_subtext")}</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">{leftHeading}</h2>
+            <p className="text-white/60 text-sm mt-3 leading-relaxed">{leftSubtext}</p>
 
             <ul className="mt-8 space-y-3 inline-flex flex-col items-start mx-auto">
               {trustPoints.map((point, i) => (
@@ -97,11 +126,11 @@ export default function LoginPage() {
           <SkylineDecoration />
         </div>
 
-        {/* ================= BOTTOM/RIGHT — Form panel ================= */}
+        {/* ================= RIGHT PANEL - Form ================= */}
         <div className="flex items-center justify-center px-5 sm:px-10 py-10 md:py-12 bg-white">
           <div className="w-full max-w-sm">
-            <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{t("login_heading")}</h1>
-            <p className="text-gray-500 text-sm mb-7 text-center">{t("login_panel_subtext")}</p>
+            <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{formHeading}</h1>
+            <p className="text-gray-500 text-sm mb-7 text-center">{formSubtext}</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -125,11 +154,19 @@ export default function LoginPage() {
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">{icons.lock}</span>
                   <input
-                    type="password"
-                    className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+                    type={showPassword ? "text" : "password"}
+                    className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? icons.eye : icons.eyeOff}
+                  </button>
                 </div>
               </div>
 
