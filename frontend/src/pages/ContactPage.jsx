@@ -108,14 +108,6 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* BACK TO HOME */}
-      {/* ============================================================ */}
-      <div className="pb-16 text-center">
-        <Link to="/" className="text-[#E8A33D] font-semibold text-sm hover:underline">
-          {t("waitlist_back_home")}
-        </Link>
-      </div>
 
       {/* ============================================================ */}
       {/* BOTTOM NAVIGATION - MOBILE ONLY */}
