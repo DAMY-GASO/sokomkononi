@@ -4,7 +4,8 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import DashboardShell from "./components/DashboardShell.jsx";
 import MyListings from "./components/MyListings.jsx";
 import PostPropertyForm from "./components/PostPropertyForm.jsx";
-import DealRoom, { DEAL_ROOMS } from "./components/DealRoom.jsx";
+import DealRooms from "./components/DealRooms.jsx";
+import BoostSasa from "./components/BoostSasa.jsx";
 
 // Mock data ya listings
 const MOCK_LISTINGS = [
@@ -67,12 +68,11 @@ const MOCK_LISTINGS = [
 ];
 
 export default function SellerDashboard() {
-  const { t, lang } = useLanguage();  // ✅ Ongeza lang
+  const { t, lang } = useLanguage();
   const { user } = useAuth();
   const [activeView, setActiveView] = useState("listings");
   const [listings, setListings] = useState(MOCK_LISTINGS);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [dealRooms, setDealRooms] = useState(DEAL_ROOMS);
 
   // Handle removing a listing
   const handleRemoveListing = (id) => {
@@ -93,9 +93,22 @@ export default function SellerDashboard() {
     setActiveView("listings");
   };
 
+  // Handle boost update
+  const handleBoosted = (listingId, patch) => {
+    setListings((prev) =>
+      prev.map((l) => (l.id === listingId ? { ...l, ...patch } : l))
+    );
+  };
+
+  // Handle listing paid
+  const handlePaid = (id) => {
+    setListings((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, status: "live" } : l))
+    );
+  };
+
   // Map views to components
   const renderContent = () => {
-    // Success state
     if (showSuccess) {
       return (
         <div className="flex items-center justify-center p-12">
@@ -128,64 +141,27 @@ export default function SellerDashboard() {
         );
 
       case "listings":
-        return <MyListings listings={listings} onRemove={handleRemoveListing} />;
+        return (
+          <MyListings
+            listings={listings}
+            onRemove={handleRemoveListing}
+            onBoost={(id) => {
+              setActiveView("boost");
+            }}
+            onPaid={handlePaid}
+          />
+        );
 
       case "boost":
         return (
-          <div className="p-6">
-            <h2 className="text-xl font-bold text-gray-800">
-              {lang === "sw" ? "Boost Sasa" : "Boost Now"}
-            </h2>
-            <p className="text-gray-600 mt-2">
-              {lang === "sw"
-                ? "Ongeza mwonekano wa bidhaa yako mara 3"
-                : "Increase your listing visibility by 3x"}
-            </p>
-            <div className="mt-4 bg-white rounded-xl p-6 shadow-sm border">
-              <p className="text-gray-500">
-                {lang === "sw"
-                  ? "Chagua mali unayotaka ku-boost"
-                  : "Choose a property to boost"}
-              </p>
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {listings
-                  .filter((l) => l.status === "live")
-                  .map((listing) => (
-                    <div
-                      key={listing.id}
-                      className="border rounded-lg p-4 flex justify-between items-center gap-3"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <span className="font-medium text-sm truncate block">
-                          {listing.title}
-                        </span>
-                        <p className="text-xs text-gray-500">{listing.location}</p>
-                      </div>
-                      <button className="bg-[#E8A33D] text-[#101A2E] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#B87A1F] transition-colors flex-shrink-0">
-                        {lang === "sw" ? "Boost" : "Boost"}
-                      </button>
-                    </div>
-                  ))}
-                {listings.filter((l) => l.status === "live").length === 0 && (
-                  <p className="text-gray-400 col-span-2 text-center py-8">
-                    {lang === "sw"
-                      ? "Hakuna mali live za ku-boost."
-                      : "No live properties to boost."}
-                    <br />
-                    <span className="text-xs">
-                      {lang === "sw"
-                        ? "Weka mali mpya kwanza."
-                        : "Post a new property first."}
-                    </span>
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
+          <BoostSasa
+            listings={listings}
+            onBoosted={handleBoosted}
+          />
         );
 
       case "deals":
-        return <DealRoom userRole="seller" deals={dealRooms} />;
+        return <DealRooms side="seller" />;
 
       case "transactions":
         return (
@@ -200,15 +176,7 @@ export default function SellerDashboard() {
             </p>
             <div className="mt-4 bg-white rounded-xl p-6 shadow-sm border">
               <div className="py-8">
-                <svg
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#2F6D4F"
-                  strokeWidth="1.5"
-                  className="mx-auto text-gray-300"
-                >
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2F6D4F" strokeWidth="1.5" className="mx-auto text-gray-300">
                   <rect x="3" y="5" width="18" height="14" rx="2" />
                   <path d="M3 10h18" />
                 </svg>
