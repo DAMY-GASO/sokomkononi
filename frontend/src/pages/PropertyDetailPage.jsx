@@ -42,7 +42,12 @@ const COLORS = {
   sandLine: "#E6E2D6",
 };
 
-// Mock data - hii itatoka backend baadaye
+// ============================================================
+// MOCK DATA - IMEREKEBISHWA
+// Note: Tumia `titleStatus` badala ya `title` kwa hati
+// ili kuepuka duplicate key 'title' kwenye features object
+// ============================================================
+
 const MOCK_PROPERTY = {
   id: "p1",
   title: "Nyumba ya Ghorofa Mbezi Beach",
@@ -67,7 +72,7 @@ const MOCK_PROPERTY = {
     area: "350 sqm",
     parking: 3,
     yearBuilt: "2020",
-    title: "Hati Miliki",
+    titleStatus: "Hati Miliki",   // ← IMEBADILISHWA kutoka `title`
     furnished: "Semi-Furnished",
     condition: "Nzuri Sana",
   },
@@ -128,9 +133,8 @@ function timeAgo(dateStr) {
 // IMAGE GALLERY
 // ============================================================
 
-function ImageGallery({ images, title }) {
+function ImageGallery({ images, title, isFeatured, isVerified }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showAll, setShowAll] = useState(false);
 
   const nextImage = () => {
     setCurrentIndex((prev) => (prev + 1) % images.length);
@@ -148,21 +152,31 @@ function ImageGallery({ images, title }) {
           src={images[currentIndex]}
           alt={title}
           className="w-full h-full object-cover"
+          onError={(e) => {
+            // Fallback kama picha haipo
+            e.target.style.display = "none";
+            e.target.parentElement.classList.add("flex", "items-center", "justify-center");
+          }}
         />
+
+        {/* Fallback icon kama picha haipo */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <HomeIcon size={64} className="text-gray-300" />
+        </div>
 
         {/* Navigation Arrows */}
         {images.length > 1 && (
           <>
             <button
               onClick={prevImage}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors z-10"
               aria-label="Previous image"
             >
               <ChevronLeft size={20} />
             </button>
             <button
               onClick={nextImage}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors z-10"
               aria-label="Next image"
             >
               <ChevronRight size={20} />
@@ -171,22 +185,22 @@ function ImageGallery({ images, title }) {
         )}
 
         {/* Image Counter */}
-        <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5">
+        <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10">
           <Camera size={14} />
           {currentIndex + 1} / {images.length}
         </div>
 
         {/* Featured Badge */}
-        {MOCK_PROPERTY.isFeatured && (
-          <div className="absolute top-3 left-3 bg-[#E8A33D] text-[#101A2E] text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
+        {isFeatured && (
+          <div className="absolute top-3 left-3 bg-[#E8A33D] text-[#101A2E] text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Star size={12} fill="#101A2E" />
             Featured
           </div>
         )}
 
         {/* Verified Badge */}
-        {MOCK_PROPERTY.isVerified && (
-          <div className="absolute top-3 right-3 bg-[#2F6D4F] text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1">
+        {isVerified && (
+          <div className="absolute top-3 right-3 bg-[#2F6D4F] text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Shield size={12} />
             Verified
           </div>
@@ -234,10 +248,8 @@ function FeatureItem({ icon: Icon, label, value }) {
 }
 
 function FeaturesSection({ property }) {
-  const Icon = CATEGORY_ICONS[property.category] || HomeIcon;
   const features = property.features;
 
-  // Features to display based on category
   const featureItems = [];
 
   if (features.bedrooms) {
@@ -255,14 +267,23 @@ function FeaturesSection({ property }) {
   if (features.yearBuilt) {
     featureItems.push({ icon: Calendar, label: "Mwaka wa Ujenzi", value: features.yearBuilt });
   }
-  if (features.title) {
-    featureItems.push({ icon: CheckCircle, label: "Hati", value: features.title });
+  // ✅ SASA inatumia titleStatus badala ya title
+  if (features.titleStatus) {
+    featureItems.push({ icon: CheckCircle, label: "Hati", value: features.titleStatus });
   }
   if (features.condition) {
     featureItems.push({ icon: Settings, label: "Hali", value: features.condition });
   }
   if (features.furnished) {
     featureItems.push({ icon: HomeIcon, label: "Samani", value: features.furnished });
+  }
+
+  if (featureItems.length === 0) {
+    return (
+      <p className="text-sm text-gray-500 text-center py-4">
+        Hakuna sifa za ziada zilizoainishwa
+      </p>
+    );
   }
 
   return (
@@ -314,10 +335,13 @@ function SellerCard({ seller, onContact }) {
         Wasiliana na Muuzaji
       </button>
 
-      <button className="w-full mt-2 border border-[#2F6D4F] text-[#2F6D4F] hover:bg-[#2F6D4F]/5 py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+      <a
+        href={`tel:${seller.phone}`}
+        className="w-full mt-2 border border-[#2F6D4F] text-[#2F6D4F] hover:bg-[#2F6D4F]/5 py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+      >
         <Phone size={16} />
         Piga Simu
-      </button>
+      </a>
 
       <div className="mt-4 pt-4 border-t border-gray-100">
         <p className="text-xs text-gray-500 text-center">
@@ -335,13 +359,13 @@ function SellerCard({ seller, onContact }) {
 export default function PropertyDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { user } = useAuth();
 
   const [property] = useState(MOCK_PROPERTY);
   const [isSaved, setIsSaved] = useState(property.isSaved);
   const [showContactModal, setShowContactModal] = useState(false);
-  const [activeTab, setActiveTab] = useState("details"); // "details" | "amenities" | "location"
+  const [activeTab, setActiveTab] = useState("details");
 
   const handleSave = () => {
     setIsSaved(!isSaved);
@@ -356,7 +380,7 @@ export default function PropertyDetailPage() {
       });
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert("Link imenakiliwa!");
+      alert(lang === "sw" ? "Link imenakiliwa!" : "Link copied!");
     }
   };
 
@@ -374,18 +398,18 @@ export default function PropertyDetailPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-          <Link to="/" className="hover:text-[#E8A33D] transition-colors">
-            Nyumbani
+        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-4 overflow-x-auto">
+          <Link to="/" className="hover:text-[#E8A33D] transition-colors whitespace-nowrap">
+            {lang === "sw" ? "Nyumbani" : "Home"}
           </Link>
-          <ChevronRight size={14} />
+          <ChevronRight size={14} className="flex-shrink-0" />
           <Link
             to={`/kategoria/${property.category}`}
-            className="hover:text-[#E8A33D] transition-colors"
+            className="hover:text-[#E8A33D] transition-colors whitespace-nowrap"
           >
             {property.categoryLabel}
           </Link>
-          <ChevronRight size={14} />
+          <ChevronRight size={14} className="flex-shrink-0" />
           <span className="text-gray-800 font-medium truncate">{property.title}</span>
         </nav>
 
@@ -393,7 +417,12 @@ export default function PropertyDetailPage() {
           {/* ================= LEFT - Main Content ================= */}
           <div className="lg:col-span-2 space-y-6">
             {/* Image Gallery */}
-            <ImageGallery images={property.images} title={property.title} />
+            <ImageGallery 
+              images={property.images} 
+              title={property.title}
+              isFeatured={property.isFeatured}
+              isVerified={property.isVerified}
+            />
 
             {/* Title & Price */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
@@ -403,12 +432,12 @@ export default function PropertyDetailPage() {
                     {property.title}
                   </h1>
                   <div className="flex items-center gap-2 mt-2 text-gray-500 text-sm">
-                    <MapPin size={14} />
+                    <MapPin size={14} className="flex-shrink-0" />
                     <span>{property.location}</span>
                   </div>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 flex-wrap">
                     <span className="flex items-center gap-1">
-                      <Eye size={12} /> {property.stats.views} walioangalia
+                      <Eye size={12} /> {property.stats.views} {lang === "sw" ? "walioangalia" : "views"}
                     </span>
                     <span>•</span>
                     <span>{timeAgo(property.postedAt)}</span>
@@ -444,13 +473,13 @@ export default function PropertyDetailPage() {
 
               {/* Price */}
               <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="flex items-end gap-3">
+                <div className="flex items-end gap-3 flex-wrap">
                   <p className="text-2xl sm:text-3xl font-bold text-[#C1502E]">
                     {formatTZS(property.price)}
                   </p>
                   {property.priceNegotiable && (
                     <span className="text-xs font-medium text-[#2F6D4F] bg-[#2F6D4F]/10 px-2.5 py-1 rounded-full mb-1">
-                      Bei inajadiliwa
+                      {lang === "sw" ? "Bei inajadiliwa" : "Negotiable"}
                     </span>
                   )}
                 </div>
@@ -468,7 +497,7 @@ export default function PropertyDetailPage() {
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  Maelezo
+                  {lang === "sw" ? "Maelezo" : "Details"}
                 </button>
                 <button
                   onClick={() => setActiveTab("amenities")}
@@ -478,7 +507,7 @@ export default function PropertyDetailPage() {
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  Huduma
+                  {lang === "sw" ? "Huduma" : "Amenities"}
                 </button>
                 <button
                   onClick={() => setActiveTab("location")}
@@ -488,25 +517,25 @@ export default function PropertyDetailPage() {
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  Mahali
+                  {lang === "sw" ? "Mahali" : "Location"}
                 </button>
               </div>
 
               <div className="p-5">
                 {activeTab === "details" && (
                   <div className="space-y-6">
-                    {/* Description */}
                     <div>
-                      <h3 className="font-semibold text-gray-800 mb-3">Maelezo</h3>
+                      <h3 className="font-semibold text-gray-800 mb-3">
+                        {lang === "sw" ? "Maelezo" : "Description"}
+                      </h3>
                       <p className="text-gray-600 text-sm leading-relaxed">
                         {property.description}
                       </p>
                     </div>
 
-                    {/* Features */}
                     <div>
                       <h3 className="font-semibold text-gray-800 mb-3">
-                        Sifa za Mali
+                        {lang === "sw" ? "Sifa za Mali" : "Property Features"}
                       </h3>
                       <FeaturesSection property={property} />
                     </div>
@@ -515,30 +544,41 @@ export default function PropertyDetailPage() {
 
                 {activeTab === "amenities" && (
                   <div>
-                    <h3 className="font-semibold text-gray-800 mb-4">Huduma Zilizopo</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {property.amenities.map((amenity, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-lg"
-                        >
-                          <CheckCircle size={16} className="text-[#2F6D4F] flex-shrink-0" />
-                          <span className="text-sm text-gray-700">{amenity}</span>
-                        </div>
-                      ))}
-                    </div>
+                    <h3 className="font-semibold text-gray-800 mb-4">
+                      {lang === "sw" ? "Huduma Zilizopo" : "Available Amenities"}
+                    </h3>
+                    {property.amenities.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {property.amenities.map((amenity, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-lg"
+                          >
+                            <CheckCircle size={16} className="text-[#2F6D4F] flex-shrink-0" />
+                            <span className="text-sm text-gray-700">{amenity}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        {lang === "sw" ? "Hakuna huduma zilizoainishwa" : "No amenities listed"}
+                      </p>
+                    )}
                   </div>
                 )}
 
                 {activeTab === "location" && (
                   <div>
-                    <h3 className="font-semibold text-gray-800 mb-4">Mahali</h3>
-                    {/* Map placeholder */}
+                    <h3 className="font-semibold text-gray-800 mb-4">
+                      {lang === "sw" ? "Mahali" : "Location"}
+                    </h3>
                     <div className="w-full h-64 bg-gray-100 rounded-xl flex items-center justify-center">
                       <div className="text-center">
                         <MapPin size={32} className="text-gray-300 mx-auto" />
                         <p className="text-gray-500 text-sm mt-2">{property.location}</p>
-                        <p className="text-gray-400 text-xs">Ramani itaonekana hapa</p>
+                        <p className="text-gray-400 text-xs">
+                          {lang === "sw" ? "Ramani itaonekana hapa" : "Map will appear here"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -556,15 +596,20 @@ export default function PropertyDetailPage() {
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                 <Shield size={16} className="text-[#E8A33D]" />
-                Vidokezo vya Usalama
+                {lang === "sw" ? "Vidokezo vya Usalama" : "Safety Tips"}
               </h3>
               <ul className="space-y-2.5">
-                {[
+                {(lang === "sw" ? [
                   "Kutana na muuzaji sehemu za wazi",
                   "Angalia mali kabla ya kulipa",
                   "Thibitisha hati za mali",
                   "Tumia Deal Room yetu kwa mazungumzo",
-                ].map((tip, idx) => (
+                ] : [
+                  "Meet the seller in open places",
+                  "Inspect the property before paying",
+                  "Verify property documents",
+                  "Use our Deal Room for conversations",
+                ]).map((tip, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-xs text-gray-600">
                     <CheckCircle size={14} className="text-[#2F6D4F] mt-0.5 flex-shrink-0" />
                     {tip}
@@ -575,27 +620,35 @@ export default function PropertyDetailPage() {
                 to="/kuhusu#usalama"
                 className="block mt-3 text-xs text-[#E8A33D] font-medium hover:underline"
               >
-                Soma zaidi kuhusu usalama →
+                {lang === "sw" ? "Soma zaidi kuhusu usalama →" : "Read more about safety →"}
               </Link>
             </div>
 
             {/* Stats */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <h3 className="font-semibold text-gray-800 mb-3">Takwimu</h3>
+              <h3 className="font-semibold text-gray-800 mb-3">
+                {lang === "sw" ? "Takwimu" : "Statistics"}
+              </h3>
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div>
                   <p className="text-lg font-bold text-gray-800">{property.stats.views}</p>
-                  <p className="text-xs text-gray-500">Walioangalia</p>
+                  <p className="text-xs text-gray-500">
+                    {lang === "sw" ? "Walioangalia" : "Views"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-lg font-bold text-gray-800">{property.stats.saves}</p>
-                  <p className="text-xs text-gray-500">Wamehifadhi</p>
+                  <p className="text-xs text-gray-500">
+                    {lang === "sw" ? "Wamehifadhi" : "Saves"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-lg font-bold text-gray-800">
                     {property.stats.inquiries}
                   </p>
-                  <p className="text-xs text-gray-500">Maswali</p>
+                  <p className="text-xs text-gray-500">
+                    {lang === "sw" ? "Maswali" : "Inquiries"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -605,12 +658,14 @@ export default function PropertyDetailPage() {
         {/* Similar Properties */}
         <div className="mt-10">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Mali Zinazofanana</h2>
+            <h2 className="text-xl font-bold text-gray-800">
+              {lang === "sw" ? "Mali Zinazofanana" : "Similar Properties"}
+            </h2>
             <Link
               to={`/kategoria/${property.category}`}
               className="text-[#E8A33D] text-sm font-medium hover:underline"
             >
-              Tazama Zote →
+              {lang === "sw" ? "Tazama Zote →" : "View All →"}
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -625,7 +680,7 @@ export default function PropertyDetailPage() {
                 </div>
                 <div className="p-4">
                   <h3 className="font-semibold text-gray-800 text-sm truncate">
-                    Nyumba ya Vyumba 3, Mbezi
+                    {lang === "sw" ? "Nyumba ya Vyumba 3, Mbezi" : "3-Bedroom House, Mbezi"}
                   </h3>
                   <p className="text-[#C1502E] font-bold text-sm mt-1">
                     TZS 35,000,000
@@ -646,10 +701,12 @@ export default function PropertyDetailPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-2">
-              Wasiliana na {property.seller.name}
+              {lang === "sw" ? "Wasiliana na" : "Contact"} {property.seller.name}
             </h3>
             <p className="text-sm text-gray-500 mb-4">
-              Chagua jinsi ungependa kuwasiliana:
+              {lang === "sw"
+                ? "Chagua jinsi ungependa kuwasiliana:"
+                : "Choose how you'd like to get in touch:"}
             </p>
             <div className="space-y-2">
               <a
@@ -658,7 +715,9 @@ export default function PropertyDetailPage() {
               >
                 <Phone size={20} className="text-[#2F6D4F]" />
                 <div>
-                  <p className="text-sm font-medium text-gray-800">Piga Simu</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    {lang === "sw" ? "Piga Simu" : "Call"}
+                  </p>
                   <p className="text-xs text-gray-500">{property.seller.phone}</p>
                 </div>
               </a>
@@ -671,8 +730,14 @@ export default function PropertyDetailPage() {
               >
                 <MessageSquare size={20} className="text-[#E8A33D]" />
                 <div>
-                  <p className="text-sm font-medium text-gray-800">Tuma Ujumbe</p>
-                  <p className="text-xs text-gray-500">Anzisha mazungumzo kwenye Deal Room</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    {lang === "sw" ? "Tuma Ujumbe" : "Send Message"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {lang === "sw"
+                      ? "Anzisha mazungumzo kwenye Deal Room"
+                      : "Start a conversation in the Deal Room"}
+                  </p>
                 </div>
               </button>
             </div>
@@ -680,7 +745,7 @@ export default function PropertyDetailPage() {
               onClick={() => setShowContactModal(false)}
               className="w-full mt-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
             >
-              Funga
+              {lang === "sw" ? "Funga" : "Close"}
             </button>
           </div>
         </div>
