@@ -237,10 +237,6 @@ export default function RegisterPage() {
                 <p className="text-white/40 text-xs">{t("stats_properties")}</p>
               </div>
               <div className="w-px h-8 bg-white/10" />
-              <div>
-                <p className="text-xl font-bold text-[#E8A33D]">2,500+</p>
-                <p className="text-white/40 text-xs">{t("stats_deals")}</p>
-              </div>
             </div>
           </div>
 
