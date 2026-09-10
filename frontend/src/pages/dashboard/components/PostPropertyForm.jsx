@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-import DashboardShell from "./components/DashboardShell.jsx";
-import MyListings from "./components/MyListings.jsx";
-import PostPropertyForm from "./components/PostPropertyForm.jsx";
+import DashboardShell from "./DashboardShell.jsx";
+import MyListings from "./MyListings.jsx";
+import PostPropertyForm from "./PostPropertyForm.jsx";
 
 // Mock data ya listings
 const MOCK_LISTINGS = [
