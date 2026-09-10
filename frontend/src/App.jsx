@@ -19,12 +19,14 @@ import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 import TermsPage from "./pages/TermsPage.jsx";
 import PrivacyPage from "./pages/PrivacyPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
+import ScrollToHash from "./components/ScrollToHash.jsx";
 
 function App() {
   return (
     <AuthProvider>
       <LanguageProvider>
         <Router>
+          <ScrollToHash />
           <Routes>
             {/* ============================================================ */}
             {/* PUBLIC ROUTES */}
