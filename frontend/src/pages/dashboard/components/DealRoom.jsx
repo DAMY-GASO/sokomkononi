@@ -810,4 +810,4 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
   );
 }
 export { DEAL_ROOMS };
-export default DealRoom;
+
