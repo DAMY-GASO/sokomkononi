@@ -476,56 +476,52 @@ export default function HomePage() {
   </div>
 </section>
 
-      {/* ============================================================ */}
-{/* WHY SOKOMKONONI */}
+{/* ============================================================ */}
+{/* WHY SOKOMKONONI - CONTAINERS 3 */}
 {/* ============================================================ */}
 <section className="py-16 px-4 max-w-6xl mx-auto">
   <div className="text-center mb-12">
     <h2 className="text-3xl font-bold text-gray-800">
       {lang === "sw" ? "Kwa Nini SokoMkononi?" : "Why SokoMkononi?"}
     </h2>
-    <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
-      {lang === "sw"
-        ? "Jukwaa la kisasa linalowaunganisha wanunuzi na wauzaji wa mali Tanzania kwa urahisi, uwazi na kuaminiana."
-        : "A modern platform connecting property buyers and sellers in Tanzania with ease, transparency and trust."}
-    </p>
     
-    {/* Tagline */}
-    <div className="flex flex-wrap items-center justify-center gap-3 mt-5 text-sm font-medium text-[#E8A33D]">
-      <span>🔎 {lang === "sw" ? "Tafuta" : "Search"}</span>
-      <span className="text-gray-300">|</span>
-      <span>🤝 {lang === "sw" ? "Ungana" : "Connect"}</span>
-      <span className="text-gray-300">|</span>
-      <span>💬 {lang === "sw" ? "Jadiliana" : "Negotiate"}</span>
-    </div>
-    
-    <p className="text-sm text-gray-500 mt-3 italic">
+    <p className="text-sm text-gray-500 mt-4 italic">
       {lang === "sw"
         ? "SokoMkononi — Nunua na Uza kwa Kujiamini"
         : "SokoMkononi — Buy and Sell with Confidence"}
     </p>
   </div>
 
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-    {/* Salama na Inaaminika - IMEBADILISHWA */}
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+    {/* Container 1 - Jukwaa la Kisasa (Pamoja na Tagline) */}
     <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
       <div className="w-16 h-16 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mb-5">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8">
-          <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" strokeLinejoin="round" />
-          <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 11.5 12 4l9 7.5" />
+          <path d="M5 10v10h14V10" />
+          <path d="M9 20v-6h6v6" />
         </svg>
       </div>
       <h3 className="font-bold text-lg text-gray-800">
-        {lang === "sw" ? " Salama na Inaaminika" : " Safe & Trusted"}
+        {lang === "sw" ? "Jukwaa la Kisasa" : "A Modern Platform"}
       </h3>
-      <p className="text-gray-600 text-sm mt-3 leading-relaxed max-w-sm">
+      <p className="text-gray-600 text-sm mt-3 leading-relaxed">
         {lang === "sw"
-          ? "Tunajenga mazingira ya biashara yenye uwazi na uaminifu, huku watumiaji wakipewa nafasi ya kuthibitisha taarifa kabla ya kufanya muamala."
-          : "We build a transparent and trustworthy trading environment, while giving users the opportunity to verify information before making a transaction."}
+          ? "Jukwaa la kisasa linalowaunganisha wanunuzi na wauzaji wa mali Tanzania kwa urahisi, uwazi na kuaminiana."
+          : "A modern platform connecting property buyers and sellers in Tanzania with ease, transparency and trust."}
       </p>
+      
+      {/* Tagline - SASA IKO KWENYE CONTAINER YA KWANZA */}
+      <div className="flex flex-wrap items-center justify-center gap-3 mt-5 text-sm font-medium text-[#E8A33D]">
+        <span>🔎 {lang === "sw" ? "Tafuta" : "Search"}</span>
+        <span className="text-gray-300">|</span>
+        <span>🤝 {lang === "sw" ? "Ungana" : "Connect"}</span>
+        <span className="text-gray-300">|</span>
+        <span>💬 {lang === "sw" ? "Jadiliana" : "Negotiate"}</span>
+      </div>
     </div>
 
-    {/* Upatikanaji Rahisi - IMEBADILISHWA */}
+    {/* Container 2 - Upatikanaji Rahisi */}
     <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
       <div className="w-16 h-16 bg-[#2F6D4F]/20 rounded-full flex items-center justify-center mb-5">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2F6D4F" strokeWidth="1.8">
@@ -534,17 +530,34 @@ export default function HomePage() {
         </svg>
       </div>
       <h3 className="font-bold text-lg text-gray-800">
-        {lang === "sw" ? " Upatikanaji Rahisi" : " Easy Access"}
+        {lang === "sw" ? "Upatikanaji Rahisi" : "Easy Access"}
       </h3>
-      <p className="text-gray-600 text-sm mt-3 leading-relaxed max-w-sm">
+      <p className="text-gray-600 text-sm mt-3 leading-relaxed">
         {lang === "sw"
           ? "Tafuta na pata mali unayohitaji popote Tanzania, kwa urahisi kupitia SokoMkononi Web Platform na Apps za iOS & Android."
           : "Find and get the property you need anywhere in Tanzania, easily through the SokoMkononi Web Platform and iOS & Android Apps."}
       </p>
     </div>
+
+    {/* Container 3 - Salama na Inaaminika */}
+    <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
+      <div className="w-16 h-16 bg-[#C1502E]/20 rounded-full flex items-center justify-center mb-5">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C1502E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" strokeLinejoin="round" />
+          <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+      <h3 className="font-bold text-lg text-gray-800">
+        {lang === "sw" ? "Salama na Inaaminika" : "Safe & Trusted"}
+      </h3>
+      <p className="text-gray-600 text-sm mt-3 leading-relaxed">
+        {lang === "sw"
+          ? "Tunajenga mazingira ya biashara yenye uwazi na uaminifu, huku watumiaji wakipewa nafasi ya kuthibitisha taarifa kabla ya kufanya muamala."
+          : "We build a transparent and trustworthy trading environment, while giving users the opportunity to verify information before making a transaction."}
+      </p>
+    </div>
   </div>
 </section>
-
       {/* ============================================================ */}
       {/* PROPERTY CAROUSEL - ID="matangazo" */}
       {/* ============================================================ */}
@@ -642,57 +655,56 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* FAQ - ID="faq" - MASWALI 22 KUTOKA KWA MTEJA */}
-      {/* ============================================================ */}
-      <section id="faq" className="py-16 px-4 max-w-3xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-800 text-center mb-4">
-          {lang === "sw" ? "Maswali Yanayoulizwa Mara kwa Mara" : "Frequently Asked Questions"}
-        </h2>
-        <p className="text-gray-500 text-sm text-center mb-12">
-          {lang === "sw"
-            ? "Majibu ya maswali yanayoulizwa sana kuhusu SokoMkononi"
-            : "Answers to the most frequently asked questions about SokoMkononi"}
-        </p>
-        <div className="space-y-3">
-          {faqs.map((faq, index) => {
-            const isOpen = openFaq === index;
-            return (
-              <div key={index} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-                <button
-                  onClick={() => toggleFaq(index)}
-                  aria-expanded={isOpen}
-                  className="w-full flex items-start justify-between gap-4 p-4 text-left hover:bg-[#F5F3EC]/60 transition-colors"
-                >
-                  <h3 className="font-semibold text-gray-800 text-sm sm:text-base flex-1">
-                    <span className="text-[#E8A33D] mr-2">{index + 1}.</span>
-                    {lang === "sw" ? faq.q.sw : faq.q.en}
-                  </h3>
-                  <svg
-                    className={`w-5 h-5 flex-shrink-0 text-[#E8A33D] transition-transform duration-200 mt-0.5 ${isOpen ? "rotate-180" : ""}`}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-                <div
-                  className={`grid transition-all duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-                  style={{ display: "grid" }}
-                >
-                  <div className="overflow-hidden">
-                    <div className="text-gray-600 text-sm px-4 pb-4 whitespace-pre-line leading-relaxed">
-                      {lang === "sw" ? faq.a.sw : faq.a.en}
-                    </div>
-                  </div>
-                </div>
+    {/* ============================================================ */}
+{/* FAQ - ID="faq" - MASWALI 22 KUTOKA KWA MTEJA */}
+{/* ============================================================ */}
+<section id="faq" className="py-16 px-4 max-w-3xl mx-auto">
+  <h2 className="text-3xl font-bold text-gray-800 text-center mb-4">
+    {lang === "sw" ? "Maswali Yanayoulizwa Mara kwa Mara" : "Frequently Asked Questions"}
+  </h2>
+  <p className="text-gray-500 text-sm text-center mb-12">
+    {lang === "sw"
+      ? "Majibu ya maswali yanayoulizwa sana kuhusu SokoMkononi"
+      : "Answers to the most frequently asked questions about SokoMkononi"}
+  </p>
+  <div className="space-y-3">
+    {faqs.map((faq, index) => {
+      const isOpen = openFaq === index;
+      return (
+        <div key={index} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+          <button
+            onClick={() => toggleFaq(index)}
+            aria-expanded={isOpen}
+            className="w-full flex items-start justify-between gap-4 p-4 text-left hover:bg-[#F5F3EC]/60 transition-colors"
+          >
+            <h3 className="font-semibold text-gray-800 text-sm sm:text-base flex-1">
+              {lang === "sw" ? faq.q.sw : faq.q.en}
+            </h3>
+            <svg
+              className={`w-5 h-5 flex-shrink-0 text-[#E8A33D] transition-transform duration-200 mt-0.5 ${isOpen ? "rotate-180" : ""}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <div
+            className={`grid transition-all duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+            style={{ display: "grid" }}
+          >
+            <div className="overflow-hidden">
+              <div className="text-gray-600 text-sm px-4 pb-4 whitespace-pre-line leading-relaxed">
+                {lang === "sw" ? faq.a.sw : faq.a.en}
               </div>
-            );
-          })}
+            </div>
+          </div>
         </div>
-      </section>
+      );
+    })}
+  </div>
+</section>
 
       {/* ============================================================ */}
       {/* FOOTER */}
