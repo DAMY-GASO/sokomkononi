@@ -13,7 +13,7 @@ import {
   Info,
   Eye,
 } from "lucide-react";
-import { COLORS, FONTS, formatTZS, timeAgo } from "./Dashboard/components/shared";
+import { COLORS, FONTS, formatTZS, timeAgo } from "./dashboard/components/shared";
 
 // Notification types with icon + color
 const NOTIFICATION_TYPES = {
