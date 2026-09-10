@@ -82,7 +82,7 @@ const CATEGORY_INFO = {
 };
 
 // ============================================================
-// MOCK DATA - Mali 12 kwa category
+// MOCK DATA - IMEREKEBISHWA (titleStatus badala ya title kwa hati)
 // ============================================================
 
 const MOCK_PROPERTIES = {
@@ -101,14 +101,14 @@ const MOCK_PROPERTIES = {
     { id: "n12", title: "Apartment Kariakoo", price: 72000000, location: "Kariakoo, Dar es Salaam", bedrooms: 2, bathrooms: 2, area: "110 sqm", views: 234, postedAt: "2026-06-28", img: "/assets/properties/house12.jpg" },
   ],
   viwanja: [
-    { id: "v1", title: "Kiwanja Ubungo — Hati Miliki", price: 28000000, location: "Ubungo, Dar es Salaam", area: "600 sqm", title: "Hati Miliki", isVerified: true, views: 145, postedAt: "2026-08-28", img: "/assets/properties/land1.jpg" },
-    { id: "v2", title: "Shamba la Kilimo Kilosa", price: 1500000, location: "Kilosa, Morogoro", area: "5 ekari", title: "Hati ya Kimila", views: 234, postedAt: "2026-08-25", img: "/assets/properties/land2.jpg" },
-    { id: "v3", title: "Kiwanja Kigamboni", price: 18000000, location: "Kigamboni, Dar es Salaam", area: "400 sqm", title: "Hati Miliki", isFeatured: true, isVerified: true, views: 389, postedAt: "2026-08-20", img: "/assets/properties/land3.jpg" },
-    { id: "v4", title: "Shamba Ismani Iringa", price: 8500000, location: "Ismani, Iringa", area: "10 ekari", title: "Hati Miliki", views: 167, postedAt: "2026-08-15", img: "/assets/properties/land4.jpg" },
-    { id: "v5", title: "Kiwanja Bunju", price: 22000000, location: "Bunju, Dar es Salaam", area: "500 sqm", title: "Hati Miliki", isVerified: true, views: 278, postedAt: "2026-08-10", img: "/assets/properties/land5.jpg" },
-    { id: "v6", title: "Shamba Morogoro Mjini", price: 12000000, location: "Morogoro Mjini", area: "3 ekari", title: "Hati ya Kimila", views: 145, postedAt: "2026-08-05", img: "/assets/properties/land6.jpg" },
-    { id: "v7", title: "Kiwanja Mbweni", price: 15000000, location: "Mbweni, Dar es Salaam", area: "400 sqm", title: "Hati Miliki", views: 189, postedAt: "2026-07-28", img: "/assets/properties/land7.jpg" },
-    { id: "v8", title: "Shamba Kilimo Dodoma", price: 20000000, location: "Dodoma", area: "8 ekari", title: "Hati Miliki", isFeatured: true, views: 312, postedAt: "2026-07-20", img: "/assets/properties/land8.jpg" },
+    { id: "v1", title: "Kiwanja Ubungo — Hati Miliki", price: 28000000, location: "Ubungo, Dar es Salaam", area: "600 sqm", titleStatus: "Hati Miliki", isVerified: true, views: 145, postedAt: "2026-08-28", img: "/assets/properties/land1.jpg" },
+    { id: "v2", title: "Shamba la Kilimo Kilosa", price: 1500000, location: "Kilosa, Morogoro", area: "5 ekari", titleStatus: "Hati ya Kimila", views: 234, postedAt: "2026-08-25", img: "/assets/properties/land2.jpg" },
+    { id: "v3", title: "Kiwanja Kigamboni", price: 18000000, location: "Kigamboni, Dar es Salaam", area: "400 sqm", titleStatus: "Hati Miliki", isFeatured: true, isVerified: true, views: 389, postedAt: "2026-08-20", img: "/assets/properties/land3.jpg" },
+    { id: "v4", title: "Shamba Ismani Iringa", price: 8500000, location: "Ismani, Iringa", area: "10 ekari", titleStatus: "Hati Miliki", views: 167, postedAt: "2026-08-15", img: "/assets/properties/land4.jpg" },
+    { id: "v5", title: "Kiwanja Bunju", price: 22000000, location: "Bunju, Dar es Salaam", area: "500 sqm", titleStatus: "Hati Miliki", isVerified: true, views: 278, postedAt: "2026-08-10", img: "/assets/properties/land5.jpg" },
+    { id: "v6", title: "Shamba Morogoro Mjini", price: 12000000, location: "Morogoro Mjini", area: "3 ekari", titleStatus: "Hati ya Kimila", views: 145, postedAt: "2026-08-05", img: "/assets/properties/land6.jpg" },
+    { id: "v7", title: "Kiwanja Mbweni", price: 15000000, location: "Mbweni, Dar es Salaam", area: "400 sqm", titleStatus: "Hati Miliki", views: 189, postedAt: "2026-07-28", img: "/assets/properties/land7.jpg" },
+    { id: "v8", title: "Shamba Kilimo Dodoma", price: 20000000, location: "Dodoma", area: "8 ekari", titleStatus: "Hati Miliki", isFeatured: true, views: 312, postedAt: "2026-07-20", img: "/assets/properties/land8.jpg" },
   ],
   magari: [
     { id: "m1", title: "Toyota Harrier 2016", price: 42000000, location: "Kinondoni, Dar es Salaam", make: "Toyota", model: "Harrier", year: 2016, mileage: "85,000 km", fuel: "Petrol", transmission: "Automatic", isFeatured: true, isVerified: true, views: 567, postedAt: "2026-08-28", img: "/assets/properties/car1.jpg" },
@@ -211,6 +211,7 @@ function PropertyCard({ property, category, viewMode, isSaved, onToggleSave }) {
             {property.bedrooms && <span>🛏 {property.bedrooms} vyumba</span>}
             {property.bathrooms && <span>🚿 {property.bathrooms} bafu</span>}
             {property.area && <span>📐 {property.area}</span>}
+            {property.titleStatus && <span>📜 {property.titleStatus}</span>}
             {property.make && <span>🚗 {property.make} {property.model}</span>}
           </div>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
@@ -281,6 +282,7 @@ function PropertyCard({ property, category, viewMode, isSaved, onToggleSave }) {
           {property.bedrooms && <span>🛏 {property.bedrooms}</span>}
           {property.bathrooms && <span>🚿 {property.bathrooms}</span>}
           {property.area && <span>📐 {property.area}</span>}
+          {property.titleStatus && <span>📜 {property.titleStatus}</span>}
           {property.make && <span>🚗 {property.year}</span>}
         </div>
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">
@@ -345,7 +347,6 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
 
   const content = (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-800 flex items-center gap-2">
           <SlidersHorizontal size={16} />
@@ -359,7 +360,6 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
         </button>
       </div>
 
-      {/* Price Range */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">Bei</h4>
         <div className="space-y-2">
@@ -378,7 +378,6 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
         </div>
       </div>
 
-      {/* Other filters */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">Vigezo Vingine</h4>
         <div className="space-y-2">
@@ -403,7 +402,6 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
         </div>
       </div>
 
-      {/* Actions */}
       <div className="space-y-2 pt-4 border-t border-gray-100">
         <button
           onClick={handleApply}
@@ -423,14 +421,12 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
 
   return (
     <>
-      {/* Desktop sidebar */}
       <aside className="hidden lg:block w-64 flex-shrink-0">
         <div className="bg-white rounded-xl border border-gray-100 p-5 sticky top-20">
           {content}
         </div>
       </aside>
 
-      {/* Mobile drawer */}
       {isOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="flex-1 bg-black/50" onClick={onClose} />
@@ -456,8 +452,8 @@ export default function CategoryPage() {
   const categoryInfo = CATEGORY_INFO[category] || CATEGORY_INFO.nyumba;
   const CategoryIcon = categoryInfo.icon;
 
-  const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
-  const [sortBy, setSortBy] = useState("newest"); // "newest" | "price_low" | "price_high" | "popular"
+  const [viewMode, setViewMode] = useState("grid");
+  const [sortBy, setSortBy] = useState("newest");
   const [filters, setFilters] = useState({ priceRange: null, verified: false, featured: false });
   const [savedIds, setSavedIds] = useState([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -467,11 +463,9 @@ export default function CategoryPage() {
 
   const allProperties = MOCK_PROPERTIES[category] || [];
 
-  // Filter and sort properties
   const filteredProperties = useMemo(() => {
     let result = [...allProperties];
 
-    // Search filter
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -481,55 +475,26 @@ export default function CategoryPage() {
       );
     }
 
-    // Verified filter
     if (filters.verified) {
       result = result.filter((p) => p.isVerified);
     }
 
-    // Featured filter
     if (filters.featured) {
       result = result.filter((p) => p.isFeatured);
     }
 
-    // Price range filter
     if (filters.priceRange !== null) {
       const ranges = {
-        nyumba: [
-          [0, 50000000],
-          [50000000, 100000000],
-          [100000000, 200000000],
-          [200000000, Infinity],
-        ],
-        viwanja: [
-          [0, 10000000],
-          [10000000, 20000000],
-          [20000000, 50000000],
-          [50000000, Infinity],
-        ],
-        magari: [
-          [0, 20000000],
-          [20000000, 50000000],
-          [50000000, 100000000],
-          [100000000, Infinity],
-        ],
-        biashara: [
-          [0, 20000000],
-          [20000000, 50000000],
-          [50000000, 100000000],
-          [100000000, Infinity],
-        ],
-        mashine: [
-          [0, 30000000],
-          [30000000, 70000000],
-          [70000000, 150000000],
-          [150000000, Infinity],
-        ],
+        nyumba: [[0, 50000000], [50000000, 100000000], [100000000, 200000000], [200000000, Infinity]],
+        viwanja: [[0, 10000000], [10000000, 20000000], [20000000, 50000000], [50000000, Infinity]],
+        magari: [[0, 20000000], [20000000, 50000000], [50000000, 100000000], [100000000, Infinity]],
+        biashara: [[0, 20000000], [20000000, 50000000], [50000000, 100000000], [100000000, Infinity]],
+        mashine: [[0, 30000000], [30000000, 70000000], [70000000, 150000000], [150000000, Infinity]],
       };
       const [min, max] = ranges[category][filters.priceRange];
       result = result.filter((p) => p.price >= min && p.price < max);
     }
 
-    // Sort
     switch (sortBy) {
       case "price_low":
         result.sort((a, b) => a.price - b.price);
@@ -548,7 +513,6 @@ export default function CategoryPage() {
     return result;
   }, [allProperties, searchQuery, filters, sortBy, category]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredProperties.length / ITEMS_PER_PAGE);
   const paginatedProperties = filteredProperties.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -570,10 +534,8 @@ export default function CategoryPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* ================= HERO BANNER ================= */}
       <section className="bg-[#101A2E] text-white py-10 px-4">
         <div className="max-w-7xl mx-auto">
-          {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-white/60 mb-4">
             <Link to="/" className="hover:text-white transition-colors">
               Nyumbani
@@ -596,7 +558,6 @@ export default function CategoryPage() {
             </div>
           </div>
 
-          {/* Search Bar */}
           <form onSubmit={handleSearchSubmit} className="mt-6 max-w-2xl">
             <div className="relative">
               <Search
@@ -625,10 +586,8 @@ export default function CategoryPage() {
         </div>
       </section>
 
-      {/* ================= MAIN CONTENT ================= */}
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex gap-6">
-          {/* Sidebar */}
           <FilterSidebar
             category={category}
             filters={filters}
@@ -638,9 +597,7 @@ export default function CategoryPage() {
             lang={lang}
           />
 
-          {/* Main */}
           <div className="flex-1 min-w-0">
-            {/* Toolbar */}
             <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <p className="text-sm text-gray-600">
@@ -652,7 +609,6 @@ export default function CategoryPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Mobile filter button */}
                 <button
                   onClick={() => setShowMobileFilters(true)}
                   className="lg:hidden flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
@@ -661,7 +617,6 @@ export default function CategoryPage() {
                   {lang === "sw" ? "Vichujio" : "Filters"}
                 </button>
 
-                {/* Sort */}
                 <div className="relative">
                   <select
                     value={sortBy}
@@ -687,7 +642,6 @@ export default function CategoryPage() {
                   />
                 </div>
 
-                {/* View mode toggle */}
                 <div className="hidden sm:flex border border-gray-200 rounded-lg overflow-hidden">
                   <button
                     onClick={() => setViewMode("grid")}
@@ -715,7 +669,6 @@ export default function CategoryPage() {
               </div>
             </div>
 
-            {/* Active Filters */}
             {(filters.priceRange !== null || filters.verified || filters.featured || searchQuery) && (
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className="text-xs text-gray-500">
@@ -757,7 +710,6 @@ export default function CategoryPage() {
               </div>
             )}
 
-            {/* Properties Grid/List */}
             {paginatedProperties.length > 0 ? (
               <>
                 <div
@@ -779,7 +731,6 @@ export default function CategoryPage() {
                   ))}
                 </div>
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-8">
                     <button
