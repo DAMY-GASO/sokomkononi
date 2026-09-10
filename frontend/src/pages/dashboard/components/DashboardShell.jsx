@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search,
   Bell,
@@ -56,7 +57,49 @@ const BUYER_NAV = [
   { key: "transactions", label: "My Transactions", icon: Receipt },
 ];
 
-// Seed data so My Listings has something to show before the seller posts anything new.
+// Ramani ya URL → { side, key }
+const URL_TO_STATE = {
+  "/dashboard": { side: "seller", key: "listings" },
+  "/dashboard/seller": { side: "seller", key: "listings" },
+  "/dashboard/post": { side: "seller", key: "post" },
+  "/dashboard/listings": { side: "seller", key: "listings" },
+  "/dashboard/saved": { side: "seller", key: "saved" },
+  "/dashboard/boost": { side: "seller", key: "boost" },
+  "/dashboard/deals": { side: "seller", key: "deals" },
+  "/dashboard/messages": { side: "seller", key: "messages" },
+  "/dashboard/notifications": { side: "seller", key: "notifications" },
+  "/dashboard/transactions": { side: "seller", key: "transactions" },
+  "/dashboard/buyer": { side: "buyer", key: "browse" },
+  "/dashboard/buyer/saved": { side: "buyer", key: "saved" },
+  "/dashboard/buyer/messages": { side: "buyer", key: "messages" },
+  "/dashboard/buyer/notifications": { side: "buyer", key: "notifications" },
+  "/dashboard/buyer/transactions": { side: "buyer", key: "transactions" },
+};
+
+// Ramani ya { side, key } → URL
+const STATE_TO_URL = {
+  seller: {
+    post: "/dashboard/post",
+    listings: "/dashboard/listings",
+    saved: "/dashboard/saved",
+    boost: "/dashboard/boost",
+    deals: "/dashboard/deals",
+    messages: "/dashboard/messages",
+    notifications: "/dashboard/notifications",
+    transactions: "/dashboard/transactions",
+  },
+  buyer: {
+    browse: "/dashboard/buyer",
+    saved: "/dashboard/buyer/saved",
+    deals: "/dashboard/deals",
+    messages: "/dashboard/buyer/messages",
+    notifications: "/dashboard/buyer/notifications",
+    waiting: "/dashboard/buyer",
+    transactions: "/dashboard/buyer/transactions",
+  },
+};
+
+// Seed data
 const SEED_LISTINGS = [
   {
     id: "l1",
@@ -107,7 +150,10 @@ const SEED_LISTINGS = [
 ];
 
 export default function DashboardShell() {
-  const [side, setSide] = useState("seller"); // "seller" | "buyer"
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  const [side, setSide] = useState("seller");
   const [activeKey, setActiveKey] = useState(SELLER_NAV[0].key);
   const [tickerIndex, setTickerIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -116,10 +162,22 @@ export default function DashboardShell() {
 
   const nav = side === "seller" ? SELLER_NAV : BUYER_NAV;
 
+  // ============================================================
+  // SOMA URL NA KUFUNGUA TAB SAHIHI
+  // ============================================================
   useEffect(() => {
-    setActiveKey(nav[0].key);
-  }, [side]);
+    const path = location.pathname;
+    const match = URL_TO_STATE[path];
+    if (match) {
+      setSide(match.side);
+      setActiveKey(match.key);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
+  // ============================================================
+  // TICKER
+  // ============================================================
   useEffect(() => {
     const id = setInterval(() => {
       setTickerIndex((i) => (i + 1) % ANNOUNCEMENTS.length);
@@ -129,6 +187,9 @@ export default function DashboardShell() {
 
   const accent = side === "seller" ? COLORS.gold : COLORS.green;
 
+  // ============================================================
+  // LISTING HELPERS
+  // ============================================================
   const addListing = (listing) => setListings((prev) => [listing, ...prev]);
   const removeListing = (id) =>
     setListings((prev) => prev.filter((l) => l.id !== id));
@@ -137,17 +198,41 @@ export default function DashboardShell() {
 
   const goToBoost = (listingId) => {
     setBoostTarget(listingId);
-    setActiveKey("boost");
+    handleNavClick("boost");
   };
 
   const markListingPaid = (id) => updateListing(id, { status: "live" });
 
+  // ============================================================
+  // NAVIGATION HELPERS
+  // ============================================================
+  const handleNavClick = (key) => {
+    setActiveKey(key);
+    const url = STATE_TO_URL[side]?.[key];
+    if (url) {
+      navigate(url);
+    }
+  };
+
+  const handleSideChange = (newSide) => {
+    setSide(newSide);
+    const firstKey = newSide === "seller" ? "listings" : "browse";
+    setActiveKey(firstKey);
+    const url = STATE_TO_URL[newSide]?.[firstKey];
+    if (url) {
+      navigate(url);
+    }
+  };
+
+  // ============================================================
+  // RENDER MAIN CONTENT
+  // ============================================================
   const renderMain = () => {
     if (activeKey === "post") {
       return (
         <PostPropertyForm
           onSubmit={addListing}
-          onGoToListings={() => setActiveKey("listings")}
+          onGoToListings={() => handleNavClick("listings")}
           onPaid={markListingPaid}
           onGoToBoost={goToBoost}
         />
@@ -187,6 +272,7 @@ export default function DashboardShell() {
     if (activeKey === "transactions") {
       return <MyTransactionsPage />;
     }
+    // Default: placeholder
     return (
       <main className="flex-1 p-4 sm:p-6">
         <h1
@@ -264,7 +350,7 @@ export default function DashboardShell() {
             className="hidden md:flex items-center rounded-full p-1"
           >
             <button
-              onClick={() => setSide("seller")}
+              onClick={() => handleSideChange("seller")}
               style={{
                 background: side === "seller" ? COLORS.gold : "transparent",
                 color: side === "seller" ? COLORS.night : COLORS.sand,
@@ -274,7 +360,7 @@ export default function DashboardShell() {
               Uza Sasa
             </button>
             <button
-              onClick={() => setSide("buyer")}
+              onClick={() => handleSideChange("buyer")}
               style={{
                 background: side === "buyer" ? COLORS.green : "transparent",
                 color: COLORS.sand,
@@ -285,7 +371,7 @@ export default function DashboardShell() {
             </button>
           </div>
 
-          {/* Home button - link to HomePage */}
+          {/* Home button */}
           <a
             href="/"
             className="text-white/80 hover:text-white p-1.5 transition-colors"
@@ -295,9 +381,9 @@ export default function DashboardShell() {
             <Home size={20} />
           </a>
 
-          {/* Notifications - inaelekeza NotificationsPage */}
+          {/* Notifications */}
           <button
-            onClick={() => setActiveKey("notifications")}
+            onClick={() => handleNavClick("notifications")}
             className="relative text-white/80 hover:text-white p-1.5 transition-colors"
             aria-label="Notifications"
           >
@@ -325,7 +411,7 @@ export default function DashboardShell() {
         className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full"
       >
         <button
-          onClick={() => setSide("seller")}
+          onClick={() => handleSideChange("seller")}
           style={{
             background: side === "seller" ? COLORS.gold : "transparent",
             color: side === "seller" ? COLORS.night : COLORS.sand,
@@ -335,7 +421,7 @@ export default function DashboardShell() {
           Uza Sasa
         </button>
         <button
-          onClick={() => setSide("buyer")}
+          onClick={() => handleSideChange("buyer")}
           style={{
             background: side === "buyer" ? COLORS.green : "transparent",
             color: COLORS.sand,
@@ -371,7 +457,7 @@ export default function DashboardShell() {
             return (
               <button
                 key={key}
-                onClick={() => setActiveKey(key)}
+                onClick={() => handleNavClick(key)}
                 style={{
                   background: isActive ? COLORS.night : "transparent",
                   color: isActive ? COLORS.sand : COLORS.night,
@@ -424,7 +510,7 @@ export default function DashboardShell() {
                   <button
                     key={key}
                     onClick={() => {
-                      setActiveKey(key);
+                      handleNavClick(key);
                       setSidebarOpen(false);
                     }}
                     style={{
@@ -439,7 +525,6 @@ export default function DashboardShell() {
                 );
               })}
 
-              {/* Home link kwenye mobile sidebar */}
               <a
                 href="/"
                 style={{ color: COLORS.night }}
