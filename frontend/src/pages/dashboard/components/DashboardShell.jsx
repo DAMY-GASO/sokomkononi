@@ -12,12 +12,22 @@ import {
   LayoutGrid,
   Clock3,
   Megaphone,
+  Heart,
+  MessageSquare,
+  Home,
 } from "lucide-react";
 import { COLORS, FONTS } from "./shared";
 import PostPropertyForm from "./PostPropertyForm";
 import MyListings from "./MyListings";
 import BoostSasa from "./BoostSasa";
 import DealRooms from "./DealRooms";
+import BottomNav from "../../../components/BottomNav.jsx";
+
+// Kurasa mpya
+import SavedPropertiesPage from "../pages/SavedPropertiesPage";
+import MessagesPage from "../pages/MessagesPage";
+import NotificationsPage from "../pages/NotificationsPage";
+import MyTransactionsPage from "../pages/MyTransactionsPage";
 
 const ANNOUNCEMENTS = [
   "Mali mpya 240+ zimeongezwa wiki hii karibu na Dar es Salaam",
@@ -28,14 +38,20 @@ const ANNOUNCEMENTS = [
 const SELLER_NAV = [
   { key: "post", label: "Weka Mali Yako", icon: PlusCircle },
   { key: "listings", label: "My Listings", icon: ListChecks },
+  { key: "saved", label: "Zilizohifadhiwa", icon: Heart },
   { key: "boost", label: "Boost Sasa", icon: Rocket },
   { key: "deals", label: "Deal Rooms", icon: MessagesSquare },
+  { key: "messages", label: "Ujumbe", icon: MessageSquare },
+  { key: "notifications", label: "Taarifa", icon: Bell },
   { key: "transactions", label: "My Transactions", icon: Receipt },
 ];
 
 const BUYER_NAV = [
   { key: "browse", label: "Tafuta Mali", icon: LayoutGrid },
+  { key: "saved", label: "Zilizohifadhiwa", icon: Heart },
   { key: "deals", label: "Deal Rooms", icon: MessagesSquare },
+  { key: "messages", label: "Ujumbe", icon: MessageSquare },
+  { key: "notifications", label: "Taarifa", icon: Bell },
   { key: "waiting", label: "Waiting List", icon: Clock3 },
   { key: "transactions", label: "My Transactions", icon: Receipt },
 ];
@@ -114,7 +130,8 @@ export default function DashboardShell() {
   const accent = side === "seller" ? COLORS.gold : COLORS.green;
 
   const addListing = (listing) => setListings((prev) => [listing, ...prev]);
-  const removeListing = (id) => setListings((prev) => prev.filter((l) => l.id !== id));
+  const removeListing = (id) =>
+    setListings((prev) => prev.filter((l) => l.id !== id));
   const updateListing = (id, patch) =>
     setListings((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
 
@@ -146,6 +163,9 @@ export default function DashboardShell() {
         />
       );
     }
+    if (activeKey === "saved") {
+      return <SavedPropertiesPage />;
+    }
     if (activeKey === "boost") {
       return (
         <BoostSasa
@@ -157,6 +177,15 @@ export default function DashboardShell() {
     }
     if (activeKey === "deals") {
       return <DealRooms side={side} />;
+    }
+    if (activeKey === "messages") {
+      return <MessagesPage />;
+    }
+    if (activeKey === "notifications") {
+      return <NotificationsPage />;
+    }
+    if (activeKey === "transactions") {
+      return <MyTransactionsPage />;
     }
     return (
       <main className="flex-1 p-4 sm:p-6">
@@ -186,17 +215,19 @@ export default function DashboardShell() {
 
   return (
     <div
-      style={{ fontFamily: FONTS.body, background: COLORS.sand, minHeight: "600px" }}
-      className="w-full flex flex-col"
+      style={{ fontFamily: FONTS.body, background: COLORS.sand, minHeight: "100vh" }}
+      className="w-full flex flex-col pb-16 md:pb-0"
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
-      {/* Top header */}
+      {/* ============================================================ */}
+      {/* TOP HEADER */}
+      {/* ============================================================ */}
       <header
         style={{ background: COLORS.night }}
-        className="w-full flex items-center gap-3 px-3 sm:px-5 py-3"
+        className="w-full flex items-center gap-3 px-3 sm:px-5 py-3 sticky top-0 z-30"
       >
         <button
           onClick={() => setSidebarOpen((v) => !v)}
@@ -206,12 +237,14 @@ export default function DashboardShell() {
           <Menu size={22} />
         </button>
 
-        <span
+        {/* Logo - Link to HomePage */}
+        <a
+          href="/"
           style={{ fontFamily: FONTS.display, color: COLORS.sand }}
-          className="text-lg sm:text-xl font-semibold tracking-tight shrink-0"
+          className="text-lg sm:text-xl font-semibold tracking-tight shrink-0 hover:opacity-80 transition-opacity"
         >
           SokoMkononi
-        </span>
+        </a>
 
         <div
           style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.12)" }}
@@ -244,7 +277,7 @@ export default function DashboardShell() {
               onClick={() => setSide("buyer")}
               style={{
                 background: side === "buyer" ? COLORS.green : "transparent",
-                color: side === "buyer" ? COLORS.sand : COLORS.sand,
+                color: COLORS.sand,
               }}
               className="text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
@@ -252,14 +285,26 @@ export default function DashboardShell() {
             </button>
           </div>
 
+          {/* Home button - link to HomePage */}
+          <a
+            href="/"
+            className="text-white/80 hover:text-white p-1.5 transition-colors"
+            aria-label="Rudi kwenye HomePage"
+            title="Rudi Nyumbani"
+          >
+            <Home size={20} />
+          </a>
+
+          {/* Notifications - inaelekeza NotificationsPage */}
           <button
-            className="relative text-white/80 hover:text-white"
+            onClick={() => setActiveKey("notifications")}
+            className="relative text-white/80 hover:text-white p-1.5 transition-colors"
             aria-label="Notifications"
           >
             <Bell size={20} />
             <span
               style={{ background: COLORS.rust }}
-              className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full"
+              className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full"
             />
           </button>
 
@@ -272,7 +317,9 @@ export default function DashboardShell() {
         </div>
       </header>
 
-      {/* mobile toggle row */}
+      {/* ============================================================ */}
+      {/* MOBILE SELLER/BUYER TOGGLE */}
+      {/* ============================================================ */}
       <div
         style={{ background: COLORS.nightSoft }}
         className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full"
@@ -299,7 +346,9 @@ export default function DashboardShell() {
         </button>
       </div>
 
-      {/* Announcement ticker (rotates every 5s) */}
+      {/* ============================================================ */}
+      {/* ANNOUNCEMENT TICKER */}
+      {/* ============================================================ */}
       <div
         style={{ background: COLORS.sandLine, color: COLORS.night }}
         className="w-full flex items-center gap-2 px-4 py-1.5 text-xs sm:text-sm"
@@ -308,11 +357,14 @@ export default function DashboardShell() {
         <span className="truncate">{ANNOUNCEMENTS[tickerIndex]}</span>
       </div>
 
+      {/* ============================================================ */}
+      {/* BODY: SIDEBAR + MAIN CONTENT */}
+      {/* ============================================================ */}
       <div className="flex flex-1 relative">
-        {/* Sidebar - desktop */}
+        {/* ================= SIDEBAR - DESKTOP ================= */}
         <aside
           style={{ background: COLORS.sand, borderColor: COLORS.sandLine }}
-          className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1"
+          className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto"
         >
           {nav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeKey;
@@ -342,14 +394,24 @@ export default function DashboardShell() {
               </button>
             );
           })}
+
+          {/* Home link kwenye sidebar */}
+          <a
+            href="/"
+            style={{ color: COLORS.night }}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4"
+          >
+            <Home size={17} color={COLORS.night} />
+            Rudi Nyumbani
+          </a>
         </aside>
 
-        {/* Sidebar - mobile drawer */}
+        {/* ================= SIDEBAR - MOBILE DRAWER ================= */}
         {sidebarOpen && (
           <div className="md:hidden absolute inset-0 z-20 flex">
             <div
               style={{ background: COLORS.sand }}
-              className="w-64 h-full py-4 px-3 flex flex-col gap-1 shadow-xl"
+              className="w-64 h-full py-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto"
             >
               <div className="flex justify-end mb-2">
                 <button onClick={() => setSidebarOpen(false)} aria-label="Funga">
@@ -376,6 +438,16 @@ export default function DashboardShell() {
                   </button>
                 );
               })}
+
+              {/* Home link kwenye mobile sidebar */}
+              <a
+                href="/"
+                style={{ color: COLORS.night }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4"
+              >
+                <Home size={17} color={COLORS.night} />
+                Rudi Nyumbani
+              </a>
             </div>
             <div
               onClick={() => setSidebarOpen(false)}
@@ -384,8 +456,15 @@ export default function DashboardShell() {
           </div>
         )}
 
-        {/* Main content */}
+        {/* ================= MAIN CONTENT ================= */}
         <div className="flex-1 min-w-0 overflow-y-auto">{renderMain()}</div>
+      </div>
+
+      {/* ============================================================ */}
+      {/* BOTTOM NAVIGATION - MOBILE ONLY */}
+      {/* ============================================================ */}
+      <div className="md:hidden">
+        <BottomNav />
       </div>
     </div>
   );
