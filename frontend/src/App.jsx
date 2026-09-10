@@ -13,6 +13,7 @@ import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 import SellerDashboard from "./pages/dashboard/SellerDashboard.jsx";
 import BuyerDashboard from "./pages/dashboard/BuyerDashboard.jsx";
 import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
+import PropertyDetailPage from "./pages/PropertyDetailPage.jsx";
 
 
 function App() {
@@ -34,6 +35,8 @@ function App() {
             <Route path="/dashboard" element={<SellerDashboard />} /> 
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/mali/:id" element={<PropertyDetailPage />} />
+            <Route path="/property/:id" element={<PropertyDetailPage />} /> 
             <Route path="*" element={<HomePage />} />
           </Routes>
         </Router>
