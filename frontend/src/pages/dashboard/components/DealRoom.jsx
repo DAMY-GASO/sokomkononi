@@ -855,4 +855,3 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
 
 // ✅ Export zote mbili
 export { DEAL_ROOMS };
-export default DealRoom; // ← Hii ilikuwa haipo!
