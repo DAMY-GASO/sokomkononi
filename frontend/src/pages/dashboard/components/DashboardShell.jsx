@@ -24,7 +24,7 @@ import DealRooms from "./DealRooms";
 import BottomNav from "../../../components/BottomNav.jsx";
 
 // Kurasa mpya
-import SavedPropertiesPage from "../pages/SavedPropertiesPage";
+import SavedPropertyPage from "../pages/SavedPropertyPage";
 import MessagesPage from "../pages/MessagesPage";
 import NotificationsPage from "../pages/NotificationsPage";
 import MyTransactionsPage from "../pages/MyTransactionsPage";
