@@ -41,7 +41,7 @@ const COLORS = {
   sandLine: "#E6E2D6",
 };
 
-// Mock user data
+// Mock user data - ina stats kamili
 const MOCK_USER = {
   id: "u1",
   name: "John Doe",
@@ -134,31 +134,34 @@ function StatCard({ icon: Icon, value, label, color }) {
 // ============================================================
 
 function OverviewTab({ user, lang, activities }) {
+  // ✅ HAKIKISHA stats ipo
+  const stats = user?.stats || MOCK_USER.stats;
+
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
           icon={Home}
-          value={user.stats.listings}
+          value={stats.listings || 0}
           label={lang === "sw" ? "Mali Zangu" : "My Listings"}
           color={COLORS.gold}
         />
         <StatCard
           icon={Heart}
-          value={user.stats.saved}
+          value={stats.saved || 0}
           label={lang === "sw" ? "Zilizohifadhiwa" : "Saved"}
           color={COLORS.rust}
         />
         <StatCard
           icon={MessageSquare}
-          value={user.stats.deals}
+          value={stats.deals || 0}
           label={lang === "sw" ? "Deals" : "Deals"}
           color={COLORS.green}
         />
         <StatCard
           icon={Star}
-          value={user.stats.rating}
+          value={stats.rating || 0}
           label={lang === "sw" ? "Ukadiriaji" : "Rating"}
           color="#2563EB"
         />
@@ -188,7 +191,9 @@ function OverviewTab({ user, lang, activities }) {
               <p className="text-xs text-gray-500">
                 {lang === "sw" ? "Barua Pepe" : "Email"}
               </p>
-              <p className="text-sm text-gray-800 truncate">{user.email}</p>
+              <p className="text-sm text-gray-800 truncate">
+                {user.email || "—"}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -199,7 +204,7 @@ function OverviewTab({ user, lang, activities }) {
               <p className="text-xs text-gray-500">
                 {lang === "sw" ? "Simu" : "Phone"}
               </p>
-              <p className="text-sm text-gray-800">{user.phone}</p>
+              <p className="text-sm text-gray-800">{user.phone || "—"}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -210,7 +215,7 @@ function OverviewTab({ user, lang, activities }) {
               <p className="text-xs text-gray-500">
                 {lang === "sw" ? "Mahali" : "Location"}
               </p>
-              <p className="text-sm text-gray-800">{user.location}</p>
+              <p className="text-sm text-gray-800">{user.location || "—"}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -222,10 +227,12 @@ function OverviewTab({ user, lang, activities }) {
                 {lang === "sw" ? "Mwanachama Tangu" : "Member Since"}
               </p>
               <p className="text-sm text-gray-800">
-                {new Date(user.memberSince).toLocaleDateString(
-                  lang === "sw" ? "sw-TZ" : "en-US",
-                  { month: "long", year: "numeric" }
-                )}
+                {user.memberSince
+                  ? new Date(user.memberSince).toLocaleDateString(
+                      lang === "sw" ? "sw-TZ" : "en-US",
+                      { month: "long", year: "numeric" }
+                    )
+                  : "—"}
               </p>
             </div>
           </div>
@@ -273,11 +280,11 @@ function OverviewTab({ user, lang, activities }) {
 
 function EditProfileTab({ user, lang, onSave }) {
   const [form, setForm] = useState({
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    location: user.location,
-    bio: user.bio,
+    name: user.name || "",
+    email: user.email || "",
+    phone: user.phone || "",
+    location: user.location || "",
+    bio: user.bio || "",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -314,7 +321,7 @@ function EditProfileTab({ user, lang, onSave }) {
               {avatar ? (
                 <img src={avatar} alt="" className="w-full h-full object-cover" />
               ) : (
-                user.name.charAt(0)
+                user.name?.charAt(0) || "U"
               )}
             </div>
             <label className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#E8A33D] text-[#101A2E] flex items-center justify-center cursor-pointer hover:bg-[#B87A1F] transition-colors">
@@ -933,7 +940,16 @@ export default function ProfilePage() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("overview");
-  const [profileUser, setProfileUser] = useState(user || MOCK_USER);
+  
+  // ✅ HAKIKISHA profileUser ina stats kila wakati
+  const [profileUser, setProfileUser] = useState({
+    ...MOCK_USER,
+    ...(user || {}),
+    stats: {
+      ...MOCK_USER.stats,
+      ...(user?.stats || {}),
+    },
+  });
 
   const handleLogout = async () => {
     await logout();
@@ -941,7 +957,14 @@ export default function ProfilePage() {
   };
 
   const handleSaveProfile = (updatedData) => {
-    const updated = { ...profileUser, ...updatedData };
+    const updated = {
+      ...profileUser,
+      ...updatedData,
+      stats: {
+        ...profileUser.stats,
+        ...(updatedData.stats || {}),
+      },
+    };
     setProfileUser(updated);
     if (setUser) setUser(updated);
   };
@@ -987,9 +1010,9 @@ export default function ProfilePage() {
             {/* Info */}
             <div className="flex-1 text-center sm:text-left">
               <h1 className="text-2xl sm:text-3xl font-bold">
-                {profileUser.name}
+                {profileUser.name || "User"}
               </h1>
-              <p className="text-white/60 text-sm mt-1">{profileUser.email}</p>
+              <p className="text-white/60 text-sm mt-1">{profileUser.email || "—"}</p>
               <div className="flex items-center justify-center sm:justify-start gap-3 mt-3">
                 <span className="text-xs font-medium bg-[#E8A33D]/20 text-[#E8A33D] px-3 py-1 rounded-full capitalize">
                   {profileUser.role || "user"}
