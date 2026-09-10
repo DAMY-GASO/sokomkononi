@@ -51,6 +51,12 @@ export default function BottomNav() {
   // Profile link - inaelekeza /wasifu (sahihi) badala ya /profile
   const profileLink = user ? "/wasifu" : "/login";
 
+  // ✅ Saved link - inaelekeza kwenye dashboard
+  const savedLink = user ? "/dashboard/saved" : "/login";
+
+  // ✅ Messages link - inaelekeza kwenye dashboard
+  const messagesLink = user ? "/dashboard/messages" : "/login";
+
   return (
     <nav className="bottom-nav">
       <Link to="/" className={`nav-item ${isActive("/") ? "active" : ""}`}>
@@ -58,7 +64,7 @@ export default function BottomNav() {
         <span>{t("nav_home")}</span>
       </Link>
 
-      <Link to={authLink("/saved")} className={`nav-item ${isActive("/saved") ? "active" : ""}`}>
+      <Link to={savedLink} className={`nav-item ${isActive("/dashboard/saved") ? "active" : ""}`}>
         {icons.saved}
         <span>{t("nav_saved")}</span>
       </Link>
@@ -68,7 +74,7 @@ export default function BottomNav() {
         <span>{t("nav_sell")}</span>
       </Link>
 
-      <Link to={authLink("/messages")} className={`nav-item ${isActive("/messages") ? "active" : ""}`}>
+      <Link to={messagesLink} className={`nav-item ${isActive("/dashboard/messages") ? "active" : ""}`}>
         <span className="relative">
           {icons.messages}
         </span>
