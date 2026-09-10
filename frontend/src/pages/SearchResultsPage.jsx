@@ -23,9 +23,6 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
-  Clock,
-  DollarSign,
 } from "lucide-react";
 
 const COLORS = {
@@ -50,7 +47,8 @@ const CATEGORY_INFO = {
 };
 
 // ============================================================
-// MOCK DATA - Mali zote (combined)
+// MOCK DATA - IMEREKEBISHWA
+// ✅ `titleStatus` imetumika badala ya `title` kwa hati
 // ============================================================
 
 const ALL_PROPERTIES = [
@@ -62,11 +60,11 @@ const ALL_PROPERTIES = [
   { id: "n5", title: "Nyumba ya Kienyeji Kigamboni", category: "nyumba", price: 35000000, location: "Kigamboni, Dar es Salaam", region: "Dar es Salaam", bedrooms: 3, bathrooms: 2, area: "250 sqm", views: 123, postedAt: "2026-08-10" },
   { id: "n6", title: "Apartment Mbezi Luis", category: "nyumba", price: 65000000, location: "Mbezi Luis, Dar es Salaam", region: "Dar es Salaam", bedrooms: 2, bathrooms: 2, area: "120 sqm", isVerified: true, views: 267, postedAt: "2026-08-05" },
 
-  // Viwanja
-  { id: "v1", title: "Kiwanja Ubungo — Hati Miliki", category: "viwanja", price: 28000000, location: "Ubungo, Dar es Salaam", region: "Dar es Salaam", area: "600 sqm", title: "Hati Miliki", isVerified: true, views: 145, postedAt: "2026-08-28" },
-  { id: "v2", title: "Shamba la Kilimo Kilosa", category: "viwanja", price: 1500000, location: "Kilosa, Morogoro", region: "Morogoro", area: "5 ekari", title: "Hati ya Kimila", views: 234, postedAt: "2026-08-25" },
-  { id: "v3", title: "Kiwanja Kigamboni", category: "viwanja", price: 18000000, location: "Kigamboni, Dar es Salaam", region: "Dar es Salaam", area: "400 sqm", title: "Hati Miliki", isFeatured: true, isVerified: true, views: 389, postedAt: "2026-08-20" },
-  { id: "v4", title: "Shamba Ismani Iringa", category: "viwanja", price: 8500000, location: "Ismani, Iringa", region: "Iringa", area: "10 ekari", title: "Hati Miliki", views: 167, postedAt: "2026-08-15" },
+  // Viwanja - ✅ titleStatus badala ya title
+  { id: "v1", title: "Kiwanja Ubungo — Hati Miliki", category: "viwanja", price: 28000000, location: "Ubungo, Dar es Salaam", region: "Dar es Salaam", area: "600 sqm", titleStatus: "Hati Miliki", isVerified: true, views: 145, postedAt: "2026-08-28" },
+  { id: "v2", title: "Shamba la Kilimo Kilosa", category: "viwanja", price: 1500000, location: "Kilosa, Morogoro", region: "Morogoro", area: "5 ekari", titleStatus: "Hati ya Kimila", views: 234, postedAt: "2026-08-25" },
+  { id: "v3", title: "Kiwanja Kigamboni", category: "viwanja", price: 18000000, location: "Kigamboni, Dar es Salaam", region: "Dar es Salaam", area: "400 sqm", titleStatus: "Hati Miliki", isFeatured: true, isVerified: true, views: 389, postedAt: "2026-08-20" },
+  { id: "v4", title: "Shamba Ismani Iringa", category: "viwanja", price: 8500000, location: "Ismani, Iringa", region: "Iringa", area: "10 ekari", titleStatus: "Hati Miliki", views: 167, postedAt: "2026-08-15" },
 
   // Magari
   { id: "m1", title: "Toyota Harrier 2016", category: "magari", price: 42000000, location: "Kinondoni, Dar es Salaam", region: "Dar es Salaam", make: "Toyota", model: "Harrier", year: 2016, mileage: "85,000 km", fuel: "Petrol", transmission: "Automatic", isFeatured: true, isVerified: true, views: 567, postedAt: "2026-08-28" },
@@ -124,7 +122,7 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
 
   // Highlight search term
   const highlightText = (text) => {
-    if (!searchQuery) return text;
+    if (!searchQuery || !text) return text;
     const parts = text.split(new RegExp(`(${searchQuery})`, "gi"));
     return parts.map((part, i) =>
       part.toLowerCase() === searchQuery.toLowerCase() ? (
@@ -185,10 +183,11 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
           <p className="text-[#C1502E] font-bold text-base mt-2">
             {formatTZS(property.price)}
           </p>
-          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
             {property.bedrooms && <span>🛏 {property.bedrooms} vyumba</span>}
             {property.bathrooms && <span>🚿 {property.bathrooms} bafu</span>}
             {property.area && <span>📐 {property.area}</span>}
+            {property.titleStatus && <span>📜 {property.titleStatus}</span>}
             {property.make && <span>🚗 {property.make} {property.model}</span>}
             {property.type && <span>🏢 {property.type}</span>}
           </div>
@@ -264,6 +263,7 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
           {property.bedrooms && <span>🛏 {property.bedrooms}</span>}
           {property.bathrooms && <span>🚿 {property.bathrooms}</span>}
           {property.area && <span>📐 {property.area}</span>}
+          {property.titleStatus && <span>📜 {property.titleStatus}</span>}
           {property.make && <span>🚗 {property.year}</span>}
         </div>
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">
@@ -507,7 +507,7 @@ export default function SearchResultsPage() {
         p.make,
         p.model,
         p.type,
-        p.title,
+        p.titleStatus,          // ✅ Badala ya p.title (kwa hati)
         CATEGORY_INFO[p.category]?.label?.sw,
         CATEGORY_INFO[p.category]?.label?.en,
       ]
@@ -515,7 +515,6 @@ export default function SearchResultsPage() {
         .join(" ")
         .toLowerCase();
 
-      // All keywords must match
       return keywords.every((keyword) => searchableText.includes(keyword));
     });
 
@@ -564,7 +563,6 @@ export default function SearchResultsPage() {
         break;
       case "relevance":
       default:
-        // Featured first, then verified, then newest
         result.sort((a, b) => {
           if (a.isFeatured && !b.isFeatured) return -1;
           if (!a.isFeatured && b.isFeatured) return 1;
