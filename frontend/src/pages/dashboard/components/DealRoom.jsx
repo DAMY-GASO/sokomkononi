@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   MessageSquare,
@@ -10,12 +9,6 @@ import {
   XCircle,
   AlertCircle,
   Send,
-  User,
-  Home,
-  DollarSign,
-  FileText,
-  ChevronLeft,
-  ChevronRight,
   MoreVertical,
 } from "lucide-react";
 
@@ -38,7 +31,6 @@ const FONTS = {
 // MOCK DATA
 // ============================================================
 
-// Deal Room data
 const DEAL_ROOMS = [
   {
     id: "dr1",
@@ -64,7 +56,7 @@ const DEAL_ROOMS = [
       phone: "0743 895 038",
       email: "john@email.com",
     },
-    status: "active", // "active" | "negotiating" | "inspecting" | "completed" | "cancelled"
+    status: "active",
     createdAt: "2026-09-10T10:30:00",
     updatedAt: "2026-09-12T14:20:00",
     messages: [
@@ -102,13 +94,13 @@ const DEAL_ROOMS = [
         id: "n1",
         offeredPrice: 75000000,
         sellerPrice: 85000000,
-        status: "pending", // "pending" | "accepted" | "rejected" | "counter"
+        status: "pending",
         createdAt: "2026-09-11T10:00:00",
       },
     ],
     inspection: {
       scheduled: "2026-09-16T14:00:00",
-      status: "scheduled", // "scheduled" | "completed" | "cancelled"
+      status: "scheduled",
       notes: "",
     },
   },
@@ -293,29 +285,36 @@ const STATUS_CONFIG = {
 };
 
 // ============================================================
-// COMPONENTS
+// MESSAGE BUBBLE
 // ============================================================
 
 function MessageBubble({ message, isBuyer }) {
-  const isOwn = (isBuyer && message.sender === "buyer") || (!isBuyer && message.sender === "seller");
-  
+  const isOwn =
+    (isBuyer && message.sender === "buyer") ||
+    (!isBuyer && message.sender === "seller");
+
   return (
     <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
-          isOwn
-            ? "bg-[#E8A33D] text-[#101A2E]"
-            : "bg-gray-100 text-gray-800"
+          isOwn ? "bg-[#E8A33D] text-[#101A2E]" : "bg-gray-100 text-gray-800"
         }`}
       >
         <p className="text-sm">{message.text}</p>
         <span className="text-[10px] opacity-60 mt-1 block">
-          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {new Date(message.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </span>
       </div>
     </div>
   );
 }
+
+// ============================================================
+// DEAL ROOM CARD
+// ============================================================
 
 function DealRoomCard({ deal, onClick }) {
   const status = STATUS_CONFIG[deal.status] || STATUS_CONFIG.active;
@@ -334,7 +333,7 @@ function DealRoomCard({ deal, onClick }) {
           <p className="text-xs text-gray-500 mt-0.5">
             {deal.property.location}
           </p>
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-3 mt-2 flex-wrap">
             <span className="text-sm font-bold text-[#C1502E]">
               TZS {deal.property.price.toLocaleString()}
             </span>
@@ -351,15 +350,16 @@ function DealRoomCard({ deal, onClick }) {
           <div className="w-8 h-8 rounded-full bg-[#E8A33D]/10 flex items-center justify-center text-[#E8A33D] font-semibold text-xs">
             {deal.buyer.avatar}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-500 hidden sm:block">
             <p className="font-medium text-gray-700">{deal.buyer.name}</p>
-            <p className="text-[10px]">{new Date(deal.updatedAt).toLocaleDateString()}</p>
+            <p className="text-[10px]">
+              {new Date(deal.updatedAt).toLocaleDateString()}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Unread messages indicator */}
-      {deal.messages.some(m => !m.read) && (
+      {deal.messages.some((m) => !m.read) && (
         <div className="mt-2 flex items-center gap-1.5 text-[#C1502E] text-xs">
           <span className="w-2 h-2 rounded-full bg-[#C1502E]" />
           Ujumbe mpya
@@ -369,13 +369,25 @@ function DealRoomCard({ deal, onClick }) {
   );
 }
 
-function NegotiationPanel({ negotiation, onAccept, onReject, onCounter, isBuyer }) {
+// ============================================================
+// NEGOTIATION PANEL
+// ============================================================
+
+function NegotiationPanel({
+  negotiation,
+  onAccept,
+  onReject,
+  onCounter,
+  isBuyer,
+}) {
   const [counterAmount, setCounterAmount] = useState("");
-  
+
   if (!negotiation) {
     return (
       <div className="text-center py-4">
-        <p className="text-gray-500 text-sm">Hakuna negotiation iliyoanzishwa</p>
+        <p className="text-gray-500 text-sm">
+          Hakuna negotiation iliyoanzishwa
+        </p>
         <button className="mt-2 text-[#E8A33D] text-sm font-medium hover:underline">
           Anzisha Negotiation
         </button>
@@ -401,20 +413,26 @@ function NegotiationPanel({ negotiation, onAccept, onReject, onCounter, isBuyer 
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="font-semibold text-gray-800 text-sm">Negotiation</h4>
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[negotiation.status]}`}>
+        <span
+          className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[negotiation.status]}`}
+        >
           {statusLabels[negotiation.status]}
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div>
-          <p className="text-gray-500 text-xs">Ofa yako</p>
+          <p className="text-gray-500 text-xs">
+            {isBuyer ? "Ofa yako" : "Ofa ya Mnunuzi"}
+          </p>
           <p className="font-semibold text-gray-800">
             TZS {negotiation.offeredPrice.toLocaleString()}
           </p>
         </div>
         <div>
-          <p className="text-gray-500 text-xs">Bei ya Muuzaji</p>
+          <p className="text-gray-500 text-xs">
+            {isBuyer ? "Bei ya Muuzaji" : "Bei yako"}
+          </p>
           <p className="font-semibold text-gray-800">
             TZS {negotiation.sellerPrice.toLocaleString()}
           </p>
@@ -433,13 +451,13 @@ function NegotiationPanel({ negotiation, onAccept, onReject, onCounter, isBuyer 
         <div className="flex gap-2">
           <button
             onClick={() => onAccept?.(negotiation.id)}
-            className="flex-1 bg-[#2F6D4F] text-white text-sm font-medium py-2 rounded-lg"
+            className="flex-1 bg-[#2F6D4F] text-white text-sm font-medium py-2 rounded-lg hover:bg-[#245a41] transition-colors"
           >
             Kubali
           </button>
           <button
             onClick={() => onReject?.(negotiation.id)}
-            className="flex-1 border border-[#C1502E] text-[#C1502E] text-sm font-medium py-2 rounded-lg"
+            className="flex-1 border border-[#C1502E] text-[#C1502E] text-sm font-medium py-2 rounded-lg hover:bg-[#C1502E]/5 transition-colors"
           >
             Kataa
           </button>
@@ -453,16 +471,19 @@ function NegotiationPanel({ negotiation, onAccept, onReject, onCounter, isBuyer 
             placeholder="Weka bei..."
             value={counterAmount}
             onChange={(e) => setCounterAmount(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20"
           />
           <button
             onClick={() => {
               if (counterAmount && onCounter) {
-                onCounter(negotiation.id, parseInt(counterAmount.replace(/[^0-9]/g, "")));
+                onCounter(
+                  negotiation.id,
+                  parseInt(counterAmount.replace(/[^0-9]/g, ""))
+                );
                 setCounterAmount("");
               }
             }}
-            className="bg-[#E8A33D] text-[#101A2E] px-4 py-2 rounded-lg text-sm font-medium"
+            className="bg-[#E8A33D] text-[#101A2E] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#B87A1F] transition-colors"
           >
             <Send size={16} />
           </button>
@@ -472,11 +493,17 @@ function NegotiationPanel({ negotiation, onAccept, onReject, onCounter, isBuyer 
   );
 }
 
+// ============================================================
+// INSPECTION PANEL
+// ============================================================
+
 function InspectionPanel({ inspection, onSchedule }) {
   if (!inspection) {
     return (
       <div className="text-center py-4">
-        <p className="text-gray-500 text-sm">Hakuna inspection iliyopangwa</p>
+        <p className="text-gray-500 text-sm">
+          Hakuna inspection iliyopangwa
+        </p>
         <button className="mt-2 text-[#E8A33D] text-sm font-medium hover:underline">
           Panga Inspection
         </button>
@@ -494,26 +521,34 @@ function InspectionPanel({ inspection, onSchedule }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="font-semibold text-gray-800 text-sm">Inspection</h4>
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[inspection.status]}`}>
-          {inspection.status === "scheduled" ? "Imepangwa" : 
-           inspection.status === "completed" ? "Imekamilika" : "Imefutwa"}
+        <span
+          className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[inspection.status]}`}
+        >
+          {inspection.status === "scheduled"
+            ? "Imepangwa"
+            : inspection.status === "completed"
+            ? "Imekamilika"
+            : "Imefutwa"}
         </span>
       </div>
 
       {inspection.scheduled && (
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-sm flex-wrap">
           <Calendar size={16} className="text-gray-400" />
           <span className="text-gray-700">
-            {new Date(inspection.scheduled).toLocaleDateString('sw-TZ', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric'
+            {new Date(inspection.scheduled).toLocaleDateString("sw-TZ", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
             })}
           </span>
           <Clock size={16} className="text-gray-400 ml-2" />
           <span className="text-gray-700">
-            {new Date(inspection.scheduled).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {new Date(inspection.scheduled).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </span>
         </div>
       )}
@@ -527,10 +562,10 @@ function InspectionPanel({ inspection, onSchedule }) {
 
       {inspection.status === "scheduled" && (
         <div className="flex gap-2">
-          <button className="flex-1 bg-[#2F6D4F] text-white text-sm font-medium py-2 rounded-lg">
+          <button className="flex-1 bg-[#2F6D4F] text-white text-sm font-medium py-2 rounded-lg hover:bg-[#245a41] transition-colors">
             Kamilisha Inspection
           </button>
-          <button className="flex-1 border border-[#C1502E] text-[#C1502E] text-sm font-medium py-2 rounded-lg">
+          <button className="flex-1 border border-[#C1502E] text-[#C1502E] text-sm font-medium py-2 rounded-lg hover:bg-[#C1502E]/5 transition-colors">
             Ghairi
           </button>
         </div>
@@ -538,6 +573,10 @@ function InspectionPanel({ inspection, onSchedule }) {
     </div>
   );
 }
+
+// ============================================================
+// MESSAGE INPUT
+// ============================================================
 
 function MessageInput({ onSend }) {
   const [message, setMessage] = useState("");
@@ -581,13 +620,13 @@ function MessageInput({ onSend }) {
 export default function DealRoom({ deals: externalDeals, userRole = "seller" }) {
   const [deals, setDeals] = useState(externalDeals || DEAL_ROOMS);
   const [selectedDeal, setSelectedDeal] = useState(null);
-  const [activeTab, setActiveTab] = useState("messages"); // "messages" | "negotiation" | "inspection"
+  const [activeTab, setActiveTab] = useState("messages");
 
   const isBuyer = userRole === "buyer";
 
   const handleSendMessage = (text) => {
     if (!selectedDeal) return;
-    
+
     const newMessage = {
       id: `m${Date.now()}`,
       sender: isBuyer ? "buyer" : "seller",
@@ -599,7 +638,11 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
     setDeals((prev) =>
       prev.map((d) =>
         d.id === selectedDeal.id
-          ? { ...d, messages: [...d.messages, newMessage], updatedAt: new Date().toISOString() }
+          ? {
+              ...d,
+              messages: [...d.messages, newMessage],
+              updatedAt: new Date().toISOString(),
+            }
           : d
       )
     );
@@ -616,35 +659,24 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
     setActiveTab("messages");
   };
 
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = (now - date) / 1000 / 60 / 60; // hours
-
-    if (diff < 1) {
-      const minutes = Math.floor(diff * 60);
-      return `${minutes} dakika zilizopita`;
-    } else if (diff < 24) {
-      const hours = Math.floor(diff);
-      return hours === 1 ? `Saa 1 iliyopita` : `Saa ${hours} zilizopita`;
-    } else {
-      const days = Math.floor(diff / 24);
-      return days === 1 ? `Siku 1 iliyopita` : `Siku ${days} zilizopita`;
-    }
-  };
-
   return (
-    <div style={{ fontFamily: FONTS.body, background: COLORS.sand }} className="w-full h-full">
+    <div
+      style={{ fontFamily: FONTS.body, background: COLORS.sand }}
+      className="w-full h-full"
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
       <div className="max-w-6xl mx-auto">
-        <h1 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl sm:text-3xl font-semibold mb-1">
+        <h1
+          style={{ fontFamily: FONTS.display, color: COLORS.night }}
+          className="text-2xl sm:text-3xl font-semibold mb-1"
+        >
           Deal Rooms
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-5">
-          {isBuyer 
+          {isBuyer
             ? "Mazungumzo yako na wauzaji wa mali"
             : "Mazungumzo yako na wanunuzi wa mali"}
         </p>
@@ -657,7 +689,7 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
                 <MessageSquare size={40} className="mx-auto text-gray-300" />
                 <p className="text-gray-500 text-sm mt-2">Hakuna deal rooms</p>
                 <p className="text-gray-400 text-xs">
-                  {isBuyer 
+                  {isBuyer
                     ? "Anzisha mazungumzo kwa mali unayopenda"
                     : "Wateja watakapowasiliana nawe, wataonekana hapa"}
                 </p>
@@ -678,7 +710,9 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
             {!selectedDeal ? (
               <div className="bg-white rounded-xl border border-gray-100 p-12 text-center h-[500px] flex flex-col items-center justify-center">
                 <MessageSquare size={56} className="text-gray-300" />
-                <h3 className="text-lg font-semibold text-gray-800 mt-4">Chagua Deal Room</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mt-4">
+                  Chagua Deal Room
+                </h3>
                 <p className="text-gray-500 text-sm">
                   Bonyeza deal room kutoka upande wa kushoto kuona mazungumzo
                 </p>
@@ -689,11 +723,15 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-full bg-[#E8A33D]/10 flex items-center justify-center text-[#E8A33D] font-semibold text-sm flex-shrink-0">
-                      {isBuyer ? selectedDeal.seller.avatar : selectedDeal.buyer.avatar}
+                      {isBuyer
+                        ? selectedDeal.seller.avatar
+                        : selectedDeal.buyer.avatar}
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-800 text-sm truncate">
-                        {isBuyer ? selectedDeal.seller.name : selectedDeal.buyer.name}
+                        {isBuyer
+                          ? selectedDeal.seller.name
+                          : selectedDeal.buyer.name}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
                         {selectedDeal.property.title}
@@ -701,9 +739,16 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                    <a
+                      href={`tel:${
+                        isBuyer
+                          ? selectedDeal.seller.phone
+                          : selectedDeal.buyer.phone
+                      }`}
+                      className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
                       <Phone size={18} />
-                    </button>
+                    </a>
                     <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                       <MoreVertical size={18} />
                     </button>
@@ -711,23 +756,23 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-100 px-4">
+                <div className="flex border-b border-gray-100 px-4 overflow-x-auto">
                   <button
                     onClick={() => setActiveTab("messages")}
-                    className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                    className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                       activeTab === "messages"
                         ? "border-[#E8A33D] text-[#E8A33D]"
                         : "border-transparent text-gray-500 hover:text-gray-700"
                     }`}
                   >
                     Ujumbe
-                    {selectedDeal.messages.some(m => !m.read) && (
+                    {selectedDeal.messages.some((m) => !m.read) && (
                       <span className="ml-1.5 w-2 h-2 rounded-full bg-[#C1502E] inline-block" />
                     )}
                   </button>
                   <button
                     onClick={() => setActiveTab("negotiation")}
-                    className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                    className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                       activeTab === "negotiation"
                         ? "border-[#E8A33D] text-[#E8A33D]"
                         : "border-transparent text-gray-500 hover:text-gray-700"
@@ -737,7 +782,7 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
                   </button>
                   <button
                     onClick={() => setActiveTab("inspection")}
-                    className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                    className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                       activeTab === "inspection"
                         ? "border-[#E8A33D] text-[#E8A33D]"
                         : "border-transparent text-gray-500 hover:text-gray-700"
@@ -753,16 +798,16 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
                     <div className="space-y-3">
                       {/* Property info */}
                       <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-gray-800 text-sm">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-gray-800 text-sm truncate">
                               {selectedDeal.property.title}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 truncate">
                               {selectedDeal.property.location}
                             </p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex-shrink-0">
                             <p className="font-bold text-[#C1502E] text-sm">
                               TZS {selectedDeal.property.price.toLocaleString()}
                             </p>
@@ -789,13 +834,11 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
                   )}
 
                   {activeTab === "inspection" && (
-                    <InspectionPanel
-                      inspection={selectedDeal.inspection}
-                    />
+                    <InspectionPanel inspection={selectedDeal.inspection} />
                   )}
                 </div>
 
-                {/* Message Input - Only for messages tab */}
+                {/* Message Input */}
                 {activeTab === "messages" && (
                   <div className="p-3 border-t border-gray-100">
                     <MessageInput onSend={handleSendMessage} />
@@ -809,5 +852,7 @@ export default function DealRoom({ deals: externalDeals, userRole = "seller" }) 
     </div>
   );
 }
-export { DEAL_ROOMS };
 
+// ✅ Export zote mbili
+export { DEAL_ROOMS };
+export default DealRoom; // ← Hii ilikuwa haipo!
