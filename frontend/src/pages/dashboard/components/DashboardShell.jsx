@@ -25,10 +25,10 @@ import DealRooms from "./DealRooms";
 import BottomNav from "../../../components/BottomNav.jsx";
 
 // Kurasa mpya
-import SavedPropertiesPage from "../pages/SavedPropertiesPage";
-import MessagesPage from "../pages/MessagesPage";
-import NotificationsPage from "../pages/NotificationsPage";
-import MyTransactionsPage from "../pages/MyTransactionsPage";
+import SavedPropertiesPage from "../../pages/SavedPropertiesPage";
+import MessagesPage from "../../pages/MessagesPage";
+import NotificationsPage from "../../pages/NotificationsPage";
+import MyTransactionsPage from "../../pages/MyTransactionsPage";
 
 const ANNOUNCEMENTS = [
   "Mali mpya 240+ zimeongezwa wiki hii karibu na Dar es Salaam",
