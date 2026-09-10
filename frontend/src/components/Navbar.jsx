@@ -60,13 +60,7 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
     { name: { sw: "Nyumba", en: "Houses" }, slug: "nyumba" },
     { name: { sw: "Viwanja", en: "Plots & Land" }, slug: "viwanja" },
     { name: { sw: "Magari", en: "Cars" }, slug: "magari" },
-    { name: { sw: "Pikipiki", en: "Motorcycles" }, slug: "pikipiki" },
-    { name: { sw: "Mabasi", en: "Buses" }, slug: "mabasi" },
-    { name: { sw: "Mashine", en: "Machinery" }, slug: "mashine" },
-    { name: { sw: "Samani", en: "Furniture" }, slug: "samani" },
-    { name: { sw: "Vifaa vya Elektroniki", en: "Electronics" }, slug: "vifaa-vya-elektroniki" },
-    { name: { sw: "Mifugo", en: "Livestock" }, slug: "mifugo" },
-    { name: { sw: "Vifaa vya Nyumbani", en: "Home Appliances" }, slug: "vifaa-vya-nyumbani" },
+    { name: { sw: "Mashine", en: "Machinery" }, slug: "mashine" }
   ];
 
   const displayCategories = categories.length > 0 ? categories : defaultCategories;
