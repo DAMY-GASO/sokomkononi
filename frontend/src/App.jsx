@@ -14,7 +14,11 @@ import SellerDashboard from "./pages/dashboard/SellerDashboard.jsx";
 import BuyerDashboard from "./pages/dashboard/BuyerDashboard.jsx";
 import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
 import PropertyDetailPage from "./pages/PropertyDetailPage.jsx";
-
+import CategoryPage from "./pages/CategoryPage.jsx";
+import SearchResultsPage from "./pages/SearchResultsPage.jsx";
+import TermsPage from "./pages/TermsPage.jsx";
+import PrivacyPage from "./pages/PrivacyPage.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
 
 function App() {
   return (
@@ -37,6 +41,14 @@ function App() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/mali/:id" element={<PropertyDetailPage />} />
             <Route path="/property/:id" element={<PropertyDetailPage />} /> 
+            <Route path="/kategoria" element={<CategoryPage />} />
+            <Route path="/kategoria/:slug" element={<CategoryPage />} />
+            <Route path="/tafuta" element={<SearchResultsPage />} />
+            <Route path="/search" element={<SearchResultsPage />} />
+            <Route path="/sheria" element={<TermsPage />} />
+            <Route path="/faragha" element={<PrivacyPage />} />
+            <Route path="/wasifu" element={<ProfilePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<HomePage />} />
           </Routes>
         </Router>
