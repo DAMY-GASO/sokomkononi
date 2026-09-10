@@ -16,8 +16,11 @@ import {
   Heart,
   MessageSquare,
   Home,
+  Globe,
+  Check,
 } from "lucide-react";
 import { COLORS, FONTS } from "./shared";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
 import PostPropertyForm from "./PostPropertyForm";
 import MyListings from "./MyListings";
 import BoostSasa from "./BoostSasa";
@@ -37,24 +40,24 @@ const ANNOUNCEMENTS = [
 ];
 
 const SELLER_NAV = [
-  { key: "post", label: "Weka Mali Yako", icon: PlusCircle },
-  { key: "listings", label: "My Listings", icon: ListChecks },
-  { key: "saved", label: "Zilizohifadhiwa", icon: Heart },
-  { key: "boost", label: "Boost Sasa", icon: Rocket },
-  { key: "deals", label: "Deal Rooms", icon: MessagesSquare },
-  { key: "messages", label: "Ujumbe", icon: MessageSquare },
-  { key: "notifications", label: "Taarifa", icon: Bell },
-  { key: "transactions", label: "My Transactions", icon: Receipt },
+  { key: "post", label: { sw: "Weka Mali Yako", en: "Post Property" }, icon: PlusCircle },
+  { key: "listings", label: { sw: "My Listings", en: "My Listings" }, icon: ListChecks },
+  { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
+  { key: "boost", label: { sw: "Boost Sasa", en: "Boost Now" }, icon: Rocket },
+  { key: "deals", label: { sw: "Deal Rooms", en: "Deal Rooms" }, icon: MessagesSquare },
+  { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
+  { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
+  { key: "transactions", label: { sw: "My Transactions", en: "My Transactions" }, icon: Receipt },
 ];
 
 const BUYER_NAV = [
-  { key: "browse", label: "Tafuta Mali", icon: LayoutGrid },
-  { key: "saved", label: "Zilizohifadhiwa", icon: Heart },
-  { key: "deals", label: "Deal Rooms", icon: MessagesSquare },
-  { key: "messages", label: "Ujumbe", icon: MessageSquare },
-  { key: "notifications", label: "Taarifa", icon: Bell },
-  { key: "waiting", label: "Waiting List", icon: Clock3 },
-  { key: "transactions", label: "My Transactions", icon: Receipt },
+  { key: "browse", label: { sw: "Tafuta Mali", en: "Browse Properties" }, icon: LayoutGrid },
+  { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
+  { key: "deals", label: { sw: "Deal Rooms", en: "Deal Rooms" }, icon: MessagesSquare },
+  { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
+  { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
+  { key: "waiting", label: { sw: "Waiting List", en: "Waiting List" }, icon: Clock3 },
+  { key: "transactions", label: { sw: "My Transactions", en: "My Transactions" }, icon: Receipt },
 ];
 
 // Ramani ya URL → { side, key }
@@ -99,7 +102,6 @@ const STATE_TO_URL = {
   },
 };
 
-// Seed data
 const SEED_LISTINGS = [
   {
     id: "l1",
@@ -152,15 +154,24 @@ const SEED_LISTINGS = [
 export default function DashboardShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  
+  const { lang, setLang } = useLanguage(); // ✅ Tumia language context
+
   const [side, setSide] = useState("seller");
   const [activeKey, setActiveKey] = useState(SELLER_NAV[0].key);
   const [tickerIndex, setTickerIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [listings, setListings] = useState(SEED_LISTINGS);
   const [boostTarget, setBoostTarget] = useState(null);
+  const [langOpen, setLangOpen] = useState(false);
 
   const nav = side === "seller" ? SELLER_NAV : BUYER_NAV;
+
+  const languages = [
+    { code: "sw", native: "Kiswahili" },
+    { code: "en", native: "English" },
+  ];
+
+  const currentLang = languages.find((l) => l.code === lang) || languages[0];
 
   // ============================================================
   // SOMA URL NA KUFUNGUA TAB SAHIHI
@@ -172,7 +183,6 @@ export default function DashboardShell() {
       setSide(match.side);
       setActiveKey(match.key);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   // ============================================================
@@ -224,6 +234,11 @@ export default function DashboardShell() {
     }
   };
 
+  const handleLanguageSelect = (code) => {
+    setLang(code);
+    setLangOpen(false);
+  };
+
   // ============================================================
   // RENDER MAIN CONTENT
   // ============================================================
@@ -272,14 +287,13 @@ export default function DashboardShell() {
     if (activeKey === "transactions") {
       return <MyTransactionsPage />;
     }
-    // Default: placeholder
     return (
       <main className="flex-1 p-4 sm:p-6">
         <h1
           style={{ fontFamily: FONTS.display, color: COLORS.night }}
           className="text-2xl sm:text-3xl font-semibold mb-1"
         >
-          {nav.find((n) => n.key === activeKey)?.label}
+          {nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-6">
           {side === "seller"
@@ -292,7 +306,7 @@ export default function DashboardShell() {
           className="rounded-2xl border-2 border-dashed p-10 text-center"
         >
           <p style={{ color: "rgba(16,26,46,0.45)" }} className="text-sm">
-            Sehemu ya "{nav.find((n) => n.key === activeKey)?.label}" itajengwa hapa
+            Sehemu ya "{nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}" itajengwa hapa
           </p>
         </div>
       </main>
@@ -323,7 +337,6 @@ export default function DashboardShell() {
           <Menu size={22} />
         </button>
 
-        {/* Logo - Link to HomePage */}
         <a
           href="/"
           style={{ fontFamily: FONTS.display, color: COLORS.sand }}
@@ -338,13 +351,16 @@ export default function DashboardShell() {
         >
           <Search size={16} color="rgba(245,243,236,0.6)" />
           <input
-            placeholder="Tafuta mali... (jina, mahali, category)"
+            placeholder={
+              lang === "sw" ? "Tafuta mali..." : "Search properties..."
+            }
             className="bg-transparent outline-none text-sm flex-1"
             style={{ color: COLORS.sand }}
           />
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          {/* Seller/Buyer Toggle */}
           <div
             style={{ background: COLORS.nightSoft }}
             className="hidden md:flex items-center rounded-full p-1"
@@ -357,7 +373,7 @@ export default function DashboardShell() {
               }}
               className="text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
-              Uza Sasa
+              {lang === "sw" ? "Uza Sasa" : "Sell Now"}
             </button>
             <button
               onClick={() => handleSideChange("buyer")}
@@ -367,8 +383,50 @@ export default function DashboardShell() {
               }}
               className="text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
-              Nunua Sasa
+              {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
             </button>
+          </div>
+
+          {/* ✅ Language Switcher */}
+          <div className="relative">
+            <button
+              onClick={() => setLangOpen((v) => !v)}
+              style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.15)" }}
+              className="text-white/80 hover:text-white text-sm font-medium border rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
+            >
+              <Globe size={14} />
+              <span className="hidden sm:inline">{currentLang?.native || "Kiswahili"}</span>
+              <span className="sm:hidden">{currentLang?.code?.toUpperCase() || "SW"}</span>
+            </button>
+            {langOpen && (
+              <div
+                style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.1)" }}
+                className="absolute right-0 mt-2 w-48 border rounded-lg shadow-xl py-2 z-50"
+              >
+                <div
+                  style={{ borderColor: "rgba(245,243,236,0.1)" }}
+                  className="px-4 py-2 border-b"
+                >
+                  <p style={{ color: "rgba(245,243,236,0.5)" }} className="text-xs font-semibold">
+                    {lang === "sw" ? "Chagua Lugha" : "Choose Language"}
+                  </p>
+                </div>
+                {languages.map((l) => (
+                  <button
+                    key={l.code}
+                    onClick={() => handleLanguageSelect(l.code)}
+                    style={{
+                      background: lang === l.code ? "rgba(245,243,236,0.05)" : "transparent",
+                      color: COLORS.sand,
+                    }}
+                    className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-white/5 transition-colors"
+                  >
+                    <span className="text-sm font-medium">{l.native}</span>
+                    {lang === l.code && <Check size={14} color={COLORS.gold} />}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Home button */}
@@ -376,7 +434,6 @@ export default function DashboardShell() {
             href="/"
             className="text-white/80 hover:text-white p-1.5 transition-colors"
             aria-label="Rudi kwenye HomePage"
-            title="Rudi Nyumbani"
           >
             <Home size={20} />
           </a>
@@ -403,9 +460,7 @@ export default function DashboardShell() {
         </div>
       </header>
 
-      {/* ============================================================ */}
       {/* MOBILE SELLER/BUYER TOGGLE */}
-      {/* ============================================================ */}
       <div
         style={{ background: COLORS.nightSoft }}
         className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full"
@@ -418,7 +473,7 @@ export default function DashboardShell() {
           }}
           className="flex-1 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
-          Uza Sasa
+          {lang === "sw" ? "Uza Sasa" : "Sell Now"}
         </button>
         <button
           onClick={() => handleSideChange("buyer")}
@@ -428,13 +483,11 @@ export default function DashboardShell() {
           }}
           className="flex-1 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
-          Nunua Sasa
+          {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
         </button>
       </div>
 
-      {/* ============================================================ */}
       {/* ANNOUNCEMENT TICKER */}
-      {/* ============================================================ */}
       <div
         style={{ background: COLORS.sandLine, color: COLORS.night }}
         className="w-full flex items-center gap-2 px-4 py-1.5 text-xs sm:text-sm"
@@ -443,11 +496,9 @@ export default function DashboardShell() {
         <span className="truncate">{ANNOUNCEMENTS[tickerIndex]}</span>
       </div>
 
-      {/* ============================================================ */}
       {/* BODY: SIDEBAR + MAIN CONTENT */}
-      {/* ============================================================ */}
       <div className="flex flex-1 relative">
-        {/* ================= SIDEBAR - DESKTOP ================= */}
+        {/* SIDEBAR - DESKTOP */}
         <aside
           style={{ background: COLORS.sand, borderColor: COLORS.sandLine }}
           className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto"
@@ -465,7 +516,7 @@ export default function DashboardShell() {
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left"
               >
                 <Icon size={17} color={isActive ? accent : COLORS.night} />
-                {label}
+                {label[lang] || label.sw}
                 {key === "listings" && listings.length > 0 && (
                   <span
                     style={{
@@ -481,18 +532,17 @@ export default function DashboardShell() {
             );
           })}
 
-          {/* Home link kwenye sidebar */}
           <a
             href="/"
             style={{ color: COLORS.night }}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4"
           >
             <Home size={17} color={COLORS.night} />
-            Rudi Nyumbani
+            {lang === "sw" ? "Rudi Nyumbani" : "Back to Home"}
           </a>
         </aside>
 
-        {/* ================= SIDEBAR - MOBILE DRAWER ================= */}
+        {/* SIDEBAR - MOBILE DRAWER */}
         {sidebarOpen && (
           <div className="md:hidden absolute inset-0 z-20 flex">
             <div
@@ -520,7 +570,7 @@ export default function DashboardShell() {
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left"
                   >
                     <Icon size={17} color={isActive ? accent : COLORS.night} />
-                    {label}
+                    {label[lang] || label.sw}
                   </button>
                 );
               })}
@@ -531,7 +581,7 @@ export default function DashboardShell() {
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4"
               >
                 <Home size={17} color={COLORS.night} />
-                Rudi Nyumbani
+                {lang === "sw" ? "Rudi Nyumbani" : "Back to Home"}
               </a>
             </div>
             <div
@@ -541,13 +591,11 @@ export default function DashboardShell() {
           </div>
         )}
 
-        {/* ================= MAIN CONTENT ================= */}
+        {/* MAIN CONTENT */}
         <div className="flex-1 min-w-0 overflow-y-auto">{renderMain()}</div>
       </div>
 
-      {/* ============================================================ */}
       {/* BOTTOM NAVIGATION - MOBILE ONLY */}
-      {/* ============================================================ */}
       <div className="md:hidden">
         <BottomNav />
       </div>
