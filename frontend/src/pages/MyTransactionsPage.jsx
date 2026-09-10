@@ -15,7 +15,7 @@ import {
   MapPin,
   TrendingUp,
 } from "lucide-react";
-import { COLORS, FONTS, formatTZS, timeAgo } from "../components/shared";
+import { COLORS, FONTS, formatTZS, timeAgo } from "./Dashboard/components/shared";
 
 // Transaction types
 const TRANSACTION_TYPES = {
