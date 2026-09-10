@@ -35,7 +35,7 @@ const icons = {
 export default function BottomNav() {
   const location = useLocation();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const isActive = (path) => {
     if (path === "/") return location.pathname === "/";
@@ -44,6 +44,12 @@ export default function BottomNav() {
 
   // Kurasa zinazohitaji mtumiaji awe ame-login kwanza. Asipoingia, anapelekwa /login.
   const authLink = (path) => (user ? path : "/login");
+
+  // Sell link - kama ameingia, anapelekwa seller dashboard; kama hajaingia, anapelekwa register
+  const sellLink = user ? "/dashboard/seller" : "/register?intent=sell";
+
+  // Profile link - inaelekeza /wasifu (sahihi) badala ya /profile
+  const profileLink = user ? "/wasifu" : "/login";
 
   return (
     <nav className="bottom-nav">
@@ -57,7 +63,7 @@ export default function BottomNav() {
         <span>{t("nav_saved")}</span>
       </Link>
 
-      <Link to="/register?intent=sell" className="nav-item sell-btn">
+      <Link to={sellLink} className="nav-item sell-btn">
         {icons.sell}
         <span>{t("nav_sell")}</span>
       </Link>
@@ -69,7 +75,7 @@ export default function BottomNav() {
         <span>{t("nav_messages")}</span>
       </Link>
 
-      <Link to={authLink("/profile")} className={`nav-item ${isActive("/profile") ? "active" : ""}`}>
+      <Link to={profileLink} className={`nav-item ${isActive("/wasifu") || isActive("/profile") ? "active" : ""}`}>
         {icons.profile}
         <span>{t("nav_profile")}</span>
       </Link>
