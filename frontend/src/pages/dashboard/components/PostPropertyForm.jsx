@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useAuth } from "../../context/AuthContext.jsx";
-import { useLanguage } from "../../context/LanguageContext.jsx";
+import { useAuth } from "../../../context/AuthContext.jsx";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
 import DashboardShell from "./components/DashboardShell.jsx";
 import MyListings from "./components/MyListings.jsx";
 import PostPropertyForm from "./components/PostPropertyForm.jsx";
