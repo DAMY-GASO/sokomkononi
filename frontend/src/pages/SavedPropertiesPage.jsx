@@ -14,7 +14,7 @@ import {
   Briefcase,
   Wrench,
 } from "lucide-react";
-import { COLORS, FONTS, getCategory, formatTZS, timeAgo } from "../components/shared";
+import { COLORS, FONTS, formatTZS, timeAgo } from "./Dashboard/components/shared";
 
 // Mock saved properties
 const SEED_SAVED = [
