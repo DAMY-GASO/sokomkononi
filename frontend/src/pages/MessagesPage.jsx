@@ -10,7 +10,7 @@ import {
   Check,
   CheckCheck,
 } from "lucide-react";
-import { COLORS, FONTS, formatTZS, timeAgo } from "./Dashboard/components/shared";
+import { COLORS, FONTS, formatTZS, timeAgo } from "./dashboard/components/shared";
 
 const SEED_CONVERSATIONS = [
   {
