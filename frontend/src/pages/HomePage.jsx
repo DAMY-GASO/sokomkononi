@@ -109,7 +109,6 @@ export default function HomePage() {
   const { lang, setLang } = useLanguage();
   
   const [openFaq, setOpenFaq] = useState(null);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [appToastShouldRender, setAppToastShouldRender] = useState(false);
   const [appToastVisible, setAppToastVisible] = useState(false);
@@ -149,68 +148,183 @@ export default function HomePage() {
     { name: { sw: "Vifaa vya Nyumbani", en: "Home Appliances" }, slug: "vifaa-vya-nyumbani", count: "1,700+", icon: "appliance", img: "/assets/categories/vifaa-nyumbani.jpg" },
   ];
 
+  // ============================================================
+  // FAQ - MASWALI 22 KUTOKA KWA MTEJA
+  // ============================================================
   const faqs = [
     {
-      q: { sw: "Je, SokoMkononi ni salama?", en: "Is SokoMkononi safe?" },
+      q: { sw: "SokoMkononi ni nini?", en: "What is SokoMkononi?" },
       a: {
-        sw: "Ndio, SokoMkononi ina mfumo wa uthibitishaji wa wauzaji na wanunuzi, pamoja na mfumo wa malipo salama.",
-        en: "Yes, SokoMkononi has a verification system for sellers and buyers, plus a secure payment system.",
+        sw: "SokoMkononi ni marketplace inayowaunganisha wanunuzi na wauzaji sehemu moja, ili kurahisisha kutafuta, kuuza na kufanya biashara.",
+        en: "SokoMkononi is a marketplace that connects buyers and sellers in one place, making it easier to find, sell and do business.",
       },
     },
     {
-      q: { sw: "Ninawezaje kuuza mali yangu?", en: "How can I sell my property?" },
+      q: { sw: "SokoMkononi inafanya kazi vipi?", en: "How does SokoMkononi work?" },
       a: {
-        sw: "Bonyeza kitufe cha 'Uza' na ujaze maelezo ya mali yako. Timu yetu itaipitia na kuiweka kwenye soko.",
-        en: "Click the 'Sell' button and fill in your property details. Our team will review and list it.",
-      },
-    },
-    {
-      q: { sw: "Ninawezaje kununua mali kupitia SokoMkononi?", en: "How can I buy a property through SokoMkononi?" },
-      a: {
-        sw: "Tafuta bidhaa unayoipenda kisha bonyeza 'Nunua Hii' ili kufungua Deal Room. Humo utawasiliana moja kwa moja na muuzaji, kufanya mazungumzo ya bei, na mkishakubaliana bei mtaendelea na hatua zinazofuata mpaka ununuzi kukamilika.",
-        en: "Find a listing you like and click 'Buy This' to open a Deal Room. There you'll communicate directly with the seller, negotiate the price, and once you agree you'll proceed through the following steps until the purchase is complete.",
-      },
-    },
-    {
-      q: { sw: "Nini maana ya bidhaa kuwa 'Reserved'?", en: "What does it mean when a listing is 'Reserved'?" },
-      a: {
-        sw: "Bidhaa ikiwa 'Reserved' inamaanisha mnunuzi mwingine ameshaanza mchakato wa kuinunua. Wewe bado unaweza kujiunga kwenye 'Waiting List' ili upewe taarifa endapo mchakato huo hautafanikiwa na bidhaa itapatikana tena.",
-        en: "When a listing shows 'Reserved', it means another buyer has already started the purchase process. You can still join the 'Waiting List' to be notified if that process falls through and the listing becomes available again.",
+        sw: "Muuzaji anaweka bidhaa au mali yake kwenye SokoMkononi, na mnunuzi anatafuta anachohitaji. Wanaweza kuwasiliana, kujadiliana na, inapohitajika, kutumia Deal Room kwa ajili ya mazungumzo na makubaliano ya biashara.",
+        en: "A seller lists their product or property on SokoMkononi, and a buyer searches for what they need. They can communicate, negotiate and, when needed, use the Deal Room for discussions and trade agreements.",
       },
     },
     {
       q: { sw: "Je, naweza kutumia akaunti moja kuuza na kununua?", en: "Can I use one account to both buy and sell?" },
       a: {
-        sw: "Ndio. Akaunti moja tu inatosha — unabadilisha tu kati ya 'Uza Sasa' na 'Nunua Sasa' ndani ya dashboard yako bila kuhitaji kujisajili tena.",
-        en: "Yes. A single account is enough — you simply switch between 'Sell Now' and 'Buy Now' inside your dashboard without needing to register again.",
+        sw: "Ndiyo. Akaunti moja inatosha. Unaweza kubadilisha kati ya \"Uza Sasa\" na \"Nunua Sasa\" ndani ya dashboard yako bila kujisajili tena.",
+        en: "Yes. One account is enough. You can switch between \"Sell Now\" and \"Buy Now\" within your dashboard without registering again.",
       },
     },
     {
-      q: { sw: "Je, kuna app ya simu (mobile app)?", en: "Is there a mobile app?" },
+      q: { sw: "Ninawezaje kununua bidhaa au mali?", en: "How can I buy a product or property?" },
       a: {
-        sw: "App ya Android na iOS inakuja hivi karibuni. Kwa sasa unaweza kujiunga na Waitlist ili kupokea taarifa mara app itakapopatikana, au kutumia tovuti kama app kupitia kipengele cha 'kusakinisha' kwenye browser yako.",
-        en: "The Android and iOS app is coming soon. For now you can join the Waitlist to be notified once it's available, or install the website as an app directly from your browser.",
+        sw: "Tafuta bidhaa au mali unayohitaji, angalia taarifa zake na wasiliana na muuzaji. Baada ya kufikia makubaliano, mnaweza kutumia Deal Room kuendelea na hatua za biashara.",
+        en: "Search for the product or property you need, review its details and contact the seller. Once you reach an agreement, you can use the Deal Room to continue with the trade steps.",
       },
     },
     {
-      q: { sw: "Nini kinatokea nikienda kuona mali na sio kama ilivyoelezwa?", en: "What happens if I inspect a property and it's not as described?" },
+      q: { sw: "Ninawezaje kuuza kupitia SokoMkononi?", en: "How can I sell through SokoMkononi?" },
       a: {
-        sw: "Baada ya muda wa 'Inspection', ukiona bidhaa si kama ilivyoelezwa unaweza kuchagua 'Not As Described' na mazungumzo yatarudi kwenye Deal Room kuendelea na negotiation, au ukiamua kughairi unaweza kufuta transaction.",
-        en: "After the Inspection period, if the property isn't as described you can choose 'Not As Described' and the conversation returns to the Deal Room for further negotiation, or you can cancel the transaction if you decide not to proceed.",
+        sw: "Jisajili, fungua akaunti yako, chagua \"Uza Sasa\", weka taarifa na picha za bidhaa au mali yako, kisha fuata hatua za kulipia Listing Fee na kuchapisha tangazo lako.",
+        en: "Register, open your account, select \"Sell Now\", enter details and photos of your product or property, then follow the steps to pay the Listing Fee and publish your listing.",
+      },
+    },
+    {
+      q: { sw: "Ninawezaje kuweka tangazo langu?", en: "How can I post my listing?" },
+      a: {
+        sw: "Ingia kwenye akaunti yako, chagua \"Uza Sasa\", chagua aina ya bidhaa au mali, jaza taarifa zinazohitajika, weka picha nzuri na taarifa sahihi, kisha lipia Listing Fee kabla ya tangazo kuchapishwa.",
+        en: "Log into your account, select \"Sell Now\", choose the type of product or property, fill in the required details, add good photos and accurate information, then pay the Listing Fee before the listing is published.",
+      },
+    },
+    {
+      q: { sw: "Je, kuweka tangazo ni bure?", en: "Is posting a listing free?" },
+      a: {
+        sw: "Hapana. Listing Fee inalipwa kabla ya kuchapisha tangazo. Kiasi cha ada kinategemea bei ya bidhaa au mali inayowekwa kwenye listing.",
+        en: "No. A Listing Fee is paid before publishing a listing. The fee amount depends on the price of the product or property listed.",
+      },
+    },
+    {
+      q: { sw: "SokoMkononi inapataje mapato?", en: "How does SokoMkononi earn revenue?" },
+      a: {
+        sw: "SokoMkononi ina njia kuu 5 za mapato:\n\n1️⃣ Listing Fee — Muuzaji hulipia kabla ya kuchapisha listing. Ada hupungua kadri bei ya bidhaa/mali inavyokuwa kubwa na huongezeka kadri bei inavyokuwa ndogo.\n\n2️⃣ Reservation Fee — Baada ya mnunuzi na muuzaji kufikia makubaliano kupitia Deal Room, mnunuzi anaweza kulipia reservation ya saa 24, 48, 72 au Custom. Kadri muda wa reservation unavyoongezeka, ada huongezeka.\n\n3️⃣ Boosting Fee — Muuzaji anaweza kubofya \"Boost Sasa\" na kulipia ili tangazo lake lipewe kipaumbele na kuonekana zaidi kwenye listings.\n\n4️⃣ Leading Fee — Muuzaji anaweza kulipia kipaumbele kwenye matokeo ya search ili bidhaa yake ionekane juu zaidi wakati wanunuzi wanatafuta bidhaa zinazofanana.\n\n5️⃣ Ads Fee — Muuzaji au biashara inaweza kulipia kuweka bidhaa au huduma kama tangazo maalum ndani ya mfumo kwa ajili ya kuongeza mwonekano.",
+        en: "SokoMkononi has 5 main revenue streams:\n\n1️⃣ Listing Fee — Seller pays before publishing a listing. The fee decreases as the price of the product/property increases and increases as the price decreases.\n\n2️⃣ Reservation Fee — After buyer and seller reach an agreement via Deal Room, the buyer can pay for a reservation of 24, 48, 72 hours or Custom. The longer the reservation period, the higher the fee.\n\n3️⃣ Boosting Fee — A seller can click \"Boost Now\" and pay to give their listing priority and more visibility in listings.\n\n4️⃣ Leading Fee — A seller can pay for priority in search results so their product appears higher when buyers search for similar products.\n\n5️⃣ Ads Fee — A seller or business can pay to place a product or service as a special ad within the system to increase visibility.",
+      },
+    },
+    {
+      q: { sw: "Je, kuna app ya simu?", en: "Is there a mobile app?" },
+      a: {
+        sw: "Ndiyo, app ya Android na iOS inakuja hivi karibuni. Kwa sasa unaweza kutumia tovuti ya SokoMkononi kupitia simu na, ikiwa browser yako inaunga mkono, kutumia kipengele cha \"Install/Add to Home Screen\" ili kuitumia kama app.\n\nUnaweza pia kujiunga na Waitlist ili kupata taarifa app itakapopatikana.",
+        en: "Yes, an Android and iOS app is coming soon. For now you can use the SokoMkononi website on your phone and, if your browser supports it, use the \"Install/Add to Home Screen\" feature to use it like an app.\n\nYou can also join the Waitlist to get notified when the app is available.",
+      },
+    },
+    {
+      q: { sw: "Je, SokoMkononi ni salama?", en: "Is SokoMkononi safe?" },
+      a: {
+        sw: "SokoMkononi inalenga kujenga mazingira ya biashara yenye uwazi na uaminifu, pamoja na kusaidia uthibitishaji wa watumiaji. Hata hivyo, kila mnunuzi na muuzaji anapaswa kuthibitisha taarifa za bidhaa, mali na mhusika kabla ya kufanya muamala.",
+        en: "SokoMkononi aims to build a transparent and trustworthy trading environment, and supports user verification. However, every buyer and seller should verify product, property and party information before making a transaction.",
+      },
+    },
+    {
+      q: { sw: "Ninawezaje kujua muuzaji ni halali?", en: "How can I know if a seller is legitimate?" },
+      a: {
+        sw: "Angalia taarifa za muuzaji na tangazo lake. Kwa bidhaa au mali zenye thamani kubwa, hakikisha utambulisho, umiliki, nyaraka na taarifa muhimu vimethibitishwa kabla ya kufanya malipo.",
+        en: "Review the seller's information and their listing. For high-value products or properties, make sure identity, ownership, documents and important information are verified before making payment.",
+      },
+    },
+    {
+      q: { sw: "Deal Room ni nini?", en: "What is a Deal Room?" },
+      a: {
+        sw: "Deal Room ni sehemu maalum ndani ya SokoMkononi inayosaidia mnunuzi na muuzaji kuwasiliana, kujadiliana na kuweka kumbukumbu ya makubaliano yao wakati wa mchakato wa biashara.",
+        en: "A Deal Room is a special section within SokoMkononi that helps buyers and sellers communicate, negotiate and keep a record of their agreement during the trade process.",
+      },
+    },
+    {
+      q: { sw: "Reservation Fee ni nini?", en: "What is a Reservation Fee?" },
+      a: {
+        sw: "Ni ada inayolipwa na mnunuzi baada ya kufikia makubaliano kupitia Deal Room, ili bidhaa iwe reserved kwa muda aliochagua — saa 24, 48, 72 au Custom.\n\nWakati bidhaa ikiwa reserved, itaendelea kuonekana kwenye listings, lakini wanunuzi wengine hawataweza kuwasiliana na muuzaji mpaka muda wa reservation uishe.",
+        en: "It is a fee paid by the buyer after reaching an agreement via the Deal Room, to reserve the product for the period they choose — 24, 48, 72 hours or Custom.\n\nWhile the product is reserved, it will still appear in listings, but other buyers cannot contact the seller until the reservation period ends.",
+      },
+    },
+    {
+      q: { sw: "Nini kinatokea nikikagua mali na nikakuta si kama ilivyoelezwa?", en: "What happens if I inspect a property and find it's not as described?" },
+      a: {
+        sw: "Baada ya kipindi cha Inspection, ukigundua kuwa bidhaa au mali si kama ilivyoelezwa kwenye listing, unaweza kuchagua \"Not As Described.\"\n\nHapo mazungumzo yanaweza kurudi kwenye Deal Room kwa ajili ya kuendelea na negotiation au, ikiwa utaamua kutokendelea, unaweza kughairi transaction kwa kufuata masharti ya SokoMkononi.",
+        en: "After the Inspection period, if you discover that the product or property is not as described in the listing, you can choose \"Not As Described.\"\n\nThen the conversation can return to the Deal Room for further negotiation or, if you decide not to continue, you can cancel the transaction by following SokoMkononi's terms.",
+      },
+    },
+    {
+      q: { sw: "Je, SokoMkononi inashikilia fedha au mali ya muamala?", en: "Does SokoMkononi hold funds or property of the transaction?" },
+      a: {
+        sw: "Hapana. SokoMkononi ni marketplace inayowaunganisha wanunuzi na wauzaji. Haimiliki wala kushikilia mali ya muamala. Masharti ya huduma yoyote inayohusisha malipo yataonyeshwa wazi kabla ya mtumiaji kuthibitisha.",
+        en: "No. SokoMkononi is a marketplace that connects buyers and sellers. It does not own or hold the transaction's property. Terms for any service involving payment will be clearly shown before the user confirms.",
+      },
+    },
+    {
+      q: { sw: "Ninawezaje kuwasiliana na muuzaji?", en: "How can I contact a seller?" },
+      a: {
+        sw: "Fungua listing unayovutiwa nayo na tumia njia ya mawasiliano iliyowekwa. Ikiwa mazungumzo yamefikia hatua ya deal, mnaweza kutumia Deal Room kuendelea na mchakato.",
+        en: "Open the listing you're interested in and use the provided contact method. If the conversation reaches a deal stage, you can use the Deal Room to continue the process.",
+      },
+    },
+    {
+      q: { sw: "Ninawezaje kuongeza mwonekano wa listing yangu?", en: "How can I increase my listing's visibility?" },
+      a: {
+        sw: "Unaweza kutumia huduma za Boosting au Leading:\n\n• Boost Sasa — kuongeza mwonekano wa listing kwenye marketplace.\n• Leading — kuipa listing kipaumbele kwenye matokeo ya search.",
+        en: "You can use Boosting or Leading services:\n\n• Boost Now — increase listing visibility in the marketplace.\n• Leading — give your listing priority in search results.",
+      },
+    },
+    {
+      q: { sw: "Ads Fee ni nini?", en: "What is an Ads Fee?" },
+      a: {
+        sw: "Ads Fee ni gharama ya kuweka bidhaa au huduma kama tangazo maalum ndani ya mfumo wa SokoMkononi ili kuongeza mwonekano wake kwa watumiaji.",
+        en: "An Ads Fee is the cost of placing a product or service as a special ad within SokoMkononi to increase its visibility to users.",
+      },
+    },
+    {
+      q: { sw: "Listing Fee na Boosting Fee vina tofauti gani?", en: "What's the difference between Listing Fee and Boosting Fee?" },
+      a: {
+        sw: "Listing Fee — ada ya kuchapisha listing.\nBoosting Fee — ada ya kuongeza mwonekano na kipaumbele cha listing iliyokwishawekwa.",
+        en: "Listing Fee — the fee to publish a listing.\nBoosting Fee — the fee to increase visibility and priority of an already-posted listing.",
+      },
+    },
+    {
+      q: { sw: "Ninawezaje kuripoti tangazo la uongo au mtu tapeli?", en: "How can I report a fake listing or scammer?" },
+      a: {
+        sw: "Usifanye malipo wala kutoa taarifa nyeti. Tumia kitufe cha \"Ripoti\" kuripoti listing au mtumiaji kwa SokoMkononi.",
+        en: "Do not make payments or share sensitive information. Use the \"Report\" button to report the listing or user to SokoMkononi.",
+      },
+    },
+    {
+      q: { sw: "Ninawezaje kuripoti listing au mtumiaji?", en: "How can I report a listing or user?" },
+      a: {
+        sw: "Fungua listing au wasifu husika, chagua \"Ripoti\", kisha eleza tatizo. Timu ya SokoMkononi inaweza kukagua taarifa hiyo na kuchukua hatua stahiki.",
+        en: "Open the relevant listing or profile, select \"Report\", then describe the issue. SokoMkononi's team can review the report and take appropriate action.",
+      },
+    },
+    {
+      q: { sw: "Ni bidhaa/mali gani zinaweza kuwekwa SokoMkononi?", en: "What products/properties can be listed on SokoMkononi?" },
+      a: {
+        sw: "Kwa sasa SokoMkononi inalenga:\n\n🏠 Nyumba & Majengo\n🌍 Viwanja & Mashamba\n🚗 Magari\n🏢 Biashara Zinazouzwa\n🚜 Mashine / Heavy Equipment\n📦 Mali/Bidhaa Nyinginezo\n\nBidhaa au mali lazima ziwe halali na zifuate masharti ya SokoMkononi.",
+        en: "Currently SokoMkononi focuses on:\n\n🏠 Houses & Buildings\n🌍 Plots & Farms\n🚗 Cars\n🏢 Businesses for Sale\n🚜 Machinery / Heavy Equipment\n📦 Other Goods/Products\n\nProducts or properties must be legal and comply with SokoMkononi's terms.",
+      },
+    },
+    {
+      q: { sw: "Je, SokoMkononi inahakikisha bidhaa au mali ninayonunua?", en: "Does SokoMkononi guarantee the product or property I'm buying?" },
+      a: {
+        sw: "SokoMkononi inawaunganisha wanunuzi na wauzaji na kutoa mazingira ya kusaidia biashara kufanyika kwa uwazi. Hata hivyo, mnunuzi anapaswa kukagua na kuthibitisha bidhaa, mali, umiliki na nyaraka kabla ya kufanya muamala.",
+        en: "SokoMkononi connects buyers and sellers and provides an environment that helps trade happen transparently. However, the buyer should inspect and verify the product, property, ownership and documents before making a transaction.",
       },
     },
   ];
 
   const trendingProperties = [
-    { title: "Nyumba ya Vyumba 3, Mbezi", region: "Dar es Salaam", price: "TSh 35,000,000", img: "/assets/trendings/dar-es-salaam.jpg" },
-    { title: "Gari Ndogo la Mjini, Njiro", region: "Arusha", price: "TSh 12,500,000", img: "/assets/trendings/arusha.jpg" },
-    { title: "Pikipiki ya Boxer, Ilemela", region: "Mwanza", price: "TSh 2,800,000", img: "/assets/trendings/mwanza.jpg" },
-    { title: "Basi la Abiria, Area D", region: "Dodoma", price: "TSh 95,000,000", img: "/assets/trendings/dodoma.jpg" },
-    { title: "Trekta la Kilimo, Iyunga", region: "Mbeya", price: "TSh 68,000,000", img: "/assets/trendings/mbeya.jpg" },
-    { title: "Kabati la Sebule, Kiembesamaki", region: "Zanzibar", price: "TSh 450,000", img: "/assets/trendings/zanzibar.jpg" },
-    { title: "Shamba Tayari kwa Kilimo, Kilosa", region: "Morogoro", price: "TSh 1,500,000", img: "/assets/trendings/morogoro.jpg" },
-    { title: "Shamba la Kilimo, Ismani", region: "Iringa", price: "TSh 8,500,000", img: "/assets/trendings/iringa.jpg" },
-    { title: "Mbuzi wa Kienyeji, Ilongero", region: "Singida", price: "TSh 120,000", img: "/assets/trendings/singida.jpg" },
+    { id: "n1", title: "Nyumba ya Vyumba 3, Mbezi", region: "Dar es Salaam", price: "TSh 35,000,000", img: "/assets/trendings/dar-es-salaam.jpg" },
+    { id: "m1", title: "Gari Ndogo la Mjini, Njiro", region: "Arusha", price: "TSh 12,500,000", img: "/assets/trendings/arusha.jpg" },
+    { id: "ma1", title: "Pikipiki ya Boxer, Ilemela", region: "Mwanza", price: "TSh 2,800,000", img: "/assets/trendings/mwanza.jpg" },
+    { id: "m2", title: "Basi la Abiria, Area D", region: "Dodoma", price: "TSh 95,000,000", img: "/assets/trendings/dodoma.jpg" },
+    { id: "ma2", title: "Trekta la Kilimo, Iyunga", region: "Mbeya", price: "TSh 68,000,000", img: "/assets/trendings/mbeya.jpg" },
+    { id: "s1", title: "Kabati la Sebule, Kiembesamaki", region: "Zanzibar", price: "TSh 450,000", img: "/assets/trendings/zanzibar.jpg" },
+    { id: "v1", title: "Shamba Tayari kwa Kilimo, Kilosa", region: "Morogoro", price: "TSh 1,500,000", img: "/assets/trendings/morogoro.jpg" },
+    { id: "v2", title: "Shamba la Kilimo, Ismani", region: "Iringa", price: "TSh 8,500,000", img: "/assets/trendings/iringa.jpg" },
+    { id: "li1", title: "Mbuzi wa Kienyeji, Ilongero", region: "Singida", price: "TSh 120,000", img: "/assets/trendings/singida.jpg" },
   ];
 
   const testimonials = [
@@ -256,8 +370,7 @@ export default function HomePage() {
     e.preventDefault();
     const q = searchQuery.trim();
     if (!q) return;
-    navigate(`/kategoria?tafuta=${encodeURIComponent(q)}`);
-    setMobileSearchOpen(false);
+    navigate(`/tafuta?tafuta=${encodeURIComponent(q)}`);
   };
 
   const toggleFaq = (index) => {
@@ -274,43 +387,6 @@ export default function HomePage() {
         setLang={setLang} 
         categories={categories}
       />
-
-      {/* ============================================================ */}
-      {/* MOBILE SEARCH BAR */}
-      {/* ============================================================ */}
-      {mobileSearchOpen && (
-        <div className="sm:hidden bg-[#101A2E] px-4 py-3 border-t border-white/10">
-          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <input
-                autoFocus
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={lang === "sw" ? "Tafuta mali..." : "Search properties..."}
-                className="w-full bg-white/10 border border-white/15 rounded-full pl-4 pr-10 py-2.5 text-white text-sm placeholder-white/40 focus:outline-none focus:border-[#E8A33D]"
-              />
-              <button 
-                type="submit" 
-                aria-label={lang === "sw" ? "Tafuta" : "Search"}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <circle cx="11" cy="11" r="8" strokeWidth="2" />
-                  <path d="M21 21l-4.35-4.35" strokeWidth="2" />
-                </svg>
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => { setMobileSearchOpen(false); setSearchQuery(""); }}
-              className="text-white/60 hover:text-white text-sm px-2 py-2"
-            >
-              {lang === "sw" ? "Ghairi" : "Cancel"}
-            </button>
-          </form>
-        </div>
-      )}
 
       {/* ============================================================ */}
       {/* HERO SECTION */}
@@ -376,7 +452,7 @@ export default function HomePage() {
                 <path d="M20.9 17c-.5 1.1-.7 1.6-1.3 2.6-.9 1.4-2.1 3.1-3.6 3.1-1.3 0-1.7-.9-3.5-.9s-2.2.9-3.5.9c-1.5 0-2.6-1.5-3.5-2.9C3.2 17 2.5 13 3.6 10.5c.7-1.6 2-2.6 3.4-2.6 1.3 0 2.2.9 3.3.9 1.1 0 1.7-.9 3.5-.9 1.3 0 2.7.7 3.7 1.9-3.2 1.8-2.7 6.5.4 7.2Z" />
               </svg>
               <span className="text-xs text-left">
-                <span className="block text-white/50 text-[10px]">{lang === "sw" ? "Pakua kwenye" : "Download on"}</span>
+                <span className="block text-white/50 text-[10px]">{lang === "sw" ? "Pata kwenye" : "Get it on"}</span>
                 <span className="block font-semibold text-white">App Store</span>
               </span>
             </Link>
@@ -397,71 +473,95 @@ export default function HomePage() {
             <p className="text-2xl md:text-3xl font-bold text-[#E8A33D]">10,000+</p>
             <p className="text-white/50 text-xs md:text-sm mt-1">{lang === "sw" ? "Mali" : "Properties"}</p>
           </div>
-          <div>
-            <p className="text-2xl md:text-3xl font-bold text-[#E8A33D]">2,500+</p>
-            <p className="text-white/50 text-xs md:text-sm mt-1">{lang === "sw" ? "Mikataba" : "Deals"}</p>
-          </div>
         </div>
       </section>
 
       {/* ============================================================ */}
-      {/* WHY SOKOMKONONI */}
+      {/* WHY SOKOMKONONI - IMEREKEBISHWA KWA MAELEZO YA MTEJA */}
       {/* ============================================================ */}
       <section className="py-16 px-4 max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-800 text-center">
-            {lang === "sw" ? "Kwa nini SokoMkononi?" : "Why SokoMkononi?"}
+          <h2 className="text-3xl font-bold text-gray-800">
+            {lang === "sw" ? "Kwa Nini SokoMkononi?" : "Why SokoMkononi?"}
           </h2>
-          <p className="text-gray-600 mt-2 max-w-2xl mx-auto text-center">
-            {lang === "sw" ? "Jukwaa salama na la kuaminika la kununua na kuuza mali nchini Tanzania." : "A safe and trusted platform for buying and selling property in Tanzania."}
+          <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
+            {lang === "sw"
+              ? "Jukwaa la kisasa linalowaunganisha wanunuzi na wauzaji wa mali Tanzania kwa urahisi, uwazi na kuaminiana."
+              : "A modern platform connecting property buyers and sellers in Tanzania with ease, transparency and trust."}
+          </p>
+          
+          {/* Tagline */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-5 text-sm font-medium text-[#E8A33D]">
+            <span>🔎 {lang === "sw" ? "Tafuta" : "Search"}</span>
+            <span className="text-gray-300">|</span>
+            <span>🤝 {lang === "sw" ? "Ungana" : "Connect"}</span>
+            <span className="text-gray-300">|</span>
+            <span>💬 {lang === "sw" ? "Jadiliana" : "Negotiate"}</span>
+          </div>
+          
+          <p className="text-sm text-gray-500 mt-3 italic">
+            {lang === "sw"
+              ? "SokoMkononi — Nunua na Uza kwa Kujiamini"
+              : "SokoMkononi — Buy and Sell with Confidence"}
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="text-center p-6 bg-[#F5F3EC] rounded-xl">
-            <div className="w-16 h-16 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {/* Salama na Inaaminika */}
+          <div className="p-6 bg-[#F5F3EC] rounded-xl">
+            <div className="w-14 h-14 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mb-4">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8">
                 <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" strokeLinejoin="round" />
                 <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <h3 className="font-bold text-lg text-gray-800 text-center">{lang === "sw" ? "Salama na Inaaminika" : "Safe & Trusted"}</h3>
-            <p className="text-gray-600 text-sm mt-2 text-center">{lang === "sw" ? "Kila muamala unathibitishwa na timu yetu kwa usalama wa pande zote." : "Every transaction is verified by our team for all parties' safety."}</p>
+            <h3 className="font-bold text-lg text-gray-800">
+              {lang === "sw" ? "🔐 Salama na Inaaminika" : "🔐 Safe & Trusted"}
+            </h3>
+            <p className="text-gray-600 text-sm mt-2 leading-relaxed">
+              {lang === "sw"
+                ? "Tunajenga mazingira ya biashara yenye uwazi na uaminifu, huku watumiaji wakipewa nafasi ya kuthibitisha taarifa kabla ya kufanya muamala."
+                : "We build a transparent and trustworthy trading environment, while giving users the opportunity to verify information before making a transaction."}
+            </p>
           </div>
-          <div className="text-center p-6 bg-[#F5F3EC] rounded-xl">
-            <div className="w-16 h-16 bg-[#2F6D4F]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2F6D4F" strokeWidth="1.8">
-                <rect x="7" y="2" width="10" height="20" rx="2" strokeLinejoin="round" />
-                <path d="M11 18h2" strokeLinecap="round" />
+
+          {/* Upatikanaji Rahisi */}
+          <div className="p-6 bg-[#F5F3EC] rounded-xl">
+            <div className="w-14 h-14 bg-[#2F6D4F]/20 rounded-full flex items-center justify-center mb-4">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2F6D4F" strokeWidth="1.8">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                <circle cx="12" cy="10" r="3" />
               </svg>
             </div>
-            <h3 className="font-bold text-lg text-gray-800 text-center">{lang === "sw" ? "Upatikanaji Rahisi" : "Easy Access"}</h3>
-            <p className="text-gray-600 text-sm mt-2 text-center">{lang === "sw" ? "Pata mali yoyote popote ulipo nchini Tanzania kupitia app yetu." : "Find any property anywhere in Tanzania through our app."}</p>
-          </div>
-          <div className="text-center p-6 bg-[#F5F3EC] rounded-xl">
-            <div className="w-16 h-16 bg-[#C1502E]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#C1502E" strokeWidth="1.8">
-                <circle cx="8" cy="15" r="6" />
-                <circle cx="15" cy="8" r="6" />
-                <path d="M8 15h1M15 8v1" strokeLinecap="round" />
-              </svg>
-            </div>
-            <h3 className="font-bold text-lg text-gray-800 text-center">{lang === "sw" ? "Bei za Ushindani" : "Competitive Prices"}</h3>
-            <p className="text-gray-600 text-sm mt-2 text-center">{lang === "sw" ? "Pata bei nzuri na uwezo wa kujadili moja kwa moja na wauzaji." : "Get great prices and negotiate directly with sellers."}</p>
+            <h3 className="font-bold text-lg text-gray-800">
+              {lang === "sw" ? "📍 Upatikanaji Rahisi" : "📍 Easy Access"}
+            </h3>
+            <p className="text-gray-600 text-sm mt-2 leading-relaxed">
+              {lang === "sw"
+                ? "Tafuta na pata mali unayohitaji popote Tanzania, kwa urahisi kupitia SokoMkononi Web Platform na Apps za iOS & Android."
+                : "Find and get the property you need anywhere in Tanzania, easily through the SokoMkononi Web Platform and iOS & Android Apps."}
+            </p>
           </div>
         </div>
       </section>
 
       {/* ============================================================ */}
-      {/* PROPERTY CAROUSEL - IMEONGEZWA ID="matangazo" */}
+      {/* PROPERTY CAROUSEL - ID="matangazo" */}
       {/* ============================================================ */}
       <section id="matangazo" className="py-8 px-4 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">{lang === "sw" ? "Mali Zinazotrendi" : "Trending Properties"}</h2>
-          <a href="#" className="text-[#E8A33D] text-sm font-semibold hover:underline">{lang === "sw" ? "Tazama Zote →" : "View All →"}</a>
+          <Link to="/tafuta?tafuta=trending" className="text-[#E8A33D] text-sm font-semibold hover:underline">
+            {lang === "sw" ? "Tazama Zote →" : "View All →"}
+          </Link>
         </div>
         <div className="flex gap-4 overflow-x-auto pb-4">
-          {trendingProperties.map((prop, idx) => (
-            <div key={idx} className="min-w-[200px] sm:min-w-[240px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0 hover:shadow-md transition-shadow">
+          {trendingProperties.map((prop) => (
+            <Link 
+              key={prop.id} 
+              to={`/mali/${prop.id}`}
+              className="min-w-[200px] sm:min-w-[240px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0 hover:shadow-md transition-shadow"
+            >
               <div className="h-40 bg-[#F5F3EC] overflow-hidden">
                 <img
                   src={prop.img}
@@ -478,13 +578,13 @@ export default function HomePage() {
                   <span className="text-green-600 text-xs font-medium">● {lang === "sw" ? "Inapatikana" : "Available"}</span>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
 
       {/* ============================================================ */}
-      {/* CATEGORIES - IMEONGEZWA ID="kategoria" */}
+      {/* CATEGORIES - ID="kategoria" */}
       {/* ============================================================ */}
       <section id="kategoria" className="py-12 px-4 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -543,25 +643,33 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* FAQ - IMEONGEZWA ID="faq" */}
+      {/* FAQ - ID="faq" - MASWALI 22 KUTOKA KWA MTEJA */}
       {/* ============================================================ */}
       <section id="faq" className="py-16 px-4 max-w-3xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
-          {lang === "sw" ? "Maswali Yanayoulizwa Sana" : "Frequently Asked Questions"}
+        <h2 className="text-3xl font-bold text-gray-800 text-center mb-4">
+          {lang === "sw" ? "Maswali Yanayoulizwa Mara kwa Mara" : "Frequently Asked Questions"}
         </h2>
-        <div className="space-y-4">
+        <p className="text-gray-500 text-sm text-center mb-12">
+          {lang === "sw"
+            ? "Majibu ya maswali yanayoulizwa sana kuhusu SokoMkononi"
+            : "Answers to the most frequently asked questions about SokoMkononi"}
+        </p>
+        <div className="space-y-3">
           {faqs.map((faq, index) => {
             const isOpen = openFaq === index;
             return (
-              <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
+              <div key={index} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
                 <button
                   onClick={() => toggleFaq(index)}
                   aria-expanded={isOpen}
-                  className="w-full flex items-center justify-between gap-4 p-4 text-left hover:bg-[#F5F3EC]/60 transition-colors"
+                  className="w-full flex items-start justify-between gap-4 p-4 text-left hover:bg-[#F5F3EC]/60 transition-colors"
                 >
-                  <h3 className="font-semibold text-gray-800">{lang === "sw" ? faq.q.sw : faq.q.en}</h3>
+                  <h3 className="font-semibold text-gray-800 text-sm sm:text-base flex-1">
+                    <span className="text-[#E8A33D] mr-2">{index + 1}.</span>
+                    {lang === "sw" ? faq.q.sw : faq.q.en}
+                  </h3>
                   <svg
-                    className={`w-5 h-5 flex-shrink-0 text-[#E8A33D] transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                    className={`w-5 h-5 flex-shrink-0 text-[#E8A33D] transition-transform duration-200 mt-0.5 ${isOpen ? "rotate-180" : ""}`}
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -575,7 +683,9 @@ export default function HomePage() {
                   style={{ display: "grid" }}
                 >
                   <div className="overflow-hidden">
-                    <p className="text-gray-600 text-sm px-4 pb-4">{lang === "sw" ? faq.a.sw : faq.a.en}</p>
+                    <div className="text-gray-600 text-sm px-4 pb-4 whitespace-pre-line leading-relaxed">
+                      {lang === "sw" ? faq.a.sw : faq.a.en}
+                    </div>
                   </div>
                 </div>
               </div>
