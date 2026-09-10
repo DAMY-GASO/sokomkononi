@@ -5,7 +5,6 @@ import { useAuth } from "../context/AuthContext.jsx";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
-import { COLORS } from "./dashboard/components/shared";
 import {
   MapPin,
   Bed,
