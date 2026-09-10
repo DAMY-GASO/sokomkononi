@@ -14,7 +14,7 @@ import {
   Briefcase,
   Wrench,
 } from "lucide-react";
-import { COLORS, FONTS, formatTZS, timeAgo } from "./dashboard/components/shared";
+import { COLORS, FONTS, formatTZS, timeAgo } from "./Dashboard/components/shared";
 
 // Mock saved properties
 const SEED_SAVED = [
@@ -59,6 +59,7 @@ const SEED_SAVED = [
   },
 ];
 
+// ✅ Ramani ya icons kwa category (badala ya getCategory)
 const CATEGORY_ICONS = {
   nyumba: HomeIcon,
   viwanja: Trees,
@@ -68,8 +69,8 @@ const CATEGORY_ICONS = {
 };
 
 function SavedCard({ property, viewMode, onRemove }) {
-  const category = getCategory(property.category);
-  const Icon = category?.icon || HomeIcon;
+  // ✅ Tumia CATEGORY_ICONS moja kwa moja
+  const Icon = CATEGORY_ICONS[property.category] || HomeIcon;
 
   const handleRemove = (e) => {
     e.preventDefault();
