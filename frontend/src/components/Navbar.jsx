@@ -1,21 +1,28 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Navbar({ lang, setLang, categories = [], trustLinks = [] }) {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  
   const [langOpen, setLangOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [mobileCatOpen, setMobileCatOpen] = useState(false);
   const [adsDropdownOpen, setAdsDropdownOpen] = useState(false);
   const [mobileAdsDropdownOpen, setMobileAdsDropdownOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   // Matangazo menu items
   const adMenuItems = [
-    { label: { sw: "Matangazo Mapya", en: "New Ads" }, link: "/matangazo/mapya" },
-    { label: { sw: "Matangazo ya Ofa", en: "Deal Ads" }, link: "/matangazo/ofa" },
-    { label: { sw: "Matangazo Yaliyothibitishwa", en: "Verified Ads" }, link: "/matangazo/yaliyothibitishwa" },
-    { label: { sw: "Matangazo ya Haraka", en: "Urgent Ads" }, link: "/matangazo/haraka" },
-    { label: { sw: "Matangazo Yote", en: "All Ads" }, link: "/matangazo/yote" },
+    { label: { sw: "Matangazo Mapya", en: "New Ads" }, link: "/tafuta?tafuta=mpya" },
+    { label: { sw: "Matangazo ya Ofa", en: "Deal Ads" }, link: "/tafuta?tafuta=ofa" },
+    { label: { sw: "Matangazo Yaliyothibitishwa", en: "Verified Ads" }, link: "/tafuta?tafuta=verified" },
+    { label: { sw: "Matangazo ya Haraka", en: "Urgent Ads" }, link: "/tafuta?tafuta=haraka" },
+    { label: { sw: "Matangazo Yote", en: "All Ads" }, link: "/tafuta" },
   ];
 
   const languages = [
@@ -26,6 +33,20 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
   const handleLanguageSelect = (code) => {
     setLang(code);
     setLangOpen(false);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/tafuta?tafuta=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false);
+      setSearchQuery("");
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
   };
 
   const currentLang = languages.find(l => l.code === lang) || languages[1];
@@ -67,10 +88,10 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
                 <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
               </svg>
             </button>
-            <div className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <span className="hidden md:flex w-7 h-7 rounded-md bg-[#E8A33D] items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
               <span className="font-bold text-base sm:text-lg tracking-tight">SokoMkononi</span>
-            </div>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
@@ -106,10 +127,9 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
               )}
             </div>
 
-            {/* Trust Links - "Matangazo" imebadilisha "Usalama" */}
+            {/* Trust Links */}
             {trustLinks.length > 0 ? (
               trustLinks.map((l) => {
-                // Kama link ni "/usalama", badilisha kuwa dropdown ya Matangazo
                 if (l.to === "/usalama") {
                   return (
                     <div key={l.to} className="relative">
@@ -150,7 +170,6 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
                 <Link to="/kuhusu" className="text-white/70 hover:text-white text-sm font-medium transition-colors">
                   {lang === "sw" ? "Kuhusu Sisi" : "About Us"}
                 </Link>
-                {/* Matangazo Dropdown - Badala ya Usalama */}
                 <div className="relative">
                   <button
                     onClick={() => setAdsDropdownOpen((prev) => !prev)}
@@ -183,10 +202,35 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
             )}
           </nav>
 
-          {/* Right: Search + Language + Login */}
+          {/* Right: Search + Language + User/Login */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Search Icon */}
-            <button className="sm:hidden text-white/60 hover:text-white p-1.5 transition-colors">
+            {/* Search - Desktop */}
+            <form onSubmit={handleSearchSubmit} className="relative hidden sm:block">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={lang === "sw" ? "Tafuta mali..." : "Search properties..."}
+                className="bg-white/10 border border-white/15 rounded-md pl-3 pr-9 py-1.5 text-white text-sm placeholder-white/40 focus:outline-none focus:border-[#E8A33D] w-40 lg:w-56"
+              />
+              <button
+                type="submit"
+                aria-label={lang === "sw" ? "Tafuta" : "Search"}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8" strokeWidth="2" />
+                  <path d="M21 21l-4.35-4.35" strokeWidth="2" />
+                </svg>
+              </button>
+            </form>
+
+            {/* Search Icon - Mobile */}
+            <button
+              onClick={() => setSearchOpen(!searchOpen)}
+              className="sm:hidden text-white/60 hover:text-white p-1.5 transition-colors"
+              aria-label={lang === "sw" ? "Tafuta" : "Search"}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8" />
                 <path d="M21 21l-4.35-4.35" />
@@ -208,7 +252,9 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
               {langOpen && (
                 <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-[#182541] border border-white/10 rounded-lg shadow-xl py-2 z-50">
                   <div className="px-4 py-2 border-b border-white/10">
-                    <p className="text-white/50 text-xs font-semibold">Je, unapendelea lugha gani?</p>
+                    <p className="text-white/50 text-xs font-semibold">
+                      {lang === "sw" ? "Je, unapendelea lugha gani?" : "Which language do you prefer?"}
+                    </p>
                   </div>
                   {languages.map((l) => (
                     <button
@@ -228,15 +274,108 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
               )}
             </div>
 
-            {/* Login/Register Button */}
-            <Link
-              to="/login"
-              className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold text-sm px-4 py-2 rounded-md transition-colors whitespace-nowrap"
-            >
-              {lang === "sw" ? "Ingia/Jisajili" : "Login/Register"}
-            </Link>
+            {/* User Menu / Login Button */}
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/15 rounded-md px-2 py-1.5 transition-colors"
+                >
+                  <div className="w-7 h-7 rounded-full bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-xs">
+                    {user.name?.charAt(0)?.toUpperCase() || "U"}
+                  </div>
+                  <span className="hidden lg:inline text-white text-sm font-medium truncate max-w-[80px]">
+                    {user.name?.split(" ")[0] || "User"}
+                  </span>
+                  <svg className={`w-4 h-4 text-white/60 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-[#182541] border border-white/10 rounded-lg shadow-xl py-2 z-50">
+                    <div className="px-4 py-3 border-b border-white/10">
+                      <p className="text-white text-sm font-semibold truncate">{user.name}</p>
+                      <p className="text-white/50 text-xs truncate">{user.email}</p>
+                    </div>
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      {lang === "sw" ? "Dashibodi" : "Dashboard"}
+                    </Link>
+                    <Link
+                      to="/wasifu"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      {lang === "sw" ? "Wasifu" : "Profile"}
+                    </Link>
+                    <Link
+                      to="/dashboard/buyer"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
+                    </Link>
+                    <Link
+                      to="/dashboard/seller"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      {lang === "sw" ? "Uza Sasa" : "Sell Now"}
+                    </Link>
+                    <div className="my-2 border-t border-white/10" />
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2.5 text-sm text-[#C1502E] hover:bg-[#C1502E]/10 transition-colors"
+                    >
+                      {lang === "sw" ? "Toka" : "Logout"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold text-sm px-4 py-2 rounded-md transition-colors whitespace-nowrap"
+              >
+                {lang === "sw" ? "Ingia/Jisajili" : "Login/Register"}
+              </Link>
+            )}
           </div>
         </div>
+
+        {/* Mobile Search Bar */}
+        {searchOpen && (
+          <div className="sm:hidden bg-[#101A2E] border-t border-white/10 px-4 py-3">
+            <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  autoFocus
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={lang === "sw" ? "Tafuta mali..." : "Search properties..."}
+                  className="w-full bg-white/10 border border-white/15 rounded-md pl-3 pr-9 py-2 text-white text-sm placeholder-white/40 focus:outline-none focus:border-[#E8A33D]"
+                />
+                <button type="submit" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" strokeWidth="2" />
+                    <path d="M21 21l-4.35-4.35" strokeWidth="2" />
+                  </svg>
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+                className="text-white/60 hover:text-white text-sm px-2 py-2"
+              >
+                {lang === "sw" ? "Ghairi" : "Cancel"}
+              </button>
+            </form>
+          </div>
+        )}
       </header>
 
       {/* ============================================================ */}
@@ -245,7 +384,7 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
       <div className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`} onClick={handleOverlayClick} />
       <div className={`fixed top-0 right-0 h-full w-72 max-w-[80%] bg-[#101A2E] z-50 transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "translate-x-full"}`}>
         <button onClick={() => setMenuOpen(false)} className="absolute top-4 right-4 text-white/60 hover:text-white text-2xl p-2">✕</button>
-        <div className="pt-16 px-6">
+        <div className="pt-16 px-6 h-full overflow-y-auto pb-8">
           <div className="flex items-center gap-2 mb-8 pb-4 border-b border-white/10">
             <span className="w-8 h-8 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
             <span className="text-white font-bold text-lg tracking-tight">SokoMkononi</span>
@@ -255,7 +394,7 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
               {lang === "sw" ? "Nyumbani" : "Home"}
             </Link>
 
-            {/* Categories dropdown kwenye mobile */}
+            {/* Categories dropdown */}
             <button
               onClick={() => setMobileCatOpen((prev) => !prev)}
               aria-expanded={mobileCatOpen}
@@ -286,7 +425,7 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
 
             <div className="my-2 border-t border-white/10" />
 
-            {/* Mobile Matangazo Dropdown - Badala ya Usalama */}
+            {/* Matangazo Dropdown */}
             <button
               onClick={() => setMobileAdsDropdownOpen((prev) => !prev)}
               aria-expanded={mobileAdsDropdownOpen}
@@ -315,10 +454,10 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
               </div>
             </div>
 
-            {/* Mobile Trust Links - Usalama imeondolewa, imebadilishwa na Matangazo dropdown */}
+            {/* Trust Links */}
             {trustLinks.length > 0 ? (
               trustLinks.map((l) => {
-                if (l.to === "/usalama") return null; // Ruka Usalama kwenye mobile
+                if (l.to === "/usalama") return null;
                 return (
                   <Link key={l.to} to={l.to} onClick={() => setMenuOpen(false)} className="text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors">
                     {lang === "sw" ? l.label.sw : l.label.en}
@@ -336,12 +475,53 @@ export default function Navbar({ lang, setLang, categories = [], trustLinks = []
               </>
             )}
           </nav>
+
+          {/* Auth Section */}
           <div className="my-6 border-t border-white/10" />
-          <div className="flex flex-col gap-3">
-            <Link to="/login" onClick={() => setMenuOpen(false)} className="w-full text-center bg-[#E8A33D] text-[#101A2E] font-semibold text-base rounded-md py-3 hover:bg-[#B87A1F] transition-colors">
-              {lang === "sw" ? "Ingia/Jisajili" : "Login/Register"}
-            </Link>
-          </div>
+          
+          {user ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold">
+                  {user.name?.charAt(0)?.toUpperCase() || "U"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-semibold truncate">{user.name}</p>
+                  <p className="text-white/50 text-xs truncate">{user.email}</p>
+                </div>
+              </div>
+              <Link
+                to="/dashboard"
+                onClick={() => setMenuOpen(false)}
+                className="block w-full text-center border border-white/20 text-white font-semibold text-base rounded-md py-3 hover:bg-white/5 transition-colors"
+              >
+                {lang === "sw" ? "Dashibodi" : "Dashboard"}
+              </Link>
+              <Link
+                to="/wasifu"
+                onClick={() => setMenuOpen(false)}
+                className="block w-full text-center border border-white/20 text-white font-semibold text-base rounded-md py-3 hover:bg-white/5 transition-colors"
+              >
+                {lang === "sw" ? "Wasifu" : "Profile"}
+              </Link>
+              <button
+                onClick={() => { handleLogout(); setMenuOpen(false); }}
+                className="w-full text-center border border-[#C1502E] text-[#C1502E] font-semibold text-base rounded-md py-3 hover:bg-[#C1502E]/10 transition-colors"
+              >
+                {lang === "sw" ? "Toka" : "Logout"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <Link
+                to="/login"
+                onClick={() => setMenuOpen(false)}
+                className="w-full text-center bg-[#E8A33D] text-[#101A2E] font-semibold text-base rounded-md py-3 hover:bg-[#B87A1F] transition-colors"
+              >
+                {lang === "sw" ? "Ingia/Jisajili" : "Login/Register"}
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </>
