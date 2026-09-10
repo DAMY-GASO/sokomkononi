@@ -7,7 +7,7 @@ export default function Footer({ selectedLang = "sw" }) {
       <div className="max-w-7xl mx-auto px-4 py-12">
         
         {/* ============================================================ */}
-        {/* APP DOWNLOAD SECTION - Separate from main footer */}
+        {/* APP DOWNLOAD SECTION */}
         {/* ============================================================ */}
         <div className="text-center mb-10 pb-8 border-b border-white/10">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">
@@ -21,25 +21,13 @@ export default function Footer({ selectedLang = "sw" }) {
           <div className="flex flex-wrap gap-3 justify-center mt-4">
             <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors">
               <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0" aria-hidden="true">
-                <path
-                  d="M4.5 3.5c-.3.3-.5.7-.5 1.2v14.6c0 .5.2.9.5 1.2l.1.1L13 12.1v-.2L4.6 3.4l-.1.1z"
-                  fill="#00D2FF"
-                />
-                <path
-                  d="M15.9 15L13 12.1v-.2l2.9-2.9 6.5 3.7c.8.5.8 1.3 0 1.8l-6.5 3.7z"
-                  fill="#FFCE00"
-                />
-                <path
-                  d="M15.9 15L13 12l-8.4 8.5c.4.4 1 .4 1.7.1L15.9 15"
-                  fill="#FF3A44"
-                />
-                <path
-                  d="M15.9 9.1L6.3 3.6c-.7-.4-1.3-.3-1.7.1L13 12l2.9-2.9z"
-                  fill="#00F076"
-                />
+                <path d="M4.5 3.5c-.3.3-.5.7-.5 1.2v14.6c0 .5.2.9.5 1.2l.1.1L13 12.1v-.2L4.6 3.4l-.1.1z" fill="#00D2FF" />
+                <path d="M15.9 15L13 12.1v-.2l2.9-2.9 6.5 3.7c.8.5.8 1.3 0 1.8l-6.5 3.7z" fill="#FFCE00" />
+                <path d="M15.9 15L13 12l-8.4 8.5c.4.4 1 .4 1.7.1L15.9 15" fill="#FF3A44" />
+                <path d="M15.9 9.1L6.3 3.6c-.7-.4-1.3-.3-1.7.1L13 12l2.9-2.9z" fill="#00F076" />
               </svg>
               <span className="text-sm text-left">
-                <span className="block text-white/50 text-[10px]">{selectedLang === "sw" ? "Pakua kwenye" : "Get it on"}</span>
+                <span className="block text-white/50 text-[10px]">{selectedLang === "sw" ? "Pakua kwenye" : "Download on the"}</span>
                 <span className="block font-semibold text-white text-sm">Google Play</span>
               </span>
             </Link>
@@ -53,7 +41,6 @@ export default function Footer({ selectedLang = "sw" }) {
               </span>
             </Link>
           </div>
-         
         </div>
 
         {/* ============================================================ */}
