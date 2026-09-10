@@ -25,6 +25,7 @@ import PostPropertyForm from "./PostPropertyForm";
 import MyListings from "./MyListings";
 import BoostSasa from "./BoostSasa";
 import DealRooms from "./DealRooms";
+import BrowseProperties from "./BrowseProperties";
 import BottomNav from "../../../components/BottomNav.jsx";
 
 // Kurasa mpya
@@ -154,7 +155,7 @@ const SEED_LISTINGS = [
 export default function DashboardShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { lang, setLang } = useLanguage(); // ✅ Tumia language context
+  const { lang, setLang } = useLanguage();
 
   const [side, setSide] = useState("seller");
   const [activeKey, setActiveKey] = useState(SELLER_NAV[0].key);
@@ -262,6 +263,9 @@ export default function DashboardShell() {
           onPaid={markListingPaid}
         />
       );
+    }
+    if (activeKey === "browse") {
+      return <BrowseProperties lang={lang} />;
     }
     if (activeKey === "saved") {
       return <SavedPropertiesPage />;
@@ -387,7 +391,7 @@ export default function DashboardShell() {
             </button>
           </div>
 
-          {/* ✅ Language Switcher */}
+          {/* Language Switcher */}
           <div className="relative">
             <button
               onClick={() => setLangOpen((v) => !v)}
