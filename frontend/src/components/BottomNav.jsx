@@ -45,16 +45,16 @@ export default function BottomNav() {
   // Kurasa zinazohitaji mtumiaji awe ame-login kwanza. Asipoingia, anapelekwa /login.
   const authLink = (path) => (user ? path : "/login");
 
-  // Sell link - kama ameingia, anapelekwa seller dashboard; kama hajaingia, anapelekwa register
-  const sellLink = user ? "/dashboard/seller" : "/register?intent=sell";
+  // ✅ Sell link - inaelekeza "Weka Mali" moja kwa moja
+  const sellLink = user ? "/dashboard/post" : "/register?intent=sell";
 
   // Profile link - inaelekeza /wasifu (sahihi) badala ya /profile
   const profileLink = user ? "/wasifu" : "/login";
 
-  // ✅ Saved link - inaelekeza kwenye dashboard
+  // Saved link - inaelekeza kwenye dashboard
   const savedLink = user ? "/dashboard/saved" : "/login";
 
-  // ✅ Messages link - inaelekeza kwenye dashboard
+  // Messages link - inaelekeza kwenye dashboard
   const messagesLink = user ? "/dashboard/messages" : "/login";
 
   return (
