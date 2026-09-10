@@ -196,13 +196,6 @@ export default function DashboardShell() {
   const updateListing = (id, patch) =>
     setListings((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
 
-  const goToBoost = (listingId) => {
-    setBoostTarget(listingId);
-    handleNavClick("boost");
-  };
-
-  const markListingPaid = (id) => updateListing(id, { status: "live" });
-
   // ============================================================
   // NAVIGATION HELPERS
   // ============================================================
@@ -213,6 +206,13 @@ export default function DashboardShell() {
       navigate(url);
     }
   };
+
+  const goToBoost = (listingId) => {
+    setBoostTarget(listingId);
+    handleNavClick("boost");
+  };
+
+  const markListingPaid = (id) => updateListing(id, { status: "live" });
 
   const handleSideChange = (newSide) => {
     setSide(newSide);
