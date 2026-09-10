@@ -68,15 +68,11 @@ export default function WaitlistPage() {
                 <p className="text-xl font-bold text-[#E8A33D]">5,000+</p>
                 <p className="text-white/40 text-xs">{t("stats_sellers")}</p>
               </div>
+
               <div className="w-px h-8 bg-white/10" />
               <div>
                 <p className="text-xl font-bold text-[#E8A33D]">10,000+</p>
                 <p className="text-white/40 text-xs">{t("stats_properties")}</p>
-              </div>
-              <div className="w-px h-8 bg-white/10" />
-              <div>
-                <p className="text-xl font-bold text-[#E8A33D]">2,500+</p>
-                <p className="text-white/40 text-xs">{t("stats_deals")}</p>
               </div>
             </div>
 
@@ -99,7 +95,7 @@ export default function WaitlistPage() {
                   <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.3c0 26.2 4.8 53.3 14.4 81.3 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.8zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
                 </svg>
                 <span className="text-xs text-left leading-tight">
-                  <span className="block text-white/50 text-[8px]">{t("badge_download_on")}</span>
+                  <span className="block text-white/50 text-[8px]">{t("badge_get_it_on")}</span>
                   <span className="block font-semibold text-white text-[10px]">{t("badge_app_store")}</span>
                 </span>
               </Link>
