@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import {
+  FileText,
   Shield,
   Lock,
   Eye,
