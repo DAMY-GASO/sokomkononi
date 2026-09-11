@@ -11,35 +11,35 @@ import {
 } from "lucide-react";
 import { COLORS, FONTS, getCategory, formatTZS, timeAgo } from "./dashboard/components/shared";
 import { useWaitingList, leaveWaitingList as leaveWaitingListStore } from "../config/waitingListStore.js";
+import { useLanguage } from "../context/LanguageContext.jsx";
 
 // Waiting List = mnunuzi anajiunga na foleni ya mali ambayo tayari ina
-// reservation/imeuzwa, ili apate taarifa endapo nafasi itafunguka tena
-// (mf. deal nyingine ikighairiwa kwenye Deal Rooms).
-export const WAITING_STATUS = {
+// reservation/imeuzwa, ili apate taarifa endapo nafasi itafunguka tena.
+const getWaitingStatus = (lang) => ({
   pending: {
-    label: "Kwenye Foleni",
+    label: lang === "sw" ? "Kwenye Foleni" : "In Queue",
     color: "#8A5A16",
     bg: "rgba(232,163,61,0.16)",
     icon: Hourglass,
   },
   notified: {
-    label: "Nafasi Wazi — Umetaarifiwa",
+    label: lang === "sw" ? "Nafasi Wazi — Umetaarifiwa" : "Slot Open — You're Notified",
     color: COLORS.green,
     bg: "rgba(47,109,79,0.14)",
     icon: BellRing,
   },
   expired: {
-    label: "Muda wa Kuchukua Nafasi Umeisha",
+    label: lang === "sw" ? "Muda wa Kuchukua Nafasi Umeisha" : "Slot Claim Window Expired",
     color: COLORS.night,
     bg: "rgba(16,26,46,0.08)",
     icon: XCircle,
   },
-};
+});
 
-function WaitingListItem({ entry, onLeave, onGoToDeals }) {
+function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
   const category = getCategory(entry.category);
   const Icon = category?.icon;
-  const status = WAITING_STATUS[entry.status] || WAITING_STATUS.pending;
+  const status = getWaitingStatus(lang)[entry.status] || getWaitingStatus(lang).pending;
   const StatusIcon = status.icon;
 
   return (
@@ -60,7 +60,10 @@ function WaitingListItem({ entry, onLeave, onGoToDeals }) {
             <p style={{ color: COLORS.night }} className="text-sm font-semibold truncate">
               {entry.property}
             </p>
-            <p style={{ color: "rgba(16,26,46,0.5)" }} className="text-xs mt-0.5 flex items-center gap-1">
+            <p
+              style={{ color: "rgba(16,26,46,0.5)" }}
+              className="text-xs mt-0.5 flex items-center gap-1"
+            >
               <MapPin size={10} /> {entry.location}
             </p>
           </div>
@@ -79,10 +82,13 @@ function WaitingListItem({ entry, onLeave, onGoToDeals }) {
           </span>
           {entry.status === "pending" && entry.position && (
             <span style={{ color: "rgba(16,26,46,0.55)" }}>
-              • Nafasi yako: <strong>#{entry.position}</strong> kwenye foleni
+              • {lang === "sw" ? "Nafasi yako" : "Your position"}: <strong>#{entry.position}</strong>{" "}
+              {lang === "sw" ? "kwenye foleni" : "in queue"}
             </span>
           )}
-          <span style={{ color: "rgba(16,26,46,0.4)" }}>• Umejiunga {timeAgo(entry.joinedAt)}</span>
+          <span style={{ color: "rgba(16,26,46,0.4)" }}>
+            • {lang === "sw" ? "Umejiunga" : "Joined"} {timeAgo(entry.joinedAt)}
+          </span>
         </div>
 
         {entry.status === "notified" && (
@@ -91,16 +97,30 @@ function WaitingListItem({ entry, onLeave, onGoToDeals }) {
             className="mt-3 rounded-lg border px-3 py-2 flex items-center justify-between gap-2 flex-wrap"
           >
             <span style={{ color: COLORS.green }} className="text-[11px] font-medium">
-              Nafasi imefunguka! Una hadi{" "}
-              {entry.respondBy ? new Date(entry.respondBy).toLocaleString("sw-TZ") : "muda fulani"}{" "}
-              kuanza mazungumzo kabla nafasi kupewa mtu mwingine.
+              {lang === "sw" ? (
+                <>
+                  Nafasi imefunguka! Una hadi{" "}
+                  {entry.respondBy
+                    ? new Date(entry.respondBy).toLocaleString("sw-TZ")
+                    : "muda fulani"}{" "}
+                  kuanza mazungumzo kabla nafasi kupewa mtu mwingine.
+                </>
+              ) : (
+                <>
+                  A slot opened! You have until{" "}
+                  {entry.respondBy
+                    ? new Date(entry.respondBy).toLocaleString("en-US")
+                    : "some time"}{" "}
+                  to start negotiations before it's given to someone else.
+                </>
+              )}
             </span>
             <button
               onClick={onGoToDeals}
               style={{ background: COLORS.green, color: "white" }}
               className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
             >
-              Nenda Deal Room <ArrowRight size={12} />
+              {lang === "sw" ? "Nenda Deal Room" : "Go to Deal Room"} <ArrowRight size={12} />
             </button>
           </div>
         )}
@@ -111,7 +131,7 @@ function WaitingListItem({ entry, onLeave, onGoToDeals }) {
             style={{ color: COLORS.rust }}
             className="flex items-center gap-1 text-[11px] font-semibold mt-2.5"
           >
-            <LogOut size={11} /> Ondoka kwenye Foleni
+            <LogOut size={11} /> {lang === "sw" ? "Ondoka kwenye Foleni" : "Leave Queue"}
           </button>
         )}
       </div>
@@ -121,6 +141,7 @@ function WaitingListItem({ entry, onLeave, onGoToDeals }) {
 
 export default function WaitingListPage({ entries: entriesProp, onLeave, onGoToDeals }) {
   const storeEntries = useWaitingList();
+  const { lang } = useLanguage();
   const entries = entriesProp ?? storeEntries;
   const [filter, setFilter] = useState("all");
 
@@ -133,17 +154,20 @@ export default function WaitingListPage({ entries: entriesProp, onLeave, onGoToD
   };
 
   const filters = [
-    { key: "all", label: "Zote" },
-    { key: "pending", label: "Kwenye Foleni" },
-    { key: "notified", label: "Umetaarifiwa" },
-    { key: "expired", label: "Imeisha Muda" },
+    { key: "all", label: lang === "sw" ? "Zote" : "All" },
+    { key: "pending", label: lang === "sw" ? "Kwenye Foleni" : "In Queue" },
+    { key: "notified", label: lang === "sw" ? "Umetaarifiwa" : "Notified" },
+    { key: "expired", label: lang === "sw" ? "Imeisha Muda" : "Expired" },
   ];
 
   const filtered = entries.filter((e) => filter === "all" || e.status === filter);
   const notifiedCount = entries.filter((e) => e.status === "notified").length;
 
   return (
-    <div style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "100%" }} className="w-full p-4 sm:p-6">
+    <div
+      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "100%" }}
+      className="w-full p-4 sm:p-6"
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
@@ -151,13 +175,17 @@ export default function WaitingListPage({ entries: entriesProp, onLeave, onGoToD
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-2 mb-1">
           <Clock3 size={22} color={COLORS.gold} />
-          <h1 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl sm:text-3xl font-semibold">
-            Waiting List
+          <h1
+            style={{ fontFamily: FONTS.display, color: COLORS.night }}
+            className="text-2xl sm:text-3xl font-semibold"
+          >
+            {lang === "sw" ? "Waiting List" : "Waiting List"}
           </h1>
         </div>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-5">
-          Mali ambazo tayari zina Reservation/zimeuzwa — utapata taarifa endapo nafasi itafunguka
-          tena.
+          {lang === "sw"
+            ? "Mali ambazo tayari zina Reservation/zimeuzwa — utapata taarifa endapo nafasi itafunguka tena."
+            : "Properties currently Reserved/Sold — you'll be notified if a slot opens up."}
         </p>
 
         {notifiedCount > 0 && (
@@ -167,8 +195,18 @@ export default function WaitingListPage({ entries: entriesProp, onLeave, onGoToD
           >
             <Bell size={16} color={COLORS.green} />
             <p style={{ color: COLORS.green }} className="text-sm font-medium">
-              Una {notifiedCount} nafasi {notifiedCount === 1 ? "iliyofunguka" : "zilizofunguka"} —
-              chukua hatua kabla muda haujaisha.
+              {lang === "sw" ? (
+                <>
+                  Una {notifiedCount} nafasi{" "}
+                  {notifiedCount === 1 ? "iliyofunguka" : "zilizofunguka"} — chukua hatua kabla muda
+                  haujaisha.
+                </>
+              ) : (
+                <>
+                  You have {notifiedCount} open slot{notifiedCount === 1 ? "" : "s"} — take action
+                  before time runs out.
+                </>
+              )}
             </p>
           </div>
         )}
@@ -197,17 +235,26 @@ export default function WaitingListPage({ entries: entriesProp, onLeave, onGoToD
           >
             <Clock3 size={48} className="mx-auto text-gray-300 mb-3" />
             <h3 style={{ color: COLORS.night }} className="font-semibold mb-1">
-              Hujajiunga na waiting list yoyote
+              {lang === "sw"
+                ? "Hujajiunga na waiting list yoyote"
+                : "You haven't joined any waiting list"}
             </h3>
             <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-sm">
-              Ukiona mali iliyo na Reservation/imeuzwa, bofya "Jiunge na Waiting List" kwenye
-              tangazo lake ili tukutaarifu nafasi ikifunguka.
+              {lang === "sw"
+                ? 'Ukiona mali iliyo na Reservation/imeuzwa, bofya "Jiunge na Waiting List" kwenye tangazo lake ili tukutaarifu nafasi ikifunguka.'
+                : 'When you see a Reserved/Sold property, click "Join Waiting List" on its listing so we can notify you if a slot opens up.'}
             </p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {filtered.map((e) => (
-              <WaitingListItem key={e.id} entry={e} onLeave={handleLeave} onGoToDeals={onGoToDeals} />
+              <WaitingListItem
+                key={e.id}
+                entry={e}
+                onLeave={handleLeave}
+                onGoToDeals={onGoToDeals}
+                lang={lang}
+              />
             ))}
           </div>
         )}
