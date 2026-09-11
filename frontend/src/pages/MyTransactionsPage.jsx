@@ -15,27 +15,83 @@ import {
 } from "lucide-react";
 import { COLORS, FONTS, formatTZS, timeAgo } from "./dashboard/components/shared";
 import { useTransactions } from "../config/transactionsStore.js";
+import { useLanguage } from "../context/LanguageContext.jsx";
 
-const TRANSACTION_TYPES = {
-  listing_fee: { label: "Listing Fee", icon: CreditCard, color: COLORS.rust, bg: "rgba(193,80,46,0.12)" },
-  reservation: { label: "Reservation Fee", icon: HandCoins, color: COLORS.green, bg: "rgba(47,109,79,0.12)" },
-  boost: { label: "Boost Fee", icon: Rocket, color: COLORS.gold, bg: "rgba(232,163,61,0.12)" },
-  leading: { label: "Leading Fee", icon: TrendingUp, color: "#2563EB", bg: "rgba(37,99,235,0.12)" },
-  advertisement: { label: "Advertisement Fee", icon: Megaphone, color: COLORS.gold, bg: "rgba(232,163,61,0.12)" },
-  sale: { label: "Mauzo", icon: TrendingUp, color: COLORS.green, bg: "rgba(47,109,79,0.16)" },
-  purchase: { label: "Ununuzi", icon: HandCoins, color: "#2563EB", bg: "rgba(37,99,235,0.12)" },
-};
+const getTransactionTypes = (lang) => ({
+  listing_fee: {
+    label: "Listing Fee",
+    icon: CreditCard,
+    color: COLORS.rust,
+    bg: "rgba(193,80,46,0.12)",
+  },
+  reservation: {
+    label: lang === "sw" ? "Reservation Fee" : "Reservation Fee",
+    icon: HandCoins,
+    color: COLORS.green,
+    bg: "rgba(47,109,79,0.12)",
+  },
+  boost: {
+    label: lang === "sw" ? "Boost Fee" : "Boost Fee",
+    icon: Rocket,
+    color: COLORS.gold,
+    bg: "rgba(232,163,61,0.12)",
+  },
+  leading: {
+    label: lang === "sw" ? "Leading Fee" : "Leading Fee",
+    icon: TrendingUp,
+    color: "#2563EB",
+    bg: "rgba(37,99,235,0.12)",
+  },
+  advertisement: {
+    label: lang === "sw" ? "Advertisement Fee" : "Advertisement Fee",
+    icon: Megaphone,
+    color: COLORS.gold,
+    bg: "rgba(232,163,61,0.12)",
+  },
+  sale: {
+    label: lang === "sw" ? "Mauzo" : "Sale",
+    icon: TrendingUp,
+    color: COLORS.green,
+    bg: "rgba(47,109,79,0.16)",
+  },
+  purchase: {
+    label: lang === "sw" ? "Ununuzi" : "Purchase",
+    icon: HandCoins,
+    color: "#2563EB",
+    bg: "rgba(37,99,235,0.12)",
+  },
+});
 
-const STATUS = {
-  completed: { label: "Imekamilika", color: COLORS.green, bg: "rgba(47,109,79,0.12)", icon: CheckCircle },
-  pending: { label: "Inasubiri", color: "#8A5A16", bg: "rgba(232,163,61,0.16)", icon: Clock },
-  failed: { label: "Imeshindikana", color: COLORS.rust, bg: "rgba(193,80,46,0.12)", icon: XCircle },
-  refunded: { label: "Imerejeshwa", color: COLORS.night, bg: "rgba(16,26,46,0.08)", icon: AlertCircle },
-};
+const getStatus = (lang) => ({
+  completed: {
+    label: lang === "sw" ? "Imekamilika" : "Completed",
+    color: COLORS.green,
+    bg: "rgba(47,109,79,0.12)",
+    icon: CheckCircle,
+  },
+  pending: {
+    label: lang === "sw" ? "Inasubiri" : "Pending",
+    color: "#8A5A16",
+    bg: "rgba(232,163,61,0.16)",
+    icon: Clock,
+  },
+  failed: {
+    label: lang === "sw" ? "Imeshindikana" : "Failed",
+    color: COLORS.rust,
+    bg: "rgba(193,80,46,0.12)",
+    icon: XCircle,
+  },
+  refunded: {
+    label: lang === "sw" ? "Imerejeshwa" : "Refunded",
+    color: COLORS.night,
+    bg: "rgba(16,26,46,0.08)",
+    icon: AlertCircle,
+  },
+});
 
-function TransactionItem({ txn }) {
-  const type = TRANSACTION_TYPES[txn.type] || TRANSACTION_TYPES.listing_fee;
-  const status = STATUS[txn.status] || STATUS.pending;
+function TransactionItem({ txn, lang }) {
+  const type = getTransactionTypes(lang)[txn.type] || getTransactionTypes(lang).listing_fee;
+  const status = getStatus(lang)[txn.status] || getStatus(lang).pending;
   const TypeIcon = type.icon;
   const StatusIcon = status.icon;
 
@@ -76,7 +132,9 @@ function TransactionItem({ txn }) {
             {formatTZS(txn.amount)}
           </span>
           <span style={{ color: "rgba(16,26,46,0.5)" }}>• {txn.method}</span>
-          <span style={{ color: "rgba(16,26,46,0.4)" }}>• {timeAgo(txn.at)}</span>
+          <span style={{ color: "rgba(16,26,46,0.4)" }}>
+            • {timeAgo(txn.at, lang)}
+          </span>
         </div>
       </div>
     </div>
@@ -84,19 +142,20 @@ function TransactionItem({ txn }) {
 }
 
 export default function MyTransactionsPage({ transactions: transactionsProp }) {
+  const { lang } = useLanguage();
   const storeTransactions = useTransactions();
   const transactions = transactionsProp ?? storeTransactions;
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   const filters = [
-    { key: "all", label: "Zote" },
+    { key: "all", label: lang === "sw" ? "Zote" : "All" },
     { key: "listing_fee", label: "Listing Fee" },
     { key: "boost", label: "Boost" },
     { key: "leading", label: "Leading" },
-    { key: "advertisement", label: "Ads" },
+    { key: "advertisement", label: lang === "sw" ? "Ads" : "Ads" },
     { key: "reservation", label: "Reservation" },
-    { key: "sale", label: "Mauzo" },
+    { key: "sale", label: lang === "sw" ? "Mauzo" : "Sales" },
   ];
 
   const filtered = transactions.filter((t) => {
@@ -133,26 +192,44 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
           style={{ fontFamily: FONTS.display, color: COLORS.night }}
           className="text-2xl sm:text-3xl font-semibold mb-1"
         >
-          My Transactions
+          {lang === "sw" ? "Miamala Yangu" : "My Transactions"}
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-5">
-          Fuatilia malipo, mauzo, na miamala yako yote.
+          {lang === "sw"
+            ? "Fuatilia malipo, mauzo, na miamala yako yote."
+            : "Track your payments, sales, and all transactions."}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-          <div style={{ background: "white", borderColor: COLORS.sandLine }} className="rounded-xl border p-4">
-            <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs mb-1">Jumla Iliyolipwa</p>
-            <p style={{ color: COLORS.rust }} className="text-lg font-bold">{formatTZS(totals.spent)}</p>
+          <div
+            style={{ background: "white", borderColor: COLORS.sandLine }}
+            className="rounded-xl border p-4"
+          >
+            <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs mb-1">
+              {lang === "sw" ? "Jumla Iliyolipwa" : "Total Spent"}
+            </p>
+            <p style={{ color: COLORS.rust }} className="text-lg font-bold">
+              {formatTZS(totals.spent)}
+            </p>
           </div>
-          <div style={{ background: "white", borderColor: COLORS.sandLine }} className="rounded-xl border p-4">
-            <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs mb-1">Jumla Iliyopatikana</p>
-            <p style={{ color: COLORS.green }} className="text-lg font-bold">{formatTZS(totals.earned)}</p>
+          <div
+            style={{ background: "white", borderColor: COLORS.sandLine }}
+            className="rounded-xl border p-4"
+          >
+            <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs mb-1">
+              {lang === "sw" ? "Jumla Iliyopatikana" : "Total Earned"}
+            </p>
+            <p style={{ color: COLORS.green }} className="text-lg font-bold">
+              {formatTZS(totals.earned)}
+            </p>
           </div>
           <div
             style={{ background: COLORS.night, color: COLORS.sand, borderColor: COLORS.night }}
             className="rounded-xl border p-4"
           >
-            <p className="text-xs mb-1 opacity-70">Idadi ya Miamala</p>
+            <p className="text-xs mb-1 opacity-70">
+              {lang === "sw" ? "Idadi ya Miamala" : "Number of Transactions"}
+            </p>
             <p className="text-lg font-bold">{transactions.length}</p>
           </div>
         </div>
@@ -164,7 +241,9 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tafuta kwa ref au jina..."
+              placeholder={
+                lang === "sw" ? "Tafuta kwa ref au jina..." : "Search by ref or title..."
+              }
               style={{ background: "white", borderColor: COLORS.sandLine, color: COLORS.night }}
               className="w-full rounded-xl border pl-10 pr-3 py-2.5 text-sm outline-none"
             />
@@ -174,7 +253,7 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
             style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "white" }}
           >
             <Download size={14} />
-            Pakua CSV
+            {lang === "sw" ? "Pakua CSV" : "Download CSV"}
           </button>
         </div>
 
@@ -201,15 +280,23 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
             className="rounded-2xl border-2 border-dashed p-12 text-center bg-white"
           >
             <Receipt size={48} className="mx-auto text-gray-300 mb-3" />
-            <h3 style={{ color: COLORS.night }} className="font-semibold mb-1">Hakuna miamala</h3>
+            <h3 style={{ color: COLORS.night }} className="font-semibold mb-1">
+              {lang === "sw" ? "Hakuna miamala" : "No transactions"}
+            </h3>
             <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-sm">
-              {searchQuery ? "Jaribu kutafuta kwa neno lingine" : "Miamala yako itaonekana hapa."}
+              {searchQuery
+                ? lang === "sw"
+                  ? "Jaribu kutafuta kwa neno lingine"
+                  : "Try searching with a different term"
+                : lang === "sw"
+                  ? "Miamala yako itaonekana hapa."
+                  : "Your transactions will appear here."}
             </p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {filtered.map((t) => (
-              <TransactionItem key={t.id} txn={t} />
+              <TransactionItem key={t.id} txn={t} lang={lang} />
             ))}
           </div>
         )}
