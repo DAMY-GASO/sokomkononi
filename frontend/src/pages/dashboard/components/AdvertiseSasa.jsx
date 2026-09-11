@@ -2,12 +2,18 @@ import React, { useState, useEffect } from "react";
 import { Megaphone, MapPin, Clock, Sparkles } from "lucide-react";
 import { COLORS, FONTS, getCategory, formatTZS } from "./shared";
 import { useAdvertisementFeeConfig } from "../../../config/advertisementFeeStore.js";
-import { useActiveBannerAds, addBannerAd, bannerDaysRemaining } from "../../../config/bannerAdsStore.js";
+import {
+  useActiveBannerAds,
+  addBannerAd,
+  bannerDaysRemaining,
+} from "../../../config/bannerAdsStore.js";
 import { notifyAdvertisementPurchased } from "../../../config/notificationsStore.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
+import { getCategoryIcon } from "../../../config/categoriesStore.js";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
 import PaymentGateway from "./PaymentGateway";
 
-function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds }) {
+function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds, lang }) {
   if (listings.length === 0) {
     return (
       <div
@@ -15,8 +21,9 @@ function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds 
         className="rounded-2xl border-2 border-dashed p-8 text-center"
       >
         <p style={{ color: "rgba(16,26,46,0.45)" }} className="text-sm">
-          Huna mali yoyote iliyo Live kwa sasa. Advertisement Fee inapatikana
-          tu kwa mali zilizochapishwa.
+          {lang === "sw"
+            ? "Huna mali yoyote iliyo Live kwa sasa. Advertisement Fee inapatikana tu kwa mali zilizochapishwa."
+            : "You don't have any Live listings right now. Advertisement Fee is only available for published properties."}
         </p>
       </div>
     );
@@ -26,7 +33,7 @@ function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds 
     <div className="flex flex-col gap-2">
       {listings.map((l) => {
         const category = getCategory(l.category);
-        const Icon = category?.icon;
+        const Icon = getCategoryIcon(category?.iconKey);
         const active = l.id === selectedId;
         const advertising = activeBannerListingIds.has(l.id);
         return (
@@ -49,7 +56,10 @@ function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds 
               <p style={{ color: COLORS.night }} className="text-sm font-semibold truncate">
                 {l.title}
               </p>
-              <p style={{ color: "rgba(16,26,46,0.5)" }} className="flex items-center gap-1 text-xs">
+              <p
+                style={{ color: "rgba(16,26,46,0.5)" }}
+                className="flex items-center gap-1 text-xs"
+              >
                 <MapPin size={11} /> {l.location}
               </p>
             </div>
@@ -58,7 +68,8 @@ function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds 
                 style={{ background: "rgba(193,80,46,0.14)", color: COLORS.rust }}
                 className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full shrink-0"
               >
-                <Megaphone size={11} /> Tayari inatangazwa
+                <Megaphone size={11} />{" "}
+                {lang === "sw" ? "Tayari inatangazwa" : "Already advertised"}
               </span>
             )}
           </button>
@@ -68,7 +79,12 @@ function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds 
   );
 }
 
-export default function AdvertiseSasa({ listings = [], initialListingId = null, onAdvertised = () => {} }) {
+export default function AdvertiseSasa({
+  listings = [],
+  initialListingId = null,
+  onAdvertised = () => {},
+}) {
+  const { lang } = useLanguage();
   const liveListings = listings.filter((l) => l.status === "live");
   const adFee = useAdvertisementFeeConfig();
   const activeBanners = useActiveBannerAds();
@@ -90,7 +106,9 @@ export default function AdvertiseSasa({ listings = [], initialListingId = null, 
   }, [initialListingId]);
 
   const selectedListing = liveListings.find((l) => l.id === selectedId);
-  const alreadyAdvertising = selectedListing ? activeBannerListingIds.has(selectedListing.id) : false;
+  const alreadyAdvertising = selectedListing
+    ? activeBannerListingIds.has(selectedListing.id)
+    : false;
   const canAdvertise = Boolean(selectedListing) && !alreadyAdvertising;
 
   const handleConfirm = () => {
@@ -106,19 +124,20 @@ export default function AdvertiseSasa({ listings = [], initialListingId = null, 
     notifyAdvertisementPurchased({
       listingId: selectedListing.id,
       listingTitle: selectedListing.title,
-      placement: "Banner inayozunguka (Dashboard)",
+      placement:
+        lang === "sw" ? "Banner inayozunguka (Dashboard)" : "Rotating banner (Dashboard)",
       amount: adFee.price,
       expiresAt: banner.expiresAt,
     });
 
-    // 2) === MPYA: rekodi transaction kwenye My Transactions ===
+    // 2) Rekodi transaction kwenye My Transactions
     addTransaction({
       type: "advertisement",
       title: `Advertisement — ${selectedListing.title}`,
       property: selectedListing.title,
       amount: adFee.price,
       status: "completed",
-      method: "M-Pesa", // PaymentGateway bado halirudishi method halisi — baadaye
+      method: "M-Pesa",
       listingId: selectedListing.id,
       bannerId: banner.id,
     });
@@ -143,17 +162,34 @@ export default function AdvertiseSasa({ listings = [], initialListingId = null, 
           >
             <Megaphone color="white" size={24} />
           </div>
-          <h2 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl font-semibold mb-2">
-            Banner Imewekwa
+          <h2
+            style={{ fontFamily: FONTS.display, color: COLORS.night }}
+            className="text-2xl font-semibold mb-2"
+          >
+            {lang === "sw" ? "Banner Imewekwa" : "Banner Published"}
           </h2>
           <p style={{ color: "rgba(16,26,46,0.65)" }} className="text-sm mb-5">
-            "{done.listing.title}" sasa itaonekana kwenye banner
-            inayozunguka ya Dashboard (buyer na seller) hadi{" "}
-            {new Date(done.banner.expiresAt).toLocaleDateString("sw-TZ", {
-              day: "numeric",
-              month: "long",
-            })}
-            .
+            {lang === "sw" ? (
+              <>
+                "{done.listing.title}" sasa itaonekana kwenye banner inayozunguka ya Dashboard
+                (buyer na seller) hadi{" "}
+                {new Date(done.banner.expiresAt).toLocaleDateString("sw-TZ", {
+                  day: "numeric",
+                  month: "long",
+                })}
+                .
+              </>
+            ) : (
+              <>
+                "{done.listing.title}" will now appear in the rotating Dashboard banner (buyer and
+                seller) until{" "}
+                {new Date(done.banner.expiresAt).toLocaleDateString("en-US", {
+                  day: "numeric",
+                  month: "long",
+                })}
+                .
+              </>
+            )}
           </p>
           <button
             onClick={() => {
@@ -163,7 +199,7 @@ export default function AdvertiseSasa({ listings = [], initialListingId = null, 
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="w-full py-3 rounded-xl font-semibold text-sm"
           >
-            Tangaza Mali Nyingine
+            {lang === "sw" ? "Tangaza Mali Nyingine" : "Advertise Another Listing"}
           </button>
         </div>
       </div>
@@ -171,25 +207,32 @@ export default function AdvertiseSasa({ listings = [], initialListingId = null, 
   }
 
   return (
-    <div style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }} className="w-full p-4 sm:p-6">
+    <div
+      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }}
+      className="w-full p-4 sm:p-6"
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
       <div className="max-w-2xl mx-auto">
-        <h1 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl sm:text-3xl font-semibold mb-1">
-          Tangaza Sasa
+        <h1
+          style={{ fontFamily: FONTS.display, color: COLORS.night }}
+          className="text-2xl sm:text-3xl font-semibold mb-1"
+        >
+          {lang === "sw" ? "Tangaza Sasa" : "Advertise Now"}
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-6">
-          Weka bidhaa yako kwenye banner inayozunguka ya Dashboard — buyer
-          na seller wote wataiona wanapoingia.
+          {lang === "sw"
+            ? "Weka bidhaa yako kwenye banner inayozunguka ya Dashboard — buyer na seller wote wataiona wanapoingia."
+            : "Place your product on the rotating Dashboard banner — all buyers and sellers will see it when they log in."}
         </p>
 
         {stage !== "paying" && (
           <>
             <div className="flex flex-col gap-2 mb-3">
               <span style={{ color: COLORS.night }} className="text-sm font-medium">
-                Chagua Mali (Live pekee)
+                {lang === "sw" ? "Chagua Mali (Live pekee)" : "Select Property (Live only)"}
               </span>
             </div>
             <div className="mb-6">
@@ -198,6 +241,7 @@ export default function AdvertiseSasa({ listings = [], initialListingId = null, 
                 selectedId={selectedId}
                 onSelect={setSelectedId}
                 activeBannerListingIds={activeBannerListingIds}
+                lang={lang}
               />
             </div>
           </>
@@ -209,7 +253,11 @@ export default function AdvertiseSasa({ listings = [], initialListingId = null, 
               <PaymentGateway
                 amount={adFee.price}
                 title={adFee.label}
-                description={`Advertisement Fee kwa "${selectedListing.title}" — siku ${adFee.days}`}
+                description={
+                  lang === "sw"
+                    ? `Advertisement Fee kwa "${selectedListing.title}" — siku ${adFee.days}`
+                    : `Advertisement Fee for "${selectedListing.title}" — ${adFee.days} days`
+                }
                 onCancel={() => setStage("select")}
                 onSuccess={handlePaymentSuccess}
               />
@@ -226,8 +274,12 @@ export default function AdvertiseSasa({ listings = [], initialListingId = null, 
                     <Sparkles size={18} color={COLORS.rust} />
                   </div>
                   <div>
-                    <p style={{ color: COLORS.night }} className="text-sm font-semibold mb-0.5">
-                      {adFee.label} — siku {adFee.days}
+                    <p
+                      style={{ color: COLORS.night }}
+                      className="text-sm font-semibold mb-0.5"
+                    >
+                      {adFee.label} —{" "}
+                      {lang === "sw" ? `siku ${adFee.days}` : `${adFee.days} days`}
                     </p>
                     <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs">
                       {adFee.desc}
@@ -241,11 +293,23 @@ export default function AdvertiseSasa({ listings = [], initialListingId = null, 
                     className="flex items-center gap-2 text-xs rounded-lg px-3 py-2.5 mb-4"
                   >
                     <Clock size={14} />
-                    Mali hii tayari ina banner inayotumika siku{" "}
-                    {bannerDaysRemaining(
-                      activeBanners.find((b) => b.listingId === selectedListing.id)
-                    )}{" "}
-                    zilizobaki. Subiri iishe kabla ya kununua nyingine.
+                    {lang === "sw" ? (
+                      <>
+                        Mali hii tayari ina banner inayotumika siku{" "}
+                        {bannerDaysRemaining(
+                          activeBanners.find((b) => b.listingId === selectedListing.id)
+                        )}{" "}
+                        zilizobaki. Subiri iishe kabla ya kununua nyingine.
+                      </>
+                    ) : (
+                      <>
+                        This listing already has an active banner with{" "}
+                        {bannerDaysRemaining(
+                          activeBanners.find((b) => b.listingId === selectedListing.id)
+                        )}{" "}
+                        days remaining. Wait for it to expire before buying another.
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -254,8 +318,11 @@ export default function AdvertiseSasa({ listings = [], initialListingId = null, 
                   className="rounded-2xl border p-4 flex items-center justify-between mb-4"
                 >
                   <div>
-                    <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs mb-0.5">
-                      Jumla ya Malipo
+                    <p
+                      style={{ color: "rgba(16,26,46,0.55)" }}
+                      className="text-xs mb-0.5"
+                    >
+                      {lang === "sw" ? "Jumla ya Malipo" : "Total Payment"}
                     </p>
                     <p style={{ color: COLORS.rust }} className="text-lg font-bold">
                       {formatTZS(adFee.price)}
@@ -271,7 +338,7 @@ export default function AdvertiseSasa({ listings = [], initialListingId = null, 
                     className="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm"
                   >
                     <Megaphone size={15} />
-                    Lipa na Tangaza
+                    {lang === "sw" ? "Lipa na Tangaza" : "Pay and Advertise"}
                   </button>
                 </div>
               </>
