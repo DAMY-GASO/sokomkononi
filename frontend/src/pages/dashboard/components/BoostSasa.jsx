@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Rocket, Check, MapPin, TrendingUp, Clock } from "lucide-react";
 import {
@@ -12,6 +11,7 @@ import {
 } from "./shared";
 import { useBoostPackages } from "../../../config/boostPackagesStore.js";
 import { notifyBoostPurchased } from "../../../config/notificationsStore.js";
+import { addTransaction } from "../../../config/transactionsStore.js";
 import PaymentGateway from "./PaymentGateway";
 
 function ListingPicker({ listings, selectedId, onSelect }) {
@@ -163,6 +163,8 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
   const handlePaymentSuccess = () => {
     const patch = applyBoost(selectedListing, packageKey);
     onBoosted(selectedListing.id, patch);
+
+    // 1) Taarifa (user + admin)
     notifyBoostPurchased({
       listingId: selectedListing.id,
       listingTitle: selectedListing.title,
@@ -170,6 +172,18 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
       expiresAt: patch.boostExpiresAt,
       amount: selectedPackage.price,
     });
+
+    // 2) === MPYA: rekodi transaction kwenye My Transactions ===
+    addTransaction({
+      type: "boost",
+      title: `${selectedPackage.label} — ${selectedListing.title}`,
+      property: selectedListing.title,
+      amount: selectedPackage.price,
+      status: "completed",
+      method: "M-Pesa", // PaymentGateway bado halirudishi method halisi
+      listingId: selectedListing.id,
+    });
+
     setDone({ listing: selectedListing, pkg: selectedPackage, expiresAt: patch.boostExpiresAt });
     setStage("done");
   };
