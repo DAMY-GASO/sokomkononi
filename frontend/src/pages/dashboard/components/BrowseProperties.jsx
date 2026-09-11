@@ -32,8 +32,8 @@ import {
   isBoostActive,
   isLeadingActive,
 } from "./shared";
-import { usePublicListings } from "../../config/listingsStore.js";
-import { useSavedIds, toggleSaved } from "../../config/savedStore.js";
+import { usePublicListings } from "../../../config/listingsStore.js";
+import { useSavedIds, toggleSaved } from "../../../config/savedStore.js";
 
 const REGIONS = [
   "Arusha",
