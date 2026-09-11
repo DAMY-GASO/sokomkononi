@@ -9,7 +9,12 @@ import { useDeals, resolveDispute } from "../../config/dealsStore.js";
 import { useUsers, toggleUserStatus } from "../../config/usersStore.js";
 import { useListings, decideListing } from "../../config/listingsStore.js";
 import { useBoostPackages, updateBoostPackagePrice } from "../../config/boostPackagesStore.js";
-import { useListingFeeConfigs, updateListingFeeConfig } from "../../config/listingFeeStore.js";
+import {
+  useListingFeeConfigs,
+  updateListingFeeConfig,
+  addFeeConfig,
+  hasFeeConfig,
+} from "../../config/listingFeeStore.js";
 import { useLeadingFeeConfig, updateLeadingFeePrice } from "../../config/leadingFeeStore.js";
 import { useAdvertisementFeeConfig, updateAdvertisementFeePrice } from "../../config/advertisementFeeStore.js";
 import {
@@ -34,6 +39,7 @@ import {
 } from "../../config/systemSettingsStore.js";
 import {
   useCategories,
+  useActiveCategories,
   addCategory,
   updateCategory,
   removeCategory,
@@ -823,7 +829,7 @@ function DealsSection() {
 }
 
 // ============================================================
-// SECTION: REVENUE
+// SECTION: REVENUE (na Categories Bila Fee Config)
 // ============================================================
 function EditableAmount({ value, onSave, prefix = "TZS " }) {
   const [editing, setEditing] = useState(false);
@@ -901,21 +907,48 @@ function RevenueSection() {
   const boostPackages = useBoostPackages();
   const leadingFee = useLeadingFeeConfig();
   const adFee = useAdvertisementFeeConfig();
+  const activeCategories = useActiveCategories();
   const [saved, setSaved] = useState(false);
+  const [flash, setFlash] = useState(null);
 
-  const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
+  const showFlash = (msg, type = "success") => {
+    setFlash({ msg, type });
+    setTimeout(() => setFlash(null), 3500);
+  };
 
-  const updateListingFeeRate = (key, rate) => { updateListingFeeConfig(key, { rate }); flash(); };
-  const updateListingFeeMin = (key, min) => { updateListingFeeConfig(key, { min }); flash(); };
-  const updateListingFeeMax = (key, max) => { updateListingFeeConfig(key, { max }); flash(); };
-  const updateReservationFee = (id, fee) => { updateReservationRate(id, fee); flash(); };
-  const updateBoostPrice = (key, price) => { updateBoostPackagePrice(key, price); flash(); };
-  const updateLeadingPrice = (price) => { updateLeadingFeePrice(price); flash(); };
-  const updateAdvertisementPrice = (price) => { updateAdvertisementFeePrice(price); flash(); };
+  const flashSaved = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+
+  const updateListingFeeRate = (key, rate) => { updateListingFeeConfig(key, { rate }); flashSaved(); };
+  const updateListingFeeMin = (key, min) => { updateListingFeeConfig(key, { min }); flashSaved(); };
+  const updateListingFeeMax = (key, max) => { updateListingFeeConfig(key, { max }); flashSaved(); };
+  const updateReservationFee = (id, fee) => { updateReservationRate(id, fee); flashSaved(); };
+  const updateBoostPrice = (key, price) => { updateBoostPackagePrice(key, price); flashSaved(); };
+  const updateLeadingPrice = (price) => { updateLeadingFeePrice(price); flashSaved(); };
+  const updateAdvertisementPrice = (price) => { updateAdvertisementFeePrice(price); flashSaved(); };
+
+  // Categories zilizo hai lakini hazina fee config bado
+  const missingFeeCategories = activeCategories.filter((c) => !hasFeeConfig(c.key));
+
+  const handleAddFeeConfig = (cat) => {
+    try {
+      addFeeConfig(cat.key, cat.label?.sw || cat.key);
+      showFlash(
+        `Fee config ya "${cat.key}" imeongezwa kwa default (1%, min 10,000, max 100,000). Hariri hapa chini kubadilisha.`
+      );
+    } catch (e) {
+      showFlash(e.message, "error");
+    }
+  };
 
   return (
     <>
-      <SectionHeader title="Revenue & Financial Settings" subtitle="Vyanzo vyote 5 vya mapato — bofya kiasi kubadilisha" />
+      <SectionHeader
+        title="Revenue & Financial Settings"
+        subtitle="Vyanzo vyote 5 vya mapato — bofya kiasi kubadilisha"
+      />
       {saved && (
         <div
           style={{ background: `${COLORS.green}15`, color: COLORS.green }}
@@ -924,11 +957,83 @@ function RevenueSection() {
           Imehifadhiwa
         </div>
       )}
+      {flash && (
+        <div
+          style={{
+            background: flash.type === "error" ? `${COLORS.rust}15` : `${COLORS.green}15`,
+            color: flash.type === "error" ? COLORS.rust : COLORS.green,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg mb-4 inline-block"
+        >
+          {flash.msg}
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
+        {/* CATEGORIES BILA FEE CONFIG */}
+        {missingFeeCategories.length > 0 && (
+          <div
+            className="bg-white rounded-xl border p-5"
+            style={{ borderColor: COLORS.rust, borderWidth: "2px" }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                style={{ background: `${COLORS.rust}15` }}
+                className="w-9 h-9 rounded-lg flex items-center justify-center"
+              >
+                <AlertTriangle size={16} color={COLORS.rust} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-800">
+                  Categories Bila Fee Config ({missingFeeCategories.length})
+                </p>
+                <p className="text-xs text-gray-500">
+                  Categories hizi ni hai lakini wauzaji hawawezi kuunda listing — bofya "Ongeza Fee" kwa kila moja
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              {missingFeeCategories.map((cat) => {
+                const Icon = getCategoryIcon(cat.iconKey);
+                return (
+                  <div
+                    key={cat.key}
+                    style={{ borderColor: COLORS.sandLine }}
+                    className="flex items-center gap-3 border rounded-lg px-3 py-2"
+                  >
+                    <div
+                      style={{ background: COLORS.night }}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                    >
+                      <Icon size={14} color={COLORS.gold} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800">
+                        {cat.label?.sw || cat.key}
+                      </p>
+                      <p className="text-xs text-gray-400 font-mono">{cat.key}</p>
+                    </div>
+                    <button
+                      onClick={() => handleAddFeeConfig(cat)}
+                      style={{ background: COLORS.rust, color: "white" }}
+                      className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg shrink-0"
+                    >
+                      <Plus size={12} /> Ongeza Fee
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 1. Listing Fee */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center gap-3 mb-1">
-            <div style={{ background: `${COLORS.gold}15` }} className="w-9 h-9 rounded-lg flex items-center justify-center">
+            <div
+              style={{ background: `${COLORS.gold}15` }}
+              className="w-9 h-9 rounded-lg flex items-center justify-center"
+            >
               <Home size={16} color={COLORS.gold} />
             </div>
             <p className="text-sm font-semibold text-gray-800">Listing Fee</p>
@@ -938,7 +1043,10 @@ function RevenueSection() {
           </p>
           <div className="divide-y divide-gray-100">
             {listingFeeConfigs.map((c) => (
-              <div key={c.key} className="flex items-center justify-between py-2.5 gap-3 flex-wrap">
+              <div
+                key={c.key}
+                className="flex items-center justify-between py-2.5 gap-3 flex-wrap"
+              >
                 <span className="text-sm text-gray-600 min-w-[150px]">{c.label}</span>
                 <div className="flex items-center gap-4">
                   <div className="flex flex-col items-start">
@@ -956,17 +1064,28 @@ function RevenueSection() {
                 </div>
               </div>
             ))}
+            {listingFeeConfigs.length === 0 && (
+              <p className="text-xs text-gray-400 py-3">
+                Hakuna fee config bado. Ongeza kwa category hapo juu.
+              </p>
+            )}
           </div>
         </div>
 
+        {/* 2. Reservation Fee */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center gap-3 mb-1">
-            <div style={{ background: `${COLORS.green}15` }} className="w-9 h-9 rounded-lg flex items-center justify-center">
+            <div
+              style={{ background: `${COLORS.green}15` }}
+              className="w-9 h-9 rounded-lg flex items-center justify-center"
+            >
               <Clock size={16} color={COLORS.green} />
             </div>
             <p className="text-sm font-semibold text-gray-800">Reservation Fee</p>
           </div>
-          <p className="text-xs text-gray-500 mb-3">100% mapato ya SokoMkononi — hakuna 50/50 split</p>
+          <p className="text-xs text-gray-500 mb-3">
+            100% mapato ya SokoMkononi — hakuna 50/50 split
+          </p>
           <div className="divide-y divide-gray-100">
             {reservationRates.map((r) => (
               <div key={r.id} className="flex items-center justify-between py-2.5">
@@ -977,14 +1096,20 @@ function RevenueSection() {
           </div>
         </div>
 
+        {/* 3. Boost Packages */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center gap-3 mb-1">
-            <div style={{ background: `${COLORS.rust}15` }} className="w-9 h-9 rounded-lg flex items-center justify-center">
+            <div
+              style={{ background: `${COLORS.rust}15` }}
+              className="w-9 h-9 rounded-lg flex items-center justify-center"
+            >
               <Rocket size={16} color={COLORS.rust} />
             </div>
             <p className="text-sm font-semibold text-gray-800">Boost Packages</p>
           </div>
-          <p className="text-xs text-gray-500 mb-3">Bei za Boost Sasa (Basic/Featured/Premium)</p>
+          <p className="text-xs text-gray-500 mb-3">
+            Bei za Boost Sasa (Basic/Featured/Premium)
+          </p>
           <div className="divide-y divide-gray-100">
             {boostPackages.map((pkg) => (
               <div key={pkg.key} className="flex items-center justify-between py-2.5">
@@ -997,9 +1122,13 @@ function RevenueSection() {
           </div>
         </div>
 
+        {/* 4 + 5. Leading Fee na Advertisement Fee */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col gap-3">
-            <div style={{ background: `${COLORS.rust}15` }} className="w-10 h-10 rounded-xl flex items-center justify-center">
+            <div
+              style={{ background: `${COLORS.rust}15` }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+            >
               <Search size={18} color={COLORS.rust} />
             </div>
             <div>
@@ -1011,7 +1140,10 @@ function RevenueSection() {
           </div>
 
           <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col gap-3">
-            <div style={{ background: `${COLORS.rust}15` }} className="w-10 h-10 rounded-xl flex items-center justify-center">
+            <div
+              style={{ background: `${COLORS.rust}15` }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+            >
               <Smartphone size={18} color={COLORS.rust} />
             </div>
             <div>
