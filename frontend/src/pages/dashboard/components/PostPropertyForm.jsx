@@ -54,10 +54,13 @@ export default function PostPropertyForm({
   });
   const [extra, setExtra] = useState({});
 
-  // category object kutoka store (sasa ni object yenye label: {sw,en})
+  // category object kutoka store (label ni { sw, en })
   const category = categories.find((c) => c.key === categoryKey);
   const categoryLabel = category?.label?.[lang] || category?.label?.sw || "";
   const feeInfo = calculateListingFee(categoryKey, base.price);
+
+  // Error kama category haina fee config
+  const noFeeConfig = feeInfo.error === "NO_FEE_CONFIG";
 
   const handlePhotoAdd = (e) => {
     const files = Array.from(e.target.files || []).slice(0, 8 - photos.length);
@@ -74,7 +77,8 @@ export default function PostPropertyForm({
     base.title.trim() &&
     base.price.trim() &&
     base.location.trim() &&
-    photos.length > 0;
+    photos.length > 0 &&
+    !noFeeConfig;
 
   const resetForm = () => {
     setStage("form");
@@ -355,6 +359,16 @@ export default function PostPropertyForm({
 
         {category && (
           <form onSubmit={handleFormSubmit} className="flex flex-col gap-5">
+            {/* ERROR: category haina fee config */}
+            {noFeeConfig && (
+              <div
+                style={{ background: `${COLORS.rust}15`, color: COLORS.rust, borderColor: COLORS.rust }}
+                className="rounded-xl border px-4 py-3 text-xs font-semibold"
+              >
+                ⚠️ {feeInfo.message}
+              </div>
+            )}
+
             {/* Photos */}
             <Field
               label={
@@ -420,11 +434,17 @@ export default function PostPropertyForm({
                   value={base.price}
                   onChange={(e) => setBase({ ...base, price: e.target.value })}
                 />
-                {feeInfo.price > 0 && (
-                  <span style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs">
-                    {lang === "sw" ? "Makadirio ya Listing Fee" : "Estimated Listing Fee"}:{" "}
-                    <b style={{ color: COLORS.rust }}>{formatTZS(feeInfo.fee)}</b>
+                {noFeeConfig ? (
+                  <span style={{ color: COLORS.rust }} className="text-xs font-semibold">
+                    {lang === "sw" ? "Fee haipo — wasiliana na Admin" : "Fee missing — contact Admin"}
                   </span>
+                ) : (
+                  feeInfo.price > 0 && (
+                    <span style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs">
+                      {lang === "sw" ? "Makadirio ya Listing Fee" : "Estimated Listing Fee"}:{" "}
+                      <b style={{ color: COLORS.rust }}>{formatTZS(feeInfo.fee)}</b>
+                    </span>
+                  )
                 )}
               </Field>
               <Field label={lang === "sw" ? "Mahali" : "Location"}>
@@ -442,7 +462,7 @@ export default function PostPropertyForm({
               </Field>
             </div>
 
-            {/* Category-specific fields — extra[] kutoka category */}
+            {/* Category-specific fields */}
             {category.extra && category.extra.length > 0 && (
               <div
                 style={{ borderColor: COLORS.sandLine, background: "white" }}
