@@ -11,7 +11,7 @@ import {
   CheckCheck,
 } from "lucide-react";
 import { COLORS, FONTS, formatTZS, timeAgo } from "./dashboard/components/shared";
-import { useConversations, sendMessage, markConversationRead } from "./config/messagesStore.js";
+import { useConversations, sendMessage, markConversationRead } from "../config/messagesStore.js";
 
 function ConversationListItem({ convo, active, onSelect }) {
   return (
