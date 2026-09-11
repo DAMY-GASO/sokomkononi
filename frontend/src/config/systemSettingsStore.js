@@ -1,18 +1,28 @@
 // ============================================================
 // systemSettingsStore.js
 // CHANZO KIMOJA CHA UKWELI kwa mipangilio ya ndani ya mfumo:
-// Webhooks, Sub-Admins, na App Store Links (Admin > System Settings).
+//   - Webhooks          (Admin > System Settings)
+//   - Sub-Admins        (Admin > System Settings)
+//   - App Store Links   (Admin > System Settings)
+//   - Platform Policy   (Admin > System Settings — muda wa maisha
+//                        ya listing, n.k.)
 //
 // Kabla ya hii, WebhooksPanel/SubAdminsPanel/AppStoreLinksPanel
 // zilitumia useState za ndani tu — kila mara ukurasa ukifunguliwa upya
 // (refresh) mabadiliko yote yalipotea. Sasa yanahifadhiwa hapa, kama
 // dealsStore.js/feePolicy.js/listingsStore.js/usersStore.js.
 //
-// Hazina sehemu nyingine ya mfumo inayosoma data hizi kwa sasa (ni za
-// Admin peke yake), lakini zimewekwa kwenye muundo huu ili siku
-// backend halisi ikiwepo, badilisha tu functions hizi ziite API —
-// hooks (useWebhooks, useSubAdmins, useAppStoreLinks) hazitahitaji
-// kubadilika.
+// Platform Policy ni tofauti na "fee" — haina bei, ina "kanuni":
+// muda wa listing kuishi, na kadhalika. listingsStore.js inasoma
+// listingLifetimeDays kutoka hapa kila listing mpya inapoundwa,
+// hivyo Admin anaweza kuongeza/kupunguza muda bila kugusa code.
+//
+// Hazina sehemu nyingine nyingi za mfumo zinazosoma data hizi kwa
+// sasa (ni za Admin peke yake, isipokuwa Platform Policy ambayo
+// listingsStore.js inaisoma), lakini zimewekwa kwenye muundo huu
+// ili siku backend halisi ikiwepo, badilisha tu functions hizi ziite
+// API — hooks (useWebhooks, useSubAdmins, useAppStoreLinks,
+// usePlatformPolicy) hazitahitaji kubadilika.
 // ============================================================
 
 import { useEffect, useState } from "react";
@@ -25,6 +35,9 @@ function makeSlice(storageKey, updateEvent, seed) {
       if (!raw) return seed;
       const parsed = JSON.parse(raw);
       if (parsed == null) return seed;
+      // Kwa slices za array: kama parsed ni tupu, rudi kwenye seed.
+      // Kwa slices za object (kama Platform Policy), tunaruhusu
+      // object tupu kama ilivyo — hakuna special-case.
       if (Array.isArray(seed) && (!Array.isArray(parsed) || parsed.length === 0)) return seed;
       return parsed;
     } catch {
@@ -131,3 +144,38 @@ const appStoreLinksSlice = makeSlice(
 export function getAppStoreLinks() { return appStoreLinksSlice.read(); }
 export function saveAppStoreLinks(links) { appStoreLinksSlice.save(links); }
 export function useAppStoreLinks() { return appStoreLinksSlice.useSlice(); }
+
+// ------------------------------------------------------------
+// PLATFORM POLICY
+// ------------------------------------------------------------
+// Kanuni za jumla za mfumo (bila bei) — Admin anaweza kubadilisha
+// kwenye System Settings > Platform Policy. listingsStore.js inasoma
+// `listingLifetimeDays` kila listing mpya inapoundwa.
+//
+// MUHIMU: Mabadiliko ya policy hayaathiri listings zilizokwisha
+// chapishwa — zinaendelea na expiresAt zao za awali. Ni listings
+// mpya pekee zinazopata muda mpya. (Backend inaweza kuamua
+// retro-apply kama mteja atahitaji — frontend haifanyi hivyo.)
+export const SEED_PLATFORM_POLICY = {
+  // Siku 60 kwa default — Admin anaweza kupunguza hadi 1 au kuongeza
+  // hadi 365 kupitia UI (guard kwenye PlatformPolicyPanel).
+  listingLifetimeDays: 60,
+  // Nafasi ya policies nyingine zijazo: gracePeriodHours kwa
+  // reservation kukaribia kuisha, maxPhotosPerListing, n.k.
+};
+
+const platformPolicySlice = makeSlice(
+  "sokomkononi_platform_policy_v1",
+  "sokomkononi:platform-policy-updated",
+  SEED_PLATFORM_POLICY
+);
+
+export function getPlatformPolicy() { return platformPolicySlice.read(); }
+export function savePlatformPolicy(policy) { platformPolicySlice.save(policy); }
+export function updatePlatformPolicy(patch) {
+  const current = getPlatformPolicy();
+  const next = { ...current, ...patch };
+  savePlatformPolicy(next);
+  return next;
+}
+export function usePlatformPolicy() { return platformPolicySlice.useSlice(); }
