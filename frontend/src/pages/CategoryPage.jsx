@@ -23,7 +23,12 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  TrendingUp,
+  Clock3,
+  Ban,
 } from "lucide-react";
+import { usePublicListings } from "../config/listingsStore.js";
+import { isBoostActive, isLeadingActive, formatTZS, timeAgo } from "./dashboard/components/shared";
 
 const COLORS = {
   night: "#101A2E",
@@ -37,7 +42,6 @@ const COLORS = {
 // ============================================================
 // CATEGORY MAPPING
 // ============================================================
-
 const CATEGORY_INFO = {
   nyumba: {
     label: { sw: "Nyumba & Majengo", en: "Houses & Buildings" },
@@ -81,120 +85,70 @@ const CATEGORY_INFO = {
   },
 };
 
-// ============================================================
-// MOCK DATA - IMEREKEBISHWA (titleStatus badala ya title kwa hati)
-// ============================================================
-
-const MOCK_PROPERTIES = {
-  nyumba: [
-    { id: "n1", title: "Nyumba ya Ghorofa Mbezi Beach", price: 85000000, location: "Mbezi Beach, Dar es Salaam", bedrooms: 4, bathrooms: 3, area: "350 sqm", isFeatured: true, isVerified: true, views: 214, postedAt: "2026-08-28", img: "/assets/properties/house1.jpg" },
-    { id: "n2", title: "Apartment ya Kisasa Masaki", price: 150000000, location: "Masaki, Dar es Salaam", bedrooms: 3, bathrooms: 2, area: "180 sqm", isFeatured: true, isVerified: true, views: 456, postedAt: "2026-08-25", img: "/assets/properties/house2.jpg" },
-    { id: "n3", title: "Nyumba ya Vyumba 3, Njiro", price: 45000000, location: "Njiro, Arusha", bedrooms: 3, bathrooms: 2, area: "200 sqm", isVerified: true, views: 178, postedAt: "2026-08-20", img: "/assets/properties/house3.jpg" },
-    { id: "n4", title: "Villa ya Kifahari Oysterbay", price: 250000000, location: "Oysterbay, Dar es Salaam", bedrooms: 5, bathrooms: 4, area: "500 sqm", isFeatured: true, views: 892, postedAt: "2026-08-15", img: "/assets/properties/house4.jpg" },
-    { id: "n5", title: "Nyumba ya Kienyeji Kigamboni", price: 35000000, location: "Kigamboni, Dar es Salaam", bedrooms: 3, bathrooms: 2, area: "250 sqm", views: 123, postedAt: "2026-08-10", img: "/assets/properties/house5.jpg" },
-    { id: "n6", title: "Apartment Mbezi Luis", price: 65000000, location: "Mbezi Luis, Dar es Salaam", bedrooms: 2, bathrooms: 2, area: "120 sqm", isVerified: true, views: 267, postedAt: "2026-08-05", img: "/assets/properties/house6.jpg" },
-    { id: "n7", title: "Nyumba Sinza Madukani", price: 55000000, location: "Sinza, Dar es Salaam", bedrooms: 3, bathrooms: 2, area: "180 sqm", views: 145, postedAt: "2026-07-28", img: "/assets/properties/house7.jpg" },
-    { id: "n8", title: "Ghorofa Mikocheni", price: 120000000, location: "Mikocheni, Dar es Salaam", bedrooms: 4, bathrooms: 3, area: "300 sqm", isFeatured: true, isVerified: true, views: 534, postedAt: "2026-07-20", img: "/assets/properties/house8.jpg" },
-    { id: "n9", title: "Nyumba Mwenge", price: 40000000, location: "Mwenge, Dar es Salaam", bedrooms: 3, bathrooms: 2, area: "200 sqm", views: 89, postedAt: "2026-07-15", img: "/assets/properties/house9.jpg" },
-    { id: "n10", title: "Villa Kigali", price: 180000000, location: "Kigali, Dar es Salaam", bedrooms: 5, bathrooms: 4, area: "450 sqm", isVerified: true, views: 312, postedAt: "2026-07-10", img: "/assets/properties/house10.jpg" },
-    { id: "n11", title: "Nyumba Tabata", price: 38000000, location: "Tabata, Dar es Salaam", bedrooms: 3, bathrooms: 2, area: "170 sqm", views: 156, postedAt: "2026-07-05", img: "/assets/properties/house11.jpg" },
-    { id: "n12", title: "Apartment Kariakoo", price: 72000000, location: "Kariakoo, Dar es Salaam", bedrooms: 2, bathrooms: 2, area: "110 sqm", views: 234, postedAt: "2026-06-28", img: "/assets/properties/house12.jpg" },
-  ],
-  viwanja: [
-    { id: "v1", title: "Kiwanja Ubungo — Hati Miliki", price: 28000000, location: "Ubungo, Dar es Salaam", area: "600 sqm", titleStatus: "Hati Miliki", isVerified: true, views: 145, postedAt: "2026-08-28", img: "/assets/properties/land1.jpg" },
-    { id: "v2", title: "Shamba la Kilimo Kilosa", price: 1500000, location: "Kilosa, Morogoro", area: "5 ekari", titleStatus: "Hati ya Kimila", views: 234, postedAt: "2026-08-25", img: "/assets/properties/land2.jpg" },
-    { id: "v3", title: "Kiwanja Kigamboni", price: 18000000, location: "Kigamboni, Dar es Salaam", area: "400 sqm", titleStatus: "Hati Miliki", isFeatured: true, isVerified: true, views: 389, postedAt: "2026-08-20", img: "/assets/properties/land3.jpg" },
-    { id: "v4", title: "Shamba Ismani Iringa", price: 8500000, location: "Ismani, Iringa", area: "10 ekari", titleStatus: "Hati Miliki", views: 167, postedAt: "2026-08-15", img: "/assets/properties/land4.jpg" },
-    { id: "v5", title: "Kiwanja Bunju", price: 22000000, location: "Bunju, Dar es Salaam", area: "500 sqm", titleStatus: "Hati Miliki", isVerified: true, views: 278, postedAt: "2026-08-10", img: "/assets/properties/land5.jpg" },
-    { id: "v6", title: "Shamba Morogoro Mjini", price: 12000000, location: "Morogoro Mjini", area: "3 ekari", titleStatus: "Hati ya Kimila", views: 145, postedAt: "2026-08-05", img: "/assets/properties/land6.jpg" },
-    { id: "v7", title: "Kiwanja Mbweni", price: 15000000, location: "Mbweni, Dar es Salaam", area: "400 sqm", titleStatus: "Hati Miliki", views: 189, postedAt: "2026-07-28", img: "/assets/properties/land7.jpg" },
-    { id: "v8", title: "Shamba Kilimo Dodoma", price: 20000000, location: "Dodoma", area: "8 ekari", titleStatus: "Hati Miliki", isFeatured: true, views: 312, postedAt: "2026-07-20", img: "/assets/properties/land8.jpg" },
-  ],
-  magari: [
-    { id: "m1", title: "Toyota Harrier 2016", price: 42000000, location: "Kinondoni, Dar es Salaam", make: "Toyota", model: "Harrier", year: 2016, mileage: "85,000 km", fuel: "Petrol", transmission: "Automatic", isFeatured: true, isVerified: true, views: 567, postedAt: "2026-08-28", img: "/assets/properties/car1.jpg" },
-    { id: "m2", title: "Toyota Land Cruiser Prado 2018", price: 95000000, location: "Masaki, Dar es Salaam", make: "Toyota", model: "Prado", year: 2018, mileage: "45,000 km", fuel: "Diesel", transmission: "Automatic", isFeatured: true, isVerified: true, views: 892, postedAt: "2026-08-25", img: "/assets/properties/car2.jpg" },
-    { id: "m3", title: "Nissan X-Trail 2015", price: 28000000, location: "Mwanza", make: "Nissan", model: "X-Trail", year: 2015, mileage: "120,000 km", fuel: "Petrol", transmission: "Automatic", views: 234, postedAt: "2026-08-20", img: "/assets/properties/car3.jpg" },
-    { id: "m4", title: "Toyota IST 2007", price: 12500000, location: "Arusha", make: "Toyota", model: "IST", year: 2007, mileage: "180,000 km", fuel: "Petrol", transmission: "Automatic", views: 189, postedAt: "2026-08-15", img: "/assets/properties/car4.jpg" },
-    { id: "m5", title: "Mercedes-Benz C200 2017", price: 65000000, location: "Dar es Salaam", make: "Mercedes", model: "C200", year: 2017, mileage: "55,000 km", fuel: "Petrol", transmission: "Automatic", isVerified: true, views: 445, postedAt: "2026-08-10", img: "/assets/properties/car5.jpg" },
-    { id: "m6", title: "Toyota RAV4 2019", price: 75000000, location: "Dodoma", make: "Toyota", model: "RAV4", year: 2019, mileage: "30,000 km", fuel: "Petrol", transmission: "Automatic", isFeatured: true, views: 678, postedAt: "2026-08-05", img: "/assets/properties/car6.jpg" },
-    { id: "m7", title: "Subaru Forester 2014", price: 32000000, location: "Mbeya", make: "Subaru", model: "Forester", year: 2014, mileage: "140,000 km", fuel: "Petrol", transmission: "Automatic", views: 234, postedAt: "2026-07-28", img: "/assets/properties/car7.jpg" },
-    { id: "m8", title: "Honda CR-V 2016", price: 45000000, location: "Dar es Salaam", make: "Honda", model: "CR-V", year: 2016, mileage: "90,000 km", fuel: "Petrol", transmission: "Automatic", views: 345, postedAt: "2026-07-20", img: "/assets/properties/car8.jpg" },
-    { id: "m9", title: "Toyota Vitz 2015", price: 18000000, location: "Mwanza", make: "Toyota", model: "Vitz", year: 2015, mileage: "100,000 km", fuel: "Petrol", transmission: "Automatic", views: 456, postedAt: "2026-07-15", img: "/assets/properties/car9.jpg" },
-    { id: "m10", title: "Mazda CX-5 2018", price: 58000000, location: "Arusha", make: "Mazda", model: "CX-5", year: 2018, mileage: "65,000 km", fuel: "Petrol", transmission: "Automatic", isVerified: true, views: 389, postedAt: "2026-07-10", img: "/assets/properties/car10.jpg" },
-  ],
-  biashara: [
-    { id: "b1", title: "Duka la Vifaa vya Ujenzi — Kariakoo", price: 15000000, location: "Kariakoo, Dar es Salaam", type: "Duka", revenue: "TZS 5M/mwezi", isFeatured: true, isVerified: true, views: 389, postedAt: "2026-08-28", img: "/assets/properties/biz1.jpg" },
-    { id: "b2", title: "Mgahawa wa Kisasa — Mikocheni", price: 45000000, location: "Mikocheni, Dar es Salaam", type: "Mgahawa", revenue: "TZS 15M/mwezi", isFeatured: true, isVerified: true, views: 567, postedAt: "2026-08-25", img: "/assets/properties/biz2.jpg" },
-    { id: "b3", title: "Saluni ya Kisasa — Mbezi", price: 12000000, location: "Mbezi, Dar es Salaam", type: "Saluni", revenue: "TZS 3M/mwezi", views: 234, postedAt: "2026-08-20", img: "/assets/properties/biz3.jpg" },
-    { id: "b4", title: "Duka la Nguo — Kariakoo", price: 25000000, location: "Kariakoo, Dar es Salaam", type: "Duka", revenue: "TZS 8M/mwezi", isVerified: true, views: 345, postedAt: "2026-08-15", img: "/assets/properties/biz4.jpg" },
-    { id: "b5", title: "Pharmacy — Sinza", price: 35000000, location: "Sinza, Dar es Salaam", type: "Pharmacy", revenue: "TZS 10M/mwezi", views: 278, postedAt: "2026-08-10", img: "/assets/properties/biz5.jpg" },
-    { id: "b6", title: "Kiwanda cha Kutengeneza Samani", price: 85000000, location: "Ubungo, Dar es Salaam", type: "Kiwanda", revenue: "TZS 25M/mwezi", isFeatured: true, views: 456, postedAt: "2026-08-05", img: "/assets/properties/biz6.jpg" },
-  ],
-  mashine: [
-    { id: "ma1", title: "Excavator CAT 320D", price: 120000000, location: "Chalinze, Pwani", type: "Excavator", hours: "3,200 hrs", condition: "Nzuri Sana", isFeatured: true, isVerified: true, views: 234, postedAt: "2026-08-28", img: "/assets/properties/machine1.jpg" },
-    { id: "ma2", title: "Trekta la Kilimo John Deere", price: 68000000, location: "Mbeya", type: "Trekta", hours: "1,500 hrs", condition: "Nzuri Sana", isVerified: true, views: 345, postedAt: "2026-08-25", img: "/assets/properties/machine2.jpg" },
-    { id: "ma3", title: "Bulldozer Komatsu D65", price: 150000000, location: "Dodoma", type: "Bulldozer", hours: "4,500 hrs", condition: "Nzuri", views: 189, postedAt: "2026-08-20", img: "/assets/properties/machine3.jpg" },
-    { id: "ma4", title: "Generator 500 KVA", price: 35000000, location: "Dar es Salaam", type: "Generator", hours: "800 hrs", condition: "Nzuri Sana", isFeatured: true, views: 278, postedAt: "2026-08-15", img: "/assets/properties/machine4.jpg" },
-    { id: "ma5", title: "Forklift Toyota 2.5 Ton", price: 25000000, location: "Dar es Salaam", type: "Forklift", hours: "2,000 hrs", condition: "Nzuri", views: 156, postedAt: "2026-08-10", img: "/assets/properties/machine5.jpg" },
-    { id: "ma6", title: "Compressor Atlas Copco", price: 18000000, location: "Mwanza", type: "Compressor", hours: "1,200 hrs", condition: "Nzuri Sana", views: 123, postedAt: "2026-08-05", img: "/assets/properties/machine6.jpg" },
-  ],
-};
-
-// ============================================================
-// HELPER FUNCTIONS
-// ============================================================
-
-function formatTZS(amount) {
-  return "TZS " + Math.round(amount).toLocaleString("en-US");
-}
-
-function timeAgo(dateStr) {
-  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-  if (days <= 0) return "Leo";
-  if (days === 1) return "Jana";
-  if (days < 30) return `Siku ${days}`;
-  const months = Math.floor(days / 30);
-  return months === 1 ? "Mwezi 1" : `Miezi ${months}`;
+function reservationCountdown(reservedUntil) {
+  if (!reservedUntil) return "";
+  const ms = new Date(reservedUntil).getTime() - Date.now();
+  if (ms <= 0) return "Inaisha hivi karibuni";
+  const hours = Math.floor(ms / 3600000);
+  if (hours < 24) return `Inaisha baada ya saa ${hours}`;
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  if (remainingHours === 0) return `Inaisha baada ya siku ${days}`;
+  return `Inaisha baada ya siku ${days} ${remainingHours}saa`;
 }
 
 // ============================================================
-// PROPERTY CARD
+// PROPERTY CARD (inalingana na BrowseProperties)
 // ============================================================
-
-function PropertyCard({ property, category, viewMode, isSaved, onToggleSave }) {
-  const Icon = CATEGORY_INFO[category]?.icon || HomeIcon;
+function PropertyCard({ property, viewMode, isSaved, onToggleSave }) {
+  const Icon = CATEGORY_INFO[property.category]?.icon || HomeIcon;
+  const isFeatured = isBoostActive(property);
+  const isLeading = isLeadingActive(property);
+  const isVerified = Boolean(property.verified);
+  const isReserved = property.status === "reserved";
+  const isSold = property.status === "sold";
 
   if (viewMode === "list") {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col sm:flex-row">
+      <div
+        className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-shadow flex flex-col sm:flex-row ${
+          isSold ? "border-gray-200 opacity-75" : "border-gray-100"
+        }`}
+      >
         <Link
           to={`/mali/${property.id}`}
           className="w-full sm:w-48 h-48 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative"
         >
           <Icon size={32} className="text-gray-300" />
-          {property.isFeatured && (
+          {isReserved && (
             <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Star size={10} fill="#101A2E" />
-              Featured
+              <Clock3 size={10} /> RESERVED
+            </span>
+          )}
+          {isSold && (
+            <span className="absolute top-2 left-2 bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <Ban size={10} /> SOLD
             </span>
           )}
         </Link>
         <div className="flex-1 p-4 flex flex-col">
           <div className="flex items-start justify-between gap-2">
             <Link to={`/mali/${property.id}`} className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-800 text-sm hover:text-[#E8A33D] transition-colors">
-                {property.title}
-              </h3>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h3 className="font-semibold text-gray-800 text-sm hover:text-[#E8A33D] transition-colors">
+                  {property.title}
+                </h3>
+                {isLeading && (
+                  <span className="shrink-0 bg-[#2F6D4F]/10 text-[#2F6D4F] text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                    <TrendingUp size={9} /> Priority
+                  </span>
+                )}
+              </div>
             </Link>
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                onToggleSave(property.id);
-              }}
+              onClick={(e) => { e.preventDefault(); onToggleSave(property.id); }}
               className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                isSaved
-                  ? "bg-[#C1502E] text-white"
-                  : "text-gray-400 hover:text-[#C1502E]"
+                isSaved ? "bg-[#C1502E] text-white" : "text-gray-400 hover:text-[#C1502E]"
               }`}
             >
               <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
@@ -207,7 +161,12 @@ function PropertyCard({ property, category, viewMode, isSaved, onToggleSave }) {
           <p className="text-[#C1502E] font-bold text-base mt-2">
             {formatTZS(property.price)}
           </p>
-          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+          {isReserved && property.reservedUntil && (
+            <p className="text-[11px] font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
+              <Clock3 size={11} /> {reservationCountdown(property.reservedUntil)}
+            </p>
+          )}
+          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
             {property.bedrooms && <span>🛏 {property.bedrooms} vyumba</span>}
             {property.bathrooms && <span>🚿 {property.bathrooms} bafu</span>}
             {property.area && <span>📐 {property.area}</span>}
@@ -217,15 +176,14 @@ function PropertyCard({ property, category, viewMode, isSaved, onToggleSave }) {
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <span className="flex items-center gap-1">
-                <Eye size={12} /> {property.views}
+                <Eye size={12} /> {property.views || 0}
               </span>
               <span>•</span>
               <span>{timeAgo(property.postedAt)}</span>
             </div>
-            {property.isVerified && (
+            {isVerified && (
               <span className="flex items-center gap-1 text-xs text-[#2F6D4F] font-medium">
-                <Shield size={12} />
-                Verified
+                <Shield size={12} /> Verified
               </span>
             )}
           </div>
@@ -234,43 +192,57 @@ function PropertyCard({ property, category, viewMode, isSaved, onToggleSave }) {
     );
   }
 
-  // Grid view (default)
+  // Grid view
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-all group">
+    <div
+      className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-all group ${
+        isSold ? "border-gray-200 opacity-75" : "border-gray-100"
+      }`}
+    >
       <Link to={`/mali/${property.id}`} className="block relative">
         <div className="w-full h-44 bg-gray-100 flex items-center justify-center">
           <Icon size={40} className="text-gray-300 group-hover:scale-110 transition-transform" />
         </div>
-        {property.isFeatured && (
-          <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Star size={10} fill="#101A2E" />
-            Featured
-          </span>
-        )}
-        {property.isVerified && (
+
+        <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+          {isLeading && (
+            <span className="bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <TrendingUp size={10} /> Search Priority
+            </span>
+          )}
+          {isFeatured && (
+            <span className="bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <Star size={10} fill="#101A2E" /> Featured
+            </span>
+          )}
+          {isReserved && (
+            <span className="bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+              <Clock3 size={10} /> RESERVED
+            </span>
+          )}
+          {isSold && (
+            <span className="bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+              <Ban size={10} /> SOLD
+            </span>
+          )}
+        </div>
+
+        {isVerified && (
           <span className="absolute top-2 right-2 bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Shield size={10} />
-            Verified
+            <Shield size={10} /> Verified
           </span>
         )}
         <button
-          onClick={(e) => {
-            e.preventDefault();
-            onToggleSave(property.id);
-          }}
+          onClick={(e) => { e.preventDefault(); onToggleSave(property.id); }}
           className={`absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-            isSaved
-              ? "bg-[#C1502E] text-white"
-              : "bg-white/90 text-gray-400 hover:text-[#C1502E]"
+            isSaved ? "bg-[#C1502E] text-white" : "bg-white/90 text-gray-400 hover:text-[#C1502E]"
           }`}
         >
           <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
         </button>
       </Link>
       <Link to={`/mali/${property.id}`} className="block p-4">
-        <h3 className="font-semibold text-gray-800 text-sm truncate">
-          {property.title}
-        </h3>
+        <h3 className="font-semibold text-gray-800 text-sm truncate">{property.title}</h3>
         <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
           <MapPin size={12} />
           <span className="truncate">{property.location}</span>
@@ -278,6 +250,11 @@ function PropertyCard({ property, category, viewMode, isSaved, onToggleSave }) {
         <p className="text-[#C1502E] font-bold text-base mt-2">
           {formatTZS(property.price)}
         </p>
+        {isReserved && property.reservedUntil && (
+          <p className="text-[11px] font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
+            <Clock3 size={11} /> {reservationCountdown(property.reservedUntil)}
+          </p>
+        )}
         <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
           {property.bedrooms && <span>🛏 {property.bedrooms}</span>}
           {property.bathrooms && <span>🚿 {property.bathrooms}</span>}
@@ -287,7 +264,7 @@ function PropertyCard({ property, category, viewMode, isSaved, onToggleSave }) {
         </div>
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">
           <span className="flex items-center gap-1">
-            <Eye size={12} /> {property.views}
+            <Eye size={12} /> {property.views || 0}
           </span>
           <span>{timeAgo(property.postedAt)}</span>
         </div>
@@ -297,9 +274,8 @@ function PropertyCard({ property, category, viewMode, isSaved, onToggleSave }) {
 }
 
 // ============================================================
-// FILTERS SIDEBAR
+// FILTER SIDEBAR
 // ============================================================
-
 function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang }) {
   const [localFilters, setLocalFilters] = useState(filters);
 
@@ -336,26 +312,16 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
     ],
   };
 
-  const handleApply = () => {
-    setFilters(localFilters);
-    onClose();
-  };
-
-  const handleReset = () => {
-    setLocalFilters({ priceRange: null, verified: false, featured: false });
-  };
+  const handleApply = () => { setFilters(localFilters); onClose(); };
+  const handleReset = () => setLocalFilters({ priceRange: null, verified: false, featured: false });
 
   const content = (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-          <SlidersHorizontal size={16} />
-          Vichujio
+          <SlidersHorizontal size={16} /> Vichujio
         </h3>
-        <button
-          onClick={onClose}
-          className="lg:hidden text-gray-400 hover:text-gray-600"
-        >
+        <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-600">
           <X size={20} />
         </button>
       </div>
@@ -422,17 +388,13 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
   return (
     <>
       <aside className="hidden lg:block w-64 flex-shrink-0">
-        <div className="bg-white rounded-xl border border-gray-100 p-5 sticky top-20">
-          {content}
-        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-5 sticky top-20">{content}</div>
       </aside>
 
       {isOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="flex-1 bg-black/50" onClick={onClose} />
-          <div className="w-80 max-w-[85%] bg-white h-full overflow-y-auto p-5">
-            {content}
-          </div>
+          <div className="w-80 max-w-[85%] bg-white h-full overflow-y-auto p-5">{content}</div>
         </div>
       )}
     </>
@@ -442,11 +404,10 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-
 export default function CategoryPage() {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
-  const { t, lang } = useLanguage();
+  const { lang } = useLanguage();
 
   const category = slug || "nyumba";
   const categoryInfo = CATEGORY_INFO[category] || CATEGORY_INFO.nyumba;
@@ -461,7 +422,12 @@ export default function CategoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 9;
 
-  const allProperties = MOCK_PROPERTIES[category] || [];
+  // === BADILIKO: usePublicListings() badala ya MOCK_PROPERTIES ===
+  const allPublic = usePublicListings();
+  const allProperties = useMemo(
+    () => allPublic.filter((l) => l.category === category),
+    [allPublic, category]
+  );
 
   const filteredProperties = useMemo(() => {
     let result = [...allProperties];
@@ -469,19 +435,12 @@ export default function CategoryPage() {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.location.toLowerCase().includes(q)
+        (p) => p.title.toLowerCase().includes(q) || p.location.toLowerCase().includes(q)
       );
     }
 
-    if (filters.verified) {
-      result = result.filter((p) => p.isVerified);
-    }
-
-    if (filters.featured) {
-      result = result.filter((p) => p.isFeatured);
-    }
+    if (filters.verified) result = result.filter((p) => p.verified);
+    if (filters.featured) result = result.filter((p) => isBoostActive(p));
 
     if (filters.priceRange !== null) {
       const ranges = {
@@ -495,20 +454,27 @@ export default function CategoryPage() {
       result = result.filter((p) => p.price >= min && p.price < max);
     }
 
-    switch (sortBy) {
-      case "price_low":
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case "price_high":
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case "popular":
-        result.sort((a, b) => b.views - a.views);
-        break;
-      case "newest":
-      default:
-        result.sort((a, b) => new Date(b.postedAt) - new Date(a.postedAt));
-    }
+    const sortComparator = (a, b) => {
+      switch (sortBy) {
+        case "price_low": return a.price - b.price;
+        case "price_high": return b.price - a.price;
+        case "popular": return (b.views || 0) - (a.views || 0);
+        case "newest":
+        default: return new Date(b.postedAt) - new Date(a.postedAt);
+      }
+    };
+
+    const statusRank = (p) => (p.status === "live" ? 0 : p.status === "reserved" ? 1 : 2);
+
+    result.sort((a, b) => {
+      const aLeading = isLeadingActive(a) ? 1 : 0;
+      const bLeading = isLeadingActive(b) ? 1 : 0;
+      if (aLeading !== bLeading) return bLeading - aLeading;
+      const aRank = statusRank(a);
+      const bRank = statusRank(b);
+      if (aRank !== bRank) return aRank - bRank;
+      return sortComparator(a, b);
+    });
 
     return result;
   }, [allProperties, searchQuery, filters, sortBy, category]);
@@ -537,9 +503,7 @@ export default function CategoryPage() {
       <section className="bg-[#101A2E] text-white py-10 px-4">
         <div className="max-w-7xl mx-auto">
           <nav className="flex items-center gap-2 text-sm text-white/60 mb-4">
-            <Link to="/" className="hover:text-white transition-colors">
-              Nyumbani
-            </Link>
+            <Link to="/" className="hover:text-white transition-colors">Nyumbani</Link>
             <ChevronRight size={14} />
             <span className="text-white">{categoryInfo.label[lang]}</span>
           </nav>
@@ -549,30 +513,19 @@ export default function CategoryPage() {
               <CategoryIcon size={28} color={COLORS.gold} />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">
-                {categoryInfo.label[lang]}
-              </h1>
-              <p className="text-white/60 text-sm mt-1">
-                {categoryInfo.description[lang]}
-              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold">{categoryInfo.label[lang]}</h1>
+              <p className="text-white/60 text-sm mt-1">{categoryInfo.description[lang]}</p>
             </div>
           </div>
 
           <form onSubmit={handleSearchSubmit} className="mt-6 max-w-2xl">
             <div className="relative">
-              <Search
-                size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40"
-              />
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={
-                  lang === "sw"
-                    ? "Tafuta kwenye category hii..."
-                    : "Search in this category..."
-                }
+                placeholder={lang === "sw" ? "Tafuta kwenye category hii..." : "Search in this category..."}
                 className="w-full bg-white/10 border border-white/20 rounded-full pl-12 pr-32 py-3 text-white placeholder-white/40 focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/30 transition-all"
               />
               <button
@@ -599,14 +552,10 @@ export default function CategoryPage() {
 
           <div className="flex-1 min-w-0">
             <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <p className="text-sm text-gray-600">
-                  <span className="font-semibold text-gray-800">
-                    {filteredProperties.length}
-                  </span>{" "}
-                  {lang === "sw" ? "mali zimepatikana" : "properties found"}
-                </p>
-              </div>
+              <p className="text-sm text-gray-600">
+                <span className="font-semibold text-gray-800">{filteredProperties.length}</span>{" "}
+                {lang === "sw" ? "mali zimepatikana" : "properties found"}
+              </p>
 
               <div className="flex items-center gap-2">
                 <button
@@ -623,44 +572,25 @@ export default function CategoryPage() {
                     onChange={(e) => setSortBy(e.target.value)}
                     className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 pr-8 text-sm font-medium text-gray-700 focus:outline-none focus:border-[#E8A33D] cursor-pointer"
                   >
-                    <option value="newest">
-                      {lang === "sw" ? "Mpya Kwanza" : "Newest First"}
-                    </option>
-                    <option value="price_low">
-                      {lang === "sw" ? "Bei: Chini → Juu" : "Price: Low → High"}
-                    </option>
-                    <option value="price_high">
-                      {lang === "sw" ? "Bei: Juu → Chini" : "Price: High → Low"}
-                    </option>
-                    <option value="popular">
-                      {lang === "sw" ? "Maarufu" : "Popular"}
-                    </option>
+                    <option value="newest">{lang === "sw" ? "Mpya Kwanza" : "Newest First"}</option>
+                    <option value="price_low">{lang === "sw" ? "Bei: Chini → Juu" : "Price: Low → High"}</option>
+                    <option value="price_high">{lang === "sw" ? "Bei: Juu → Chini" : "Price: High → Low"}</option>
+                    <option value="popular">{lang === "sw" ? "Maarufu" : "Popular"}</option>
                   </select>
-                  <ChevronDown
-                    size={14}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
+                  <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 </div>
 
                 <div className="hidden sm:flex border border-gray-200 rounded-lg overflow-hidden">
                   <button
                     onClick={() => setViewMode("grid")}
-                    className={`p-2 transition-colors ${
-                      viewMode === "grid"
-                        ? "bg-[#E8A33D] text-[#101A2E]"
-                        : "text-gray-500 hover:bg-gray-50"
-                    }`}
+                    className={`p-2 transition-colors ${viewMode === "grid" ? "bg-[#E8A33D] text-[#101A2E]" : "text-gray-500 hover:bg-gray-50"}`}
                     aria-label="Grid view"
                   >
                     <Grid3x3 size={16} />
                   </button>
                   <button
                     onClick={() => setViewMode("list")}
-                    className={`p-2 transition-colors ${
-                      viewMode === "list"
-                        ? "bg-[#E8A33D] text-[#101A2E]"
-                        : "text-gray-500 hover:bg-gray-50"
-                    }`}
+                    className={`p-2 transition-colors ${viewMode === "list" ? "bg-[#E8A33D] text-[#101A2E]" : "text-gray-500 hover:bg-gray-50"}`}
                     aria-label="List view"
                   >
                     <List size={16} />
@@ -677,25 +607,19 @@ export default function CategoryPage() {
                 {searchQuery && (
                   <span className="inline-flex items-center gap-1 bg-[#E8A33D]/10 text-[#8A5A16] text-xs px-2.5 py-1 rounded-full">
                     "{searchQuery}"
-                    <button onClick={() => setSearchQuery("")}>
-                      <X size={12} />
-                    </button>
+                    <button onClick={() => setSearchQuery("")}><X size={12} /></button>
                   </span>
                 )}
                 {filters.verified && (
                   <span className="inline-flex items-center gap-1 bg-[#2F6D4F]/10 text-[#2F6D4F] text-xs px-2.5 py-1 rounded-full">
                     Verified
-                    <button onClick={() => setFilters({ ...filters, verified: false })}>
-                      <X size={12} />
-                    </button>
+                    <button onClick={() => setFilters({ ...filters, verified: false })}><X size={12} /></button>
                   </span>
                 )}
                 {filters.featured && (
                   <span className="inline-flex items-center gap-1 bg-[#E8A33D]/10 text-[#8A5A16] text-xs px-2.5 py-1 rounded-full">
                     Featured
-                    <button onClick={() => setFilters({ ...filters, featured: false })}>
-                      <X size={12} />
-                    </button>
+                    <button onClick={() => setFilters({ ...filters, featured: false })}><X size={12} /></button>
                   </span>
                 )}
                 <button
@@ -712,18 +636,11 @@ export default function CategoryPage() {
 
             {paginatedProperties.length > 0 ? (
               <>
-                <div
-                  className={
-                    viewMode === "grid"
-                      ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
-                      : "flex flex-col gap-3"
-                  }
-                >
+                <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" : "flex flex-col gap-3"}>
                   {paginatedProperties.map((property) => (
                     <PropertyCard
                       key={property.id}
                       property={property}
-                      category={category}
                       viewMode={viewMode}
                       isSaved={savedIds.includes(property.id)}
                       onToggleSave={toggleSave}
@@ -745,9 +662,7 @@ export default function CategoryPage() {
                         key={page}
                         onClick={() => setCurrentPage(page)}
                         className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                          currentPage === page
-                            ? "bg-[#E8A33D] text-[#101A2E]"
-                            : "border border-gray-200 text-gray-600 hover:bg-gray-50"
+                          currentPage === page ? "bg-[#E8A33D] text-[#101A2E]" : "border border-gray-200 text-gray-600 hover:bg-gray-50"
                         }`}
                       >
                         {page}
@@ -772,9 +687,7 @@ export default function CategoryPage() {
                   {lang === "sw" ? "Hakuna mali iliyopatikana" : "No properties found"}
                 </h3>
                 <p className="text-gray-500 text-sm mt-1">
-                  {lang === "sw"
-                    ? "Jaribu kubadilisha vichujio au utafutaji wako"
-                    : "Try changing your filters or search"}
+                  {lang === "sw" ? "Jaribu kubadilisha vichujio au utafutaji wako" : "Try changing your filters or search"}
                 </p>
                 <button
                   onClick={() => {
