@@ -21,10 +21,10 @@ import {
   FONTS,
   formatTZS,
   timeAgo,
-  isBoostActive,
 } from "./dashboard/components/shared";
 import { usePublicListings } from "../config/listingsStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
+import { useLanguage } from "../context/LanguageContext.jsx";
 
 const CATEGORY_ICONS = {
   nyumba: HomeIcon,
@@ -34,7 +34,7 @@ const CATEGORY_ICONS = {
   mashine: Wrench,
 };
 
-function SavedCard({ property, viewMode, onRemove }) {
+function SavedCard({ property, viewMode, onRemove, lang }) {
   const Icon = CATEGORY_ICONS[property.category] || HomeIcon;
   const isReserved = property.status === "reserved";
   const isSold = property.status === "sold";
@@ -78,7 +78,7 @@ function SavedCard({ property, viewMode, onRemove }) {
             <button
               onClick={handleRemove}
               className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
-              aria-label="Remove"
+              aria-label={lang === "sw" ? "Ondoa" : "Remove"}
             >
               <Trash2 size={16} />
             </button>
@@ -89,12 +89,14 @@ function SavedCard({ property, viewMode, onRemove }) {
           </div>
           <p className="text-[#C1502E] font-bold text-base mt-2">{formatTZS(property.price)}</p>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-            <span className="text-xs text-gray-400">Ilifadhiwa {timeAgo(property.postedAt)}</span>
+            <span className="text-xs text-gray-400">
+              {lang === "sw" ? "Ilifadhiwa" : "Saved"} {timeAgo(property.postedAt, lang)}
+            </span>
             <Link
               to={`/mali/${property.id}`}
               className="text-xs font-semibold text-[#E8A33D] hover:underline"
             >
-              Angalia →
+              {lang === "sw" ? "Angalia" : "View"} →
             </Link>
           </div>
         </div>
@@ -130,7 +132,7 @@ function SavedCard({ property, viewMode, onRemove }) {
         <button
           onClick={handleRemove}
           className="absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center bg-white/90 text-[#C1502E] hover:bg-red-500 hover:text-white transition-colors"
-          aria-label="Remove"
+          aria-label={lang === "sw" ? "Ondoa" : "Remove"}
         >
           <Trash2 size={16} />
         </button>
@@ -146,7 +148,7 @@ function SavedCard({ property, viewMode, onRemove }) {
           <span className="flex items-center gap-1">
             <Eye size={12} /> {property.views || 0}
           </span>
-          <span>{timeAgo(property.postedAt)}</span>
+          <span>{timeAgo(property.postedAt, lang)}</span>
         </div>
       </Link>
     </div>
@@ -154,13 +156,12 @@ function SavedCard({ property, viewMode, onRemove }) {
 }
 
 export default function SavedPropertiesPage() {
+  const { lang } = useLanguage();
   const savedIds = useSavedIds();
   const allListings = usePublicListings();
   const [viewMode, setViewMode] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Chuja listings kwa IDs zilizohifadhiwa; ondoa zile zilizo-expired
-  // (hazipo kwenye usePublicListings).
   const saved = useMemo(() => {
     return allListings.filter((l) => savedIds.includes(l.id));
   }, [allListings, savedIds]);
@@ -171,7 +172,7 @@ export default function SavedPropertiesPage() {
       p.location.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleRemove = (id) => toggleSaved(id); // toggle off
+  const handleRemove = (id) => toggleSaved(id);
 
   return (
     <div
@@ -188,7 +189,7 @@ export default function SavedPropertiesPage() {
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
             className="text-2xl sm:text-3xl font-semibold"
           >
-            Zilizohifadhiwa
+            {lang === "sw" ? "Zilizohifadhiwa" : "Saved Properties"}
           </h1>
           <span
             style={{ background: COLORS.night, color: COLORS.sand }}
@@ -198,23 +199,39 @@ export default function SavedPropertiesPage() {
           </span>
         </div>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-5">
-          Mali ulizozihifadhi kwa ajili ya baadaye.
+          {lang === "sw"
+            ? "Mali ulizozihifadhi kwa ajili ya baadaye."
+            : "Properties you've saved for later."}
         </p>
 
         {saved.length > 0 && (
           <div className="flex items-center gap-2 mb-4">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tafuta kwenye zilizohifadhiwa..."
-                style={{ background: "white", borderColor: COLORS.sandLine, color: COLORS.night }}
+                placeholder={
+                  lang === "sw"
+                    ? "Tafuta kwenye zilizohifadhiwa..."
+                    : "Search in saved..."
+                }
+                style={{
+                  background: "white",
+                  borderColor: COLORS.sandLine,
+                  color: COLORS.night,
+                }}
                 className="w-full rounded-xl border pl-10 pr-3 py-2.5 text-sm outline-none"
               />
             </div>
-            <div className="flex border rounded-xl overflow-hidden" style={{ borderColor: COLORS.sandLine }}>
+            <div
+              className="flex border rounded-xl overflow-hidden"
+              style={{ borderColor: COLORS.sandLine }}
+            >
               <button
                 onClick={() => setViewMode("grid")}
                 style={{
@@ -248,12 +265,22 @@ export default function SavedPropertiesPage() {
           >
             <Heart size={48} className="mx-auto text-gray-300 mb-3" />
             <h3 style={{ color: COLORS.night }} className="font-semibold mb-1">
-              {searchQuery ? "Hakuna matokeo" : "Hakuna mali iliyohifadhiwa"}
+              {searchQuery
+                ? lang === "sw"
+                  ? "Hakuna matokeo"
+                  : "No results"
+                : lang === "sw"
+                  ? "Hakuna mali iliyohifadhiwa"
+                  : "No saved properties"}
             </h3>
             <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-sm mb-5">
               {searchQuery
-                ? "Jaribu kutafuta kwa neno lingine"
-                : "Mali unayovutiwa nayo, ihifadhi ili uikumbuke baadaye."}
+                ? lang === "sw"
+                  ? "Jaribu kutafuta kwa neno lingine"
+                  : "Try searching with a different term"
+                : lang === "sw"
+                  ? "Mali unayovutiwa nayo, ihifadhi ili uikumbuke baadaye."
+                  : "Save properties you're interested in so you can find them later."}
             </p>
             {!searchQuery && (
               <Link
@@ -261,7 +288,7 @@ export default function SavedPropertiesPage() {
                 style={{ background: COLORS.gold, color: COLORS.night }}
                 className="inline-block px-5 py-2.5 rounded-xl font-semibold text-sm"
               >
-                Tafuta Mali
+                {lang === "sw" ? "Tafuta Mali" : "Browse Properties"}
               </Link>
             )}
           </div>
@@ -274,7 +301,13 @@ export default function SavedPropertiesPage() {
             }
           >
             {filtered.map((p) => (
-              <SavedCard key={p.id} property={p} viewMode={viewMode} onRemove={handleRemove} />
+              <SavedCard
+                key={p.id}
+                property={p}
+                viewMode={viewMode}
+                onRemove={handleRemove}
+                lang={lang}
+              />
             ))}
           </div>
         )}
