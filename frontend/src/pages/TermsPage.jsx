@@ -175,7 +175,7 @@ const TERMS_CONTENT = {
         title: "4. Payments and Fees",
         content: [
           "SokoMkononi charges a Listing Fee for each listing posted. The fee depends on the property price and its category.",
-          "All payments are made securely through authorized payment providers (M-Pesa, Tigo Pesa, Airtel Money, etc.).",
+          "All payments are made securely through authorized payment providers (M-Pesa, Mixx by Yas, Airtel Money, etc.).",
           "SokoMkononi is not involved in direct transactions between buyers and sellers. Both parties are responsible for ensuring the safety of their transactions.",
           "For Boost services, the fee is paid before the service begins. Boost increases the visibility of your listing for a specific period.",
         ],
