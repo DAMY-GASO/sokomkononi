@@ -19,9 +19,10 @@ import {
 } from "lucide-react";
 import { COLORS, FONTS, formatTZS, timeAgo } from "./dashboard/components/shared";
 import { useNotifications } from "../config/notificationsStore.js";
+import { useLanguage } from "../context/LanguageContext.jsx";
 
 // Notification types with icon + color — "leading", "advertisement" na
-// "listing_fee" ni matukio halisi ya Awamu 7 (yanayotengenezwa na
+// "listing_fee" ni matukio halisi (yanayotengenezwa na
 // notificationsStore.js moja kwa moja BoostSasa/LeadingSasa/AdvertiseSasa
 // na DashboardShell.markListingPaid zinapofanikiwa).
 const NOTIFICATION_TYPES = {
@@ -35,9 +36,12 @@ const NOTIFICATION_TYPES = {
   reminder: { icon: Clock, color: "#2563EB", bg: "rgba(37,99,235,0.12)" },
   listing_released: { icon: BellRing, color: COLORS.rust, bg: "rgba(193,80,46,0.12)" },
   system: { icon: Info, color: COLORS.night, bg: "rgba(16,26,46,0.08)" },
+  // Canonical events kutoka notificationsStore
+  "dispute.resolved": { icon: Shield, color: COLORS.green, bg: "rgba(47,109,79,0.12)" },
+  "payment.proof_submitted": { icon: Receipt, color: "#8A5A16", bg: "rgba(232,163,61,0.16)" },
 };
 
-function NotificationItem({ notif, onMarkRead, onRemove }) {
+function NotificationItem({ notif, onMarkRead, onRemove, lang }) {
   const config = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.system;
   const Icon = config.icon;
 
@@ -71,12 +75,15 @@ function NotificationItem({ notif, onMarkRead, onRemove }) {
             />
           )}
         </div>
-        <p style={{ color: "rgba(16,26,46,0.65)" }} className="text-xs mb-2 leading-relaxed">
+        <p
+          style={{ color: "rgba(16,26,46,0.65)" }}
+          className="text-xs mb-2 leading-relaxed"
+        >
           {notif.body}
         </p>
         <div className="flex items-center gap-3">
           <span style={{ color: "rgba(16,26,46,0.4)" }} className="text-[10px]">
-            {timeAgo(notif.at)}
+            {timeAgo(notif.at, lang)}
           </span>
           {notif.link && (
             <Link
@@ -84,7 +91,7 @@ function NotificationItem({ notif, onMarkRead, onRemove }) {
               className="text-[11px] font-semibold hover:underline"
               style={{ color: COLORS.gold }}
             >
-              Angalia →
+              {lang === "sw" ? "Angalia" : "View"} →
             </Link>
           )}
         </div>
@@ -95,7 +102,7 @@ function NotificationItem({ notif, onMarkRead, onRemove }) {
           <button
             onClick={() => onMarkRead(notif.id)}
             className="p-1.5 text-gray-400 hover:text-green-600 rounded-lg hover:bg-green-50 transition-colors"
-            aria-label="Mark as read"
+            aria-label={lang === "sw" ? "Weka kama imesomwa" : "Mark as read"}
           >
             <Check size={14} />
           </button>
@@ -103,7 +110,7 @@ function NotificationItem({ notif, onMarkRead, onRemove }) {
         <button
           onClick={() => onRemove(notif.id)}
           className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
-          aria-label="Remove"
+          aria-label={lang === "sw" ? "Ondoa" : "Remove"}
         >
           <Trash2 size={14} />
         </button>
@@ -113,32 +120,44 @@ function NotificationItem({ notif, onMarkRead, onRemove }) {
 }
 
 export default function NotificationsPage() {
+  const { lang } = useLanguage();
   const { notifications, unreadCount, markRead, markAllRead, remove, clearAll } =
     useNotifications("user");
   const [filter, setFilter] = useState("all"); // all | unread
 
-  const filtered = filter === "unread" ? notifications.filter((n) => !n.read) : notifications;
+  const filtered =
+    filter === "unread" ? notifications.filter((n) => !n.read) : notifications;
 
   const handleMarkRead = (id) => markRead(id);
   const handleMarkAllRead = () => markAllRead();
   const handleRemove = (id) => remove(id);
 
   const handleClearAll = () => {
-    if (window.confirm("Una uhakika unataka kufuta taarifa zote?")) {
+    const message =
+      lang === "sw"
+        ? "Una uhakika unataka kufuta taarifa zote?"
+        : "Are you sure you want to delete all notifications?";
+    if (window.confirm(message)) {
       clearAll();
     }
   };
 
   return (
-    <div style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "100%" }} className="w-full p-4 sm:p-6">
+    <div
+      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "100%" }}
+      className="w-full p-4 sm:p-6"
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-1">
-          <h1 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl sm:text-3xl font-semibold">
-            Taarifa
+          <h1
+            style={{ fontFamily: FONTS.display, color: COLORS.night }}
+            className="text-2xl sm:text-3xl font-semibold"
+          >
+            {lang === "sw" ? "Taarifa" : "Notifications"}
           </h1>
           {unreadCount > 0 && (
             <span
@@ -150,7 +169,9 @@ export default function NotificationsPage() {
           )}
         </div>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-5">
-          Taarifa za miamala, ujumbe, na mabadiliko kwenye akaunti yako.
+          {lang === "sw"
+            ? "Taarifa za miamala, ujumbe, na mabadiliko kwenye akaunti yako."
+            : "Notifications about transactions, messages, and account changes."}
         </p>
 
         {/* Filters and actions */}
@@ -168,7 +189,7 @@ export default function NotificationsPage() {
                 }}
                 className="text-xs font-semibold px-4 py-1.5 rounded-full transition-colors"
               >
-                Zote ({notifications.length})
+                {lang === "sw" ? "Zote" : "All"} ({notifications.length})
               </button>
               <button
                 onClick={() => setFilter("unread")}
@@ -178,7 +199,7 @@ export default function NotificationsPage() {
                 }}
                 className="text-xs font-semibold px-4 py-1.5 rounded-full transition-colors"
               >
-                Hazijasomwa ({unreadCount})
+                {lang === "sw" ? "Hazijasomwa" : "Unread"} ({unreadCount})
               </button>
             </div>
 
@@ -190,7 +211,7 @@ export default function NotificationsPage() {
                   style={{ color: COLORS.green }}
                 >
                   <CheckCheck size={14} />
-                  Soma zote
+                  {lang === "sw" ? "Soma zote" : "Mark all read"}
                 </button>
               )}
               <button
@@ -199,7 +220,7 @@ export default function NotificationsPage() {
                 style={{ color: COLORS.rust }}
               >
                 <Trash2 size={14} />
-                Futa zote
+                {lang === "sw" ? "Futa zote" : "Clear all"}
               </button>
             </div>
           </div>
@@ -212,12 +233,22 @@ export default function NotificationsPage() {
           >
             <Bell size={48} className="mx-auto text-gray-300 mb-3" />
             <h3 style={{ color: COLORS.night }} className="font-semibold mb-1">
-              {filter === "unread" ? "Hakuna taarifa mpya" : "Hakuna taarifa"}
+              {filter === "unread"
+                ? lang === "sw"
+                  ? "Hakuna taarifa mpya"
+                  : "No new notifications"
+                : lang === "sw"
+                  ? "Hakuna taarifa"
+                  : "No notifications"}
             </h3>
             <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-sm">
               {filter === "unread"
-                ? "Umesoma taarifa zote."
-                : "Taarifa zako zitaonekana hapa."}
+                ? lang === "sw"
+                  ? "Umesoma taarifa zote."
+                  : "You've read all your notifications."
+                : lang === "sw"
+                  ? "Taarifa zako zitaonekana hapa."
+                  : "Your notifications will appear here."}
             </p>
           </div>
         ) : (
@@ -228,6 +259,7 @@ export default function NotificationsPage() {
                 notif={n}
                 onMarkRead={handleMarkRead}
                 onRemove={handleRemove}
+                lang={lang}
               />
             ))}
           </div>
