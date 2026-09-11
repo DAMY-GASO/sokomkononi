@@ -60,7 +60,7 @@ function SkylineDecoration() {
 function FieldInput({ icon, type = "text", value, onChange, label, inputMode, required }) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
-  
+
   return (
     <div>
       <label className="block text-xs font-semibold text-gray-600 mb-1.5">{label}</label>
@@ -177,7 +177,12 @@ export default function RegisterPage() {
       await verifyOtp(form.email, otp.trim());
       const { confirmPassword, ...payload } = form;
       await register({ ...payload, intent: intent || null });
-      navigate(intent === "sell" ? "/dashboard?next=weka-tangazo" : "/dashboard");
+
+      // ============================================================
+      // IMEBADILISHWA: kila mtumiaji mpya anapelekwa kwenye
+      // /dashboard/post ("Weka Mali Yako") — sio /dashboard (My Listings)
+      // ============================================================
+      navigate("/dashboard/post");
     } catch (err) {
       setError(err?.response?.data?.message || t("register_error_otp_invalid"));
     } finally {
