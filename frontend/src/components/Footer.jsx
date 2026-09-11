@@ -1,25 +1,30 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useLanguage } from "../context/LanguageContext.jsx";
 
-export default function Footer({ selectedLang = "sw" }) {
+export default function Footer({ selectedLang: propLang }) {
+  // Soma kutoka context kama prop haijatolewa — hii inafanya Footer
+  // kubadilika lugha popote, hata kwenye kurasa zisizopitisha prop.
+  const { lang: ctxLang } = useLanguage();
+  const selectedLang = propLang ?? ctxLang;
+
   return (
     <footer className="bg-[#0D1524] text-white/80 border-t border-white/10">
       <div className="max-w-7xl mx-auto px-4 py-12">
-        
-        {/* ============================================================ */}
-        {/* APP DOWNLOAD SECTION */}
-        {/* ============================================================ */}
         <div className="text-center mb-10 pb-8 border-b border-white/10">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">
             {selectedLang === "sw" ? "PAKUA SOKOMKONONI APP" : "DOWNLOAD SOKOMKONONI APP"}
           </h2>
           <p className="text-white/50 text-sm max-w-2xl mx-auto">
-            {selectedLang === "sw" 
-              ? "Fanya biashara kwa urahisi zaidi ukiwa popote — pata taarifa za deals zako, tafuta mali, na wasiliana na Madalali/Wateja moja kwa moja kutoka simu yako." 
+            {selectedLang === "sw"
+              ? "Fanya biashara kwa urahisi zaidi ukiwa popote — pata taarifa za deals zako, tafuta mali, na wasiliana na Madalali/Wateja moja kwa moja kutoka simu yako."
               : "Do business more easily wherever you are — get deal notifications, search properties, and communicate with Agents/Customers directly from your phone."}
           </p>
           <div className="flex flex-wrap gap-3 justify-center mt-4">
-            <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors">
+            <Link
+              to="/waitlist"
+              className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors"
+            >
               <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0" aria-hidden="true">
                 <path d="M4.5 3.5c-.3.3-.5.7-.5 1.2v14.6c0 .5.2.9.5 1.2l.1.1L13 12.1v-.2L4.6 3.4l-.1.1z" fill="#00D2FF" />
                 <path d="M15.9 15L13 12.1v-.2l2.9-2.9 6.5 3.7c.8.5.8 1.3 0 1.8l-6.5 3.7z" fill="#FFCE00" />
@@ -27,27 +32,31 @@ export default function Footer({ selectedLang = "sw" }) {
                 <path d="M15.9 9.1L6.3 3.6c-.7-.4-1.3-.3-1.7.1L13 12l2.9-2.9z" fill="#00F076" />
               </svg>
               <span className="text-sm text-left">
-                <span className="block text-white/50 text-[10px]">{selectedLang === "sw" ? "Pakua kwenye" : "Download on the"}</span>
+                <span className="block text-white/50 text-[10px]">
+                  {selectedLang === "sw" ? "Pakua kwenye" : "Download on the"}
+                </span>
                 <span className="block font-semibold text-white text-sm">Google Play</span>
               </span>
             </Link>
-            <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors">
+            <Link
+              to="/waitlist"
+              className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors"
+            >
               <svg viewBox="0 0 384 512" className="w-6 h-6 shrink-0 fill-white" aria-hidden="true">
                 <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.3c0 26.2 4.8 53.3 14.4 81.3 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.8zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
               </svg>
               <span className="text-sm text-left">
-                <span className="block text-white/50 text-[10px]">{selectedLang === "sw" ? "Pakua kwenye" : "Download on the"}</span>
+                <span className="block text-white/50 text-[10px]">
+                  {selectedLang === "sw" ? "Pakua kwenye" : "Download on the"}
+                </span>
                 <span className="block font-semibold text-white text-sm">App Store</span>
               </span>
             </Link>
           </div>
         </div>
 
-        {/* ============================================================ */}
         {/* MAIN FOOTER GRID */}
-        {/* ============================================================ */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10">
-          
           {/* Column 1: Brand */}
           <div className="col-span-2 lg:col-span-1 text-center lg:text-left">
             <div className="flex items-center justify-center lg:justify-start gap-2 mb-4">
@@ -57,8 +66,8 @@ export default function Footer({ selectedLang = "sw" }) {
               <span className="text-white font-bold text-lg tracking-tight">SokoMkononi</span>
             </div>
             <p className="text-white/50 text-sm leading-relaxed max-w-xs mx-auto lg:mx-0">
-              {selectedLang === "sw" 
-                ? "SokoMkononi ni jukwaa lako la kidijitali linalokuletea soko kiganjani mwako. Tunakuunganisha na wauzaji na wanunuzi kwa urahisi, usalama na uaminifu." 
+              {selectedLang === "sw"
+                ? "SokoMkononi ni jukwaa lako la kidijitali linalokuletea soko kiganjani mwako. Tunakuunganisha na wauzaji na wanunuzi kwa urahisi, usalama na uaminifu."
                 : "SokoMkononi is your digital marketplace bringing the market to your fingertips. We connect you with sellers and buyers with ease, security and trust."}
             </p>
           </div>
@@ -69,28 +78,50 @@ export default function Footer({ selectedLang = "sw" }) {
               {selectedLang === "sw" ? "VIUNGO VYA HARAKA" : "QUICK LINKS"}
             </h3>
             <ul className="space-y-2.5">
-              <li><Link to="/" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Nyumbani" : "Home"}</Link></li>
-              {/* Kategoria - inaelekeza HomePage sehemu ya kategoria */}
-              <li><Link to="/#kategoria" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Kategoria za Bidhaa" : "Product Categories"}</Link></li>
-              {/* Kuhusu Mfumo - inaelekeza AboutPage */}
-              <li><Link to="/kuhusu" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Kuhusu Mfumo" : "About System"}</Link></li>
-              {/* Matangazo - inaelekeza HomePage sehemu ya matangazo yanayotrend */}
-              <li><Link to="/#matangazo" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Matangazo" : "Ads"}</Link></li>
+              <li>
+                <Link to="/" className="text-white/50 hover:text-white text-sm transition-colors">
+                  {selectedLang === "sw" ? "Nyumbani" : "Home"}
+                </Link>
+              </li>
+              <li>
+                <Link to="/#kategoria" className="text-white/50 hover:text-white text-sm transition-colors">
+                  {selectedLang === "sw" ? "Kategoria za Bidhaa" : "Product Categories"}
+                </Link>
+              </li>
+              <li>
+                <Link to="/kuhusu" className="text-white/50 hover:text-white text-sm transition-colors">
+                  {selectedLang === "sw" ? "Kuhusu Mfumo" : "About System"}
+                </Link>
+              </li>
+              <li>
+                <Link to="/#matangazo" className="text-white/50 hover:text-white text-sm transition-colors">
+                  {selectedLang === "sw" ? "Matangazo" : "Ads"}
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Column 3: Support / Msaada */}
+          {/* Column 3: Support */}
           <div className="text-center lg:text-left">
             <h3 className="text-white font-semibold text-sm mb-4 underline underline-offset-4">
               {selectedLang === "sw" ? "MSAADA" : "SUPPORT"}
             </h3>
             <ul className="space-y-2.5">
-              {/* Maswali - inaelekeza HomePage sehemu ya FAQ */}
-              <li><Link to="/#faq" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Maswali" : "FAQ"}</Link></li>
-              {/* Wasiliana Nasi - inaelekeza ContactPage */}
-              <li><Link to="/mawasiliano" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Wasiliana Nasi" : "Contact Us"}</Link></li>
-              {/* Waitlist - inaelekeza WaitlistPage */}
-              <li><Link to="/waitlist" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Waitlist ya App" : "App Waitlist"}</Link></li>
+              <li>
+                <Link to="/#faq" className="text-white/50 hover:text-white text-sm transition-colors">
+                  {selectedLang === "sw" ? "Maswali" : "FAQ"}
+                </Link>
+              </li>
+              <li>
+                <Link to="/mawasiliano" className="text-white/50 hover:text-white text-sm transition-colors">
+                  {selectedLang === "sw" ? "Wasiliana Nasi" : "Contact Us"}
+                </Link>
+              </li>
+              <li>
+                <Link to="/waitlist" className="text-white/50 hover:text-white text-sm transition-colors">
+                  {selectedLang === "sw" ? "Waitlist ya App" : "App Waitlist"}
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -100,10 +131,21 @@ export default function Footer({ selectedLang = "sw" }) {
               {selectedLang === "sw" ? "SHERIA NA FARAGHA" : "LEGAL & PRIVACY"}
             </h3>
             <ul className="space-y-2.5">
-              <li><Link to="/sheria" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Sheria na Masharti" : "Terms & Conditions"}</Link></li>
-              <li><Link to="/faragha" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Sera ya Faragha" : "Privacy Policy"}</Link></li>
-              {/* Usalama - inaelekeza AboutPage (kwa kuwa imeunganishwa) */}
-              <li><Link to="/kuhusu#usalama" className="text-white/50 hover:text-white text-sm transition-colors">{selectedLang === "sw" ? "Usalama" : "Safety"}</Link></li>
+              <li>
+                <Link to="/sheria" className="text-white/50 hover:text-white text-sm transition-colors">
+                  {selectedLang === "sw" ? "Sheria na Masharti" : "Terms & Conditions"}
+                </Link>
+              </li>
+              <li>
+                <Link to="/faragha" className="text-white/50 hover:text-white text-sm transition-colors">
+                  {selectedLang === "sw" ? "Sera ya Faragha" : "Privacy Policy"}
+                </Link>
+              </li>
+              <li>
+                <Link to="/kuhusu#usalama" className="text-white/50 hover:text-white text-sm transition-colors">
+                  {selectedLang === "sw" ? "Usalama" : "Safety"}
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -118,7 +160,9 @@ export default function Footer({ selectedLang = "sw" }) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0-.828.672-1.5 1.5-1.5h16.5c.828 0 1.5.672 1.5 1.5v10.5c0 .828-.672 1.5-1.5 1.5H3.75c-.828 0-1.5-.672-1.5-1.5V6.75z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75l9.75 6.75 9.75-6.75" />
                 </svg>
-                <a href="mailto:info@sokomkononi.co.tz" className="hover:text-white transition-colors">info@sokomkononi.co.tz</a>
+                <a href="mailto:info@sokomkononi.co.tz" className="hover:text-white transition-colors">
+                  info@sokomkononi.co.tz
+                </a>
               </li>
               <li className="text-white/50 text-sm flex items-center justify-center lg:justify-start gap-2">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 fill-none stroke-[#E8A33D] stroke-2" aria-hidden="true">
@@ -140,8 +184,8 @@ export default function Footer({ selectedLang = "sw" }) {
         {/* Bottom Bar */}
         <div className="mt-10 pt-6 border-t border-white/10 flex flex-col-reverse md:flex-row items-center justify-between gap-4">
           <p className="text-white/30 text-xs text-center md:text-left">
-            © {new Date().getFullYear()} SokoMkononi. 
-            {selectedLang === "sw" ? " Haki zote zimehifadhiwa." : " All rights reserved."}
+            © {new Date().getFullYear()} SokoMkononi.{" "}
+            {selectedLang === "sw" ? "Haki zote zimehifadhiwa." : "All rights reserved."}
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 w-full md:w-auto">
