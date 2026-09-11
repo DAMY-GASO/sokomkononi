@@ -27,10 +27,12 @@ import {
   addListing as addListingToStore,
   removeListing as removeListingFromStore,
   updateListing as updateListingInStore,
-} from "../../config/listingsStore.js";
+  checkListingExpiry,
+} from "../../../config/listingsStore.js";
 import { useSentAnnouncements } from "../../../config/announcementsStore.js";
 import { useNotifications, notifyListingFeePaid } from "../../../config/notificationsStore.js";
 import { checkReservationReminders } from "../../../config/dealsStore.js";
+import { addTransaction } from "../../../config/transactionsStore.js"; // === MPYA ===
 import PostPropertyForm from "./PostPropertyForm";
 import MyListings from "./MyListings";
 import BoostSasa from "./BoostSasa";
@@ -45,12 +47,9 @@ import BottomNav from "../../../components/BottomNav.jsx";
 import SavedPropertiesPage from "../../SavedPropertiesPage";
 import MessagesPage from "../../MessagesPage";
 import NotificationsPage from "../../NotificationsPage";
-import MyTransactionsPage, { SEED_TRANSACTIONS } from "../../MyTransactionsPage";
+import MyTransactionsPage from "../../MyTransactionsPage";
 import WaitingListPage from "../../WaitingListPage";
 import { useWaitingList, leaveWaitingList } from "../../../config/waitingListStore.js";
-
-// Matangazo ya ticker sasa yanatoka ../../../config/announcementsStore.js —
-// yale yale anayotuma Admin kwenye System Settings > Announcements.
 
 const SELLER_NAV = [
   { key: "post", label: { sw: "Weka Mali Yako", en: "Post Property" }, icon: PlusCircle },
@@ -75,7 +74,6 @@ const BUYER_NAV = [
   { key: "transactions", label: { sw: "My Transactions", en: "My Transactions" }, icon: Receipt },
 ];
 
-// Ramani ya URL → { side, key }
 const URL_TO_STATE = {
   "/dashboard": { side: "seller", key: "listings" },
   "/dashboard/seller": { side: "seller", key: "listings" },
@@ -97,7 +95,6 @@ const URL_TO_STATE = {
   "/dashboard/buyer/transactions": { side: "buyer", key: "transactions" },
 };
 
-// Ramani ya { side, key } → URL
 const STATE_TO_URL = {
   seller: {
     post: "/dashboard/post",
@@ -122,10 +119,6 @@ const STATE_TO_URL = {
   },
 };
 
-// Listings mock imehamishiwa ../../config/listingsStore.js (SEED_LISTINGS) —
-// hii ndiyo listing ZILEZILE zinazoonekana kwenye Admin > Listing & Ads
-// Moderation, ili uamuzi wa Admin (Idhinisha/Kataa) uonekane hapa papo hapo.
-
 export default function DashboardShell() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -138,7 +131,6 @@ export default function DashboardShell() {
   const listings = useListings();
   const { unreadCount: unreadNotifCount } = useNotifications("user");
   const announcements = useSentAnnouncements();
-  const [transactions, setTransactions] = useState(SEED_TRANSACTIONS);
   const waitingList = useWaitingList();
   const [boostTarget, setBoostTarget] = useState(null);
   const [leadingTarget, setLeadingTarget] = useState(null);
@@ -167,15 +159,18 @@ export default function DashboardShell() {
   }, [location.pathname]);
 
   // ============================================================
-  // KUMBUSHO LA RESERVATION KUKARIBIA KUISHA
+  // KUMBUSHO LA RESERVATION + LISTING EXPIRY
   // Dashboard hii ndiyo inapakiwa kila mtumiaji anapoingia sehemu yoyote
-  // ya /dashboard, hivyo ni mahali sahihi pa kuangalia deals zote mara
-  // moja kwa kila kuingia, kisha kila dakika 5 wakati akiwa ameendelea
-  // kukaa humo (bila kuhitaji DealRooms.jsx iwe wazi).
+  // ya /dashboard, hivyo ni mahali sahihi pa kuangalia deals + listings
+  // mara moja kwa kila kuingia, kisha kila dakika 5.
   // ============================================================
   useEffect(() => {
     checkReservationReminders();
-    const interval = setInterval(checkReservationReminders, 5 * 60 * 1000);
+    checkListingExpiry();
+    const interval = setInterval(() => {
+      checkReservationReminders();
+      checkListingExpiry();
+    }, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -200,22 +195,19 @@ export default function DashboardShell() {
   const updateListing = (id, patch) => updateListingInStore(id, patch);
 
   // ============================================================
-  // TRANSACTION HELPERS — Deal Rooms na My Transactions zinatumia
-  // state hii moja ili mzunguko uwe unaoendelea (siyo data mbili tofauti).
+  // TRANSACTION HELPERS
+  // Sasa: `addTransaction()` inatoka transactionsStore.js —
+  // chanzo kimoja cha ukweli kwa MyTransactionsPage, Admin Overview,
+  // na fee emitters zote (Boost/Leading/Advertise/Listing Fee).
   // ============================================================
-  const addTransaction = (txn) => setTransactions((prev) => [txn, ...prev]);
-
   const handleReservationPaid = (deal, { hours, fee, method, expiresAt }) => {
     addTransaction({
-      id: `t_${Date.now()}`,
-      ref: `SM-2026-${String(1000 + transactions.length + 1)}`,
-      type: "reservation_fee",
+      type: "reservation",
       title: `Reservation Fee — ${deal.listingTitle}`,
       property: deal.listingTitle,
       amount: fee,
       status: "completed",
       method,
-      at: new Date().toISOString(),
       dealId: deal.id,
       reservationHours: hours,
       reservationExpiresAt: expiresAt,
@@ -225,23 +217,16 @@ export default function DashboardShell() {
   const handleFinalPaymentConfirmed = (deal, dealSide, { method, reference }) => {
     const isSeller = dealSide === "seller";
     addTransaction({
-      id: `t_${Date.now()}`,
-      ref: `SM-2026-${String(1000 + transactions.length + 1)}`,
       type: isSeller ? "sale" : "purchase",
       title: `${isSeller ? "Mauzo" : "Ununuzi"} — ${deal.listingTitle}`,
       property: deal.listingTitle,
       amount: deal.currentOffer,
       status: "completed",
       method: method || "—",
-      at: new Date().toISOString(),
       dealId: deal.id,
       paymentReference: reference,
     });
   };
-
-  // ============================================================
-  // WAITING LIST HELPERS
-  // ============================================================
 
   // ============================================================
   // NAVIGATION HELPERS
@@ -273,6 +258,9 @@ export default function DashboardShell() {
     if (listingId) navigate(`/mali/${listingId}`);
   };
 
+  // ============================================================
+  // LISTING FEE PAID — transaction + notification
+  // ============================================================
   const markListingPaid = (id) => {
     updateListing(id, { status: "live" });
     const listing = listings.find((l) => l.id === id);
@@ -281,6 +269,15 @@ export default function DashboardShell() {
         listingId: id,
         listingTitle: listing.title,
         amount: listing.listingFee,
+      });
+      addTransaction({
+        type: "listing_fee",
+        title: `Listing Fee — ${listing.title}`,
+        property: listing.title,
+        amount: listing.listingFee,
+        status: "completed",
+        method: "M-Pesa",
+        listingId: id,
       });
     }
   };
@@ -375,7 +372,8 @@ export default function DashboardShell() {
       return <NotificationsPage />;
     }
     if (activeKey === "transactions") {
-      return <MyTransactionsPage transactions={transactions} />;
+      // Store inasoma yenyewe — hakuna prop ya `transactions` tena
+      return <MyTransactionsPage />;
     }
     if (activeKey === "waiting") {
       return (
@@ -421,9 +419,7 @@ export default function DashboardShell() {
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
-      {/* ============================================================ */}
       {/* TOP HEADER */}
-      {/* ============================================================ */}
       <header
         style={{ background: COLORS.night }}
         className="w-full flex items-center gap-3 px-3 sm:px-5 py-3 sticky top-0 z-30"
@@ -450,20 +446,14 @@ export default function DashboardShell() {
         >
           <Search size={16} color="rgba(245,243,236,0.6)" />
           <input
-            placeholder={
-              lang === "sw" ? "Tafuta mali..." : "Search properties..."
-            }
+            placeholder={lang === "sw" ? "Tafuta mali..." : "Search properties..."}
             className="bg-transparent outline-none text-sm flex-1"
             style={{ color: COLORS.sand }}
           />
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          {/* Seller/Buyer Toggle */}
-          <div
-            style={{ background: COLORS.nightSoft }}
-            className="hidden md:flex items-center rounded-full p-1"
-          >
+          <div style={{ background: COLORS.nightSoft }} className="hidden md:flex items-center rounded-full p-1">
             <button
               onClick={() => handleSideChange("seller")}
               style={{
@@ -486,7 +476,6 @@ export default function DashboardShell() {
             </button>
           </div>
 
-          {/* Language Switcher */}
           <div className="relative">
             <button
               onClick={() => setLangOpen((v) => !v)}
@@ -502,10 +491,7 @@ export default function DashboardShell() {
                 style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.1)" }}
                 className="absolute right-0 mt-2 w-48 border rounded-lg shadow-xl py-2 z-50"
               >
-                <div
-                  style={{ borderColor: "rgba(245,243,236,0.1)" }}
-                  className="px-4 py-2 border-b"
-                >
+                <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-2 border-b">
                   <p style={{ color: "rgba(245,243,236,0.5)" }} className="text-xs font-semibold">
                     {lang === "sw" ? "Chagua Lugha" : "Choose Language"}
                   </p>
@@ -528,7 +514,6 @@ export default function DashboardShell() {
             )}
           </div>
 
-          {/* Home button */}
           <a
             href="/"
             className="text-white/80 hover:text-white p-1.5 transition-colors"
@@ -537,7 +522,6 @@ export default function DashboardShell() {
             <Home size={20} />
           </a>
 
-          {/* Notifications */}
           <button
             onClick={() => handleNavClick("notifications")}
             className="relative text-white/80 hover:text-white p-1.5 transition-colors"
@@ -601,14 +585,9 @@ export default function DashboardShell() {
         </span>
       </div>
 
-      {/* PROMOTED BANNER (Advertisement Fee) — inajizungusha 5s,
-          inaonekana kwa seller na buyer side zote mbili; haichukui
-          nafasi kabisa ikiwa hakuna banner hai kwa sasa. */}
       <PromotedBannerStrip onOpenListing={goToListingDetail} />
 
-      {/* BODY: SIDEBAR + MAIN CONTENT */}
       <div className="flex flex-1 relative">
-        {/* SIDEBAR - DESKTOP */}
         <aside
           style={{ background: COLORS.sand, borderColor: COLORS.sandLine }}
           className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto"
@@ -652,7 +631,6 @@ export default function DashboardShell() {
           </a>
         </aside>
 
-        {/* SIDEBAR - MOBILE DRAWER */}
         {sidebarOpen && (
           <div className="md:hidden absolute inset-0 z-20 flex">
             <div
@@ -694,18 +672,13 @@ export default function DashboardShell() {
                 {lang === "sw" ? "Rudi Nyumbani" : "Back to Home"}
               </a>
             </div>
-            <div
-              onClick={() => setSidebarOpen(false)}
-              className="flex-1 bg-black/30"
-            />
+            <div onClick={() => setSidebarOpen(false)} className="flex-1 bg-black/30" />
           </div>
         )}
 
-        {/* MAIN CONTENT */}
         <div className="flex-1 min-w-0 overflow-y-auto">{renderMain()}</div>
       </div>
 
-      {/* BOTTOM NAVIGATION - MOBILE ONLY */}
       <div className="md:hidden">
         <BottomNav />
       </div>
