@@ -10,10 +10,6 @@ import {
   X,
   ChevronDown,
   Home as HomeIcon,
-  Trees,
-  Car,
-  Briefcase,
-  Wrench,
   Star,
   Shield,
   Eye,
@@ -34,62 +30,36 @@ import {
 } from "./shared";
 import { usePublicListings } from "../../../config/listingsStore.js";
 import { useSavedIds, toggleSaved } from "../../../config/savedStore.js";
+import {
+  useActiveCategories,
+  getCategoryIcon,
+} from "../../../config/categoriesStore.js";
 
+// Mikoa 31 ya Tanzania
 const REGIONS = [
-  "Arusha",
-  "Dar es Salaam",
-  "Dodoma",
-  "Geita",
-  "Iringa",
-  "Kagera",
-  "Katavi",
-  "Kigoma",
-  "Kilimanjaro",
-  "Lindi",
-  "Manyara",
-  "Mara",
-  "Mbeya",
-  "Morogoro",
-  "Mtwara",
-  "Mwanza",
-  "Njombe",
-  "Pwani",
-  "Rukwa",
-  "Ruvuma",
-  "Shinyanga",
-  "Simiyu",
-  "Singida",
-  "Songwe",
-  "Tabora",
-  "Tanga",
-  "Kaskazini Pemba",   // Pemba North
-  "Kusini Pemba",      // Pemba South
-  "Kaskazini Unguja",  // Unguja North
-  "Kusini Unguja",     // Unguja South
-  "Mjini Magharibi",   // Zanzibar Urban West
+  "Arusha", "Dar es Salaam", "Dodoma", "Geita", "Iringa", "Kagera", "Katavi",
+  "Kigoma", "Kilimanjaro", "Lindi", "Manyara", "Mara", "Mbeya", "Morogoro",
+  "Mtwara", "Mwanza", "Njombe", "Pwani", "Rukwa", "Ruvuma", "Shinyanga",
+  "Simiyu", "Singida", "Songwe", "Tabora", "Tanga",
+  "Kaskazini Pemba", "Kusini Pemba", "Kaskazini Unguja", "Kusini Unguja",
+  "Mjini Magharibi",
 ];
-
-const CATEGORY_ICONS = {
-  nyumba: HomeIcon,
-  viwanja: Trees,
-  magari: Car,
-  biashara: Briefcase,
-  mashine: Wrench,
-};
 
 // ============================================================
 // RESERVATION COUNTDOWN
 // ============================================================
-function reservationCountdown(reservedUntil) {
+function reservationCountdown(reservedUntil, lang) {
   if (!reservedUntil) return "";
   const ms = new Date(reservedUntil).getTime() - Date.now();
-  if (ms <= 0) return "Inaisha hivi karibuni";
+  if (ms <= 0) return lang === "sw" ? "Inaisha hivi karibuni" : "Ending soon";
   const hours = Math.floor(ms / 3600000);
-  if (hours < 24) return `Inaisha baada ya saa ${hours}`;
+  if (hours < 24) return lang === "sw" ? `Inaisha baada ya saa ${hours}` : `Ends in ${hours}hrs`;
   const days = Math.floor(hours / 24);
   const remainingHours = hours % 24;
-  if (remainingHours === 0) return `Inaisha baada ya siku ${days}`;
-  return `Inaisha baada ya siku ${days} ${remainingHours}saa`;
+  if (remainingHours === 0) return lang === "sw" ? `Inaisha baada ya siku ${days}` : `Ends in ${days} days`;
+  return lang === "sw"
+    ? `Inaisha baada ya siku ${days} ${remainingHours}saa`
+    : `Ends in ${days}d ${remainingHours}h`;
 }
 
 // ============================================================
@@ -97,7 +67,9 @@ function reservationCountdown(reservedUntil) {
 // ============================================================
 function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
   const category = getCategory(property.category);
-  const Icon = CATEGORY_ICONS[property.category] || HomeIcon;
+  const Icon = getCategoryIcon(category?.iconKey);
+  const categoryLabel = category?.label?.[lang] || category?.label?.sw || property.category;
+
   const isFeatured = isBoostActive(property);
   const isLeading = isLeadingActive(property);
   const isVerified = Boolean(property.verified);
@@ -169,12 +141,16 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
           {isReserved && property.reservedUntil && (
             <p className="text-[11px] font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
               <Clock3 size={11} />
-              {reservationCountdown(property.reservedUntil)}
+              {reservationCountdown(property.reservedUntil, lang)}
             </p>
           )}
           <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
-            {property.bedrooms && <span>🛏 {property.bedrooms} vyumba</span>}
-            {property.bathrooms && <span>🚿 {property.bathrooms} bafu</span>}
+            {property.bedrooms && (
+              <span>🛏 {property.bedrooms} {lang === "sw" ? "vyumba" : "bed"}</span>
+            )}
+            {property.bathrooms && (
+              <span>🚿 {property.bathrooms} {lang === "sw" ? "bafu" : "bath"}</span>
+            )}
             {property.area && <span>📐 {property.area}</span>}
             {property.make && (
               <span>
@@ -188,7 +164,7 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
                 <Eye size={12} /> {property.views}
               </span>
               <span>•</span>
-              <span>{timeAgo(property.postedAt)}</span>
+              <span>{timeAgo(property.postedAt, lang)}</span>
             </div>
             {isVerified && (
               <span className="flex items-center gap-1 text-xs text-[#2F6D4F] font-medium">
@@ -262,20 +238,24 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
       <div className="p-4">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-[10px] font-medium text-[#E8A33D] bg-[#E8A33D]/10 px-2 py-0.5 rounded-full">
-            {category?.label}
+            {categoryLabel}
           </span>
         </div>
-        <h3 className="font-semibold text-gray-800 text-sm truncate">{property.title}</h3>
+        <h3 className="font-semibold text-gray-800 text-sm truncate">
+          {property.title}
+        </h3>
         <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
           <MapPin size={12} />
           <span className="truncate">{property.location}</span>
         </div>
-        <p className="text-[#C1502E] font-bold text-base mt-2">{formatTZS(property.price)}</p>
+        <p className="text-[#C1502E] font-bold text-base mt-2">
+          {formatTZS(property.price)}
+        </p>
 
         {isReserved && property.reservedUntil && (
           <p className="text-[11px] font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
             <Clock3 size={11} />
-            {reservationCountdown(property.reservedUntil)}
+            {reservationCountdown(property.reservedUntil, lang)}
           </p>
         )}
 
@@ -289,7 +269,7 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
           <span className="flex items-center gap-1">
             <Eye size={12} /> {property.views}
           </span>
-          <span>{timeAgo(property.postedAt)}</span>
+          <span>{timeAgo(property.postedAt, lang)}</span>
         </div>
       </div>
     </Link>
@@ -301,21 +281,14 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
 // ============================================================
 function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
   const [localFilters, setLocalFilters] = useState(filters);
+  const allCategories = useActiveCategories();
 
   const priceRanges = [
-    { label: "Chini ya TZS 20M", min: 0, max: 20000000 },
-    { label: "TZS 20M - 50M", min: 20000000, max: 50000000 },
-    { label: "TZS 50M - 100M", min: 50000000, max: 100000000 },
-    { label: "TZS 100M - 200M", min: 100000000, max: 200000000 },
-    { label: "Juu ya TZS 200M", min: 200000000, max: Infinity },
-  ];
-
-  const categories = [
-    { key: "nyumba", label: lang === "sw" ? "Nyumba" : "Houses" },
-    { key: "viwanja", label: lang === "sw" ? "Viwanja" : "Plots" },
-    { key: "magari", label: lang === "sw" ? "Magari" : "Cars" },
-    { key: "biashara", label: lang === "sw" ? "Biashara" : "Businesses" },
-    { key: "mashine", label: lang === "sw" ? "Mashine" : "Machinery" },
+    { label: "Chini ya TZS 20M", en: "Under TZS 20M", min: 0, max: 20000000 },
+    { label: "TZS 20M - 50M", en: "TZS 20M - 50M", min: 20000000, max: 50000000 },
+    { label: "TZS 50M - 100M", en: "TZS 50M - 100M", min: 50000000, max: 100000000 },
+    { label: "TZS 100M - 200M", en: "TZS 100M - 200M", min: 100000000, max: 200000000 },
+    { label: "Juu ya TZS 200M", en: "Above TZS 200M", min: 200000000, max: Infinity },
   ];
 
   const handleApply = () => {
@@ -324,13 +297,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
   };
 
   const handleReset = () => {
-    const reset = {
-      categories: [],
-      priceRange: null,
-      regions: [],
-      verified: false,
-      featured: false,
-    };
+    const reset = { categories: [], priceRange: null, regions: [], verified: false, featured: false };
     setLocalFilters(reset);
   };
 
@@ -369,7 +336,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
           {lang === "sw" ? "Kategoria" : "Category"}
         </h4>
         <div className="space-y-2">
-          {categories.map((cat) => (
+          {allCategories.map((cat) => (
             <label key={cat.key} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -377,7 +344,9 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
                 onChange={() => toggleCategory(cat.key)}
                 className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
               />
-              <span className="text-sm text-gray-600">{cat.label}</span>
+              <span className="text-sm text-gray-600">
+                {cat.label[lang] || cat.label.sw}
+              </span>
             </label>
           ))}
         </div>
@@ -397,7 +366,9 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
                 onChange={() => setLocalFilters({ ...localFilters, priceRange: idx })}
                 className="w-4 h-4 text-[#E8A33D] focus:ring-[#E8A33D]"
               />
-              <span className="text-sm text-gray-600">{range.label}</span>
+              <span className="text-sm text-gray-600">
+                {lang === "sw" ? range.label : range.en}
+              </span>
             </label>
           ))}
         </div>
@@ -504,12 +475,11 @@ export default function BrowseProperties({ lang = "sw" }) {
     verified: false,
     featured: false,
   });
-  const savedIds = useSavedIds(); // === IMEBADILISHWA — kutoka savedStore ===
+  const savedIds = useSavedIds();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 9;
 
-  // === IMEBADILISHWA — usePublicListings inarudisha live + reserved + sold ===
   const allProperties = usePublicListings();
 
   const filteredProperties = useMemo(() => {
@@ -594,12 +564,6 @@ export default function BrowseProperties({ lang = "sw" }) {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // ============================================================
-  // toggleSave — inaita savedStore.toggleSaved(id)
-  // Inabadilisha localStorage + inatuma event ili:
-  //   - heart ya card hii ijae/kufifia papo hapo
-  //   - SavedPropertiesPage ijisasisha papo hapo ikiwa ipo wazi
-  // ============================================================
   const toggleSave = (id) => toggleSaved(id);
 
   const handleSearchSubmit = (e) => {
@@ -765,7 +729,7 @@ export default function BrowseProperties({ lang = "sw" }) {
                     key={cat}
                     className="inline-flex items-center gap-1 bg-[#E8A33D]/10 text-[#8A5A16] text-xs px-2.5 py-1 rounded-full"
                   >
-                    {cat}
+                    {getCategory(cat)?.label?.[lang] || cat}
                     <button
                       onClick={() =>
                         setFilters({
