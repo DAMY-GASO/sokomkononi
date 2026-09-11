@@ -12,9 +12,11 @@ import {
 import { useBoostPackages } from "../../../config/boostPackagesStore.js";
 import { notifyBoostPurchased } from "../../../config/notificationsStore.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
+import { getCategoryIcon } from "../../../config/categoriesStore.js";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
 import PaymentGateway from "./PaymentGateway";
 
-function ListingPicker({ listings, selectedId, onSelect }) {
+function ListingPicker({ listings, selectedId, onSelect, lang }) {
   if (listings.length === 0) {
     return (
       <div
@@ -22,8 +24,9 @@ function ListingPicker({ listings, selectedId, onSelect }) {
         className="rounded-2xl border-2 border-dashed p-8 text-center"
       >
         <p style={{ color: "rgba(16,26,46,0.45)" }} className="text-sm">
-          Huna mali yoyote iliyo Live kwa sasa. Boost inapatikana tu kwa mali
-          zilizochapishwa.
+          {lang === "sw"
+            ? "Huna mali yoyote iliyo Live kwa sasa. Boost inapatikana tu kwa mali zilizochapishwa."
+            : "You don't have any Live listings right now. Boost is only available for published properties."}
         </p>
       </div>
     );
@@ -33,7 +36,7 @@ function ListingPicker({ listings, selectedId, onSelect }) {
     <div className="flex flex-col gap-2">
       {listings.map((l) => {
         const category = getCategory(l.category);
-        const Icon = category?.icon;
+        const Icon = getCategoryIcon(category?.iconKey);
         const active = l.id === selectedId;
         const boosted = isBoostActive(l);
         return (
@@ -56,7 +59,10 @@ function ListingPicker({ listings, selectedId, onSelect }) {
               <p style={{ color: COLORS.night }} className="text-sm font-semibold truncate">
                 {l.title}
               </p>
-              <p style={{ color: "rgba(16,26,46,0.5)" }} className="flex items-center gap-1 text-xs">
+              <p
+                style={{ color: "rgba(16,26,46,0.5)" }}
+                className="flex items-center gap-1 text-xs"
+              >
                 <MapPin size={11} /> {l.location}
               </p>
             </div>
@@ -65,7 +71,10 @@ function ListingPicker({ listings, selectedId, onSelect }) {
                 style={{ background: "rgba(232,163,61,0.16)", color: "#8A5A16" }}
                 className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full shrink-0"
               >
-                <Rocket size={11} /> Siku {boostDaysRemaining(l)} zimebaki
+                <Rocket size={11} />{" "}
+                {lang === "sw"
+                  ? `Siku ${boostDaysRemaining(l)} zimebaki`
+                  : `${boostDaysRemaining(l)} days left`}
               </span>
             )}
           </button>
@@ -75,7 +84,7 @@ function ListingPicker({ listings, selectedId, onSelect }) {
   );
 }
 
-function PackageCard({ pkg, selected, onSelect }) {
+function PackageCard({ pkg, selected, onSelect, lang }) {
   const isFeatured = pkg.key === "featured";
   return (
     <button
@@ -91,7 +100,7 @@ function PackageCard({ pkg, selected, onSelect }) {
           style={{ background: COLORS.rust, color: "white" }}
           className="absolute -top-2.5 left-4 text-[10px] font-bold px-2 py-0.5 rounded-full"
         >
-          Maarufu Zaidi
+          {lang === "sw" ? "Maarufu Zaidi" : "Most Popular"}
         </span>
       )}
       <div className="flex items-center justify-between">
@@ -113,7 +122,7 @@ function PackageCard({ pkg, selected, onSelect }) {
           {formatTZS(pkg.price)}
         </span>
         <span style={{ color: "rgba(16,26,46,0.5)" }} className="text-xs">
-          / siku {pkg.days}
+          / {lang === "sw" ? `siku ${pkg.days}` : `${pkg.days} days`}
         </span>
       </div>
       <ul className="flex flex-col gap-1.5">
@@ -132,7 +141,12 @@ function PackageCard({ pkg, selected, onSelect }) {
   );
 }
 
-export default function BoostSasa({ listings = [], initialListingId = null, onBoosted = () => {} }) {
+export default function BoostSasa({
+  listings = [],
+  initialListingId = null,
+  onBoosted = () => {},
+}) {
+  const { lang } = useLanguage();
   const liveListings = listings.filter((l) => l.status === "live");
   const boostPackages = useBoostPackages();
   const [selectedId, setSelectedId] = useState(
@@ -173,14 +187,14 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
       amount: selectedPackage.price,
     });
 
-    // 2) === MPYA: rekodi transaction kwenye My Transactions ===
+    // 2) Rekodi transaction kwenye My Transactions
     addTransaction({
       type: "boost",
       title: `${selectedPackage.label} — ${selectedListing.title}`,
       property: selectedListing.title,
       amount: selectedPackage.price,
       status: "completed",
-      method: "M-Pesa", // PaymentGateway bado halirudishi method halisi
+      method: "M-Pesa",
       listingId: selectedListing.id,
     });
 
@@ -204,17 +218,34 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
           >
             <Rocket color={COLORS.night} size={24} />
           </div>
-          <h2 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl font-semibold mb-2">
-            Boost Imewekwa
+          <h2
+            style={{ fontFamily: FONTS.display, color: COLORS.night }}
+            className="text-2xl font-semibold mb-2"
+          >
+            {lang === "sw" ? "Boost Imewekwa" : "Boost Applied"}
           </h2>
           <p style={{ color: "rgba(16,26,46,0.65)" }} className="text-sm mb-5">
-            "{done.listing.title}" sasa ina <b>{done.pkg.label}</b> na itaonekana zaidi
-            kwa wanunuzi hadi{" "}
-            {new Date(done.expiresAt).toLocaleDateString("sw-TZ", {
-              day: "numeric",
-              month: "long",
-            })}
-            .
+            {lang === "sw" ? (
+              <>
+                "{done.listing.title}" sasa ina <b>{done.pkg.label}</b> na itaonekana zaidi kwa
+                wanunuzi hadi{" "}
+                {new Date(done.expiresAt).toLocaleDateString("sw-TZ", {
+                  day: "numeric",
+                  month: "long",
+                })}
+                .
+              </>
+            ) : (
+              <>
+                "{done.listing.title}" now has <b>{done.pkg.label}</b> and will be more visible to
+                buyers until{" "}
+                {new Date(done.expiresAt).toLocaleDateString("en-US", {
+                  day: "numeric",
+                  month: "long",
+                })}
+                .
+              </>
+            )}
           </p>
           <button
             onClick={() => {
@@ -224,7 +255,7 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="w-full py-3 rounded-xl font-semibold text-sm"
           >
-            Boost Mali Nyingine
+            {lang === "sw" ? "Boost Mali Nyingine" : "Boost Another Listing"}
           </button>
         </div>
       </div>
@@ -232,28 +263,41 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
   }
 
   return (
-    <div style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }} className="w-full p-4 sm:p-6">
+    <div
+      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }}
+      className="w-full p-4 sm:p-6"
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
       <div className="max-w-2xl mx-auto">
-        <h1 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl sm:text-3xl font-semibold mb-1">
-          Boost Sasa
+        <h1
+          style={{ fontFamily: FONTS.display, color: COLORS.night }}
+          className="text-2xl sm:text-3xl font-semibold mb-1"
+        >
+          {lang === "sw" ? "Boost Sasa" : "Boost Now"}
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-6">
-          Ongeza mwonekano wa mali yako kwa wanunuzi wengi zaidi.
+          {lang === "sw"
+            ? "Ongeza mwonekano wa mali yako kwa wanunuzi wengi zaidi."
+            : "Increase your property's visibility to more buyers."}
         </p>
 
         {stage !== "paying" && (
           <>
             <div className="flex flex-col gap-2 mb-3">
               <span style={{ color: COLORS.night }} className="text-sm font-medium">
-                1. Chagua Mali (Live pekee)
+                1. {lang === "sw" ? "Chagua Mali (Live pekee)" : "Select Property (Live only)"}
               </span>
             </div>
             <div className="mb-6">
-              <ListingPicker listings={liveListings} selectedId={selectedId} onSelect={setSelectedId} />
+              <ListingPicker
+                listings={liveListings}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                lang={lang}
+              />
             </div>
           </>
         )}
@@ -264,7 +308,7 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
               <>
                 <div className="flex flex-col gap-2 mb-3">
                   <span style={{ color: COLORS.night }} className="text-sm font-medium">
-                    2. Chagua Package
+                    2. {lang === "sw" ? "Chagua Package" : "Choose Package"}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
@@ -274,6 +318,7 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
                       pkg={pkg}
                       selected={pkg.key === packageKey}
                       onSelect={setPackageKey}
+                      lang={lang}
                     />
                   ))}
                 </div>
@@ -284,7 +329,11 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
               <PaymentGateway
                 amount={selectedPackage.price}
                 title={selectedPackage.label}
-                description={`Boost kwa "${selectedListing.title}"`}
+                description={
+                  lang === "sw"
+                    ? `Boost kwa "${selectedListing.title}"`
+                    : `Boost for "${selectedListing.title}"`
+                }
                 onCancel={() => setStage("select")}
                 onSuccess={handlePaymentSuccess}
               />
@@ -296,9 +345,20 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
                     className="flex items-center gap-2 text-xs rounded-lg px-3 py-2.5 mb-4"
                   >
                     <Clock size={14} />
-                    Mali hii tayari ina Boost inayoisha baada ya siku{" "}
-                    {boostDaysRemaining(selectedListing)} — ukiendelea, siku {selectedPackage.days} za{" "}
-                    {selectedPackage.label} zitaongezwa baada ya hapo.
+                    {lang === "sw" ? (
+                      <>
+                        Mali hii tayari ina Boost inayoisha baada ya siku{" "}
+                        {boostDaysRemaining(selectedListing)} — ukiendelea, siku{" "}
+                        {selectedPackage.days} za {selectedPackage.label} zitaongezwa baada ya hapo.
+                      </>
+                    ) : (
+                      <>
+                        This listing already has a Boost expiring in{" "}
+                        {boostDaysRemaining(selectedListing)} days — if you continue,{" "}
+                        {selectedPackage.days} more days of {selectedPackage.label} will be added
+                        after that.
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -307,8 +367,11 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
                   className="rounded-2xl border p-4 flex items-center justify-between mb-4"
                 >
                   <div>
-                    <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs mb-0.5">
-                      Jumla ya Malipo
+                    <p
+                      style={{ color: "rgba(16,26,46,0.55)" }}
+                      className="text-xs mb-0.5"
+                    >
+                      {lang === "sw" ? "Jumla ya Malipo" : "Total Payment"}
                     </p>
                     <p style={{ color: COLORS.rust }} className="text-lg font-bold">
                       {formatTZS(selectedPackage.price)}
@@ -324,7 +387,7 @@ export default function BoostSasa({ listings = [], initialListingId = null, onBo
                     className="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm"
                   >
                     <Rocket size={15} />
-                    Lipa na Boost
+                    {lang === "sw" ? "Lipa na Boost" : "Pay and Boost"}
                   </button>
                 </div>
               </>
