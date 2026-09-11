@@ -154,19 +154,20 @@ export const STATUS = {
   rejected: { label: "Imekataliwa", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
 };
 
-export function timeAgo(dateStr) {
+export function timeAgo(dateStr, lang = "sw") {
   const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-  if (days <= 0) return "Leo";
-  if (days === 1) return "Jana";
-  if (days < 30) return `Siku ${days} zilizopita`;
+  if (days <= 0) return lang === "sw" ? "Leo" : "Today";
+  if (days === 1) return lang === "sw" ? "Jana" : "Yesterday";
+  if (days < 30) return lang === "sw" ? `Siku ${days} zilizopita` : `${days} days ago`;
   const months = Math.floor(days / 30);
-  return months === 1 ? "Mwezi 1 uliopita" : `Miezi ${months} iliyopita`;
+  if (lang === "sw") return months === 1 ? "Mwezi 1 uliopita" : `Miezi ${months} iliyopita`;
+  return months === 1 ? "1 month ago" : `${months} months ago`;
 }
 
 // ---- Payment methods ----
 export const PAYMENT_METHODS = [
   { key: "mpesa", label: "M-Pesa", type: "mobile" },
-  { key: "tigopesa", label: "Tigo Pesa", type: "mobile" },
+  { key: "tigopesa", label: "Mixx by Yas", type: "mobile" },
   { key: "airtelmoney", label: "Airtel Money", type: "mobile" },
   { key: "halopesa", label: "HaloPesa", type: "mobile" },
   { key: "card", label: "Kadi ya Benki (Visa/Mastercard)", type: "card" },
