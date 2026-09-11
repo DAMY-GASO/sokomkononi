@@ -32,19 +32,41 @@ import {
   isBoostActive,
   isLeadingActive,
 } from "./shared";
-import { usePublicListings } from "../../../config/listingsStore.js";
+import { usePublicListings } from "../../config/listingsStore.js";
+import { useSavedIds, toggleSaved } from "../../config/savedStore.js";
 
 const REGIONS = [
-  "Dar es Salaam",
   "Arusha",
-  "Mwanza",
+  "Dar es Salaam",
   "Dodoma",
+  "Geita",
+  "Iringa",
+  "Kagera",
+  "Katavi",
+  "Kigoma",
+  "Kilimanjaro",
+  "Lindi",
+  "Manyara",
+  "Mara",
   "Mbeya",
   "Morogoro",
-  "Tanga",
-  "Zanzibar",
-  "Iringa",
+  "Mtwara",
+  "Mwanza",
+  "Njombe",
   "Pwani",
+  "Rukwa",
+  "Ruvuma",
+  "Shinyanga",
+  "Simiyu",
+  "Singida",
+  "Songwe",
+  "Tabora",
+  "Tanga",
+  "Kaskazini Pemba",   // Pemba North
+  "Kusini Pemba",      // Pemba South
+  "Kaskazini Unguja",  // Unguja North
+  "Kusini Unguja",     // Unguja South
+  "Mjini Magharibi",   // Zanzibar Urban West
 ];
 
 const CATEGORY_ICONS = {
@@ -56,7 +78,7 @@ const CATEGORY_ICONS = {
 };
 
 // ============================================================
-// RESERVATION COUNTDOWN (badge kwenye card + detail)
+// RESERVATION COUNTDOWN
 // ============================================================
 function reservationCountdown(reservedUntil) {
   if (!reservedUntil) return "";
@@ -81,7 +103,6 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
   const isVerified = Boolean(property.verified);
   const isReserved = property.status === "reserved";
   const isSold = property.status === "sold";
-  const isUnavailable = isReserved || isSold;
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -155,7 +176,11 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
             {property.bedrooms && <span>🛏 {property.bedrooms} vyumba</span>}
             {property.bathrooms && <span>🚿 {property.bathrooms} bafu</span>}
             {property.area && <span>📐 {property.area}</span>}
-            {property.make && <span>🚗 {property.make} {property.model}</span>}
+            {property.make && (
+              <span>
+                🚗 {property.make} {property.model}
+              </span>
+            )}
           </div>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
             <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -190,7 +215,6 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
           <Icon size={40} className="text-gray-300 group-hover:scale-110 transition-transform" />
         </div>
 
-        {/* Top-left: leading / featured / reserved / sold */}
         <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
           {isLeading && (
             <span className="bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
@@ -241,16 +265,12 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
             {category?.label}
           </span>
         </div>
-        <h3 className="font-semibold text-gray-800 text-sm truncate">
-          {property.title}
-        </h3>
+        <h3 className="font-semibold text-gray-800 text-sm truncate">{property.title}</h3>
         <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
           <MapPin size={12} />
           <span className="truncate">{property.location}</span>
         </div>
-        <p className="text-[#C1502E] font-bold text-base mt-2">
-          {formatTZS(property.price)}
-        </p>
+        <p className="text-[#C1502E] font-bold text-base mt-2">{formatTZS(property.price)}</p>
 
         {isReserved && property.reservedUntil && (
           <p className="text-[11px] font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
@@ -304,7 +324,13 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
   };
 
   const handleReset = () => {
-    const reset = { categories: [], priceRange: null, regions: [], verified: false, featured: false };
+    const reset = {
+      categories: [],
+      priceRange: null,
+      regions: [],
+      verified: false,
+      featured: false,
+    };
     setLocalFilters(reset);
   };
 
@@ -478,12 +504,12 @@ export default function BrowseProperties({ lang = "sw" }) {
     verified: false,
     featured: false,
   });
-  const [savedIds, setSavedIds] = useState([]);
+  const savedIds = useSavedIds(); // === IMEBADILISHWA — kutoka savedStore ===
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 9;
 
-  // === BADILIKO: usePublicListings() — inarudisha live + reserved + sold ===
+  // === IMEBADILISHWA — usePublicListings inarudisha live + reserved + sold ===
   const allProperties = usePublicListings();
 
   const filteredProperties = useMemo(() => {
@@ -527,7 +553,6 @@ export default function BrowseProperties({ lang = "sw" }) {
       result = result.filter((p) => p.price >= min && p.price < max);
     }
 
-    // Comparator ya sortBy iliyochaguliwa na mtumiaji.
     const sortComparator = (a, b) => {
       switch (sortBy) {
         case "price_low":
@@ -542,8 +567,7 @@ export default function BrowseProperties({ lang = "sw" }) {
       }
     };
 
-    // Leading Fee inapewa kipaumbele KWANZA, kisha SOLD/RESERVED
-    // zinashushwa chini (zinaonekana, lakini si mbele ya AVAILABLE).
+    // Leading Fee inapewa kipaumbele; kisha AVAILABLE → RESERVED → SOLD
     const statusRank = (p) => {
       if (p.status === "live") return 0;
       if (p.status === "reserved") return 1;
@@ -570,11 +594,13 @@ export default function BrowseProperties({ lang = "sw" }) {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const toggleSave = (id) => {
-    setSavedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
+  // ============================================================
+  // toggleSave — inaita savedStore.toggleSaved(id)
+  // Inabadilisha localStorage + inatuma event ili:
+  //   - heart ya card hii ijae/kufifia papo hapo
+  //   - SavedPropertiesPage ijisasisha papo hapo ikiwa ipo wazi
+  // ============================================================
+  const toggleSave = (id) => toggleSaved(id);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -585,7 +611,13 @@ export default function BrowseProperties({ lang = "sw" }) {
   };
 
   const clearFilters = () => {
-    setFilters({ categories: [], priceRange: null, regions: [], verified: false, featured: false });
+    setFilters({
+      categories: [],
+      priceRange: null,
+      regions: [],
+      verified: false,
+      featured: false,
+    });
     setSearchQuery("");
   };
 
@@ -597,13 +629,19 @@ export default function BrowseProperties({ lang = "sw" }) {
     filters.featured;
 
   return (
-    <div style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "100%" }} className="w-full p-4 sm:p-6">
+    <div
+      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "100%" }}
+      className="w-full p-4 sm:p-6"
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
       <div className="max-w-7xl mx-auto">
-        <h1 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl sm:text-3xl font-semibold mb-1">
+        <h1
+          style={{ fontFamily: FONTS.display, color: COLORS.night }}
+          className="text-2xl sm:text-3xl font-semibold mb-1"
+        >
           {lang === "sw" ? "Tafuta Mali" : "Browse Properties"}
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-5">
