@@ -4,13 +4,13 @@
 // category) — hii ndiyo namba HALISI zinazotozwa muuzaji wakati
 // akiweka mali (calculateListingFee() kwenye shared.js).
 //
-// Kabla ya hii, Admin > Revenue > Listing Fee ilikuwa na
-// INITIAL_LISTING_TIERS yake — tiers za bei-ya-mali (mfano "TZS 0 –
-// 10,000,000 → fee TZS 20,000") zisizo na uhusiano wowote na fomula
-// halisi iliyotumika kuunda listing (CATEGORIES[].fee = {rate, min,
-// max} kwenye shared.js, kwa kila category — nyumba, magari, n.k.).
-// Admin akibadilisha "Listing Fee" kwenye Revenue, PostPropertyForm
-// haikujua kabisa. Sasa zote mbili zinasoma/kuandika hapa.
+// MUHIMU — UNGANISHO NA categoriesStore.js:
+//   Categories zinatoka categoriesStore.js (chanzo kimoja cha ukweli,
+//   Admin anaongeza/kufuta kupitia System Settings > Categories).
+//   Fee configs hapa zinatakiwa kuwa na key MOJA kwa MOJA kwa kila
+//   category hai. Kama category hai lakini haina fee config,
+//   calculateListingFee() inarudi { error: "NO_FEE_CONFIG" } — UI
+//   inamuelekeza Admin kwenye Revenue > Categories Bila Fee Config.
 //
 // Kama stores nyingine — demo ya front-end pekee, localStorage +
 // custom event. Backend halisi ikiwepo, badilisha functions hizi
@@ -50,7 +50,8 @@ export function getListingFeeConfigs() {
   return readFromStorage();
 }
 
-/** Pata config ya category moja kwa key yake. */
+/** Pata config ya category moja kwa key yake. Inarudi undefined kama
+ *  haipo — calculateListingFee() inashughulikia hilo kwa NO_FEE_CONFIG. */
 export function getListingFeeConfig(categoryKey) {
   return getListingFeeConfigs().find((c) => c.key === categoryKey);
 }
@@ -67,6 +68,56 @@ export function saveListingFeeConfigs(list) {
 export function updateListingFeeConfig(categoryKey, patch) {
   const current = getListingFeeConfigs();
   const next = current.map((c) => (c.key === categoryKey ? { ...c, ...patch } : c));
+  saveListingFeeConfigs(next);
+  return next;
+}
+
+// ============================================================
+// FEE CONFIG MANAGEMENT kwa categories mpya
+// ============================================================
+
+/**
+ * Je, category hii ina fee config? Hutumika na RevenueSection
+ * kuonyesha categories zilizo hai lakini hazina fee bado.
+ */
+export function hasFeeConfig(categoryKey) {
+  return getListingFeeConfigs().some((c) => c.key === categoryKey);
+}
+
+/**
+ * Ongeza fee config ya category mpya kwa default rate/min/max.
+ * Admin anaweza kuhariri baadaye kwa EditablePercent/EditableAmount.
+ *
+ * @param {string} categoryKey - key ya category (mf. "pikipiki")
+ * @param {string} label - label ya kuonyesha (mf. "Pikipiki")
+ */
+export function addFeeConfig(categoryKey, label) {
+  const current = getListingFeeConfigs();
+  if (current.some((c) => c.key === categoryKey)) {
+    throw new Error(`Fee config ya "${categoryKey}" ipo tayari.`);
+  }
+  const next = [
+    ...current,
+    {
+      key: categoryKey,
+      label: label || categoryKey,
+      rate: 0.01,      // 1%
+      min: 10000,      // TZS 10,000
+      max: 100000,     // TZS 100,000
+    },
+  ];
+  saveListingFeeConfigs(next);
+  return next;
+}
+
+/**
+ * Ondoa fee config. Kwa kawaida haihitajiki kwa sababu kufuta
+ * category kunazuia kama kuna listings — lakini hii inasaidia Admin
+ * kama anataka kufuta config pekee (mf. aliyekuwa ameongeza config
+ * ya category isiyotumika).
+ */
+export function removeFeeConfig(categoryKey) {
+  const next = getListingFeeConfigs().filter((c) => c.key !== categoryKey);
   saveListingFeeConfigs(next);
   return next;
 }
