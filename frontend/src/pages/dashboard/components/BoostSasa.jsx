@@ -10,8 +10,8 @@ import {
   boostDaysRemaining,
   applyBoost,
 } from "./shared";
-import { useBoostPackages } from "../../config/boostPackagesStore.js";
-import { notifyBoostPurchased } from "../../config/notificationsStore.js";
+import { useBoostPackages } from "../../../config/boostPackagesStore.js";
+import { notifyBoostPurchased } from "../../../config/notificationsStore.js";
 import PaymentGateway from "./PaymentGateway";
 
 function ListingPicker({ listings, selectedId, onSelect }) {
