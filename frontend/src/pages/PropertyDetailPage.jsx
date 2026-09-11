@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -24,8 +24,6 @@ import {
   Star,
   Camera,
   Car,
-  Fuel,
-  Gauge,
   Settings,
   Trees,
   Home as HomeIcon,
@@ -33,8 +31,11 @@ import {
   Wrench,
   Clock3,
   BellRing,
+  Ban,
 } from "lucide-react";
+import { useListings } from "../config/listingsStore.js";
 import { useWaitingList, joinWaitingList } from "../config/waitingListStore.js";
+import { isBoostActive, isLeadingActive } from "./dashboard/components/shared";
 
 const COLORS = {
   night: "#101A2E",
@@ -45,83 +46,20 @@ const COLORS = {
   sandLine: "#E6E2D6",
 };
 
-// ============================================================
-// MOCK DATA - IMEREKEBISHWA
-// Note: Tumia `titleStatus` badala ya `title` kwa hati
-// ili kuepuka duplicate key 'title' kwenye features object
-// ============================================================
-
-const MOCK_PROPERTY = {
-  id: "p1",
-  title: "Nyumba ya Ghorofa Mbezi Beach",
-  category: "nyumba",
-  categoryLabel: "Nyumba & Majengo",
-  price: 85000000,
-  priceNegotiable: true,
-  // status: "available" | "reserved" | "sold" - real data hii itatoka
-  // kwenye listingsStore/dealsStore (deal ikiwa na reservationFee inayo-
-  // endelea = "reserved"). Imewekwa "reserved" hapa kama DEMO ili
-  // kuonyesha UI ya Waiting List - badilisha kulingana na chanzo halisi.
-  status: "reserved",
-  location: "Mbezi Beach, Dar es Salaam",
-  region: "Dar es Salaam",
-  description:
-    "Nyumba nzuri ya ghorofa yenye vyumba 4 vya kulala, sebule kubwa, jikoni ya kisasa, na eneo la kuegesha magari 3. Iko katika eneo zuri la Mbezi Beach, karibu na shule, hospitali, na maduka. Ina hati miliki kamili na inafaa kwa familia au biashara ya kupangisha.",
-  images: [
-    "/assets/properties/house1.jpg",
-    "/assets/properties/house2.jpg",
-    "/assets/properties/house3.jpg",
-    "/assets/properties/house4.jpg",
-    "/assets/properties/house5.jpg",
-  ],
-  features: {
-    bedrooms: 4,
-    bathrooms: 3,
-    area: "350 sqm",
-    parking: 3,
-    yearBuilt: "2020",
-    titleStatus: "Hati Miliki",   // ← IMEBADILISHWA kutoka `title`
-    furnished: "Semi-Furnished",
-    condition: "Nzuri Sana",
-  },
-  amenities: [
-    "Umeme wa TANESCO",
-    "Maji ya DAWASA",
-    "Ukuta wa Kuzuia",
-    "Geti la Umeme",
-    "CCTV Cameras",
-    "Bustani",
-    "Septic Tank",
-    "Borehole",
-  ],
-  seller: {
-    id: "s1",
-    name: "John Doe",
-    avatar: "J",
-    phone: "0743 895 038",
-    verified: true,
-    rating: 4.8,
-    totalListings: 12,
-    memberSince: "2024",
-  },
-  stats: {
-    views: 214,
-    saves: 45,
-    inquiries: 6,
-  },
-  postedAt: "2026-08-28",
-  isSaved: false,
-  isVerified: true,
-  isFeatured: true,
-};
-
-// Map ya categories
 const CATEGORY_ICONS = {
   nyumba: HomeIcon,
   viwanja: Trees,
   magari: Car,
   biashara: Briefcase,
   mashine: Wrench,
+};
+
+const CATEGORY_LABELS = {
+  nyumba: "Nyumba & Majengo",
+  viwanja: "Viwanja & Mashamba",
+  magari: "Magari",
+  biashara: "Biashara Zinazouzwa",
+  mashine: "Mashine / Heavy Equipment",
 };
 
 function formatTZS(amount) {
@@ -137,42 +75,59 @@ function timeAgo(dateStr) {
   return months === 1 ? "Mwezi 1 uliopita" : `Miezi ${months} iliyopita`;
 }
 
+function reservationCountdown(reservedUntil) {
+  if (!reservedUntil) return "";
+  const ms = new Date(reservedUntil).getTime() - Date.now();
+  if (ms <= 0) return "Inaisha hivi karibuni";
+  const hours = Math.floor(ms / 3600000);
+  if (hours < 24) return `Saa ${hours} zimebaki`;
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  if (remainingHours === 0) return `Siku ${days} zimebaki`;
+  return `Siku ${days} ${remainingHours}saa zimebaki`;
+}
+
 // ============================================================
 // IMAGE GALLERY
 // ============================================================
-
-function ImageGallery({ images, title, isFeatured, isVerified, status }) {
+function ImageGallery({ property }) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const images = property.images || [];
+  const Icon = CATEGORY_ICONS[property.category] || HomeIcon;
+  const isReserved = property.status === "reserved";
+  const isSold = property.status === "sold";
+  const isFeatured = isBoostActive(property);
+  const isVerified = Boolean(property.verified);
 
-  const nextImage = () => {
-    setCurrentIndex((prev) => (prev + 1) % images.length);
-  };
+  if (images.length === 0) {
+    return (
+      <div className="relative w-full h-64 sm:h-96 md:h-[500px] rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center">
+        <Icon size={64} className="text-gray-300" />
+        {(isReserved || isSold) && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <span className="bg-[#101A2E] text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-2">
+              {isSold ? <Ban size={16} /> : <Clock3 size={16} />}
+              {isSold ? "Imeuzwa" : "Ina Reservation"}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
-  const prevImage = () => {
-    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
-  };
+  const nextImage = () => setCurrentIndex((prev) => (prev + 1) % images.length);
+  const prevImage = () => setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
 
   return (
     <>
       <div className="relative w-full h-64 sm:h-96 md:h-[500px] rounded-2xl overflow-hidden bg-gray-100">
-        {/* Main Image */}
         <img
           src={images[currentIndex]}
-          alt={title}
+          alt={property.title}
           className="w-full h-full object-cover"
-          onError={(e) => {
-            // Fallback kama picha haipo
-            e.target.style.display = "none";
-            e.target.parentElement.classList.add("flex", "items-center", "justify-center");
-          }}
+          onError={(e) => { e.target.style.display = "none"; }}
         />
 
-        {/* Fallback icon kama picha haipo */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <HomeIcon size={64} className="text-gray-300" />
-        </div>
-
-        {/* Navigation Arrows */}
         {images.length > 1 && (
           <>
             <button
@@ -192,13 +147,11 @@ function ImageGallery({ images, title, isFeatured, isVerified, status }) {
           </>
         )}
 
-        {/* Image Counter */}
         <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10">
           <Camera size={14} />
           {currentIndex + 1} / {images.length}
         </div>
 
-        {/* Featured Badge */}
         {isFeatured && (
           <div className="absolute top-3 left-3 bg-[#E8A33D] text-[#101A2E] text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Star size={12} fill="#101A2E" />
@@ -206,7 +159,6 @@ function ImageGallery({ images, title, isFeatured, isVerified, status }) {
           </div>
         )}
 
-        {/* Verified Badge */}
         {isVerified && (
           <div className="absolute top-3 right-3 bg-[#2F6D4F] text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Shield size={12} />
@@ -214,19 +166,16 @@ function ImageGallery({ images, title, isFeatured, isVerified, status }) {
           </div>
         )}
 
-        {/* Reserved/Sold Overlay - inaonekana juu ya picha ili mnunuzi
-            ajue mara moja mali haipatikani kwa sasa, kabla hajasoma chini. */}
-        {(status === "reserved" || status === "sold") && (
+        {(isReserved || isSold) && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10 pointer-events-none">
             <span className="bg-[#101A2E] text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-2">
-              <Clock3 size={16} />
-              {status === "sold" ? "Imeuzwa" : "Ina Reservation"}
+              {isSold ? <Ban size={16} /> : <Clock3 size={16} />}
+              {isSold ? "Imeuzwa" : "Ina Reservation"}
             </span>
           </div>
         )}
       </div>
 
-      {/* Thumbnail Strip */}
       {images.length > 1 && (
         <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
           {images.map((img, idx) => (
@@ -249,9 +198,8 @@ function ImageGallery({ images, title, isFeatured, isVerified, status }) {
 }
 
 // ============================================================
-// FEATURES SECTION
+// FEATURES
 // ============================================================
-
 function FeatureItem({ icon: Icon, label, value }) {
   return (
     <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100">
@@ -267,37 +215,19 @@ function FeatureItem({ icon: Icon, label, value }) {
 }
 
 function FeaturesSection({ property }) {
-  const features = property.features;
+  const items = [];
 
-  const featureItems = [];
+  if (property.bedrooms) items.push({ icon: Bed, label: "Vyumba vya Kulala", value: property.bedrooms });
+  if (property.bathrooms) items.push({ icon: Bath, label: "Bafu", value: property.bathrooms });
+  if (property.area) items.push({ icon: Maximize, label: "Ukubwa", value: property.area });
+  if (property.year) items.push({ icon: Calendar, label: "Mwaka", value: property.year });
+  if (property.titleStatus) items.push({ icon: CheckCircle, label: "Hati", value: property.titleStatus });
+  if (property.make) items.push({ icon: Car, label: "Gari", value: `${property.make} ${property.model || ""}`.trim() });
+  if (property.mileage) items.push({ icon: Settings, label: "Mileage", value: property.mileage });
+  if (property.type) items.push({ icon: Settings, label: "Aina", value: property.type });
+  if (property.hours) items.push({ icon: Settings, label: "Saa za Matumizi", value: property.hours });
 
-  if (features.bedrooms) {
-    featureItems.push({ icon: Bed, label: "Vyumba vya Kulala", value: features.bedrooms });
-  }
-  if (features.bathrooms) {
-    featureItems.push({ icon: Bath, label: "Bafu", value: features.bathrooms });
-  }
-  if (features.area) {
-    featureItems.push({ icon: Maximize, label: "Ukubwa", value: features.area });
-  }
-  if (features.parking) {
-    featureItems.push({ icon: Car, label: "Maegesho", value: features.parking });
-  }
-  if (features.yearBuilt) {
-    featureItems.push({ icon: Calendar, label: "Mwaka wa Ujenzi", value: features.yearBuilt });
-  }
-  // ✅ SASA inatumia titleStatus badala ya title
-  if (features.titleStatus) {
-    featureItems.push({ icon: CheckCircle, label: "Hati", value: features.titleStatus });
-  }
-  if (features.condition) {
-    featureItems.push({ icon: Settings, label: "Hali", value: features.condition });
-  }
-  if (features.furnished) {
-    featureItems.push({ icon: HomeIcon, label: "Samani", value: features.furnished });
-  }
-
-  if (featureItems.length === 0) {
+  if (items.length === 0) {
     return (
       <p className="text-sm text-gray-500 text-center py-4">
         Hakuna sifa za ziada zilizoainishwa
@@ -307,7 +237,7 @@ function FeaturesSection({ property }) {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-      {featureItems.map((item, idx) => (
+      {items.map((item, idx) => (
         <FeatureItem key={idx} {...item} />
       ))}
     </div>
@@ -317,33 +247,28 @@ function FeaturesSection({ property }) {
 // ============================================================
 // SELLER CARD
 // ============================================================
-
-function SellerCard({ seller, onContact, status, alreadyOnWaitlist, onJoinWaitlist }) {
-  const isUnavailable = status === "reserved" || status === "sold";
+function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onContact }) {
+  const isReserved = status === "reserved";
+  const isSold = status === "sold";
+  const isUnavailable = isReserved || isSold;
+  const sellerName = property.seller_name || "Muuzaji";
+  const sellerInitial = sellerName.charAt(0).toUpperCase();
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5">
       <div className="flex items-center gap-4 mb-4">
         <div className="w-14 h-14 rounded-full bg-[#E8A33D]/10 flex items-center justify-center text-[#E8A33D] font-bold text-xl flex-shrink-0">
-          {seller.avatar}
+          {sellerInitial}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-800 truncate">{seller.name}</h3>
-            {seller.verified && (
+            <h3 className="font-semibold text-gray-800 truncate">{sellerName}</h3>
+            {property.verified && (
               <CheckCircle size={16} className="text-[#2F6D4F] flex-shrink-0" />
             )}
           </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <div className="flex items-center gap-1">
-              <Star size={12} fill="#E8A33D" color="#E8A33D" />
-              <span className="text-xs font-medium text-gray-700">{seller.rating}</span>
-            </div>
-            <span className="text-xs text-gray-400">•</span>
-            <span className="text-xs text-gray-500">{seller.totalListings} mali</span>
-          </div>
           <p className="text-xs text-gray-400 mt-0.5">
-            Mwanachama tangu {seller.memberSince}
+            Muuzaji kwenye SokoMkononi
           </p>
         </div>
       </div>
@@ -352,24 +277,33 @@ function SellerCard({ seller, onContact, status, alreadyOnWaitlist, onJoinWaitli
         <>
           <div className="mb-3 p-3 rounded-xl bg-[#E8A33D]/10 border border-[#E8A33D]/30">
             <p className="text-xs font-semibold text-[#8A5A16] flex items-center gap-1.5">
-              <Clock3 size={13} />
-              {status === "sold" ? "Mali hii tayari imeuzwa." : "Mali hii tayari ina Reservation."}
+              {isSold ? <Ban size={13} /> : <Clock3 size={13} />}
+              {isSold ? "Mali hii tayari imeuzwa." : "Mali hii tayari ina Reservation."}
             </p>
+            {isReserved && property.reservedUntil && (
+              <p className="text-[11px] text-[#8A5A16] mt-1">
+                {reservationCountdown(property.reservedUntil)}
+              </p>
+            )}
             <p className="text-[11px] text-[#8A5A16]/80 mt-1">
               Jiunge na Waiting List ili tukutaarifu papo hapo endapo itaachiwa huru.
             </p>
           </div>
           <button
             onClick={onJoinWaitlist}
-            disabled={alreadyOnWaitlist}
+            disabled={alreadyOnWaitlist || isSold}
             className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 ${
-              alreadyOnWaitlist
+              alreadyOnWaitlist || isSold
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "bg-[#101A2E] hover:bg-[#0A1220] text-white"
             }`}
           >
             <BellRing size={16} />
-            {alreadyOnWaitlist ? "Tayari Umejiunga" : "Jiunge na Waiting List"}
+            {isSold
+              ? "Imeuzwa Tayari"
+              : alreadyOnWaitlist
+              ? "Tayari Umejiunga"
+              : "Jiunge na Waiting List"}
           </button>
         </>
       ) : (
@@ -382,14 +316,6 @@ function SellerCard({ seller, onContact, status, alreadyOnWaitlist, onJoinWaitli
         </button>
       )}
 
-      <a
-        href={`tel:${seller.phone}`}
-        className="w-full mt-2 border border-[#2F6D4F] text-[#2F6D4F] hover:bg-[#2F6D4F]/5 py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-      >
-        <Phone size={16} />
-        Piga Simu
-      </a>
-
       <div className="mt-4 pt-4 border-t border-gray-100">
         <p className="text-xs text-gray-500 text-center">
           Muuzaji amethibitishwa na SokoMkononi
@@ -400,24 +326,69 @@ function SellerCard({ seller, onContact, status, alreadyOnWaitlist, onJoinWaitli
 }
 
 // ============================================================
+// NOT FOUND
+// ============================================================
+function ListingNotFound({ lang }) {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+        <HomeIcon size={64} className="mx-auto text-gray-300 mb-4" />
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          {lang === "sw" ? "Mali haipatikani" : "Listing not found"}
+        </h1>
+        <p className="text-gray-500 text-sm mb-6">
+          {lang === "sw"
+            ? "Tangazo hili huenda limefutwa au halipo. Tafuta mali nyingine."
+            : "This listing may have been removed or does not exist. Browse other properties."}
+        </p>
+        <Link
+          to="/dashboard/buyer"
+          className="inline-block bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] px-6 py-2.5 rounded-xl font-semibold text-sm transition-colors"
+        >
+          {lang === "sw" ? "Tafuta Mali Nyingine" : "Browse Other Properties"}
+        </Link>
+      </div>
+      <Footer />
+      <BottomNav />
+    </div>
+  );
+}
+
+// ============================================================
 // MAIN COMPONENT
 // ============================================================
-
 export default function PropertyDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t, lang } = useLanguage();
+  const { lang } = useLanguage();
   const { user } = useAuth();
 
-  const [property] = useState(MOCK_PROPERTY);
-  const [isSaved, setIsSaved] = useState(property.isSaved);
+  // === BADILIKO KUU: soma listing halisi kutoka store ===
+  const allListings = useListings();
+  const property = useMemo(() => allListings.find((l) => l.id === id), [allListings, id]);
+
+  const [isSaved, setIsSaved] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
 
   const waitingListEntries = useWaitingList();
-  const alreadyOnWaitlist = waitingListEntries.some(
-    (e) => e.property === property.title && (e.status === "pending" || e.status === "notified")
+  const alreadyOnWaitlist = useMemo(
+    () =>
+      property
+        ? waitingListEntries.some(
+            (e) =>
+              e.property === property.title &&
+              (e.status === "pending" || e.status === "notified")
+          )
+        : false,
+    [waitingListEntries, property]
   );
+
+  // Kama listing haipo (id si sahihi) — onyesha "haipatikani".
+  if (!property) {
+    return <ListingNotFound lang={lang} />;
+  }
 
   const handleJoinWaitlist = () => {
     if (!user) {
@@ -432,18 +403,16 @@ export default function PropertyDetailPage() {
     });
   };
 
-  const handleSave = () => {
-    setIsSaved(!isSaved);
-  };
+  const handleSave = () => setIsSaved(!isSaved);
 
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
         title: property.title,
-        text: property.description,
+        text: property.description || property.title,
         url: window.location.href,
       });
-    } else {
+    } else if (navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
       alert(lang === "sw" ? "Link imenakiliwa!" : "Link copied!");
     }
@@ -456,6 +425,8 @@ export default function PropertyDetailPage() {
     }
     setShowContactModal(true);
   };
+
+  const categoryLabel = CATEGORY_LABELS[property.category] || "Mali";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -472,23 +443,16 @@ export default function PropertyDetailPage() {
             to={`/kategoria/${property.category}`}
             className="hover:text-[#E8A33D] transition-colors whitespace-nowrap"
           >
-            {property.categoryLabel}
+            {categoryLabel}
           </Link>
           <ChevronRight size={14} className="flex-shrink-0" />
           <span className="text-gray-800 font-medium truncate">{property.title}</span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* ================= LEFT - Main Content ================= */}
+          {/* LEFT */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Image Gallery */}
-            <ImageGallery 
-              images={property.images} 
-              title={property.title}
-              isFeatured={property.isFeatured}
-              isVerified={property.isVerified}
-              status={property.status}
-            />
+            <ImageGallery property={property} />
 
             {/* Title & Price */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
@@ -503,7 +467,7 @@ export default function PropertyDetailPage() {
                   </div>
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 flex-wrap">
                     <span className="flex items-center gap-1">
-                      <Eye size={12} /> {property.stats.views} {lang === "sw" ? "walioangalia" : "views"}
+                      <Eye size={12} /> {property.views || 0} {lang === "sw" ? "walioangalia" : "views"}
                     </span>
                     <span>•</span>
                     <span>{timeAgo(property.postedAt)}</span>
@@ -537,15 +501,24 @@ export default function PropertyDetailPage() {
                 </div>
               </div>
 
-              {/* Price */}
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <div className="flex items-end gap-3 flex-wrap">
                   <p className="text-2xl sm:text-3xl font-bold text-[#C1502E]">
                     {formatTZS(property.price)}
                   </p>
-                  {property.priceNegotiable && (
+                  {property.status === "live" && (
                     <span className="text-xs font-medium text-[#2F6D4F] bg-[#2F6D4F]/10 px-2.5 py-1 rounded-full mb-1">
-                      {lang === "sw" ? "Bei inajadiliwa" : "Negotiable"}
+                      {lang === "sw" ? "Inapatikana" : "Available"}
+                    </span>
+                  )}
+                  {property.status === "reserved" && (
+                    <span className="text-xs font-medium text-[#8A5A16] bg-[#E8A33D]/15 px-2.5 py-1 rounded-full mb-1">
+                      {lang === "sw" ? "Ina Reservation" : "Reserved"}
+                    </span>
+                  )}
+                  {property.status === "sold" && (
+                    <span className="text-xs font-medium text-white bg-[#101A2E] px-2.5 py-1 rounded-full mb-1">
+                      {lang === "sw" ? "Imeuzwa" : "Sold"}
                     </span>
                   )}
                 </div>
@@ -566,16 +539,6 @@ export default function PropertyDetailPage() {
                   {lang === "sw" ? "Maelezo" : "Details"}
                 </button>
                 <button
-                  onClick={() => setActiveTab("amenities")}
-                  className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                    activeTab === "amenities"
-                      ? "text-[#E8A33D] border-b-2 border-[#E8A33D]"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {lang === "sw" ? "Huduma" : "Amenities"}
-                </button>
-                <button
                   onClick={() => setActiveTab("location")}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     activeTab === "location"
@@ -594,8 +557,8 @@ export default function PropertyDetailPage() {
                       <h3 className="font-semibold text-gray-800 mb-3">
                         {lang === "sw" ? "Maelezo" : "Description"}
                       </h3>
-                      <p className="text-gray-600 text-sm leading-relaxed">
-                        {property.description}
+                      <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">
+                        {property.description || (lang === "sw" ? "Hakuna maelezo yaliyotolewa." : "No description provided.")}
                       </p>
                     </div>
 
@@ -605,31 +568,6 @@ export default function PropertyDetailPage() {
                       </h3>
                       <FeaturesSection property={property} />
                     </div>
-                  </div>
-                )}
-
-                {activeTab === "amenities" && (
-                  <div>
-                    <h3 className="font-semibold text-gray-800 mb-4">
-                      {lang === "sw" ? "Huduma Zilizopo" : "Available Amenities"}
-                    </h3>
-                    {property.amenities.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {property.amenities.map((amenity, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-lg"
-                          >
-                            <CheckCircle size={16} className="text-[#2F6D4F] flex-shrink-0" />
-                            <span className="text-sm text-gray-700">{amenity}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500 text-center py-4">
-                        {lang === "sw" ? "Hakuna huduma zilizoainishwa" : "No amenities listed"}
-                      </p>
-                    )}
                   </div>
                 )}
 
@@ -653,117 +591,63 @@ export default function PropertyDetailPage() {
             </div>
           </div>
 
-          {/* ================= RIGHT - Sidebar ================= */}
+          {/* RIGHT */}
           <div className="lg:col-span-1 space-y-4">
-            {/* Seller Card */}
             <SellerCard
-              seller={property.seller}
-              onContact={handleContact}
+              property={property}
               status={property.status}
               alreadyOnWaitlist={alreadyOnWaitlist}
               onJoinWaitlist={handleJoinWaitlist}
+              onContact={handleContact}
             />
 
-            {/* Safety Tips */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                 <Shield size={16} className="text-[#E8A33D]" />
                 {lang === "sw" ? "Vidokezo vya Usalama" : "Safety Tips"}
               </h3>
               <ul className="space-y-2.5">
-                {(lang === "sw" ? [
-                  "Kutana na muuzaji sehemu za wazi",
-                  "Angalia mali kabla ya kulipa",
-                  "Thibitisha hati za mali",
-                  "Tumia Deal Room yetu kwa mazungumzo",
-                ] : [
-                  "Meet the seller in open places",
-                  "Inspect the property before paying",
-                  "Verify property documents",
-                  "Use our Deal Room for conversations",
-                ]).map((tip, idx) => (
+                {(lang === "sw"
+                  ? [
+                      "Kutana na muuzaji sehemu za wazi",
+                      "Angalia mali kabla ya kulipa",
+                      "Thibitisha hati za mali",
+                      "Tumia Deal Room yetu kwa mazungumzo",
+                    ]
+                  : [
+                      "Meet the seller in open places",
+                      "Inspect the property before paying",
+                      "Verify property documents",
+                      "Use our Deal Room for conversations",
+                    ]
+                ).map((tip, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-xs text-gray-600">
                     <CheckCircle size={14} className="text-[#2F6D4F] mt-0.5 flex-shrink-0" />
                     {tip}
                   </li>
                 ))}
               </ul>
-              <Link
-                to="/kuhusu#usalama"
-                className="block mt-3 text-xs text-[#E8A33D] font-medium hover:underline"
-              >
-                {lang === "sw" ? "Soma zaidi kuhusu usalama →" : "Read more about safety →"}
-              </Link>
             </div>
 
-            {/* Stats */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <h3 className="font-semibold text-gray-800 mb-3">
                 {lang === "sw" ? "Takwimu" : "Statistics"}
               </h3>
-              <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="grid grid-cols-2 gap-3 text-center">
                 <div>
-                  <p className="text-lg font-bold text-gray-800">{property.stats.views}</p>
+                  <p className="text-lg font-bold text-gray-800">{property.views || 0}</p>
                   <p className="text-xs text-gray-500">
                     {lang === "sw" ? "Walioangalia" : "Views"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-gray-800">{property.stats.saves}</p>
-                  <p className="text-xs text-gray-500">
-                    {lang === "sw" ? "Wamehifadhi" : "Saves"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-gray-800">
-                    {property.stats.inquiries}
-                  </p>
+                  <p className="text-lg font-bold text-gray-800">{property.inquiries || 0}</p>
                   <p className="text-xs text-gray-500">
                     {lang === "sw" ? "Maswali" : "Inquiries"}
                   </p>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Similar Properties */}
-        <div className="mt-10">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800">
-              {lang === "sw" ? "Mali Zinazofanana" : "Similar Properties"}
-            </h2>
-            <Link
-              to={`/kategoria/${property.category}`}
-              className="text-[#E8A33D] text-sm font-medium hover:underline"
-            >
-              {lang === "sw" ? "Tazama Zote →" : "View All →"}
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((item) => (
-              <Link
-                key={item}
-                to={`/mali/${item}`}
-                className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
-              >
-                <div className="h-40 bg-gray-100 flex items-center justify-center">
-                  <HomeIcon size={32} className="text-gray-300" />
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-800 text-sm truncate">
-                    {lang === "sw" ? "Nyumba ya Vyumba 3, Mbezi" : "3-Bedroom House, Mbezi"}
-                  </h3>
-                  <p className="text-[#C1502E] font-bold text-sm mt-1">
-                    TZS 35,000,000
-                  </p>
-                  <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
-                    <MapPin size={12} />
-                    Dar es Salaam
-                  </div>
-                </div>
-              </Link>
-            ))}
           </div>
         </div>
       </div>
@@ -773,7 +657,7 @@ export default function PropertyDetailPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-2">
-              {lang === "sw" ? "Wasiliana na" : "Contact"} {property.seller.name}
+              {lang === "sw" ? "Wasiliana na" : "Contact"} {property.seller_name || "Muuzaji"}
             </h3>
             <p className="text-sm text-gray-500 mb-4">
               {lang === "sw"
@@ -781,18 +665,6 @@ export default function PropertyDetailPage() {
                 : "Choose how you'd like to get in touch:"}
             </p>
             <div className="space-y-2">
-              <a
-                href={`tel:${property.seller.phone}`}
-                className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                <Phone size={20} className="text-[#2F6D4F]" />
-                <div>
-                  <p className="text-sm font-medium text-gray-800">
-                    {lang === "sw" ? "Piga Simu" : "Call"}
-                  </p>
-                  <p className="text-xs text-gray-500">{property.seller.phone}</p>
-                </div>
-              </a>
               <button
                 onClick={() => {
                   setShowContactModal(false);
