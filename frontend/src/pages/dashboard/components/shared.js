@@ -1,8 +1,26 @@
-import { Home, Trees, Car, Briefcase, Wrench } from "lucide-react";
+// ============================================================
+// shared.js
+// Helper functions na brand tokens za SokoMkononi.
+//
+// MWISHO WA MABADILIKO (Hatua 1):
+//   - CATEGORIES array IMEONDOLEWA — sasa zinatoka
+//     ../../../config/categoriesStore.js (chanzo kimoja cha ukweli,
+//     kinachodhibitiwa na Admin kupitia Dashboard > Categories)
+//   - getCategory() inarudisha category object kutoka store
+//   - getCategoryIconByKey() inarudisha lucide-react component
+//   - getCategoryLabel() shortcut ya label moja kwa moja
+//   - getActiveCategories re-export kwa urahisi
+// ============================================================
+
 import { getBoostPackage as getBoostPackageFromStore } from "../../../config/boostPackagesStore.js";
 import { getListingFeeConfig } from "../../../config/listingFeeStore.js";
 import { getLeadingFeeConfig } from "../../../config/leadingFeeStore.js";
-import { getPlatformPolicy } from "../../../config/systemSettingsStore.js"; 
+import { getPlatformPolicy } from "../../../config/systemSettingsStore.js";
+import {
+  getCategory as getCategoryFromStore,
+  getActiveCategories,
+  getCategoryIcon,
+} from "../../../config/categoriesStore.js";
 
 // ---- Brand tokens (SokoMkononi) ----
 export const COLORS = {
@@ -20,90 +38,59 @@ export const FONTS = {
   body: "'Manrope', sans-serif",
 };
 
-// ---- Categories (icon + label + category-specific fields) ----
-export const CATEGORIES = [
-  {
-    key: "nyumba",
-    label: "Nyumba & Majengo",
-    icon: Home,
-    extra: [
-      { key: "vyumba", label: "Vyumba vya kulala", type: "number", placeholder: "mfano: 3" },
-      { key: "bafu", label: "Bafu", type: "number", placeholder: "mfano: 2" },
-      { key: "ukubwa", label: "Ukubwa (sqm)", type: "text", placeholder: "mfano: 250 sqm" },
-      {
-        key: "title",
-        label: "Hati (Title Status)",
-        type: "select",
-        options: ["Hati Miliki", "Hati ya Kimila", "Inasubiri Hati", "Hakuna Hati"],
-      },
-    ],
-  },
-  {
-    key: "viwanja",
-    label: "Viwanja & Mashamba",
-    icon: Trees,
-    extra: [
-      { key: "ukubwa", label: "Ukubwa wa Eneo", type: "text", placeholder: "mfano: nusu ekari" },
-      {
-        key: "title",
-        label: "Hati / Title Status",
-        type: "select",
-        options: ["Hati Miliki", "Hati ya Kimila", "Inasubiri Hati", "Hakuna Hati"],
-      },
-      {
-        key: "matumizi",
-        label: "Matumizi ya Ardhi",
-        type: "select",
-        options: ["Makazi", "Kilimo", "Biashara", "Viwanda"],
-      },
-    ],
-  },
-  {
-    key: "magari",
-    label: "Magari",
-    icon: Car,
-    extra: [
-      { key: "make_model", label: "Make / Model / Mwaka", type: "text", placeholder: "mfano: Toyota Harrier 2016" },
-      { key: "mileage", label: "Mileage (km)", type: "number", placeholder: "mfano: 85000" },
-      { key: "transmission", label: "Transmission", type: "select", options: ["Automatic", "Manual"] },
-      {
-        key: "mafuta",
-        label: "Aina ya Mafuta",
-        type: "select",
-        options: ["Petrol", "Diesel", "Hybrid", "Umeme (EV)"],
-      },
-    ],
-  },
-  {
-    key: "biashara",
-    label: "Biashara Zinazouzwa",
-    icon: Briefcase,
-    extra: [
-      { key: "aina", label: "Aina ya Biashara", type: "text", placeholder: "mfano: Duka la vifaa vya ujenzi" },
-      { key: "mapato", label: "Mapato ya Wastani (kwa mwezi)", type: "text", placeholder: "TZS ..." },
-      { key: "muda", label: "Muda Biashara Ikiwepo", type: "text", placeholder: "mfano: miaka 4" },
-    ],
-  },
-  {
-    key: "mashine",
-    label: "Mashine / Heavy Equipment",
-    icon: Wrench,
-    extra: [
-      { key: "aina", label: "Aina ya Mashine", type: "text", placeholder: "mfano: Excavator" },
-      { key: "hours", label: "Saa za Matumizi", type: "number", placeholder: "mfano: 3200" },
-      {
-        key: "hali",
-        label: "Hali",
-        type: "select",
-        options: ["Mpya", "Nzuri Sana", "Nzuri", "Inahitaji Matengenezo"],
-      },
-    ],
-  },
-];
+// ============================================================
+// CATEGORIES — sasa zinatoka categoriesStore.js
+// ============================================================
+// Muundo wa category: { key, label: {sw,en}, description: {sw,en},
+//                       iconKey, isPopular, active, extra[] }
+//
+// Icons zinahifadhiwa kama strings (mf. "Home", "Car") — UI inarudisha
+// component kwa getCategoryIconByKey("Home") au
+// getCategoryIcon("Home") moja kwa moja kutoka store.
+// ============================================================
 
+/**
+ * getCategory(key) — rudisha category object kutoka store.
+ *
+ * @example
+ *   const cat = getCategory("nyumba");
+ *   // cat.label.sw === "Nyumba & Majengo"
+ *   // cat.iconKey === "Home"
+ *   // cat.extra === [{key:"vyumba", ...}, ...]
+ */
 export function getCategory(key) {
-  return CATEGORIES.find((c) => c.key === key);
+  return getCategoryFromStore(key);
 }
+
+/**
+ * getCategoryIconByKey(iconKey) — rudisha lucide-react component.
+ *
+ * @example
+ *   const Icon = getCategoryIconByKey("Home"); // <Home />
+ *   <Icon size={20} />
+ */
+export function getCategoryIconByKey(iconKey) {
+  return getCategoryIcon(iconKey);
+}
+
+/**
+ * getCategoryLabel(key, lang) — shortcut ya label moja kwa moja.
+ *
+ * @example
+ *   getCategoryLabel("nyumba", "sw") === "Nyumba & Majengo"
+ *   getCategoryLabel("nyumba", "en") === "Houses & Buildings"
+ */
+export function getCategoryLabel(key, lang = "sw") {
+  const cat = getCategory(key);
+  if (!cat) return key;
+  return cat.label?.[lang] || cat.label?.sw || key;
+}
+
+/**
+ * Re-export ya getActiveCategories kutoka store — kwa components
+ * zinazo-import kutoka shared.js.
+ */
+export { getActiveCategories };
 
 // ---- Money helpers ----
 export function parsePrice(value) {
@@ -220,22 +207,17 @@ export function applyLeading(listing) {
 }
 
 // ============================================================
-// === IMEBADILISHWA ===
-// buildListingFromSubmission — sasa ina-hoist fields muhimu kutoka
-// `extra` kwenda top-level, ili listing mpya ifanane kabisa na
-// SEED_LISTINGS (PropertyDetail, CategoryPage, BrowseProperties zote
-// zinaweza kuisoma kwa uthabiti bila kujua `extra`).
+// buildListingFromSubmission
+// Ina-hoist fields muhimu kutoka `extra` kwenda top-level, ili listing
+// mpya ifanane kabisa na SEED_LISTINGS.
 //
 // Pia inaweka `expiresAt` kutoka platform policy (Admin > System
-// Settings > Platform Policy) — siku 60 kwa default, inaweza
-// kubadilishwa na Admin bila kugusa code.
+// Settings > Platform Policy) — siku 60 kwa default.
 // ============================================================
 export function buildListingFromSubmission({ categoryKey, base, extra, photoCount }) {
   const feeInfo = calculateListingFee(categoryKey, base.price);
 
-  // Hoist helpers — kila field inaongezwa kama ipo, ili listing isiwe
-  // na keys tupu (undefined). Hii inafanya listing mpya ifanane na
-  // muundo wa SEED_LISTINGS.
+  // Hoist helpers — kila field inaongezwa kama ipo.
   const hoisted = {};
 
   // Common (nyumba, viwanja)
