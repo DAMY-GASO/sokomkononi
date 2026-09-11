@@ -25,6 +25,7 @@ import {
   leadingDaysRemaining,
 } from "./shared";
 import { useActiveBannerAds, bannerDaysRemaining } from "../../../config/bannerAdsStore.js";
+import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import PaymentGateway from "./PaymentGateway";
 
@@ -85,7 +86,8 @@ function ListingCard({
   lang,
 }) {
   const category = getCategory(listing.category);
-  const Icon = category?.icon;
+  const Icon = getCategoryIcon(category?.iconKey);
+  const categoryLabel = category?.label?.[lang] || category?.label?.sw || listing.category;
   const isFaded = listing.status === "sold" || listing.status === "expired";
   const isReserved = listing.status === "reserved";
 
@@ -139,7 +141,7 @@ function ListingCard({
         </div>
 
         <p style={{ color: "rgba(16,26,46,0.5)" }} className="text-xs mb-2">
-          {category?.label}
+          {categoryLabel}
         </p>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3">
@@ -157,7 +159,7 @@ function ListingCard({
             {listing.location}
           </span>
           <span style={{ color: "rgba(16,26,46,0.4)" }} className="text-xs">
-            {timeAgo(listing.postedAt)}
+            {timeAgo(listing.postedAt, lang)}
           </span>
         </div>
 
