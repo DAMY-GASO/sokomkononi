@@ -12,8 +12,9 @@ import {
 } from "lucide-react";
 import { COLORS, FONTS, formatTZS, timeAgo } from "./dashboard/components/shared";
 import { useConversations, sendMessage, markConversationRead } from "../config/messagesStore.js";
+import { useLanguage } from "../context/LanguageContext.jsx";
 
-function ConversationListItem({ convo, active, onSelect }) {
+function ConversationListItem({ convo, active, onSelect, lang }) {
   return (
     <button
       onClick={() => onSelect(convo.id)}
@@ -43,7 +44,7 @@ function ConversationListItem({ convo, active, onSelect }) {
             {convo.name}
           </p>
           <span style={{ color: "rgba(16,26,46,0.4)" }} className="text-[10px] shrink-0">
-            {timeAgo(convo.lastAt)}
+            {timeAgo(convo.lastAt, lang)}
           </span>
         </div>
         <p
@@ -65,7 +66,7 @@ function ConversationListItem({ convo, active, onSelect }) {
   );
 }
 
-function ChatView({ convo, onBack, onSend }) {
+function ChatView({ convo, onBack, onSend, lang }) {
   const [text, setText] = useState("");
 
   const handleSend = () => {
@@ -81,7 +82,11 @@ function ChatView({ convo, onBack, onSend }) {
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="flex items-center gap-3 border-b p-3 sm:p-4"
       >
-        <button onClick={onBack} className="md:hidden shrink-0" aria-label="Rudi">
+        <button
+          onClick={onBack}
+          className="md:hidden shrink-0"
+          aria-label={lang === "sw" ? "Rudi" : "Back"}
+        >
           <ArrowLeft size={18} color={COLORS.night} />
         </button>
         <div className="relative flex-shrink-0">
@@ -102,8 +107,17 @@ function ChatView({ convo, onBack, onSend }) {
           <p style={{ color: COLORS.night }} className="text-sm font-semibold truncate">
             {convo.name}
           </p>
-          <p style={{ color: convo.online ? COLORS.green : "rgba(16,26,46,0.5)" }} className="text-xs">
-            {convo.online ? "Yupo mtandaoni" : "Hayupo mtandaoni"}
+          <p
+            style={{ color: convo.online ? COLORS.green : "rgba(16,26,46,0.5)" }}
+            className="text-xs"
+          >
+            {convo.online
+              ? lang === "sw"
+                ? "Yupo mtandaoni"
+                : "Online"
+              : lang === "sw"
+                ? "Hayupo mtandaoni"
+                : "Offline"}
           </p>
         </div>
         <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
@@ -134,10 +148,15 @@ function ChatView({ convo, onBack, onSend }) {
                 <p className="text-sm">{m.text}</p>
                 <div
                   className="flex items-center gap-1 justify-end mt-1"
-                  style={{ color: isMe ? "rgba(245,243,236,0.6)" : "rgba(16,26,46,0.4)" }}
+                  style={{
+                    color: isMe ? "rgba(245,243,236,0.6)" : "rgba(16,26,46,0.4)",
+                  }}
                 >
                   <span className="text-[10px]">
-                    {new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {new Date(m.at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </span>
                   {isMe && (m.read ? <CheckCheck size={12} /> : <Check size={12} />)}
                 </div>
@@ -153,9 +172,13 @@ function ChatView({ convo, onBack, onSend }) {
         className="flex items-center gap-2 p-3 border-t"
       >
         <input
-          style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }}
+          style={{
+            background: COLORS.sand,
+            borderColor: COLORS.sandLine,
+            color: COLORS.night,
+          }}
           className="flex-1 rounded-full border px-4 py-2.5 text-sm outline-none"
-          placeholder="Andika ujumbe..."
+          placeholder={lang === "sw" ? "Andika ujumbe..." : "Type a message..."}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
@@ -168,7 +191,7 @@ function ChatView({ convo, onBack, onSend }) {
             color: text.trim() ? COLORS.night : "rgba(16,26,46,0.4)",
           }}
           className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-          aria-label="Tuma"
+          aria-label={lang === "sw" ? "Tuma" : "Send"}
         >
           <Send size={16} />
         </button>
@@ -178,13 +201,14 @@ function ChatView({ convo, onBack, onSend }) {
 }
 
 export default function MessagesPage({ initialConversationId = null }) {
+  const { lang } = useLanguage();
   const convos = useConversations();
-  const [selectedId, setSelectedId] = useState(initialConversationId || convos[0]?.id || null);
+  const [selectedId, setSelectedId] = useState(
+    initialConversationId || convos[0]?.id || null
+  );
   const [mobileShowChat, setMobileShowChat] = useState(!!initialConversationId);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Notification ikielekeza kwenye mazungumzo maalum (?c=<id>), fungua
-  // moja kwa moja hata kama page ilikuwa tayari imefunguliwa awali.
   useEffect(() => {
     if (initialConversationId) {
       setSelectedId(initialConversationId);
@@ -210,15 +234,21 @@ export default function MessagesPage({ initialConversationId = null }) {
   };
 
   return (
-    <div style={{ background: COLORS.sand, fontFamily: FONTS.body, height: "100%" }} className="w-full flex flex-col">
+    <div
+      style={{ background: COLORS.sand, fontFamily: FONTS.body, height: "100%" }}
+      className="w-full flex flex-col"
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
       <div className="p-4 sm:p-6 pb-2">
         <div className="flex items-center gap-3 mb-1">
-          <h1 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl sm:text-3xl font-semibold">
-            Ujumbe
+          <h1
+            style={{ fontFamily: FONTS.display, color: COLORS.night }}
+            className="text-2xl sm:text-3xl font-semibold"
+          >
+            {lang === "sw" ? "Ujumbe" : "Messages"}
           </h1>
           {totalUnread > 0 && (
             <span
@@ -230,18 +260,29 @@ export default function MessagesPage({ initialConversationId = null }) {
           )}
         </div>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-4">
-          Mazungumzo yako na wanunuzi na wauzaji.
+          {lang === "sw"
+            ? "Mazungumzo yako na wanunuzi na wauzaji."
+            : "Your conversations with buyers and sellers."}
         </p>
 
         {/* Search */}
         <div className="relative max-w-md">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tafuta mazungumzo..."
-            style={{ background: "white", borderColor: COLORS.sandLine, color: COLORS.night }}
+            placeholder={
+              lang === "sw" ? "Tafuta mazungumzo..." : "Search conversations..."
+            }
+            style={{
+              background: "white",
+              borderColor: COLORS.sandLine,
+              color: COLORS.night,
+            }}
             className="w-full rounded-xl border pl-10 pr-3 py-2.5 text-sm outline-none"
           />
         </div>
@@ -251,7 +292,9 @@ export default function MessagesPage({ initialConversationId = null }) {
         {/* List pane */}
         <div
           style={{ borderColor: COLORS.sandLine }}
-          className={`${mobileShowChat ? "hidden" : "flex"} md:flex flex-col w-full md:w-80 shrink-0 border-r px-3 sm:px-4 pb-4 gap-2 overflow-y-auto`}
+          className={`${
+            mobileShowChat ? "hidden" : "flex"
+          } md:flex flex-col w-full md:w-80 shrink-0 border-r px-3 sm:px-4 pb-4 gap-2 overflow-y-auto`}
         >
           {filteredConvos.length === 0 ? (
             <div
@@ -260,7 +303,7 @@ export default function MessagesPage({ initialConversationId = null }) {
             >
               <MessageSquare size={40} className="mx-auto text-gray-300 mb-2" />
               <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-sm">
-                Hakuna mazungumzo
+                {lang === "sw" ? "Hakuna mazungumzo" : "No conversations"}
               </p>
             </div>
           ) : (
@@ -270,25 +313,31 @@ export default function MessagesPage({ initialConversationId = null }) {
                 convo={c}
                 active={c.id === selectedId}
                 onSelect={handleSelect}
+                lang={lang}
               />
             ))
           )}
         </div>
 
         {/* Chat pane */}
-        <div className={`${mobileShowChat ? "flex" : "hidden"} md:flex flex-1 min-w-0 flex-col`}>
+        <div
+          className={`${mobileShowChat ? "flex" : "hidden"} md:flex flex-1 min-w-0 flex-col`}
+        >
           {selectedConvo ? (
             <ChatView
               convo={selectedConvo}
               onBack={() => setMobileShowChat(false)}
               onSend={handleSend}
+              lang={lang}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <MessageSquare size={56} className="text-gray-300 mx-auto mb-3" />
                 <p style={{ color: "rgba(16,26,46,0.45)" }} className="text-sm">
-                  Chagua mazungumzo kuanza.
+                  {lang === "sw"
+                    ? "Chagua mazungumzo kuanza."
+                    : "Select a conversation to start."}
                 </p>
               </div>
             </div>
