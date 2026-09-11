@@ -26,6 +26,7 @@ import { COLORS, FONTS, getCategory, formatTZS, timeAgo } from "./shared";
 import { useReservationRates, calcReservationFee } from "../../../config/feePolicy.js";
 import { useDeals, updateDeal as updateDealInStore } from "../../../config/dealsStore.js";
 import { notifyPaymentProofSubmitted } from "../../../config/notificationsStore.js";
+import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 
 const getDealStatus = (lang) => ({
@@ -411,7 +412,7 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
               Ref: <span className="font-mono">{proof.reference}</span>
             </p>
             <p style={{ color: "rgba(16,26,46,0.4)" }} className="mt-0.5">
-              {lang === "sw" ? "Zimetumwa" : "Submitted"} {timeAgo(proof.submittedAt)}
+              {lang === "sw" ? "Zimetumwa" : "Submitted"} {timeAgo(proof.submittedAt, lang)}
             </p>
           </div>
         </div>
@@ -476,7 +477,7 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
 
 function DealListItem({ deal, active, onSelect, lang }) {
   const category = getCategory(deal.category);
-  const Icon = category?.icon;
+  const Icon = getCategoryIcon(category?.iconKey);
   const status = getDealStatus(lang)[deal.status];
   const lastMessage = deal.messages[deal.messages.length - 1];
 
@@ -501,7 +502,7 @@ function DealListItem({ deal, active, onSelect, lang }) {
             {deal.counterpartyName}
           </p>
           <span style={{ color: "rgba(16,26,46,0.4)" }} className="text-[10px] shrink-0">
-            {timeAgo(lastMessage.at)}
+            {timeAgo(lastMessage.at, lang)}
           </span>
         </div>
         <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs truncate mb-1.5">
@@ -742,8 +743,8 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
           </div>
           <p style={{ color: "rgba(16,26,46,0.4)" }} className="text-[10px]">
             {lang === "sw"
-              ? "Kwa demo hii, malipo yanathibitishwa papo hapo. Kwenye uzalishaji itaunganishwa na gateway halisi ya M-Pesa/Tigo Pesa/Airtel Money."
-              : "In this demo, payments are confirmed instantly. In production this will connect to a real M-Pesa/Tigo Pesa/Airtel Money gateway."}
+              ? "Kwa demo hii, malipo yanathibitishwa papo hapo. Kwenye uzalishaji itaunganishwa na gateway halisi ya M-Pesa/Mixx by Yas/Airtel Money."
+              : "In this demo, payments are confirmed instantly. In production this will connect to a real M-Pesa/Mixx by Yas/Airtel Money gateway."}
           </p>
         </>
       )}
@@ -770,6 +771,7 @@ function DealDetail({
   const [offerAmount, setOfferAmount] = useState("");
   const [reserveOpen, setReserveOpen] = useState(false);
   const category = getCategory(deal.category);
+  const CategoryIcon = getCategoryIcon(category?.iconKey);
   const status = getDealStatus(lang)[deal.status];
   const counterpartyLabel =
     side === "seller"
@@ -804,7 +806,7 @@ function DealDetail({
           style={{ background: COLORS.night }}
           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
         >
-          {category?.icon && <category.icon size={15} color={COLORS.gold} />}
+          {CategoryIcon && <CategoryIcon size={15} color={COLORS.gold} />}
         </div>
         <div className="flex-1 min-w-0">
           <p style={{ color: COLORS.night }} className="text-sm font-semibold truncate">
