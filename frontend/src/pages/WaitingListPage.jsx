@@ -10,7 +10,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { COLORS, FONTS, getCategory, formatTZS, timeAgo } from "./dashboard/components/shared";
-import { useWaitingList, leaveWaitingList as leaveWaitingListStore } from "./config/waitingListStore.js";
+import { useWaitingList, leaveWaitingList as leaveWaitingListStore } from "../config/waitingListStore.js";
 
 // Waiting List = mnunuzi anajiunga na foleni ya mali ambayo tayari ina
 // reservation/imeuzwa, ili apate taarifa endapo nafasi itafunguka tena
