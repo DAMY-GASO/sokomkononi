@@ -3,11 +3,14 @@ import { ImagePlus, X, ChevronLeft, Check } from "lucide-react";
 import {
   COLORS,
   FONTS,
-  CATEGORIES,
   formatTZS,
   calculateListingFee,
   buildListingFromSubmission,
 } from "./shared";
+import {
+  useActiveCategories,
+  getCategoryIcon,
+} from "../../../config/categoriesStore.js";
 import PaymentGateway from "./PaymentGateway";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 
@@ -35,6 +38,8 @@ export default function PostPropertyForm({
   onGoToBoost = () => {},
 }) {
   const { lang } = useLanguage();
+  const categories = useActiveCategories();
+
   const [categoryKey, setCategoryKey] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [stage, setStage] = useState("form"); // form | review | paying | paid
@@ -49,7 +54,9 @@ export default function PostPropertyForm({
   });
   const [extra, setExtra] = useState({});
 
-  const category = CATEGORIES.find((c) => c.key === categoryKey);
+  // category object kutoka store (sasa ni object yenye label: {sw,en})
+  const category = categories.find((c) => c.key === categoryKey);
+  const categoryLabel = category?.label?.[lang] || category?.label?.sw || "";
   const feeInfo = calculateListingFee(categoryKey, base.price);
 
   const handlePhotoAdd = (e) => {
@@ -107,7 +114,10 @@ export default function PostPropertyForm({
   const contactPrefOptions = [
     { value: "Simu", label: lang === "sw" ? "Simu" : "Phone" },
     { value: "WhatsApp", label: "WhatsApp" },
-    { value: "Ujumbe wa ndani (In-app)", label: lang === "sw" ? "Ujumbe wa ndani (In-app)" : "In-app message" },
+    {
+      value: "Ujumbe wa ndani (In-app)",
+      label: lang === "sw" ? "Ujumbe wa ndani (In-app)" : "In-app message",
+    },
   ];
 
   if (stage === "review" || stage === "paying") {
@@ -162,7 +172,7 @@ export default function PostPropertyForm({
                 </div>
                 <div className="flex justify-between text-xs mb-1.5">
                   <span style={{ color: "rgba(16,26,46,0.6)" }}>
-                    {lang === "sw" ? "Rate" : "Rate"} ({category.label})
+                    Rate ({categoryLabel})
                   </span>
                   <span style={{ color: COLORS.night }} className="font-medium">
                     {(feeInfo.rate * 100).toFixed(1)}%
@@ -311,7 +321,7 @@ export default function PostPropertyForm({
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-6">
           {category
-            ? `${lang === "sw" ? "Category" : "Category"}: ${category.label}`
+            ? `${lang === "sw" ? "Category" : "Category"}: ${categoryLabel}`
             : lang === "sw"
               ? "Chagua category ya mali unayotaka kuiweka"
               : "Choose the category of the property you want to list"}
@@ -319,24 +329,27 @@ export default function PostPropertyForm({
 
         {!category && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {CATEGORIES.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setCategoryKey(key)}
-                style={{ borderColor: COLORS.sandLine, background: "white" }}
-                className="flex flex-col items-start gap-3 p-4 rounded-2xl border text-left hover:shadow-sm transition-shadow"
-              >
-                <div
-                  style={{ background: COLORS.night }}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+            {categories.map(({ key, label, iconKey }) => {
+              const Icon = getCategoryIcon(iconKey);
+              return (
+                <button
+                  key={key}
+                  onClick={() => setCategoryKey(key)}
+                  style={{ borderColor: COLORS.sandLine, background: "white" }}
+                  className="flex flex-col items-start gap-3 p-4 rounded-2xl border text-left hover:shadow-sm transition-shadow"
                 >
-                  <Icon size={18} color={COLORS.gold} />
-                </div>
-                <span style={{ color: COLORS.night }} className="text-sm font-semibold">
-                  {label}
-                </span>
-              </button>
-            ))}
+                  <div
+                    style={{ background: COLORS.night }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  >
+                    <Icon size={18} color={COLORS.gold} />
+                  </div>
+                  <span style={{ color: COLORS.night }} className="text-sm font-semibold">
+                    {label[lang] || label.sw}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -371,7 +384,13 @@ export default function PostPropertyForm({
                   >
                     <ImagePlus size={18} />
                     {lang === "sw" ? "Ongeza" : "Add"}
-                    <input type="file" accept="image/*" multiple hidden onChange={handlePhotoAdd} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      hidden
+                      onChange={handlePhotoAdd}
+                    />
                   </label>
                 )}
               </div>
@@ -413,7 +432,9 @@ export default function PostPropertyForm({
                   style={inputStyle}
                   className="rounded-xl border px-3 py-2.5 text-sm outline-none"
                   placeholder={
-                    lang === "sw" ? "mfano: Mbezi Beach, Dar es Salaam" : "e.g. Mbezi Beach, Dar es Salaam"
+                    lang === "sw"
+                      ? "mfano: Mbezi Beach, Dar es Salaam"
+                      : "e.g. Mbezi Beach, Dar es Salaam"
                   }
                   value={base.location}
                   onChange={(e) => setBase({ ...base, location: e.target.value })}
@@ -421,45 +442,47 @@ export default function PostPropertyForm({
               </Field>
             </div>
 
-            {/* Category-specific fields */}
-            <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-2xl border p-4 flex flex-col gap-4"
-            >
-              <span style={{ color: COLORS.rust }} className="text-xs font-semibold">
-                {lang === "sw" ? "Taarifa za Ziada" : "Additional Details"} — {category.label}
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {category.extra.map((f) => (
-                  <Field key={f.key} label={f.label}>
-                    {f.type === "select" ? (
-                      <select
-                        style={inputStyle}
-                        className="rounded-xl border px-3 py-2.5 text-sm outline-none"
-                        value={extra[f.key] || ""}
-                        onChange={(e) => setExtraField(f.key, e.target.value)}
-                      >
-                        <option value="">{lang === "sw" ? "Chagua..." : "Choose..."}</option>
-                        {f.options.map((o) => (
-                          <option key={o} value={o}>
-                            {o}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        style={inputStyle}
-                        type={f.type}
-                        className="rounded-xl border px-3 py-2.5 text-sm outline-none"
-                        placeholder={f.placeholder}
-                        value={extra[f.key] || ""}
-                        onChange={(e) => setExtraField(f.key, e.target.value)}
-                      />
-                    )}
-                  </Field>
-                ))}
+            {/* Category-specific fields — extra[] kutoka category */}
+            {category.extra && category.extra.length > 0 && (
+              <div
+                style={{ borderColor: COLORS.sandLine, background: "white" }}
+                className="rounded-2xl border p-4 flex flex-col gap-4"
+              >
+                <span style={{ color: COLORS.rust }} className="text-xs font-semibold">
+                  {lang === "sw" ? "Taarifa za Ziada" : "Additional Details"} — {categoryLabel}
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {category.extra.map((f) => (
+                    <Field key={f.key} label={f.label}>
+                      {f.type === "select" ? (
+                        <select
+                          style={inputStyle}
+                          className="rounded-xl border px-3 py-2.5 text-sm outline-none"
+                          value={extra[f.key] || ""}
+                          onChange={(e) => setExtraField(f.key, e.target.value)}
+                        >
+                          <option value="">{lang === "sw" ? "Chagua..." : "Choose..."}</option>
+                          {f.options.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          style={inputStyle}
+                          type={f.type}
+                          className="rounded-xl border px-3 py-2.5 text-sm outline-none"
+                          placeholder={f.placeholder}
+                          value={extra[f.key] || ""}
+                          onChange={(e) => setExtraField(f.key, e.target.value)}
+                        />
+                      )}
+                    </Field>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <Field label={lang === "sw" ? "Maelezo" : "Description"}>
               <textarea
