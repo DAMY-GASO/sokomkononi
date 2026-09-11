@@ -26,78 +26,77 @@ import { COLORS, FONTS, getCategory, formatTZS, timeAgo } from "./shared";
 import { useReservationRates, calcReservationFee } from "../../../config/feePolicy.js";
 import { useDeals, updateDeal as updateDealInStore } from "../../../config/dealsStore.js";
 import { notifyPaymentProofSubmitted } from "../../../config/notificationsStore.js";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
 
-const DEAL_STATUS = {
-  negotiating: { label: "Inaendelea", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
-  offer_sent: { label: "Ofa Imetumwa", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
-  accepted: { label: "Imekubaliwa", bg: "rgba(47,109,79,0.16)", fg: COLORS.green },
-  declined: { label: "Imekataliwa", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
-  reserved: { label: "Inspection Period", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
-  awaiting_final_payment: { label: "Tayari kwa Malipo ya Mwisho", bg: "rgba(37,99,235,0.12)", fg: "#2563EB" },
-  payment_proof_submitted: { label: "Uthibitisho Umetumwa", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
-  completed: { label: "Imekamilika", bg: "rgba(47,109,79,0.18)", fg: COLORS.green },
-  disputed: { label: "Mgogoro — Chini ya Ukaguzi", bg: "rgba(193,80,46,0.16)", fg: COLORS.rust },
-  cancelled: { label: "Imeghairiwa", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
-};
+const getDealStatus = (lang) => ({
+  negotiating: { label: lang === "sw" ? "Inaendelea" : "Negotiating", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
+  offer_sent: { label: lang === "sw" ? "Ofa Imetumwa" : "Offer Sent", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
+  accepted: { label: lang === "sw" ? "Imekubaliwa" : "Accepted", bg: "rgba(47,109,79,0.16)", fg: COLORS.green },
+  declined: { label: lang === "sw" ? "Imekataliwa" : "Declined", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
+  reserved: { label: lang === "sw" ? "Inspection Period" : "Inspection Period", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
+  awaiting_final_payment: { label: lang === "sw" ? "Tayari kwa Malipo ya Mwisho" : "Ready for Final Payment", bg: "rgba(37,99,235,0.12)", fg: "#2563EB" },
+  payment_proof_submitted: { label: lang === "sw" ? "Uthibitisho Umetumwa" : "Proof Submitted", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
+  completed: { label: lang === "sw" ? "Imekamilika" : "Completed", bg: "rgba(47,109,79,0.18)", fg: COLORS.green },
+  disputed: { label: lang === "sw" ? "Mgogoro — Chini ya Ukaguzi" : "Dispute — Under Review", bg: "rgba(193,80,46,0.16)", fg: COLORS.rust },
+  cancelled: { label: lang === "sw" ? "Imeghairiwa" : "Cancelled", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
+});
 
 const CUSTOM_MIN_HOURS = 1;
 const CUSTOM_MAX_HOURS = 336;
 
 const PAYMENT_METHODS = ["M-Pesa", "Tigo Pesa", "Airtel Money", "HaloPesa", "Benki (CRDB)"];
 
-function formatHours(hours) {
+function formatHours(hours, lang) {
   if (hours % 24 === 0) {
     const days = hours / 24;
-    return `Saa ${hours} (Siku ${days})`;
+    return lang === "sw" ? `Saa ${hours} (Siku ${days})` : `${hours} hrs (${days} days)`;
   }
-  return `Saa ${hours}`;
+  return lang === "sw" ? `Saa ${hours}` : `${hours} hrs`;
 }
 
-const INSPECTION_OPTIONS = [
-  {
-    key: "READY_FOR_FINAL_PAYMENT",
-    label: "Tayari — Endelea na Malipo ya Mwisho",
-    desc: "Nimeridhika baada ya ukaguzi, mali/bidhaa ni sawa na maelezo.",
-    icon: CheckCircle2,
-    tone: { fg: COLORS.green, bg: "rgba(47,109,79,0.08)", border: COLORS.green },
-  },
-  {
-    key: "REQUEST_NEGOTIATION",
-    label: "Omba Negotiation Nyingine",
-    desc: "Ukaguzi umeonyesha jambo linalohitaji majadiliano ya bei/masharti.",
-    icon: RefreshCcw,
-    tone: { fg: "#8A5A16", bg: "rgba(232,163,61,0.12)", border: COLORS.gold },
-  },
-  {
-    key: "NOT_AS_DESCRIBED",
-    label: "Sio Kama Ilivyoelezwa",
-    desc: "Kuna tofauti kubwa kati ya maelezo na hali halisi — hii ni mgogoro.",
-    icon: AlertTriangle,
-    tone: { fg: COLORS.rust, bg: "rgba(193,80,46,0.1)", border: COLORS.rust },
-  },
-  {
-    key: "CANCEL",
-    label: "Ghairi Deal",
-    desc: "Sitaki kuendelea na ununuzi huu.",
-    icon: Ban,
-    tone: { fg: COLORS.night, bg: "rgba(16,26,46,0.05)", border: COLORS.sandLine },
-  },
-];
-
-const INSPECTION_RESULT_MESSAGES = {
-  READY_FOR_FINAL_PAYMENT: "Mnunuzi ameridhika na ukaguzi — tayari kwa malipo ya mwisho.",
-  REQUEST_NEGOTIATION: "Mnunuzi ameomba negotiation nyingine baada ya ukaguzi.",
-  NOT_AS_DESCRIBED: "Mnunuzi ameripoti: bidhaa/mali sio kama ilivyoelezwa.",
-  CANCEL: "Mnunuzi ameghairi deal baada ya ukaguzi.",
-};
-
-function InspectionPanel({ deal, onResolve }) {
+function InspectionPanel({ deal, onResolve, lang }) {
   const [step, setStep] = useState("choose");
   const [pendingKey, setPendingKey] = useState(null);
   const [note, setNote] = useState("");
 
-  const needsReason = pendingKey === "NOT_AS_DESCRIBED" || pendingKey === "CANCEL";
-  const pendingOption = INSPECTION_OPTIONS.find((o) => o.key === pendingKey);
+  const options = [
+    {
+      key: "READY_FOR_FINAL_PAYMENT",
+      label: lang === "sw" ? "Tayari — Endelea na Malipo ya Mwisho" : "Ready — Proceed to Final Payment",
+      desc: lang === "sw"
+        ? "Nimeridhika baada ya ukaguzi, mali/bidhaa ni sawa na maelezo."
+        : "I'm satisfied with the inspection; the property matches the description.",
+      icon: CheckCircle2,
+      tone: { fg: COLORS.green, bg: "rgba(47,109,79,0.08)", border: COLORS.green },
+    },
+    {
+      key: "REQUEST_NEGOTIATION",
+      label: lang === "sw" ? "Omba Negotiation Nyingine" : "Request Another Negotiation",
+      desc: lang === "sw"
+        ? "Ukaguzi umeonyesha jambo linalohitaji majadiliano ya bei/masharti."
+        : "The inspection revealed something that needs further negotiation.",
+      icon: RefreshCcw,
+      tone: { fg: "#8A5A16", bg: "rgba(232,163,61,0.12)", border: COLORS.gold },
+    },
+    {
+      key: "NOT_AS_DESCRIBED",
+      label: lang === "sw" ? "Sio Kama Ilivyoelezwa" : "Not As Described",
+      desc: lang === "sw"
+        ? "Kuna tofauti kubwa kati ya maelezo na hali halisi — hii ni mgogoro."
+        : "Major discrepancy between the description and reality — this is a dispute.",
+      icon: AlertTriangle,
+      tone: { fg: COLORS.rust, bg: "rgba(193,80,46,0.1)", border: COLORS.rust },
+    },
+    {
+      key: "CANCEL",
+      label: lang === "sw" ? "Ghairi Deal" : "Cancel Deal",
+      desc: lang === "sw" ? "Sitaki kuendelea na ununuzi huu." : "I don't want to continue with this purchase.",
+      icon: Ban,
+      tone: { fg: COLORS.night, bg: "rgba(16,26,46,0.05)", border: COLORS.sandLine },
+    },
+  ];
+
+  const pendingOption = options.find((o) => o.key === pendingKey);
 
   const handleChoose = (key) => {
     if (key === "NOT_AS_DESCRIBED" || key === "CANCEL") {
@@ -124,18 +123,19 @@ function InspectionPanel({ deal, onResolve }) {
             <div className="flex items-center gap-2">
               <SearchCheck size={14} color={COLORS.night} />
               <p style={{ color: COLORS.night }} className="text-xs font-semibold">
-                Inspection Period — chagua hatua inayofuata
+                {lang === "sw" ? "Inspection Period — chagua hatua inayofuata" : "Inspection Period — choose next step"}
               </p>
             </div>
             {deal.reservationExpiresAt && (
               <span style={{ color: COLORS.rust }} className="text-[10px] font-semibold shrink-0">
-                Inaisha: {new Date(deal.reservationExpiresAt).toLocaleString("sw-TZ")}
+                {lang === "sw" ? "Inaisha" : "Ends"}:{" "}
+                {new Date(deal.reservationExpiresAt).toLocaleString(lang === "sw" ? "sw-TZ" : "en-US")}
               </span>
             )}
           </div>
 
           <div className="flex flex-col gap-2">
-            {INSPECTION_OPTIONS.map((opt) => (
+            {options.map((opt) => (
               <button
                 key={opt.key}
                 onClick={() => handleChoose(opt.key)}
@@ -171,8 +171,12 @@ function InspectionPanel({ deal, onResolve }) {
             onChange={(e) => setNote(e.target.value)}
             placeholder={
               pendingKey === "NOT_AS_DESCRIBED"
-                ? "Eleza tofauti ulizoziona (lazima ujaze hii kwa mgogoro)..."
-                : "Sababu (hiari)..."
+                ? lang === "sw"
+                  ? "Eleza tofauti ulizoziona (lazima ujaze hii kwa mgogoro)..."
+                  : "Describe the discrepancies you saw (required for disputes)..."
+                : lang === "sw"
+                  ? "Sababu (hiari)..."
+                  : "Reason (optional)..."
             }
             rows={3}
             style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }}
@@ -181,13 +185,16 @@ function InspectionPanel({ deal, onResolve }) {
 
           {pendingKey === "NOT_AS_DESCRIBED" && !note.trim() && (
             <p style={{ color: COLORS.rust }} className="text-[11px]">
-              Tafadhali eleza tofauti kabla ya kuendelea, ili timu ya SokoMkononi iweze kusaidia.
+              {lang === "sw"
+                ? "Tafadhali eleza tofauti kabla ya kuendelea, ili timu ya SokoMkononi iweze kusaidia."
+                : "Please describe the discrepancies before continuing so our team can assist."}
             </p>
           )}
 
           <p style={{ color: "rgba(16,26,46,0.45)" }} className="text-[11px]">
-            Reservation Fee uliyolipa ({formatTZS(deal.reservationFee || 0)}) ni mapato ya
-            SokoMkononi na haitarejeshwa.
+            {lang === "sw"
+              ? `Reservation Fee uliyolipa (${formatTZS(deal.reservationFee || 0)}) ni mapato ya SokoMkononi na haitarejeshwa.`
+              : `The Reservation Fee you paid (${formatTZS(deal.reservationFee || 0)}) is SokoMkononi revenue and is non-refundable.`}
           </p>
 
           <div className="flex items-center gap-2 pt-1">
@@ -200,7 +207,7 @@ function InspectionPanel({ deal, onResolve }) {
               style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
               className="text-xs font-semibold px-3 py-2 rounded-lg border"
             >
-              Rudi Nyuma
+              {lang === "sw" ? "Rudi Nyuma" : "Back"}
             </button>
             <button
               onClick={handleSubmitReason}
@@ -212,7 +219,7 @@ function InspectionPanel({ deal, onResolve }) {
               }}
               className="flex-1 text-xs font-semibold px-3 py-2 rounded-lg"
             >
-              Thibitisha
+              {lang === "sw" ? "Thibitisha" : "Confirm"}
             </button>
           </div>
         </>
@@ -221,7 +228,7 @@ function InspectionPanel({ deal, onResolve }) {
   );
 }
 
-function PaymentProofPanel({ deal, onSubmit }) {
+function PaymentProofPanel({ deal, onSubmit, lang }) {
   const [preview, setPreview] = useState(null);
   const [fileName, setFileName] = useState("");
   const [reference, setReference] = useState("");
@@ -257,12 +264,15 @@ function PaymentProofPanel({ deal, onSubmit }) {
       <div className="flex items-center gap-2">
         <Upload size={14} color={COLORS.night} />
         <p style={{ color: COLORS.night }} className="text-xs font-semibold">
-          Pakia Uthibitisho wa Malipo ya Mwisho — {formatTZS(deal.currentOffer)}
+          {lang === "sw"
+            ? `Pakia Uthibitisho wa Malipo ya Mwisho — ${formatTZS(deal.currentOffer)}`
+            : `Upload Final Payment Proof — ${formatTZS(deal.currentOffer)}`}
         </p>
       </div>
       <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-[11px] -mt-1.5">
-        Lipa {formatTZS(deal.currentOffer)} moja kwa moja kwa muuzaji (M-Pesa/Benki/n.k), kisha
-        pakia risiti au screenshot ya malipo hapa.
+        {lang === "sw"
+          ? `Lipa ${formatTZS(deal.currentOffer)} moja kwa moja kwa muuzaji (M-Pesa/Benki/n.k), kisha pakia risiti au screenshot ya malipo hapa.`
+          : `Pay ${formatTZS(deal.currentOffer)} directly to the seller (M-Pesa/Bank/etc.), then upload the receipt or payment screenshot here.`}
       </p>
 
       <input
@@ -278,7 +288,7 @@ function PaymentProofPanel({ deal, onSubmit }) {
           style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
           className="rounded-xl border p-2.5 flex items-center gap-3"
         >
-          <img src={preview} alt="Risiti" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+          <img src={preview} alt="Receipt" className="w-14 h-14 rounded-lg object-cover shrink-0" />
           <div className="flex-1 min-w-0">
             <p style={{ color: COLORS.night }} className="text-xs font-medium truncate">
               {fileName}
@@ -288,7 +298,7 @@ function PaymentProofPanel({ deal, onSubmit }) {
               style={{ color: COLORS.green }}
               className="text-[11px] font-semibold"
             >
-              Badilisha picha
+              {lang === "sw" ? "Badilisha picha" : "Change image"}
             </button>
           </div>
         </div>
@@ -299,14 +309,20 @@ function PaymentProofPanel({ deal, onSubmit }) {
           className="rounded-xl border-2 border-dashed py-5 flex flex-col items-center gap-1.5"
         >
           <FileImage size={22} color="rgba(16,26,46,0.35)" />
-          <span className="text-xs font-medium">Bofya kupakia risiti/screenshot</span>
+          <span className="text-xs font-medium">
+            {lang === "sw" ? "Bofya kupakia risiti/screenshot" : "Click to upload receipt/screenshot"}
+          </span>
         </button>
       )}
 
       <input
         value={reference}
         onChange={(e) => setReference(e.target.value)}
-        placeholder="Namba ya muamala / Reference (mf. QGH7X92K1)"
+        placeholder={
+          lang === "sw"
+            ? "Namba ya muamala / Reference (mf. QGH7X92K1)"
+            : "Transaction number / Reference (e.g. QGH7X92K1)"
+        }
         style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }}
         className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
       />
@@ -337,13 +353,15 @@ function PaymentProofPanel({ deal, onSubmit }) {
         }}
         className="text-xs font-semibold px-3 py-2.5 rounded-lg"
       >
-        {submitting ? "Inatuma..." : "Tuma Uthibitisho wa Malipo"}
+        {submitting
+          ? lang === "sw" ? "Inatuma..." : "Submitting..."
+          : lang === "sw" ? "Tuma Uthibitisho wa Malipo" : "Submit Payment Proof"}
       </button>
     </div>
   );
 }
 
-function PaymentProofReview({ deal, onConfirm, onReject }) {
+function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -371,7 +389,7 @@ function PaymentProofReview({ deal, onConfirm, onReject }) {
       <div className="flex items-center gap-2">
         <Paperclip size={14} color={COLORS.night} />
         <p style={{ color: COLORS.night }} className="text-xs font-semibold">
-          Uthibitisho wa Malipo kutoka kwa Mnunuzi
+          {lang === "sw" ? "Uthibitisho wa Malipo kutoka kwa Mnunuzi" : "Payment Proof from Buyer"}
         </p>
       </div>
 
@@ -382,7 +400,7 @@ function PaymentProofReview({ deal, onConfirm, onReject }) {
         >
           <img
             src={proof.dataUrl}
-            alt="Risiti ya malipo"
+            alt="Payment receipt"
             className="w-16 h-16 rounded-lg object-cover shrink-0"
           />
           <div className="min-w-0 text-xs">
@@ -393,7 +411,7 @@ function PaymentProofReview({ deal, onConfirm, onReject }) {
               Ref: <span className="font-mono">{proof.reference}</span>
             </p>
             <p style={{ color: "rgba(16,26,46,0.4)" }} className="mt-0.5">
-              Zimetumwa {timeAgo(proof.submittedAt)}
+              {lang === "sw" ? "Zimetumwa" : "Submitted"} {timeAgo(proof.submittedAt)}
             </p>
           </div>
         </div>
@@ -406,7 +424,7 @@ function PaymentProofReview({ deal, onConfirm, onReject }) {
             style={{ borderColor: "rgba(193,80,46,0.35)", color: COLORS.rust }}
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border"
           >
-            <ThumbsDown size={13} /> Bado Sijapokea
+            <ThumbsDown size={13} /> {lang === "sw" ? "Bado Sijapokea" : "Not Received Yet"}
           </button>
           <button
             onClick={handleConfirm}
@@ -414,7 +432,10 @@ function PaymentProofReview({ deal, onConfirm, onReject }) {
             style={{ background: COLORS.green, color: "white" }}
             className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2.5 rounded-lg disabled:opacity-70"
           >
-            <Check size={14} /> {busy ? "Inathibitisha..." : "Nimepokea Malipo — Kamilisha"}
+            <Check size={14} />{" "}
+            {busy
+              ? lang === "sw" ? "Inathibitisha..." : "Confirming..."
+              : lang === "sw" ? "Nimepokea Malipo — Kamilisha" : "Payment Received — Complete"}
           </button>
         </div>
       ) : (
@@ -422,7 +443,9 @@ function PaymentProofReview({ deal, onConfirm, onReject }) {
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Kwa nini bado hujapokea? (hiari)"
+            placeholder={
+              lang === "sw" ? "Kwa nini bado hujapokea? (hiari)" : "Why haven't you received it? (optional)"
+            }
             rows={2}
             style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }}
             className="w-full rounded-lg border px-3 py-2 text-sm outline-none resize-none"
@@ -433,14 +456,16 @@ function PaymentProofReview({ deal, onConfirm, onReject }) {
               style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
               className="text-xs font-semibold px-3 py-2 rounded-lg border"
             >
-              Ghairi
+              {lang === "sw" ? "Ghairi" : "Cancel"}
             </button>
             <button
               onClick={handleReject}
               style={{ background: COLORS.rust, color: "white" }}
               className="flex-1 text-xs font-semibold px-3 py-2 rounded-lg"
             >
-              Tuma — Muulize Mnunuzi Apakie Tena
+              {lang === "sw"
+                ? "Tuma — Muulize Mnunuzi Apakie Tena"
+                : "Send — Ask Buyer to Re-upload"}
             </button>
           </div>
         </>
@@ -449,10 +474,10 @@ function PaymentProofReview({ deal, onConfirm, onReject }) {
   );
 }
 
-function DealListItem({ deal, active, onSelect }) {
+function DealListItem({ deal, active, onSelect, lang }) {
   const category = getCategory(deal.category);
   const Icon = category?.icon;
-  const status = DEAL_STATUS[deal.status];
+  const status = getDealStatus(lang)[deal.status];
   const lastMessage = deal.messages[deal.messages.length - 1];
 
   return (
@@ -493,7 +518,7 @@ function DealListItem({ deal, active, onSelect }) {
   );
 }
 
-function OfferBubble({ amount, mine }) {
+function OfferBubble({ amount, mine, lang }) {
   return (
     <div
       style={{
@@ -505,7 +530,7 @@ function OfferBubble({ amount, mine }) {
       <HandCoins size={16} color={mine ? COLORS.night : COLORS.rust} />
       <div>
         <p style={{ color: mine ? COLORS.night : "rgba(16,26,46,0.55)" }} className="text-[11px]">
-          Ofa
+          {lang === "sw" ? "Ofa" : "Offer"}
         </p>
         <p style={{ color: mine ? COLORS.night : COLORS.rust }} className="text-sm font-bold">
           {formatTZS(amount)}
@@ -515,7 +540,7 @@ function OfferBubble({ amount, mine }) {
   );
 }
 
-function ReservationPanel({ deal, onCancel, onConfirm }) {
+function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
   const [step, setStep] = useState("choose");
   const [selected, setSelected] = useState(24);
   const [customHours, setCustomHours] = useState(96);
@@ -549,7 +574,7 @@ function ReservationPanel({ deal, onCancel, onConfirm }) {
           <div className="flex items-center gap-2">
             <Clock3 size={14} color={COLORS.night} />
             <p style={{ color: COLORS.night }} className="text-xs font-semibold">
-              Chagua muda wa Reservation
+              {lang === "sw" ? "Chagua muda wa Reservation" : "Choose Reservation Duration"}
             </p>
           </div>
 
@@ -586,7 +611,7 @@ function ReservationPanel({ deal, onCancel, onConfirm }) {
             className="rounded-xl border px-3 py-2.5 flex items-center justify-between"
           >
             <span style={{ color: COLORS.night }} className="text-xs font-semibold">
-              Muda Mwingine (Custom)
+              {lang === "sw" ? "Muda Mwingine (Custom)" : "Other Duration (Custom)"}
             </span>
             {selected === "custom" ? (
               <span className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -600,25 +625,28 @@ function ReservationPanel({ deal, onCancel, onConfirm }) {
                   className="w-16 rounded-md border px-2 py-1 text-xs outline-none text-right"
                 />
                 <span style={{ color: "rgba(16,26,46,0.55)" }} className="text-[11px]">
-                  saa
+                  {lang === "sw" ? "saa" : "hrs"}
                 </span>
               </span>
             ) : (
               <span style={{ color: "rgba(16,26,46,0.45)" }} className="text-[11px]">
-                weka saa mwenyewe
+                {lang === "sw" ? "weka saa mwenyewe" : "enter hours"}
               </span>
             )}
           </button>
 
           {selected === "custom" && !validCustom && (
             <p style={{ color: COLORS.rust }} className="text-[11px]">
-              Weka saa kati ya {CUSTOM_MIN_HOURS} na {CUSTOM_MAX_HOURS}.
+              {lang === "sw"
+                ? `Weka saa kati ya ${CUSTOM_MIN_HOURS} na ${CUSTOM_MAX_HOURS}.`
+                : `Enter hours between ${CUSTOM_MIN_HOURS} and ${CUSTOM_MAX_HOURS}.`}
             </p>
           )}
 
           {selected === "custom" && validCustom && (
             <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-[11px]">
-              {formatHours(Number(customHours))} → Reservation Fee:{" "}
+              {formatHours(Number(customHours), lang)} →{" "}
+              {lang === "sw" ? "Reservation Fee:" : "Reservation Fee:"}{" "}
               <span style={{ color: COLORS.green }} className="font-semibold">
                 {formatTZS(fee)}
               </span>
@@ -631,7 +659,7 @@ function ReservationPanel({ deal, onCancel, onConfirm }) {
               style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
               className="text-xs font-semibold px-3 py-2 rounded-lg border"
             >
-              Ghairi
+              {lang === "sw" ? "Ghairi" : "Cancel"}
             </button>
             <button
               onClick={() => validCustom && setStep("pay")}
@@ -642,7 +670,7 @@ function ReservationPanel({ deal, onCancel, onConfirm }) {
               }}
               className="flex-1 text-xs font-semibold px-3 py-2 rounded-lg"
             >
-              Endelea — Lipa {formatTZS(fee)}
+              {lang === "sw" ? `Endelea — Lipa ${formatTZS(fee)}` : `Continue — Pay ${formatTZS(fee)}`}
             </button>
           </div>
         </>
@@ -653,7 +681,7 @@ function ReservationPanel({ deal, onCancel, onConfirm }) {
           <div className="flex items-center gap-2">
             <CreditCard size={14} color={COLORS.night} />
             <p style={{ color: COLORS.night }} className="text-xs font-semibold">
-              Lipa Reservation Fee
+              {lang === "sw" ? "Lipa Reservation Fee" : "Pay Reservation Fee"}
             </p>
           </div>
 
@@ -663,7 +691,7 @@ function ReservationPanel({ deal, onCancel, onConfirm }) {
           >
             <div>
               <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-[11px]">
-                {deal.listingTitle} · {formatHours(hours)}
+                {deal.listingTitle} · {formatHours(hours, lang)}
               </p>
               <p style={{ color: COLORS.night }} className="text-base font-bold">
                 {formatTZS(fee)}
@@ -673,7 +701,7 @@ function ReservationPanel({ deal, onCancel, onConfirm }) {
           </div>
 
           <p style={{ color: "rgba(16,26,46,0.5)" }} className="text-[11px]">
-            Chagua njia ya malipo
+            {lang === "sw" ? "Chagua njia ya malipo" : "Choose payment method"}
           </p>
           <div className="grid grid-cols-2 gap-2">
             {PAYMENT_METHODS.map((m) => (
@@ -699,7 +727,7 @@ function ReservationPanel({ deal, onCancel, onConfirm }) {
               style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
               className="text-xs font-semibold px-3 py-2 rounded-lg border"
             >
-              Rudi Nyuma
+              {lang === "sw" ? "Rudi Nyuma" : "Back"}
             </button>
             <button
               onClick={handlePay}
@@ -707,12 +735,15 @@ function ReservationPanel({ deal, onCancel, onConfirm }) {
               style={{ background: COLORS.green, color: "white" }}
               className="flex-1 flex items-center justify-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-70"
             >
-              {paying ? "Inathibitisha malipo..." : `Thibitisha Malipo — ${formatTZS(fee)}`}
+              {paying
+                ? lang === "sw" ? "Inathibitisha malipo..." : "Confirming payment..."
+                : lang === "sw" ? `Thibitisha Malipo — ${formatTZS(fee)}` : `Confirm Payment — ${formatTZS(fee)}`}
             </button>
           </div>
           <p style={{ color: "rgba(16,26,46,0.4)" }} className="text-[10px]">
-            Kwa demo hii, malipo yanathibitishwa papo hapo. Kwenye uzalishaji itaunganishwa na
-            gateway halisi ya M-Pesa/Tigo Pesa/Airtel Money.
+            {lang === "sw"
+              ? "Kwa demo hii, malipo yanathibitishwa papo hapo. Kwenye uzalishaji itaunganishwa na gateway halisi ya M-Pesa/Tigo Pesa/Airtel Money."
+              : "In this demo, payments are confirmed instantly. In production this will connect to a real M-Pesa/Tigo Pesa/Airtel Money gateway."}
           </p>
         </>
       )}
@@ -732,14 +763,18 @@ function DealDetail({
   onProofSubmit,
   onProofConfirm,
   onProofReject,
+  lang,
 }) {
   const [text, setText] = useState("");
   const [offerOpen, setOfferOpen] = useState(false);
   const [offerAmount, setOfferAmount] = useState("");
   const [reserveOpen, setReserveOpen] = useState(false);
   const category = getCategory(deal.category);
-  const status = DEAL_STATUS[deal.status];
-  const counterpartyLabel = side === "seller" ? "Mnunuzi" : "Muuzaji";
+  const status = getDealStatus(lang)[deal.status];
+  const counterpartyLabel =
+    side === "seller"
+      ? lang === "sw" ? "Mnunuzi" : "Buyer"
+      : lang === "sw" ? "Muuzaji" : "Seller";
 
   const handleSend = () => {
     if (!text.trim()) return;
@@ -762,7 +797,7 @@ function DealDetail({
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="flex items-center gap-3 border-b p-3 sm:p-4"
       >
-        <button onClick={onBack} className="md:hidden shrink-0" aria-label="Rudi">
+        <button onClick={onBack} className="md:hidden shrink-0" aria-label="Back">
           <ArrowLeft size={18} color={COLORS.night} />
         </button>
         <div
@@ -778,7 +813,6 @@ function DealDetail({
               · {counterpartyLabel}
             </span>
           </p>
-          {/* === BADILIKO: listing title ni Link kwa listing detail === */}
           {deal.listingId ? (
             <Link
               to={`/mali/${deal.listingId}`}
@@ -788,7 +822,10 @@ function DealDetail({
               <MapPin size={10} /> {deal.listingTitle}
             </Link>
           ) : (
-            <p style={{ color: "rgba(16,26,46,0.5)" }} className="text-xs truncate flex items-center gap-1">
+            <p
+              style={{ color: "rgba(16,26,46,0.5)" }}
+              className="text-xs truncate flex items-center gap-1"
+            >
               <MapPin size={10} /> {deal.listingTitle}
             </p>
           )}
@@ -807,32 +844,42 @@ function DealDetail({
         className="flex items-center justify-between px-4 py-2 text-xs"
       >
         <span style={{ color: "rgba(16,26,46,0.6)" }}>
-          Bei Iliyowekwa: {formatTZS(deal.askingPrice)}
+          {lang === "sw" ? "Bei Iliyowekwa" : "Asking Price"}: {formatTZS(deal.askingPrice)}
         </span>
         <span style={{ color: COLORS.rust }} className="font-semibold">
-          Ofa ya Sasa: {formatTZS(deal.currentOffer)}
+          {lang === "sw" ? "Ofa ya Sasa" : "Current Offer"}: {formatTZS(deal.currentOffer)}
         </span>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-2.5" style={{ background: COLORS.sand }}>
+      <div
+        className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-2.5"
+        style={{ background: COLORS.sand }}
+      >
         {deal.messages.map((m) =>
           m.sender === "admin" ? (
             <div key={m.id} className="flex justify-center my-1">
               <div
-                style={{ background: "rgba(16,26,46,0.06)", color: COLORS.night, borderColor: COLORS.sandLine }}
+                style={{
+                  background: "rgba(16,26,46,0.06)",
+                  color: COLORS.night,
+                  borderColor: COLORS.sandLine,
+                }}
                 className="border rounded-xl px-3.5 py-2 max-w-[90%] text-[11px] text-center font-medium"
               >
                 <span style={{ color: COLORS.rust }} className="font-bold">
-                  SokoMkononi Admin:{" "}
+                  {lang === "sw" ? "SokoMkononi Admin" : "SokoMkononi Admin"}:{" "}
                 </span>
                 {m.text}
               </div>
             </div>
           ) : (
-            <div key={m.id} className={`flex ${m.sender === "me" ? "justify-end" : "justify-start"}`}>
+            <div
+              key={m.id}
+              className={`flex ${m.sender === "me" ? "justify-end" : "justify-start"}`}
+            >
               {m.offerAmount ? (
-                <OfferBubble amount={m.offerAmount} mine={m.sender === "me"} />
+                <OfferBubble amount={m.offerAmount} mine={m.sender === "me"} lang={lang} />
               ) : (
                 <div
                   style={{
@@ -861,22 +908,28 @@ function DealDetail({
             style={{ background: COLORS.green, color: "white" }}
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
           >
-            <Check size={13} /> Kubali Ofa ya {formatTZS(deal.currentOffer)}
+            <Check size={13} />{" "}
+            {lang === "sw"
+              ? `Kubali Ofa ya ${formatTZS(deal.currentOffer)}`
+              : `Accept Offer of ${formatTZS(deal.currentOffer)}`}
           </button>
           <button
             onClick={() => onRespond(deal.id, "declined")}
             style={{ borderColor: "rgba(193,80,46,0.35)", color: COLORS.rust }}
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border"
           >
-            <X size={13} /> Kataa
+            <X size={13} /> {lang === "sw" ? "Kataa" : "Decline"}
           </button>
           <button
             onClick={() => setOfferOpen((v) => !v)}
             style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border ml-auto"
           >
-            <HandCoins size={13} /> Toa Ofa Nyingine
-            <ChevronDown size={12} style={{ transform: offerOpen ? "rotate(180deg)" : "none" }} />
+            <HandCoins size={13} /> {lang === "sw" ? "Toa Ofa Nyingine" : "Make Another Offer"}
+            <ChevronDown
+              size={12}
+              style={{ transform: offerOpen ? "rotate(180deg)" : "none" }}
+            />
           </button>
         </div>
       )}
@@ -889,7 +942,7 @@ function DealDetail({
           <input
             style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }}
             className="flex-1 rounded-lg border px-3 py-2 text-sm outline-none"
-            placeholder="Kiasi cha ofa (TZS)"
+            placeholder={lang === "sw" ? "Kiasi cha ofa (TZS)" : "Offer amount (TZS)"}
             value={offerAmount}
             onChange={(e) => setOfferAmount(e.target.value)}
           />
@@ -898,7 +951,7 @@ function DealDetail({
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
           >
-            Tuma Ofa
+            {lang === "sw" ? "Tuma Ofa" : "Send Offer"}
           </button>
         </div>
       )}
@@ -909,14 +962,16 @@ function DealDetail({
           className="flex items-center justify-between gap-2 px-3 sm:px-4 py-3 border-t"
         >
           <span style={{ color: COLORS.green }} className="text-xs font-medium">
-            Mmekubaliana kwenye {formatTZS(deal.currentOffer)}. Hatua inayofuata ni Reservation Deposit.
+            {lang === "sw"
+              ? `Mmekubaliana kwenye ${formatTZS(deal.currentOffer)}. Hatua inayofuata ni Reservation Deposit.`
+              : `You agreed at ${formatTZS(deal.currentOffer)}. Next step is the Reservation Deposit.`}
           </span>
           <button
             onClick={() => setReserveOpen(true)}
             style={{ background: COLORS.green, color: "white" }}
             className="text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
           >
-            Weka Reservation
+            {lang === "sw" ? "Weka Reservation" : "Place Reservation"}
           </button>
         </div>
       )}
@@ -924,6 +979,7 @@ function DealDetail({
       {deal.status === "accepted" && reserveOpen && (
         <ReservationPanel
           deal={deal}
+          lang={lang}
           onCancel={() => setReserveOpen(false)}
           onConfirm={(details) => {
             setReserveOpen(false);
@@ -938,23 +994,33 @@ function DealDetail({
           className="flex items-center justify-between gap-2 px-3 sm:px-4 py-3 border-t text-xs"
         >
           <span style={{ color: COLORS.night }}>
-            Reservation Fee {formatTZS(deal.reservationFee)} imelipwa · {deal.reservationMethod} ·
-            Mnunuzi yuko kwenye Inspection Period.
+            {lang === "sw"
+              ? `Reservation Fee ${formatTZS(deal.reservationFee)} imelipwa · ${deal.reservationMethod} · Mnunuzi yuko kwenye Inspection Period.`
+              : `Reservation Fee ${formatTZS(deal.reservationFee)} paid · ${deal.reservationMethod} · Buyer is in Inspection Period.`}
           </span>
           {deal.reservationExpiresAt && (
             <span style={{ color: COLORS.rust }} className="font-semibold shrink-0">
-              Inaisha: {new Date(deal.reservationExpiresAt).toLocaleString("sw-TZ")}
+              {lang === "sw" ? "Inaisha" : "Ends"}:{" "}
+              {new Date(deal.reservationExpiresAt).toLocaleString(lang === "sw" ? "sw-TZ" : "en-US")}
             </span>
           )}
         </div>
       )}
 
       {deal.status === "reserved" && side === "buyer" && (
-        <InspectionPanel deal={deal} onResolve={(key, note) => onInspectionResolve(deal.id, key, note)} />
+        <InspectionPanel
+          deal={deal}
+          lang={lang}
+          onResolve={(key, note) => onInspectionResolve(deal.id, key, note)}
+        />
       )}
 
       {deal.status === "awaiting_final_payment" && side === "buyer" && (
-        <PaymentProofPanel deal={deal} onSubmit={(proof) => onProofSubmit(deal.id, proof)} />
+        <PaymentProofPanel
+          deal={deal}
+          lang={lang}
+          onSubmit={(proof) => onProofSubmit(deal.id, proof)}
+        />
       )}
 
       {deal.status === "awaiting_final_payment" && side === "seller" && (
@@ -964,8 +1030,9 @@ function DealDetail({
         >
           <CheckCircle2 size={16} color="#2563EB" className="shrink-0" />
           <span style={{ color: "#1E3A8A" }} className="text-xs font-medium">
-            Ukaguzi umepita. Mnunuzi anaandaa malipo ya mwisho ya {formatTZS(deal.currentOffer)} na
-            atapakia uthibitisho hapa.
+            {lang === "sw"
+              ? `Ukaguzi umepita. Mnunuzi anaandaa malipo ya mwisho ya ${formatTZS(deal.currentOffer)} na atapakia uthibitisho hapa.`
+              : `Inspection passed. Buyer is preparing the final payment of ${formatTZS(deal.currentOffer)} and will upload proof here.`}
           </span>
         </div>
       )}
@@ -973,6 +1040,7 @@ function DealDetail({
       {deal.status === "payment_proof_submitted" && side === "seller" && (
         <PaymentProofReview
           deal={deal}
+          lang={lang}
           onConfirm={() => onProofConfirm(deal.id)}
           onReject={(reason) => onProofReject(deal.id, reason)}
         />
@@ -985,7 +1053,9 @@ function DealDetail({
         >
           <FileImage size={16} color="#8A5A16" className="shrink-0" />
           <span style={{ color: "#8A5A16" }} className="text-xs font-medium">
-            Uthibitisho wako wa malipo umetumwa. Unasubiri muuzaji athibitishe "Nimepokea Malipo".
+            {lang === "sw"
+              ? `Uthibitisho wako wa malipo umetumwa. Unasubiri muuzaji athibitishe "Nimepokea Malipo".`
+              : `Your payment proof has been submitted. Waiting for the seller to confirm "Payment Received".`}
           </span>
         </div>
       )}
@@ -997,7 +1067,9 @@ function DealDetail({
         >
           <PartyPopper size={16} color={COLORS.green} className="shrink-0" />
           <span style={{ color: COLORS.green }} className="text-xs font-medium">
-            Muamala umekamilika! Malipo yamethibitishwa — angalia My Transactions kwa risiti.
+            {lang === "sw"
+              ? "Muamala umekamilika! Malipo yamethibitishwa — angalia My Transactions kwa risiti."
+              : "Transaction completed! Payment confirmed — check My Transactions for the receipt."}
           </span>
         </div>
       )}
@@ -1009,8 +1081,9 @@ function DealDetail({
         >
           <AlertTriangle size={16} color={COLORS.rust} className="shrink-0" />
           <span style={{ color: COLORS.rust }} className="text-xs font-medium">
-            Mnunuzi ameripoti "sio kama ilivyoelezwa". Timu ya SokoMkononi itaingilia kati kusaidia
-            kutatua mgogoro huu.
+            {lang === "sw"
+              ? `Mnunuzi ameripoti "sio kama ilivyoelezwa". Timu ya SokoMkononi itaingilia kati kusaidia kutatua mgogoro huu.`
+              : `Buyer reported "not as described". SokoMkononi team will step in to help resolve this dispute.`}
           </span>
         </div>
       )}
@@ -1022,7 +1095,9 @@ function DealDetail({
         >
           <Ban size={16} color={COLORS.night} className="shrink-0" />
           <span style={{ color: COLORS.night }} className="text-xs font-medium">
-            Deal hii imeghairiwa. Reservation Fee haitarejeshwa.
+            {lang === "sw"
+              ? "Deal hii imeghairiwa. Reservation Fee haitarejeshwa."
+              : "This deal has been cancelled. Reservation Fee is non-refundable."}
           </span>
         </div>
       )}
@@ -1036,7 +1111,7 @@ function DealDetail({
           <input
             style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }}
             className="flex-1 rounded-full border px-4 py-2.5 text-sm outline-none"
-            placeholder="Andika ujumbe..."
+            placeholder={lang === "sw" ? "Andika ujumbe..." : "Type a message..."}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
@@ -1045,7 +1120,7 @@ function DealDetail({
             onClick={handleSend}
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            aria-label="Tuma"
+            aria-label="Send"
           >
             <Send size={16} />
           </button>
@@ -1055,8 +1130,13 @@ function DealDetail({
   );
 }
 
-export default function DealRooms({ side = "seller", onReservationPaid, onFinalPaymentConfirmed }) {
+export default function DealRooms({
+  side = "seller",
+  onReservationPaid,
+  onFinalPaymentConfirmed,
+}) {
   const deals = useDeals();
+  const { lang } = useLanguage();
   const [selectedId, setSelectedId] = useState(null);
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
 
@@ -1087,7 +1167,13 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
       status: "offer_sent",
       messages: [
         ...deal.messages,
-        { id: `m_${Date.now()}`, sender: "me", text: "", at: new Date().toISOString(), offerAmount: amount },
+        {
+          id: `m_${Date.now()}`,
+          sender: "me",
+          text: "",
+          at: new Date().toISOString(),
+          offerAmount: amount,
+        },
       ],
     });
   };
@@ -1095,9 +1181,10 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
   const handleReserveConfirm = (id, { hours, fee, method }) => {
     const deal = deals.find((d) => d.id === id);
     const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-    const note = `Reservation Deposit ya ${formatTZS(fee)} imelipwa (${method}) — muda: ${formatHours(
-      hours
-    )}. Inaisha ${new Date(expiresAt).toLocaleString("sw-TZ")}.`;
+    const note =
+      lang === "sw"
+        ? `Reservation Deposit ya ${formatTZS(fee)} imelipwa (${method}) — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(expiresAt).toLocaleString("sw-TZ")}.`
+        : `Reservation Deposit of ${formatTZS(fee)} paid (${method}) — duration: ${formatHours(hours, lang)}. Ends ${new Date(expiresAt).toLocaleString("en-US")}.`;
 
     updateDeal(id, {
       status: "reserved",
@@ -1116,8 +1203,26 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
 
   const handleInspectionResolve = (id, outcome, note) => {
     const deal = deals.find((d) => d.id === id);
-    const baseNote = INSPECTION_RESULT_MESSAGES[outcome] || "";
-    const fullNote = note ? `${baseNote} Sababu: ${note}` : baseNote;
+    const baseNote = {
+      READY_FOR_FINAL_PAYMENT:
+        lang === "sw"
+          ? "Mnunuzi ameridhika na ukaguzi — tayari kwa malipo ya mwisho."
+          : "Buyer is satisfied with the inspection — ready for final payment.",
+      REQUEST_NEGOTIATION:
+        lang === "sw"
+          ? "Mnunuzi ameomba negotiation nyingine baada ya ukaguzi."
+          : "Buyer requested another negotiation after inspection.",
+      NOT_AS_DESCRIBED:
+        lang === "sw"
+          ? "Mnunuzi ameripoti: bidhaa/mali sio kama ilivyoelezwa."
+          : "Buyer reported: the property is not as described.",
+      CANCEL:
+        lang === "sw"
+          ? "Mnunuzi ameghairi deal baada ya ukaguzi."
+          : "Buyer cancelled the deal after inspection.",
+    }[outcome] || "";
+
+    const fullNote = note ? `${baseNote} ${lang === "sw" ? "Sababu" : "Reason"}: ${note}` : baseNote;
     const newMessages = [
       ...deal.messages,
       { id: `m_${Date.now()}`, sender: "me", text: fullNote, at: new Date().toISOString() },
@@ -1136,7 +1241,10 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
 
   const handleProofSubmit = (id, proof) => {
     const deal = deals.find((d) => d.id === id);
-    const note = `Uthibitisho wa malipo umetumwa (${proof.method}, Ref: ${proof.reference}).`;
+    const note =
+      lang === "sw"
+        ? `Uthibitisho wa malipo umetumwa (${proof.method}, Ref: ${proof.reference}).`
+        : `Payment proof submitted (${proof.method}, Ref: ${proof.reference}).`;
     updateDeal(id, {
       status: "payment_proof_submitted",
       paymentProof: { ...proof, submittedAt: new Date().toISOString() },
@@ -1146,7 +1254,6 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
       ],
     });
 
-    // === MPYA: taarifa kwa muuzaji (na admin) kwamba proof imetumwa ===
     notifyPaymentProofSubmitted({
       dealId: id,
       listingTitle: deal.listingTitle,
@@ -1156,7 +1263,10 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
 
   const handleProofConfirm = (id) => {
     const deal = deals.find((d) => d.id === id);
-    const note = "Muuzaji amethibitisha: Nimepokea Malipo. Muamala umekamilika.";
+    const note =
+      lang === "sw"
+        ? "Muuzaji amethibitisha: Nimepokea Malipo. Muamala umekamilika."
+        : "Seller confirmed: Payment received. Transaction completed.";
     updateDeal(id, {
       status: "completed",
       messages: [
@@ -1173,8 +1283,12 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
   const handleProofReject = (id, reason) => {
     const deal = deals.find((d) => d.id === id);
     const note = reason
-      ? `Muuzaji bado hajapokea malipo. Sababu: ${reason}. Tafadhali pakia uthibitisho tena.`
-      : "Muuzaji bado hajapokea malipo. Tafadhali pakia uthibitisho tena.";
+      ? lang === "sw"
+        ? `Muuzaji bado hajapokea malipo. Sababu: ${reason}. Tafadhali pakia uthibitisho tena.`
+        : `Seller has not received payment yet. Reason: ${reason}. Please re-upload proof.`
+      : lang === "sw"
+        ? "Muuzaji bado hajapokea malipo. Tafadhali pakia uthibitisho tena."
+        : "Seller has not received payment yet. Please re-upload proof.";
     updateDeal(id, {
       status: "awaiting_final_payment",
       paymentProof: null,
@@ -1189,8 +1303,12 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
     const deal = deals.find((d) => d.id === id);
     const note =
       newStatus === "accepted"
-        ? `Ofa ya ${formatTZS(deal.currentOffer)} imekubaliwa.`
-        : "Ofa imekataliwa.";
+        ? lang === "sw"
+          ? `Ofa ya ${formatTZS(deal.currentOffer)} imekubaliwa.`
+          : `Offer of ${formatTZS(deal.currentOffer)} accepted.`
+        : lang === "sw"
+          ? "Ofa imekataliwa."
+          : "Offer declined.";
     updateDeal(id, {
       status: newStatus,
       messages: [
@@ -1214,12 +1332,16 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
           style={{ fontFamily: FONTS.display, color: COLORS.night }}
           className="text-2xl sm:text-3xl font-semibold mb-1"
         >
-          Deal Rooms
+          {lang === "sw" ? "Deal Rooms" : "Deal Rooms"}
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-4">
           {side === "seller"
-            ? "Negotiate moja kwa moja na wanunuzi wenye nia ya mali yako."
-            : "Negotiate moja kwa moja na wauzaji wa mali unazovutiwa nazo."}
+            ? lang === "sw"
+              ? "Negotiate moja kwa moja na wanunuzi wenye nia ya mali yako."
+              : "Negotiate directly with buyers interested in your property."
+            : lang === "sw"
+              ? "Negotiate moja kwa moja na wauzaji wa mali unazovutiwa nazo."
+              : "Negotiate directly with sellers of properties you're interested in."}
         </p>
       </div>
 
@@ -1229,7 +1351,13 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
           className={`${mobileShowDetail ? "hidden" : "flex"} md:flex flex-col w-full md:w-80 shrink-0 border-r px-3 sm:px-4 pb-4 gap-2 overflow-y-auto`}
         >
           {deals.map((d) => (
-            <DealListItem key={d.id} deal={d} active={d.id === selectedId} onSelect={handleSelect} />
+            <DealListItem
+              key={d.id}
+              deal={d}
+              active={d.id === selectedId}
+              onSelect={handleSelect}
+              lang={lang}
+            />
           ))}
         </div>
 
@@ -1238,6 +1366,7 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
             <DealDetail
               deal={selectedDeal}
               side={side}
+              lang={lang}
               onBack={() => setMobileShowDetail(false)}
               onSendMessage={handleSendMessage}
               onSendOffer={handleSendOffer}
@@ -1251,7 +1380,9 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <p style={{ color: "rgba(16,26,46,0.45)" }} className="text-sm">
-                Chagua deal room kuanza mazungumzo.
+                {lang === "sw"
+                  ? "Chagua deal room kuanza mazungumzo."
+                  : "Select a deal room to start chatting."}
               </p>
             </div>
           )}
