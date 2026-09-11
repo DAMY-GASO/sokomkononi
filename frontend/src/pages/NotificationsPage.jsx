@@ -18,7 +18,7 @@ import {
   BellRing,
 } from "lucide-react";
 import { COLORS, FONTS, formatTZS, timeAgo } from "./dashboard/components/shared";
-import { useNotifications } from "./config/notificationsStore.js";
+import { useNotifications } from "../config/notificationsStore.js";
 
 // Notification types with icon + color — "leading", "advertisement" na
 // "listing_fee" ni matukio halisi ya Awamu 7 (yanayotengenezwa na
