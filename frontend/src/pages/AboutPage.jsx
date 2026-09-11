@@ -1,12 +1,11 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import Navbar from "../components/Navbar.jsx";
 
 export default function AboutSafetyPage() {
-  const { t, lang, setLang } = useLanguage();
+  const { t, lang } = useLanguage();
 
   // Values from About page - pamoja na SVG icons
   const values = [
@@ -89,37 +88,34 @@ export default function AboutSafetyPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ============================================================ */}
       {/* NAVBAR */}
-      {/* ============================================================ */}
-      <Navbar lang={lang} setLang={setLang} />
+      <Navbar />
 
-      {/* ============================================================ */}
       {/* HERO SECTION - About */}
-      {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-14 px-4 text-center">
         <h1 className="text-3xl md:text-4xl font-bold">{t("about_heading")}</h1>
         <p className="text-white/70 mt-3 max-w-xl mx-auto">{t("about_subtext")}</p>
       </section>
 
-      {/* ============================================================ */}
       {/* MISSION SECTION */}
-      {/* ============================================================ */}
       <section className="py-14 px-4 max-w-3xl mx-auto text-center">
         <p className="text-gray-700 leading-relaxed">{t("about_mission")}</p>
       </section>
 
-      {/* ============================================================ */}
-      {/* VALUES SECTION - PAMOJA NA SVG ICONS */}
-      {/* ============================================================ */}
+      {/* VALUES SECTION */}
       <section className="pb-14 px-4 max-w-6xl mx-auto">
         <h2 className="text-2xl font-bold text-gray-800 text-center mb-8">
-          {lang === "sw" ? "Thamani Zetu" : "Our Values"}
+          {t("about_values_heading")}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {values.map((v, i) => (
-            <div key={i} className="text-center p-6 bg-[#F5F3EC] rounded-xl flex flex-col items-center">
-              <div className={`w-16 h-16 ${v.bgColor} rounded-full flex items-center justify-center mb-4`}>
+            <div
+              key={i}
+              className="text-center p-6 bg-[#F5F3EC] rounded-xl flex flex-col items-center"
+            >
+              <div
+                className={`w-16 h-16 ${v.bgColor} rounded-full flex items-center justify-center mb-4`}
+              >
                 {v.icon}
               </div>
               <h3 className="font-bold text-lg text-gray-800">{v.title}</h3>
@@ -129,16 +125,12 @@ export default function AboutSafetyPage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
       {/* DIVIDER */}
-      {/* ============================================================ */}
       <div className="max-w-4xl mx-auto px-4">
         <div className="border-t border-gray-200"></div>
       </div>
 
-      {/* ============================================================ */}
-      {/* SAFETY SECTION - ID="usalama" */}
-      {/* ============================================================ */}
+      {/* SAFETY SECTION - id="usalama" */}
       <section id="usalama" className="py-14 px-4 max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <div className="w-14 h-14 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -151,7 +143,7 @@ export default function AboutSafetyPage() {
           <p className="text-gray-600 mt-2 max-w-xl mx-auto">{t("safety_subtext")}</p>
         </div>
 
-        {/* Tips - PAMOJA NA SVG ICONS */}
+        {/* Tips */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {tips.map((tip, i) => (
             <div key={i} className="p-6 bg-[#F5F3EC] rounded-xl">
@@ -168,12 +160,19 @@ export default function AboutSafetyPage() {
           ))}
         </div>
 
-        {/* ============================================================ */}
-        {/* ALERT - REPORT NOTE - RANGI NYEKUNDU ILIYO KOLEZWA */}
-        {/* ============================================================ */}
+        {/* ALERT - REPORT NOTE */}
         <div className="mt-8 p-5 rounded-xl border-2 border-red-300 bg-red-50 flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#DC2626"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
               <line x1="12" y1="9" x2="12" y2="13" />
               <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -181,23 +180,14 @@ export default function AboutSafetyPage() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-800 mb-1">
-              {lang === "sw" ? "Ripoti Udanganyifu" : "Report Fraud"}
+              {t("safety_report_heading")}
             </p>
-            <p className="text-red-700 text-sm leading-relaxed">
-              {t("safety_report_note")}
-            </p>
+            <p className="text-red-700 text-sm leading-relaxed">{t("safety_report_note")}</p>
           </div>
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* BOTTOM NAVIGATION - MOBILE ONLY */}
-      {/* ============================================================ */}
       <BottomNav />
-
-      {/* ============================================================ */}
-      {/* FOOTER */}
-      {/* ============================================================ */}
       <Footer selectedLang={lang} />
     </div>
   );
