@@ -71,7 +71,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(form);
-      navigate("/dashboard");
+      navigate("/dashboard/post");   // ← IMEBADILISHWA: kutoka "/dashboard" → "/dashboard/post"
     } catch (err) {
       setError(err?.response?.data?.message || t("login_error_default"));
     } finally {
