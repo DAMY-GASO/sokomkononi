@@ -20,15 +20,19 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  Clock3,
+  Ban,
 } from "lucide-react";
-import { COLORS, FONTS, getCategory, formatTZS, timeAgo, isBoostActive, isLeadingActive } from "./shared";
-import { useLiveListings } from "../../config/listingsStore.js";
-
-// Mock SEED_PROPERTIES imehamishiwa ../../config/listingsStore.js —
-// zilikuwa data TOFAUTI kabisa na Admin > Moderation na My Listings,
-// hivyo mnunuzi hakuwahi kuona listing mpya za muuzaji wala maamuzi ya
-// Admin (Idhinisha/Kataa). Sasa BrowseProperties inasoma useLiveListings()
-// pekee — listing zilizo "live" (zimeidhinishwa) ndizo zinazoonekana hapa.
+import {
+  COLORS,
+  FONTS,
+  getCategory,
+  formatTZS,
+  timeAgo,
+  isBoostActive,
+  isLeadingActive,
+} from "./shared";
+import { usePublicListings } from "../../../config/listingsStore.js";
 
 const REGIONS = [
   "Dar es Salaam",
@@ -52,18 +56,32 @@ const CATEGORY_ICONS = {
 };
 
 // ============================================================
+// RESERVATION COUNTDOWN (badge kwenye card + detail)
+// ============================================================
+function reservationCountdown(reservedUntil) {
+  if (!reservedUntil) return "";
+  const ms = new Date(reservedUntil).getTime() - Date.now();
+  if (ms <= 0) return "Inaisha hivi karibuni";
+  const hours = Math.floor(ms / 3600000);
+  if (hours < 24) return `Inaisha baada ya saa ${hours}`;
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  if (remainingHours === 0) return `Inaisha baada ya siku ${days}`;
+  return `Inaisha baada ya siku ${days} ${remainingHours}saa`;
+}
+
+// ============================================================
 // PROPERTY CARD
 // ============================================================
-
 function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
   const category = getCategory(property.category);
   const Icon = CATEGORY_ICONS[property.category] || HomeIcon;
-  // isFeatured inatokana na Boost halisi (listingsStore), si flag tuli.
   const isFeatured = isBoostActive(property);
-  // isLeading inatokana na Leading Fee halisi — hii ndiyo inayoipa
-  // listing kipaumbele juu ya matokeo (angalia sortBy comparator chini).
   const isLeading = isLeadingActive(property);
   const isVerified = Boolean(property.verified);
+  const isReserved = property.status === "reserved";
+  const isSold = property.status === "sold";
+  const isUnavailable = isReserved || isSold;
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -75,10 +93,24 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
     return (
       <Link
         to={`/mali/${property.id}`}
-        className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col sm:flex-row"
+        className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-shadow flex flex-col sm:flex-row ${
+          isSold ? "border-gray-200 opacity-75" : "border-gray-100"
+        }`}
       >
-        <div className="w-full sm:w-48 h-40 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0">
+        <div className="w-full sm:w-48 h-40 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative">
           <Icon size={32} className="text-gray-300" />
+          {isReserved && (
+            <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <Clock3 size={10} />
+              RESERVED
+            </span>
+          )}
+          {isSold && (
+            <span className="absolute top-2 left-2 bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <Ban size={10} />
+              SOLD
+            </span>
+          )}
         </div>
         <div className="flex-1 p-4">
           <div className="flex items-start justify-between gap-2">
@@ -113,6 +145,12 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
           <p className="text-[#C1502E] font-bold text-base mt-2">
             {formatTZS(property.price)}
           </p>
+          {isReserved && property.reservedUntil && (
+            <p className="text-[11px] font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
+              <Clock3 size={11} />
+              {reservationCountdown(property.reservedUntil)}
+            </p>
+          )}
           <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
             {property.bedrooms && <span>🛏 {property.bedrooms} vyumba</span>}
             {property.bathrooms && <span>🚿 {property.bathrooms} bafu</span>}
@@ -139,31 +177,47 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
     );
   }
 
+  // Grid view
   return (
     <Link
       to={`/mali/${property.id}`}
-      className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-all group block"
+      className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-all group block ${
+        isSold ? "border-gray-200 opacity-75" : "border-gray-100"
+      }`}
     >
       <div className="relative">
         <div className="w-full h-44 bg-gray-100 flex items-center justify-center">
           <Icon size={40} className="text-gray-300 group-hover:scale-110 transition-transform" />
         </div>
-        {(isLeading || isFeatured) && (
-          <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
-            {isLeading && (
-              <span className="bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                <TrendingUp size={10} />
-                Search Priority
-              </span>
-            )}
-            {isFeatured && (
-              <span className="bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                <Star size={10} fill="#101A2E" />
-                Featured
-              </span>
-            )}
-          </div>
-        )}
+
+        {/* Top-left: leading / featured / reserved / sold */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+          {isLeading && (
+            <span className="bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <TrendingUp size={10} />
+              Search Priority
+            </span>
+          )}
+          {isFeatured && (
+            <span className="bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <Star size={10} fill="#101A2E" />
+              Featured
+            </span>
+          )}
+          {isReserved && (
+            <span className="bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+              <Clock3 size={10} />
+              RESERVED
+            </span>
+          )}
+          {isSold && (
+            <span className="bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+              <Ban size={10} />
+              SOLD
+            </span>
+          )}
+        </div>
+
         {isVerified && (
           <span className="absolute top-2 right-2 bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
             <Shield size={10} />
@@ -197,6 +251,14 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
         <p className="text-[#C1502E] font-bold text-base mt-2">
           {formatTZS(property.price)}
         </p>
+
+        {isReserved && property.reservedUntil && (
+          <p className="text-[11px] font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
+            <Clock3 size={11} />
+            {reservationCountdown(property.reservedUntil)}
+          </p>
+        )}
+
         <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
           {property.bedrooms && <span>🛏 {property.bedrooms}</span>}
           {property.bathrooms && <span>🚿 {property.bathrooms}</span>}
@@ -217,7 +279,6 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
 // ============================================================
 // FILTER SIDEBAR
 // ============================================================
-
 function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
   const [localFilters, setLocalFilters] = useState(filters);
 
@@ -277,7 +338,6 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
         </button>
       </div>
 
-      {/* Categories */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">
           {lang === "sw" ? "Kategoria" : "Category"}
@@ -297,7 +357,6 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
         </div>
       </div>
 
-      {/* Price Range */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">
           {lang === "sw" ? "Bei" : "Price"}
@@ -318,7 +377,6 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
         </div>
       </div>
 
-      {/* Regions */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">
           {lang === "sw" ? "Mkoa" : "Region"}
@@ -338,7 +396,6 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
         </div>
       </div>
 
-      {/* Other */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">
           {lang === "sw" ? "Vigezo Vingine" : "Other"}
@@ -369,7 +426,6 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
         </div>
       </div>
 
-      {/* Actions */}
       <div className="space-y-2 pt-4 border-t border-gray-100">
         <button
           onClick={handleApply}
@@ -410,7 +466,6 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-
 export default function BrowseProperties({ lang = "sw" }) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
@@ -428,9 +483,9 @@ export default function BrowseProperties({ lang = "sw" }) {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 9;
 
-  const allProperties = useLiveListings();
+  // === BADILIKO: usePublicListings() — inarudisha live + reserved + sold ===
+  const allProperties = usePublicListings();
 
-  // Filter and sort
   const filteredProperties = useMemo(() => {
     let result = [...allProperties];
 
@@ -440,7 +495,7 @@ export default function BrowseProperties({ lang = "sw" }) {
         (p) =>
           p.title.toLowerCase().includes(q) ||
           p.location.toLowerCase().includes(q) ||
-          p.region.toLowerCase().includes(q)
+          (p.region && p.region.toLowerCase().includes(q))
       );
     }
 
@@ -472,7 +527,7 @@ export default function BrowseProperties({ lang = "sw" }) {
       result = result.filter((p) => p.price >= min && p.price < max);
     }
 
-    // Comparator ya sortBy iliyochaguliwa na mtumiaji (bei/views/tarehe).
+    // Comparator ya sortBy iliyochaguliwa na mtumiaji.
     const sortComparator = (a, b) => {
       switch (sortBy) {
         case "price_low":
@@ -487,14 +542,22 @@ export default function BrowseProperties({ lang = "sw" }) {
       }
     };
 
-    // Leading Fee (search priority) inapewa kipaumbele KWANZA — listing
-    // zenye leadingExpiresAt hai zinapanda JUU ya matokeo YOTE, bila
-    // kujali sortBy iliyochaguliwa. Ndani ya kundi moja (leading au
-    // la kawaida), sortBy ya mtumiaji ndiyo inayoamua mpangilio.
+    // Leading Fee inapewa kipaumbele KWANZA, kisha SOLD/RESERVED
+    // zinashushwa chini (zinaonekana, lakini si mbele ya AVAILABLE).
+    const statusRank = (p) => {
+      if (p.status === "live") return 0;
+      if (p.status === "reserved") return 1;
+      if (p.status === "sold") return 2;
+      return 3;
+    };
+
     result.sort((a, b) => {
       const aLeading = isLeadingActive(a) ? 1 : 0;
       const bLeading = isLeadingActive(b) ? 1 : 0;
       if (aLeading !== bLeading) return bLeading - aLeading;
+      const aRank = statusRank(a);
+      const bRank = statusRank(b);
+      if (aRank !== bRank) return aRank - bRank;
       return sortComparator(a, b);
     });
 
@@ -540,7 +603,6 @@ export default function BrowseProperties({ lang = "sw" }) {
       `}</style>
 
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <h1 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl sm:text-3xl font-semibold mb-1">
           {lang === "sw" ? "Tafuta Mali" : "Browse Properties"}
         </h1>
@@ -550,7 +612,6 @@ export default function BrowseProperties({ lang = "sw" }) {
             : "Find the property you're looking for from verified sellers."}
         </p>
 
-        {/* Search Bar */}
         <form onSubmit={handleSearchSubmit} className="mb-5">
           <div className="relative max-w-2xl">
             <Search
@@ -579,7 +640,6 @@ export default function BrowseProperties({ lang = "sw" }) {
           </div>
         </form>
 
-        {/* Main Content */}
         <div className="flex gap-6">
           <FilterSidebar
             filters={filters}
@@ -590,7 +650,6 @@ export default function BrowseProperties({ lang = "sw" }) {
           />
 
           <div className="flex-1 min-w-0">
-            {/* Toolbar */}
             <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-gray-600">
                 <span className="font-semibold text-gray-800">
@@ -658,7 +717,6 @@ export default function BrowseProperties({ lang = "sw" }) {
               </div>
             </div>
 
-            {/* Active Filters */}
             {hasActiveFilters && (
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className="text-xs text-gray-500">
@@ -691,7 +749,6 @@ export default function BrowseProperties({ lang = "sw" }) {
               </div>
             )}
 
-            {/* Properties Grid */}
             {paginatedProperties.length > 0 ? (
               <>
                 <div
@@ -713,7 +770,6 @@ export default function BrowseProperties({ lang = "sw" }) {
                   ))}
                 </div>
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-8">
                     <button
