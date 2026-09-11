@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { useLanguage } from "../../context/LanguageContext.jsx";
 import {
   useReservationRates,
   updateReservationRate,
@@ -30,8 +29,11 @@ import {
   PERMISSION_OPTIONS,
   useAppStoreLinks,
   saveAppStoreLinks,
+  usePlatformPolicy,
+  updatePlatformPolicy,
 } from "../../config/systemSettingsStore.js";
-import { useNotifications } from "../../config/notificationsStore.js";
+import { useNotifications, NOTIFICATION_EVENTS } from "../../config/notificationsStore.js";
+import { useMyTransactionsAggregate } from "../../config/transactionsStore.js";
 import {
   Users,
   Home,
@@ -42,7 +44,6 @@ import {
   Clock,
   MoreVertical,
   Search,
-  Filter,
   Download,
   LogOut,
   LayoutDashboard,
@@ -69,6 +70,7 @@ import {
   Megaphone,
   Star,
   Rocket,
+  ArrowRight,
 } from "lucide-react";
 
 const COLORS = {
@@ -86,77 +88,15 @@ const FONTS = {
   body: "'Manrope', sans-serif",
 };
 
-// ============================================================
-// MOCK DATA
-// ============================================================
-
-const STATS = [
-  { id: "users", label: "Watumiaji", value: "12,847", change: "+12.5%", icon: Users, color: COLORS.gold },
-  { id: "properties", label: "Mali", value: "8,234", change: "+8.3%", icon: Home, color: COLORS.green },
-  { id: "deals", label: "Deals", value: "2,451", change: "+15.7%", icon: ShoppingBag, color: "#2563EB" },
-  { id: "revenue", label: "Mapato", value: "TSh 4.2M", change: "+22.1%", icon: DollarSign, color: COLORS.rust },
+const NAV = [
+  { key: "overview", label: "Overview & Analytics", icon: LayoutDashboard },
+  { key: "users", label: "User Management", icon: Users },
+  { key: "moderation", label: "Listing & Ads Moderation", icon: ShieldCheck },
+  { key: "deals", label: "Deal Rooms & Disputes", icon: MessagesSquare },
+  { key: "revenue", label: "Revenue & Financial Settings", icon: Wallet },
+  { key: "system", label: "System Settings", icon: SettingsIcon },
 ];
 
-const CHART_DATA = {
-  labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-  users: [120, 150, 180, 200, 220, 180, 160],
-  properties: [80, 100, 120, 140, 160, 130, 110],
-  deals: [40, 50, 60, 70, 80, 65, 55],
-};
-
-// Users mock imehamishiwa ../../config/usersStore.js (SEED_USERS).
-// Listings mock imehamishiwa ../../config/listingsStore.js (SEED_LISTINGS) —
-// hii ndiyo listing ZILEZILE zinazoonekana kwenye "My Listings" ya muuzaji
-// (DashboardShell.jsx).
-// Deals mock imehamishiwa ../../config/dealsStore.js (SEED_DEALS) —
-// hii ndiyo deal ZILEZILE zinazoonekana kwenye DealRooms.jsx.
-
-// Listing Fee tiers za zamani hapa (bei-ya-mali → fee flat) hazikuwa
-// na uhusiano wowote na fomula halisi (rate% + min/max kwa category)
-// inayotumika kuunda listing — zimeondolewa. Configs halisi sasa
-// zinatoka ../../config/listingFeeStore.js.
-
-const INITIAL_FEATURED_PLACEMENTS = [
-  { id: "homepage", label: "Homepage", fee: 50000 },
-  { id: "top_category", label: "Top of Category", fee: 30000 },
-  { id: "featured_section", label: "Featured Section", fee: 25000 },
-  { id: "search_priority", label: "Search Priority", fee: 10000 },
-];
-
-// Boosting Fee ya zamani hapa (flat "TZS 15,000/wiki") haikuwa na
-// uhusiano wowote na bei halisi za BoostSasa (Basic/Featured/Premium
-// kwa siku) — imeondolewa. Bei halisi za Boost sasa zinatoka
-// ../../config/boostPackagesStore.js (BoostPackagesCard hapa chini).
-
-// Leading Fee na Advertisement Fee za zamani hapa (INITIAL_FLAT_FEES,
-// namba tuli) hazikuwa na uhusiano wowote na bidhaa halisi — hakuna
-// listing iliyowahi "kupanda juu" wala banner iliyowahi kuonekana.
-// Sasa: Leading Fee inatoka ../../config/leadingFeeStore.js (na
-// kuathiri mpangilio wa BrowseProperties.jsx kupitia isLeadingActive),
-// na Advertisement Fee inatoka ../../config/advertisementFeeStore.js
-// (banner halisi zinaundwa na AdvertiseSasa.jsx ndani ya
-// bannerAdsStore.js, na kuonekana kwenye DashboardShell.jsx). Icons
-// pekee ndizo zilizobaki tuli hapa chini.
-const FLAT_FEE_ICONS = {
-  leading: Search,
-  ads: Smartphone,
-};
-
-// Webhooks, Sub-Admins, App Store Links mock zimehamishiwa
-// ../../config/systemSettingsStore.js (SEED_WEBHOOKS, SEED_SUBADMINS,
-// SEED_APP_STORE_LINKS) — PERMISSION_OPTIONS pia inatoka huko.
-// Announcements mock imehamishiwa ../../config/announcementsStore.js
-// (SEED_ANNOUNCEMENTS, ANNOUNCEMENT_TYPES) — ndiyo yanayoonekana kwenye
-// ticker ya mtumiaji (DashboardShell.jsx).
-
-// Admin notifications mock (INITIAL_ADMIN_NOTIFICATIONS) imehamishiwa
-// ../../config/notificationsStore.js (SEED_NOTIFICATIONS, audience: "admin")
-// — chanzo kimoja cha ukweli na taarifa za mtumiaji (NotificationsPage.jsx).
-// Matukio halisi ya Boost/Leading Fee/Advertisement/Listing Fee sasa
-// yanaunda taarifa hapa moja kwa moja (angalia notifyBoostPurchased n.k
-// ndani ya notificationsStore.js), pamoja na zile za zamani (moderation,
-// disputes, payment issues, fraud) ambazo bado ni seed hadi ziunganishwe
-// na matukio yake halisi (Awamu inayofuata).
 const ADMIN_NOTIFICATION_ICONS = {
   listing_pending: Home,
   dispute: Flag,
@@ -166,10 +106,10 @@ const ADMIN_NOTIFICATION_ICONS = {
   leading: Search,
   ads: Smartphone,
   listing_fee: CreditCard,
+  [NOTIFICATION_EVENTS.DISPUTE_RESOLVED]: Flag,
+  [NOTIFICATION_EVENTS.PAYMENT_PROOF_SUBMITTED]: CreditCard,
 };
 
-// Muda halisi (ISO) -> "Dakika 5 zilizopita" / "Saa 1 iliyopita" / n.k,
-// mtindo uleule wa timeAgo() (shared.js) unaotumika upande wa mtumiaji.
 function timeAgo(dateStr) {
   const ms = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(ms / 60000);
@@ -182,66 +122,38 @@ function timeAgo(dateStr) {
   return `Siku ${days} zilizopita`;
 }
 
-const NAV = [
-  { key: "overview", label: "Overview & Analytics", icon: LayoutDashboard },
-  { key: "users", label: "User Management", icon: Users },
-  { key: "moderation", label: "Listing & Ads Moderation", icon: ShieldCheck },
-  { key: "deals", label: "Deal Rooms & Disputes", icon: MessagesSquare },
-  { key: "revenue", label: "Revenue & Financial Settings", icon: Wallet },
-  { key: "system", label: "System Settings", icon: SettingsIcon },
-];
+function formatTZS(amount) {
+  return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
+}
 
 // ============================================================
 // SHARED UI
 // ============================================================
 
-function StatCard({ stat }) {
-  const Icon = stat.icon;
+function StatCard({ label, value, change, icon: Icon, color }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500 font-medium">{stat.label}</p>
-          <p className="text-2xl font-bold text-gray-800 mt-1">{stat.value}</p>
-          <p className="text-xs text-green-600 mt-1">{stat.change}</p>
+          <p className="text-sm text-gray-500 font-medium">{label}</p>
+          <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
+          {change && <p className="text-xs text-green-600 mt-1">{change}</p>}
         </div>
-        <div style={{ background: `${stat.color}15` }} className="w-12 h-12 rounded-xl flex items-center justify-center">
-          <Icon size={22} color={stat.color} />
+        <div style={{ background: `${color}15` }} className="w-12 h-12 rounded-xl flex items-center justify-center">
+          <Icon size={22} color={color} />
         </div>
       </div>
     </div>
   );
 }
 
-function SimpleChart() {
-  const maxValue = Math.max(...CHART_DATA.users, ...CHART_DATA.properties, ...CHART_DATA.deals);
+function SectionHeader({ title, subtitle }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-800">Weekly Activity</h3>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#E8A33D]"></span><span className="text-xs text-gray-500">Users</span></div>
-          <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#2F6D4F]"></span><span className="text-xs text-gray-500">Properties</span></div>
-          <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#C1502E]"></span><span className="text-xs text-gray-500">Deals</span></div>
-        </div>
-      </div>
-      <div className="h-48 flex items-end gap-2">
-        {CHART_DATA.labels.map((label, index) => {
-          const userHeight = (CHART_DATA.users[index] / maxValue) * 100;
-          const propertyHeight = (CHART_DATA.properties[index] / maxValue) * 100;
-          const dealHeight = (CHART_DATA.deals[index] / maxValue) * 100;
-          return (
-            <div key={label} className="flex-1 flex flex-col items-center gap-1">
-              <div className="w-full flex justify-center gap-1">
-                <div className="w-4 rounded-t-sm bg-[#E8A33D] transition-all duration-500" style={{ height: `${userHeight}%`, minHeight: "4px" }}></div>
-                <div className="w-4 rounded-t-sm bg-[#2F6D4F] transition-all duration-500" style={{ height: `${propertyHeight}%`, minHeight: "4px" }}></div>
-                <div className="w-4 rounded-t-sm bg-[#C1502E] transition-all duration-500" style={{ height: `${dealHeight}%`, minHeight: "4px" }}></div>
-              </div>
-              <span className="text-xs text-gray-400">{label}</span>
-            </div>
-          );
-        })}
-      </div>
+    <div className="mb-5">
+      <h1 style={{ fontFamily: FONTS.display }} className="text-2xl sm:text-3xl font-semibold text-gray-800">
+        {title}
+      </h1>
+      {subtitle && <p className="text-gray-500 text-sm mt-0.5">{subtitle}</p>}
     </div>
   );
 }
@@ -255,6 +167,7 @@ function StatusBadge({ status }) {
     verified: { label: "Imethibitishwa", color: "bg-green-100 text-green-700" },
     rejected: { label: "Imekataliwa", color: "bg-red-100 text-red-700" },
     live: { label: "Live", color: "bg-green-100 text-green-700" },
+    reserved: { label: "Ina Reservation", color: "bg-yellow-100 text-yellow-700" },
     in_review: { label: "Inasubiri", color: "bg-yellow-100 text-yellow-700" },
     pending_payment: { label: "Inasubiri Malipo", color: "bg-yellow-100 text-yellow-700" },
     sold: { label: "Imeuzwa", color: "bg-blue-100 text-blue-700" },
@@ -264,7 +177,6 @@ function StatusBadge({ status }) {
     offer_sent: { label: "Ofa Imetumwa", color: "bg-yellow-100 text-yellow-700" },
     accepted: { label: "Imekubaliwa", color: "bg-green-100 text-green-700" },
     declined: { label: "Imekataliwa", color: "bg-red-100 text-red-700" },
-    reserved: { label: "Inspection Period", color: "bg-blue-100 text-blue-700" },
     awaiting_final_payment: { label: "Malipo ya Mwisho", color: "bg-blue-100 text-blue-700" },
     payment_proof_submitted: { label: "Uthibitisho Umetumwa", color: "bg-yellow-100 text-yellow-700" },
     disputed: { label: "Mgogoro", color: "bg-red-100 text-red-700" },
@@ -274,39 +186,107 @@ function StatusBadge({ status }) {
   return <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${s.color}`}>{s.label}</span>;
 }
 
-function SectionHeader({ title, subtitle }) {
-  return (
-    <div className="mb-5">
-      <h1 style={{ fontFamily: FONTS.display }} className="text-2xl sm:text-3xl font-semibold text-gray-800">{title}</h1>
-      {subtitle && <p className="text-gray-500 text-sm mt-0.5">{subtitle}</p>}
-    </div>
+// ============================================================
+// SECTION: OVERVIEW (imeboreshwa)
+// ============================================================
+function OverviewSection({ onNavigate }) {
+  const users = useUsers();
+  const listings = useListings();
+  const deals = useDeals();
+  const transactions = useMyTransactionsAggregate();
+
+  // Derive stats kutoka stores — hakuna hardcoded tena.
+  const totalUsers = users.length;
+  const totalListings = listings.length;
+  const liveListings = listings.filter((l) => l.status === "live").length;
+  const reservedListings = listings.filter((l) => l.status === "reserved").length;
+  const totalDeals = deals.length;
+  const totalRevenue = transactions.revenue;
+
+  // Deals zinazoendelea (live transactions in progress)
+  const activeDeals = useMemo(
+    () =>
+      deals.filter((d) =>
+        ["negotiating", "offer_sent", "accepted", "reserved", "awaiting_final_payment", "payment_proof_submitted", "disputed"].includes(
+          d.status
+        )
+      ),
+    [deals]
   );
-}
 
-// ============================================================
-// SECTION: OVERVIEW
-// ============================================================
+  const stats = [
+    { id: "users", label: "Watumiaji", value: totalUsers.toLocaleString(), change: "", icon: Users, color: COLORS.gold },
+    { id: "listings", label: "Mali (Live + Reserved)", value: `${liveListings} + ${reservedListings}`, change: "", icon: Home, color: COLORS.green },
+    { id: "deals", label: "Deals", value: totalDeals.toLocaleString(), change: "", icon: ShoppingBag, color: "#2563EB" },
+    { id: "revenue", label: "Mapato", value: formatTZS(totalRevenue), change: "", icon: DollarSign, color: COLORS.rust },
+  ];
 
-function OverviewSection() {
   return (
     <>
       <SectionHeader title="Overview & Analytics" subtitle="Muhtasari wa mfumo mzima wa SokoMkononi" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {STATS.map((stat) => <StatCard key={stat.id} stat={stat} />)}
+        {stats.map((stat) => (
+          <StatCard key={stat.id} {...stat} />
+        ))}
       </div>
-      <SimpleChart />
+
+      {/* === LIVE TRANSACTIONS IN PROGRESS — kipengele kipya per Doc §4.1 === */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+            <Clock size={16} color={COLORS.gold} />
+            Live Transactions Zinazoendelea
+          </h3>
+          <button
+            onClick={() => onNavigate("deals")}
+            className="text-xs font-semibold hover:underline flex items-center gap-1"
+            style={{ color: COLORS.gold }}
+          >
+            Nenda Deal Rooms <ArrowRight size={12} />
+          </button>
+        </div>
+
+        {activeDeals.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">
+            Hakuna deals zinazoendelea kwa sasa.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {activeDeals.slice(0, 5).map((d) => (
+              <div
+                key={d.id}
+                className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2.5"
+                style={{ borderColor: COLORS.sandLine }}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{d.listingTitle}</p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {d.buyerName} ← → {d.sellerName}
+                  </p>
+                </div>
+                <span className="text-sm font-bold shrink-0" style={{ color: COLORS.rust }}>
+                  {formatTZS(d.currentOffer ?? d.askingPrice)}
+                </span>
+                <StatusBadge status={d.status} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </>
   );
 }
 
 // ============================================================
-// SECTION: USER MANAGEMENT
+// SECTION: USER MANAGEMENT (imeboreshwa — row click → drawer)
 // ============================================================
-
 function UserManagementSection() {
   const users = useUsers();
+  const listings = useListings();
+  const deals = useDeals();
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("Zote");
+  const [selectedUser, setSelectedUser] = useState(null);
 
   const toggleStatus = (id) => toggleUserStatus(id);
 
@@ -317,6 +297,12 @@ function UserManagementSection() {
     const matchesRole = roleFilter === "Zote" || u.role === roleFilter;
     return matchesQuery && matchesRole;
   });
+
+  // User's listings + deals — kwa drawer
+  const userListings = selectedUser ? listings.filter((l) => l.seller === selectedUser.name) : [];
+  const userDeals = selectedUser
+    ? deals.filter((d) => d.buyerName === selectedUser.name || d.sellerName === selectedUser.name)
+    : [];
 
   return (
     <>
@@ -358,7 +344,11 @@ function UserManagementSection() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
+                <tr
+                  key={u.id}
+                  className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                  onClick={() => setSelectedUser(u)}
+                >
                   <td className="px-5 py-3 text-sm font-medium text-gray-800">{u.name}</td>
                   <td className="px-5 py-3 text-sm text-gray-500">{u.email}</td>
                   <td className="px-5 py-3 text-sm text-gray-500">{u.role}</td>
@@ -366,10 +356,11 @@ function UserManagementSection() {
                   <td className="px-5 py-3 text-sm text-gray-400">{u.joined}</td>
                   <td className="px-5 py-3 text-right">
                     <button
-                      onClick={() => toggleStatus(u.id)}
-                      style={{
-                        color: u.status === "suspended" ? COLORS.green : COLORS.rust,
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleStatus(u.id);
                       }}
+                      style={{ color: u.status === "suspended" ? COLORS.green : COLORS.rust }}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border"
                     >
                       {u.status === "suspended" ? <RotateCcw size={13} /> : <Ban size={13} />}
@@ -379,20 +370,129 @@ function UserManagementSection() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-8 text-center text-sm text-gray-400">Hakuna matokeo</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-5 py-8 text-center text-sm text-gray-400">
+                    Hakuna matokeo
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* === USER DETAIL DRAWER === */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="flex-1 bg-black/40" onClick={() => setSelectedUser(null)} />
+          <div
+            className="w-full sm:w-96 h-full bg-white shadow-2xl overflow-y-auto"
+            style={{ fontFamily: FONTS.body }}
+          >
+            <div
+              className="sticky top-0 p-4 flex items-center justify-between border-b"
+              style={{ borderColor: COLORS.sandLine, background: "white" }}
+            >
+              <h3 className="font-semibold text-gray-800">Wasifu wa Mtumiaji</h3>
+              <button onClick={() => setSelectedUser(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              {/* Header */}
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold"
+                  style={{ background: `${COLORS.gold}20`, color: COLORS.gold }}
+                >
+                  {selectedUser.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-gray-800 truncate">{selectedUser.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{selectedUser.email}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <StatusBadge status={selectedUser.status} />
+                    <span className="text-xs text-gray-400 capitalize">{selectedUser.role}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Meta */}
+              <div
+                className="rounded-xl p-3 text-xs space-y-1.5"
+                style={{ background: COLORS.sand }}
+              >
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Alijiunga:</span>
+                  <span className="font-medium text-gray-700">{selectedUser.joined}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Listings:</span>
+                  <span className="font-medium text-gray-700">{userListings.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Deals:</span>
+                  <span className="font-medium text-gray-700">{userDeals.length}</span>
+                </div>
+              </div>
+
+              {/* Listings */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                  Listings Zake ({userListings.length})
+                </p>
+                {userListings.length === 0 ? (
+                  <p className="text-xs text-gray-400">Hakuna listings.</p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {userListings.map((l) => (
+                      <div
+                        key={l.id}
+                        className="flex items-center justify-between gap-2 text-xs border rounded-lg px-3 py-2"
+                        style={{ borderColor: COLORS.sandLine }}
+                      >
+                        <span className="truncate text-gray-700">{l.title}</span>
+                        <StatusBadge status={l.status} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Deals */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                  Deals Zake ({userDeals.length})
+                </p>
+                {userDeals.length === 0 ? (
+                  <p className="text-xs text-gray-400">Hakuna deals.</p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {userDeals.map((d) => (
+                      <div
+                        key={d.id}
+                        className="flex items-center justify-between gap-2 text-xs border rounded-lg px-3 py-2"
+                        style={{ borderColor: COLORS.sandLine }}
+                      >
+                        <span className="truncate text-gray-700">{d.listingTitle}</span>
+                        <StatusBadge status={d.status} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
 // ============================================================
-// SECTION: LISTING & ADS MODERATION
+// SECTION: MODERATION (kama ilivyo)
 // ============================================================
-
 function ModerationSection() {
   const listings = useListings();
   const [statusFilter, setStatusFilter] = useState("in_review");
@@ -445,16 +545,26 @@ function ModerationSection() {
                 <tr key={l.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-5 py-3 text-sm font-medium text-gray-800">{l.title}</td>
                   <td className="px-5 py-3 text-sm text-gray-500">{l.category}</td>
-                  <td className="px-5 py-3 text-sm text-gray-500">{l.seller}</td>
-                  <td className="px-5 py-3 text-sm font-semibold text-[#C1502E]">TZS {l.price.toLocaleString()}</td>
+                  <td className="px-5 py-3 text-sm text-gray-500">{l.seller || l.seller_name}</td>
+                  <td className="px-5 py-3 text-sm font-semibold" style={{ color: COLORS.rust }}>
+                    {formatTZS(l.price)}
+                  </td>
                   <td className="px-5 py-3"><StatusBadge status={l.status} /></td>
                   <td className="px-5 py-3 text-right">
                     {l.status === "in_review" ? (
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => decide(l.id, "live")} style={{ color: COLORS.green }} className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200">
+                        <button
+                          onClick={() => decide(l.id, "live")}
+                          style={{ color: COLORS.green }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200"
+                        >
                           <CheckCircle size={13} /> Idhinisha
                         </button>
-                        <button onClick={() => decide(l.id, "rejected")} style={{ color: COLORS.rust }} className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200">
+                        <button
+                          onClick={() => decide(l.id, "rejected")}
+                          style={{ color: COLORS.rust }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200"
+                        >
                           <XCircle size={13} /> Kataa
                         </button>
                       </div>
@@ -465,7 +575,11 @@ function ModerationSection() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-8 text-center text-sm text-gray-400">Hakuna mali katika kundi hili</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-5 py-8 text-center text-sm text-gray-400">
+                    Hakuna mali katika kundi hili
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
@@ -476,31 +590,12 @@ function ModerationSection() {
 }
 
 // ============================================================
-// SECTION: DEAL ROOMS & DISPUTE RESOLUTION
+// SECTION: DEALS (kama ilivyo)
 // ============================================================
-
 const DISPUTE_ACTIONS = [
-  {
-    key: "refund",
-    label: "Rudisha Fedha kwa Mnunuzi",
-    desc: "Malalamiko ni sahihi — deal inaghairiwa na mnunuzi anarejeshewa fedha alizolipa.",
-    icon: RotateCcw,
-    tone: COLORS.green,
-  },
-  {
-    key: "continue",
-    label: "Endelea na Deal",
-    desc: "Baada ya kukagua, hakuna tatizo la kutosha kusimamisha deal — inarudi kwenye majadiliano.",
-    icon: CheckCircle,
-    tone: COLORS.gold,
-  },
-  {
-    key: "cancel",
-    label: "Ghairi Kabisa (Bila Kurejesha)",
-    desc: "Deal inasitishwa kabisa. Hakuna urejeshaji wa fedha kwa upande wowote.",
-    icon: XCircle,
-    tone: COLORS.rust,
-  },
+  { key: "refund", label: "Rudisha Fedha kwa Mnunuzi", desc: "Malalamiko ni sahihi — deal inaghairiwa na mnunuzi anarejeshewa fedha alizolipa.", icon: RotateCcw, tone: COLORS.green },
+  { key: "continue", label: "Endelea na Deal", desc: "Baada ya kukagua, hakuna tatizo la kutosha kusimamisha deal — inarudi kwenye majadiliano.", icon: CheckCircle, tone: COLORS.gold },
+  { key: "cancel", label: "Ghairi Kabisa (Bila Kurejesha)", desc: "Deal inasitishwa kabisa. Hakuna urejeshaji wa fedha kwa upande wowote.", icon: XCircle, tone: COLORS.rust },
 ];
 
 function DisputeReviewPanel({ deal, onResolve, onClose }) {
@@ -515,42 +610,58 @@ function DisputeReviewPanel({ deal, onResolve, onClose }) {
   };
 
   return (
-    <div style={{ borderColor: COLORS.sandLine, background: COLORS.sand }} className="border-t px-5 py-4 flex flex-col gap-4">
+    <div
+      style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
+      className="border-t px-5 py-4 flex flex-col gap-4"
+    >
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-gray-800">Kagua Mgogoro — {deal.listingTitle}</p>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs font-semibold">Funga</button>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xs font-semibold">
+          Funga
+        </button>
       </div>
 
-      {/* Sababu ya mnunuzi */}
       <div>
         <p className="text-[11px] font-semibold text-gray-500 uppercase mb-1.5">Sababu ya Mnunuzi</p>
-        <p style={{ borderColor: COLORS.sandLine }} className="text-sm text-gray-700 bg-white border rounded-lg px-3 py-2.5">
+        <p
+          style={{ borderColor: COLORS.sandLine }}
+          className="text-sm text-gray-700 bg-white border rounded-lg px-3 py-2.5"
+        >
           {deal.disputeNote || "Hakuna maelezo yaliyotolewa na mnunuzi."}
         </p>
       </div>
 
-      {/* Taarifa za Reservation */}
       {deal.reservationFee != null && (
         <div>
           <p className="text-[11px] font-semibold text-gray-500 uppercase mb-1.5">Reservation Fee</p>
-          <div style={{ borderColor: COLORS.sandLine }} className="flex flex-wrap gap-x-5 gap-y-1 bg-white border rounded-lg px-3 py-2.5 text-xs text-gray-600">
+          <div
+            style={{ borderColor: COLORS.sandLine }}
+            className="flex flex-wrap gap-x-5 gap-y-1 bg-white border rounded-lg px-3 py-2.5 text-xs text-gray-600"
+          >
             <span>Muda: Saa {deal.reservationHours ?? "—"}</span>
-            <span>Kiasi: TZS {deal.reservationFee.toLocaleString()}</span>
+            <span>Kiasi: {formatTZS(deal.reservationFee)}</span>
             <span>Njia: {deal.reservationMethod || "—"}</span>
           </div>
         </div>
       )}
 
-      {/* Historia ya ujumbe */}
       <div>
         <p className="text-[11px] font-semibold text-gray-500 uppercase mb-1.5">Historia ya Mazungumzo</p>
-        <div style={{ borderColor: COLORS.sandLine }} className="max-h-52 overflow-y-auto flex flex-col gap-2 bg-white border rounded-lg p-3">
+        <div
+          style={{ borderColor: COLORS.sandLine }}
+          className="max-h-52 overflow-y-auto flex flex-col gap-2 bg-white border rounded-lg p-3"
+        >
           {deal.messages.map((m) => {
             const who = m.sender === "admin" ? "Admin" : m.sender === "me" ? "Muuzaji" : "Mnunuzi";
-            const text = m.text || (m.offerAmount ? `Ofa ya TZS ${m.offerAmount.toLocaleString()}` : "");
+            const text = m.text || (m.offerAmount ? `Ofa ya ${formatTZS(m.offerAmount)}` : "");
             return (
               <p key={m.id} className="text-xs leading-snug">
-                <span style={{ color: m.sender === "admin" ? COLORS.rust : COLORS.night }} className="font-semibold">{who}: </span>
+                <span
+                  style={{ color: m.sender === "admin" ? COLORS.rust : COLORS.night }}
+                  className="font-semibold"
+                >
+                  {who}:{" "}
+                </span>
                 <span className="text-gray-500">{text}</span>
               </p>
             );
@@ -558,7 +669,6 @@ function DisputeReviewPanel({ deal, onResolve, onClose }) {
         </div>
       </div>
 
-      {/* Chaguzi za uamuzi */}
       <div>
         <p className="text-[11px] font-semibold text-gray-500 uppercase mb-2">Chagua Uamuzi</p>
         <div className="flex flex-col gap-2">
@@ -591,7 +701,7 @@ function DisputeReviewPanel({ deal, onResolve, onClose }) {
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Maelezo ya uamuzi (yataonekana kwa muuzaji na mnunuzi kwenye deal room)..."
+            placeholder="Maelezo ya uamuzi..."
             rows={2}
             style={{ borderColor: COLORS.sandLine }}
             className="w-full rounded-lg border px-3 py-2 text-sm outline-none resize-none bg-white"
@@ -629,7 +739,7 @@ function DealsSection() {
 
   return (
     <>
-      <SectionHeader title="Deal Rooms & Dispute Resolution" subtitle="Fuatilia deals na utatue migogoro kati ya mnunuzi na muuzaji" />
+      <SectionHeader title="Deal Rooms & Dispute Resolution" subtitle="Fuatilia deals na utatue migogoro" />
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -653,14 +763,19 @@ function DealsSection() {
                       <td className="px-5 py-3 text-sm font-medium text-gray-800 flex items-center gap-2">
                         {d.listingTitle}
                         {isDisputed && (
-                          <span style={{ background: `${COLORS.rust}15`, color: COLORS.rust }} className="text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          <span
+                            style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          >
                             MGOGORO
                           </span>
                         )}
                       </td>
                       <td className="px-5 py-3 text-sm text-gray-500">{d.buyerName}</td>
                       <td className="px-5 py-3 text-sm text-gray-500">{d.sellerName}</td>
-                      <td className="px-5 py-3 text-sm font-semibold text-[#C1502E]">TZS {(d.currentOffer ?? d.askingPrice).toLocaleString()}</td>
+                      <td className="px-5 py-3 text-sm font-semibold" style={{ color: COLORS.rust }}>
+                        {formatTZS(d.currentOffer ?? d.askingPrice)}
+                      </td>
                       <td className="px-5 py-3"><StatusBadge status={d.status} /></td>
                       <td className="px-5 py-3 text-right">
                         {isDisputed ? (
@@ -672,14 +787,20 @@ function DealsSection() {
                             {isExpanded ? "Funga" : "Kagua Mgogoro"}
                           </button>
                         ) : (
-                          <button className="text-gray-400 hover:text-gray-600"><MoreVertical size={16} /></button>
+                          <button className="text-gray-400 hover:text-gray-600">
+                            <MoreVertical size={16} />
+                          </button>
                         )}
                       </td>
                     </tr>
                     {isDisputed && isExpanded && (
                       <tr>
                         <td colSpan={6} className="p-0">
-                          <DisputeReviewPanel deal={d} onResolve={handleResolve} onClose={() => setExpandedId(null)} />
+                          <DisputeReviewPanel
+                            deal={d}
+                            onResolve={handleResolve}
+                            onClose={() => setExpandedId(null)}
+                          />
                         </td>
                       </tr>
                     )}
@@ -687,7 +808,11 @@ function DealsSection() {
                 );
               })}
               {deals.length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-8 text-center text-sm text-gray-400">Hakuna deals</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-5 py-8 text-center text-sm text-gray-400">
+                    Hakuna deals
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
@@ -698,9 +823,8 @@ function DealsSection() {
 }
 
 // ============================================================
-// SECTION: REVENUE & FINANCIAL SETTINGS
+// SECTION: REVENUE (imeboreshwa — Featured Placements imeondolewa)
 // ============================================================
-
 function EditableAmount({ value, onSave, prefix = "TZS " }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -775,65 +899,34 @@ function RevenueSection() {
   const listingFeeConfigs = useListingFeeConfigs();
   const reservationRates = useReservationRates();
   const boostPackages = useBoostPackages();
-  const [featuredPlacements, setFeaturedPlacements] = useState(INITIAL_FEATURED_PLACEMENTS);
   const leadingFee = useLeadingFeeConfig();
   const adFee = useAdvertisementFeeConfig();
   const [saved, setSaved] = useState(false);
 
   const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
 
-  const updateListingFeeRate = (key, rate) => {
-    updateListingFeeConfig(key, { rate });
-    flash();
-  };
-
-  const updateListingFeeMin = (key, min) => {
-    updateListingFeeConfig(key, { min });
-    flash();
-  };
-
-  const updateListingFeeMax = (key, max) => {
-    updateListingFeeConfig(key, { max });
-    flash();
-  };
-
-  const updateReservationFee = (id, fee) => {
-    updateReservationRate(id, fee);
-    flash();
-  };
-
-  const updateBoostPrice = (key, price) => {
-    updateBoostPackagePrice(key, price);
-    flash();
-  };
-
-  const updateFeaturedFee = (id, fee) => {
-    setFeaturedPlacements((p) => p.map((row) => (row.id === id ? { ...row, fee } : row)));
-    flash();
-  };
-
-  const updateLeadingPrice = (price) => {
-    updateLeadingFeePrice(price);
-    flash();
-  };
-
-  const updateAdvertisementPrice = (price) => {
-    updateAdvertisementFeePrice(price);
-    flash();
-  };
+  const updateListingFeeRate = (key, rate) => { updateListingFeeConfig(key, { rate }); flash(); };
+  const updateListingFeeMin = (key, min) => { updateListingFeeConfig(key, { min }); flash(); };
+  const updateListingFeeMax = (key, max) => { updateListingFeeConfig(key, { max }); flash(); };
+  const updateReservationFee = (id, fee) => { updateReservationRate(id, fee); flash(); };
+  const updateBoostPrice = (key, price) => { updateBoostPackagePrice(key, price); flash(); };
+  const updateLeadingPrice = (price) => { updateLeadingFeePrice(price); flash(); };
+  const updateAdvertisementPrice = (price) => { updateAdvertisementFeePrice(price); flash(); };
 
   return (
     <>
-      <SectionHeader title="Revenue & Financial Settings" subtitle="Vyanzo vyote 6 vya mapato ya SokoMkononi — bofya kiasi kubadilisha" />
+      <SectionHeader title="Revenue & Financial Settings" subtitle="Vyanzo vyote 5 vya mapato — bofya kiasi kubadilisha" />
       {saved && (
-        <div style={{ background: `${COLORS.green}15`, color: COLORS.green }} className="text-xs font-semibold px-3 py-2 rounded-lg mb-4 inline-block">
+        <div
+          style={{ background: `${COLORS.green}15`, color: COLORS.green }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg mb-4 inline-block"
+        >
           Imehifadhiwa
         </div>
       )}
 
       <div className="flex flex-col gap-4">
-        {/* Listing Fee per category (rate% + min/max) — hizi ndizo
-            namba HALISI zinazotumika PostPropertyForm ilipoundwa listing */}
+        {/* 1. Listing Fee */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center gap-3 mb-1">
             <div style={{ background: `${COLORS.gold}15` }} className="w-9 h-9 rounded-lg flex items-center justify-center">
@@ -841,7 +934,9 @@ function RevenueSection() {
             </div>
             <p className="text-sm font-semibold text-gray-800">Listing Fee</p>
           </div>
-          <p className="text-xs text-gray-500 mb-3">Asilimia ya bei ya mali kwa category, na ukomo wa chini/juu — inalipwa kabla ya kuchapisha</p>
+          <p className="text-xs text-gray-500 mb-3">
+            Asilimia ya bei ya mali kwa category, na ukomo wa chini/juu
+          </p>
           <div className="divide-y divide-gray-100">
             {listingFeeConfigs.map((c) => (
               <div key={c.key} className="flex items-center justify-between py-2.5 gap-3 flex-wrap">
@@ -865,7 +960,7 @@ function RevenueSection() {
           </div>
         </div>
 
-        {/* Reservation Fee by duration */}
+        {/* 2. Reservation Fee */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center gap-3 mb-1">
             <div style={{ background: `${COLORS.green}15` }} className="w-9 h-9 rounded-lg flex items-center justify-center">
@@ -873,7 +968,7 @@ function RevenueSection() {
             </div>
             <p className="text-sm font-semibold text-gray-800">Reservation Fee</p>
           </div>
-          <p className="text-xs text-gray-500 mb-3">100% mapato ya SokoMkononi — hakuna 50/50 split na muuzaji</p>
+          <p className="text-xs text-gray-500 mb-3">100% mapato ya SokoMkononi — hakuna 50/50 split</p>
           <div className="divide-y divide-gray-100">
             {reservationRates.map((r) => (
               <div key={r.id} className="flex items-center justify-between py-2.5">
@@ -884,8 +979,7 @@ function RevenueSection() {
           </div>
         </div>
 
-        {/* Boost Packages (Basic/Featured/Premium) — bei halisi
-            zinazotumika kwenye Boost Sasa ya muuzaji */}
+        {/* 3. Boost Packages */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center gap-3 mb-1">
             <div style={{ background: `${COLORS.rust}15` }} className="w-9 h-9 rounded-lg flex items-center justify-center">
@@ -893,7 +987,7 @@ function RevenueSection() {
             </div>
             <p className="text-sm font-semibold text-gray-800">Boost Packages</p>
           </div>
-          <p className="text-xs text-gray-500 mb-3">Bei za Boost Sasa (Basic/Featured/Premium) — mabadiliko yanaonekana papo hapo kwa muuzaji</p>
+          <p className="text-xs text-gray-500 mb-3">Bei za Boost Sasa (Basic/Featured/Premium)</p>
           <div className="divide-y divide-gray-100">
             {boostPackages.map((pkg) => (
               <div key={pkg.key} className="flex items-center justify-between py-2.5">
@@ -906,37 +1000,11 @@ function RevenueSection() {
           </div>
         </div>
 
-        {/* Featured / Top Listing (Premium) */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="flex items-center gap-3 mb-1">
-            <div style={{ background: `${COLORS.gold}15` }} className="w-9 h-9 rounded-lg flex items-center justify-center">
-              <Star size={16} color={COLORS.gold} />
-            </div>
-            <p className="text-sm font-semibold text-gray-800">Featured / Top Listing (Premium)</p>
-          </div>
-          <p className="text-xs text-gray-500 mb-3">
-            Muuzaji analipia bidhaa yake ionekane sehemu za premium — analipia attention, si tu kuweka bidhaa
-          </p>
-          <div className="divide-y divide-gray-100">
-            {featuredPlacements.map((p) => (
-              <div key={p.id} className="flex items-center justify-between py-2.5">
-                <span className="text-sm text-gray-600">{p.label}</span>
-                <EditableAmount value={p.fee} onSave={(v) => updateFeaturedFee(p.id, v)} />
-              </div>
-            ))}
-          </div>
-          <p className="text-[11px] text-gray-400 mt-2">Kiwango kinachopendekezwa na mteja: TZS 10,000–50,000 kulingana na placement</p>
-        </div>
-
-        {/* Leading Fee (search priority) — huathiri moja kwa moja
-            mpangilio wa BrowseProperties.jsx kupitia isLeadingActive() */}
-        {/* Advertisement Fee (banner ya dashboard) — kila malipo
-            huunda banner halisi ndani ya bannerAdsStore.js, inayoonekana
-            kwenye DashboardShell.jsx (PromotedBannerStrip, 5s rotation) */}
+        {/* 4 + 5. Leading Fee na Advertisement Fee */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col gap-3">
             <div style={{ background: `${COLORS.rust}15` }} className="w-10 h-10 rounded-xl flex items-center justify-center">
-              <FLAT_FEE_ICONS.leading size={18} color={COLORS.rust} />
+              <Search size={18} color={COLORS.rust} />
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-800">{leadingFee.label}</p>
@@ -948,7 +1016,7 @@ function RevenueSection() {
 
           <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col gap-3">
             <div style={{ background: `${COLORS.rust}15` }} className="w-10 h-10 rounded-xl flex items-center justify-center">
-              <FLAT_FEE_ICONS.ads size={18} color={COLORS.rust} />
+              <Smartphone size={18} color={COLORS.rust} />
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-800">{adFee.label}</p>
@@ -964,9 +1032,8 @@ function RevenueSection() {
 }
 
 // ============================================================
-// SECTION: SYSTEM SETTINGS
+// SECTION: SYSTEM SETTINGS (imeboreshwa — Platform Policy added)
 // ============================================================
-
 function WebhooksPanel() {
   const [webhooks] = useWebhooks();
   const [form, setForm] = useState({ event: "Payment Success", url: "" });
@@ -991,7 +1058,11 @@ function WebhooksPanel() {
 
       <div className="flex flex-col gap-2">
         {webhooks.map((w) => (
-          <div key={w.id} style={{ borderColor: COLORS.sandLine }} className="flex items-center justify-between gap-2 border rounded-lg px-3 py-2">
+          <div
+            key={w.id}
+            style={{ borderColor: COLORS.sandLine }}
+            className="flex items-center justify-between gap-2 border rounded-lg px-3 py-2"
+          >
             <div className="min-w-0">
               <p className="text-xs font-semibold text-gray-700">{w.event}</p>
               <p className="text-xs text-gray-400 truncate">{w.url}</p>
@@ -1030,7 +1101,11 @@ function WebhooksPanel() {
           placeholder="https://..."
           className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none"
         />
-        <button onClick={add} style={{ background: COLORS.gold, color: COLORS.night }} className="flex items-center justify-center gap-1 text-xs font-semibold rounded-lg px-3 py-2">
+        <button
+          onClick={add}
+          style={{ background: COLORS.gold, color: COLORS.night }}
+          className="flex items-center justify-center gap-1 text-xs font-semibold rounded-lg px-3 py-2"
+        >
           <Plus size={13} /> Ongeza
         </button>
       </div>
@@ -1045,7 +1120,9 @@ function SubAdminsPanel() {
   const togglePerm = (p) => {
     setForm((f) => ({
       ...f,
-      permissions: f.permissions.includes(p) ? f.permissions.filter((x) => x !== p) : [...f.permissions, p],
+      permissions: f.permissions.includes(p)
+        ? f.permissions.filter((x) => x !== p)
+        : [...f.permissions, p],
     }));
   };
 
@@ -1068,13 +1145,21 @@ function SubAdminsPanel() {
 
       <div className="flex flex-col gap-2">
         {subAdmins.map((a) => (
-          <div key={a.id} style={{ borderColor: COLORS.sandLine }} className="flex items-center justify-between gap-2 border rounded-lg px-3 py-2">
+          <div
+            key={a.id}
+            style={{ borderColor: COLORS.sandLine }}
+            className="flex items-center justify-between gap-2 border rounded-lg px-3 py-2"
+          >
             <div className="min-w-0">
               <p className="text-xs font-semibold text-gray-700">{a.name}</p>
               <p className="text-xs text-gray-400 truncate">{a.email}</p>
               <div className="flex flex-wrap gap-1 mt-1">
                 {a.permissions.map((p) => (
-                  <span key={p} style={{ background: `${COLORS.gold}15`, color: COLORS.gold }} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                  <span
+                    key={p}
+                    style={{ background: `${COLORS.gold}15`, color: COLORS.gold }}
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                  >
                     {p}
                   </span>
                 ))}
@@ -1120,7 +1205,11 @@ function SubAdminsPanel() {
             </button>
           ))}
         </div>
-        <button onClick={add} style={{ background: COLORS.gold, color: COLORS.night }} className="flex items-center justify-center gap-1 text-xs font-semibold rounded-lg px-3 py-2 self-start">
+        <button
+          onClick={add}
+          style={{ background: COLORS.gold, color: COLORS.night }}
+          className="flex items-center justify-center gap-1 text-xs font-semibold rounded-lg px-3 py-2 self-start"
+        >
           <Plus size={13} /> Ongeza Sub-Admin
         </button>
       </div>
@@ -1150,7 +1239,9 @@ function AppStoreLinksPanel() {
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-gray-600 flex items-center gap-1"><Link2 size={12} /> Google Play Store</span>
+        <span className="text-xs font-medium text-gray-600 flex items-center gap-1">
+          <Link2 size={12} /> Google Play Store
+        </span>
         <input
           value={links.play}
           onChange={(e) => setLinks({ ...links, play: e.target.value })}
@@ -1160,7 +1251,9 @@ function AppStoreLinksPanel() {
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-gray-600 flex items-center gap-1"><Link2 size={12} /> Apple App Store</span>
+        <span className="text-xs font-medium text-gray-600 flex items-center gap-1">
+          <Link2 size={12} /> Apple App Store
+        </span>
         <input
           value={links.appstore}
           onChange={(e) => setLinks({ ...links, appstore: e.target.value })}
@@ -1169,7 +1262,66 @@ function AppStoreLinksPanel() {
         />
       </label>
 
-      <button onClick={save} style={{ background: COLORS.gold, color: COLORS.night }} className="flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2 self-start">
+      <button
+        onClick={save}
+        style={{ background: COLORS.gold, color: COLORS.night }}
+        className="flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2 self-start"
+      >
+        <Save size={13} /> Hifadhi
+      </button>
+      {saved && <span style={{ color: COLORS.green }} className="text-xs font-semibold">Imehifadhiwa</span>}
+    </div>
+  );
+}
+
+function PlatformPolicyPanel() {
+  const [policy, setPolicy] = usePlatformPolicy();
+  const [saved, setSaved] = useState(false);
+  const [draft, setDraft] = useState(policy.listingLifetimeDays);
+
+  const save = () => {
+    const days = Math.max(1, Math.min(365, Number(draft) || 60));
+    updatePlatformPolicy({ listingLifetimeDays: days });
+    setDraft(days);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <div style={{ background: `${COLORS.night}0D` }} className="w-9 h-9 rounded-lg flex items-center justify-center">
+          <Clock size={16} color={COLORS.night} />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-800">Platform Policy</p>
+          <p className="text-xs text-gray-500">Kanuni za jumla za mfumo</p>
+        </div>
+      </div>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-gray-600">Muda wa Listing Kuishi (siku)</span>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={1}
+            max={365}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value.replace(/\D/g, ""))}
+            className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
+          />
+          <span className="text-xs text-gray-500">siku</span>
+        </div>
+        <span className="text-[11px] text-gray-400">
+          Listing "live" inakuwa "expired" baada ya siku hizi. Min: 1, Max: 365.
+        </span>
+      </label>
+
+      <button
+        onClick={save}
+        style={{ background: COLORS.gold, color: COLORS.night }}
+        className="flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2 self-start"
+      >
         <Save size={13} /> Hifadhi
       </button>
       {saved && <span style={{ color: COLORS.green }} className="text-xs font-semibold">Imehifadhiwa</span>}
@@ -1202,7 +1354,7 @@ function AnnouncementsPanel() {
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-800">System / Marketplace Announcements</p>
-            <p className="text-xs text-gray-500">Matangazo ya jumla — fee changes, categories mpya, maintenance, promotions</p>
+            <p className="text-xs text-gray-500">Matangazo ya jumla — fee changes, categories mpya, maintenance</p>
           </div>
         </div>
         <button
@@ -1268,14 +1420,24 @@ function AnnouncementsPanel() {
 
       <div className="flex flex-col gap-2">
         {announcements.map((a) => (
-          <div key={a.id} style={{ borderColor: COLORS.sandLine }} className="flex items-start justify-between gap-3 border rounded-lg px-4 py-3">
+          <div
+            key={a.id}
+            style={{ borderColor: COLORS.sandLine }}
+            className="flex items-start justify-between gap-3 border rounded-lg px-4 py-3"
+          >
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span style={{ background: `${COLORS.gold}15`, color: COLORS.gold }} className="text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <span
+                  style={{ background: `${COLORS.gold}15`, color: COLORS.gold }}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                >
                   {typeLabel(a.typeId)}
                 </span>
                 {!a.sent && (
-                  <span style={{ background: `${COLORS.green}15`, color: COLORS.green }} className="text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  <span
+                    style={{ background: `${COLORS.green}15`, color: COLORS.green }}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  >
                     Imepangwa: {a.scheduledFor?.replace("T", " ")}
                   </span>
                 )}
@@ -1302,6 +1464,7 @@ function SystemSettingsSection() {
         <WebhooksPanel />
         <SubAdminsPanel />
         <AppStoreLinksPanel />
+        <PlatformPolicyPanel />
         <AnnouncementsPanel />
       </div>
     </>
@@ -1311,7 +1474,6 @@ function SystemSettingsSection() {
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-
 export default function AdminDashboard() {
   const { user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
@@ -1357,13 +1519,13 @@ export default function AdminDashboard() {
 
   const renderSection = () => {
     switch (activeSection) {
-      case "overview": return <OverviewSection />;
+      case "overview": return <OverviewSection onNavigate={setActiveSection} />;
       case "users": return <UserManagementSection />;
       case "moderation": return <ModerationSection />;
       case "deals": return <DealsSection />;
       case "revenue": return <RevenueSection />;
       case "system": return <SystemSettingsSection />;
-      default: return <OverviewSection />;
+      default: return <OverviewSection onNavigate={setActiveSection} />;
     }
   };
 
@@ -1373,21 +1535,26 @@ export default function AdminDashboard() {
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
-      {/* HEADER */}
-      <header style={{ background: COLORS.night }} className="sticky top-0 z-50 w-full flex items-center justify-between px-4 sm:px-6 py-3">
+      <header
+        style={{ background: COLORS.night }}
+        className="sticky top-0 z-50 w-full flex items-center justify-between px-4 sm:px-6 py-3"
+      >
         <div className="flex items-center gap-3">
           <button onClick={() => setSidebarOpen((v) => !v)} className="text-white/70 hover:text-white md:hidden">
             <Menu size={20} />
           </button>
-          <span style={{ fontFamily: FONTS.display, color: COLORS.sand }} className="text-lg sm:text-xl font-semibold tracking-tight">
+          <span
+            style={{ fontFamily: FONTS.display, color: COLORS.sand }}
+            className="text-lg sm:text-xl font-semibold tracking-tight"
+          >
             SokoMkononi
           </span>
-          <span className="text-[10px] font-semibold bg-[#E8A33D]/20 text-[#E8A33D] px-2.5 py-0.5 rounded-full">ADMIN</span>
+          <span className="text-[10px] font-semibold bg-[#E8A33D]/20 text-[#E8A33D] px-2.5 py-0.5 rounded-full">
+            ADMIN
+          </span>
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="text-white/60 hover:text-white transition-colors"><Search size={18} /></button>
-
           <div className="relative">
             <button
               onClick={() => setNotifOpen((v) => !v)}
@@ -1412,7 +1579,9 @@ export default function AdminDashboard() {
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <span className="text-sm font-semibold text-gray-800">Admin Notifications</span>
                   {unreadCount > 0 && (
-                    <span style={{ color: COLORS.rust }} className="text-xs font-semibold">{unreadCount} mpya</span>
+                    <span style={{ color: COLORS.rust }} className="text-xs font-semibold">
+                      {unreadCount} mpya
+                    </span>
                   )}
                 </div>
                 <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
@@ -1425,7 +1594,10 @@ export default function AdminDashboard() {
                         style={{ background: n.read ? "white" : `${COLORS.gold}0D` }}
                         className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
                       >
-                        <div style={{ background: `${COLORS.night}0D` }} className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                        <div
+                          style={{ background: `${COLORS.night}0D` }}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                        >
                           <Icon size={14} color={COLORS.night} />
                         </div>
                         <div className="min-w-0">
@@ -1446,7 +1618,10 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          <button onClick={handleLogout} className="text-white/60 hover:text-white transition-colors flex items-center gap-1.5 text-sm">
+          <button
+            onClick={handleLogout}
+            className="text-white/60 hover:text-white transition-colors flex items-center gap-1.5 text-sm"
+          >
             <LogOut size={16} />
             <span className="hidden sm:inline">Toka</span>
           </button>
@@ -1457,8 +1632,10 @@ export default function AdminDashboard() {
       </header>
 
       <div className="flex">
-        {/* SIDEBAR - desktop */}
-        <aside style={{ borderColor: COLORS.sandLine }} className="hidden md:flex w-64 shrink-0 border-r flex-col py-4 px-3 gap-1 min-h-[calc(100vh-56px)]">
+        <aside
+          style={{ borderColor: COLORS.sandLine }}
+          className="hidden md:flex w-64 shrink-0 border-r flex-col py-4 px-3 gap-1 min-h-[calc(100vh-56px)]"
+        >
           {NAV.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeSection;
             return (
@@ -1478,20 +1655,27 @@ export default function AdminDashboard() {
           })}
         </aside>
 
-        {/* SIDEBAR - mobile drawer */}
         {sidebarOpen && (
           <div className="md:hidden fixed inset-0 z-40 flex">
             <div style={{ background: COLORS.sand }} className="w-64 h-full py-4 px-3 flex flex-col gap-1 shadow-xl">
               <div className="flex justify-end mb-2">
-                <button onClick={() => setSidebarOpen(false)}><X size={20} color={COLORS.night} /></button>
+                <button onClick={() => setSidebarOpen(false)}>
+                  <X size={20} color={COLORS.night} />
+                </button>
               </div>
               {NAV.map(({ key, label, icon: Icon }) => {
                 const isActive = key === activeSection;
                 return (
                   <button
                     key={key}
-                    onClick={() => { setActiveSection(key); setSidebarOpen(false); }}
-                    style={{ background: isActive ? COLORS.night : "transparent", color: isActive ? COLORS.sand : COLORS.night }}
+                    onClick={() => {
+                      setActiveSection(key);
+                      setSidebarOpen(false);
+                    }}
+                    style={{
+                      background: isActive ? COLORS.night : "transparent",
+                      color: isActive ? COLORS.sand : COLORS.night,
+                    }}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left"
                   >
                     <Icon size={17} color={isActive ? COLORS.gold : COLORS.night} />
@@ -1504,10 +1688,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* MAIN CONTENT */}
-        <main className="flex-1 max-w-7xl px-4 sm:px-6 py-6">
-          {renderSection()}
-        </main>
+        <main className="flex-1 max-w-7xl px-4 sm:px-6 py-6">{renderSection()}</main>
       </div>
     </div>
   );
