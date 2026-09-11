@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Heart,
@@ -13,53 +13,19 @@ import {
   Car,
   Briefcase,
   Wrench,
+  Clock3,
+  Ban,
 } from "lucide-react";
-import { COLORS, FONTS, formatTZS, timeAgo } from "./dashboard/components/shared";
+import {
+  COLORS,
+  FONTS,
+  formatTZS,
+  timeAgo,
+  isBoostActive,
+} from "./dashboard/components/shared";
+import { usePublicListings } from "../config/listingsStore.js";
+import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 
-// Mock saved properties
-const SEED_SAVED = [
-  {
-    id: "sp1",
-    title: "Nyumba ya Ghorofa Mbezi Beach",
-    category: "nyumba",
-    price: 85000000,
-    location: "Mbezi Beach, Dar es Salaam",
-    savedAt: "2026-09-10T10:00:00.000Z",
-    isVerified: true,
-    views: 214,
-  },
-  {
-    id: "sp2",
-    title: "Toyota Harrier 2016",
-    category: "magari",
-    price: 42000000,
-    location: "Kinondoni, Dar es Salaam",
-    savedAt: "2026-09-08T14:30:00.000Z",
-    isVerified: true,
-    views: 567,
-  },
-  {
-    id: "sp3",
-    title: "Kiwanja Ubungo — Hati Miliki",
-    category: "viwanja",
-    price: 28000000,
-    location: "Ubungo, Dar es Salaam",
-    savedAt: "2026-09-05T09:15:00.000Z",
-    views: 145,
-  },
-  {
-    id: "sp4",
-    title: "Duka la Vifaa vya Ujenzi — Kariakoo",
-    category: "biashara",
-    price: 15000000,
-    location: "Kariakoo, Dar es Salaam",
-    savedAt: "2026-09-01T16:45:00.000Z",
-    isVerified: true,
-    views: 389,
-  },
-];
-
-// ✅ Ramani ya icons kwa category (badala ya getCategory)
 const CATEGORY_ICONS = {
   nyumba: HomeIcon,
   viwanja: Trees,
@@ -69,8 +35,9 @@ const CATEGORY_ICONS = {
 };
 
 function SavedCard({ property, viewMode, onRemove }) {
-  // ✅ Tumia CATEGORY_ICONS moja kwa moja
   const Icon = CATEGORY_ICONS[property.category] || HomeIcon;
+  const isReserved = property.status === "reserved";
+  const isSold = property.status === "sold";
 
   const handleRemove = (e) => {
     e.preventDefault();
@@ -80,12 +47,26 @@ function SavedCard({ property, viewMode, onRemove }) {
 
   if (viewMode === "list") {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col sm:flex-row">
+      <div
+        className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-shadow flex flex-col sm:flex-row ${
+          isSold ? "border-gray-200 opacity-75" : "border-gray-100"
+        }`}
+      >
         <Link
           to={`/mali/${property.id}`}
-          className="w-full sm:w-48 h-40 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0"
+          className="w-full sm:w-48 h-40 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative"
         >
           <Icon size={32} className="text-gray-300" />
+          {isReserved && (
+            <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <Clock3 size={10} /> RESERVED
+            </span>
+          )}
+          {isSold && (
+            <span className="absolute top-2 left-2 bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <Ban size={10} /> SOLD
+            </span>
+          )}
         </Link>
         <div className="flex-1 p-4 flex flex-col">
           <div className="flex items-start justify-between gap-2">
@@ -106,13 +87,9 @@ function SavedCard({ property, viewMode, onRemove }) {
             <MapPin size={12} />
             {property.location}
           </div>
-          <p className="text-[#C1502E] font-bold text-base mt-2">
-            {formatTZS(property.price)}
-          </p>
+          <p className="text-[#C1502E] font-bold text-base mt-2">{formatTZS(property.price)}</p>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-            <span className="text-xs text-gray-400">
-              Ilifadhiwa {timeAgo(property.savedAt)}
-            </span>
+            <span className="text-xs text-gray-400">Ilifadhiwa {timeAgo(property.postedAt)}</span>
             <Link
               to={`/mali/${property.id}`}
               className="text-xs font-semibold text-[#E8A33D] hover:underline"
@@ -126,12 +103,26 @@ function SavedCard({ property, viewMode, onRemove }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-all group">
+    <div
+      className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-all group ${
+        isSold ? "border-gray-200 opacity-75" : "border-gray-100"
+      }`}
+    >
       <Link to={`/mali/${property.id}`} className="block relative">
         <div className="w-full h-44 bg-gray-100 flex items-center justify-center">
           <Icon size={40} className="text-gray-300 group-hover:scale-110 transition-transform" />
         </div>
-        {property.isVerified && (
+        {isReserved && (
+          <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+            <Clock3 size={10} /> RESERVED
+          </span>
+        )}
+        {isSold && (
+          <span className="absolute top-2 left-2 bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+            <Ban size={10} /> SOLD
+          </span>
+        )}
+        {property.verified && (
           <span className="absolute top-2 right-2 bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full">
             Verified
           </span>
@@ -150,14 +141,12 @@ function SavedCard({ property, viewMode, onRemove }) {
           <MapPin size={12} />
           <span className="truncate">{property.location}</span>
         </div>
-        <p className="text-[#C1502E] font-bold text-base mt-2">
-          {formatTZS(property.price)}
-        </p>
+        <p className="text-[#C1502E] font-bold text-base mt-2">{formatTZS(property.price)}</p>
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">
           <span className="flex items-center gap-1">
-            <Eye size={12} /> {property.views}
+            <Eye size={12} /> {property.views || 0}
           </span>
-          <span>{timeAgo(property.savedAt)}</span>
+          <span>{timeAgo(property.postedAt)}</span>
         </div>
       </Link>
     </div>
@@ -165,9 +154,16 @@ function SavedCard({ property, viewMode, onRemove }) {
 }
 
 export default function SavedPropertiesPage() {
-  const [saved, setSaved] = useState(SEED_SAVED);
+  const savedIds = useSavedIds();
+  const allListings = usePublicListings();
   const [viewMode, setViewMode] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Chuja listings kwa IDs zilizohifadhiwa; ondoa zile zilizo-expired
+  // (hazipo kwenye usePublicListings).
+  const saved = useMemo(() => {
+    return allListings.filter((l) => savedIds.includes(l.id));
+  }, [allListings, savedIds]);
 
   const filtered = saved.filter(
     (p) =>
@@ -175,19 +171,23 @@ export default function SavedPropertiesPage() {
       p.location.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleRemove = (id) => {
-    setSaved((prev) => prev.filter((p) => p.id !== id));
-  };
+  const handleRemove = (id) => toggleSaved(id); // toggle off
 
   return (
-    <div style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "100%" }} className="w-full p-4 sm:p-6">
+    <div
+      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "100%" }}
+      className="w-full p-4 sm:p-6"
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-1">
-          <h1 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl sm:text-3xl font-semibold">
+          <h1
+            style={{ fontFamily: FONTS.display, color: COLORS.night }}
+            className="text-2xl sm:text-3xl font-semibold"
+          >
             Zilizohifadhiwa
           </h1>
           <span
