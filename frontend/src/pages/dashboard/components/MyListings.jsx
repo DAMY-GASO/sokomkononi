@@ -24,7 +24,7 @@ import {
   isLeadingActive,
   leadingDaysRemaining,
 } from "./shared";
-import { useActiveBannerAds, bannerDaysRemaining } from "../../config/bannerAdsStore.js";
+import { useActiveBannerAds, bannerDaysRemaining } from "../../../config/bannerAdsStore.js";
 import PaymentGateway from "./PaymentGateway";
 
 const TABS = [
