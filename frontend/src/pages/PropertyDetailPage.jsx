@@ -34,7 +34,7 @@ import {
   Clock3,
   BellRing,
 } from "lucide-react";
-import { useWaitingList, joinWaitingList } from "./config/waitingListStore.js";
+import { useWaitingList, joinWaitingList } from "../config/waitingListStore.js";
 
 const COLORS = {
   night: "#101A2E",
