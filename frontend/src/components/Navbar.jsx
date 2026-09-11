@@ -383,8 +383,9 @@ export default function Navbar({
                     >
                       {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                     </Link>
+                    {/* === IMEBADILISHWA: /dashboard/seller → /dashboard/post === */}
                     <Link
-                      to="/dashboard/seller"
+                      to="/dashboard/post"
                       onClick={() => setUserMenuOpen(false)}
                       className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                     >
