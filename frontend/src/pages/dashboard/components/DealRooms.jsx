@@ -23,9 +23,9 @@ import {
   Paperclip,
 } from "lucide-react";
 import { COLORS, FONTS, getCategory, formatTZS, timeAgo } from "./shared";
-import { useReservationRates, calcReservationFee } from "../../config/feePolicy.js";
-import { useDeals, updateDeal as updateDealInStore } from "../../config/dealsStore.js";
-import { notifyPaymentProofSubmitted } from "../../config/notificationsStore.js";
+import { useReservationRates, calcReservationFee } from "../../../config/feePolicy.js";
+import { useDeals, updateDeal as updateDealInStore } from "../../../config/dealsStore.js";
+import { notifyPaymentProofSubmitted } from "../../../config/notificationsStore.js";
 
 const DEAL_STATUS = {
   negotiating: { label: "Inaendelea", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
