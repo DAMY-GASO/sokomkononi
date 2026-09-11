@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { usePopularCategories } from "../config/categoriesStore.js";
 
 export default function Navbar({
   lang: langProp,
@@ -12,12 +13,13 @@ export default function Navbar({
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  // === MUHIMU: Soma kutoka context kama props hazijatolewa ===
-  // Hii inafanya Navbar kufanya kazi popote, hata kama page
-  // imesahau kupitisha setLang.
+  // Soma kutoka context kama props hazijatolewa
   const { lang: langCtx, setLang: setLangCtx } = useLanguage();
   const lang = langProp ?? langCtx;
   const setLang = setLangProp ?? setLangCtx;
+
+  // Popular categories kutoka store — fallback kama hakuna prop
+  const popularCategories = usePopularCategories();
 
   const [langOpen, setLangOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -29,6 +31,7 @@ export default function Navbar({
   const [searchQuery, setSearchQuery] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
+  // Matangazo menu items
   const adMenuItems = [
     { label: { sw: "Matangazo Mapya", en: "New Ads" }, link: "/tafuta?tafuta=mpya" },
     { label: { sw: "Matangazo ya Ofa", en: "Deal Ads" }, link: "/tafuta?tafuta=ofa" },
@@ -67,20 +70,25 @@ export default function Navbar({
     setMenuOpen(false);
   };
 
-  const defaultCategories =
-    categories.length > 0
-      ? categories
-      : [
-          { name: { sw: "Nyumba", en: "Houses" }, slug: "nyumba" },
-          { name: { sw: "Viwanja", en: "Plots & Land" }, slug: "viwanja" },
-          { name: { sw: "Magari", en: "Cars" }, slug: "magari" },
-          { name: { sw: "Mashine", en: "Machinery" }, slug: "mashine" },
-        ];
+  // Kama page imepitisha `categories` prop (kutoka HomePage), tumia hizo.
+  // Vinginevyo, tumia popularCategories kutoka store.
+  const displayCategories = categories.length > 0 ? categories : popularCategories;
 
-  const displayCategories = categories.length > 0 ? categories : defaultCategories;
+  // Helper ya kupata jina la category — inashughulikia `label` na `name`
+  const getCatLabel = (cat) =>
+    cat.label?.[lang] ||
+    cat.label?.sw ||
+    cat.name?.[lang] ||
+    cat.name?.sw ||
+    cat.key ||
+    cat.slug;
+
+  // Helper ya kupata key/slug ya category
+  const getCatKey = (cat) => cat.key || cat.slug;
 
   return (
     <>
+      {/* HEADER */}
       <header className="bg-[#101A2E] text-white border-b border-white/10 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Left: Hamburger + Logo */}
@@ -124,17 +132,26 @@ export default function Navbar({
                 </svg>
               </button>
               {catOpen && (
-                <div className="absolute left-0 mt-2 w-56 bg-[#182541] border border-white/10 rounded-lg shadow-xl py-2 z-50">
+                <div className="absolute left-0 mt-2 w-56 bg-[#182541] border border-white/10 rounded-lg shadow-xl py-2 z-50 max-h-96 overflow-y-auto">
                   {displayCategories.map((cat) => (
                     <Link
-                      key={cat.slug}
-                      to={`/kategoria/${cat.slug}`}
+                      key={getCatKey(cat)}
+                      to={`/kategoria/${getCatKey(cat)}`}
                       onClick={() => setCatOpen(false)}
                       className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                     >
-                      {lang === "sw" ? cat.name.sw : cat.name.en}
+                      {getCatLabel(cat)}
                     </Link>
                   ))}
+                  <div className="border-t border-white/10 mt-1 pt-1">
+                    <Link
+                      to="/kategoria"
+                      onClick={() => setCatOpen(false)}
+                      className="block px-4 py-2 text-sm text-[#E8A33D] font-semibold hover:bg-white/5 transition-colors"
+                    >
+                      {lang === "sw" ? "Ona Zote →" : "View All →"}
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -188,7 +205,10 @@ export default function Navbar({
               })
             ) : (
               <>
-                <Link to="/kuhusu" className="text-white/70 hover:text-white text-sm font-medium transition-colors">
+                <Link
+                  to="/kuhusu"
+                  className="text-white/70 hover:text-white text-sm font-medium transition-colors"
+                >
                   {lang === "sw" ? "Kuhusu Sisi" : "About Us"}
                 </Link>
                 <div className="relative">
@@ -233,6 +253,7 @@ export default function Navbar({
 
           {/* Right: Search + Language + User/Login */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Search - Desktop */}
             <form onSubmit={handleSearchSubmit} className="relative hidden sm:block">
               <input
                 type="text"
@@ -253,6 +274,7 @@ export default function Navbar({
               </button>
             </form>
 
+            {/* Search Icon - Mobile */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
               className="sm:hidden text-white/60 hover:text-white p-1.5 transition-colors"
@@ -285,9 +307,7 @@ export default function Navbar({
                 <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-[#182541] border border-white/10 rounded-lg shadow-xl py-2 z-50">
                   <div className="px-4 py-2 border-b border-white/10">
                     <p className="text-white/50 text-xs font-semibold">
-                      {lang === "sw"
-                        ? "Je, unapendelea lugha gani?"
-                        : "Which language do you prefer?"}
+                      {lang === "sw" ? "Je, unapendelea lugha gani?" : "Which language do you prefer?"}
                     </p>
                   </div>
                   {languages.map((l) => (
@@ -314,6 +334,7 @@ export default function Navbar({
               )}
             </div>
 
+            {/* User Menu / Login Button */}
             {user ? (
               <div className="relative">
                 <button
@@ -327,9 +348,7 @@ export default function Navbar({
                     {user.name?.split(" ")[0] || "User"}
                   </span>
                   <svg
-                    className={`w-4 h-4 text-white/60 transition-transform ${
-                      userMenuOpen ? "rotate-180" : ""
-                    }`}
+                    className={`w-4 h-4 text-white/60 transition-transform ${userMenuOpen ? "rotate-180" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -464,6 +483,7 @@ export default function Navbar({
               {lang === "sw" ? "Nyumbani" : "Home"}
             </Link>
 
+            {/* Categories dropdown - mobile */}
             <button
               onClick={() => setMobileCatOpen((prev) => !prev)}
               aria-expanded={mobileCatOpen}
@@ -488,19 +508,27 @@ export default function Navbar({
               <div className="overflow-hidden pl-2">
                 {displayCategories.map((cat) => (
                   <Link
-                    key={cat.slug}
-                    to={`/kategoria/${cat.slug}`}
+                    key={getCatKey(cat)}
+                    to={`/kategoria/${getCatKey(cat)}`}
                     onClick={() => setMenuOpen(false)}
                     className="block text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
                   >
-                    {lang === "sw" ? cat.name.sw : cat.name.en}
+                    {getCatLabel(cat)}
                   </Link>
                 ))}
+                <Link
+                  to="/kategoria"
+                  onClick={() => setMenuOpen(false)}
+                  className="block text-[#E8A33D] hover:text-[#B87A1F] text-sm font-semibold py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
+                >
+                  {lang === "sw" ? "Ona Zote →" : "View All →"}
+                </Link>
               </div>
             </div>
 
             <div className="my-2 border-t border-white/10" />
 
+            {/* Matangazo Dropdown - mobile */}
             <button
               onClick={() => setMobileAdsDropdownOpen((prev) => !prev)}
               aria-expanded={mobileAdsDropdownOpen}
@@ -508,9 +536,7 @@ export default function Navbar({
             >
               <span>{lang === "sw" ? "Matangazo" : "Ads"}</span>
               <svg
-                className={`w-4 h-4 transition-transform ${
-                  mobileAdsDropdownOpen ? "rotate-180" : ""
-                }`}
+                className={`w-4 h-4 transition-transform ${mobileAdsDropdownOpen ? "rotate-180" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -538,6 +564,7 @@ export default function Navbar({
               </div>
             </div>
 
+            {/* Trust Links - mobile */}
             {trustLinks.length > 0 ? (
               trustLinks.map((l) => {
                 if (l.to === "/usalama") return null;
