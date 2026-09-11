@@ -7,122 +7,12 @@ import BottomNav from "../components/BottomNav.jsx";
 import Navbar from "../components/Navbar.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
 import {
-  Home as HomeIcon,
-  Trees,
-  Car,
-  Briefcase,
-  Wrench,
-} from "lucide-react";
-
-const CATEGORY_ICONS_TRENDING = {
-  nyumba: HomeIcon,
-  viwanja: Trees,
-  magari: Car,
-  biashara: Briefcase,
-  mashine: Wrench,
-};
+  usePopularCategories,
+  getCategoryIcon,
+} from "../config/categoriesStore.js";
 
 function formatTZS(amount) {
   return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
-}
-
-function CategoryIcon({ type }) {
-  const common = { width: 44, height: 44, viewBox: "0 0 24 24", fill: "none", strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round" };
-  switch (type) {
-    case "house":
-      return (
-        <svg {...common} stroke="#E8A33D">
-          <path d="M3 11.5 12 4l9 7.5" />
-          <path d="M5 10v10h14V10" />
-          <path d="M9 20v-6h6v6" />
-        </svg>
-      );
-    case "land":
-      return (
-        <svg {...common} stroke="#2F6D4F">
-          <path d="M12 3v7" />
-          <path d="M12 10c-3 0-5-2-5-5" />
-          <path d="M12 10c3 0 5-2 5-5" />
-          <path d="M6 21h12" />
-          <path d="M9 21V13" />
-          <path d="M15 21V13" />
-        </svg>
-      );
-    case "car":
-      return (
-        <svg {...common} stroke="#C1502E">
-          <path d="M3 16V12l2.5-5h13L21 12v4" />
-          <path d="M3 16h18" />
-          <circle cx="7" cy="18" r="1.6" />
-          <circle cx="17" cy="18" r="1.6" />
-        </svg>
-      );
-    case "moto":
-      return (
-        <svg {...common} stroke="#101A2E">
-          <circle cx="6" cy="17" r="3" />
-          <circle cx="18" cy="17" r="3" />
-          <path d="M6 17h6l3-7h3" />
-          <path d="M9 10h4" />
-        </svg>
-      );
-    case "bus":
-      return (
-        <svg {...common} stroke="#2F6D4F">
-          <rect x="3" y="5" width="18" height="12" rx="2" />
-          <path d="M3 12h18" />
-          <circle cx="7.5" cy="19" r="1.4" />
-          <circle cx="16.5" cy="19" r="1.4" />
-        </svg>
-      );
-    case "gear":
-      return (
-        <svg {...common} stroke="#E8A33D">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19 12a7 7 0 0 0-.3-2l1.7-1.3-2-3.4-2 .8a7 7 0 0 0-1.7-1l-.3-2.1h-4l-.3 2.1a7 7 0 0 0-1.7 1l-2-.8-2 3.4L6.1 10a7 7 0 0 0 0 4l-1.7 1.3 2 3.4 2-.8a7 7 0 0 0 1.7 1l.3 2.1h4l.3-2.1a7 7 0 0 0 1.7-1l2 .8 2-3.4L18.7 14a7 7 0 0 0 .3-2Z" />
-        </svg>
-      );
-    case "sofa":
-      return (
-        <svg {...common} stroke="#C1502E">
-          <path d="M5 12V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4" />
-          <path d="M3 12h18v5H3z" />
-          <path d="M4 17v2" />
-          <path d="M20 17v2" />
-        </svg>
-      );
-    case "electronics":
-      return (
-        <svg {...common} stroke="#101A2E">
-          <rect x="3" y="4" width="18" height="12" rx="1" />
-          <path d="M8 20h8" />
-          <path d="M12 16v4" />
-        </svg>
-      );
-    case "livestock":
-      return (
-        <svg {...common} stroke="#8B5E34">
-          <path d="M7 9c-1.5-1.5-2-3.5-1.5-5.5C7 4 8.5 5.5 9 7" />
-          <path d="M17 9c1.5-1.5 2-3.5 1.5-5.5C17 4 15.5 5.5 15 7" />
-          <ellipse cx="12" cy="13" rx="6" ry="5" />
-          <circle cx="9.7" cy="12" r="0.8" fill="#8B5E34" stroke="none" />
-          <circle cx="14.3" cy="12" r="0.8" fill="#8B5E34" stroke="none" />
-          <path d="M10.5 15c.5.5 2.5.5 3 0" />
-          <path d="M12 18v2" />
-        </svg>
-      );
-    case "appliance":
-      return (
-        <svg {...common} stroke="#2F6D4F">
-          <path d="M9 3h6l1 4H8l1-4z" />
-          <path d="M8 7h8v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V7z" />
-          <path d="M11 3v-.5" />
-          <path d="M13 3v-.5" />
-        </svg>
-      );
-    default:
-      return null;
-  }
 }
 
 export default function HomePage() {
@@ -135,8 +25,19 @@ export default function HomePage() {
   const [appToastShouldRender, setAppToastShouldRender] = useState(false);
   const [appToastVisible, setAppToastVisible] = useState(false);
 
-  // === BADILIKO: trending inasoma kutoka listingsStore ===
+  // === Categories kutoka store ===
+  const popularCategories = usePopularCategories();
   const allListings = usePublicListings();
+
+  // Hesabu count per category — live
+  const categories = useMemo(() => {
+    return popularCategories.map((cat) => ({
+      ...cat,
+      count: allListings.filter((l) => l.category === cat.key).length,
+    }));
+  }, [popularCategories, allListings]);
+
+  // === Trending listings kutoka store ===
   const trendingProperties = useMemo(() => {
     return [...allListings]
       .filter((l) => l.status === "live" || l.status === "reserved")
@@ -147,7 +48,6 @@ export default function HomePage() {
         title: l.title,
         region: l.region || l.location,
         price: formatTZS(l.price),
-        img: null,
         category: l.category,
       }));
   }, [allListings]);
@@ -183,19 +83,6 @@ export default function HomePage() {
     if (user) navigate("/dashboard/buyer");
     else navigate("/register?intent=buy");
   };
-
-  const categories = [
-    { name: { sw: "Nyumba", en: "Houses" }, slug: "nyumba", count: "3,200+", icon: "house", img: "/assets/categories/nyumba.jpg" },
-    { name: { sw: "Viwanja", en: "Plots & Land" }, slug: "viwanja", count: "2,100+", icon: "land", img: "/assets/categories/viwanja.jpg" },
-    { name: { sw: "Magari", en: "Cars" }, slug: "magari", count: "2,800+", icon: "car", img: "/assets/categories/magari.jpg" },
-    { name: { sw: "Pikipiki", en: "Motorcycles" }, slug: "pikipiki", count: "1,500+", icon: "moto", img: "/assets/categories/pikipiki.jpg" },
-    { name: { sw: "Mabasi", en: "Buses" }, slug: "mabasi", count: "800+", icon: "bus", img: "/assets/categories/mabasi.jpg" },
-    { name: { sw: "Mashine", en: "Machinery" }, slug: "mashine", count: "900+", icon: "gear", img: "/assets/categories/mashine.jpg" },
-    { name: { sw: "Samani", en: "Furniture" }, slug: "samani", count: "1,200+", icon: "sofa", img: "/assets/categories/samani.jpg" },
-    { name: { sw: "Vifaa vya Elektroniki", en: "Electronics" }, slug: "vifaa-vya-elektroniki", count: "2,000+", icon: "electronics", img: "/assets/categories/elektroniki.jpg" },
-    { name: { sw: "Mifugo", en: "Livestock" }, slug: "mifugo", count: "1,100+", icon: "livestock", img: "/assets/categories/mifugo.jpg" },
-    { name: { sw: "Vifaa vya Nyumbani", en: "Home Appliances" }, slug: "vifaa-vya-nyumbani", count: "1,700+", icon: "appliance", img: "/assets/categories/vifaa-nyumbani.jpg" },
-  ];
 
   const faqs = [
     {
@@ -431,7 +318,9 @@ export default function HomePage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={lang === "sw" ? "Tafuta nyumba, gari, kiwanja..." : "Search houses, cars, land..."}
+                placeholder={
+                  lang === "sw" ? "Tafuta nyumba, gari, kiwanja..." : "Search houses, cars, land..."
+                }
                 className="w-full bg-white/10 border border-white/20 rounded-full pl-6 pr-14 py-3.5 text-white text-base placeholder-white/50 focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/30 transition-all"
               />
               <button
@@ -439,7 +328,13 @@ export default function HomePage() {
                 aria-label={lang === "sw" ? "Tafuta" : "Search"}
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] p-2.5 rounded-full transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2.5"
+                >
                   <circle cx="11" cy="11" r="8" />
                   <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
                 </svg>
@@ -463,25 +358,47 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-wrap gap-3 justify-center mt-8">
-            <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors">
+            <Link
+              to="/waitlist"
+              className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors"
+            >
               <svg width="20" height="20" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19.7,19.2L4.3,35.3c0,0,0,0,0,0c0.5,1.7,2.1,3,4,3c0.8,0,1.5-0.2,2.1-0.6l0,0l17.4-9.9L19.7,19.2z" fill="#EA4335" />
-                <path d="M35.3,16.4L35.3,16.4l-7.5-4.3l-8.4,7.4l8.5,8.3l7.5-4.2c1.3-0.7,2.2-2.1,2.2-3.6C37.5,18.5,36.6,17.1,35.3,16.4z" fill="#FBBC04" />
-                <path d="M4.3,4.7C4.2,5,4.2,5.4,4.2,5.8v28.5c0,0.4,0,0.7,0.1,1.1l16-15.7L4.3,4.7z" fill="#4285F4" />
-                <path d="M19.8,20l8-7.9L10.5,2.3C9.9,1.9,9.1,1.7,8.3,1.7c-1.9,0-3.6,1.3-4,3c0,0,0,0,0,0L19.8,20z" fill="#34A853" />
+                <path
+                  d="M19.7,19.2L4.3,35.3c0,0,0,0,0,0c0.5,1.7,2.1,3,4,3c0.8,0,1.5-0.2,2.1-0.6l0,0l17.4-9.9L19.7,19.2z"
+                  fill="#EA4335"
+                />
+                <path
+                  d="M35.3,16.4L35.3,16.4l-7.5-4.3l-8.4,7.4l8.5,8.3l7.5-4.2c1.3-0.7,2.2-2.1,2.2-3.6C37.5,18.5,36.6,17.1,35.3,16.4z"
+                  fill="#FBBC04"
+                />
+                <path
+                  d="M4.3,4.7C4.2,5,4.2,5.4,4.2,5.8v28.5c0,0.4,0,0.7,0.1,1.1l16-15.7L4.3,4.7z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M19.8,20l8-7.9L10.5,2.3C9.9,1.9,9.1,1.7,8.3,1.7c-1.9,0-3.6,1.3-4,3c0,0,0,0,0,0L19.8,20z"
+                  fill="#34A853"
+                />
               </svg>
               <span className="text-xs text-left">
-                <span className="block text-white/50 text-[10px]">{lang === "sw" ? "Pata kwenye" : "Get it on"}</span>
+                <span className="block text-white/50 text-[10px]">
+                  {lang === "sw" ? "Pata kwenye" : "Get it on"}
+                </span>
                 <span className="block font-semibold text-white">Google Play</span>
               </span>
             </Link>
-            <Link to="/waitlist" className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors">
+            <Link
+              to="/waitlist"
+              className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors"
+            >
               <svg width="18" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-white">
                 <path d="M16.7 1.3c.1 1-.3 2-.9 2.8-.6.8-1.7 1.4-2.7 1.3-.1-1 .4-2 1-2.7.6-.8 1.7-1.3 2.6-1.4Z" />
                 <path d="M20.9 17c-.5 1.1-.7 1.6-1.3 2.6-.9 1.4-2.1 3.1-3.6 3.1-1.3 0-1.7-.9-3.5-.9s-2.2.9-3.5.9c-1.5 0-2.6-1.5-3.5-2.9C3.2 17 2.5 13 3.6 10.5c.7-1.6 2-2.6 3.4-2.6 1.3 0 2.2.9 3.3.9 1.1 0 1.7-.9 3.5-.9 1.3 0 2.7.7 3.7 1.9-3.2 1.8-2.7 6.5.4 7.2Z" />
               </svg>
               <span className="text-xs text-left">
-                <span className="block text-white/50 text-[10px]">{lang === "sw" ? "Pata kwenye" : "Get it on"}</span>
+                <span className="block text-white/50 text-[10px]">
+                  {lang === "sw" ? "Pata kwenye" : "Get it on"}
+                </span>
                 <span className="block font-semibold text-white">App Store</span>
               </span>
             </Link>
@@ -494,11 +411,15 @@ export default function HomePage() {
         <div className="max-w-3xl mx-auto px-4 grid grid-cols-2 gap-8 text-center">
           <div>
             <p className="text-2xl md:text-3xl font-bold text-[#E8A33D]">5,000+</p>
-            <p className="text-white/50 text-xs md:text-sm mt-1">{lang === "sw" ? "Wauzaji" : "Sellers"}</p>
+            <p className="text-white/50 text-xs md:text-sm mt-1">
+              {lang === "sw" ? "Wauzaji" : "Sellers"}
+            </p>
           </div>
           <div>
             <p className="text-2xl md:text-3xl font-bold text-[#E8A33D]">10,000+</p>
-            <p className="text-white/50 text-xs md:text-sm mt-1">{lang === "sw" ? "Mali" : "Properties"}</p>
+            <p className="text-white/50 text-xs md:text-sm mt-1">
+              {lang === "sw" ? "Mali" : "Properties"}
+            </p>
           </div>
         </div>
       </section>
@@ -519,7 +440,16 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
             <div className="w-16 h-16 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mb-5">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#E8A33D"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M3 11.5 12 4l9 7.5" />
                 <path d="M5 10v10h14V10" />
                 <path d="M9 20v-6h6v6" />
@@ -544,7 +474,14 @@ export default function HomePage() {
 
           <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
             <div className="w-16 h-16 bg-[#2F6D4F]/20 rounded-full flex items-center justify-center mb-5">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2F6D4F" strokeWidth="1.8">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#2F6D4F"
+                strokeWidth="1.8"
+              >
                 <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
@@ -561,7 +498,16 @@ export default function HomePage() {
 
           <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
             <div className="w-16 h-16 bg-[#C1502E]/20 rounded-full flex items-center justify-center mb-5">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C1502E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#C1502E"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" strokeLinejoin="round" />
                 <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -578,13 +524,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* TRENDING — IMEBADILISHWA */}
+      {/* TRENDING */}
       <section id="matangazo" className="scroll-mt-16 py-8 px-4 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">
             {lang === "sw" ? "Mali Zinazotrendi" : "Trending Properties"}
           </h2>
-          <Link to="/tafuta?tafuta=trending" className="text-[#E8A33D] text-sm font-semibold hover:underline">
+          <Link
+            to="/tafuta?tafuta=trending"
+            className="text-[#E8A33D] text-sm font-semibold hover:underline"
+          >
             {lang === "sw" ? "Tazama Zote →" : "View All →"}
           </Link>
         </div>
@@ -596,7 +545,8 @@ export default function HomePage() {
         ) : (
           <div className="flex gap-4 overflow-x-auto pb-4">
             {trendingProperties.map((prop) => {
-              const CategoryIcon = CATEGORY_ICONS_TRENDING[prop.category] || HomeIcon;
+              const cat = categories.find((c) => c.key === prop.category);
+              const Icon = getCategoryIcon(cat?.iconKey);
               return (
                 <Link
                   key={prop.id}
@@ -604,18 +554,16 @@ export default function HomePage() {
                   className="min-w-[200px] sm:min-w-[240px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0 hover:shadow-md transition-shadow"
                 >
                   <div className="h-40 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
-                    {prop.img ? (
-                      <img src={prop.img} alt={prop.title} loading="lazy" className="w-full h-full object-cover" />
-                    ) : (
-                      <CategoryIcon size={40} className="text-gray-300" />
-                    )}
+                    <Icon size={48} className="text-[#E8A33D]" />
                   </div>
                   <div className="p-4">
                     <h3 className="font-semibold text-gray-800 text-sm truncate">{prop.title}</h3>
                     <p className="text-[#E8A33D] font-bold text-lg">{prop.price}</p>
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-gray-500 text-xs truncate">📍 {prop.region}</span>
-                      <span className="text-green-600 text-xs font-medium whitespace-nowrap">● {lang === "sw" ? "Inapatikana" : "Available"}</span>
+                      <span className="text-green-600 text-xs font-medium whitespace-nowrap">
+                        ● {lang === "sw" ? "Inapatikana" : "Available"}
+                      </span>
                     </div>
                   </div>
                 </Link>
@@ -636,28 +584,31 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {categories.map((cat) => (
-            <Link
-              key={cat.slug}
-              to={`/kategoria/${cat.slug}`}
-              className="bg-white rounded-lg overflow-hidden text-center border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 group"
-            >
-              <div className="h-36 sm:h-40 overflow-hidden bg-[#F5F3EC]">
-                <img
-                  src={cat.img}
-                  alt={lang === "sw" ? cat.name.sw : cat.name.en}
-                  loading="lazy"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-              <div className="p-3">
-                <h3 className="font-semibold text-gray-800 text-sm">
-                  {lang === "sw" ? cat.name.sw : cat.name.en}
-                </h3>
-                <p className="text-xs text-gray-500">{cat.count}</p>
-              </div>
-            </Link>
-          ))}
+          {categories.map((cat) => {
+            const Icon = getCategoryIcon(cat.iconKey);
+            return (
+              <Link
+                key={cat.key}
+                to={`/kategoria/${cat.key}`}
+                className="bg-white rounded-lg overflow-hidden text-center border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 group"
+              >
+                <div className="h-36 sm:h-40 bg-[#F5F3EC] flex items-center justify-center">
+                  <Icon
+                    size={48}
+                    className="text-[#E8A33D] group-hover:scale-105 transition-transform"
+                  />
+                </div>
+                <div className="p-3">
+                  <h3 className="font-semibold text-gray-800 text-sm">
+                    {cat.label[lang] || cat.label.sw}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {cat.count} {lang === "sw" ? "mali" : "listings"}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -716,7 +667,9 @@ export default function HomePage() {
                     {lang === "sw" ? faq.q.sw : faq.q.en}
                   </h3>
                   <svg
-                    className={`w-5 h-5 flex-shrink-0 text-[#E8A33D] transition-transform duration-200 mt-0.5 ${isOpen ? "rotate-180" : ""}`}
+                    className={`w-5 h-5 flex-shrink-0 text-[#E8A33D] transition-transform duration-200 mt-0.5 ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -726,7 +679,9 @@ export default function HomePage() {
                   </svg>
                 </button>
                 <div
-                  className={`grid transition-all duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                  }`}
                   style={{ display: "grid" }}
                 >
                   <div className="overflow-hidden">
@@ -752,7 +707,16 @@ export default function HomePage() {
         >
           <div className="bg-[#101A2E] text-white rounded-xl shadow-2xl border border-white/10 p-4 flex items-start gap-3">
             <div className="w-9 h-9 rounded-lg bg-[#E8A33D]/15 flex items-center justify-center flex-shrink-0">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#E8A33D"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <rect x="7" y="2" width="10" height="20" rx="2" />
                 <path d="M11 18h2" />
               </svg>
@@ -762,7 +726,9 @@ export default function HomePage() {
                 {lang === "sw" ? "App ya SokoMkononi inakuja!" : "The SokoMkononi app is coming!"}
               </p>
               <p className="text-white/60 text-xs mt-0.5 leading-relaxed">
-                {lang === "sw" ? "Jiunge na waitlist ili uwe wa kwanza kujua." : "Join the waitlist to be first to know."}
+                {lang === "sw"
+                  ? "Jiunge na waitlist ili uwe wa kwanza kujua."
+                  : "Join the waitlist to be first to know."}
               </p>
               <Link
                 to="/waitlist"
@@ -777,7 +743,15 @@ export default function HomePage() {
               aria-label={lang === "sw" ? "Funga" : "Close"}
               className="text-white/40 hover:text-white flex-shrink-0"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
                 <path d="M18 6 6 18M6 6l12 12" />
               </svg>
             </button>
