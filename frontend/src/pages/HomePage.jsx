@@ -1,10 +1,30 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import Navbar from "../components/Navbar.jsx";
+import { usePublicListings } from "../config/listingsStore.js";
+import {
+  Home as HomeIcon,
+  Trees,
+  Car,
+  Briefcase,
+  Wrench,
+} from "lucide-react";
+
+const CATEGORY_ICONS_TRENDING = {
+  nyumba: HomeIcon,
+  viwanja: Trees,
+  magari: Car,
+  biashara: Briefcase,
+  mashine: Wrench,
+};
+
+function formatTZS(amount) {
+  return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
+}
 
 function CategoryIcon({ type }) {
   const common = { width: 44, height: 44, viewBox: "0 0 24 24", fill: "none", strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round" };
@@ -115,6 +135,23 @@ export default function HomePage() {
   const [appToastShouldRender, setAppToastShouldRender] = useState(false);
   const [appToastVisible, setAppToastVisible] = useState(false);
 
+  // === BADILIKO: trending inasoma kutoka listingsStore ===
+  const allListings = usePublicListings();
+  const trendingProperties = useMemo(() => {
+    return [...allListings]
+      .filter((l) => l.status === "live" || l.status === "reserved")
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 9)
+      .map((l) => ({
+        id: l.id,
+        title: l.title,
+        region: l.region || l.location,
+        price: formatTZS(l.price),
+        img: null,
+        category: l.category,
+      }));
+  }, [allListings]);
+
   useEffect(() => {
     if (sessionStorage.getItem("app_toast_dismissed")) return;
     const showTimer = setTimeout(() => setAppToastShouldRender(true), 2500);
@@ -137,27 +174,14 @@ export default function HomePage() {
     setTimeout(() => setAppToastShouldRender(false), 300);
   }
 
-  // ============================================================
-  // SELL / BUY HANDLERS - ZINAHITAJI LOGIN
-  // ============================================================
   const handleSellNow = () => {
-    if (user) {
-      // Ameingia - nenda moja kwa moja kwenye "Weka Mali"
-      navigate("/dashboard/post");
-    } else {
-      // Hajaingia - nenda register na intent=sell
-      navigate("/register?intent=sell");
-    }
+    if (user) navigate("/dashboard/post");
+    else navigate("/register?intent=sell");
   };
 
   const handleBuyNow = () => {
-    if (user) {
-      // Ameingia - nenda kwenye "Tafuta Mali" (buyer dashboard browse)
-      navigate("/dashboard/buyer");
-    } else {
-      // Hajaingia - nenda register na intent=buy
-      navigate("/register?intent=buy");
-    }
+    if (user) navigate("/dashboard/buyer");
+    else navigate("/register?intent=buy");
   };
 
   const categories = [
@@ -173,9 +197,6 @@ export default function HomePage() {
     { name: { sw: "Vifaa vya Nyumbani", en: "Home Appliances" }, slug: "vifaa-vya-nyumbani", count: "1,700+", icon: "appliance", img: "/assets/categories/vifaa-nyumbani.jpg" },
   ];
 
-  // ============================================================
-  // FAQ - MASWALI 22 KUTOKA KWA MTEJA
-  // ============================================================
   const faqs = [
     {
       q: { sw: "SokoMkononi ni nini?", en: "What is SokoMkononi?" },
@@ -340,18 +361,6 @@ export default function HomePage() {
     },
   ];
 
-  const trendingProperties = [
-    { id: "n1", title: "Nyumba ya Vyumba 3, Mbezi", region: "Dar es Salaam", price: "TSh 35,000,000", img: "/assets/trendings/dar-es-salaam.jpg" },
-    { id: "m1", title: "Gari Ndogo la Mjini, Njiro", region: "Arusha", price: "TSh 12,500,000", img: "/assets/trendings/arusha.jpg" },
-    { id: "ma1", title: "Pikipiki ya Boxer, Ilemela", region: "Mwanza", price: "TSh 2,800,000", img: "/assets/trendings/mwanza.jpg" },
-    { id: "m2", title: "Basi la Abiria, Area D", region: "Dodoma", price: "TSh 95,000,000", img: "/assets/trendings/dodoma.jpg" },
-    { id: "ma2", title: "Trekta la Kilimo, Iyunga", region: "Mbeya", price: "TSh 68,000,000", img: "/assets/trendings/mbeya.jpg" },
-    { id: "s1", title: "Kabati la Sebule, Kiembesamaki", region: "Zanzibar", price: "TSh 450,000", img: "/assets/trendings/zanzibar.jpg" },
-    { id: "v1", title: "Shamba Tayari kwa Kilimo, Kilosa", region: "Morogoro", price: "TSh 1,500,000", img: "/assets/trendings/morogoro.jpg" },
-    { id: "v2", title: "Shamba la Kilimo, Ismani", region: "Iringa", price: "TSh 8,500,000", img: "/assets/trendings/iringa.jpg" },
-    { id: "li1", title: "Mbuzi wa Kienyeji, Ilongero", region: "Singida", price: "TSh 120,000", img: "/assets/trendings/singida.jpg" },
-  ];
-
   const testimonials = [
     {
       name: "Mary",
@@ -398,24 +407,13 @@ export default function HomePage() {
     navigate(`/tafuta?tafuta=${encodeURIComponent(q)}`);
   };
 
-  const toggleFaq = (index) => {
-    setOpenFaq((prev) => (prev === index ? null : index));
-  };
+  const toggleFaq = (index) => setOpenFaq((prev) => (prev === index ? null : index));
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ============================================================ */}
-      {/* NAVBAR */}
-      {/* ============================================================ */}
-      <Navbar
-        lang={lang}
-        setLang={setLang}
-        categories={categories}
-      />
+      <Navbar lang={lang} setLang={setLang} categories={categories} />
 
-      {/* ============================================================ */}
-      {/* HERO SECTION */}
-      {/* ============================================================ */}
+      {/* HERO */}
       <section className="bg-[#101A2E] text-white py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-3xl md:text-4xl font-bold mt-3 leading-tight">
@@ -449,9 +447,6 @@ export default function HomePage() {
             </div>
           </form>
 
-          {/* ============================================================ */}
-          {/* SELL NOW / BUY NOW - ZINAHITAJI LOGIN */}
-          {/* ============================================================ */}
           <div className="flex flex-wrap gap-3 justify-center mt-6">
             <button
               onClick={handleBuyNow}
@@ -494,9 +489,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* STATS SECTION */}
-      {/* ============================================================ */}
+      {/* STATS */}
       <section className="bg-[#0D1524] text-white py-8">
         <div className="max-w-3xl mx-auto px-4 grid grid-cols-2 gap-8 text-center">
           <div>
@@ -510,15 +503,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* WHY SOKOMKONONI - CONTAINERS 3 */}
-      {/* ============================================================ */}
+      {/* WHY */}
       <section className="py-16 px-4 max-w-6xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-800">
             {lang === "sw" ? "Kwa Nini SokoMkononi?" : "Why SokoMkononi?"}
           </h2>
-
           <p className="text-sm text-gray-500 mt-4 italic">
             {lang === "sw"
               ? "SokoMkononi — Nunua na Uza kwa Kujiamini"
@@ -527,7 +517,6 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {/* Container 1 - Jukwaa la Kisasa (Pamoja na Tagline) */}
           <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
             <div className="w-16 h-16 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mb-5">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -544,8 +533,6 @@ export default function HomePage() {
                 ? "Jukwaa la kisasa linalowaunganisha wanunuzi na wauzaji wa mali Tanzania kwa urahisi, uwazi na kuaminiana."
                 : "A modern platform connecting property buyers and sellers in Tanzania with ease, transparency and trust."}
             </p>
-
-            {/* Tagline */}
             <div className="flex flex-wrap items-center justify-center gap-3 mt-5 text-sm font-medium text-[#E8A33D]">
               <span>🔎 {lang === "sw" ? "Tafuta" : "Search"}</span>
               <span className="text-gray-300">|</span>
@@ -555,7 +542,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Container 2 - Upatikanaji Rahisi */}
           <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
             <div className="w-16 h-16 bg-[#2F6D4F]/20 rounded-full flex items-center justify-center mb-5">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2F6D4F" strokeWidth="1.8">
@@ -573,7 +559,6 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Container 3 - Salama na Inaaminika */}
           <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
             <div className="w-16 h-16 bg-[#C1502E]/20 rounded-full flex items-center justify-center mb-5">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C1502E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -593,55 +578,70 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* PROPERTY CAROUSEL - ID="matangazo" */}
-      {/* ============================================================ */}
+      {/* TRENDING — IMEBADILISHWA */}
       <section id="matangazo" className="scroll-mt-16 py-8 px-4 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">{lang === "sw" ? "Mali Zinazotrendi" : "Trending Properties"}</h2>
+          <h2 className="text-2xl font-bold text-gray-800">
+            {lang === "sw" ? "Mali Zinazotrendi" : "Trending Properties"}
+          </h2>
           <Link to="/tafuta?tafuta=trending" className="text-[#E8A33D] text-sm font-semibold hover:underline">
             {lang === "sw" ? "Tazama Zote →" : "View All →"}
           </Link>
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {trendingProperties.map((prop) => (
-            <Link
-              key={prop.id}
-              to={`/mali/${prop.id}`}
-              className="min-w-[200px] sm:min-w-[240px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0 hover:shadow-md transition-shadow"
-            >
-              <div className="h-40 bg-[#F5F3EC] overflow-hidden">
-                <img
-                  src={prop.img}
-                  alt={prop.title}
-                  loading="lazy"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="font-semibold text-gray-800 text-sm truncate">{prop.title}</h3>
-                <p className="text-[#E8A33D] font-bold text-lg">{prop.price}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-gray-500 text-xs">📍 {prop.region}</span>
-                  <span className="text-green-600 text-xs font-medium">● {lang === "sw" ? "Inapatikana" : "Available"}</span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+
+        {trendingProperties.length === 0 ? (
+          <div className="text-center py-10 text-gray-400 text-sm">
+            {lang === "sw" ? "Hakuna mali kwa sasa" : "No listings yet"}
+          </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {trendingProperties.map((prop) => {
+              const CategoryIcon = CATEGORY_ICONS_TRENDING[prop.category] || HomeIcon;
+              return (
+                <Link
+                  key={prop.id}
+                  to={`/mali/${prop.id}`}
+                  className="min-w-[200px] sm:min-w-[240px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0 hover:shadow-md transition-shadow"
+                >
+                  <div className="h-40 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
+                    {prop.img ? (
+                      <img src={prop.img} alt={prop.title} loading="lazy" className="w-full h-full object-cover" />
+                    ) : (
+                      <CategoryIcon size={40} className="text-gray-300" />
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-gray-800 text-sm truncate">{prop.title}</h3>
+                    <p className="text-[#E8A33D] font-bold text-lg">{prop.price}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-gray-500 text-xs truncate">📍 {prop.region}</span>
+                      <span className="text-green-600 text-xs font-medium whitespace-nowrap">● {lang === "sw" ? "Inapatikana" : "Available"}</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </section>
 
-      {/* ============================================================ */}
-      {/* CATEGORIES - ID="kategoria" */}
-      {/* ============================================================ */}
+      {/* CATEGORIES */}
       <section id="kategoria" className="scroll-mt-16 py-12 px-4 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">{lang === "sw" ? "Kategoria Maarufu" : "Popular Categories"}</h2>
-          <Link to="/kategoria" className="text-[#E8A33D] text-sm font-semibold hover:underline">{lang === "sw" ? "Tazama Yote →" : "View All →"}</Link>
+          <h2 className="text-2xl font-bold text-gray-800">
+            {lang === "sw" ? "Kategoria Maarufu" : "Popular Categories"}
+          </h2>
+          <Link to="/kategoria" className="text-[#E8A33D] text-sm font-semibold hover:underline">
+            {lang === "sw" ? "Tazama Yote →" : "View All →"}
+          </Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {categories.map((cat) => (
-            <Link key={cat.slug} to={`/kategoria/${cat.slug}`} className="bg-white rounded-lg overflow-hidden text-center border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 group">
+            <Link
+              key={cat.slug}
+              to={`/kategoria/${cat.slug}`}
+              className="bg-white rounded-lg overflow-hidden text-center border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 group"
+            >
               <div className="h-36 sm:h-40 overflow-hidden bg-[#F5F3EC]">
                 <img
                   src={cat.img}
@@ -651,7 +651,9 @@ export default function HomePage() {
                 />
               </div>
               <div className="p-3">
-                <h3 className="font-semibold text-gray-800 text-sm">{lang === "sw" ? cat.name.sw : cat.name.en}</h3>
+                <h3 className="font-semibold text-gray-800 text-sm">
+                  {lang === "sw" ? cat.name.sw : cat.name.en}
+                </h3>
                 <p className="text-xs text-gray-500">{cat.count}</p>
               </div>
             </Link>
@@ -659,9 +661,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
       {/* TESTIMONIALS */}
-      {/* ============================================================ */}
       <section className="py-16 px-4 max-w-7xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
           {lang === "sw" ? "Wanachosema Wadau Wetu" : "What Our Contributors Say"}
@@ -684,15 +684,15 @@ export default function HomePage() {
               >
                 "{lang === "sw" ? item.quote.sw : item.quote.en}"
               </p>
-              <p className="text-[#E8A33D] font-semibold mt-3 text-sm text-center flex-shrink-0">— {item.name}, {item.region}</p>
+              <p className="text-[#E8A33D] font-semibold mt-3 text-sm text-center flex-shrink-0">
+                — {item.name}, {item.region}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* FAQ - ID="faq" - MASWALI 22 KUTOKA KWA MTEJA */}
-      {/* ============================================================ */}
+      {/* FAQ */}
       <section id="faq" className="scroll-mt-16 py-16 px-4 max-w-3xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-800 text-center mb-4">
           {lang === "sw" ? "Maswali Yanayoulizwa Mara kwa Mara" : "Frequently Asked Questions"}
@@ -741,14 +741,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* FOOTER */}
-      {/* ============================================================ */}
       <Footer selectedLang={lang} />
 
-      {/* ============================================================ */}
-      {/* FLOATING APP NOTIFICATION */}
-      {/* ============================================================ */}
+      {/* TOAST */}
       {appToastShouldRender && (
         <div
           className={`fixed bottom-24 sm:bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 z-[60] transition-all duration-300 ${
