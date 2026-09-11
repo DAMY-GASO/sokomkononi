@@ -28,9 +28,9 @@ import {
   removeListing as removeListingFromStore,
   updateListing as updateListingInStore,
 } from "../../config/listingsStore.js";
-import { useSentAnnouncements } from "../../config/announcementsStore.js";
-import { useNotifications, notifyListingFeePaid } from "../../config/notificationsStore.js";
-import { checkReservationReminders } from "../../config/dealsStore.js";
+import { useSentAnnouncements } from "../../../config/announcementsStore.js";
+import { useNotifications, notifyListingFeePaid } from "../../../config/notificationsStore.js";
+import { checkReservationReminders } from "../../../config/dealsStore.js";
 import PostPropertyForm from "./PostPropertyForm";
 import MyListings from "./MyListings";
 import BoostSasa from "./BoostSasa";
@@ -47,9 +47,9 @@ import MessagesPage from "../../MessagesPage";
 import NotificationsPage from "../../NotificationsPage";
 import MyTransactionsPage, { SEED_TRANSACTIONS } from "../../MyTransactionsPage";
 import WaitingListPage from "../../WaitingListPage";
-import { useWaitingList, leaveWaitingList } from "../../config/waitingListStore.js";
+import { useWaitingList, leaveWaitingList } from "../../../config/waitingListStore.js";
 
-// Matangazo ya ticker sasa yanatoka ../../config/announcementsStore.js —
+// Matangazo ya ticker sasa yanatoka ../../../config/announcementsStore.js —
 // yale yale anayotuma Admin kwenye System Settings > Announcements.
 
 const SELLER_NAV = [
