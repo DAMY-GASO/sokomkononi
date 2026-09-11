@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Megaphone, MapPin, ChevronRight } from "lucide-react";
 import { COLORS, FONTS, getCategory, formatTZS } from "./shared";
 import { useActiveBannerAds } from "../../../config/bannerAdsStore.js";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
 
 const ROTATION_MS = 5000;
 
@@ -15,6 +16,7 @@ const ROTATION_MS = 5000;
 // kwa sasa — si placeholder tupu.
 // ============================================================
 export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
+  const { lang } = useLanguage();
   const banners = useActiveBannerAds();
   const [index, setIndex] = useState(0);
 
@@ -40,12 +42,13 @@ export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
         fontFamily: FONTS.body,
       }}
       className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-opacity hover:opacity-95"
+      aria-label={lang === "sw" ? "Tangazo lililolipiwa" : "Sponsored listing"}
     >
       <span
         style={{ background: "rgba(232,163,61,0.18)", color: COLORS.gold }}
         className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full shrink-0 uppercase tracking-wide"
       >
-        <Megaphone size={11} /> Tangazo
+        <Megaphone size={11} /> {lang === "sw" ? "Tangazo" : "Sponsored"}
       </span>
 
       <div
@@ -59,7 +62,10 @@ export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
         <p style={{ color: COLORS.sand }} className="text-sm font-semibold truncate">
           {banner.listingTitle}
         </p>
-        <p style={{ color: "rgba(245,243,236,0.6)" }} className="flex items-center gap-1 text-xs truncate">
+        <p
+          style={{ color: "rgba(245,243,236,0.6)" }}
+          className="flex items-center gap-1 text-xs truncate"
+        >
           <MapPin size={10} className="shrink-0" /> {banner.location}
           <span className="mx-1">•</span>
           {formatTZS(banner.price)}
