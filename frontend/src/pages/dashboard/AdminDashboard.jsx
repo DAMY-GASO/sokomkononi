@@ -32,6 +32,16 @@ import {
   usePlatformPolicy,
   updatePlatformPolicy,
 } from "../../config/systemSettingsStore.js";
+import {
+  useCategories,
+  addCategory,
+  updateCategory,
+  removeCategory,
+  toggleCategoryActive,
+  toggleCategoryPopular,
+  getCategoryIcon,
+  AVAILABLE_ICONS,
+} from "../../config/categoriesStore.js";
 import { useNotifications, NOTIFICATION_EVENTS } from "../../config/notificationsStore.js";
 import { useMyTransactionsAggregate } from "../../config/transactionsStore.js";
 import {
@@ -187,7 +197,7 @@ function StatusBadge({ status }) {
 }
 
 // ============================================================
-// SECTION: OVERVIEW (imeboreshwa)
+// SECTION: OVERVIEW
 // ============================================================
 function OverviewSection({ onNavigate }) {
   const users = useUsers();
@@ -195,15 +205,12 @@ function OverviewSection({ onNavigate }) {
   const deals = useDeals();
   const transactions = useMyTransactionsAggregate();
 
-  // Derive stats kutoka stores — hakuna hardcoded tena.
   const totalUsers = users.length;
-  const totalListings = listings.length;
   const liveListings = listings.filter((l) => l.status === "live").length;
   const reservedListings = listings.filter((l) => l.status === "reserved").length;
   const totalDeals = deals.length;
   const totalRevenue = transactions.revenue;
 
-  // Deals zinazoendelea (live transactions in progress)
   const activeDeals = useMemo(
     () =>
       deals.filter((d) =>
@@ -230,7 +237,6 @@ function OverviewSection({ onNavigate }) {
         ))}
       </div>
 
-      {/* === LIVE TRANSACTIONS IN PROGRESS — kipengele kipya per Doc §4.1 === */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-800 flex items-center gap-2">
@@ -278,7 +284,7 @@ function OverviewSection({ onNavigate }) {
 }
 
 // ============================================================
-// SECTION: USER MANAGEMENT (imeboreshwa — row click → drawer)
+// SECTION: USER MANAGEMENT
 // ============================================================
 function UserManagementSection() {
   const users = useUsers();
@@ -298,7 +304,6 @@ function UserManagementSection() {
     return matchesQuery && matchesRole;
   });
 
-  // User's listings + deals — kwa drawer
   const userListings = selectedUser ? listings.filter((l) => l.seller === selectedUser.name) : [];
   const userDeals = selectedUser
     ? deals.filter((d) => d.buyerName === selectedUser.name || d.sellerName === selectedUser.name)
@@ -381,7 +386,6 @@ function UserManagementSection() {
         </div>
       </div>
 
-      {/* === USER DETAIL DRAWER === */}
       {selectedUser && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="flex-1 bg-black/40" onClick={() => setSelectedUser(null)} />
@@ -400,7 +404,6 @@ function UserManagementSection() {
             </div>
 
             <div className="p-5 space-y-5">
-              {/* Header */}
               <div className="flex items-center gap-3">
                 <div
                   className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold"
@@ -418,7 +421,6 @@ function UserManagementSection() {
                 </div>
               </div>
 
-              {/* Meta */}
               <div
                 className="rounded-xl p-3 text-xs space-y-1.5"
                 style={{ background: COLORS.sand }}
@@ -437,7 +439,6 @@ function UserManagementSection() {
                 </div>
               </div>
 
-              {/* Listings */}
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
                   Listings Zake ({userListings.length})
@@ -460,7 +461,6 @@ function UserManagementSection() {
                 )}
               </div>
 
-              {/* Deals */}
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
                   Deals Zake ({userDeals.length})
@@ -491,7 +491,7 @@ function UserManagementSection() {
 }
 
 // ============================================================
-// SECTION: MODERATION (kama ilivyo)
+// SECTION: MODERATION
 // ============================================================
 function ModerationSection() {
   const listings = useListings();
@@ -590,7 +590,7 @@ function ModerationSection() {
 }
 
 // ============================================================
-// SECTION: DEALS (kama ilivyo)
+// SECTION: DEALS
 // ============================================================
 const DISPUTE_ACTIONS = [
   { key: "refund", label: "Rudisha Fedha kwa Mnunuzi", desc: "Malalamiko ni sahihi — deal inaghairiwa na mnunuzi anarejeshewa fedha alizolipa.", icon: RotateCcw, tone: COLORS.green },
@@ -823,7 +823,7 @@ function DealsSection() {
 }
 
 // ============================================================
-// SECTION: REVENUE (imeboreshwa — Featured Placements imeondolewa)
+// SECTION: REVENUE
 // ============================================================
 function EditableAmount({ value, onSave, prefix = "TZS " }) {
   const [editing, setEditing] = useState(false);
@@ -926,7 +926,6 @@ function RevenueSection() {
       )}
 
       <div className="flex flex-col gap-4">
-        {/* 1. Listing Fee */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center gap-3 mb-1">
             <div style={{ background: `${COLORS.gold}15` }} className="w-9 h-9 rounded-lg flex items-center justify-center">
@@ -960,7 +959,6 @@ function RevenueSection() {
           </div>
         </div>
 
-        {/* 2. Reservation Fee */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center gap-3 mb-1">
             <div style={{ background: `${COLORS.green}15` }} className="w-9 h-9 rounded-lg flex items-center justify-center">
@@ -979,7 +977,6 @@ function RevenueSection() {
           </div>
         </div>
 
-        {/* 3. Boost Packages */}
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex items-center gap-3 mb-1">
             <div style={{ background: `${COLORS.rust}15` }} className="w-9 h-9 rounded-lg flex items-center justify-center">
@@ -1000,7 +997,6 @@ function RevenueSection() {
           </div>
         </div>
 
-        {/* 4 + 5. Leading Fee na Advertisement Fee */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col gap-3">
             <div style={{ background: `${COLORS.rust}15` }} className="w-10 h-10 rounded-xl flex items-center justify-center">
@@ -1032,7 +1028,7 @@ function RevenueSection() {
 }
 
 // ============================================================
-// SECTION: SYSTEM SETTINGS (imeboreshwa — Platform Policy added)
+// SECTION: SYSTEM SETTINGS
 // ============================================================
 function WebhooksPanel() {
   const [webhooks] = useWebhooks();
@@ -1329,6 +1325,371 @@ function PlatformPolicyPanel() {
   );
 }
 
+// ============================================================
+// CATEGORIES PANEL
+// ============================================================
+function CategoriesPanel() {
+  const categories = useCategories();
+  const listings = useListings();
+  const [editing, setEditing] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [flash, setFlash] = useState(null);
+
+  const showFlash = (msg, type = "success") => {
+    setFlash({ msg, type });
+    setTimeout(() => setFlash(null), 3500);
+  };
+
+  const listingsCountFor = (key) => listings.filter((l) => l.category === key).length;
+
+  const handleDelete = (key) => {
+    const count = listingsCountFor(key);
+    if (count > 0) {
+      showFlash(
+        `Kuna listings ${count} zenye category "${key}". Ondoa/kwamisha listings hizo kwanza.`,
+        "error"
+      );
+      return;
+    }
+    if (!window.confirm(`Futa category "${key}"? Hatua hii haiwezi kurudishwa.`)) return;
+    const result = removeCategory(key, count);
+    if (result.success) {
+      showFlash(`Category "${key}" imefutwa.`);
+    } else {
+      showFlash(result.message, "error");
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col gap-4 lg:col-span-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <div
+            style={{ background: `${COLORS.night}0D` }}
+            className="w-9 h-9 rounded-lg flex items-center justify-center"
+          >
+            <ShoppingBag size={16} color={COLORS.night} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Categories</p>
+            <p className="text-xs text-gray-500">
+              Ongeza, hariri, zima, au futa categories za soko
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setAdding(true)}
+          style={{ background: COLORS.gold, color: COLORS.night }}
+          className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2"
+        >
+          <Plus size={13} /> Category Mpya
+        </button>
+      </div>
+
+      {flash && (
+        <div
+          style={{
+            background: flash.type === "error" ? `${COLORS.rust}15` : `${COLORS.green}15`,
+            color: flash.type === "error" ? COLORS.rust : COLORS.green,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg"
+        >
+          {flash.msg}
+        </div>
+      )}
+
+      {adding && (
+        <CategoryForm
+          onSave={(newCat) => {
+            try {
+              addCategory(newCat);
+              setAdding(false);
+              showFlash(
+                `Category "${newCat.key}" imeongezwa. Kumbuka kuweka Listing Fee kwenye Revenue, la sivyo wauzaji hawataweza kuunda listing kwenye category hii.`
+              );
+            } catch (e) {
+              showFlash(e.message, "error");
+            }
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      )}
+
+      <div className="flex flex-col gap-2">
+        {categories.map((cat) => {
+          const count = listingsCountFor(cat.key);
+          const Icon = getCategoryIcon(cat.iconKey);
+          const isEditing = editing === cat.key;
+
+          return (
+            <div
+              key={cat.key}
+              style={{ borderColor: COLORS.sandLine }}
+              className="border rounded-lg"
+            >
+              <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
+                <div
+                  style={{ background: COLORS.night }}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                >
+                  <Icon size={15} color={COLORS.gold} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-gray-800">
+                      {cat.label?.sw || cat.key}
+                    </p>
+                    <span className="text-[10px] text-gray-400 font-mono">({cat.key})</span>
+                    {cat.isPopular && (
+                      <span
+                        style={{ background: `${COLORS.gold}20`, color: COLORS.gold }}
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                      >
+                        POPULAR
+                      </span>
+                    )}
+                    {cat.active === false && (
+                      <span
+                        style={{ background: `${COLORS.rust}20`, color: COLORS.rust }}
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                      >
+                        IMEZIMWA
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {count} {count === 1 ? "listing" : "listings"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                  <button
+                    onClick={() => toggleCategoryActive(cat.key)}
+                    className="text-[11px] font-semibold px-2 py-1 rounded-md border"
+                    style={{
+                      color: cat.active === false ? COLORS.green : COLORS.rust,
+                      borderColor: COLORS.sandLine,
+                    }}
+                  >
+                    {cat.active === false ? "Washa" : "Zima"}
+                  </button>
+                  <button
+                    onClick={() => toggleCategoryPopular(cat.key)}
+                    className="text-[11px] font-semibold px-2 py-1 rounded-md border"
+                    style={{
+                      color: cat.isPopular ? COLORS.rust : COLORS.green,
+                      borderColor: COLORS.sandLine,
+                    }}
+                  >
+                    {cat.isPopular ? "Ondoa Popular" : "Weka Popular"}
+                  </button>
+                  <button
+                    onClick={() => setEditing(isEditing ? null : cat.key)}
+                    className="text-[11px] font-semibold px-2 py-1 rounded-md border"
+                    style={{ color: COLORS.night, borderColor: COLORS.sandLine }}
+                  >
+                    {isEditing ? "Funga" : "Hariri"}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(cat.key)}
+                    className="text-gray-300 hover:text-[#C1502E] p-1"
+                    aria-label="Futa"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {isEditing && (
+                <CategoryForm
+                  initial={cat}
+                  isEditing
+                  onSave={(patch) => {
+                    updateCategory(cat.key, patch);
+                    setEditing(null);
+                    showFlash(`Category "${cat.key}" imehaririwa.`);
+                  }}
+                  onCancel={() => setEditing(null)}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// CATEGORY FORM
+// ============================================================
+function CategoryForm({ initial = {}, isEditing = false, onSave, onCancel }) {
+  const [form, setForm] = useState({
+    key: initial.key || "",
+    labelSw: initial.label?.sw || "",
+    labelEn: initial.label?.en || "",
+    descSw: initial.description?.sw || "",
+    descEn: initial.description?.en || "",
+    iconKey: initial.iconKey || "Home",
+    isPopular: initial.isPopular ?? true,
+    active: initial.active ?? true,
+  });
+
+  const canSave = form.key.trim() && form.labelSw.trim() && form.labelEn.trim();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!canSave) return;
+
+    const slugified = isEditing
+      ? form.key
+      : form.key.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+    onSave({
+      key: slugified,
+      label: { sw: form.labelSw.trim(), en: form.labelEn.trim() },
+      description: {
+        sw: form.descSw.trim() || form.labelSw.trim(),
+        en: form.descEn.trim() || form.labelEn.trim(),
+      },
+      iconKey: form.iconKey,
+      isPopular: form.isPopular,
+      active: form.active,
+      extra: initial.extra || [],
+    });
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
+      className="border-t rounded-b-lg p-4 flex flex-col gap-3"
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold text-gray-500">Key (slug)</span>
+          <input
+            value={form.key}
+            onChange={(e) => setForm({ ...form, key: e.target.value })}
+            placeholder="mfano: pikipiki"
+            disabled={isEditing}
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:bg-gray-100 disabled:text-gray-500"
+          />
+          {!isEditing && (
+            <span className="text-[10px] text-gray-400">
+              Herufi ndogo, namba, na `-` pekee. Mfano: `vifaa-vya-nyumbani`
+            </span>
+          )}
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold text-gray-500">Icon</span>
+          <select
+            value={form.iconKey}
+            onChange={(e) => setForm({ ...form, iconKey: e.target.value })}
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none"
+          >
+            {Object.keys(AVAILABLE_ICONS).map((k) => (
+              <option key={k} value={k}>
+                {k}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold text-gray-500">Label (Kiswahili)</span>
+          <input
+            value={form.labelSw}
+            onChange={(e) => setForm({ ...form, labelSw: e.target.value })}
+            placeholder="mfano: Pikipiki"
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold text-gray-500">Label (English)</span>
+          <input
+            value={form.labelEn}
+            onChange={(e) => setForm({ ...form, labelEn: e.target.value })}
+            placeholder="e.g. Motorcycles"
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none"
+          />
+        </label>
+        <label className="flex flex-col gap-1 sm:col-span-2">
+          <span className="text-[11px] font-semibold text-gray-500">
+            Description (Kiswahili) — hiari
+          </span>
+          <input
+            value={form.descSw}
+            onChange={(e) => setForm({ ...form, descSw: e.target.value })}
+            placeholder="Maelezo mafupi yanayoonekana kwenye ukurasa wa category"
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none"
+          />
+        </label>
+        <label className="flex flex-col gap-1 sm:col-span-2">
+          <span className="text-[11px] font-semibold text-gray-500">
+            Description (English) — hiari
+          </span>
+          <input
+            value={form.descEn}
+            onChange={(e) => setForm({ ...form, descEn: e.target.value })}
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none"
+          />
+        </label>
+      </div>
+
+      <div className="flex items-center gap-4 text-xs flex-wrap">
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.isPopular}
+            onChange={(e) => setForm({ ...form, isPopular: e.target.checked })}
+          />
+          Inaonekana HomePage + Navbar
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.active}
+            onChange={(e) => setForm({ ...form, active: e.target.checked })}
+          />
+          Hai (inapatikana kwa wauzaji)
+        </label>
+      </div>
+
+      {!isEditing && (
+        <p style={{ color: COLORS.rust }} className="text-[11px] leading-relaxed">
+          ⚠️ Baada ya kuunda category hii, <b>LAZIMA</b> uende{" "}
+          <b>Revenue &gt; Listing Fee</b> na uongeze fee config yake. La sivyo, wauzaji hawataweza
+          kuunda listing kwenye category hii.
+        </p>
+      )}
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{ borderColor: COLORS.sandLine }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg border text-gray-600 hover:bg-white"
+        >
+          Ghairi
+        </button>
+        <button
+          type="submit"
+          disabled={!canSave}
+          style={{
+            background: canSave ? COLORS.night : COLORS.sandLine,
+            color: canSave ? COLORS.sand : "rgba(16,26,46,0.4)",
+          }}
+          className="flex-1 text-xs font-semibold px-3 py-2 rounded-lg"
+        >
+          {isEditing ? "Hifadhi Mabadiliko" : "Ongeza Category"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ============================================================
+// ANNOUNCEMENTS PANEL
+// ============================================================
 function AnnouncementsPanel() {
   const announcements = useAnnouncements();
   const [form, setForm] = useState({ typeId: "fee_change", title: "", message: "", scheduledFor: "" });
@@ -1461,6 +1822,7 @@ function SystemSettingsSection() {
     <>
       <SectionHeader title="System Settings" subtitle="Mipangilio ya ndani ya mfumo" />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <CategoriesPanel />
         <WebhooksPanel />
         <SubAdminsPanel />
         <AppStoreLinksPanel />
