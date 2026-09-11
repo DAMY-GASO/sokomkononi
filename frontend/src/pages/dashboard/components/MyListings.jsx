@@ -25,19 +25,20 @@ import {
   leadingDaysRemaining,
 } from "./shared";
 import { useActiveBannerAds, bannerDaysRemaining } from "../../../config/bannerAdsStore.js";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
 import PaymentGateway from "./PaymentGateway";
 
-const TABS = [
-  { key: "all", label: "Zote" },
-  { key: "live", label: "Live" },
-  { key: "pending_payment", label: "Inasubiri Malipo" },
-  { key: "in_review", label: "Inakaguliwa" },
-  { key: "sold", label: "Imeuzwa" },
-  { key: "expired", label: "Imeisha Muda" },
-];
-
-function StatusBadge({ status }) {
-  const s = STATUS[status];
+function StatusBadge({ status, lang }) {
+  const config = {
+    live: { label: lang === "sw" ? "Live" : "Live", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
+    reserved: { label: lang === "sw" ? "Ina Reservation" : "Reserved", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
+    sold: { label: lang === "sw" ? "Imeuzwa" : "Sold", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
+    pending_payment: { label: lang === "sw" ? "Inasubiri Malipo" : "Pending Payment", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
+    in_review: { label: lang === "sw" ? "Inakaguliwa" : "In Review", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
+    expired: { label: lang === "sw" ? "Imeisha Muda" : "Expired", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
+    rejected: { label: lang === "sw" ? "Imekataliwa" : "Rejected", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
+  };
+  const s = config[status] || config.pending_payment;
   return (
     <span
       style={{ background: s.bg, color: s.fg }}
@@ -53,8 +54,8 @@ function ActionButton({ icon: Icon, label, onClick, tone = "default" }) {
     tone === "primary"
       ? { background: COLORS.gold, color: COLORS.night }
       : tone === "danger"
-      ? { background: "transparent", color: COLORS.rust, borderColor: "rgba(193,80,46,0.35)" }
-      : { background: "transparent", color: COLORS.night, borderColor: COLORS.sandLine };
+        ? { background: "transparent", color: COLORS.rust, borderColor: "rgba(193,80,46,0.35)" }
+        : { background: "transparent", color: COLORS.night, borderColor: COLORS.sandLine };
 
   return (
     <button
@@ -70,10 +71,23 @@ function ActionButton({ icon: Icon, label, onClick, tone = "default" }) {
   );
 }
 
-function ListingCard({ listing, onRemove, onBoost, onLeading, onAdvertise, activeBanner, isPaying, onStartPay, onCancelPay, onPaySuccess }) {
+function ListingCard({
+  listing,
+  onRemove,
+  onBoost,
+  onLeading,
+  onAdvertise,
+  activeBanner,
+  isPaying,
+  onStartPay,
+  onCancelPay,
+  onPaySuccess,
+  lang,
+}) {
   const category = getCategory(listing.category);
   const Icon = category?.icon;
   const isFaded = listing.status === "sold" || listing.status === "expired";
+  const isReserved = listing.status === "reserved";
 
   return (
     <div
@@ -95,7 +109,7 @@ function ListingCard({ listing, onRemove, onBoost, onLeading, onAdvertise, activ
           >
             {listing.title}
           </h3>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
             {isLeadingActive(listing) && (
               <span
                 style={{ background: "rgba(47,109,79,0.14)", color: COLORS.green }}
@@ -120,7 +134,7 @@ function ListingCard({ listing, onRemove, onBoost, onLeading, onAdvertise, activ
                 <Rocket size={11} /> {boostDaysRemaining(listing)}d
               </span>
             )}
-            <StatusBadge status={listing.status} />
+            <StatusBadge status={listing.status} lang={lang} />
           </div>
         </div>
 
@@ -147,16 +161,16 @@ function ListingCard({ listing, onRemove, onBoost, onLeading, onAdvertise, activ
           </span>
         </div>
 
-        {(listing.status === "live" || isFaded) && (
+        {(listing.status === "live" || listing.status === "reserved" || isFaded) && (
           <div
             style={{ color: "rgba(16,26,46,0.55)" }}
             className="flex items-center gap-4 text-xs mb-3"
           >
             <span className="flex items-center gap-1">
-              <Eye size={13} /> {listing.views ?? 0} walioangalia
+              <Eye size={13} /> {listing.views ?? 0} {lang === "sw" ? "walioangalia" : "views"}
             </span>
             <span className="flex items-center gap-1">
-              <Inbox size={13} /> {listing.inquiries ?? 0} maswali
+              <Inbox size={13} /> {listing.inquiries ?? 0} {lang === "sw" ? "maswali" : "inquiries"}
             </span>
           </div>
         )}
@@ -165,8 +179,12 @@ function ListingCard({ listing, onRemove, onBoost, onLeading, onAdvertise, activ
           <div className="mb-3">
             <PaymentGateway
               amount={listing.listingFee}
-              title="Listing Fee"
-              description={`Kuchapisha "${listing.title}"`}
+              title={lang === "sw" ? "Listing Fee" : "Listing Fee"}
+              description={
+                lang === "sw"
+                  ? `Kuchapisha "${listing.title}"`
+                  : `Publishing "${listing.title}"`
+              }
               onCancel={onCancelPay}
               onSuccess={onPaySuccess}
             />
@@ -178,8 +196,17 @@ function ListingCard({ listing, onRemove, onBoost, onLeading, onAdvertise, activ
             style={{ background: "rgba(232,163,61,0.1)", color: "#8A5A16" }}
             className="text-xs rounded-lg px-3 py-2 mb-3"
           >
-            Lipa <b>{formatTZS(listing.listingFee)}</b> ili mali hii ianze kuonekana kwa
-            wanunuzi.
+            {lang === "sw" ? (
+              <>
+                Lipa <b>{formatTZS(listing.listingFee)}</b> ili mali hii ianze kuonekana kwa
+                wanunuzi.
+              </>
+            ) : (
+              <>
+                Pay <b>{formatTZS(listing.listingFee)}</b> so this listing starts being visible to
+                buyers.
+              </>
+            )}
           </div>
         )}
 
@@ -188,8 +215,22 @@ function ListingCard({ listing, onRemove, onBoost, onLeading, onAdvertise, activ
             style={{ color: "rgba(16,26,46,0.55)" }}
             className="flex items-center gap-1.5 text-xs mb-3"
           >
-            <Clock size={13} /> Timu yetu inakagua taarifa zako — kwa kawaida chini ya saa
-            24.
+            <Clock size={13} />{" "}
+            {lang === "sw"
+              ? "Timu yetu inakagua taarifa zako — kwa kawaida chini ya saa 24."
+              : "Our team is reviewing your listing — usually within 24 hours."}
+          </div>
+        )}
+
+        {listing.status === "reserved" && (
+          <div
+            style={{ background: "rgba(232,163,61,0.1)", color: "#8A5A16" }}
+            className="flex items-center gap-1.5 text-xs rounded-lg px-3 py-2 mb-3"
+          >
+            <Clock size={13} />{" "}
+            {lang === "sw"
+              ? "Mali hii ina Reservation hai — inaonekana kwa wanunuzi wengine kama RESERVED."
+              : "This listing has an active reservation — other buyers see it as RESERVED."}
           </div>
         )}
 
@@ -197,35 +238,92 @@ function ListingCard({ listing, onRemove, onBoost, onLeading, onAdvertise, activ
           <div className="flex flex-wrap gap-2">
             {listing.status === "live" && (
               <>
-                <ActionButton icon={Eye} label="Angalia" />
-                <ActionButton icon={Rocket} label="Boost Sasa" tone="primary" onClick={() => onBoost(listing.id)} />
-                <ActionButton icon={TrendingUp} label="Panda Juu" onClick={() => onLeading(listing.id)} />
+                <ActionButton icon={Eye} label={lang === "sw" ? "Angalia" : "View"} />
+                <ActionButton
+                  icon={Rocket}
+                  label={lang === "sw" ? "Boost Sasa" : "Boost Now"}
+                  tone="primary"
+                  onClick={() => onBoost(listing.id)}
+                />
+                <ActionButton
+                  icon={TrendingUp}
+                  label={lang === "sw" ? "Panda Juu" : "Promote"}
+                  onClick={() => onLeading(listing.id)}
+                />
                 <ActionButton
                   icon={Megaphone}
-                  label={activeBanner ? "Inatangazwa" : "Tangaza"}
+                  label={
+                    activeBanner
+                      ? lang === "sw" ? "Inatangazwa" : "Advertising"
+                      : lang === "sw" ? "Tangaza" : "Advertise"
+                  }
                   onClick={() => onAdvertise(listing.id)}
                 />
-                <ActionButton icon={Pencil} label="Hariri" />
-                <ActionButton icon={Trash2} label="Ondoa" tone="danger" onClick={() => onRemove(listing.id)} />
+                <ActionButton icon={Pencil} label={lang === "sw" ? "Hariri" : "Edit"} />
+                <ActionButton
+                  icon={Trash2}
+                  label={lang === "sw" ? "Ondoa" : "Remove"}
+                  tone="danger"
+                  onClick={() => onRemove(listing.id)}
+                />
+              </>
+            )}
+            {listing.status === "reserved" && (
+              <>
+                <ActionButton icon={Eye} label={lang === "sw" ? "Angalia" : "View"} />
+                <ActionButton icon={Pencil} label={lang === "sw" ? "Hariri" : "Edit"} />
               </>
             )}
             {listing.status === "pending_payment" && (
               <>
                 <ActionButton
                   icon={CreditCard}
-                  label={`Lipa ${formatTZS(listing.listingFee)}`}
+                  label={
+                    lang === "sw"
+                      ? `Lipa ${formatTZS(listing.listingFee)}`
+                      : `Pay ${formatTZS(listing.listingFee)}`
+                  }
                   tone="primary"
                   onClick={() => onStartPay(listing.id)}
                 />
-                <ActionButton icon={Trash2} label="Futa" tone="danger" onClick={() => onRemove(listing.id)} />
+                <ActionButton
+                  icon={Trash2}
+                  label={lang === "sw" ? "Futa" : "Delete"}
+                  tone="danger"
+                  onClick={() => onRemove(listing.id)}
+                />
               </>
             )}
-            {listing.status === "in_review" && <ActionButton icon={Pencil} label="Hariri" />}
-            {listing.status === "sold" && <ActionButton icon={Eye} label="Angalia" />}
+            {listing.status === "in_review" && (
+              <ActionButton icon={Pencil} label={lang === "sw" ? "Hariri" : "Edit"} />
+            )}
+            {listing.status === "sold" && (
+              <ActionButton icon={Eye} label={lang === "sw" ? "Angalia" : "View"} />
+            )}
             {listing.status === "expired" && (
               <>
-                <ActionButton icon={RefreshCw} label="Chapisha Tena" tone="primary" />
-                <ActionButton icon={Trash2} label="Futa" tone="danger" onClick={() => onRemove(listing.id)} />
+                <ActionButton
+                  icon={RefreshCw}
+                  label={lang === "sw" ? "Chapisha Tena" : "Republish"}
+                  tone="primary"
+                />
+                <ActionButton
+                  icon={Trash2}
+                  label={lang === "sw" ? "Futa" : "Delete"}
+                  tone="danger"
+                  onClick={() => onRemove(listing.id)}
+                />
+              </>
+            )}
+            {listing.status === "rejected" && (
+              <>
+                <ActionButton icon={Pencil} label={lang === "sw" ? "Hariri" : "Edit"} />
+                <ActionButton
+                  icon={Trash2}
+                  label={lang === "sw" ? "Futa" : "Delete"}
+                  tone="danger"
+                  onClick={() => onRemove(listing.id)}
+                />
               </>
             )}
           </div>
@@ -243,29 +341,50 @@ export default function MyListings({
   onAdvertise = () => {},
   onPaid = () => {},
 }) {
+  const { lang } = useLanguage();
   const [tab, setTab] = useState("all");
   const [payingId, setPayingId] = useState(null);
   const activeBanners = useActiveBannerAds();
 
+  const TABS = [
+    { key: "all", label: lang === "sw" ? "Zote" : "All" },
+    { key: "live", label: "Live" },
+    { key: "reserved", label: lang === "sw" ? "Ina Reservation" : "Reserved" },
+    { key: "pending_payment", label: lang === "sw" ? "Inasubiri Malipo" : "Pending" },
+    { key: "in_review", label: lang === "sw" ? "Inakaguliwa" : "In Review" },
+    { key: "sold", label: lang === "sw" ? "Imeuzwa" : "Sold" },
+    { key: "expired", label: lang === "sw" ? "Imeisha Muda" : "Expired" },
+    { key: "rejected", label: lang === "sw" ? "Imekataliwa" : "Rejected" },
+  ];
+
   const counts = TABS.reduce((acc, t) => {
-    acc[t.key] = t.key === "all" ? listings.length : listings.filter((l) => l.status === t.key).length;
+    acc[t.key] =
+      t.key === "all" ? listings.length : listings.filter((l) => l.status === t.key).length;
     return acc;
   }, {});
 
   const filtered = tab === "all" ? listings : listings.filter((l) => l.status === tab);
 
   return (
-    <div style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }} className="w-full p-4 sm:p-6">
+    <div
+      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }}
+      className="w-full p-4 sm:p-6"
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
       <div className="max-w-3xl mx-auto">
-        <h1 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl sm:text-3xl font-semibold mb-1">
-          My Listings
+        <h1
+          style={{ fontFamily: FONTS.display, color: COLORS.night }}
+          className="text-2xl sm:text-3xl font-semibold mb-1"
+        >
+          {lang === "sw" ? "Mali Zangu" : "My Listings"}
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-5">
-          Dhibiti mali zako zote ulizoziweka na fuatilia status ya kila moja.
+          {lang === "sw"
+            ? "Dhibiti mali zako zote ulizoziweka na fuatilia status ya kila moja."
+            : "Manage all your listings and track the status of each one."}
         </p>
 
         <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
@@ -303,6 +422,7 @@ export default function MyListings({
               <ListingCard
                 key={l.id}
                 listing={l}
+                lang={lang}
                 onRemove={onRemove}
                 onBoost={onBoost}
                 onLeading={onLeading}
@@ -324,7 +444,9 @@ export default function MyListings({
             className="rounded-2xl border-2 border-dashed p-10 text-center"
           >
             <p style={{ color: "rgba(16,26,46,0.45)" }} className="text-sm">
-              Huna mali yoyote yenye status hii kwa sasa.
+              {lang === "sw"
+                ? "Huna mali yoyote yenye status hii kwa sasa."
+                : "You don't have any listing with this status yet."}
             </p>
           </div>
         )}
