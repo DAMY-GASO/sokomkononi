@@ -44,7 +44,7 @@ const getDealStatus = (lang) => ({
 const CUSTOM_MIN_HOURS = 1;
 const CUSTOM_MAX_HOURS = 336;
 
-const PAYMENT_METHODS = ["M-Pesa", "Tigo Pesa", "Airtel Money", "HaloPesa", "Benki (CRDB)"];
+const PAYMENT_METHODS = ["M-Pesa", "Mixx by Yas", "Airtel Money", "HaloPesa", "Benki (CRDB)"];
 
 function formatHours(hours, lang) {
   if (hours % 24 === 0) {
