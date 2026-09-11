@@ -11,7 +11,6 @@ import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 import SellerDashboard from "./pages/dashboard/SellerDashboard.jsx";
-import BuyerDashboard from "./pages/dashboard/BuyerDashboard.jsx";
 import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
 import PropertyDetailPage from "./pages/PropertyDetailPage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
