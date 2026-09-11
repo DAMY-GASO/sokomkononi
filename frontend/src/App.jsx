@@ -1,24 +1,48 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext.jsx";
+import { LanguageProvider } from "./context/LanguageContext.jsx";
+import ScrollToHash from "./components/ScrollToHash.jsx";
+
+// ============================================================
+// PUBLIC PAGES
+// ============================================================
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
+import TermsPage from "./pages/TermsPage.jsx";
+import PrivacyPage from "./pages/PrivacyPage.jsx";
+
+// ============================================================
+// AUTH PAGES
+// ============================================================
 import LoginPage from "./pages/Auth/LoginPage.jsx";
 import RegisterPage from "./pages/Auth/RegisterPage.jsx";
 import WaitlistPage from "./pages/Auth/WaitlistPage.jsx";
 import ForgotpasswordPage from "./pages/Auth/ForgotpasswordPage.jsx";
-import { AuthProvider } from "./context/AuthContext.jsx";
-import { LanguageProvider } from "./context/LanguageContext.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
-import SellerDashboard from "./pages/dashboard/SellerDashboard.jsx";
-import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
+
+// ============================================================
+// PROPERTY & SEARCH
+// ============================================================
 import PropertyDetailPage from "./pages/PropertyDetailPage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
 import SearchResultsPage from "./pages/SearchResultsPage.jsx";
-import TermsPage from "./pages/TermsPage.jsx";
-import PrivacyPage from "./pages/PrivacyPage.jsx";
+
+// ============================================================
+// PROFILE
+// ============================================================
 import ProfilePage from "./pages/ProfilePage.jsx";
-import ScrollToHash from "./components/ScrollToHash.jsx";
+
+// ============================================================
+// DASHBOARD (Seller + Buyer — moja inashughulikia zote mbili)
+// ============================================================
+import DashboardShell from "./pages/dashboard/components/DashboardShell.jsx";
+
+// ============================================================
+// ADMIN DASHBOARD
+// ============================================================
+import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
 
 function App() {
   return (
@@ -31,14 +55,18 @@ function App() {
             {/* PUBLIC ROUTES */}
             {/* ============================================================ */}
             <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotpasswordPage />} />
-            <Route path="/waitlist" element={<WaitlistPage />} />
             <Route path="/kuhusu" element={<AboutPage />} />
             <Route path="/mawasiliano" element={<ContactPage />} />
             <Route path="/sheria" element={<TermsPage />} />
             <Route path="/faragha" element={<PrivacyPage />} />
+
+            {/* ============================================================ */}
+            {/* AUTH ROUTES */}
+            {/* ============================================================ */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotpasswordPage />} />
+            <Route path="/waitlist" element={<WaitlistPage />} />
 
             {/* ============================================================ */}
             {/* PROPERTY & SEARCH ROUTES */}
@@ -51,27 +79,32 @@ function App() {
             <Route path="/search" element={<SearchResultsPage />} />
 
             {/* ============================================================ */}
-            {/* DASHBOARD ROUTES - SELLER */}
+            {/* DASHBOARD ROUTES — SELLER SIDE
+                Zote zinapelekwa DashboardShell, ambayo inasoma URL na
+                kuamua `side` + `activeKey` kupitia URL_TO_STATE */}
             {/* ============================================================ */}
-            <Route path="/dashboard" element={<SellerDashboard />} />
-            <Route path="/dashboard/seller" element={<SellerDashboard />} />
-            <Route path="/dashboard/saved" element={<SellerDashboard />} />
-            <Route path="/dashboard/messages" element={<SellerDashboard />} />
-            <Route path="/dashboard/notifications" element={<SellerDashboard />} />
-            <Route path="/dashboard/transactions" element={<SellerDashboard />} />
-            <Route path="/dashboard/boost" element={<SellerDashboard />} />
-            <Route path="/dashboard/deals" element={<SellerDashboard />} />
-            <Route path="/dashboard/post" element={<SellerDashboard />} />
-            <Route path="/dashboard/listings" element={<SellerDashboard />} />
+            <Route path="/dashboard" element={<DashboardShell />} />
+            <Route path="/dashboard/seller" element={<DashboardShell />} />
+            <Route path="/dashboard/post" element={<DashboardShell />} />
+            <Route path="/dashboard/listings" element={<DashboardShell />} />
+            <Route path="/dashboard/saved" element={<DashboardShell />} />
+            <Route path="/dashboard/boost" element={<DashboardShell />} />
+            <Route path="/dashboard/leading" element={<DashboardShell />} />
+            <Route path="/dashboard/advertise" element={<DashboardShell />} />
+            <Route path="/dashboard/deals" element={<DashboardShell />} />
+            <Route path="/dashboard/messages" element={<DashboardShell />} />
+            <Route path="/dashboard/notifications" element={<DashboardShell />} />
+            <Route path="/dashboard/transactions" element={<DashboardShell />} />
 
             {/* ============================================================ */}
-            {/* DASHBOARD ROUTES - BUYER */}
+            {/* DASHBOARD ROUTES — BUYER SIDE */}
             {/* ============================================================ */}
-            <Route path="/dashboard/buyer" element={<BuyerDashboard />} />
-            <Route path="/dashboard/buyer/saved" element={<BuyerDashboard />} />
-            <Route path="/dashboard/buyer/messages" element={<BuyerDashboard />} />
-            <Route path="/dashboard/buyer/notifications" element={<BuyerDashboard />} />
-            <Route path="/dashboard/buyer/transactions" element={<BuyerDashboard />} />
+            <Route path="/dashboard/buyer" element={<DashboardShell />} />
+            <Route path="/dashboard/buyer/saved" element={<DashboardShell />} />
+            <Route path="/dashboard/buyer/messages" element={<DashboardShell />} />
+            <Route path="/dashboard/buyer/notifications" element={<DashboardShell />} />
+            <Route path="/dashboard/buyer/waiting" element={<DashboardShell />} />
+            <Route path="/dashboard/buyer/transactions" element={<DashboardShell />} />
 
             {/* ============================================================ */}
             {/* ADMIN ROUTES */}
@@ -87,7 +120,7 @@ function App() {
             <Route path="/profile" element={<ProfilePage />} />
 
             {/* ============================================================ */}
-            {/* FALLBACK - LAZIMA IWE YA MWISHO */}
+            {/* FALLBACK — LAZIMA IWE YA MWISHO */}
             {/* ============================================================ */}
             <Route path="*" element={<HomePage />} />
           </Routes>
