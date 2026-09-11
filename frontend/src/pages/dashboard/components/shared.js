@@ -2,14 +2,15 @@
 // shared.js
 // Helper functions na brand tokens za SokoMkononi.
 //
-// MWISHO WA MABADILIKO (Hatua 1):
+// MWISHO WA MABADILIKO:
 //   - CATEGORIES array IMEONDOLEWA — sasa zinatoka
-//     ../../../config/categoriesStore.js (chanzo kimoja cha ukweli,
-//     kinachodhibitiwa na Admin kupitia Dashboard > Categories)
+//     ../../../config/categoriesStore.js
 //   - getCategory() inarudisha category object kutoka store
 //   - getCategoryIconByKey() inarudisha lucide-react component
 //   - getCategoryLabel() shortcut ya label moja kwa moja
 //   - getActiveCategories re-export kwa urahisi
+//   - calculateListingFee() inarudi error state kama category haina
+//     fee config (category mpya iliyoongezwa na Admin bila fee)
 // ============================================================
 
 import { getBoostPackage as getBoostPackageFromStore } from "../../../config/boostPackagesStore.js";
@@ -43,20 +44,10 @@ export const FONTS = {
 // ============================================================
 // Muundo wa category: { key, label: {sw,en}, description: {sw,en},
 //                       iconKey, isPopular, active, extra[] }
-//
-// Icons zinahifadhiwa kama strings (mf. "Home", "Car") — UI inarudisha
-// component kwa getCategoryIconByKey("Home") au
-// getCategoryIcon("Home") moja kwa moja kutoka store.
 // ============================================================
 
 /**
  * getCategory(key) — rudisha category object kutoka store.
- *
- * @example
- *   const cat = getCategory("nyumba");
- *   // cat.label.sw === "Nyumba & Majengo"
- *   // cat.iconKey === "Home"
- *   // cat.extra === [{key:"vyumba", ...}, ...]
  */
 export function getCategory(key) {
   return getCategoryFromStore(key);
@@ -64,10 +55,6 @@ export function getCategory(key) {
 
 /**
  * getCategoryIconByKey(iconKey) — rudisha lucide-react component.
- *
- * @example
- *   const Icon = getCategoryIconByKey("Home"); // <Home />
- *   <Icon size={20} />
  */
 export function getCategoryIconByKey(iconKey) {
   return getCategoryIcon(iconKey);
@@ -75,10 +62,6 @@ export function getCategoryIconByKey(iconKey) {
 
 /**
  * getCategoryLabel(key, lang) — shortcut ya label moja kwa moja.
- *
- * @example
- *   getCategoryLabel("nyumba", "sw") === "Nyumba & Majengo"
- *   getCategoryLabel("nyumba", "en") === "Houses & Buildings"
  */
 export function getCategoryLabel(key, lang = "sw") {
   const cat = getCategory(key);
@@ -87,8 +70,7 @@ export function getCategoryLabel(key, lang = "sw") {
 }
 
 /**
- * Re-export ya getActiveCategories kutoka store — kwa components
- * zinazo-import kutoka shared.js.
+ * Re-export ya getActiveCategories kutoka store.
  */
 export { getActiveCategories };
 
@@ -103,14 +85,41 @@ export function formatTZS(amount) {
   return "TZS " + Math.round(amount).toLocaleString("en-US");
 }
 
-// Calculates the listing fee for a given category + price.
-// Returns { price, rate, rawFee, fee, capped: "min" | "max" | null }
+/**
+ * calculateListingFee(categoryKey, priceInput)
+ *
+ * Inarudi:
+ *   { price, rate, rawFee, fee, capped: "min" | "max" | null }
+ *
+ * Kama category haina fee config (category mpya iliyoongezwa na Admin
+ * bila kuweka fee), inarudi:
+ *   { price, rate: 0, rawFee: 0, fee: null, capped: null,
+ *     error: "NO_FEE_CONFIG", message: "..." }
+ *
+ * UI LAZIMA kuangalia `feeInfo.error === "NO_FEE_CONFIG"` kabla ya
+ * kuruhusu submit.
+ */
 export function calculateListingFee(categoryKey, priceInput) {
   const config = getListingFeeConfig(categoryKey);
   const price = parsePrice(priceInput);
 
-  if (!config || !price) {
-    return { price, rate: config?.rate ?? 0, rawFee: 0, fee: 0, capped: null };
+  // Category haina fee config — Admin hajaongeza bado.
+  if (!config) {
+    return {
+      price,
+      rate: 0,
+      rawFee: 0,
+      fee: null,
+      capped: null,
+      error: "NO_FEE_CONFIG",
+      message:
+        "Category hii haina Listing Fee config bado. Wasiliana na Admin ili kuweka ada kabla ya kuweka listing.",
+    };
+  }
+
+  // Price bado haijawekwa — rudisha fee 0 bila error.
+  if (!price) {
+    return { price, rate: config.rate, rawFee: 0, fee: 0, capped: null };
   }
 
   const rawFee = price * config.rate;
@@ -208,16 +217,10 @@ export function applyLeading(listing) {
 
 // ============================================================
 // buildListingFromSubmission
-// Ina-hoist fields muhimu kutoka `extra` kwenda top-level, ili listing
-// mpya ifanane kabisa na SEED_LISTINGS.
-//
-// Pia inaweka `expiresAt` kutoka platform policy (Admin > System
-// Settings > Platform Policy) — siku 60 kwa default.
 // ============================================================
 export function buildListingFromSubmission({ categoryKey, base, extra, photoCount }) {
   const feeInfo = calculateListingFee(categoryKey, base.price);
 
-  // Hoist helpers — kila field inaongezwa kama ipo.
   const hoisted = {};
 
   // Common (nyumba, viwanja)
@@ -251,7 +254,7 @@ export function buildListingFromSubmission({ categoryKey, base, extra, photoCoun
     seller_name: base.seller_name,
     contact_pref: base.contact_pref,
     extra,
-    ...hoisted, // <-- fields zilizo-hoist zinaingia top-level
+    ...hoisted,
     photoCount,
     status: "pending_payment",
     postedAt: new Date().toISOString(),
