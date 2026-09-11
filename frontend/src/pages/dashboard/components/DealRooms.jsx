@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   Send,
@@ -24,6 +25,7 @@ import {
 import { COLORS, FONTS, getCategory, formatTZS, timeAgo } from "./shared";
 import { useReservationRates, calcReservationFee } from "../../config/feePolicy.js";
 import { useDeals, updateDeal as updateDealInStore } from "../../config/dealsStore.js";
+import { notifyPaymentProofSubmitted } from "../../config/notificationsStore.js";
 
 const DEAL_STATUS = {
   negotiating: { label: "Inaendelea", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
@@ -38,14 +40,8 @@ const DEAL_STATUS = {
   cancelled: { label: "Imeghairiwa", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
 };
 
-// ============================================================
-// RESERVATION FEE — 100% mapato ya SokoMkononi.
-// Namba za bei HAZIPO hapa tena — zinasomwa moja kwa moja kutoka
-// Admin Dashboard > Revenue kupitia ../../config/feePolicy.js.
-// Ukibadilisha bei pale, ukurasa huu unasasishwa papo hapo.
-// ============================================================
 const CUSTOM_MIN_HOURS = 1;
-const CUSTOM_MAX_HOURS = 336; // siku 14
+const CUSTOM_MAX_HOURS = 336;
 
 const PAYMENT_METHODS = ["M-Pesa", "Tigo Pesa", "Airtel Money", "HaloPesa", "Benki (CRDB)"];
 
@@ -57,9 +53,6 @@ function formatHours(hours) {
   return `Saa ${hours}`;
 }
 
-// ============================================================
-// INSPECTION FLOW — chaguzi 4 za mnunuzi baada ya Inspection Period
-// ============================================================
 const INSPECTION_OPTIONS = [
   {
     key: "READY_FOR_FINAL_PAYMENT",
@@ -99,7 +92,7 @@ const INSPECTION_RESULT_MESSAGES = {
 };
 
 function InspectionPanel({ deal, onResolve }) {
-  const [step, setStep] = useState("choose"); // choose -> reason
+  const [step, setStep] = useState("choose");
   const [pendingKey, setPendingKey] = useState(null);
   const [note, setNote] = useState("");
 
@@ -228,10 +221,6 @@ function InspectionPanel({ deal, onResolve }) {
   );
 }
 
-// ============================================================
-// PAYMENT PROOF UPLOAD — mnunuzi analipa nje ya app (M-Pesa/Benki/n.k)
-// kisha anapakia risiti/screenshot kama uthibitisho.
-// ============================================================
 function PaymentProofPanel({ deal, onSubmit }) {
   const [preview, setPreview] = useState(null);
   const [fileName, setFileName] = useState("");
@@ -354,10 +343,6 @@ function PaymentProofPanel({ deal, onSubmit }) {
   );
 }
 
-// ============================================================
-// PAYMENT PROOF REVIEW — muuzaji anakagua risiti na kubonyeza
-// "Nimepokea Malipo" ndipo transaction inakamilika (COMPLETED).
-// ============================================================
 function PaymentProofReview({ deal, onConfirm, onReject }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
@@ -464,9 +449,6 @@ function PaymentProofReview({ deal, onConfirm, onReject }) {
   );
 }
 
-// Mock deal rooms yamehamishiwa ../../config/dealsStore.js (SEED_DEALS)
-// ili AdminDashboard.jsx ione deal ZILEZILE, sio seti tofauti ya data.
-
 function DealListItem({ deal, active, onSelect }) {
   const category = getCategory(deal.category);
   const Icon = category?.icon;
@@ -534,8 +516,8 @@ function OfferBubble({ amount, mine }) {
 }
 
 function ReservationPanel({ deal, onCancel, onConfirm }) {
-  const [step, setStep] = useState("choose"); // choose -> pay
-  const [selected, setSelected] = useState(24); // 24 | 48 | 72 | "custom"
+  const [step, setStep] = useState("choose");
+  const [selected, setSelected] = useState(24);
   const [customHours, setCustomHours] = useState(96);
   const [method, setMethod] = useState(PAYMENT_METHODS[0]);
   const [paying, setPaying] = useState(false);
@@ -551,7 +533,6 @@ function ReservationPanel({ deal, onCancel, onConfirm }) {
   const handlePay = () => {
     if (!validCustom) return;
     setPaying(true);
-    // Simulate malipo (M-Pesa/Tigo Pesa/Airtel/n.k) — hakuna gateway halisi bado
     setTimeout(() => {
       setPaying(false);
       onConfirm({ hours, fee, method });
@@ -797,9 +778,20 @@ function DealDetail({
               · {counterpartyLabel}
             </span>
           </p>
-          <p style={{ color: "rgba(16,26,46,0.5)" }} className="text-xs truncate flex items-center gap-1">
-            <MapPin size={10} /> {deal.listingTitle}
-          </p>
+          {/* === BADILIKO: listing title ni Link kwa listing detail === */}
+          {deal.listingId ? (
+            <Link
+              to={`/mali/${deal.listingId}`}
+              style={{ color: "rgba(16,26,46,0.5)" }}
+              className="text-xs truncate flex items-center gap-1 hover:text-[#E8A33D] transition-colors"
+            >
+              <MapPin size={10} /> {deal.listingTitle}
+            </Link>
+          ) : (
+            <p style={{ color: "rgba(16,26,46,0.5)" }} className="text-xs truncate flex items-center gap-1">
+              <MapPin size={10} /> {deal.listingTitle}
+            </p>
+          )}
         </div>
         <span
           style={{ background: status.bg, color: status.fg }}
@@ -814,7 +806,9 @@ function DealDetail({
         style={{ background: COLORS.sandLine }}
         className="flex items-center justify-between px-4 py-2 text-xs"
       >
-        <span style={{ color: "rgba(16,26,46,0.6)" }}>Bei Iliyowekwa: {formatTZS(deal.askingPrice)}</span>
+        <span style={{ color: "rgba(16,26,46,0.6)" }}>
+          Bei Iliyowekwa: {formatTZS(deal.askingPrice)}
+        </span>
         <span style={{ color: COLORS.rust }} className="font-semibold">
           Ofa ya Sasa: {formatTZS(deal.currentOffer)}
         </span>
@@ -829,7 +823,9 @@ function DealDetail({
                 style={{ background: "rgba(16,26,46,0.06)", color: COLORS.night, borderColor: COLORS.sandLine }}
                 className="border rounded-xl px-3.5 py-2 max-w-[90%] text-[11px] text-center font-medium"
               >
-                <span style={{ color: COLORS.rust }} className="font-bold">SokoMkononi Admin: </span>
+                <span style={{ color: COLORS.rust }} className="font-bold">
+                  SokoMkononi Admin:{" "}
+                </span>
                 {m.text}
               </div>
             </div>
@@ -854,7 +850,7 @@ function DealDetail({
         )}
       </div>
 
-      {/* Accept / decline row, only while negotiating */}
+      {/* Accept / decline row */}
       {(deal.status === "negotiating" || deal.status === "offer_sent") && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -1076,7 +1072,10 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
   const handleSendMessage = (id, text) => {
     const deal = deals.find((d) => d.id === id);
     updateDeal(id, {
-      messages: [...deal.messages, { id: `m_${Date.now()}`, sender: "me", text, at: new Date().toISOString() }],
+      messages: [
+        ...deal.messages,
+        { id: `m_${Date.now()}`, sender: "me", text, at: new Date().toISOString() },
+      ],
     });
   };
 
@@ -1106,7 +1105,10 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
       reservationFee: fee,
       reservationMethod: method,
       reservationExpiresAt: expiresAt,
-      messages: [...deal.messages, { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() }],
+      messages: [
+        ...deal.messages,
+        { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() },
+      ],
     });
 
     onReservationPaid?.(deal, { hours, fee, method, expiresAt });
@@ -1138,7 +1140,17 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
     updateDeal(id, {
       status: "payment_proof_submitted",
       paymentProof: { ...proof, submittedAt: new Date().toISOString() },
-      messages: [...deal.messages, { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() }],
+      messages: [
+        ...deal.messages,
+        { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() },
+      ],
+    });
+
+    // === MPYA: taarifa kwa muuzaji (na admin) kwamba proof imetumwa ===
+    notifyPaymentProofSubmitted({
+      dealId: id,
+      listingTitle: deal.listingTitle,
+      amount: deal.currentOffer,
     });
   };
 
@@ -1147,7 +1159,10 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
     const note = "Muuzaji amethibitisha: Nimepokea Malipo. Muamala umekamilika.";
     updateDeal(id, {
       status: "completed",
-      messages: [...deal.messages, { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() }],
+      messages: [
+        ...deal.messages,
+        { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() },
+      ],
     });
     onFinalPaymentConfirmed?.(deal, side, {
       method: deal.paymentProof?.method,
@@ -1163,7 +1178,10 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
     updateDeal(id, {
       status: "awaiting_final_payment",
       paymentProof: null,
-      messages: [...deal.messages, { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() }],
+      messages: [
+        ...deal.messages,
+        { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() },
+      ],
     });
   };
 
@@ -1175,18 +1193,27 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
         : "Ofa imekataliwa.";
     updateDeal(id, {
       status: newStatus,
-      messages: [...deal.messages, { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() }],
+      messages: [
+        ...deal.messages,
+        { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() },
+      ],
     });
   };
 
   return (
-    <div style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }} className="w-full">
+    <div
+      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }}
+      className="w-full"
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
       <div className="p-4 sm:p-6 pb-0">
-        <h1 style={{ fontFamily: FONTS.display, color: COLORS.night }} className="text-2xl sm:text-3xl font-semibold mb-1">
+        <h1
+          style={{ fontFamily: FONTS.display, color: COLORS.night }}
+          className="text-2xl sm:text-3xl font-semibold mb-1"
+        >
           Deal Rooms
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-4">
@@ -1197,7 +1224,6 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
       </div>
 
       <div className="flex" style={{ height: "560px" }}>
-        {/* List pane */}
         <div
           style={{ borderColor: COLORS.sandLine }}
           className={`${mobileShowDetail ? "hidden" : "flex"} md:flex flex-col w-full md:w-80 shrink-0 border-r px-3 sm:px-4 pb-4 gap-2 overflow-y-auto`}
@@ -1207,7 +1233,6 @@ export default function DealRooms({ side = "seller", onReservationPaid, onFinalP
           ))}
         </div>
 
-        {/* Detail pane */}
         <div className={`${mobileShowDetail ? "flex" : "hidden"} md:flex flex-1 min-w-0 flex-col`}>
           {selectedDeal ? (
             <DealDetail
