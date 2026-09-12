@@ -16,14 +16,12 @@ import {
   AlertCircle,
   PlusCircle,
   Inbox,
-  Heart,
-  TrendingUp,
 } from "lucide-react";
-import { COLORS, FONTS } from "../../shared";
-import { useLanguage } from "../../../../context/LanguageContext.jsx";
-import { useAuth } from "../../../../context/AuthContext.jsx";
-import { useListings } from "../../../../config/listingsStore.js";
-import { useDeals } from "../../../../config/dealsStore.js";
+import { COLORS, FONTS } from "../components/shared";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { useAuth } from "../../../context/AuthContext.jsx";
+import { useListings } from "../../../config/listingsStore.js";
+import { useDeals } from "../../../config/dealsStore.js";
 import StatTile from "./StatTile.jsx";
 import RecentActivity from "./RecentActivity.jsx";
 
@@ -35,11 +33,8 @@ export default function SellerOverview({ onNavigate }) {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ============================================================
-  // STATS — hesabu kutoka listings na deals
-  // ============================================================
   const stats = useMemo(() => {
-    const myListings = listings; // kwa sasa zote ni za seller aliyeingia
+    const myListings = listings;
 
     const totalListings = myListings.length;
     const activeListings = myListings.filter((l) => l.status === "live").length;
@@ -71,9 +66,6 @@ export default function SellerOverview({ onNavigate }) {
     };
   }, [listings, deals]);
 
-  // ============================================================
-  // QUICK ACTIONS
-  // ============================================================
   const quickActions = [
     {
       key: "post",
@@ -103,13 +95,16 @@ export default function SellerOverview({ onNavigate }) {
 
   return (
     <div style={{ fontFamily: FONTS.body }} className="p-4 sm:p-6">
-      {/* ===== GREETING ===== */}
+      {/* GREETING */}
       <div className="mb-6">
         <h1
           style={{ fontFamily: FONTS.display, color: COLORS.night }}
           className="text-2xl sm:text-3xl font-semibold"
         >
-          {t(`Karibu, ${user?.name?.split(" ")[0] || "Seller"} 👋`, `Welcome, ${user?.name?.split(" ")[0] || "Seller"} 👋`)}
+          {t(
+            `Karibu, ${user?.name?.split(" ")[0] || "Seller"} 👋`,
+            `Welcome, ${user?.name?.split(" ")[0] || "Seller"} 👋`
+          )}
         </h1>
         <p className="text-sm text-gray-500 mt-1">
           {t(
@@ -119,7 +114,7 @@ export default function SellerOverview({ onNavigate }) {
         </p>
       </div>
 
-      {/* ===== STATS GRID ===== */}
+      {/* STATS GRID */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatTile
           label={t("Active Listings", "Active Listings")}
@@ -150,7 +145,7 @@ export default function SellerOverview({ onNavigate }) {
         />
       </div>
 
-      {/* ===== SECONDARY STATS ===== */}
+      {/* SECONDARY STATS */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatTile
           label={t("Total Listings", "Total Listings")}
@@ -182,7 +177,7 @@ export default function SellerOverview({ onNavigate }) {
         />
       </div>
 
-      {/* ===== QUICK ACTIONS ===== */}
+      {/* QUICK ACTIONS */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
         <h2
           style={{ color: COLORS.night }}
@@ -211,7 +206,7 @@ export default function SellerOverview({ onNavigate }) {
         </div>
       </div>
 
-      {/* ===== RECENT ACTIVITY ===== */}
+      {/* RECENT ACTIVITY */}
       <RecentActivity
         listings={listings}
         deals={deals}
