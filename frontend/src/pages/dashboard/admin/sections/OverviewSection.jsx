@@ -1,8 +1,8 @@
 // ============================================================
 // OverviewSection.jsx
 // Muhtasari wa mfumo — stats + live transactions.
-// Bilingual (Kiswahili + English) — inasoma `lang` kutoka
-// useLanguage().
+// Bilingual (Kiswahili + English).
+// Mobile-responsive.
 // ============================================================
 
 import React, { useMemo } from "react";
@@ -104,24 +104,26 @@ export default function OverviewSection({ onNavigate }) {
             : "Overview of the entire SokoMkononi system"
         }
       />
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+
+      {/* STATS */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {stats.map((stat) => (
           <StatCard key={stat.id} {...stat} />
         ))}
       </div>
 
       {/* LIVE TRANSACTIONS IN PROGRESS */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
         <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-          <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-            <Clock size={16} color={COLORS.gold} />
+          <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
+            <Clock size={16} color={COLORS.gold} className="shrink-0" />
             {lang === "sw"
               ? "Live Transactions Zinazoendelea"
               : "Live Transactions in Progress"}
           </h3>
           <button
             onClick={() => onNavigate("deals")}
-            className="text-xs font-semibold hover:underline flex items-center gap-1"
+            className="text-xs font-semibold hover:underline flex items-center gap-1 shrink-0"
             style={{ color: COLORS.gold }}
           >
             {lang === "sw" ? "Nenda Deal Rooms" : "Go to Deal Rooms"}
@@ -140,24 +142,53 @@ export default function OverviewSection({ onNavigate }) {
             {activeDeals.slice(0, 5).map((d) => (
               <div
                 key={d.id}
-                className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2.5 flex-wrap"
+                className="border rounded-lg px-3 py-3"
                 style={{ borderColor: COLORS.sandLine }}
               >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-gray-800 truncate">
-                    {d.listingTitle}
-                  </p>
-                  <p className="text-xs text-gray-500 truncate">
+                {/* ===== MOBILE LAYOUT (sm:hidden) ===== */}
+                <div className="sm:hidden">
+                  {/* Title + Status */}
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <p className="text-sm font-semibold text-gray-800 min-w-0 flex-1 line-clamp-2">
+                      {d.listingTitle}
+                    </p>
+                    <div className="shrink-0">
+                      <StatusBadge status={d.status} lang={lang} />
+                    </div>
+                  </div>
+                  {/* Buyer ↔ Seller */}
+                  <p className="text-xs text-gray-500 truncate mb-2">
                     {d.buyerName} ← → {d.sellerName}
                   </p>
+                  {/* Price */}
+                  <p
+                    className="text-sm font-bold"
+                    style={{ color: COLORS.rust }}
+                  >
+                    {formatTZS(d.currentOffer ?? d.askingPrice)}
+                  </p>
                 </div>
-                <span
-                  className="text-sm font-bold shrink-0"
-                  style={{ color: COLORS.rust }}
-                >
-                  {formatTZS(d.currentOffer ?? d.askingPrice)}
-                </span>
-                <StatusBadge status={d.status} lang={lang} />
+
+                {/* ===== DESKTOP LAYOUT (hidden sm:flex) ===== */}
+                <div className="hidden sm:flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-800 truncate">
+                      {d.listingTitle}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {d.buyerName} ← → {d.sellerName}
+                    </p>
+                  </div>
+                  <span
+                    className="text-sm font-bold shrink-0"
+                    style={{ color: COLORS.rust }}
+                  >
+                    {formatTZS(d.currentOffer ?? d.askingPrice)}
+                  </span>
+                  <div className="shrink-0">
+                    <StatusBadge status={d.status} lang={lang} />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
