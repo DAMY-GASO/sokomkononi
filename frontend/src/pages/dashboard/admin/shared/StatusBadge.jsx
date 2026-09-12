@@ -2,6 +2,7 @@
 // StatusBadge.jsx
 // Badge ya status — kwa users, listings, deals.
 // Bilingual — inasoma `lang` prop.
+// Responsive: inaepuka kuvunja layout kwenye simu.
 // ============================================================
 
 import React from "react";
@@ -93,9 +94,13 @@ export default function StatusBadge({ status, lang = "sw" }) {
       color: "bg-gray-100 text-gray-500",
     },
   };
+
   const s = config[status] || config.pending;
+
   return (
-    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${s.color}`}>
+    <span
+      className={`inline-flex items-center justify-center text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 ${s.color}`}
+    >
       {s.label}
     </span>
   );
