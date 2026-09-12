@@ -2,6 +2,7 @@
 // DisputeReviewPanel.jsx
 // Panel ya kutatua mgogoro — Admin anachagua action.
 // Bilingual + responsive + message history iliyoboreshwa.
+// Ina-support sender: "me" | "them" | "buyer" | "seller" | "admin"
 // ============================================================
 
 import React, { useState } from "react";
@@ -14,12 +15,30 @@ import {
 import { COLORS, formatTZS } from "../../shared/constants.js";
 
 // ============================================================
-// MESSAGE BUBBLE — inaonyesha ujumbe mmoja
+// RESOLVE SENDER — inabadilisha "me"/"them" kuwa "buyer"/"seller"
 // ============================================================
-function MessageBubble({ message, lang }) {
-  const isAdmin = message.sender === "admin";
-  const isSeller = message.sender === "seller" || message.sender === "me";
-  const isBuyer = message.sender === "buyer";
+function resolveSender(sender, deal) {
+  if (sender === "admin") return "admin";
+  if (sender === "buyer" || sender === "seller") return sender;
+
+  // "me" na "them" — inategemea counterpartyName
+  // Kama counterpartyName === buyerName: "them" = buyer, "me" = seller
+  // Kama counterpartyName === sellerName: "them" = seller, "me" = buyer
+  const themIsBuyer = deal?.counterpartyName === deal?.buyerName;
+
+  if (sender === "them") return themIsBuyer ? "buyer" : "seller";
+  if (sender === "me") return themIsBuyer ? "seller" : "buyer";
+
+  return "buyer"; // fallback
+}
+
+// ============================================================
+// MESSAGE BUBBLE
+// ============================================================
+function MessageBubble({ message, deal, lang }) {
+  const resolvedSender = resolveSender(message.sender, deal);
+  const isAdmin = resolvedSender === "admin";
+  const isSeller = resolvedSender === "seller";
   const isOffer = Boolean(message.offerAmount);
 
   const who = isAdmin
@@ -34,14 +53,10 @@ function MessageBubble({ message, lang }) {
 
   const initial = who.charAt(0).toUpperCase();
 
-  // Rangi kulingana na sender
-  const tone = isAdmin
-    ? COLORS.rust
-    : isSeller
-      ? COLORS.gold
-      : COLORS.green;
+  // Rangi
+  const tone = isAdmin ? COLORS.rust : isSeller ? COLORS.gold : COLORS.green;
 
-  // Text ya ujumbe
+  // Text
   const text =
     message.text ||
     (message.offerAmount
@@ -50,10 +65,9 @@ function MessageBubble({ message, lang }) {
         : `Offer of ${formatTZS(message.offerAmount)}`
       : "");
 
-  // Timestamp (kama ipo)
-  const time = message.at || message.timestamp || message.createdAt;
-  const timeLabel = time
-    ? new Date(time).toLocaleString(lang === "sw" ? "sw-TZ" : "en-US", {
+  // Timestamp
+  const timeLabel = message.at
+    ? new Date(message.at).toLocaleString(lang === "sw" ? "sw-TZ" : "en-US", {
         hour: "2-digit",
         minute: "2-digit",
         day: "2-digit",
@@ -186,16 +200,35 @@ export default function DisputeReviewPanel({ deal, onResolve, onClose, lang }) {
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
-        <p className="text-sm font-semibold text-gray-800 min-w-0 flex-1">
-          {lang === "sw" ? "Kagua Mgogoro" : "Review Dispute"} —{" "}
-          <span className="text-gray-500 font-normal">{deal.listingTitle}</span>
-        </p>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-gray-800">
+            {lang === "sw" ? "Kagua Mgogoro" : "Review Dispute"}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5 truncate">
+            {deal.listingTitle}
+          </p>
+        </div>
         <button
           onClick={onClose}
           className="text-gray-400 hover:text-gray-600 text-xs font-semibold shrink-0"
         >
           {lang === "sw" ? "Funga" : "Close"}
         </button>
+      </div>
+
+      {/* Parties */}
+      <div
+        style={{ borderColor: COLORS.sandLine }}
+        className="flex flex-wrap gap-x-4 gap-y-1 bg-white border rounded-lg px-3 py-2 text-xs"
+      >
+        <span className="text-gray-500">
+          {lang === "sw" ? "Mnunuzi:" : "Buyer:"}{" "}
+          <span className="font-semibold text-gray-700">{deal.buyerName}</span>
+        </span>
+        <span className="text-gray-500">
+          {lang === "sw" ? "Muuzaji:" : "Seller:"}{" "}
+          <span className="font-semibold text-gray-700">{deal.sellerName}</span>
+        </span>
       </div>
 
       {/* Buyer's reason */}
@@ -266,7 +299,7 @@ export default function DisputeReviewPanel({ deal, onResolve, onClose, lang }) {
             </p>
           ) : (
             messages.map((m) => (
-              <MessageBubble key={m.id} message={m} lang={lang} />
+              <MessageBubble key={m.id} message={m} deal={deal} lang={lang} />
             ))
           )}
         </div>
