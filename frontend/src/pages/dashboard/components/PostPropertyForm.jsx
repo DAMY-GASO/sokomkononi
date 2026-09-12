@@ -333,23 +333,32 @@ export default function PostPropertyForm({
 
         {!category && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {categories.map(({ key, label, iconKey }) => {
-              const Icon = getCategoryIcon(iconKey);
+            {categories.map((cat) => {
+              const Icon = getCategoryIcon(cat.iconKey);
+              const hasPhoto = Boolean(cat.imageUrl);
               return (
                 <button
-                  key={key}
-                  onClick={() => setCategoryKey(key)}
+                  key={cat.key}
+                  onClick={() => setCategoryKey(cat.key)}
                   style={{ borderColor: COLORS.sandLine, background: "white" }}
-                  className="flex flex-col items-start gap-3 p-4 rounded-2xl border text-left hover:shadow-sm transition-shadow"
+                  className="flex flex-col items-start gap-3 p-4 rounded-2xl border text-left hover:shadow-sm transition-shadow overflow-hidden"
                 >
-                  <div
-                    style={{ background: COLORS.night }}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  >
-                    <Icon size={18} color={COLORS.gold} />
-                  </div>
+                  {hasPhoto ? (
+                    <img
+                      src={cat.imageUrl}
+                      alt={cat.label[lang] || cat.label.sw}
+                      className="w-full h-20 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div
+                      style={{ background: COLORS.night }}
+                      className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    >
+                      <Icon size={18} color={COLORS.gold} />
+                    </div>
+                  )}
                   <span style={{ color: COLORS.night }} className="text-sm font-semibold">
-                    {label[lang] || label.sw}
+                    {cat.label[lang] || cat.label.sw}
                   </span>
                 </button>
               );
