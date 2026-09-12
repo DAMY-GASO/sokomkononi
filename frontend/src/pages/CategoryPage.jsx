@@ -52,27 +52,15 @@ function reservationCountdown(reservedUntil, lang) {
   const ms = new Date(reservedUntil).getTime() - Date.now();
   if (ms <= 0) return lang === "sw" ? "Inaisha hivi karibuni" : "Ending soon";
   const hours = Math.floor(ms / 3600000);
-  if (hours < 24) return lang === "sw" ? `Inaisha baada ya saa ${hours}` : `Ends in ${hours}hrs`;
+  if (hours < 24)
+    return lang === "sw" ? `Inaisha baada ya saa ${hours}` : `Ends in ${hours}hrs`;
   const days = Math.floor(hours / 24);
   const remainingHours = hours % 24;
-  if (remainingHours === 0) return lang === "sw" ? `Inaisha baada ya siku ${days}` : `Ends in ${days} days`;
+  if (remainingHours === 0)
+    return lang === "sw" ? `Inaisha baada ya siku ${days}` : `Ends in ${days} days`;
   return lang === "sw"
     ? `Inaisha baada ya siku ${days} ${remainingHours}saa`
     : `Ends in ${days}d ${remainingHours}h`;
-}
-
-// ============================================================
-// PROPERTY CARD
-// ============================================================
-function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
-  const Icon = HomeIcon; // fallback — inachukuliwa kutoka store kwa category
-  const category = property.category;
-
-  // Tunapata icon halisi kutoka store kwa category ya listing
-  // (component moja kwa moja — kwa sababu getCategoryIcon ni function)
-  // Itaonyeshwa kwa iconKey ya kategoria unayohusika.
-
-  return null; // placeholder — tutabadilisha kwa PropertyCard halisi hapa chini
 }
 
 // ============================================================
@@ -114,7 +102,6 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
     ],
   };
 
-  // Fallback kwa category mpya (pikipiki, mabasi, n.k.)
   const defaultRanges = [
     { label: "Chini ya TZS 20M", min: 0, max: 20000000 },
     { label: "TZS 20M - 50M", min: 20000000, max: 50000000 },
@@ -140,7 +127,10 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
           <SlidersHorizontal size={16} />
           {lang === "sw" ? "Vichujio" : "Filters"}
         </h3>
-        <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-600">
+        <button
+          onClick={onClose}
+          className="lg:hidden text-gray-400 hover:text-gray-600"
+        >
           <X size={20} />
         </button>
       </div>
@@ -156,7 +146,9 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
                 type="radio"
                 name="priceRange"
                 checked={localFilters.priceRange === idx}
-                onChange={() => setLocalFilters({ ...localFilters, priceRange: idx })}
+                onChange={() =>
+                  setLocalFilters({ ...localFilters, priceRange: idx })
+                }
                 className="w-4 h-4 text-[#E8A33D] focus:ring-[#E8A33D]"
               />
               <span className="text-sm text-gray-600">{range.label}</span>
@@ -174,7 +166,9 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
             <input
               type="checkbox"
               checked={localFilters.verified}
-              onChange={(e) => setLocalFilters({ ...localFilters, verified: e.target.checked })}
+              onChange={(e) =>
+                setLocalFilters({ ...localFilters, verified: e.target.checked })
+              }
               className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
             />
             <span className="text-sm text-gray-600">
@@ -185,7 +179,9 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
             <input
               type="checkbox"
               checked={localFilters.featured}
-              onChange={(e) => setLocalFilters({ ...localFilters, featured: e.target.checked })}
+              onChange={(e) =>
+                setLocalFilters({ ...localFilters, featured: e.target.checked })
+              }
               className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
             />
             <span className="text-sm text-gray-600">
@@ -215,13 +211,17 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
   return (
     <>
       <aside className="hidden lg:block w-64 flex-shrink-0">
-        <div className="bg-white rounded-xl border border-gray-100 p-5 sticky top-20">{content}</div>
+        <div className="bg-white rounded-xl border border-gray-100 p-5 sticky top-20">
+          {content}
+        </div>
       </aside>
 
       {isOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="flex-1 bg-black/50" onClick={onClose} />
-          <div className="w-80 max-w-[85%] bg-white h-full overflow-y-auto p-5">{content}</div>
+          <div className="w-80 max-w-[85%] bg-white h-full overflow-y-auto p-5">
+            {content}
+          </div>
         </div>
       )}
     </>
@@ -241,16 +241,25 @@ export default function CategoryPage() {
   const categoryInfo = allCategories.find((c) => c.key === categoryKey);
 
   const CategoryIcon = getCategoryIcon(categoryInfo?.iconKey);
-  const categoryLabel = categoryInfo?.label?.[lang] || categoryInfo?.label?.sw || categoryKey;
+  const categoryLabel =
+    categoryInfo?.label?.[lang] || categoryInfo?.label?.sw || categoryKey;
   const categoryDescription =
     categoryInfo?.description?.[lang] || categoryInfo?.description?.sw || "";
+  const categoryImage = categoryInfo?.imageUrl || null;
+  const hasCategoryImage = Boolean(categoryImage);
 
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("newest");
-  const [filters, setFilters] = useState({ priceRange: null, verified: false, featured: false });
+  const [filters, setFilters] = useState({
+    priceRange: null,
+    verified: false,
+    featured: false,
+  });
   const [savedIds, setSavedIds] = useState([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("tafuta") || "");
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get("tafuta") || ""
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 9;
 
@@ -266,7 +275,9 @@ export default function CategoryPage() {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
-        (p) => p.title.toLowerCase().includes(q) || p.location.toLowerCase().includes(q)
+        (p) =>
+          p.title.toLowerCase().includes(q) ||
+          p.location.toLowerCase().includes(q)
       );
     }
 
@@ -275,14 +286,46 @@ export default function CategoryPage() {
 
     if (filters.priceRange !== null) {
       const ranges = {
-        nyumba: [[0, 50000000], [50000000, 100000000], [100000000, 200000000], [200000000, Infinity]],
-        viwanja: [[0, 10000000], [10000000, 20000000], [20000000, 50000000], [50000000, Infinity]],
-        magari: [[0, 20000000], [20000000, 50000000], [50000000, 100000000], [100000000, Infinity]],
-        biashara: [[0, 20000000], [20000000, 50000000], [50000000, 100000000], [100000000, Infinity]],
-        mashine: [[0, 30000000], [30000000, 70000000], [70000000, 150000000], [150000000, Infinity]],
+        nyumba: [
+          [0, 50000000],
+          [50000000, 100000000],
+          [100000000, 200000000],
+          [200000000, Infinity],
+        ],
+        viwanja: [
+          [0, 10000000],
+          [10000000, 20000000],
+          [20000000, 50000000],
+          [50000000, Infinity],
+        ],
+        magari: [
+          [0, 20000000],
+          [20000000, 50000000],
+          [50000000, 100000000],
+          [100000000, Infinity],
+        ],
+        biashara: [
+          [0, 20000000],
+          [20000000, 50000000],
+          [50000000, 100000000],
+          [100000000, Infinity],
+        ],
+        mashine: [
+          [0, 30000000],
+          [30000000, 70000000],
+          [70000000, 150000000],
+          [150000000, Infinity],
+        ],
       };
-      const fallback = [[0, 20000000], [20000000, 50000000], [50000000, 100000000], [100000000, Infinity]];
-      const [min, max] = (ranges[categoryKey] || fallback)[filters.priceRange];
+      const fallback = [
+        [0, 20000000],
+        [20000000, 50000000],
+        [50000000, 100000000],
+        [100000000, Infinity],
+      ];
+      const [min, max] = (ranges[categoryKey] || fallback)[
+        filters.priceRange
+      ];
       result = result.filter((p) => p.price >= min && p.price < max);
     }
 
@@ -300,7 +343,8 @@ export default function CategoryPage() {
       }
     };
 
-    const statusRank = (p) => (p.status === "live" ? 0 : p.status === "reserved" ? 1 : 2);
+    const statusRank = (p) =>
+      p.status === "live" ? 0 : p.status === "reserved" ? 1 : 2;
 
     result.sort((a, b) => {
       const aLeading = isLeadingActive(a) ? 1 : 0;
@@ -375,26 +419,44 @@ export default function CategoryPage() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#E8A33D]/20 flex items-center justify-center flex-shrink-0">
-              <CategoryIcon size={28} color={COLORS.gold} />
-            </div>
+            {/* === CATEGORY IMAGE / ICON === */}
+            {hasCategoryImage ? (
+              <img
+                src={categoryImage}
+                alt={categoryLabel}
+                className="w-14 h-14 rounded-2xl object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-2xl bg-[#E8A33D]/20 flex items-center justify-center flex-shrink-0">
+                <CategoryIcon size={28} color={COLORS.gold} />
+              </div>
+            )}
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">{categoryLabel}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold">
+                {categoryLabel}
+              </h1>
               {categoryDescription && (
-                <p className="text-white/60 text-sm mt-1">{categoryDescription}</p>
+                <p className="text-white/60 text-sm mt-1">
+                  {categoryDescription}
+                </p>
               )}
             </div>
           </div>
 
           <form onSubmit={handleSearchSubmit} className="mt-6 max-w-2xl">
             <div className="relative">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40"
+              />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={
-                  lang === "sw" ? "Tafuta kwenye category hii..." : "Search in this category..."
+                  lang === "sw"
+                    ? "Tafuta kwenye category hii..."
+                    : "Search in this category..."
                 }
                 className="w-full bg-white/10 border border-white/20 rounded-full pl-12 pr-32 py-3 text-white placeholder-white/40 focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/30 transition-all"
               />
@@ -423,7 +485,9 @@ export default function CategoryPage() {
           <div className="flex-1 min-w-0">
             <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-gray-600">
-                <span className="font-semibold text-gray-800">{filteredProperties.length}</span>{" "}
+                <span className="font-semibold text-gray-800">
+                  {filteredProperties.length}
+                </span>{" "}
                 {lang === "sw" ? "mali zimepatikana" : "properties found"}
               </p>
 
@@ -446,10 +510,14 @@ export default function CategoryPage() {
                       {lang === "sw" ? "Mpya Kwanza" : "Newest First"}
                     </option>
                     <option value="price_low">
-                      {lang === "sw" ? "Bei: Chini → Juu" : "Price: Low → High"}
+                      {lang === "sw"
+                        ? "Bei: Chini → Juu"
+                        : "Price: Low → High"}
                     </option>
                     <option value="price_high">
-                      {lang === "sw" ? "Bei: Juu → Chini" : "Price: High → Low"}
+                      {lang === "sw"
+                        ? "Bei: Juu → Chini"
+                        : "Price: High → Low"}
                     </option>
                     <option value="popular">
                       {lang === "sw" ? "Maarufu" : "Popular"}
@@ -488,10 +556,15 @@ export default function CategoryPage() {
               </div>
             </div>
 
-            {(filters.priceRange !== null || filters.verified || filters.featured || searchQuery) && (
+            {(filters.priceRange !== null ||
+              filters.verified ||
+              filters.featured ||
+              searchQuery) && (
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className="text-xs text-gray-500">
-                  {lang === "sw" ? "Vichujio vilivyotumika:" : "Active filters:"}
+                  {lang === "sw"
+                    ? "Vichujio vilivyotumika:"
+                    : "Active filters:"}
                 </span>
                 {searchQuery && (
                   <span className="inline-flex items-center gap-1 bg-[#E8A33D]/10 text-[#8A5A16] text-xs px-2.5 py-1 rounded-full">
@@ -504,7 +577,11 @@ export default function CategoryPage() {
                 {filters.verified && (
                   <span className="inline-flex items-center gap-1 bg-[#2F6D4F]/10 text-[#2F6D4F] text-xs px-2.5 py-1 rounded-full">
                     Verified
-                    <button onClick={() => setFilters({ ...filters, verified: false })}>
+                    <button
+                      onClick={() =>
+                        setFilters({ ...filters, verified: false })
+                      }
+                    >
                       <X size={12} />
                     </button>
                   </span>
@@ -512,14 +589,22 @@ export default function CategoryPage() {
                 {filters.featured && (
                   <span className="inline-flex items-center gap-1 bg-[#E8A33D]/10 text-[#8A5A16] text-xs px-2.5 py-1 rounded-full">
                     Featured
-                    <button onClick={() => setFilters({ ...filters, featured: false })}>
+                    <button
+                      onClick={() =>
+                        setFilters({ ...filters, featured: false })
+                      }
+                    >
                       <X size={12} />
                     </button>
                   </span>
                 )}
                 <button
                   onClick={() => {
-                    setFilters({ priceRange: null, verified: false, featured: false });
+                    setFilters({
+                      priceRange: null,
+                      verified: false,
+                      featured: false,
+                    });
                     setSearchQuery("");
                   }}
                   className="text-xs text-[#C1502E] hover:underline font-medium"
@@ -546,6 +631,7 @@ export default function CategoryPage() {
                       isSaved={savedIds.includes(property.id)}
                       onToggleSave={toggleSave}
                       lang={lang}
+                      categoryImage={categoryImage}
                     />
                   ))}
                 </div>
@@ -553,27 +639,33 @@ export default function CategoryPage() {
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-8">
                     <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.max(1, p - 1))
+                      }
                       disabled={currentPage === 1}
                       className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
                     >
                       <ChevronLeft size={16} />
                     </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                          currentPage === page
-                            ? "bg-[#E8A33D] text-[#101A2E]"
-                            : "border border-gray-200 text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                            currentPage === page
+                              ? "bg-[#E8A33D] text-[#101A2E]"
+                              : "border border-gray-200 text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      )
+                    )}
                     <button
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={currentPage === totalPages}
                       className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
                     >
@@ -588,7 +680,9 @@ export default function CategoryPage() {
                   <Search size={24} className="text-gray-400" />
                 </div>
                 <h3 className="font-semibold text-gray-800">
-                  {lang === "sw" ? "Hakuna mali iliyopatikana" : "No properties found"}
+                  {lang === "sw"
+                    ? "Hakuna mali iliyopatikana"
+                    : "No properties found"}
                 </h3>
                 <p className="text-gray-500 text-sm mt-1">
                   {lang === "sw"
@@ -597,7 +691,11 @@ export default function CategoryPage() {
                 </p>
                 <button
                   onClick={() => {
-                    setFilters({ priceRange: null, verified: false, featured: false });
+                    setFilters({
+                      priceRange: null,
+                      verified: false,
+                      featured: false,
+                    });
                     setSearchQuery("");
                   }}
                   className="mt-4 px-5 py-2 bg-[#E8A33D] text-[#101A2E] rounded-lg text-sm font-semibold hover:bg-[#B87A1F] transition-colors"
@@ -617,12 +715,22 @@ export default function CategoryPage() {
 }
 
 // ============================================================
-// CATEGORY PROPERTY CARD (inatofautiana na BrowseProperties —
-// icon inatoka store, sio hardcoded)
+// CATEGORY PROPERTY CARD — inaonyesha picha ya category kama
+// imageUrl ipo, vinginevyo icon
 // ============================================================
-function CategoryPropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
-  const categoryInfo = useActiveCategories().find((c) => c.key === property.category);
+function CategoryPropertyCard({
+  property,
+  viewMode,
+  isSaved,
+  onToggleSave,
+  lang,
+  categoryImage,
+}) {
+  const categoryInfo = useActiveCategories().find(
+    (c) => c.key === property.category
+  );
   const Icon = getCategoryIcon(categoryInfo?.iconKey);
+  const hasImage = Boolean(categoryImage);
   const isFeatured = isBoostActive(property);
   const isLeading = isLeadingActive(property);
   const isVerified = Boolean(property.verified);
@@ -644,9 +752,17 @@ function CategoryPropertyCard({ property, viewMode, isSaved, onToggleSave, lang 
       >
         <Link
           to={`/mali/${property.id}`}
-          className="w-full sm:w-48 h-48 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative"
+          className="w-full sm:w-48 h-48 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative overflow-hidden"
         >
-          <Icon size={32} className="text-gray-300" />
+          {hasImage ? (
+            <img
+              src={categoryImage}
+              alt={property.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <Icon size={32} className="text-gray-300" />
+          )}
           {isReserved && (
             <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
               <Clock3 size={10} /> RESERVED
@@ -675,7 +791,9 @@ function CategoryPropertyCard({ property, viewMode, isSaved, onToggleSave, lang 
             <button
               onClick={handleSave}
               className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                isSaved ? "bg-[#C1502E] text-white" : "text-gray-400 hover:text-[#C1502E]"
+                isSaved
+                  ? "bg-[#C1502E] text-white"
+                  : "text-gray-400 hover:text-[#C1502E]"
               }`}
             >
               <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
@@ -685,10 +803,13 @@ function CategoryPropertyCard({ property, viewMode, isSaved, onToggleSave, lang 
             <MapPin size={12} />
             {property.location}
           </div>
-          <p className="text-[#C1502E] font-bold text-base mt-2">{formatTZS(property.price)}</p>
+          <p className="text-[#C1502E] font-bold text-base mt-2">
+            {formatTZS(property.price)}
+          </p>
           {isReserved && property.reservedUntil && (
             <p className="text-[11px] font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
-              <Clock3 size={11} /> {reservationCountdown(property.reservedUntil, lang)}
+              <Clock3 size={11} />{" "}
+              {reservationCountdown(property.reservedUntil, lang)}
             </p>
           )}
           <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
@@ -696,7 +817,11 @@ function CategoryPropertyCard({ property, viewMode, isSaved, onToggleSave, lang 
             {property.bathrooms && <span>🚿 {property.bathrooms}</span>}
             {property.area && <span>📐 {property.area}</span>}
             {property.titleStatus && <span>📜 {property.titleStatus}</span>}
-            {property.make && <span>🚗 {property.make} {property.model}</span>}
+            {property.make && (
+              <span>
+                🚗 {property.make} {property.model}
+              </span>
+            )}
           </div>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
             <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -724,8 +849,19 @@ function CategoryPropertyCard({ property, viewMode, isSaved, onToggleSave, lang 
       }`}
     >
       <Link to={`/mali/${property.id}`} className="block relative">
-        <div className="w-full h-44 bg-gray-100 flex items-center justify-center">
-          <Icon size={40} className="text-gray-300 group-hover:scale-110 transition-transform" />
+        <div className="w-full h-44 bg-gray-100 flex items-center justify-center overflow-hidden">
+          {hasImage ? (
+            <img
+              src={categoryImage}
+              alt={property.title}
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            />
+          ) : (
+            <Icon
+              size={40}
+              className="text-gray-300 group-hover:scale-110 transition-transform"
+            />
+          )}
         </div>
 
         <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
@@ -759,22 +895,29 @@ function CategoryPropertyCard({ property, viewMode, isSaved, onToggleSave, lang 
         <button
           onClick={handleSave}
           className={`absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-            isSaved ? "bg-[#C1502E] text-white" : "bg-white/90 text-gray-400 hover:text-[#C1502E]"
+            isSaved
+              ? "bg-[#C1502E] text-white"
+              : "bg-white/90 text-gray-400 hover:text-[#C1502E]"
           }`}
         >
           <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
         </button>
       </Link>
       <Link to={`/mali/${property.id}`} className="block p-4">
-        <h3 className="font-semibold text-gray-800 text-sm truncate">{property.title}</h3>
+        <h3 className="font-semibold text-gray-800 text-sm truncate">
+          {property.title}
+        </h3>
         <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
           <MapPin size={12} />
           <span className="truncate">{property.location}</span>
         </div>
-        <p className="text-[#C1502E] font-bold text-base mt-2">{formatTZS(property.price)}</p>
+        <p className="text-[#C1502E] font-bold text-base mt-2">
+          {formatTZS(property.price)}
+        </p>
         {isReserved && property.reservedUntil && (
           <p className="text-[11px] font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
-            <Clock3 size={11} /> {reservationCountdown(property.reservedUntil, lang)}
+            <Clock3 size={11} />{" "}
+            {reservationCountdown(property.reservedUntil, lang)}
           </p>
         )}
         <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
