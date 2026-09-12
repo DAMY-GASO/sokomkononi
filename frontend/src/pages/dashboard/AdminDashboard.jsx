@@ -2,7 +2,7 @@
 // AdminDashboard.jsx — SHELL PEKEE
 // ============================================================
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useNotifications } from "../../config/notificationsStore.js";
@@ -18,7 +18,7 @@ import SystemSettingsSection from "./admin/sections/SystemSettingsSection.jsx";
 import AdminProfile from "./admin/sections/AdminProfile.jsx";
 
 // ============================================================
-// AVATAR
+// AVATAR — inatumika header + dropdown
 // ============================================================
 function Avatar({ user, size = "md" }) {
   const sizeClass = size === "lg" ? "w-10 h-10 text-sm" : "w-8 h-8 text-xs";
@@ -46,9 +46,9 @@ function Avatar({ user, size = "md" }) {
 }
 
 // ============================================================
-// LANGUAGE SWITCHER
+// LANGUAGE SWITCHER — header pekee (kama Navbar)
 // ============================================================
-function LanguageSwitcher({ lang, setLang, variant = "header" }) {
+function LanguageSwitcher({ lang, setLang }) {
   const [open, setOpen] = useState(false);
   const languages = [
     { code: "en", native: "English" },
@@ -56,69 +56,36 @@ function LanguageSwitcher({ lang, setLang, variant = "header" }) {
   ];
   const current = languages.find((l) => l.code === lang) || languages[1];
 
-  const isSidebar = variant === "sidebar";
-
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className={
-          isSidebar
-            ? "w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-left"
-            : "text-white/60 hover:text-white text-sm font-medium border border-white/15 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
-        }
-        style={
-          isSidebar
-            ? { background: "transparent", color: COLORS.night }
-            : undefined
-        }
+        className="text-white/60 hover:text-white text-sm font-medium border border-white/15 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
         aria-label={lang === "sw" ? "Badilisha lugha" : "Change language"}
       >
-        {isSidebar ? (
-          <>
-            <span className="flex items-center gap-2">
-              🌐
-              <span>{lang === "sw" ? "Lugha" : "Language"}</span>
-            </span>
-            <span className="text-xs font-semibold text-gray-500">
-              {current?.code?.toUpperCase()}
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="hidden sm:inline">{current?.native || "Kiswahili"}</span>
-            <span className="sm:hidden">{current?.code?.toUpperCase() || "SW"}</span>
-            <svg
-              className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </>
-        )}
+        <span className="hidden sm:inline">{current?.native || "Kiswahili"}</span>
+        <span className="sm:hidden">{current?.code?.toUpperCase() || "SW"}</span>
+        <svg
+          className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div
-            className={
-              isSidebar
-                ? "mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl py-1 z-50"
-                : "absolute right-0 mt-2 w-56 sm:w-64 bg-[#182541] border border-white/10 rounded-lg shadow-xl py-2 z-50"
-            }
-          >
-            {!isSidebar && (
-              <div className="px-4 py-2 border-b border-white/10">
-                <p className="text-white/50 text-xs font-semibold">
-                  {lang === "sw"
-                    ? "Je, unapendelea lugha gani?"
-                    : "Which language do you prefer?"}
-                </p>
-              </div>
-            )}
+          <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-[#182541] border border-white/10 rounded-lg shadow-xl py-2 z-50">
+            <div className="px-4 py-2 border-b border-white/10">
+              <p className="text-white/50 text-xs font-semibold">
+                {lang === "sw"
+                  ? "Je, unapendelea lugha gani?"
+                  : "Which language do you prefer?"}
+              </p>
+            </div>
             {languages.map((l) => (
               <button
                 key={l.code}
@@ -126,25 +93,11 @@ function LanguageSwitcher({ lang, setLang, variant = "header" }) {
                   setLang(l.code);
                   setOpen(false);
                 }}
-                className={
-                  isSidebar
-                    ? `w-full px-3 py-2 flex items-center justify-between text-sm hover:bg-gray-50 ${
-                        lang === l.code ? "bg-gray-50" : ""
-                      }`
-                    : `w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors ${
-                        lang === l.code ? "bg-white/5" : ""
-                      }`
-                }
+                className={`w-full px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors ${
+                  lang === l.code ? "bg-white/5" : ""
+                }`}
               >
-                <span
-                  className={
-                    isSidebar
-                      ? "text-sm font-medium text-gray-700"
-                      : "text-white text-sm font-medium"
-                  }
-                >
-                  {l.native}
-                </span>
+                <span className="text-white text-sm font-medium">{l.native}</span>
                 {lang === l.code && (
                   <svg className="w-4 h-4 text-[#E8A33D]" fill="currentColor" viewBox="0 0 20 20">
                     <path
@@ -269,7 +222,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Language Switcher (header) */}
+          {/* Language Switcher — header pekee */}
           <LanguageSwitcher lang={lang} setLang={setLang} />
 
           {/* Notifications */}
@@ -378,7 +331,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Profile — sasa ni section */}
+                  {/* Profile */}
                   <button
                     onClick={() => {
                       setActiveSection("profile");
@@ -390,7 +343,7 @@ export default function AdminDashboard() {
                     {lang === "sw" ? "Wasifu" : "Profile"}
                   </button>
 
-                  {/* Settings — inaelekea section ya system */}
+                  {/* Settings */}
                   <button
                     onClick={() => {
                       setActiveSection("system");
@@ -404,6 +357,7 @@ export default function AdminDashboard() {
 
                   <div className="border-t border-gray-100" />
 
+                  {/* Logout */}
                   <button
                     onClick={() => {
                       setProfileMenuOpen(false);
@@ -444,10 +398,6 @@ export default function AdminDashboard() {
               </button>
             );
           })}
-
-          <div className="mt-4 pt-4 border-t" style={{ borderColor: COLORS.sandLine }}>
-            <LanguageSwitcher lang={lang} setLang={setLang} variant="sidebar" />
-          </div>
         </aside>
 
         {/* SIDEBAR — MOBILE */}
@@ -488,13 +438,6 @@ export default function AdminDashboard() {
                   </button>
                 );
               })}
-
-              <div
-                className="mt-4 pt-4 border-t"
-                style={{ borderColor: COLORS.sandLine }}
-              >
-                <LanguageSwitcher lang={lang} setLang={setLang} variant="sidebar" />
-              </div>
             </div>
             <div
               onClick={() => setSidebarOpen(false)}
