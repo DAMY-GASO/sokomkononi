@@ -35,7 +35,7 @@ export default function DealsSection() {
             background: COLORS.gold,
             color: COLORS.night,
           }}
-          className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
+          className={`text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity ${
             fullWidth ? "w-full" : ""
           }`}
         >
