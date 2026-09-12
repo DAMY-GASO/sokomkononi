@@ -1,7 +1,7 @@
 // ============================================================
 // RevenueSection.jsx
 // Mapato & Fedha — fees zote 5 + Categories Bila Fee Config.
-// Bilingual.
+// Bilingual + image support kwenye categories.
 // ============================================================
 
 import React, { useState } from "react";
@@ -164,18 +164,29 @@ export default function RevenueSection() {
             <div className="flex flex-col gap-2">
               {missingFeeCategories.map((cat) => {
                 const Icon = getCategoryIcon(cat.iconKey);
+                const hasPhoto = Boolean(cat.imageUrl);
                 return (
                   <div
                     key={cat.key}
                     style={{ borderColor: COLORS.sandLine }}
                     className="flex items-center gap-3 border rounded-lg px-3 py-2"
                   >
-                    <div
-                      style={{ background: COLORS.night }}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                    >
-                      <Icon size={14} color={COLORS.gold} />
-                    </div>
+                    {/* PHOTO / ICON */}
+                    {hasPhoto ? (
+                      <img
+                        src={cat.imageUrl}
+                        alt={cat.label?.sw || cat.key}
+                        className="w-9 h-9 rounded-lg object-cover shrink-0"
+                      />
+                    ) : (
+                      <div
+                        style={{ background: COLORS.night }}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                      >
+                        <Icon size={14} color={COLORS.gold} />
+                      </div>
+                    )}
+
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-800">
                         {cat.label?.sw || cat.key}
