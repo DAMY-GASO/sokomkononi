@@ -18,7 +18,7 @@
 // hivyo Admin anaweza kuongeza/kupunguza muda bila kugusa code.
 //
 // Hazina sehemu nyingine nyingi za mfumo zinazosoma data hizi kwa
-// sasa (ni za Admin peke yake, isipokuwa Platform Policy ambayo
+// sasa (ni za Admin pekee, isipokuwa Platform Policy ambayo
 // listingsStore.js inaisoma), lakini zimewekwa kwenye muundo huu
 // ili siku backend halisi ikiwepo, badilisha tu functions hizi ziite
 // API — hooks (useWebhooks, useSubAdmins, useAppStoreLinks,
@@ -71,6 +71,31 @@ function makeSlice(storageKey, updateEvent, seed) {
 // ------------------------------------------------------------
 // WEBHOOKS
 // ------------------------------------------------------------
+
+// ============================================================
+// WEBHOOK EVENTS — bilingual
+// Kila event ina `label: { sw, en }` — consistent na categoriesStore.
+// `id` inabaki Kiingereza ili kuendana na seed data + backend baadaye.
+// ============================================================
+export const WEBHOOK_EVENTS = [
+  {
+    id: "Payment Success",
+    label: { sw: "Malipo Yamefanikiwa", en: "Payment Success" },
+  },
+  {
+    id: "Payment Failed",
+    label: { sw: "Malipo Yameshindikana", en: "Payment Failed" },
+  },
+  {
+    id: "SMS Notification",
+    label: { sw: "Taarifa ya SMS", en: "SMS Notification" },
+  },
+  {
+    id: "New Listing",
+    label: { sw: "Listing Mpya", en: "New Listing" },
+  },
+];
+
 export const SEED_WEBHOOKS = [
   { id: 1, event: "Payment Success", url: "https://api.sokomkononi.co.tz/webhooks/payment", active: true },
   { id: 2, event: "SMS Notification", url: "https://api.sokomkononi.co.tz/webhooks/sms", active: true },
