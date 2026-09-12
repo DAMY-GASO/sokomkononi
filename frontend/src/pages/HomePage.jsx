@@ -43,14 +43,19 @@ export default function HomePage() {
       .filter((l) => l.status === "live" || l.status === "reserved")
       .sort((a, b) => (b.views || 0) - (a.views || 0))
       .slice(0, 9)
-      .map((l) => ({
-        id: l.id,
-        title: l.title,
-        region: l.region || l.location,
-        price: formatTZS(l.price),
-        category: l.category,
-      }));
-  }, [allListings]);
+      .map((l) => {
+        const cat = popularCategories.find((c) => c.key === l.category);
+        return {
+          id: l.id,
+          title: l.title,
+          region: l.region || l.location,
+          price: formatTZS(l.price),
+          category: l.category,
+          categoryImage: cat?.imageUrl || null,
+          categoryIcon: cat?.iconKey || "Home",
+        };
+      });
+  }, [allListings, popularCategories]);
 
   useEffect(() => {
     if (sessionStorage.getItem("app_toast_dismissed")) return;
@@ -545,8 +550,8 @@ export default function HomePage() {
         ) : (
           <div className="flex gap-4 overflow-x-auto pb-4">
             {trendingProperties.map((prop) => {
-              const cat = categories.find((c) => c.key === prop.category);
-              const Icon = getCategoryIcon(cat?.iconKey);
+              const Icon = getCategoryIcon(prop.categoryIcon);
+              const hasPhoto = Boolean(prop.categoryImage);
               return (
                 <Link
                   key={prop.id}
@@ -554,7 +559,15 @@ export default function HomePage() {
                   className="min-w-[200px] sm:min-w-[240px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0 hover:shadow-md transition-shadow"
                 >
                   <div className="h-40 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
-                    <Icon size={48} className="text-[#E8A33D]" />
+                    {hasPhoto ? (
+                      <img
+                        src={prop.categoryImage}
+                        alt={prop.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Icon size={48} className="text-[#E8A33D]" />
+                    )}
                   </div>
                   <div className="p-4">
                     <h3 className="font-semibold text-gray-800 text-sm truncate">{prop.title}</h3>
@@ -586,17 +599,26 @@ export default function HomePage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {categories.map((cat) => {
             const Icon = getCategoryIcon(cat.iconKey);
+            const hasPhoto = Boolean(cat.imageUrl);
             return (
               <Link
                 key={cat.key}
                 to={`/kategoria/${cat.key}`}
                 className="bg-white rounded-lg overflow-hidden text-center border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 group"
               >
-                <div className="h-36 sm:h-40 bg-[#F5F3EC] flex items-center justify-center">
-                  <Icon
-                    size={48}
-                    className="text-[#E8A33D] group-hover:scale-105 transition-transform"
-                  />
+                <div className="h-36 sm:h-40 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
+                  {hasPhoto ? (
+                    <img
+                      src={cat.imageUrl}
+                      alt={cat.label[lang] || cat.label.sw}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <Icon
+                      size={48}
+                      className="text-[#E8A33D] group-hover:scale-105 transition-transform"
+                    />
+                  )}
                 </div>
                 <div className="p-3">
                   <h3 className="font-semibold text-gray-800 text-sm">
