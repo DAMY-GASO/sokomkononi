@@ -1,7 +1,7 @@
 // ============================================================
 // DealsSection.jsx
 // Deal Rooms & Dispute Resolution — Admin.
-// Bilingual.
+// Bilingual + mobile-responsive.
 // ============================================================
 
 import React, { useState } from "react";
@@ -23,6 +23,39 @@ export default function DealsSection() {
     setExpandedId(null);
   };
 
+  // ============================================================
+  // ACTION BUTTON — inatumika table na card
+  // ============================================================
+  const ActionButton = ({ deal, isExpanded, onToggle, fullWidth = false }) => {
+    if (deal.status === "disputed") {
+      return (
+        <button
+          onClick={onToggle}
+          style={{
+            background: COLORS.gold,
+            color: COLORS.night,
+          }}
+          className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
+            fullWidth ? "w-full" : ""
+          }`}
+        >
+          {isExpanded
+            ? lang === "sw"
+              ? "Funga"
+              : "Close"
+            : lang === "sw"
+              ? "Kagua Mgogoro"
+              : "Review Dispute"}
+        </button>
+      );
+    }
+    return (
+      <button className="text-gray-400 hover:text-gray-600 p-1">
+        <MoreVertical size={16} />
+      </button>
+    );
+  };
+
   return (
     <>
       <SectionHeader
@@ -37,7 +70,11 @@ export default function DealsSection() {
             : "Monitor deals and resolve disputes"
         }
       />
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+
+      {/* ============================================================
+          DESKTOP — TABLE (sm na juu)
+          ============================================================ */}
+      <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -101,30 +138,13 @@ export default function DealsSection() {
                         <StatusBadge status={d.status} lang={lang} />
                       </td>
                       <td className="px-5 py-3 text-right">
-                        {isDisputed ? (
-                          <button
-                            onClick={() =>
-                              setExpandedId(isExpanded ? null : d.id)
-                            }
-                            style={{
-                              background: COLORS.gold,
-                              color: COLORS.night,
-                            }}
-                            className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-                          >
-                            {isExpanded
-                              ? lang === "sw"
-                                ? "Funga"
-                                : "Close"
-                              : lang === "sw"
-                                ? "Kagua Mgogoro"
-                                : "Review Dispute"}
-                          </button>
-                        ) : (
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <MoreVertical size={16} />
-                          </button>
-                        )}
+                        <ActionButton
+                          deal={d}
+                          isExpanded={isExpanded}
+                          onToggle={() =>
+                            setExpandedId(isExpanded ? null : d.id)
+                          }
+                        />
                       </td>
                     </tr>
                     {isDisputed && isExpanded && (
@@ -155,6 +175,97 @@ export default function DealsSection() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ============================================================
+          MOBILE — CARD LIST (sm na chini)
+          ============================================================ */}
+      <div className="sm:hidden flex flex-col gap-3">
+        {deals.map((d) => {
+          const isDisputed = d.status === "disputed";
+          const isExpanded = expandedId === d.id;
+          return (
+            <div
+              key={d.id}
+              className="bg-white rounded-xl border border-gray-100 overflow-hidden"
+            >
+              <div className="p-4">
+                {/* Title + Status */}
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-800">
+                      {d.listingTitle}
+                    </p>
+                    {isDisputed && (
+                      <span
+                        style={{
+                          background: `${COLORS.rust}15`,
+                          color: COLORS.rust,
+                        }}
+                        className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1"
+                      >
+                        {lang === "sw" ? "MGOGORO" : "DISPUTE"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="shrink-0">
+                    <StatusBadge status={d.status} lang={lang} />
+                  </div>
+                </div>
+
+                {/* Buyer + Seller */}
+                <div className="flex flex-col gap-0.5 text-xs text-gray-500 mb-2">
+                  <span className="truncate">
+                    {lang === "sw" ? "Mnunuzi:" : "Buyer:"}{" "}
+                    <span className="font-medium text-gray-700">
+                      {d.buyerName}
+                    </span>
+                  </span>
+                  <span className="truncate">
+                    {lang === "sw" ? "Muuzaji:" : "Seller:"}{" "}
+                    <span className="font-medium text-gray-700">
+                      {d.sellerName}
+                    </span>
+                  </span>
+                </div>
+
+                {/* Amount */}
+                <p
+                  className="text-sm font-bold mb-3"
+                  style={{ color: COLORS.rust }}
+                >
+                  {formatTZS(d.currentOffer ?? d.askingPrice)}
+                </p>
+
+                {/* Action */}
+                <ActionButton
+                  deal={d}
+                  isExpanded={isExpanded}
+                  onToggle={() => setExpandedId(isExpanded ? null : d.id)}
+                  fullWidth
+                />
+              </div>
+
+              {/* Expanded — Dispute panel kwenye mobile */}
+              {isDisputed && isExpanded && (
+                <div className="border-t border-gray-100">
+                  <DisputeReviewPanel
+                    deal={d}
+                    onResolve={handleResolve}
+                    onClose={() => setExpandedId(null)}
+                    lang={lang}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {deals.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-sm text-gray-400">
+            {lang === "sw" ? "Hakuna deals" : "No deals"}
+          </div>
+        )}
       </div>
     </>
   );
