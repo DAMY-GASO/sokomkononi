@@ -4,12 +4,6 @@
 // Announcements upande wa Admin, na TICKER inayoonekana kwa
 // watumiaji kwenye DashboardShell).
 //
-// Kabla ya hii, DashboardShell.jsx ilikuwa na ANNOUNCEMENTS ya string
-// tatu zilizowekwa kwa mkono, hazikuwa na uhusiano wowote na
-// System Settings > Announcements upande wa Admin — ukiandika
-// tangazo jipya Admin, halionekani kamwe kwa mtumiaji. Sasa zote
-// mbili zinasoma/kuandika hapa.
-//
 // Kama stores nyingine — demo ya front-end pekee, localStorage +
 // custom event. Backend halisi ikiwepo, badilisha functions hizi
 // ziite API; useAnnouncements() haitahitaji kubadilika.
@@ -20,11 +14,27 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "sokomkononi_announcements_v1";
 const UPDATE_EVENT = "sokomkononi:announcements-updated";
 
+// ============================================================
+// ANNOUNCEMENT TYPES — bilingual (sw + en)
+// Kila type ina `label: { sw, en }` — consistent na categoriesStore.
+// ============================================================
 export const ANNOUNCEMENT_TYPES = [
-  { id: "fee_change", label: "Mabadiliko ya Fee" },
-  { id: "new_category", label: "Category Mpya" },
-  { id: "maintenance", label: "Matengenezo ya Mfumo" },
-  { id: "promotion", label: "Kampeni/Promotion" },
+  {
+    id: "fee_change",
+    label: { sw: "Mabadiliko ya Ada", en: "Fee Change" },
+  },
+  {
+    id: "new_category",
+    label: { sw: "Category Mpya", en: "New Category" },
+  },
+  {
+    id: "maintenance",
+    label: { sw: "Matengenezo ya Mfumo", en: "System Maintenance" },
+  },
+  {
+    id: "promotion",
+    label: { sw: "Kampeni/Promotion", en: "Campaign/Promotion" },
+  },
 ];
 
 export const SEED_ANNOUNCEMENTS = [
@@ -32,7 +42,11 @@ export const SEED_ANNOUNCEMENTS = [
     id: 1,
     typeId: "maintenance",
     title: "Matengenezo ya Mfumo — Jumamosi Usiku",
-    message: "Mfumo utakuwa chini kwa dakika 30 kuanzia saa 2:00 usiku kwa matengenezo ya database.",
+    titleEn: "System Maintenance — Saturday Night",
+    message:
+      "Mfumo utakuwa chini kwa dakika 30 kuanzia saa 2:00 usiku kwa matengenezo ya database.",
+    messageEn:
+      "The system will be down for 30 minutes starting 2:00 AM for database maintenance.",
     scheduledFor: "2026-09-13T23:00",
     sent: true,
   },
@@ -40,7 +54,11 @@ export const SEED_ANNOUNCEMENTS = [
     id: 2,
     typeId: "fee_change",
     title: "Boosting Fee Imepungua",
-    message: "Kuanzia wiki hii, Boosting Fee imepungua kutoka TZS 15,000 hadi TZS 12,000 kwa wiki.",
+    titleEn: "Boosting Fee Reduced",
+    message:
+      "Kuanzia wiki hii, Boosting Fee imepungua kutoka TZS 15,000 hadi TZS 12,000 kwa wiki.",
+    messageEn:
+      "Starting this week, Boosting Fee has been reduced from TZS 15,000 to TZS 12,000 per week.",
     scheduledFor: "2026-09-08T09:00",
     sent: true,
   },
@@ -52,7 +70,8 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_ANNOUNCEMENTS;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_ANNOUNCEMENTS;
+    if (!Array.isArray(parsed) || parsed.length === 0)
+      return SEED_ANNOUNCEMENTS;
     return parsed;
   } catch {
     return SEED_ANNOUNCEMENTS;
