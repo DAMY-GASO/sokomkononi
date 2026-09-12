@@ -1,5 +1,11 @@
+// ============================================================
+// CategoryForm.jsx
+// Form ya kuunda/kuhariri category — picha + fields + flags.
+// Bilingual + mobile-responsive + image upload.
+// ============================================================
+
 import React, { useState, useRef } from "react";
-import { Upload, X, ImagePlus } from "lucide-react";
+import { X, ImagePlus } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 import { AVAILABLE_ICONS } from "../../../../../config/categoriesStore.js";
@@ -42,8 +48,7 @@ export default function CategoryForm({
       return;
     }
     const reader = new FileReader();
-    reader.onload = () =>
-      setForm((f) => ({ ...f, imageUrl: reader.result }));
+    reader.onload = () => setForm((f) => ({ ...f, imageUrl: reader.result }));
     reader.readAsDataURL(file);
   };
 
@@ -58,7 +63,11 @@ export default function CategoryForm({
 
     const slugified = isEditing
       ? form.key
-      : form.key.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      : form.key
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, "");
 
     onSave({
       key: slugified,
@@ -79,7 +88,7 @@ export default function CategoryForm({
     <form
       onSubmit={handleSubmit}
       style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-      className="border-t rounded-b-lg p-4 flex flex-col gap-3"
+      className="border-t rounded-b-lg p-3 sm:p-4 flex flex-col gap-3"
     >
       {/* PHOTO UPLOAD */}
       <div>
@@ -96,14 +105,14 @@ export default function CategoryForm({
           className="hidden"
         />
         {form.imageUrl ? (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <img
               src={form.imageUrl}
               alt="Category preview"
-              className="w-24 h-24 rounded-lg object-cover border"
+              className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border shrink-0"
               style={{ borderColor: COLORS.sandLine }}
             />
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-row sm:flex-col gap-2 sm:gap-1.5">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -115,8 +124,8 @@ export default function CategoryForm({
               <button
                 type="button"
                 onClick={handleRemoveImage}
-                className="flex items-center gap-1 text-[11px] font-semibold"
-                style={{ color: COLORS.rust }}
+                className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg border"
+                style={{ borderColor: COLORS.sandLine, color: COLORS.rust }}
               >
                 <X size={12} />
                 {lang === "sw" ? "Ondoa" : "Remove"}
@@ -128,10 +137,10 @@ export default function CategoryForm({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             style={{ borderColor: COLORS.sandLine, color: "rgba(16,26,46,0.55)" }}
-            className="w-full rounded-xl border-2 border-dashed py-5 flex flex-col items-center gap-1.5"
+            className="w-full rounded-xl border-2 border-dashed py-4 sm:py-5 flex flex-col items-center gap-1.5 hover:bg-white/50 transition-colors"
           >
             <ImagePlus size={22} color="rgba(16,26,46,0.35)" />
-            <span className="text-xs font-medium">
+            <span className="text-xs font-medium text-center px-2">
               {lang === "sw"
                 ? "Bofya kupakia picha (max 1MB)"
                 : "Click to upload photo (max 1MB)"}
@@ -145,9 +154,12 @@ export default function CategoryForm({
         </p>
       </div>
 
+      {/* FIELDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-gray-500">Key (slug)</span>
+          <span className="text-[11px] font-semibold text-gray-500">
+            Key (slug)
+          </span>
           <input
             value={form.key}
             onChange={(e) => setForm({ ...form, key: e.target.value })}
@@ -220,29 +232,37 @@ export default function CategoryForm({
         </label>
       </div>
 
-      <div className="flex items-center gap-4 text-xs flex-wrap">
+      {/* FLAGS */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs">
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input
             type="checkbox"
             checked={form.isPopular}
             onChange={(e) => setForm({ ...form, isPopular: e.target.checked })}
+            className="shrink-0"
           />
-          {lang === "sw"
-            ? "Inaonekana HomePage + Navbar"
-            : "Show on HomePage + Navbar"}
+          <span>
+            {lang === "sw"
+              ? "Inaonekana HomePage + Navbar"
+              : "Show on HomePage + Navbar"}
+          </span>
         </label>
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input
             type="checkbox"
             checked={form.active}
             onChange={(e) => setForm({ ...form, active: e.target.checked })}
+            className="shrink-0"
           />
-          {lang === "sw"
-            ? "Hai (inapatikana kwa wauzaji)"
-            : "Active (available to sellers)"}
+          <span>
+            {lang === "sw"
+              ? "Hai (inapatikana kwa wauzaji)"
+              : "Active (available to sellers)"}
+          </span>
         </label>
       </div>
 
+      {/* WARNING (only when adding new) */}
       {!isEditing && (
         <p style={{ color: COLORS.rust }} className="text-[11px] leading-relaxed">
           {lang === "sw" ? (
@@ -259,12 +279,13 @@ export default function CategoryForm({
         </p>
       )}
 
+      {/* ACTIONS */}
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onCancel}
           style={{ borderColor: COLORS.sandLine }}
-          className="text-xs font-semibold px-3 py-2 rounded-lg border text-gray-600 hover:bg-white"
+          className="text-xs font-semibold px-3 py-2 rounded-lg border text-gray-600 hover:bg-white transition-colors shrink-0"
         >
           {lang === "sw" ? "Ghairi" : "Cancel"}
         </button>
@@ -275,7 +296,7 @@ export default function CategoryForm({
             background: canSave ? COLORS.night : COLORS.sandLine,
             color: canSave ? COLORS.sand : "rgba(16,26,46,0.4)",
           }}
-          className="flex-1 text-xs font-semibold px-3 py-2 rounded-lg"
+          className="flex-1 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
         >
           {isEditing
             ? lang === "sw"
