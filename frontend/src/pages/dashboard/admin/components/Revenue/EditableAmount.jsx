@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Save, Pencil } from "lucide-react";
-import { COLORS } from "../shared/constants.js";
+import { COLORS } from "../../shared/constants.js";
 
 export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
   const [editing, setEditing] = useState(false);
