@@ -8,13 +8,9 @@ import {
   PlusCircle,
   Rocket,
   MessagesSquare,
-  Eye,
-  CheckCircle,
-  Clock3,
-  TrendingUp,
 } from "lucide-react";
-import { COLORS, formatTZS, timeAgo } from "../../shared";
-import { useLanguage } from "../../../../context/LanguageContext.jsx";
+import { COLORS, timeAgo } from "../components/shared";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
 
 export default function RecentActivity({ listings, deals, onNavigate, lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -80,10 +76,7 @@ export default function RecentActivity({ listings, deals, onNavigate, lang }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3 gap-2">
-        <h2
-          style={{ color: COLORS.night }}
-          className="text-sm font-semibold"
-        >
+        <h2 style={{ color: COLORS.night }} className="text-sm font-semibold">
           {t("Shughuli za Hivi Karibuni", "Recent Activity")}
         </h2>
         <button
