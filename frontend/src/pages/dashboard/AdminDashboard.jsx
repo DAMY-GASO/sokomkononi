@@ -15,9 +15,10 @@ import ModerationSection from "./admin/sections/ModerationSection.jsx";
 import DealsSection from "./admin/sections/DealsSection.jsx";
 import RevenueSection from "./admin/sections/RevenueSection.jsx";
 import SystemSettingsSection from "./admin/sections/SystemSettingsSection.jsx";
+import AdminProfile from "./admin/sections/AdminProfile.jsx";
 
 // ============================================================
-// AVATAR — inatumika header na dropdown
+// AVATAR
 // ============================================================
 function Avatar({ user, size = "md" }) {
   const sizeClass = size === "lg" ? "w-10 h-10 text-sm" : "w-8 h-8 text-xs";
@@ -45,7 +46,7 @@ function Avatar({ user, size = "md" }) {
 }
 
 // ============================================================
-// LANGUAGE SWITCHER — reusable (header + sidebar)
+// LANGUAGE SWITCHER
 // ============================================================
 function LanguageSwitcher({ lang, setLang, variant = "header" }) {
   const [open, setOpen] = useState(false);
@@ -145,11 +146,7 @@ function LanguageSwitcher({ lang, setLang, variant = "header" }) {
                   {l.native}
                 </span>
                 {lang === l.code && (
-                  <svg
-                    className={`w-4 h-4 ${isSidebar ? "text-[#E8A33D]" : "text-[#E8A33D]"}`}
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
+                  <svg className="w-4 h-4 text-[#E8A33D]" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
                       d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -232,6 +229,8 @@ export default function AdminDashboard() {
         return <RevenueSection />;
       case "system":
         return <SystemSettingsSection />;
+      case "profile":
+        return <AdminProfile />;
       default:
         return <OverviewSection onNavigate={setActiveSection} />;
     }
@@ -369,7 +368,6 @@ export default function AdminDashboard() {
                   onClick={() => setProfileMenuOpen(false)}
                 />
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden">
-                  {/* Header: avatar + jina + email */}
                   <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
                     <Avatar user={user} size="lg" />
                     <div className="min-w-0">
@@ -380,29 +378,32 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Profile */}
-                  <Link
-                    to="/dashboard/admin/profile"
-                    onClick={() => setProfileMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  {/* Profile — sasa ni section */}
+                  <button
+                    onClick={() => {
+                      setActiveSection("profile");
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
                   >
                     <UserIcon size={16} className="text-gray-400" />
                     {lang === "sw" ? "Wasifu" : "Profile"}
-                  </Link>
+                  </button>
 
-                  {/* Settings */}
-                  <Link
-                    to="/dashboard/admin/settings"
-                    onClick={() => setProfileMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  {/* Settings — inaelekea section ya system */}
+                  <button
+                    onClick={() => {
+                      setActiveSection("system");
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
                   >
                     <Settings size={16} className="text-gray-400" />
                     {lang === "sw" ? "Mipangilio" : "Settings"}
-                  </Link>
+                  </button>
 
                   <div className="border-t border-gray-100" />
 
-                  {/* Logout */}
                   <button
                     onClick={() => {
                       setProfileMenuOpen(false);
@@ -444,7 +445,6 @@ export default function AdminDashboard() {
             );
           })}
 
-          {/* Language switcher kwenye desktop sidebar pia (hiari) */}
           <div className="mt-4 pt-4 border-t" style={{ borderColor: COLORS.sandLine }}>
             <LanguageSwitcher lang={lang} setLang={setLang} variant="sidebar" />
           </div>
@@ -489,7 +489,6 @@ export default function AdminDashboard() {
                 );
               })}
 
-              {/* Language switcher kwenye mobile sidebar */}
               <div
                 className="mt-4 pt-4 border-t"
                 style={{ borderColor: COLORS.sandLine }}
