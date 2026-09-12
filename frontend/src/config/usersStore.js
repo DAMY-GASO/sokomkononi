@@ -10,7 +10,7 @@
 //
 // Hii ndiyo pia mahali sahihi pa kuunganisha na AuthContext baadaye —
 // mf. mtumiaji "suspended" hapa asiruhusiwe kuingia (login) upande wa
-// mfumo mzima, badala ya Admin Dashboard peke yake kujua hali yake.
+// mfumo mzima, badala ya Admin Dashboard pekee kujua hali yake.
 // ============================================================
 
 import { useEffect, useState } from "react";
@@ -18,14 +18,10 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "sokomkononi_users_v1";
 const UPDATE_EVENT = "sokomkononi:users-updated";
 
-export const SEED_USERS = [
-  { id: 1, name: "Sarah Mwangi", email: "sarah@email.com", role: "Buyer", status: "active", joined: "2026-09-10" },
-  { id: 2, name: "John Doe", email: "john@email.com", role: "Seller", status: "active", joined: "2026-09-09" },
-  { id: 3, name: "Michael Kato", email: "michael@email.com", role: "Buyer", status: "pending", joined: "2026-09-08" },
-  { id: 4, name: "Jane Mushi", email: "jane@email.com", role: "Seller", status: "active", joined: "2026-09-07" },
-  { id: 5, name: "Peter Lema", email: "peter@email.com", role: "Buyer", status: "inactive", joined: "2026-09-06" },
-  { id: 6, name: "Mary Mwangi", email: "mary@email.com", role: "Seller", status: "active", joined: "2026-09-05" },
-];
+// ============================================================
+// SEED_USERS — tupu. Data itakuja kutoka backend baadaye.
+// ============================================================
+export const SEED_USERS = [];
 
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_USERS;
@@ -33,7 +29,7 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_USERS;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_USERS;
+    if (!Array.isArray(parsed)) return SEED_USERS;
     return parsed;
   } catch {
     return SEED_USERS;
