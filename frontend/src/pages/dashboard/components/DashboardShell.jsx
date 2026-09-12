@@ -19,9 +19,12 @@ import {
   Globe,
   Check,
   TrendingUp,
+  LogOut,
+  User,
 } from "lucide-react";
 import { COLORS, FONTS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { useAuth } from "../../../context/AuthContext.jsx";
 import {
   useListings,
   addListing as addListingToStore,
@@ -32,7 +35,7 @@ import {
 import { useSentAnnouncements } from "../../../config/announcementsStore.js";
 import { useNotifications, notifyListingFeePaid } from "../../../config/notificationsStore.js";
 import { checkReservationReminders } from "../../../config/dealsStore.js";
-import { addTransaction } from "../../../config/transactionsStore.js"; // === MPYA ===
+import { addTransaction } from "../../../config/transactionsStore.js";
 import PostPropertyForm from "./PostPropertyForm";
 import MyListings from "./MyListings";
 import BoostSasa from "./BoostSasa";
@@ -123,11 +126,13 @@ export default function DashboardShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const { lang, setLang } = useLanguage();
+  const { user, logout } = useAuth();
 
   const [side, setSide] = useState("seller");
   const [activeKey, setActiveKey] = useState(SELLER_NAV[0].key);
   const [tickerIndex, setTickerIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const listings = useListings();
   const { unreadCount: unreadNotifCount } = useNotifications("user");
   const announcements = useSentAnnouncements();
@@ -160,9 +165,6 @@ export default function DashboardShell() {
 
   // ============================================================
   // KUMBUSHO LA RESERVATION + LISTING EXPIRY
-  // Dashboard hii ndiyo inapakiwa kila mtumiaji anapoingia sehemu yoyote
-  // ya /dashboard, hivyo ni mahali sahihi pa kuangalia deals + listings
-  // mara moja kwa kila kuingia, kisha kila dakika 5.
   // ============================================================
   useEffect(() => {
     checkReservationReminders();
@@ -185,6 +187,16 @@ export default function DashboardShell() {
     return () => clearInterval(id);
   }, [announcements.length]);
 
+  // ============================================================
+  // FUNGA USER MENU UKIBOFYA NJE
+  // ============================================================
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const handleClickOutside = () => setUserMenuOpen(false);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [userMenuOpen]);
+
   const accent = side === "seller" ? COLORS.gold : COLORS.green;
 
   // ============================================================
@@ -196,9 +208,6 @@ export default function DashboardShell() {
 
   // ============================================================
   // TRANSACTION HELPERS
-  // Sasa: `addTransaction()` inatoka transactionsStore.js —
-  // chanzo kimoja cha ukweli kwa MyTransactionsPage, Admin Overview,
-  // na fee emitters zote (Boost/Leading/Advertise/Listing Fee).
   // ============================================================
   const handleReservationPaid = (deal, { hours, fee, method, expiresAt }) => {
     addTransaction({
@@ -258,9 +267,6 @@ export default function DashboardShell() {
     if (listingId) navigate(`/mali/${listingId}`);
   };
 
-  // ============================================================
-  // LISTING FEE PAID — transaction + notification
-  // ============================================================
   const markListingPaid = (id) => {
     updateListing(id, { status: "live" });
     const listing = listings.find((l) => l.id === id);
@@ -295,6 +301,12 @@ export default function DashboardShell() {
   const handleLanguageSelect = (code) => {
     setLang(code);
     setLangOpen(false);
+  };
+
+  const handleLogout = async () => {
+    setUserMenuOpen(false);
+    await logout();
+    navigate("/login");
   };
 
   // ============================================================
@@ -372,7 +384,6 @@ export default function DashboardShell() {
       return <NotificationsPage />;
     }
     if (activeKey === "transactions") {
-      // Store inasoma yenyewe — hakuna prop ya `transactions` tena
       return <MyTransactionsPage />;
     }
     if (activeKey === "waiting") {
@@ -397,7 +408,6 @@ export default function DashboardShell() {
             ? "Sehemu ya Uza Sasa — dhibiti mali zako, malipo na maombi ya wanunuzi."
             : "Sehemu ya Nunua Sasa — tafuta, negotiate na fuatilia manunuzi yako."}
         </p>
-
         <div
           style={{ borderColor: COLORS.sandLine }}
           className="rounded-2xl border-2 border-dashed p-10 text-center"
@@ -407,6 +417,29 @@ export default function DashboardShell() {
           </p>
         </div>
       </main>
+    );
+  };
+
+  // ============================================================
+  // USER AVATAR — herufi au picha
+  // ============================================================
+  const renderAvatar = (size = "w-8 h-8", textSize = "text-sm") => {
+    if (user?.avatar) {
+      return (
+        <img
+          src={user.avatar}
+          alt={user.name || "User"}
+          className={`${size} rounded-full object-cover shrink-0`}
+        />
+      );
+    }
+    return (
+      <div
+        style={{ background: COLORS.gold, color: COLORS.night }}
+        className={`${size} rounded-full flex items-center justify-center ${textSize} font-bold shrink-0`}
+      >
+        {user?.name?.charAt(0)?.toUpperCase() || "U"}
+      </div>
     );
   };
 
@@ -453,7 +486,11 @@ export default function DashboardShell() {
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <div style={{ background: COLORS.nightSoft }} className="hidden md:flex items-center rounded-full p-1">
+          {/* Seller/Buyer Toggle */}
+          <div
+            style={{ background: COLORS.nightSoft }}
+            className="hidden md:flex items-center rounded-full p-1"
+          >
             <button
               onClick={() => handleSideChange("seller")}
               style={{
@@ -476,6 +513,7 @@ export default function DashboardShell() {
             </button>
           </div>
 
+          {/* Language Switcher */}
           <div className="relative">
             <button
               onClick={() => setLangOpen((v) => !v)}
@@ -491,7 +529,10 @@ export default function DashboardShell() {
                 style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.1)" }}
                 className="absolute right-0 mt-2 w-48 border rounded-lg shadow-xl py-2 z-50"
               >
-                <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-2 border-b">
+                <div
+                  style={{ borderColor: "rgba(245,243,236,0.1)" }}
+                  className="px-4 py-2 border-b"
+                >
                   <p style={{ color: "rgba(245,243,236,0.5)" }} className="text-xs font-semibold">
                     {lang === "sw" ? "Chagua Lugha" : "Choose Language"}
                   </p>
@@ -514,6 +555,7 @@ export default function DashboardShell() {
             )}
           </div>
 
+          {/* Home button */}
           <a
             href="/"
             className="text-white/80 hover:text-white p-1.5 transition-colors"
@@ -522,6 +564,7 @@ export default function DashboardShell() {
             <Home size={20} />
           </a>
 
+          {/* Notifications */}
           <button
             onClick={() => handleNavClick("notifications")}
             className="relative text-white/80 hover:text-white p-1.5 transition-colors"
@@ -536,11 +579,62 @@ export default function DashboardShell() {
             )}
           </button>
 
-          <div
-            style={{ background: COLORS.gold, color: COLORS.night }}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-          >
-            A
+          {/* === USER AVATAR + MENU === */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setUserMenuOpen((v) => !v);
+              }}
+              className="rounded-full transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#E8A33D]/50"
+              aria-label={lang === "sw" ? "Menyu ya mtumiaji" : "User menu"}
+              aria-expanded={userMenuOpen}
+            >
+              {renderAvatar("w-8 h-8", "text-sm")}
+            </button>
+
+            {userMenuOpen && (
+              <div
+                style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.1)" }}
+                className="absolute right-0 mt-2 w-56 border rounded-lg shadow-xl py-2 z-50"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* User info */}
+                <div
+                  style={{ borderColor: "rgba(245,243,236,0.1)" }}
+                  className="px-4 py-3 border-b"
+                >
+                  <p style={{ color: COLORS.sand }} className="text-sm font-semibold truncate">
+                    {user?.name || "User"}
+                  </p>
+                  <p style={{ color: "rgba(245,243,236,0.5)" }} className="text-xs truncate">
+                    {user?.email || ""}
+                  </p>
+                </div>
+
+                {/* Wasifu */}
+                <button
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    navigate("/wasifu");
+                  }}
+                  style={{ color: COLORS.sand }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
+                >
+                  <User size={16} color="rgba(245,243,236,0.7)" />
+                  {lang === "sw" ? "Wasifu" : "Profile"}
+                </button>
+
+                {/* Toka */}
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#C1502E] hover:bg-[#C1502E]/10 transition-colors text-left"
+                >
+                  <LogOut size={16} />
+                  {lang === "sw" ? "Toka" : "Logout"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
