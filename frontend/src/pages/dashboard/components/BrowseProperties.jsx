@@ -63,12 +63,23 @@ function reservationCountdown(reservedUntil, lang) {
 }
 
 // ============================================================
+// CARD IMAGE RESOLVER
+// Priority: property.imageUrl → category.imageUrl → null (icon fallback)
+// ============================================================
+function resolveCardImage(property, category) {
+  if (property?.imageUrl) return property.imageUrl;
+  if (category?.imageUrl) return category.imageUrl;
+  return null;
+}
+
+// ============================================================
 // PROPERTY CARD
 // ============================================================
 function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
   const category = getCategory(property.category);
   const Icon = getCategoryIcon(category?.iconKey);
   const categoryLabel = category?.label?.[lang] || category?.label?.sw || property.category;
+  const cardImage = resolveCardImage(property, category);
 
   const isFeatured = isBoostActive(property);
   const isLeading = isLeadingActive(property);
@@ -90,8 +101,17 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
           isSold ? "border-gray-200 opacity-75" : "border-gray-100"
         }`}
       >
-        <div className="w-full sm:w-48 h-40 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative">
-          <Icon size={32} className="text-gray-300" />
+        <div className="w-full sm:w-48 h-40 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+          {cardImage ? (
+            <img
+              src={cardImage}
+              alt={property.title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <Icon size={32} className="text-gray-300" />
+          )}
           {isReserved && (
             <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
               <Clock3 size={10} />
@@ -187,8 +207,20 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
       }`}
     >
       <div className="relative">
-        <div className="w-full h-44 bg-gray-100 flex items-center justify-center">
-          <Icon size={40} className="text-gray-300 group-hover:scale-110 transition-transform" />
+        <div className="w-full h-44 bg-gray-100 flex items-center justify-center overflow-hidden">
+          {cardImage ? (
+            <img
+              src={cardImage}
+              alt={property.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              loading="lazy"
+            />
+          ) : (
+            <Icon
+              size={40}
+              className="text-gray-300 group-hover:scale-110 transition-transform"
+            />
+          )}
         </div>
 
         <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
@@ -336,19 +368,31 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
           {lang === "sw" ? "Kategoria" : "Category"}
         </h4>
         <div className="space-y-2">
-          {allCategories.map((cat) => (
-            <label key={cat.key} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={localFilters.categories.includes(cat.key)}
-                onChange={() => toggleCategory(cat.key)}
-                className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
-              />
-              <span className="text-sm text-gray-600">
-                {cat.label[lang] || cat.label.sw}
-              </span>
-            </label>
-          ))}
+          {allCategories.map((cat) => {
+            const CatIcon = getCategoryIcon(cat.iconKey);
+            return (
+              <label key={cat.key} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={localFilters.categories.includes(cat.key)}
+                  onChange={() => toggleCategory(cat.key)}
+                  className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
+                />
+                {cat.imageUrl ? (
+                  <img
+                    src={cat.imageUrl}
+                    alt=""
+                    className="w-5 h-5 rounded object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <CatIcon size={16} className="text-gray-400 flex-shrink-0" />
+                )}
+                <span className="text-sm text-gray-600">
+                  {cat.label[lang] || cat.label.sw}
+                </span>
+              </label>
+            );
+          })}
         </div>
       </div>
 
@@ -724,24 +768,35 @@ export default function BrowseProperties({ lang = "sw" }) {
                 <span className="text-xs text-gray-500">
                   {lang === "sw" ? "Vichujio:" : "Filters:"}
                 </span>
-                {filters.categories.map((cat) => (
-                  <span
-                    key={cat}
-                    className="inline-flex items-center gap-1 bg-[#E8A33D]/10 text-[#8A5A16] text-xs px-2.5 py-1 rounded-full"
-                  >
-                    {getCategory(cat)?.label?.[lang] || cat}
-                    <button
-                      onClick={() =>
-                        setFilters({
-                          ...filters,
-                          categories: filters.categories.filter((c) => c !== cat),
-                        })
-                      }
+                {filters.categories.map((cat) => {
+                  const catObj = getCategory(cat);
+                  const catImg = catObj?.imageUrl;
+                  return (
+                    <span
+                      key={cat}
+                      className="inline-flex items-center gap-1.5 bg-[#E8A33D]/10 text-[#8A5A16] text-xs px-2.5 py-1 rounded-full"
                     >
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
+                      {catImg && (
+                        <img
+                          src={catImg}
+                          alt=""
+                          className="w-4 h-4 rounded-full object-cover"
+                        />
+                      )}
+                      {catObj?.label?.[lang] || cat}
+                      <button
+                        onClick={() =>
+                          setFilters({
+                            ...filters,
+                            categories: filters.categories.filter((c) => c !== cat),
+                          })
+                        }
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  );
+                })}
                 <button
                   onClick={clearFilters}
                   className="text-xs text-[#C1502E] hover:underline font-medium"
