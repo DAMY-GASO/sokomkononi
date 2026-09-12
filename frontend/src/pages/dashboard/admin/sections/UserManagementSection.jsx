@@ -1,6 +1,6 @@
 // ============================================================
 // UserManagementSection.jsx
-// Usimamizi wa watumiaji — table + drawer ya wasifu.
+// Usimamizi wa watumiaji — table (desktop) + card list (mobile).
 // Bilingual.
 // ============================================================
 
@@ -34,6 +34,37 @@ export default function UserManagementSection() {
     return matchesQuery && matchesRole;
   });
 
+  // ============================================================
+  // ACTION BUTTON — inatumika table na card
+  // ============================================================
+  const ActionButton = ({ user, fullWidth = false }) => {
+    const isSuspended = user.status === "suspended";
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleUserStatus(user.id);
+        }}
+        style={{
+          color: isSuspended ? COLORS.green : COLORS.rust,
+          borderColor: isSuspended ? `${COLORS.green}33` : `${COLORS.rust}33`,
+        }}
+        className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+          fullWidth ? "w-full" : ""
+        }`}
+      >
+        {isSuspended ? <RotateCcw size={13} /> : <Ban size={13} />}
+        {isSuspended
+          ? lang === "sw"
+            ? "Washa Tena"
+            : "Activate"
+          : lang === "sw"
+            ? "Simamisha"
+            : "Suspend"}
+      </button>
+    );
+  };
+
   return (
     <>
       <SectionHeader
@@ -45,9 +76,10 @@ export default function UserManagementSection() {
         }
       />
 
+      {/* FILTERS */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1">
-          <Search size={16} className="text-gray-400" />
+          <Search size={16} className="text-gray-400 shrink-0" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -56,7 +88,7 @@ export default function UserManagementSection() {
                 ? "Tafuta kwa jina au email..."
                 : "Search by name or email..."
             }
-            className="outline-none text-sm flex-1"
+            className="outline-none text-sm flex-1 min-w-0"
           />
         </div>
         <select
@@ -70,7 +102,10 @@ export default function UserManagementSection() {
         </select>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      {/* ============================================================
+          DESKTOP — TABLE (sm na juu)
+          ============================================================ */}
+      <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -112,30 +147,7 @@ export default function UserManagementSection() {
                   </td>
                   <td className="px-5 py-3 text-sm text-gray-400">{u.joined}</td>
                   <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleUserStatus(u.id);
-                      }}
-                      style={{
-                        color:
-                          u.status === "suspended" ? COLORS.green : COLORS.rust,
-                      }}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border"
-                    >
-                      {u.status === "suspended" ? (
-                        <RotateCcw size={13} />
-                      ) : (
-                        <Ban size={13} />
-                      )}
-                      {u.status === "suspended"
-                        ? lang === "sw"
-                          ? "Washa Tena"
-                          : "Activate"
-                        : lang === "sw"
-                          ? "Simamisha"
-                          : "Suspend"}
-                    </button>
+                    <ActionButton user={u} />
                   </td>
                 </tr>
               ))}
@@ -154,6 +166,59 @@ export default function UserManagementSection() {
         </div>
       </div>
 
+      {/* ============================================================
+          MOBILE — CARD LIST (sm na chini)
+          ============================================================ */}
+      <div className="sm:hidden flex flex-col gap-3">
+        {filtered.map((u) => (
+          <div
+            key={u.id}
+            onClick={() => setSelectedUser(u)}
+            className="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:shadow-sm transition-shadow"
+          >
+            {/* Header: jina + status */}
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-gray-800 truncate">
+                  {u.name}
+                </p>
+                <p className="text-xs text-gray-500 truncate mt-0.5">
+                  {u.email}
+                </p>
+              </div>
+              <StatusBadge status={u.status} lang={lang} />
+            </div>
+
+            {/* Meta: role + joined */}
+            <div className="flex items-center gap-3 text-xs text-gray-500 mb-3 flex-wrap">
+              <span className="inline-flex items-center gap-1">
+                <span className="text-gray-400">
+                  {lang === "sw" ? "Role:" : "Role:"}
+                </span>
+                <span className="font-medium text-gray-700">{u.role}</span>
+              </span>
+              <span className="text-gray-300">•</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="text-gray-400">
+                  {lang === "sw" ? "Alijiunga:" : "Joined:"}
+                </span>
+                <span className="font-medium text-gray-700">{u.joined}</span>
+              </span>
+            </div>
+
+            {/* Action */}
+            <ActionButton user={u} fullWidth />
+          </div>
+        ))}
+
+        {filtered.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-sm text-gray-400">
+            {lang === "sw" ? "Hakuna matokeo" : "No results"}
+          </div>
+        )}
+      </div>
+
+      {/* DRAWER */}
       {selectedUser && (
         <UserDrawer
           user={selectedUser}
