@@ -46,8 +46,9 @@ import DealRooms from "./DealRooms";
 import BrowseProperties from "./BrowseProperties";
 import BottomNav from "../../../components/BottomNav.jsx";
 
-// Seller Overview
+// Seller & Buyer Overview
 import SellerOverview from "../seller/SellerOverview.jsx";
+import BuyerOverview from "../buyer/BuyerOverview.jsx";
 
 // Kurasa mpya
 import SavedPropertiesPage from "../../SavedPropertiesPage";
@@ -57,31 +58,39 @@ import MyTransactionsPage from "../../MyTransactionsPage";
 import WaitingListPage from "../../WaitingListPage";
 import { useWaitingList, leaveWaitingList } from "../../../config/waitingListStore.js";
 
+// ============================================================
+// SELLER NAV — Kiswahili kimeboreshwa
+// ============================================================
 const SELLER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
   { key: "post", label: { sw: "Weka Mali Yako", en: "Post Property" }, icon: PlusCircle },
-  { key: "listings", label: { sw: "My Listings", en: "My Listings" }, icon: ListChecks },
+  { key: "listings", label: { sw: "Mali Zangu", en: "My Listings" }, icon: ListChecks },
   { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
   { key: "boost", label: { sw: "Boost Sasa", en: "Boost Now" }, icon: Rocket },
   { key: "leading", label: { sw: "Leading Fee", en: "Leading Fee" }, icon: TrendingUp },
   { key: "advertise", label: { sw: "Tangaza Sasa", en: "Advertise Now" }, icon: Megaphone },
-  { key: "deals", label: { sw: "Deal Rooms", en: "Deal Rooms" }, icon: MessagesSquare },
+  { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
   { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
   { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
-  { key: "transactions", label: { sw: "My Transactions", en: "My Transactions" }, icon: Receipt },
+  { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
 ];
 
+// ============================================================
+// BUYER NAV — Kiswahili kimeboreshwa
+// ============================================================
 const BUYER_NAV = [
-  { key: "browse", label: { sw: "Tafuta Mali", en: "Browse Properties" }, icon: LayoutGrid },
+  { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
+  { key: "browse", label: { sw: "Tafuta Mali", en: "Browse Properties" }, icon: Search },
   { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
-  { key: "deals", label: { sw: "Deal Rooms", en: "Deal Rooms" }, icon: MessagesSquare },
+  { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
   { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
   { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
-  { key: "waiting", label: { sw: "Waiting List", en: "Waiting List" }, icon: Clock3 },
-  { key: "transactions", label: { sw: "My Transactions", en: "My Transactions" }, icon: Receipt },
+  { key: "waiting", label: { sw: "Orodha ya Kusubiri", en: "Waiting List" }, icon: Clock3 },
+  { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
 ];
 
 const URL_TO_STATE = {
+  // Seller
   "/dashboard": { side: "seller", key: "overview" },
   "/dashboard/seller": { side: "seller", key: "overview" },
   "/dashboard/overview": { side: "seller", key: "overview" },
@@ -95,7 +104,11 @@ const URL_TO_STATE = {
   "/dashboard/messages": { side: "seller", key: "messages" },
   "/dashboard/notifications": { side: "seller", key: "notifications" },
   "/dashboard/transactions": { side: "seller", key: "transactions" },
-  "/dashboard/buyer": { side: "buyer", key: "browse" },
+
+  // Buyer
+  "/dashboard/buyer": { side: "buyer", key: "overview" },
+  "/dashboard/buyer/overview": { side: "buyer", key: "overview" },
+  "/dashboard/buyer/browse": { side: "buyer", key: "browse" },
   "/dashboard/buyer/saved": { side: "buyer", key: "saved" },
   "/dashboard/buyer/messages": { side: "buyer", key: "messages" },
   "/dashboard/buyer/notifications": { side: "buyer", key: "notifications" },
@@ -118,7 +131,8 @@ const STATE_TO_URL = {
     transactions: "/dashboard/transactions",
   },
   buyer: {
-    browse: "/dashboard/buyer",
+    overview: "/dashboard/buyer",
+    browse: "/dashboard/buyer/browse",
     saved: "/dashboard/buyer/saved",
     deals: "/dashboard/deals",
     messages: "/dashboard/buyer/messages",
@@ -311,7 +325,7 @@ export default function DashboardShell() {
 
   const handleSideChange = (newSide) => {
     setSide(newSide);
-    const firstKey = newSide === "seller" ? "overview" : "browse";
+    const firstKey = "overview";
     setActiveKey(firstKey);
     const url = STATE_TO_URL[newSide]?.[firstKey];
     if (url) {
@@ -334,8 +348,12 @@ export default function DashboardShell() {
   // RENDER MAIN CONTENT
   // ============================================================
   const renderMain = () => {
+    // Overview — tofauti kwa seller na buyer
     if (activeKey === "overview") {
-      return <SellerOverview onNavigate={handleNavClick} />;
+      if (side === "seller") {
+        return <SellerOverview onNavigate={handleNavClick} />;
+      }
+      return <BuyerOverview onNavigate={handleNavClick} />;
     }
     if (activeKey === "post") {
       return (
@@ -603,7 +621,7 @@ export default function DashboardShell() {
             )}
           </button>
 
-          {/* === USER AVATAR + MENU === */}
+          {/* USER AVATAR + MENU */}
           <div className="relative">
             <button
               onClick={(e) => {
@@ -623,7 +641,6 @@ export default function DashboardShell() {
                 className="absolute right-0 mt-2 w-56 border rounded-lg shadow-xl py-2 z-50"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* User info */}
                 <div
                   style={{ borderColor: "rgba(245,243,236,0.1)" }}
                   className="px-4 py-3 border-b"
@@ -636,7 +653,6 @@ export default function DashboardShell() {
                   </p>
                 </div>
 
-                {/* Wasifu */}
                 <button
                   onClick={() => {
                     setUserMenuOpen(false);
@@ -649,7 +665,6 @@ export default function DashboardShell() {
                   {lang === "sw" ? "Wasifu" : "Profile"}
                 </button>
 
-                {/* Toka */}
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#C1502E] hover:bg-[#C1502E]/10 transition-colors text-left"
