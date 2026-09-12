@@ -4,7 +4,7 @@
 // ============================================================
 
 import React from "react";
-import { COLORS } from "../../shared";
+import { COLORS } from "../components/shared";
 
 export default function StatTile({
   label,
