@@ -8,6 +8,7 @@ import { useAuth } from "../../../../context/AuthContext.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { Camera, Trash2, Save, Lock, User, Mail, Phone } from "lucide-react";
 import { COLORS, FONTS } from "../shared/constants.js";
+import SectionHeader from "../shared/SectionHeader.jsx";
 
 // ============================================================
 // AVATAR
@@ -167,21 +168,16 @@ export default function AdminProfile() {
 
   return (
     <div style={{ fontFamily: FONTS.body }}>
-      {/* Title */}
-      <div className="mb-6">
-        <h1
-          style={{ fontFamily: FONTS.display, color: COLORS.night }}
-          className="text-2xl font-semibold"
-        >
-          {t("Wasifu wa Admin", "Admin Profile")}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {t(
-            "Badilisha taarifa zako, picha, na nenosiri.",
-            "Update your info, photo, and password."
-          )}
-        </p>
-      </div>
+      {/* ============================================================
+          SECTION HEADER — centered (kama sections nyingine)
+          ============================================================ */}
+      <SectionHeader
+        title={t("Wasifu wa Admin", "Admin Profile")}
+        subtitle={t(
+          "Badilisha taarifa zako, picha, na nenosiri.",
+          "Update your info, photo, and password."
+        )}
+      />
 
       {/* Toast */}
       {toast && (
