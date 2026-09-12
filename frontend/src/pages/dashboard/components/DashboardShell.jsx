@@ -122,6 +122,22 @@ const STATE_TO_URL = {
   },
 };
 
+// ============================================================
+// ANNOUNCEMENT HELPERS — bilingual
+// Inachagua title/message kwa lugha sahihi, na fallback kwenye SW.
+// ============================================================
+function getAnnouncementMessage(a, lang) {
+  if (!a) return "";
+  if (lang === "en" && a.messageEn) return a.messageEn;
+  return a.message || "";
+}
+
+function getAnnouncementTitle(a, lang) {
+  if (!a) return "";
+  if (lang === "en" && a.titleEn) return a.titleEn;
+  return a.title || "";
+}
+
 export default function DashboardShell() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -666,7 +682,7 @@ export default function DashboardShell() {
         </button>
       </div>
 
-      {/* ANNOUNCEMENT TICKER */}
+      {/* ANNOUNCEMENT TICKER — bilingual */}
       <div
         style={{ background: COLORS.sandLine, color: COLORS.night }}
         className="w-full flex items-center gap-2 px-4 py-1.5 text-xs sm:text-sm"
@@ -674,8 +690,13 @@ export default function DashboardShell() {
         <Megaphone size={14} color={COLORS.rust} className="shrink-0" />
         <span className="truncate">
           {announcements.length > 0
-            ? announcements[tickerIndex % announcements.length]?.message
-            : "Karibu SokoMkononi — tafuta au weka mali yako leo."}
+            ? getAnnouncementMessage(
+                announcements[tickerIndex % announcements.length],
+                lang
+              )
+            : lang === "sw"
+              ? "Karibu SokoMkononi — tafuta au weka mali yako leo."
+              : "Welcome to SokoMkononi — find or list your property today."}
         </span>
       </div>
 
