@@ -128,6 +128,7 @@ export default function CategoriesPanel() {
           const count = listingsCountFor(cat.key);
           const Icon = getCategoryIcon(cat.iconKey);
           const isEditing = editing === cat.key;
+          const hasPhoto = Boolean(cat.imageUrl);
 
           return (
             <div
@@ -136,12 +137,22 @@ export default function CategoriesPanel() {
               className="border rounded-lg"
             >
               <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
-                <div
-                  style={{ background: COLORS.night }}
-                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                >
-                  <Icon size={15} color={COLORS.gold} />
-                </div>
+                {/* === PHOTO / ICON === */}
+                {hasPhoto ? (
+                  <img
+                    src={cat.imageUrl}
+                    alt={cat.label?.sw || cat.key}
+                    className="w-10 h-10 rounded-lg object-cover shrink-0"
+                  />
+                ) : (
+                  <div
+                    style={{ background: COLORS.night }}
+                    className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                  >
+                    <Icon size={15} color={COLORS.gold} />
+                  </div>
+                )}
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold text-gray-800">
@@ -184,6 +195,7 @@ export default function CategoriesPanel() {
                         : "listings"}
                   </p>
                 </div>
+
                 <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                   <button
                     onClick={() => toggleCategoryActive(cat.key)}
