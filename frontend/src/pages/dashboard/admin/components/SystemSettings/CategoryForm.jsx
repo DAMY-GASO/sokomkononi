@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { Upload, X, ImagePlus } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 import { AVAILABLE_ICONS } from "../../../../../config/categoriesStore.js";
@@ -17,11 +18,39 @@ export default function CategoryForm({
     descSw: initial.description?.sw || "",
     descEn: initial.description?.en || "",
     iconKey: initial.iconKey || "Home",
+    imageUrl: initial.imageUrl || null,
     isPopular: initial.isPopular ?? true,
     active: initial.active ?? true,
   });
+  const fileInputRef = useRef(null);
 
   const canSave = form.key.trim() && form.labelSw.trim() && form.labelEn.trim();
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert(lang === "sw" ? "Tafadhali chagua picha." : "Please choose an image.");
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      alert(
+        lang === "sw"
+          ? "Picha ni kubwa sana (max 1MB)."
+          : "Image is too large (max 1MB)."
+      );
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () =>
+      setForm((f) => ({ ...f, imageUrl: reader.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setForm((f) => ({ ...f, imageUrl: null }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -29,11 +58,7 @@ export default function CategoryForm({
 
     const slugified = isEditing
       ? form.key
-      : form.key
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9-]/g, "");
+      : form.key.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
     onSave({
       key: slugified,
@@ -43,6 +68,7 @@ export default function CategoryForm({
         en: form.descEn.trim() || form.labelEn.trim(),
       },
       iconKey: form.iconKey,
+      imageUrl: form.imageUrl,
       isPopular: form.isPopular,
       active: form.active,
       extra: initial.extra || [],
@@ -55,11 +81,73 @@ export default function CategoryForm({
       style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
       className="border-t rounded-b-lg p-4 flex flex-col gap-3"
     >
+      {/* PHOTO UPLOAD */}
+      <div>
+        <span className="text-[11px] font-semibold text-gray-500 block mb-2">
+          {lang === "sw"
+            ? "Picha ya Kuwakilisha Category"
+            : "Representative Photo"}
+        </span>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        {form.imageUrl ? (
+          <div className="flex items-center gap-3">
+            <img
+              src={form.imageUrl}
+              alt="Category preview"
+              className="w-24 h-24 rounded-lg object-cover border"
+              style={{ borderColor: COLORS.sandLine }}
+            />
+            <div className="flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-[11px] font-semibold px-3 py-1.5 rounded-lg border"
+                style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
+              >
+                {lang === "sw" ? "Badilisha" : "Change"}
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                className="flex items-center gap-1 text-[11px] font-semibold"
+                style={{ color: COLORS.rust }}
+              >
+                <X size={12} />
+                {lang === "sw" ? "Ondoa" : "Remove"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            style={{ borderColor: COLORS.sandLine, color: "rgba(16,26,46,0.55)" }}
+            className="w-full rounded-xl border-2 border-dashed py-5 flex flex-col items-center gap-1.5"
+          >
+            <ImagePlus size={22} color="rgba(16,26,46,0.35)" />
+            <span className="text-xs font-medium">
+              {lang === "sw"
+                ? "Bofya kupakia picha (max 1MB)"
+                : "Click to upload photo (max 1MB)"}
+            </span>
+          </button>
+        )}
+        <p className="text-[10px] text-gray-400 mt-1">
+          {lang === "sw"
+            ? "Kama hutaweka picha, icon itatumika kama fallback."
+            : "If no photo, icon will be used as fallback."}
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-gray-500">
-            Key (slug)
-          </span>
+          <span className="text-[11px] font-semibold text-gray-500">Key (slug)</span>
           <input
             value={form.key}
             onChange={(e) => setForm({ ...form, key: e.target.value })}
@@ -67,16 +155,11 @@ export default function CategoryForm({
             disabled={isEditing}
             className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:bg-gray-100 disabled:text-gray-500"
           />
-          {!isEditing && (
-            <span className="text-[10px] text-gray-400">
-              {lang === "sw"
-                ? "Herufi ndogo, namba, na `-` pekee."
-                : "Lowercase letters, numbers, and `-` only."}
-            </span>
-          )}
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-gray-500">Icon</span>
+          <span className="text-[11px] font-semibold text-gray-500">
+            {lang === "sw" ? "Icon (fallback)" : "Icon (fallback)"}
+          </span>
           <select
             value={form.iconKey}
             onChange={(e) => setForm({ ...form, iconKey: e.target.value })}
@@ -113,7 +196,9 @@ export default function CategoryForm({
         </label>
         <label className="flex flex-col gap-1 sm:col-span-2">
           <span className="text-[11px] font-semibold text-gray-500">
-            {lang === "sw" ? "Maelezo (Kiswahili) — hiari" : "Description (Swahili) — optional"}
+            {lang === "sw"
+              ? "Maelezo (Kiswahili) — hiari"
+              : "Description (Swahili) — optional"}
           </span>
           <input
             value={form.descSw}
@@ -123,7 +208,9 @@ export default function CategoryForm({
         </label>
         <label className="flex flex-col gap-1 sm:col-span-2">
           <span className="text-[11px] font-semibold text-gray-500">
-            {lang === "sw" ? "Maelezo (Kiingereza) — hiari" : "Description (English) — optional"}
+            {lang === "sw"
+              ? "Maelezo (Kiingereza) — hiari"
+              : "Description (English) — optional"}
           </span>
           <input
             value={form.descEn}
@@ -150,7 +237,9 @@ export default function CategoryForm({
             checked={form.active}
             onChange={(e) => setForm({ ...form, active: e.target.checked })}
           />
-          {lang === "sw" ? "Hai (inapatikana kwa wauzaji)" : "Active (available to sellers)"}
+          {lang === "sw"
+            ? "Hai (inapatikana kwa wauzaji)"
+            : "Active (available to sellers)"}
         </label>
       </div>
 
