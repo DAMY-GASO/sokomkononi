@@ -11,18 +11,19 @@
 //
 // Sasa zote zinasoma kutoka hapa. Admin anaweza:
 //   - Kuongeza category mpya
-//   - Kubadilisha label/description/icon/fields
+//   - Kubadilisha label/description/icon/imageUrl/fields
 //   - Kuweka isPopular (inaonekana HomePage + Navbar)
 //   - Kuzima (active: false) bila kufuta
 //   - Kufuta — LAKINI tu ikiwa hakuna listings zenye category hiyo
+//
+// PICHA: Kila category ina `imageUrl` (base64 data URL kwa demo,
+// Cloudinary/S3 URL baada ya backend). Kama imageUrl ni null, UI
+// inaonyesha icon (fallback) kutoka `iconKey`.
 //
 // LISTING FEE: Kila category mpya LAZIMA iwe na fee config kwenye
 // listingFeeStore. Kama haipo, calculateListingFee inarudi
 // { fee: null, error: "NO_FEE_CONFIG" } — UI inapaswa kumuelekeza
 // Admin kwenye Revenue > Listing Fee.
-//
-// ICONS: Admin anachagua iconKey kutoka AVAILABLE_ICONS. Store
-// inahifadhi string; UI inarudisha component kwa getCategoryIcon().
 // ============================================================
 
 import { useEffect, useState } from "react";
@@ -53,7 +54,7 @@ const STORAGE_KEY = "sokomkononi_categories_v1";
 const UPDATE_EVENT = "sokomkononi:categories-updated";
 
 // ============================================================
-// ICONS ZINAZOPATIKANA kwa Admin kuchagua
+// ICONS ZINAZOPATIKANA kwa Admin kuchagua (fallback)
 // ============================================================
 export const AVAILABLE_ICONS = {
   Home,
@@ -88,6 +89,7 @@ export function getCategoryIcon(iconKey) {
 export const SEED_CATEGORIES = [
   {
     key: "nyumba",
+    imageUrl: null,
     label: { sw: "Nyumba & Majengo", en: "Houses & Buildings" },
     description: {
       sw: "Pata nyumba, apartments, na majengo yote Tanzania",
@@ -105,6 +107,7 @@ export const SEED_CATEGORIES = [
   },
   {
     key: "viwanja",
+    imageUrl: null,
     label: { sw: "Viwanja & Mashamba", en: "Plots & Land" },
     description: {
       sw: "Viwanja vya makazi, kilimo, na biashara",
@@ -121,6 +124,7 @@ export const SEED_CATEGORIES = [
   },
   {
     key: "magari",
+    imageUrl: null,
     label: { sw: "Magari", en: "Cars" },
     description: {
       sw: "Magari mapya na yaliyotumika Tanzania",
@@ -138,6 +142,7 @@ export const SEED_CATEGORIES = [
   },
   {
     key: "biashara",
+    imageUrl: null,
     label: { sw: "Biashara Zinazouzwa", en: "Businesses for Sale" },
     description: {
       sw: "Biashara zinazouzwa - maduka, migahawa, n.k.",
@@ -154,6 +159,7 @@ export const SEED_CATEGORIES = [
   },
   {
     key: "mashine",
+    imageUrl: null,
     label: { sw: "Mashine / Heavy Equipment", en: "Machinery / Heavy Equipment" },
     description: {
       sw: "Mashine za ujenzi, kilimo, na viwanda",
@@ -170,6 +176,7 @@ export const SEED_CATEGORIES = [
   },
   {
     key: "pikipiki",
+    imageUrl: null,
     label: { sw: "Pikipiki", en: "Motorcycles" },
     description: {
       sw: "Pikipiki za aina zote Tanzania",
@@ -182,6 +189,7 @@ export const SEED_CATEGORIES = [
   },
   {
     key: "mabasi",
+    imageUrl: null,
     label: { sw: "Mabasi", en: "Buses" },
     description: {
       sw: "Mabasi ya abiria na mizigo",
@@ -194,6 +202,7 @@ export const SEED_CATEGORIES = [
   },
   {
     key: "samani",
+    imageUrl: null,
     label: { sw: "Samani", en: "Furniture" },
     description: {
       sw: "Samani za nyumbani na ofisi",
@@ -206,6 +215,7 @@ export const SEED_CATEGORIES = [
   },
   {
     key: "vifaa-vya-elektroniki",
+    imageUrl: null,
     label: { sw: "Vifaa vya Elektroniki", en: "Electronics" },
     description: {
       sw: "Simu, kompyuta, TV na vifaa vingine vya elektroniki",
@@ -218,6 +228,7 @@ export const SEED_CATEGORIES = [
   },
   {
     key: "mifugo",
+    imageUrl: null,
     label: { sw: "Mifugo", en: "Livestock" },
     description: {
       sw: "Ng'ombe, mbuzi, kuku na mifugo mingine",
@@ -230,6 +241,7 @@ export const SEED_CATEGORIES = [
   },
   {
     key: "vifaa-vya-nyumbani",
+    imageUrl: null,
     label: { sw: "Vifaa vya Nyumbani", en: "Home Appliances" },
     description: {
       sw: "Friji, jiko, mashine za kufulia na vifaa vingine",
@@ -299,7 +311,12 @@ export function addCategory(category) {
   if (exists) {
     throw new Error(`Category "${category.key}" already exists`);
   }
-  const next = [...current, category];
+  // Hakikisha imageUrl inahifadhiwa (null kama haipo)
+  const newCat = {
+    imageUrl: null,
+    ...category,
+  };
+  const next = [...current, newCat];
   saveAll(next);
   return next;
 }
@@ -331,12 +348,7 @@ export function toggleCategoryPopular(key) {
 
 /**
  * Kufuta category. Inarudi { success: false, error, listingsCount }
- * kama bado kuna listings zenye category hiyo — Admin LAZIMA
- * kuhamisha/kufuta listings kwanza.
- *
- * @param {string} key - category key
- * @param {number} listingsCount - idadi ya listings zenye category hii
- *   (UI inapaswa ku-hesabu kwa useListings() kisha kuipitisha)
+ * kama bado kuna listings zenye category hiyo.
  */
 export function removeCategory(key, listingsCount = 0) {
   if (listingsCount > 0) {
@@ -351,6 +363,25 @@ export function removeCategory(key, listingsCount = 0) {
   const next = current.filter((c) => c.key !== key);
   saveAll(next);
   return { success: true, categories: next };
+}
+
+// ============================================================
+// IMAGE HELPERS
+// ============================================================
+/**
+ * Category ina picha? — inatumika na UI kuamua kama ionyeshe
+ * <img> au icon fallback.
+ */
+export function hasCategoryImage(category) {
+  return Boolean(category?.imageUrl && category.imageUrl.length > 0);
+}
+
+/**
+ * Sasisha picha ya category (base64 data URL kwa demo, Cloudinary URL
+ * baada ya backend). Admin pekee anaita hii.
+ */
+export function updateCategoryImage(key, imageUrl) {
+  return updateCategory(key, { imageUrl });
 }
 
 // ============================================================
