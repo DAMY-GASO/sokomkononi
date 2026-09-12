@@ -2,6 +2,7 @@
 // UserDrawer.jsx
 // Drawer ya mtumiaji (kwa User Management) — inaonyesha
 // listings zake na deals zake.
+// Mobile-responsive.
 // ============================================================
 
 import React from "react";
@@ -19,38 +20,50 @@ export default function UserDrawer({ user, listings, deals, onClose, lang }) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
+      {/* Overlay */}
       <div className="flex-1 bg-black/40" onClick={onClose} />
+
+      {/* Drawer */}
       <div
-        className="w-full sm:w-96 h-full bg-white shadow-2xl overflow-y-auto"
+        className="w-full sm:w-96 sm:max-w-md h-full bg-white shadow-2xl overflow-y-auto"
         style={{ fontFamily: FONTS.body }}
       >
+        {/* Header — sticky */}
         <div
-          className="sticky top-0 p-4 flex items-center justify-between border-b"
+          className="sticky top-0 z-10 p-4 flex items-center justify-between border-b"
           style={{ borderColor: COLORS.sandLine, background: "white" }}
         >
-          <h3 className="font-semibold text-gray-800">
+          <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
             {lang === "sw" ? "Wasifu wa Mtumiaji" : "User Profile"}
           </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-1 -mr-1"
+            aria-label={lang === "sw" ? "Funga" : "Close"}
+          >
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
-          {/* Header */}
+        <div className="p-4 sm:p-5 space-y-5">
+          {/* Header — avatar + jina */}
           <div className="flex items-center gap-3">
             <div
-              className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold"
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-base sm:text-lg font-bold shrink-0"
               style={{ background: `${COLORS.gold}20`, color: COLORS.gold }}
             >
               {user.name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-gray-800 truncate">{user.name}</p>
+              <p className="font-semibold text-gray-800 truncate">
+                {user.name}
+              </p>
               <p className="text-xs text-gray-500 truncate">{user.email}</p>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <StatusBadge status={user.status} lang={lang} />
-                <span className="text-xs text-gray-400 capitalize">{user.role}</span>
+                <span className="text-xs text-gray-400 capitalize">
+                  {user.role}
+                </span>
               </div>
             </div>
           </div>
@@ -60,19 +73,25 @@ export default function UserDrawer({ user, listings, deals, onClose, lang }) {
             className="rounded-xl p-3 text-xs space-y-1.5"
             style={{ background: COLORS.sand }}
           >
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-2">
               <span className="text-gray-500">
                 {lang === "sw" ? "Alijiunga:" : "Joined:"}
               </span>
-              <span className="font-medium text-gray-700">{user.joined}</span>
+              <span className="font-medium text-gray-700 text-right">
+                {user.joined}
+              </span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-2">
               <span className="text-gray-500">Listings:</span>
-              <span className="font-medium text-gray-700">{userListings.length}</span>
+              <span className="font-medium text-gray-700">
+                {userListings.length}
+              </span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-2">
               <span className="text-gray-500">Deals:</span>
-              <span className="font-medium text-gray-700">{userDeals.length}</span>
+              <span className="font-medium text-gray-700">
+                {userDeals.length}
+              </span>
             </div>
           </div>
 
@@ -95,8 +114,12 @@ export default function UserDrawer({ user, listings, deals, onClose, lang }) {
                     className="flex items-center justify-between gap-2 text-xs border rounded-lg px-3 py-2"
                     style={{ borderColor: COLORS.sandLine }}
                   >
-                    <span className="truncate text-gray-700">{l.title}</span>
-                    <StatusBadge status={l.status} lang={lang} />
+                    <span className="truncate text-gray-700 min-w-0 flex-1">
+                      {l.title}
+                    </span>
+                    <div className="shrink-0">
+                      <StatusBadge status={l.status} lang={lang} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -122,8 +145,12 @@ export default function UserDrawer({ user, listings, deals, onClose, lang }) {
                     className="flex items-center justify-between gap-2 text-xs border rounded-lg px-3 py-2"
                     style={{ borderColor: COLORS.sandLine }}
                   >
-                    <span className="truncate text-gray-700">{d.listingTitle}</span>
-                    <StatusBadge status={d.status} lang={lang} />
+                    <span className="truncate text-gray-700 min-w-0 flex-1">
+                      {d.listingTitle}
+                    </span>
+                    <div className="shrink-0">
+                      <StatusBadge status={d.status} lang={lang} />
+                    </div>
                   </div>
                 ))}
               </div>
