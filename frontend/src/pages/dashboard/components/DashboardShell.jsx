@@ -46,6 +46,9 @@ import DealRooms from "./DealRooms";
 import BrowseProperties from "./BrowseProperties";
 import BottomNav from "../../../components/BottomNav.jsx";
 
+// Seller Overview
+import SellerOverview from "../seller/SellerOverview.jsx";
+
 // Kurasa mpya
 import SavedPropertiesPage from "../../SavedPropertiesPage";
 import MessagesPage from "../../MessagesPage";
@@ -55,6 +58,7 @@ import WaitingListPage from "../../WaitingListPage";
 import { useWaitingList, leaveWaitingList } from "../../../config/waitingListStore.js";
 
 const SELLER_NAV = [
+  { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
   { key: "post", label: { sw: "Weka Mali Yako", en: "Post Property" }, icon: PlusCircle },
   { key: "listings", label: { sw: "My Listings", en: "My Listings" }, icon: ListChecks },
   { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
@@ -78,8 +82,9 @@ const BUYER_NAV = [
 ];
 
 const URL_TO_STATE = {
-  "/dashboard": { side: "seller", key: "listings" },
-  "/dashboard/seller": { side: "seller", key: "listings" },
+  "/dashboard": { side: "seller", key: "overview" },
+  "/dashboard/seller": { side: "seller", key: "overview" },
+  "/dashboard/overview": { side: "seller", key: "overview" },
   "/dashboard/post": { side: "seller", key: "post" },
   "/dashboard/listings": { side: "seller", key: "listings" },
   "/dashboard/saved": { side: "seller", key: "saved" },
@@ -100,6 +105,7 @@ const URL_TO_STATE = {
 
 const STATE_TO_URL = {
   seller: {
+    overview: "/dashboard/overview",
     post: "/dashboard/post",
     listings: "/dashboard/listings",
     saved: "/dashboard/saved",
@@ -124,7 +130,6 @@ const STATE_TO_URL = {
 
 // ============================================================
 // ANNOUNCEMENT HELPERS — bilingual
-// Inachagua title/message kwa lugha sahihi, na fallback kwenye SW.
 // ============================================================
 function getAnnouncementMessage(a, lang) {
   if (!a) return "";
@@ -145,7 +150,7 @@ export default function DashboardShell() {
   const { user, logout } = useAuth();
 
   const [side, setSide] = useState("seller");
-  const [activeKey, setActiveKey] = useState(SELLER_NAV[0].key);
+  const [activeKey, setActiveKey] = useState("overview");
   const [tickerIndex, setTickerIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -306,7 +311,7 @@ export default function DashboardShell() {
 
   const handleSideChange = (newSide) => {
     setSide(newSide);
-    const firstKey = newSide === "seller" ? "post" : "browse";
+    const firstKey = newSide === "seller" ? "overview" : "browse";
     setActiveKey(firstKey);
     const url = STATE_TO_URL[newSide]?.[firstKey];
     if (url) {
@@ -329,6 +334,9 @@ export default function DashboardShell() {
   // RENDER MAIN CONTENT
   // ============================================================
   const renderMain = () => {
+    if (activeKey === "overview") {
+      return <SellerOverview onNavigate={handleNavClick} />;
+    }
     if (activeKey === "post") {
       return (
         <PostPropertyForm
