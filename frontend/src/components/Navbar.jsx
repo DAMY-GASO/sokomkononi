@@ -2,7 +2,10 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import { usePopularCategories } from "../config/categoriesStore.js";
+import {
+  usePopularCategories,
+  getCategoryIcon,
+} from "../config/categoriesStore.js";
 
 export default function Navbar({
   lang: langProp,
@@ -86,6 +89,9 @@ export default function Navbar({
   // Helper ya kupata key/slug ya category
   const getCatKey = (cat) => cat.key || cat.slug;
 
+  // Helper ya kupata picha ya category (null kama haipo)
+  const getCatImage = (cat) => cat.imageUrl || null;
+
   return (
     <>
       {/* HEADER */}
@@ -133,16 +139,29 @@ export default function Navbar({
               </button>
               {catOpen && (
                 <div className="absolute left-0 mt-2 w-56 bg-[#182541] border border-white/10 rounded-lg shadow-xl py-2 z-50 max-h-96 overflow-y-auto">
-                  {displayCategories.map((cat) => (
-                    <Link
-                      key={getCatKey(cat)}
-                      to={`/kategoria/${getCatKey(cat)}`}
-                      onClick={() => setCatOpen(false)}
-                      className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
-                    >
-                      {getCatLabel(cat)}
-                    </Link>
-                  ))}
+                  {displayCategories.map((cat) => {
+                    const CatIcon = getCategoryIcon(cat.iconKey);
+                    const img = getCatImage(cat);
+                    return (
+                      <Link
+                        key={getCatKey(cat)}
+                        to={`/kategoria/${getCatKey(cat)}`}
+                        onClick={() => setCatOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+                      >
+                        {img ? (
+                          <img
+                            src={img}
+                            alt=""
+                            className="w-5 h-5 rounded object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <CatIcon size={16} className="text-white/50 flex-shrink-0" />
+                        )}
+                        <span className="truncate">{getCatLabel(cat)}</span>
+                      </Link>
+                    );
+                  })}
                   <div className="border-t border-white/10 mt-1 pt-1">
                     <Link
                       to="/kategoria"
@@ -507,16 +526,29 @@ export default function Navbar({
               style={{ display: "grid" }}
             >
               <div className="overflow-hidden pl-2">
-                {displayCategories.map((cat) => (
-                  <Link
-                    key={getCatKey(cat)}
-                    to={`/kategoria/${getCatKey(cat)}`}
-                    onClick={() => setMenuOpen(false)}
-                    className="block text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
-                  >
-                    {getCatLabel(cat)}
-                  </Link>
-                ))}
+                {displayCategories.map((cat) => {
+                  const CatIcon = getCategoryIcon(cat.iconKey);
+                  const img = getCatImage(cat);
+                  return (
+                    <Link
+                      key={getCatKey(cat)}
+                      to={`/kategoria/${getCatKey(cat)}`}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2.5 text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
+                    >
+                      {img ? (
+                        <img
+                          src={img}
+                          alt=""
+                          className="w-5 h-5 rounded object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <CatIcon size={16} className="text-white/40 flex-shrink-0" />
+                      )}
+                      <span className="truncate">{getCatLabel(cat)}</span>
+                    </Link>
+                  );
+                })}
                 <Link
                   to="/kategoria"
                   onClick={() => setMenuOpen(false)}
