@@ -9,6 +9,7 @@
 //   - ADMIN_NOTIFICATION_ICONS (icons za notifications)
 //   - timeAgo() (kwa notifications)
 //   - formatTZS() (kwa pesa)
+//   - getCategory() / getCategoryIcon() — re-export kutoka categoriesStore
 //
 // Sections zote zinatumia NAV hii.
 // ============================================================
@@ -40,6 +41,15 @@ import {
   Calendar,
 } from "lucide-react";
 import { NOTIFICATION_EVENTS } from "../../../../config/notificationsStore.js";
+
+// ============================================================
+// RE-EXPORTS — kwa urahisi wa sections
+// ============================================================
+export {
+  getCategory,
+  getCategoryIcon,
+  getCategoryLabel,
+} from "../../../../config/categoriesStore.js";
 
 export const COLORS = {
   night: "#101A2E",
