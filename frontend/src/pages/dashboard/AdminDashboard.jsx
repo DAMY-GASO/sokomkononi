@@ -1,24 +1,82 @@
 // ============================================================
-// AdminDashboard.jsx — SHELL PEKEE
+// AdminDashboard.jsx — SHELL PEKEE + Routes + Permissions
 // ============================================================
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import {
   useNotifications,
   getLocalizedField,
 } from "../../config/notificationsStore.js";
-import { Menu, X, Bell, LogOut, User as UserIcon, Settings } from "lucide-react";
+import { Menu, X, Bell, LogOut, User as UserIcon, Settings, Lock } from "lucide-react";
 
 import { COLORS, FONTS, NAV, ADMIN_NOTIFICATION_ICONS, timeAgo } from "./admin/shared/constants.js";
+
+// Core sections
 import OverviewSection from "./admin/sections/OverviewSection.jsx";
 import UserManagementSection from "./admin/sections/UserManagementSection.jsx";
 import ModerationSection from "./admin/sections/ModerationSection.jsx";
+import VerificationSection from "./admin/sections/VerificationSection.jsx";
 import DealsSection from "./admin/sections/DealsSection.jsx";
 import RevenueSection from "./admin/sections/RevenueSection.jsx";
+import PromotionsSection from "./admin/sections/PromotionsSection.jsx";
+import ReportsSection from "./admin/sections/ReportsSection.jsx";
+
+// Support & Content
+import SupportSection from "./admin/sections/SupportSection.jsx";
+import ContentSection from "./admin/sections/ContentSection.jsx";
+
+// System
+import AuditLogsSection from "./admin/sections/AuditLogsSection.jsx";
 import SystemSettingsSection from "./admin/sections/SystemSettingsSection.jsx";
+import RBACSection from "./admin/sections/RBACSection.jsx";
 import AdminProfile from "./admin/sections/AdminProfile.jsx";
+
+// Badges
+import { usePendingVerificationsCount } from "../../config/verificationsStore.js";
+import { useOpenTicketsCount } from "../../config/ticketsStore.js";
+
+// Permissions
+import { useRoles, getRole } from "../../config/rolesStore.js";
+
+// ============================================================
+// URL ↔ STATE MAPPING
+// ============================================================
+const URL_TO_STATE = {
+  "/admin": "overview",
+  "/admin/overview": "overview",
+  "/admin/users": "users",
+  "/admin/moderation": "moderation",
+  "/admin/verification": "verification",
+  "/admin/deals": "deals",
+  "/admin/revenue": "revenue",
+  "/admin/promotions": "promotions",
+  "/admin/reports": "reports",
+  "/admin/support": "support",
+  "/admin/content": "content",
+  "/admin/audit": "audit",
+  "/admin/system": "system",
+  "/admin/staff": "staff",
+  "/admin/profile": "profile",
+};
+
+const STATE_TO_URL = {
+  overview: "/admin/overview",
+  users: "/admin/users",
+  moderation: "/admin/moderation",
+  verification: "/admin/verification",
+  deals: "/admin/deals",
+  revenue: "/admin/revenue",
+  promotions: "/admin/promotions",
+  reports: "/admin/reports",
+  support: "/admin/support",
+  content: "/admin/content",
+  audit: "/admin/audit",
+  system: "/admin/system",
+  staff: "/admin/staff",
+  profile: "/admin/profile",
+};
 
 // ============================================================
 // AVATAR
@@ -126,16 +184,63 @@ export default function AdminDashboard() {
   const { user, isAdmin, logout } = useAuth();
   const { lang, setLang } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { notifications, unreadCount, markRead } = useNotifications("admin");
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
+  // Badges
+  const pendingVerificationsCount = usePendingVerificationsCount();
+  const openTicketsCount = useOpenTicketsCount();
+
+  // Permissions
+  const roles = useRoles();
+
+  // ============================================================
+  // ACTIVE SECTION — kutoka URL
+  // ============================================================
+  const activeSection = useMemo(() => {
+    const path = location.pathname;
+    return URL_TO_STATE[path] || "overview";
+  }, [location.pathname]);
+
+  // ============================================================
+  // STAFF PERMISSIONS — nani anaweza kuona nini
+  // ============================================================
+  const staffRole = useMemo(() => {
+    // Super Admin (default) — anaona kila kitu
+    if (isAdmin && !user?.roleKey) {
+      return getRole("super_admin");
+    }
+    // Staff aliye na roleKey — anaona kulingana na permissions zake
+    if (user?.roleKey) {
+      return getRole(user.roleKey);
+    }
+    // Fallback: Super Admin
+    return getRole("super_admin");
+  }, [isAdmin, user?.roleKey]);
+
+  const canAccess = (sectionKey) => {
+    // Profile na System — kila mtu anaweza kufikia yake
+    if (sectionKey === "profile" || sectionKey === "system") return true;
+    // Overview — kila mtu
+    if (sectionKey === "overview") return true;
+    // Angalia permissions
+    if (!staffRole) return false;
+    return staffRole.permissions?.includes(sectionKey);
+  };
+
+  // Filter NAV kulingana na permissions
+  const visibleNav = useMemo(() => {
+    return NAV.filter((item) => canAccess(item.key));
+  }, [staffRole]);
+
   const openNotification = (n) => {
     markRead(n.id);
-    setActiveSection(n.target || "overview");
+    const target = n.target || "overview";
+    navigate(STATE_TO_URL[target] || STATE_TO_URL.overview);
     setNotifOpen(false);
   };
 
@@ -156,6 +261,17 @@ export default function AdminDashboard() {
     navigate("/admin/login");
   };
 
+  // ============================================================
+  // NAVIGATION — setActiveSection inatumika kama navigate
+  // ============================================================
+  const handleNavClick = (key) => {
+    const url = STATE_TO_URL[key];
+    if (url) {
+      navigate(url);
+    }
+    setSidebarOpen(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -172,24 +288,83 @@ export default function AdminDashboard() {
   }
 
   const renderSection = () => {
+    // Kama hana ruhusa — onyesha "Access Denied"
+    if (!canAccess(activeSection)) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center max-w-md px-4">
+            <div
+              style={{ background: `${COLORS.rust}15` }}
+              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <Lock size={28} color={COLORS.rust} />
+            </div>
+            <h2
+              style={{ fontFamily: FONTS.display, color: COLORS.night }}
+              className="text-xl font-semibold mb-2"
+            >
+              {lang === "sw" ? "Huna Ruhusa" : "Access Denied"}
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {lang === "sw"
+                ? "Huna ruhusa ya kufikia sehemu hii. Wasiliana na Super Admin."
+                : "You don't have permission to access this section. Contact Super Admin."}
+            </p>
+            <button
+              onClick={() => navigate(STATE_TO_URL.overview)}
+              style={{ background: COLORS.gold, color: COLORS.night }}
+              className="text-xs font-semibold px-4 py-2.5 rounded-lg"
+            >
+              {lang === "sw" ? "Rudi kwenye Muhtasari" : "Back to Overview"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     switch (activeSection) {
       case "overview":
-        return <OverviewSection onNavigate={setActiveSection} />;
+        return <OverviewSection onNavigate={handleNavClick} />;
       case "users":
         return <UserManagementSection />;
       case "moderation":
         return <ModerationSection />;
+      case "verification":
+        return <VerificationSection />;
       case "deals":
         return <DealsSection />;
       case "revenue":
         return <RevenueSection />;
+      case "promotions":
+        return <PromotionsSection />;
+      case "reports":
+        return <ReportsSection />;
+      case "support":
+        return <SupportSection />;
+      case "content":
+        return <ContentSection />;
+      case "audit":
+        return <AuditLogsSection />;
       case "system":
         return <SystemSettingsSection />;
+      case "staff":
+        return <RBACSection />;
       case "profile":
         return <AdminProfile />;
       default:
-        return <OverviewSection onNavigate={setActiveSection} />;
+        return <OverviewSection onNavigate={handleNavClick} />;
     }
+  };
+
+  // Badge helper
+  const getBadge = (key) => {
+    if (key === "verification" && pendingVerificationsCount > 0) {
+      return pendingVerificationsCount;
+    }
+    if (key === "support" && openTicketsCount > 0) {
+      return openTicketsCount;
+    }
+    return null;
   };
 
   return (
@@ -222,6 +397,11 @@ export default function AdminDashboard() {
           <span className="text-[10px] font-semibold bg-[#E8A33D]/20 text-[#E8A33D] px-2.5 py-0.5 rounded-full">
             ADMIN
           </span>
+          {staffRole && staffRole.key !== "super_admin" && (
+            <span className="hidden sm:inline text-[10px] font-semibold bg-white/10 text-white/70 px-2 py-0.5 rounded-full">
+              {staffRole.label?.[lang] || staffRole.label?.sw}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -338,7 +518,7 @@ export default function AdminDashboard() {
 
                   <button
                     onClick={() => {
-                      setActiveSection("profile");
+                      navigate(STATE_TO_URL.profile);
                       setProfileMenuOpen(false);
                     }}
                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
@@ -349,7 +529,7 @@ export default function AdminDashboard() {
 
                   <button
                     onClick={() => {
-                      setActiveSection("system");
+                      navigate(STATE_TO_URL.system);
                       setProfileMenuOpen(false);
                     }}
                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
@@ -383,12 +563,13 @@ export default function AdminDashboard() {
           style={{ borderColor: COLORS.sandLine }}
           className="hidden md:flex w-64 shrink-0 border-r flex-col py-4 px-3 gap-1 min-h-[calc(100vh-56px)]"
         >
-          {NAV.map(({ key, label, icon: Icon }) => {
+          {visibleNav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeSection;
+            const badge = getBadge(key);
             return (
               <button
                 key={key}
-                onClick={() => setActiveSection(key)}
+                onClick={() => handleNavClick(key)}
                 style={{
                   background: isActive ? COLORS.night : "transparent",
                   color: isActive ? COLORS.sand : COLORS.night,
@@ -396,7 +577,18 @@ export default function AdminDashboard() {
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left"
               >
                 <Icon size={17} color={isActive ? COLORS.gold : COLORS.night} />
-                {label[lang] || label.sw}
+                <span className="flex-1 truncate">{label[lang] || label.sw}</span>
+                {badge && (
+                  <span
+                    style={{
+                      background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust,
+                      color: isActive ? COLORS.sand : "white",
+                    }}
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                  >
+                    {badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -407,25 +599,25 @@ export default function AdminDashboard() {
           <div className="md:hidden fixed inset-0 z-40 flex">
             <div
               style={{ background: COLORS.sand }}
-              className="w-64 h-full py-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto"
+              className="w-72 max-w-[85%] h-full pt-20 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto"
             >
               <div className="flex justify-end mb-2">
                 <button
                   onClick={() => setSidebarOpen(false)}
                   aria-label={lang === "sw" ? "Funga" : "Close"}
+                  className="p-2 text-gray-400 hover:text-gray-600"
                 >
                   <X size={20} color={COLORS.night} />
                 </button>
               </div>
-              {NAV.map(({ key, label, icon: Icon }) => {
+
+              {visibleNav.map(({ key, label, icon: Icon }) => {
                 const isActive = key === activeSection;
+                const badge = getBadge(key);
                 return (
                   <button
                     key={key}
-                    onClick={() => {
-                      setActiveSection(key);
-                      setSidebarOpen(false);
-                    }}
+                    onClick={() => handleNavClick(key)}
                     style={{
                       background: isActive ? COLORS.night : "transparent",
                       color: isActive ? COLORS.sand : COLORS.night,
@@ -436,7 +628,18 @@ export default function AdminDashboard() {
                       size={17}
                       color={isActive ? COLORS.gold : COLORS.night}
                     />
-                    {label[lang] || label.sw}
+                    <span className="flex-1 truncate">{label[lang] || label.sw}</span>
+                    {badge && (
+                      <span
+                        style={{
+                          background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust,
+                          color: isActive ? COLORS.sand : "white",
+                        }}
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                      >
+                        {badge}
+                      </span>
+                    )}
                   </button>
                 );
               })}
