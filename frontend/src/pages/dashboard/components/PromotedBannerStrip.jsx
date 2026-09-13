@@ -8,12 +8,8 @@ const ROTATION_MS = 5000;
 
 // ============================================================
 // PromotedBannerStrip
-// Banner inayozunguka (kila sekunde 5) kwenye Dashboard, ikionyesha
-// listing zilizonunuliwa kupitia AdvertiseSasa.jsx (Advertisement
-// Fee). Inaonekana kwa buyer na seller side zote mbili.
-//
-// Haionekani kabisa (haichukui nafasi) ikiwa hakuna banner hai
-// kwa sasa — si placeholder tupu.
+// Banner inayozunguka (kila sekunde 5) kwenye Dashboard.
+// KILA KITU CENTERED + bilingual kamili.
 // ============================================================
 export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
   const { lang } = useLanguage();
@@ -34,6 +30,8 @@ export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
   const category = getCategory(banner.category);
   const Icon = category?.icon;
 
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
   return (
     <button
       onClick={() => onOpenListing(banner.listingId)}
@@ -41,30 +39,37 @@ export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
         background: `linear-gradient(90deg, ${COLORS.night} 0%, ${COLORS.nightSoft} 100%)`,
         fontFamily: FONTS.body,
       }}
-      className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-opacity hover:opacity-95"
-      aria-label={lang === "sw" ? "Tangazo lililolipiwa" : "Sponsored listing"}
+      className="w-full flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 px-4 py-3 text-center sm:text-left transition-opacity hover:opacity-95"
+      aria-label={t("Tangazo lililolipiwa", "Sponsored listing")}
     >
-      <span
-        style={{ background: "rgba(232,163,61,0.18)", color: COLORS.gold }}
-        className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full shrink-0 uppercase tracking-wide"
-      >
-        <Megaphone size={11} /> {lang === "sw" ? "Tangazo" : "Sponsored"}
-      </span>
+      {/* Badge + Icon — centered kwenye mobile, inline kwenye desktop */}
+      <div className="flex items-center gap-2 shrink-0">
+        <span
+          style={{ background: "rgba(232,163,61,0.18)", color: COLORS.gold }}
+          className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide"
+        >
+          <Megaphone size={11} /> {t("Tangazo", "Sponsored")}
+        </span>
 
-      <div
-        style={{ background: COLORS.gold }}
-        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-      >
-        {Icon && <Icon size={15} color={COLORS.night} />}
+        <div
+          style={{ background: COLORS.gold }}
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+        >
+          {Icon && <Icon size={15} color={COLORS.night} />}
+        </div>
       </div>
 
-      <div className="flex-1 min-w-0">
-        <p style={{ color: COLORS.sand }} className="text-sm font-semibold truncate">
+      {/* Title + Location/Price — centered */}
+      <div className="flex-1 min-w-0 text-center sm:text-left">
+        <p
+          style={{ color: COLORS.sand }}
+          className="text-sm font-semibold truncate"
+        >
           {banner.listingTitle}
         </p>
         <p
           style={{ color: "rgba(245,243,236,0.6)" }}
-          className="flex items-center gap-1 text-xs truncate"
+          className="flex items-center justify-center sm:justify-start gap-1 text-xs truncate"
         >
           <MapPin size={10} className="shrink-0" /> {banner.location}
           <span className="mx-1">•</span>
@@ -72,14 +77,17 @@ export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
         </p>
       </div>
 
+      {/* Dots — centered */}
       {banners.length > 1 && (
-        <div className="hidden sm:flex items-center gap-1 shrink-0">
+        <div className="flex items-center justify-center gap-1 shrink-0">
           {banners.map((_, i) => (
             <span
               key={i}
               style={{
                 background:
-                  i === index % banners.length ? COLORS.gold : "rgba(245,243,236,0.25)",
+                  i === index % banners.length
+                    ? COLORS.gold
+                    : "rgba(245,243,236,0.25)",
               }}
               className="w-1.5 h-1.5 rounded-full"
             />
@@ -87,7 +95,12 @@ export default function PromotedBannerStrip({ onOpenListing = () => {} }) {
         </div>
       )}
 
-      <ChevronRight size={16} color="rgba(245,243,236,0.5)" className="shrink-0" />
+      {/* Chevron — centered kwenye mobile, inline kwenye desktop */}
+      <ChevronRight
+        size={16}
+        color="rgba(245,243,236,0.5)"
+        className="shrink-0 hidden sm:block"
+      />
     </button>
   );
 }
