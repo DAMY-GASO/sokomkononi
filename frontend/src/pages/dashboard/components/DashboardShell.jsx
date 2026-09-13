@@ -43,7 +43,7 @@ import { addTransaction } from "../../../config/transactionsStore.js";
 import { useNewLeadsCount } from "../../../config/leadsStore.js";
 import PostPropertyForm from "./PostPropertyForm";
 import MyListings from "./MyListings";
-import LeadsSection from "./LeadsSection";
+import LeadsSection from "../seller/LeadsSection";
 import BoostSasa from "./BoostSasa";
 import LeadingSasa from "./LeadingSasa";
 import AdvertiseSasa from "./AdvertiseSasa";
