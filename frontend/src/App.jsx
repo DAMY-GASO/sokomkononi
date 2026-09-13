@@ -79,14 +79,14 @@ function App() {
             <Route path="/search" element={<SearchResultsPage />} />
 
             {/* ============================================================ */}
-            {/* DASHBOARD ROUTES — SELLER SIDE
-                Zote zinapelekwa DashboardShell, ambayo inasoma URL na
-                kuamua `side` + `activeKey` kupitia URL_TO_STATE */}
+            {/* DASHBOARD ROUTES — SELLER SIDE */}
             {/* ============================================================ */}
             <Route path="/dashboard" element={<DashboardShell />} />
             <Route path="/dashboard/seller" element={<DashboardShell />} />
+            <Route path="/dashboard/overview" element={<DashboardShell />} />
             <Route path="/dashboard/post" element={<DashboardShell />} />
             <Route path="/dashboard/listings" element={<DashboardShell />} />
+            <Route path="/dashboard/leads" element={<DashboardShell />} />
             <Route path="/dashboard/saved" element={<DashboardShell />} />
             <Route path="/dashboard/boost" element={<DashboardShell />} />
             <Route path="/dashboard/leading" element={<DashboardShell />} />
@@ -100,18 +100,38 @@ function App() {
             {/* DASHBOARD ROUTES — BUYER SIDE */}
             {/* ============================================================ */}
             <Route path="/dashboard/buyer" element={<DashboardShell />} />
+            <Route path="/dashboard/buyer/overview" element={<DashboardShell />} />
+            <Route path="/dashboard/buyer/browse" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/saved" element={<DashboardShell />} />
+            <Route path="/dashboard/buyer/searches" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/messages" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/notifications" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/waiting" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/transactions" element={<DashboardShell />} />
+            <Route path="/dashboard/buyer/safety" element={<DashboardShell />} />
 
             {/* ============================================================ */}
             {/* ADMIN ROUTES */}
             {/* ============================================================ */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
+
+            {/* Admin Dashboard — sections zote 13 + profile */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/overview" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminDashboard />} />
+            <Route path="/admin/moderation" element={<AdminDashboard />} />
+            <Route path="/admin/verification" element={<AdminDashboard />} />
+            <Route path="/admin/deals" element={<AdminDashboard />} />
+            <Route path="/admin/revenue" element={<AdminDashboard />} />
+            <Route path="/admin/promotions" element={<AdminDashboard />} />
+            <Route path="/admin/reports" element={<AdminDashboard />} />
+            <Route path="/admin/support" element={<AdminDashboard />} />
+            <Route path="/admin/content" element={<AdminDashboard />} />
+            <Route path="/admin/audit" element={<AdminDashboard />} />
+            <Route path="/admin/system" element={<AdminDashboard />} />
+            <Route path="/admin/staff" element={<AdminDashboard />} />
+            <Route path="/admin/profile" element={<AdminDashboard />} />
 
             {/* ============================================================ */}
             {/* PROFILE ROUTES */}
