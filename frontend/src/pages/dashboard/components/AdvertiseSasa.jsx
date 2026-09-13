@@ -13,6 +13,15 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import PaymentGateway from "./PaymentGateway";
 
+// ============================================================
+// HELPER — kuchagua lugha sahihi kwa field inayoweza kuwa { sw, en }
+// ============================================================
+function getLocalized(field, lang) {
+  if (!field) return "";
+  if (typeof field === "string") return field;
+  return field?.[lang] || field?.sw || "";
+}
+
 function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds, lang }) {
   if (listings.length === 0) {
     return (
@@ -111,6 +120,12 @@ export default function AdvertiseSasa({
     : false;
   const canAdvertise = Boolean(selectedListing) && !alreadyAdvertising;
 
+  // ============================================================
+  // BILINGUAL — label na desc
+  // ============================================================
+  const adLabel = getLocalized(adFee.label, lang);
+  const adDesc = getLocalized(adFee.desc, lang);
+
   const handleConfirm = () => {
     if (!canAdvertise) return;
     setStage("paying");
@@ -133,7 +148,7 @@ export default function AdvertiseSasa({
     // 2) Rekodi transaction kwenye My Transactions
     addTransaction({
       type: "advertisement",
-      title: `Advertisement — ${selectedListing.title}`,
+      title: `${adLabel} — ${selectedListing.title}`,
       property: selectedListing.title,
       amount: adFee.price,
       status: "completed",
@@ -252,11 +267,11 @@ export default function AdvertiseSasa({
             {stage === "paying" ? (
               <PaymentGateway
                 amount={adFee.price}
-                title={adFee.label}
+                title={adLabel}
                 description={
                   lang === "sw"
-                    ? `Advertisement Fee kwa "${selectedListing.title}" — siku ${adFee.days}`
-                    : `Advertisement Fee for "${selectedListing.title}" — ${adFee.days} days`
+                    ? `${adLabel} kwa "${selectedListing.title}" — siku ${adFee.days}`
+                    : `${adLabel} for "${selectedListing.title}" — ${adFee.days} days`
                 }
                 onCancel={() => setStage("select")}
                 onSuccess={handlePaymentSuccess}
@@ -278,11 +293,11 @@ export default function AdvertiseSasa({
                       style={{ color: COLORS.night }}
                       className="text-sm font-semibold mb-0.5"
                     >
-                      {adFee.label} —{" "}
+                      {adLabel} —{" "}
                       {lang === "sw" ? `siku ${adFee.days}` : `${adFee.days} days`}
                     </p>
                     <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs">
-                      {adFee.desc}
+                      {adDesc}
                     </p>
                   </div>
                 </div>
