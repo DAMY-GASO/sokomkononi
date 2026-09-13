@@ -29,12 +29,21 @@ import { notifyPaymentProofSubmitted } from "../../../config/notificationsStore.
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 
+// ============================================================
+// HELPER — message text (inaweza kuwa string au { sw, en })
+// ============================================================
+function getMessageText(m, lang) {
+  if (!m.text) return "";
+  if (typeof m.text === "string") return m.text;
+  return m.text?.[lang] || m.text?.sw || "";
+}
+
 const getDealStatus = (lang) => ({
   negotiating: { label: lang === "sw" ? "Inaendelea" : "Negotiating", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
   offer_sent: { label: lang === "sw" ? "Ofa Imetumwa" : "Offer Sent", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
   accepted: { label: lang === "sw" ? "Imekubaliwa" : "Accepted", bg: "rgba(47,109,79,0.16)", fg: COLORS.green },
   declined: { label: lang === "sw" ? "Imekataliwa" : "Declined", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
-  reserved: { label: lang === "sw" ? "Inspection Period" : "Inspection Period", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
+  reserved: { label: lang === "sw" ? "Kipindi cha Ukaguzi" : "Inspection Period", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
   awaiting_final_payment: { label: lang === "sw" ? "Tayari kwa Malipo ya Mwisho" : "Ready for Final Payment", bg: "rgba(37,99,235,0.12)", fg: "#2563EB" },
   payment_proof_submitted: { label: lang === "sw" ? "Uthibitisho Umetumwa" : "Proof Submitted", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
   completed: { label: lang === "sw" ? "Imekamilika" : "Completed", bg: "rgba(47,109,79,0.18)", fg: COLORS.green },
@@ -124,7 +133,7 @@ function InspectionPanel({ deal, onResolve, lang }) {
             <div className="flex items-center gap-2">
               <SearchCheck size={14} color={COLORS.night} />
               <p style={{ color: COLORS.night }} className="text-xs font-semibold">
-                {lang === "sw" ? "Inspection Period — chagua hatua inayofuata" : "Inspection Period — choose next step"}
+                {lang === "sw" ? "Kipindi cha Ukaguzi — chagua hatua inayofuata" : "Inspection Period — choose next step"}
               </p>
             </div>
             {deal.reservationExpiresAt && (
@@ -591,10 +600,10 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
                 className="rounded-xl border px-2 py-2.5 text-center"
               >
                 <p style={{ color: COLORS.night }} className="text-sm font-bold">
-                  {opt.label}
+                  {opt.label?.[lang] || opt.label?.sw}
                 </p>
                 <p style={{ color: "rgba(16,26,46,0.5)" }} className="text-[10px] mb-1">
-                  {opt.sub}
+                  {opt.sub?.[lang] || opt.sub?.sw}
                 </p>
                 <p style={{ color: COLORS.green }} className="text-[11px] font-semibold">
                   {formatTZS(opt.fee)}
@@ -858,8 +867,9 @@ function DealDetail({
         className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-2.5"
         style={{ background: COLORS.sand }}
       >
-        {deal.messages.map((m) =>
-          m.sender === "admin" ? (
+        {deal.messages.map((m) => {
+          const text = getMessageText(m, lang);
+          return m.sender === "admin" ? (
             <div key={m.id} className="flex justify-center my-1">
               <div
                 style={{
@@ -872,7 +882,7 @@ function DealDetail({
                 <span style={{ color: COLORS.rust }} className="font-bold">
                   {lang === "sw" ? "SokoMkononi Admin" : "SokoMkononi Admin"}:{" "}
                 </span>
-                {m.text}
+                {text}
               </div>
             </div>
           ) : (
@@ -891,12 +901,12 @@ function DealDetail({
                   }}
                   className="border rounded-2xl px-4 py-2.5 max-w-[75%] text-sm"
                 >
-                  {m.text}
+                  {text}
                 </div>
               )}
             </div>
-          )
-        )}
+          );
+        })}
       </div>
 
       {/* Accept / decline row */}
@@ -1334,7 +1344,7 @@ export default function DealRooms({
           style={{ fontFamily: FONTS.display, color: COLORS.night }}
           className="text-2xl sm:text-3xl font-semibold mb-1"
         >
-          {lang === "sw" ? "Deal Rooms" : "Deal Rooms"}
+          {lang === "sw" ? "Vyumba vya Majadiliano" : "Deal Rooms"}
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-4">
           {side === "seller"
