@@ -10,8 +10,7 @@
 //   - timeAgo() (kwa notifications)
 //   - formatTZS() (kwa pesa)
 //
-// Sections zote (Overview, Users, Moderation, Deals, Revenue,
-// SystemSettings) zita-import kutoka hapa.
+// Sections zote zinatumia NAV hii.
 // ============================================================
 
 import {
@@ -28,6 +27,17 @@ import {
   Rocket,
   Search,
   Smartphone,
+  UserCheck,
+  History,
+  Headphones,
+  FileText,
+  BarChart3,
+  Sparkles,
+  Lock,
+  Store,
+  BookOpen,
+  Megaphone,
+  Calendar,
 } from "lucide-react";
 import { NOTIFICATION_EVENTS } from "../../../../config/notificationsStore.js";
 
@@ -46,13 +56,80 @@ export const FONTS = {
   body: "'Manrope', sans-serif",
 };
 
+// ============================================================
+// NAV — sidebar navigation (sections zote 13)
+// ============================================================
 export const NAV = [
-  { key: "overview", label: { sw: "Muhtasari & Uchanganuzi", en: "Overview & Analytics" }, icon: LayoutDashboard },
-  { key: "users", label: { sw: "Usimamizi wa Watumiaji", en: "User Management" }, icon: Users },
-  { key: "moderation", label: { sw: "Uidhinishaji wa Mali & Matangazo", en: "Listing & Ads Moderation" }, icon: ShieldCheck },
-  { key: "deals", label: { sw: "Deal Rooms & Migogoro", en: "Deal Rooms & Disputes" }, icon: MessagesSquare },
-  { key: "revenue", label: { sw: "Mapato & Fedha", en: "Revenue & Financial Settings" }, icon: Wallet },
-  { key: "system", label: { sw: "Mipangilio ya Mfumo", en: "System Settings" }, icon: SettingsIcon },
+  // Core
+  {
+    key: "overview",
+    label: { sw: "Muhtasari & Uchanganuzi", en: "Overview & Analytics" },
+    icon: LayoutDashboard,
+  },
+  {
+    key: "users",
+    label: { sw: "Usimamizi wa Watumiaji", en: "User Management" },
+    icon: Users,
+  },
+  {
+    key: "moderation",
+    label: { sw: "Uidhinishaji wa Mali", en: "Listing Moderation" },
+    icon: ShieldCheck,
+  },
+  {
+    key: "verification",
+    label: { sw: "Uthibitisho", en: "Verification" },
+    icon: UserCheck,
+  },
+  {
+    key: "deals",
+    label: { sw: "Deal Rooms & Migogoro", en: "Deal Rooms & Disputes" },
+    icon: MessagesSquare,
+  },
+  {
+    key: "revenue",
+    label: { sw: "Mapato & Fedha", en: "Revenue & Financial" },
+    icon: Wallet,
+  },
+  {
+    key: "promotions",
+    label: { sw: "Matangazo & Kampeni", en: "Promotions & Campaigns" },
+    icon: Sparkles,
+  },
+  {
+    key: "reports",
+    label: { sw: "Ripoti & Uchanganuzi", en: "Reports & Analytics" },
+    icon: BarChart3,
+  },
+
+  // Support & Content
+  {
+    key: "support",
+    label: { sw: "Huduma kwa Wateja", en: "Customer Care" },
+    icon: Headphones,
+  },
+  {
+    key: "content",
+    label: { sw: "Usimamizi wa Maudhui", en: "Content Management" },
+    icon: FileText,
+  },
+
+  // System
+  {
+    key: "audit",
+    label: { sw: "Kumbukumbu za Matendo", en: "Audit Logs" },
+    icon: History,
+  },
+  {
+    key: "system",
+    label: { sw: "Mipangilio ya Mfumo", en: "System Settings" },
+    icon: SettingsIcon,
+  },
+  {
+    key: "staff",
+    label: { sw: "Roles & Wafanyakazi", en: "Roles & Staff" },
+    icon: Lock,
+  },
 ];
 
 export const ADMIN_NOTIFICATION_ICONS = {
@@ -74,7 +151,12 @@ export function timeAgo(dateStr, lang = "sw") {
   if (mins < 1) return lang === "sw" ? "Sasa hivi" : "Just now";
   if (mins < 60) return lang === "sw" ? `Dakika ${mins} zilizopita` : `${mins} min ago`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return lang === "sw" ? (hours === 1 ? "Saa 1 iliyopita" : `Masaa ${hours} yaliyopita`) : `${hours}h ago`;
+  if (hours < 24)
+    return lang === "sw"
+      ? hours === 1
+        ? "Saa 1 iliyopita"
+        : `Masaa ${hours} yaliyopita`
+      : `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days === 1) return lang === "sw" ? "Jana" : "Yesterday";
   return lang === "sw" ? `Siku ${days} zilizopita` : `${days} days ago`;
