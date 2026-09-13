@@ -3,15 +3,9 @@
 // CHANZO KIMOJA CHA UKWELI kwa transactions (My Transactions +
 // Admin revenue analytics + overview aggregates).
 //
-// Kabla ya hii, DashboardShell ilikuwa na `useState(SEED_TRANSACTIONS)`
-// ya ndani, na MyTransactionsPage ilikuwa na `SEED_TRANSACTIONS` yake
-// TOFAUTI — Admin hakuweza kuona jumla halisi ya mapato, na miamala
-// ilipotea kila refresh.
-//
-// Sasa: kila emitter ya malipo (Listing Fee, Boost, Leading,
-// Advertisement, Reservation, Sale/Purchase) inaita `addTransaction()`
-// hapa, na MyTransactionsPage/AdminDashboard/OverviewSection zote
-// zinasoma kutoka hapa.
+// Kama stores nyingine — demo ya front-end pekee, localStorage +
+// custom event. Backend halisi ikiwepo, badilisha functions hizi
+// ziite API; hooks (useTransactions) hazitahitaji kubadilika.
 //
 // TYPES (canonical, zinalingana na Muongozo §6):
 //   listing_fee | reservation | boost | leading | advertisement | sale | purchase
@@ -22,64 +16,10 @@ import { useEffect, useMemo, useState } from "react";
 const STORAGE_KEY = "sokomkononi_transactions_v1";
 const UPDATE_EVENT = "sokomkononi:transactions-updated";
 
-// Seeding kwa demo — miamala ya mwanzo ili dashboard isiwe tupu.
-export const SEED_TRANSACTIONS = [
-  {
-    id: "t1",
-    ref: "SM-2026-0001",
-    type: "listing_fee",
-    title: "Listing Fee — Nyumba ya Ghorofa Mbezi Beach",
-    property: "Nyumba ya Ghorofa Mbezi Beach",
-    amount: 300000,
-    status: "completed",
-    method: "M-Pesa",
-    at: "2026-08-28T10:00:00.000Z",
-  },
-  {
-    id: "t2",
-    ref: "SM-2026-0002",
-    type: "boost",
-    title: "Featured Boost — Nyumba ya Ghorofa Mbezi Beach",
-    property: "Nyumba ya Ghorofa Mbezi Beach",
-    amount: 12000,
-    status: "completed",
-    method: "Tigo Pesa",
-    at: "2026-09-01T14:30:00.000Z",
-  },
-  {
-    id: "t3",
-    ref: "SM-2026-0003",
-    type: "listing_fee",
-    title: "Listing Fee — Toyota Harrier 2016",
-    property: "Toyota Harrier 2016",
-    amount: 150000,
-    status: "pending",
-    method: "Airtel Money",
-    at: "2026-09-07T09:15:00.000Z",
-  },
-  {
-    id: "t4",
-    ref: "SM-2026-0004",
-    type: "sale",
-    title: "Mauzo — Duka la Vifaa vya Ujenzi Kariakoo",
-    property: "Duka la Vifaa vya Ujenzi — Kariakoo",
-    amount: 14200000,
-    status: "completed",
-    method: "Benki (CRDB)",
-    at: "2026-08-15T16:00:00.000Z",
-  },
-  {
-    id: "t5",
-    ref: "SM-2026-0005",
-    type: "reservation",
-    title: "Reservation Fee — Kiwanja Ubungo",
-    property: "Kiwanja Ubungo — Hati Miliki",
-    amount: 50000,
-    status: "completed",
-    method: "HaloPesa",
-    at: "2026-09-05T11:00:00.000Z",
-  },
-];
+// ============================================================
+// SEED_TRANSACTIONS — tupu. Data itakuja kutoka backend baadaye.
+// ============================================================
+export const SEED_TRANSACTIONS = [];
 
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_TRANSACTIONS;
@@ -87,7 +27,7 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_TRANSACTIONS;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_TRANSACTIONS;
+    if (!Array.isArray(parsed)) return SEED_TRANSACTIONS;
     return parsed;
   } catch {
     return SEED_TRANSACTIONS;
@@ -133,15 +73,7 @@ export function useTransactions() {
 }
 
 /**
- * Aggregates kwa Admin Overview:
- *   - revenue: jumla ya fee types zote (listing_fee, reservation, boost,
- *     leading, advertisement) zilizolipwa + sale zote (kama revenue pia,
- *     kwa sababu SokoMkononi inahesabu "sale completed" kama txn ya user,
- *     ila kwa Admin revenue halisi ni FEE pekee — hapa tunachukua fee
- *     types tu kama revenue ya platform)
- *   - spent: user ame-lipa nini (kwa MyTransactions summary)
- *   - earned: user amepokea nini (sale)
- *   - totalCount: idadi ya miamala yote
+ * Aggregates kwa Admin Overview.
  */
 export function useMyTransactionsAggregate() {
   const list = useTransactions();
