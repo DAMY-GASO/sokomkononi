@@ -11,6 +11,8 @@
 //   - getActiveCategories re-export kwa urahisi
 //   - calculateListingFee() inarudi error state kama category haina
 //     fee config (category mpya iliyoongezwa na Admin bila fee)
+//   - formatNumberInput() / cleanNumberInput() — comma helpers
+//   - formatPhoneDisplay() / formatCardDisplay() — display helpers
 // ============================================================
 
 import { getBoostPackage as getBoostPackageFromStore } from "../../../config/boostPackagesStore.js";
@@ -74,17 +76,87 @@ export function getCategoryLabel(key, lang = "sw") {
  */
 export { getActiveCategories };
 
-// ---- Money helpers ----
+// ============================================================
+// MONEY HELPERS
+// ============================================================
+
+/**
+ * parsePrice(value) — toa non-digits na rudisha integer.
+ * Inafanya kazi kwa "85,000,000" au "85000000".
+ */
 export function parsePrice(value) {
   if (!value) return 0;
   const digitsOnly = String(value).replace(/[^0-9]/g, "");
   return digitsOnly ? parseInt(digitsOnly, 10) : 0;
 }
 
+/**
+ * formatTZS(amount) — onyesha kama "TZS 85,000,000".
+ */
 export function formatTZS(amount) {
   return "TZS " + Math.round(amount).toLocaleString("en-US");
 }
 
+// ============================================================
+// INPUT FORMATTING HELPERS (comma auto-format)
+// ============================================================
+
+/**
+ * formatNumberInput(value) — format namba na comma kwa input.
+ *
+ *   formatNumberInput("85000000")  -> "85,000,000"
+ *   formatNumberInput("")          -> ""
+ *   formatNumberInput("abc")       -> ""
+ *   formatNumberInput(8500)        -> "8,500"
+ *
+ * Tumia kwenye `value` ya input ya pesa.
+ */
+export function formatNumberInput(value) {
+  if (value === "" || value === null || value === undefined) return "";
+  const digits = String(value).replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("en-US");
+}
+
+/**
+ * cleanNumberInput(value) — toa comma na rudisha digits tu.
+ *
+ *   cleanNumberInput("85,000,000") -> "85000000"
+ *   cleanNumberInput("abc123")     -> "123"
+ *
+ * Tumia kwenye `onChange` ya input ya pesa.
+ */
+export function cleanNumberInput(value) {
+  return String(value ?? "").replace(/[^0-9]/g, "");
+}
+
+/**
+ * formatPhoneDisplay(value) — format namba ya simu ya Tanzania.
+ *
+ *   formatPhoneDisplay("0712345678") -> "0712 345 678"
+ */
+export function formatPhoneDisplay(value) {
+  const digits = String(value).replace(/[^0-9]/g, "").slice(0, 10);
+  if (!digits) return "";
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+  return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+}
+
+/**
+ * formatCardDisplay(value) — format namba ya kadi katika vikundi vya 4.
+ *
+ *   formatCardDisplay("4111111111111111") -> "4111 1111 1111 1111"
+ */
+export function formatCardDisplay(value) {
+  const digits = String(value).replace(/[^0-9]/g, "").slice(0, 16);
+  if (!digits) return "";
+  return digits.replace(/(.{4})/g, "$1 ").trim();
+}
+
+// ============================================================
+// calculateListingFee
+// ============================================================
 /**
  * calculateListingFee(categoryKey, priceInput)
  *
@@ -98,6 +170,9 @@ export function formatTZS(amount) {
  *
  * UI LAZIMA kuangalia `feeInfo.error === "NO_FEE_CONFIG"` kabla ya
  * kuruhusu submit.
+ *
+ * Kumbuka: `priceInput` inaweza kuwa "85,000,000" au "85000000" —
+ * parsePrice inatoa non-digits.
  */
 export function calculateListingFee(categoryKey, priceInput) {
   const config = getListingFeeConfig(categoryKey);
