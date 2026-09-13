@@ -9,7 +9,6 @@ import {
   History,
   Search,
   Trash2,
-  Filter,
   User,
   Clock,
   CheckCircle,
@@ -21,8 +20,6 @@ import {
   Tag,
   Megaphone,
   UserCog,
-  Home,
-  Users,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -65,7 +62,7 @@ const ACTION_COLORS = {
 };
 
 // ============================================================
-// MAIN SECTION
+// MAIN SECTION — export default
 // ============================================================
 export default function AuditLogsSection() {
   const { lang } = useLanguage();
@@ -132,7 +129,7 @@ export default function AuditLogsSection() {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
       <SectionHeader
         title={t("Kumbukumbu za Matendo", "Audit Logs")}
         subtitle={t(
@@ -144,7 +141,7 @@ export default function AuditLogsSection() {
       {/* Summary — responsive */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
-        className="rounded-xl border p-3 sm:p-4 mb-5 flex items-start gap-3 flex-wrap min-w-0"
+        className="rounded-xl border p-3 sm:p-4 mb-5 flex items-start gap-3 flex-wrap w-full min-w-0"
       >
         <div
           style={{ background: `${COLORS.night}0D` }}
@@ -153,10 +150,10 @@ export default function AuditLogsSection() {
           <History size={16} color={COLORS.night} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800">
+          <p className="text-sm font-semibold text-gray-800 break-words">
             {logs.length} {t("matendo yame-logiwa", "actions logged")}
           </p>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500 mt-0.5 break-words">
             {t(
               "Kumbukumbu za matendo zinaonyesha kila hatua ya Admin.",
               "Audit logs show every Admin action."
@@ -175,9 +172,9 @@ export default function AuditLogsSection() {
         )}
       </div>
 
-      {/* Action filter — scroll horizontal */}
+      {/* Action filter — CENTERED + scroll horizontal */}
       {logs.length > 0 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
           <button
             onClick={() => setActionFilter("all")}
             style={{
@@ -210,7 +207,7 @@ export default function AuditLogsSection() {
 
       {/* Search */}
       {logs.length > 0 && (
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 mb-4 min-w-0">
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 mb-4 w-full min-w-0">
           <Search size={14} className="text-gray-400 shrink-0" />
           <input
             value={query}
@@ -257,7 +254,7 @@ export default function AuditLogsSection() {
               <div
                 key={log.id}
                 style={{ borderColor: COLORS.sandLine, background: "white" }}
-                className="rounded-xl border p-3 sm:p-4 flex items-start gap-2 sm:gap-3 w-full min-w-0"
+                className="rounded-xl border p-3 sm:p-4 flex items-start gap-2 sm:gap-3 w-full max-w-full min-w-0 overflow-hidden"
               >
                 <div
                   style={{ background: colors.bg }}
@@ -266,18 +263,18 @@ export default function AuditLogsSection() {
                   <ActionIcon size={15} color={colors.fg} />
                 </div>
 
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span
                       style={{
                         background: colors.bg,
                         color: colors.fg,
                       }}
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                     >
                       {getActionLabel(log.action)}
                     </span>
-                    <span className="text-[10px] text-gray-400 flex items-center gap-1 shrink-0">
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1 shrink-0 whitespace-nowrap">
                       <Clock size={10} />
                       {timeAgo(log.at, lang)}
                     </span>
