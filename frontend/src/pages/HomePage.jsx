@@ -431,8 +431,8 @@ export default function HomePage() {
               <TypewriterText
                 text={
                   lang === "sw"
-                    ? "SokoMkononi ni jukwaa salama la kununua na kuuza nyumba, magari, viwanja na mali nyingine Tanzania."
-                    : "SokoMkononi is a safe platform to buy and sell houses, cars, land and other properties in Tanzania."
+                    ? "SokoMkononi ni jukwaa linalowaunganisha wanunuzi na wauzaji sehemu moja, kwa kurahisisha kutafuta, kuuza na kununua kwa urahisi na kujiamini."
+                    : "SokoMkononi is a safe platform that bring together buyers and sellers in one place, for simplifying searches, buying and selling in a simple way confidently."
                 }
                 speed={40}
               />
