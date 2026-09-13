@@ -1,7 +1,7 @@
 // ============================================================
 // AuditLogsSection.jsx
 // Admin — Audit Logs (nani, lini, nini).
-// Bilingual + mobile-responsive.
+// Bilingual + mobile-responsive (imeboreshwa).
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -132,7 +132,7 @@ export default function AuditLogsSection() {
   };
 
   return (
-    <>
+    <div className="w-full max-w-7xl mx-auto">
       <SectionHeader
         title={t("Kumbukumbu za Matendo", "Audit Logs")}
         subtitle={t(
@@ -141,16 +141,16 @@ export default function AuditLogsSection() {
         )}
       />
 
-      {/* Summary */}
+      {/* Summary — responsive */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
-        className="rounded-xl border p-4 mb-5 flex items-center gap-3"
+        className="rounded-xl border p-3 sm:p-4 mb-5 flex items-start gap-3 flex-wrap min-w-0"
       >
         <div
           style={{ background: `${COLORS.night}0D` }}
-          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
         >
-          <History size={18} color={COLORS.night} />
+          <History size={16} color={COLORS.night} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-800">
@@ -175,9 +175,9 @@ export default function AuditLogsSection() {
         )}
       </div>
 
-      {/* Action filter */}
+      {/* Action filter — scroll horizontal */}
       {logs.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
           <button
             onClick={() => setActionFilter("all")}
             style={{
@@ -210,7 +210,7 @@ export default function AuditLogsSection() {
 
       {/* Search */}
       {logs.length > 0 && (
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 mb-4">
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 mb-4 min-w-0">
           <Search size={14} className="text-gray-400 shrink-0" />
           <input
             value={query}
@@ -228,9 +228,9 @@ export default function AuditLogsSection() {
       {filtered.length === 0 ? (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-2xl border-2 border-dashed p-10 text-center"
+          className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
         >
-          <History size={48} className="mx-auto text-gray-300 mb-3" />
+          <History size={40} className="mx-auto text-gray-300 mb-3" />
           <h3 style={{ color: COLORS.night }} className="font-semibold mb-1">
             {query || actionFilter !== "all"
               ? t("Hakuna matokeo", "No results")
@@ -249,7 +249,7 @@ export default function AuditLogsSection() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 w-full min-w-0">
           {filtered.map((log) => {
             const ActionIcon = ACTION_ICONS[log.action] || FileText;
             const colors = getActionColor(log.action);
@@ -257,13 +257,13 @@ export default function AuditLogsSection() {
               <div
                 key={log.id}
                 style={{ borderColor: COLORS.sandLine, background: "white" }}
-                className="rounded-xl border p-3 sm:p-4 flex items-start gap-3"
+                className="rounded-xl border p-3 sm:p-4 flex items-start gap-2 sm:gap-3 w-full min-w-0"
               >
                 <div
                   style={{ background: colors.bg }}
-                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
                 >
-                  <ActionIcon size={16} color={colors.fg} />
+                  <ActionIcon size={15} color={colors.fg} />
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -273,29 +273,29 @@ export default function AuditLogsSection() {
                         background: colors.bg,
                         color: colors.fg,
                       }}
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
                     >
                       {getActionLabel(log.action)}
                     </span>
-                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1 shrink-0">
                       <Clock size={10} />
                       {timeAgo(log.at, lang)}
                     </span>
                   </div>
 
-                  <p className="text-sm text-gray-800 font-medium">
+                  <p className="text-sm text-gray-800 font-medium break-words">
                     {log.target}
                   </p>
 
                   {log.details && (
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed break-words">
                       {log.details}
                     </p>
                   )}
 
-                  <p className="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1">
-                    <User size={10} />
-                    {log.adminName}
+                  <p className="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1 min-w-0">
+                    <User size={10} className="shrink-0" />
+                    <span className="truncate">{log.adminName}</span>
                   </p>
                 </div>
 
@@ -311,6 +311,6 @@ export default function AuditLogsSection() {
           })}
         </div>
       )}
-    </>
+    </div>
   );
 }
