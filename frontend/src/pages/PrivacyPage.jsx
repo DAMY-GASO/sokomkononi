@@ -32,11 +32,11 @@ const COLORS = {
 // ============================================================
 // CONTENT
 // ============================================================
-
 const PRIVACY_CONTENT = {
   sw: {
     title: "Sera ya Faragha",
-    subtitle: "Tunajali faragha yako. Soma jinsi tunakusanya, kutumia, na kulinda taarifa zako.",
+    subtitle:
+      "Tunajali faragha yako. Soma jinsi tunakusanya, kutumia, na kulinda taarifa zako.",
     lastUpdated: "Ilisasishwa mwisho: 15 Septemba 2026",
     sections: [
       {
@@ -159,7 +159,8 @@ const PRIVACY_CONTENT = {
   },
   en: {
     title: "Privacy Policy",
-    subtitle: "We care about your privacy. Read how we collect, use, and protect your information.",
+    subtitle:
+      "We care about your privacy. Read how we collect, use, and protect your information.",
     lastUpdated: "Last updated: 15 September 2026",
     sections: [
       {
@@ -285,7 +286,6 @@ const PRIVACY_CONTENT = {
 // ============================================================
 // ACCORDION SECTION
 // ============================================================
-
 function AccordionSection({ section, isOpen, onToggle }) {
   const Icon = section.icon;
 
@@ -315,7 +315,7 @@ function AccordionSection({ section, isOpen, onToggle }) {
         style={{ display: "grid" }}
       >
         <div className="overflow-hidden">
-          <div className="px-5 pb-5 pl-[68px] space-y-3">
+          <div className="px-5 pb-5 space-y-3">
             {section.content.map((paragraph, idx) => (
               <p key={idx} className="text-sm text-gray-600 leading-relaxed">
                 {paragraph}
@@ -331,7 +331,6 @@ function AccordionSection({ section, isOpen, onToggle }) {
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-
 export default function PrivacyPage() {
   const { lang } = useLanguage();
   const content = PRIVACY_CONTENT[lang] || PRIVACY_CONTENT.sw;
@@ -361,9 +360,11 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* ================= HERO ================= */}
+      {/* ============================================================ */}
+      {/* HERO — CENTERED */}
+      {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-12 px-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto text-center">
           <Link
             to="/"
             className="inline-flex items-center gap-2 text-white/60 hover:text-white text-sm mb-4 transition-colors"
@@ -372,7 +373,7 @@ export default function PrivacyPage() {
             {lang === "sw" ? "Rudi Nyumbani" : "Back to Home"}
           </Link>
 
-          <div className="flex items-start gap-4">
+          <div className="flex flex-col items-center text-center gap-3">
             <div className="w-14 h-14 rounded-2xl bg-[#2F6D4F]/20 flex items-center justify-center flex-shrink-0">
               <Shield size={28} color={COLORS.green} />
             </div>
@@ -380,7 +381,7 @@ export default function PrivacyPage() {
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">
                 {content.title}
               </h1>
-              <p className="text-white/60 text-sm mt-2 max-w-2xl">
+              <p className="text-white/60 text-sm mt-2 max-w-2xl mx-auto">
                 {content.subtitle}
               </p>
               <p className="text-[#2F6D4F] text-xs mt-3 font-medium">
@@ -391,10 +392,12 @@ export default function PrivacyPage() {
         </div>
       </section>
 
-      {/* ================= CONTENT ================= */}
+      {/* ============================================================ */}
+      {/* CONTENT */}
+      {/* ============================================================ */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Controls */}
-        <div className="flex items-center justify-end gap-2 mb-4">
+        {/* Controls — centered */}
+        <div className="flex items-center justify-center gap-2 mb-4">
           <button
             onClick={expandAll}
             className="text-xs font-medium text-[#2F6D4F] hover:underline"
@@ -422,9 +425,9 @@ export default function PrivacyPage() {
           ))}
         </div>
 
-        {/* Footer Note */}
-        <div className="mt-8 p-5 bg-[#2F6D4F]/5 border border-[#2F6D4F]/20 rounded-xl">
-          <p className="text-sm text-gray-700">
+        {/* Footer Note — centered */}
+        <div className="mt-8 p-5 bg-[#2F6D4F]/5 border border-[#2F6D4F]/20 rounded-xl text-center">
+          <p className="text-sm text-gray-700 max-w-xl mx-auto">
             {lang === "sw"
               ? "Kama una wasiwasi kuhusu faragha yako au unataka kufuta taarifa zako, tafadhali wasiliana nasi kupitia ukurasa wa Mawasiliano."
               : "If you have concerns about your privacy or want to delete your information, please contact us via the Contact page."}
