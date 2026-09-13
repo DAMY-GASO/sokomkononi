@@ -21,7 +21,6 @@ export default function HomePage() {
   const { user } = useAuth();
 
   const [openFaq, setOpenFaq] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [appToastShouldRender, setAppToastShouldRender] = useState(false);
   const [appToastVisible, setAppToastVisible] = useState(false);
 
@@ -93,7 +92,7 @@ export default function HomePage() {
     {
       q: { sw: "SokoMkononi ni nini?", en: "What is SokoMkononi?" },
       a: {
-        sw: "SokoMkononi ni marketplace inayowaunganisha wanunuzi na wauzaji sehemu moja, ili kurahisisha kutafuta, kuuza na kufanya biashara.",
+        sw: "SokoMkononi ni soko linalowaunganisha wanunuzi na wauzaji sehemu moja, ili kurahisisha kutafuta, kuuza na kufanya biashara.",
         en: "SokoMkononi is a marketplace that connects buyers and sellers in one place, making it easier to find, sell and do business.",
       },
     },
@@ -292,13 +291,6 @@ export default function HomePage() {
     },
   ];
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    const q = searchQuery.trim();
-    if (!q) return;
-    navigate(`/tafuta?tafuta=${encodeURIComponent(q)}`);
-  };
-
   const toggleFaq = (index) => setOpenFaq((prev) => (prev === index ? null : index));
 
   return (
@@ -306,63 +298,38 @@ export default function HomePage() {
       <Navbar lang={lang} setLang={setLang} categories={categories} />
 
       {/* HERO */}
-      <section className="bg-[#101A2E] text-white py-16 px-4">
+      <section className="bg-[#101A2E] text-white py-12 sm:py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-3xl md:text-4xl font-bold mt-3 leading-tight">
+          {/* Big Headline */}
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight">
             {lang === "sw" ? "Nunua na Uza Mali kwa Urahisi" : "Buy and Sell Property Easily"}
           </h1>
-          <p className="text-white/70 text-base mt-4 max-w-2xl mx-auto leading-relaxed">
+
+          {/* Big Subtitle */}
+          <p className="text-white/75 text-lg sm:text-xl md:text-2xl mt-6 max-w-3xl mx-auto leading-relaxed font-light">
             {lang === "sw"
-              ? "SokoMkononi ni jukwaa salama la kununua na kuuza nyumba, magari, viwanja na mali nyingine."
-              : "SokoMkononi is a safe platform to buy and sell houses, cars, land and other properties."}
+              ? "SokoMkononi ni jukwaa linalowaunganisha wanunuzi na wauzaji sehemu moja, kwa kurahisisha kutafuta, kuuza na kununua kwa urahisi na kujiamini."
+              : "SokoMkononi is a safe platform that combines buyers and sellers in one place, for simplifying search, selling and buying in a simple way confidently."}
           </p>
 
-          <form onSubmit={handleSearchSubmit} className="max-w-2xl mx-auto mt-6">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={
-                  lang === "sw" ? "Tafuta nyumba, gari, kiwanja..." : "Search houses, cars, land..."
-                }
-                className="w-full bg-white/10 border border-white/20 rounded-full pl-6 pr-14 py-3.5 text-white text-base placeholder-white/50 focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/30 transition-all"
-              />
-              <button
-                type="submit"
-                aria-label={lang === "sw" ? "Tafuta" : "Search"}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] p-2.5 rounded-full transition-colors"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2.5"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
-                </svg>
-              </button>
-            </div>
-          </form>
-
-          <div className="flex flex-wrap gap-3 justify-center mt-6">
+          {/* BUTTONS — vertically on mobile, horizontally on desktop */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-stretch sm:items-center mt-10 max-w-md sm:max-w-none mx-auto">
             <button
               onClick={handleBuyNow}
-              className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold px-6 py-3 rounded-md transition-colors"
+              className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-bold text-lg sm:text-xl px-8 sm:px-12 py-5 sm:py-6 rounded-2xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
             >
               {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
             </button>
             <button
               onClick={handleSellNow}
-              className="bg-[#2F6D4F] hover:bg-[#245a41] text-white font-semibold px-6 py-3 rounded-md transition-colors"
+              className="bg-[#2F6D4F] hover:bg-[#245a41] text-white font-bold text-lg sm:text-xl px-8 sm:px-12 py-5 sm:py-6 rounded-2xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
             >
               {lang === "sw" ? "Uza Sasa" : "Sell Now"}
             </button>
           </div>
 
-          <div className="flex flex-wrap gap-3 justify-center mt-8">
+          {/* App badges */}
+          <div className="flex flex-wrap gap-3 justify-center mt-10">
             <Link
               to="/waitlist"
               className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors"
