@@ -6,24 +6,20 @@
 
 import React, { useState, useMemo } from "react";
 import {
-  MessageSquare,
   Search,
   Trash2,
   Clock,
   User,
   Send,
   CheckCircle,
-  AlertTriangle,
-  XCircle,
   ChevronDown,
   ChevronUp,
   Paperclip,
   Headphones,
   Inbox,
-  MessageCircle,
   UserCheck,
 } from "lucide-react";
-import { COLORS, FONTS, timeAgo } from "../shared/constants.js";
+import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
@@ -31,7 +27,6 @@ import {
   addTicketMessage,
   updateTicketStatus,
   updateTicketPriority,
-  assignTicket,
   removeTicket,
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
@@ -93,11 +88,11 @@ function TicketCard({ ticket, lang }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border overflow-hidden w-full min-w-0"
+      className="rounded-xl border overflow-hidden w-full max-w-full min-w-0"
     >
       {/* Header */}
-      <div className="p-3 sm:p-4">
-        <div className="flex items-start gap-2 sm:gap-3">
+      <div className="p-3 sm:p-4 w-full min-w-0">
+        <div className="flex items-start gap-2 sm:gap-3 w-full min-w-0">
           <div
             style={{ background: catColors.bg }}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
@@ -105,26 +100,26 @@ function TicketCard({ ticket, lang }) {
             <Headphones size={16} color={catColors.fg} />
           </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="text-[10px] font-bold text-gray-400 shrink-0">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-1.5 flex-wrap mb-1">
+              <span className="text-[10px] font-bold text-gray-400 shrink-0 whitespace-nowrap">
                 {ticket.id}
               </span>
               <span
                 style={{ background: catColors.bg, color: catColors.fg }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {category?.label?.[lang] || category?.label?.sw || ticket.category}
               </span>
               <span
                 style={{ background: priColors.bg, color: priColors.fg }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {priority?.label?.[lang] || priority?.label?.sw}
               </span>
               <span
                 style={{ background: statusColors.bg, color: statusColors.fg }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {status?.label?.[lang] || status?.label?.sw}
               </span>
@@ -132,7 +127,7 @@ function TicketCard({ ticket, lang }) {
 
             <p
               style={{ color: COLORS.night }}
-              className="text-sm font-semibold truncate"
+              className="text-sm font-semibold truncate w-full"
             >
               {ticket.subject}
             </p>
@@ -173,10 +168,10 @@ function TicketCard({ ticket, lang }) {
       {expanded && (
         <div
           style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-          className="border-t p-3 sm:p-4 flex flex-col gap-3 min-w-0"
+          className="border-t p-3 sm:p-4 flex flex-col gap-3 w-full max-w-full min-w-0 overflow-hidden"
         >
           {/* Messages thread */}
-          <div className="min-w-0">
+          <div className="min-w-0 w-full">
             <p className="text-[10px] font-semibold text-gray-500 uppercase mb-2">
               {t("Mazungumzo", "Conversation")}
             </p>
@@ -226,21 +221,21 @@ function TicketCard({ ticket, lang }) {
 
           {/* Attachments */}
           {ticket.attachments && ticket.attachments.length > 0 && (
-            <div className="min-w-0">
+            <div className="min-w-0 w-full">
               <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1">
                 {t("Viambatisho", "Attachments")}
               </p>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 w-full">
                 {ticket.attachments.map((att, i) => (
                   <a
                     key={i}
                     href={att.url || "#"}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-2 text-xs text-gray-700 bg-white rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors min-w-0"
+                    className="flex items-center gap-2 text-xs text-gray-700 bg-white rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors w-full min-w-0"
                   >
                     <Paperclip size={12} className="text-gray-400 shrink-0" />
-                    <span className="truncate">{att.name}</span>
+                    <span className="truncate flex-1 min-w-0">{att.name}</span>
                   </a>
                 ))}
               </div>
@@ -251,7 +246,7 @@ function TicketCard({ ticket, lang }) {
           {ticket.status !== "closed" && (
             <>
               {/* Reply composer */}
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 w-full">
                 <input
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
@@ -275,12 +270,12 @@ function TicketCard({ ticket, lang }) {
               </div>
 
               {/* Status actions — responsive */}
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
                 {ticket.status === "open" && (
                   <button
                     onClick={() => updateTicketStatus(ticket.id, "in_progress")}
                     style={{ background: COLORS.gold, color: COLORS.night }}
-                    className="text-xs font-semibold px-3 py-2 rounded-lg"
+                    className="text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
                   >
                     {t("Anza Kushughulikia", "Start Working")}
                   </button>
@@ -290,7 +285,7 @@ function TicketCard({ ticket, lang }) {
                   <button
                     onClick={handleResolve}
                     style={{ background: COLORS.green, color: "white" }}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
                   >
                     <CheckCircle size={12} />
                     {t("Tatua", "Resolve")}
@@ -300,7 +295,7 @@ function TicketCard({ ticket, lang }) {
                 <button
                   onClick={handleClose}
                   style={{ color: COLORS.night }}
-                  className="text-xs font-semibold px-3 py-2 rounded-lg border"
+                  className="text-xs font-semibold px-3 py-2 rounded-lg border shrink-0"
                 >
                   {t("Funga", "Close")}
                 </button>
@@ -340,11 +335,11 @@ function TicketCard({ ticket, lang }) {
 
           {/* Closed — reopen */}
           {ticket.status === "closed" && (
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
               <button
                 onClick={handleReopen}
                 style={{ background: COLORS.gold, color: COLORS.night }}
-                className="text-xs font-semibold px-3 py-2 rounded-lg"
+                className="text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
               >
                 {t("Fungua Tena", "Reopen")}
               </button>
@@ -372,7 +367,7 @@ function TicketCard({ ticket, lang }) {
 }
 
 // ============================================================
-// MAIN SECTION
+// MAIN SECTION — export default
 // ============================================================
 export default function SupportSection() {
   const { lang } = useLanguage();
@@ -438,7 +433,7 @@ export default function SupportSection() {
   }, [tickets, statusFilter, categoryFilter, query]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
       <SectionHeader
         title={t("Huduma kwa Wateja", "Customer Care")}
         subtitle={t(
@@ -448,12 +443,12 @@ export default function SupportSection() {
       />
 
       {/* Summary Stats — responsive */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5 w-full">
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-2.5 sm:p-3 min-w-0"
+          className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
         >
-          <p className="text-[10px] font-semibold text-gray-500 uppercase">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase truncate">
             {t("Zote", "Total")}
           </p>
           <p
@@ -465,9 +460,9 @@ export default function SupportSection() {
         </div>
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-2.5 sm:p-3 min-w-0"
+          className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
         >
-          <p className="text-[10px] font-semibold text-gray-500 uppercase">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase truncate">
             {t("Wazi", "Open")}
           </p>
           <p
@@ -479,9 +474,9 @@ export default function SupportSection() {
         </div>
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-2.5 sm:p-3 min-w-0"
+          className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
         >
-          <p className="text-[10px] font-semibold text-gray-500 uppercase">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase truncate">
             {t("Inaendelea", "In Progress")}
           </p>
           <p
@@ -493,9 +488,9 @@ export default function SupportSection() {
         </div>
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-2.5 sm:p-3 min-w-0"
+          className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
         >
-          <p className="text-[10px] font-semibold text-gray-500 uppercase">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase truncate">
             {t("Zimetatuliwa", "Resolved")}
           </p>
           <p
@@ -507,9 +502,9 @@ export default function SupportSection() {
         </div>
       </div>
 
-      {/* Status Tabs — scroll horizontal */}
+      {/* Status Tabs — CENTERED + scroll horizontal */}
       {tickets.length > 0 && (
-        <div className="flex gap-2 mb-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex justify-center gap-2 mb-3 overflow-x-auto pb-2 w-full min-w-0">
           <button
             onClick={() => setStatusFilter("all")}
             style={{
@@ -549,7 +544,7 @@ export default function SupportSection() {
 
       {/* Category Filter + Search — responsive */}
       {tickets.length > 0 && (
-        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4 w-full min-w-0">
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
