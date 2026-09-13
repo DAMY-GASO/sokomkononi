@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import {
+  getSubAdmins,
+} from "../config/rolesStore.js";
 
 const AuthContext = createContext();
 
@@ -36,7 +39,9 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  // User login (mock — baadaye: POST /api/auth/login)
+  // ============================================================
+  // USER LOGIN (mock — baadaye: POST /api/auth/login)
+  // ============================================================
   const login = async (credentials) => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -59,40 +64,89 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Admin login (mock — baadaye: POST /api/auth/admin/login)
+  // ============================================================
+  // ADMIN LOGIN (mock — baadaye: POST /api/auth/admin/login)
+  //
+  // Inasaidia:
+  //   1. Super Admin (default) — admin@sokomkononi.co.tz / Admin123!
+  //   2. Staff — email yoyote iliyo kwenye subAdminsStore
+  // ============================================================
   const adminLogin = async (credentials) => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // 1) Angalia kama ni Super Admin (default)
       const adminEmail = "admin@sokomkononi.co.tz";
       const adminPassword = "Admin123!";
-      if (credentials.email !== adminEmail || credentials.password !== adminPassword) {
-        throw new Error("Invalid admin credentials");
-      }
-      const adminUser = {
-        id: "admin1",
-        name: "Administrator",
-        email: credentials.email,
-        phone: "+255 700 000 000",
-        role: "admin",
-        permissions: ["all"],
-      };
-      // Ambatanisha avatar kama ipo
-      const storedAvatar = localStorage.getItem(AVATAR_KEY_PREFIX + adminUser.id);
-      if (storedAvatar) adminUser.avatarUrl = storedAvatar;
 
-      localStorage.setItem("auth_token", "admin_token_" + Date.now());
-      localStorage.setItem("user_data", JSON.stringify(adminUser));
-      localStorage.setItem("is_admin", "true");
-      setUser(adminUser);
-      setIsAdmin(true);
-      return adminUser;
+      if (
+        credentials.email === adminEmail &&
+        credentials.password === adminPassword
+      ) {
+        const superAdmin = {
+          id: "admin1",
+          name: "Super Administrator",
+          email: credentials.email,
+          phone: "+255 700 000 000",
+          role: "admin",
+          roleKey: "super_admin",
+          permissions: ["all"],
+        };
+        // Ambatanisha avatar kama ipo
+        const storedAvatar = localStorage.getItem(
+          AVATAR_KEY_PREFIX + superAdmin.id
+        );
+        if (storedAvatar) superAdmin.avatarUrl = storedAvatar;
+
+        localStorage.setItem("auth_token", "admin_token_" + Date.now());
+        localStorage.setItem("user_data", JSON.stringify(superAdmin));
+        localStorage.setItem("is_admin", "true");
+        setUser(superAdmin);
+        setIsAdmin(true);
+        return superAdmin;
+      }
+
+      // 2) Angalia kama ni Staff (kutoka subAdminsStore)
+      const subAdmins = getSubAdmins();
+      const staff = subAdmins.find(
+        (s) => s.email.toLowerCase() === credentials.email.toLowerCase()
+      );
+
+      if (staff) {
+        // Kwa demo, password yoyote inakubaliwa kwa staff
+        // TODO: backend itathibitisha password halisi
+        const staffUser = {
+          id: staff.id,
+          name: staff.name,
+          email: staff.email,
+          phone: "",
+          role: "admin",
+          roleKey: staff.roleKey,
+        };
+        const storedAvatar = localStorage.getItem(
+          AVATAR_KEY_PREFIX + staffUser.id
+        );
+        if (storedAvatar) staffUser.avatarUrl = storedAvatar;
+
+        localStorage.setItem("auth_token", "admin_token_" + Date.now());
+        localStorage.setItem("user_data", JSON.stringify(staffUser));
+        localStorage.setItem("is_admin", "true");
+        setUser(staffUser);
+        setIsAdmin(true);
+        return staffUser;
+      }
+
+      // 3) Hakuna match
+      throw new Error("Invalid admin credentials");
     } catch (error) {
       console.error("Admin login error:", error);
       throw error;
     }
   };
 
-  // Register (mock)
+  // ============================================================
+  // REGISTER (mock)
+  // ============================================================
   const register = async (userData) => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -115,7 +169,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Logout
+  // ============================================================
+  // LOGOUT
+  // ============================================================
   const logout = async () => {
     try {
       localStorage.removeItem("auth_token");
@@ -229,7 +285,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Send OTP (mock)
+  // ============================================================
+  // OTP (mock)
+  // ============================================================
   const sendOtp = async (email) => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
@@ -241,7 +299,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Verify OTP (mock)
   const verifyOtp = async (email, otp) => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
@@ -253,7 +310,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Reset password (mock)
   const resetPassword = async (email, newPassword) => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
@@ -277,7 +333,7 @@ export function AuthProvider({ children }) {
     sendOtp,
     verifyOtp,
     resetPassword,
-    // ===== MPYA =====
+    // Profile
     updateProfile,
     updatePassword,
     updateAvatar,
