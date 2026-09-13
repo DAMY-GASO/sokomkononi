@@ -1,7 +1,7 @@
 // ============================================================
 // MyListings.jsx
 // Mali Zangu — tabs, views, enquiries, actions.
-// Bilingual kamili.
+// Bilingual kamili + Pause/Resume/Mark as Sold.
 // ============================================================
 
 import React, { useState } from "react";
@@ -17,6 +17,9 @@ import {
   Inbox,
   TrendingUp,
   Megaphone,
+  Pause,
+  Play,
+  CheckCircle,
 } from "lucide-react";
 import {
   COLORS,
@@ -44,6 +47,11 @@ function StatusBadge({ status, lang }) {
       label: { sw: "Hai", en: "Live" },
       bg: "rgba(47,109,79,0.12)",
       fg: COLORS.green,
+    },
+    paused: {
+      label: { sw: "Imesimamishwa", en: "Paused" },
+      bg: "rgba(232,163,61,0.16)",
+      fg: "#8A5A16",
     },
     reserved: {
       label: { sw: "Imehifadhiwa", en: "Reserved" },
@@ -92,16 +100,18 @@ function ActionButton({ icon: Icon, label, onClick, tone = "default" }) {
   const styles =
     tone === "primary"
       ? { background: COLORS.gold, color: COLORS.night }
-      : tone === "danger"
-        ? { background: "transparent", color: COLORS.rust, borderColor: "rgba(193,80,46,0.35)" }
-        : { background: "transparent", color: COLORS.night, borderColor: COLORS.sandLine };
+      : tone === "success"
+        ? { background: COLORS.green, color: "white" }
+        : tone === "danger"
+          ? { background: "transparent", color: COLORS.rust, borderColor: "rgba(193,80,46,0.35)" }
+          : { background: "transparent", color: COLORS.night, borderColor: COLORS.sandLine };
 
   return (
     <button
       onClick={onClick}
       style={styles}
       className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors ${
-        tone === "primary" ? "" : "border"
+        tone === "primary" || tone === "success" ? "" : "border"
       }`}
     >
       <Icon size={13} />
@@ -116,6 +126,9 @@ function ListingCard({
   onBoost,
   onLeading,
   onAdvertise,
+  onPause,
+  onResume,
+  onMarkSold,
   activeBanner,
   isPaying,
   onStartPay,
@@ -203,7 +216,10 @@ function ListingCard({
           </span>
         </div>
 
-        {(listing.status === "live" || listing.status === "reserved" || isFaded) && (
+        {(listing.status === "live" ||
+          listing.status === "reserved" ||
+          listing.status === "paused" ||
+          isFaded) && (
           <div
             style={{ color: "rgba(16,26,46,0.55)" }}
             className="flex items-center gap-4 text-xs mb-3"
@@ -277,6 +293,19 @@ function ListingCard({
           </div>
         )}
 
+        {listing.status === "paused" && (
+          <div
+            style={{ background: "rgba(232,163,61,0.1)", color: "#8A5A16" }}
+            className="flex items-center gap-1.5 text-xs rounded-lg px-3 py-2 mb-3"
+          >
+            <Pause size={13} />{" "}
+            {t(
+              "Mali hii imesimamishwa — haionekani kwa wanunuzi. Unaweza kuiendeleza wakati wowote.",
+              "This listing is paused — it's hidden from buyers. You can resume it anytime."
+            )}
+          </div>
+        )}
+
         {!isPaying && (
           <div className="flex flex-wrap gap-2">
             {listing.status === "live" && (
@@ -304,8 +333,47 @@ function ListingCard({
                 />
                 <ActionButton icon={Pencil} label={t("Hariri", "Edit")} />
                 <ActionButton
+                  icon={Pause}
+                  label={t("Simamisha", "Pause")}
+                  onClick={() => onPause(listing.id)}
+                />
+                <ActionButton
+                  icon={CheckCircle}
+                  label={t("Imeuzwa", "Mark Sold")}
+                  tone="success"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        t(
+                          "Weka mali hii kama IMEUZWA? Itaonekana kwa wanunuzi kama SOLD.",
+                          "Mark this listing as SOLD? It will show to buyers as SOLD."
+                        )
+                      )
+                    ) {
+                      onMarkSold(listing.id);
+                    }
+                  }}
+                />
+                <ActionButton
                   icon={Trash2}
                   label={t("Ondoa", "Remove")}
+                  tone="danger"
+                  onClick={() => onRemove(listing.id)}
+                />
+              </>
+            )}
+            {listing.status === "paused" && (
+              <>
+                <ActionButton
+                  icon={Play}
+                  label={t("Endeleza", "Resume")}
+                  tone="success"
+                  onClick={() => onResume(listing.id)}
+                />
+                <ActionButton icon={Pencil} label={t("Hariri", "Edit")} />
+                <ActionButton
+                  icon={Trash2}
+                  label={t("Futa", "Delete")}
                   tone="danger"
                   onClick={() => onRemove(listing.id)}
                 />
@@ -382,6 +450,9 @@ export default function MyListings({
   onLeading = () => {},
   onAdvertise = () => {},
   onPaid = () => {},
+  onPause = () => {},
+  onResume = () => {},
+  onMarkSold = () => {},
 }) {
   const { lang } = useLanguage();
   const [tab, setTab] = useState("all");
@@ -391,11 +462,12 @@ export default function MyListings({
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   // ============================================================
-  // TABS — bilingual kamili
+  // TABS — bilingual kamili (+ paused)
   // ============================================================
   const TABS = [
     { key: "all", label: { sw: "Zote", en: "All" } },
     { key: "live", label: { sw: "Hai", en: "Live" } },
+    { key: "paused", label: { sw: "Imesimamishwa", en: "Paused" } },
     { key: "reserved", label: { sw: "Imehifadhiwa", en: "Reserved" } },
     { key: "pending_payment", label: { sw: "Inasubiri Malipo", en: "Pending" } },
     { key: "in_review", label: { sw: "Inakaguliwa", en: "In Review" } },
@@ -476,6 +548,9 @@ export default function MyListings({
                 onBoost={onBoost}
                 onLeading={onLeading}
                 onAdvertise={onAdvertise}
+                onPause={onPause}
+                onResume={onResume}
+                onMarkSold={onMarkSold}
                 activeBanner={activeBanners.find((b) => b.listingId === l.id)}
                 isPaying={payingId === l.id}
                 onStartPay={setPayingId}
