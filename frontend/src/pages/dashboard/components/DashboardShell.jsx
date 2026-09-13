@@ -40,6 +40,7 @@ import {
 import { useSentAnnouncements } from "../../../config/announcementsStore.js";
 import { useNotifications, notifyListingFeePaid } from "../../../config/notificationsStore.js";
 import { checkReservationReminders } from "../../../config/dealsStore.js";
+import { checkSavedListingsChanges } from "../../../config/savedListingsWatcher.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
 import { useNewLeadsCount } from "../../../config/leadsStore.js";
 import { useSearchesCount } from "../../../config/searchesStore.js";
@@ -222,15 +223,17 @@ export default function DashboardShell() {
   }, [location.pathname]);
 
   // ============================================================
-  // KUMBUSHO LA RESERVATION + LISTING EXPIRY
+  // KUMBUSHO LA RESERVATION + LISTING EXPIRY + SAVED CHANGES
   // ============================================================
   useEffect(() => {
     checkReservationReminders();
     checkListingExpiry();
+    checkSavedListingsChanges();
     const interval = setInterval(() => {
       checkReservationReminders();
       checkListingExpiry();
-    }, 5 * 60 * 1000);
+      checkSavedListingsChanges();
+    }, 2 * 60 * 1000); // kila dakika 2
     return () => clearInterval(interval);
   }, []);
 
