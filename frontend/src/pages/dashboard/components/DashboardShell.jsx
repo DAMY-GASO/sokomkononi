@@ -21,6 +21,7 @@ import {
   TrendingUp,
   LogOut,
   User,
+  Inbox,
 } from "lucide-react";
 import { COLORS, FONTS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -31,13 +32,18 @@ import {
   removeListing as removeListingFromStore,
   updateListing as updateListingInStore,
   checkListingExpiry,
+  pauseListing,
+  unpauseListing,
+  markAsSold,
 } from "../../../config/listingsStore.js";
 import { useSentAnnouncements } from "../../../config/announcementsStore.js";
 import { useNotifications, notifyListingFeePaid } from "../../../config/notificationsStore.js";
 import { checkReservationReminders } from "../../../config/dealsStore.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
+import { useNewLeadsCount } from "../../../config/leadsStore.js";
 import PostPropertyForm from "./PostPropertyForm";
 import MyListings from "./MyListings";
+import LeadsSection from "./LeadsSection";
 import BoostSasa from "./BoostSasa";
 import LeadingSasa from "./LeadingSasa";
 import AdvertiseSasa from "./AdvertiseSasa";
@@ -59,12 +65,13 @@ import WaitingListPage from "../../WaitingListPage";
 import { useWaitingList, leaveWaitingList } from "../../../config/waitingListStore.js";
 
 // ============================================================
-// SELLER NAV — Kiswahili kimeboreshwa
+// SELLER NAV — Kiswahili kimeboreshwa + leads
 // ============================================================
 const SELLER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
   { key: "post", label: { sw: "Weka Mali Yako", en: "Post Property" }, icon: PlusCircle },
   { key: "listings", label: { sw: "Mali Zangu", en: "My Listings" }, icon: ListChecks },
+  { key: "leads", label: { sw: "Maulizio", en: "Enquiries" }, icon: Inbox },
   { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
   { key: "boost", label: { sw: "Boost Sasa", en: "Boost Now" }, icon: Rocket },
   { key: "leading", label: { sw: "Leading Fee", en: "Leading Fee" }, icon: TrendingUp },
@@ -96,6 +103,7 @@ const URL_TO_STATE = {
   "/dashboard/overview": { side: "seller", key: "overview" },
   "/dashboard/post": { side: "seller", key: "post" },
   "/dashboard/listings": { side: "seller", key: "listings" },
+  "/dashboard/leads": { side: "seller", key: "leads" },
   "/dashboard/saved": { side: "seller", key: "saved" },
   "/dashboard/boost": { side: "seller", key: "boost" },
   "/dashboard/leading": { side: "seller", key: "leading" },
@@ -121,6 +129,7 @@ const STATE_TO_URL = {
     overview: "/dashboard/overview",
     post: "/dashboard/post",
     listings: "/dashboard/listings",
+    leads: "/dashboard/leads",
     saved: "/dashboard/saved",
     boost: "/dashboard/boost",
     leading: "/dashboard/leading",
@@ -172,6 +181,7 @@ export default function DashboardShell() {
   const { unreadCount: unreadNotifCount } = useNotifications("user");
   const announcements = useSentAnnouncements();
   const waitingList = useWaitingList();
+  const newLeadsCount = useNewLeadsCount();
   const [boostTarget, setBoostTarget] = useState(null);
   const [leadingTarget, setLeadingTarget] = useState(null);
   const [advertiseTarget, setAdvertiseTarget] = useState(null);
@@ -240,6 +250,11 @@ export default function DashboardShell() {
   const addListing = (listing) => addListingToStore(listing);
   const removeListing = (id) => removeListingFromStore(id);
   const updateListing = (id, patch) => updateListingInStore(id, patch);
+
+  // Pause / Resume / Mark as Sold
+  const handlePause = (id) => pauseListing(id);
+  const handleResume = (id) => unpauseListing(id);
+  const handleMarkSold = (id) => markAsSold(id);
 
   // ============================================================
   // TRANSACTION HELPERS
@@ -374,8 +389,14 @@ export default function DashboardShell() {
           onLeading={goToLeading}
           onAdvertise={goToAdvertise}
           onPaid={markListingPaid}
+          onPause={handlePause}
+          onResume={handleResume}
+          onMarkSold={handleMarkSold}
         />
       );
+    }
+    if (activeKey === "leads") {
+      return <LeadsSection onNavigate={handleNavClick} />;
     }
     if (activeKey === "browse") {
       return <BrowseProperties lang={lang} />;
@@ -744,6 +765,7 @@ export default function DashboardShell() {
               >
                 <Icon size={17} color={isActive ? accent : COLORS.night} />
                 {label[lang] || label.sw}
+                {/* Badge ya listings */}
                 {key === "listings" && listings.length > 0 && (
                   <span
                     style={{
@@ -753,6 +775,18 @@ export default function DashboardShell() {
                     className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                   >
                     {listings.length}
+                  </span>
+                )}
+                {/* Badge ya leads mpya */}
+                {key === "leads" && newLeadsCount > 0 && (
+                  <span
+                    style={{
+                      background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust,
+                      color: isActive ? COLORS.sand : "white",
+                    }}
+                    className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                  >
+                    {newLeadsCount}
                   </span>
                 )}
               </button>
@@ -797,6 +831,17 @@ export default function DashboardShell() {
                   >
                     <Icon size={17} color={isActive ? accent : COLORS.night} />
                     {label[lang] || label.sw}
+                    {key === "leads" && newLeadsCount > 0 && (
+                      <span
+                        style={{
+                          background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust,
+                          color: isActive ? COLORS.sand : "white",
+                        }}
+                        className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                      >
+                        {newLeadsCount}
+                      </span>
+                    )}
                   </button>
                 );
               })}
