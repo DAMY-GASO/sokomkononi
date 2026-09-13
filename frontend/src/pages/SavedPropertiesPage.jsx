@@ -1,7 +1,7 @@
 // ============================================================
 // SavedPropertiesPage.jsx
 // Zilizohifadhiwa — buyer anaona listings alizozihifadhi.
-// Bilingual kamili + notifications info + category images.
+// Bilingual kamili + KILA KITU CENTERED.
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -32,7 +32,7 @@ import { getCategoryIcon } from "../config/categoriesStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 
 // ============================================================
-// CARD IMAGE RESOLVER — kama BrowseProperties
+// CARD IMAGE RESOLVER
 // ============================================================
 function resolveCardImage(property, category) {
   if (property?.imageUrl) return property.imageUrl;
@@ -40,6 +40,9 @@ function resolveCardImage(property, category) {
   return null;
 }
 
+// ============================================================
+// SAVED CARD — imeachwa (kadi zina data nyingi)
+// ============================================================
 function SavedCard({ property, viewMode, onRemove, lang }) {
   const category = getCategory(property.category);
   const Icon = getCategoryIcon(category?.iconKey);
@@ -82,12 +85,12 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
           )}
           {isReserved && (
             <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Clock3 size={10} /> RESERVED
+              <Clock3 size={10} /> {t("IMEHIFADHIWA", "RESERVED")}
             </span>
           )}
           {isSold && (
             <span className="absolute top-2 left-2 bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Ban size={10} /> SOLD
+              <Ban size={10} /> {t("IMEUZWA", "SOLD")}
             </span>
           )}
         </Link>
@@ -107,7 +110,6 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
             </button>
           </div>
 
-          {/* Category label */}
           <span className="inline-block mt-1.5 text-[10px] font-medium text-[#E8A33D] bg-[#E8A33D]/10 px-2 py-0.5 rounded-full w-fit">
             {categoryLabel}
           </span>
@@ -159,17 +161,17 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
         </div>
         {isReserved && (
           <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Clock3 size={10} /> RESERVED
+            <Clock3 size={10} /> {t("IMEHIFADHIWA", "RESERVED")}
           </span>
         )}
         {isSold && (
           <span className="absolute top-2 left-2 bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Ban size={10} /> SOLD
+            <Ban size={10} /> {t("IMEUZWA", "SOLD")}
           </span>
         )}
         {isVerified && (
           <span className="absolute top-2 right-2 bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Shield size={10} /> Verified
+            <Shield size={10} /> {t("Imethibitishwa", "Verified")}
           </span>
         )}
         <button
@@ -205,6 +207,9 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
   );
 }
 
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
 export default function SavedPropertiesPage() {
   const { lang } = useLanguage();
   const savedIds = useSavedIds();
@@ -228,7 +233,11 @@ export default function SavedPropertiesPage() {
 
   return (
     <div
-      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "100%" }}
+      style={{
+        background: COLORS.sand,
+        fontFamily: FONTS.body,
+        minHeight: "100%",
+      }}
       className="w-full p-4 sm:p-6"
     >
       <style>{`
@@ -236,38 +245,47 @@ export default function SavedPropertiesPage() {
       `}</style>
 
       <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-1">
-          <h1
-            style={{ fontFamily: FONTS.display, color: COLORS.night }}
-            className="text-2xl sm:text-3xl font-semibold"
+        {/* ============================================================ */}
+        {/* HEADER — CENTERED */}
+        {/* ============================================================ */}
+        <div className="mb-2 text-center">
+          <div className="flex items-center justify-center gap-3 mb-1">
+            <h1
+              style={{ fontFamily: FONTS.display, color: COLORS.night }}
+              className="text-2xl sm:text-3xl font-semibold"
+            >
+              {t("Zilizohifadhiwa", "Saved Properties")}
+            </h1>
+            <span
+              style={{ background: COLORS.night, color: COLORS.sand }}
+              className="text-xs font-semibold px-2.5 py-1 rounded-full"
+            >
+              {saved.length}
+            </span>
+          </div>
+          <p
+            style={{ color: "rgba(16,26,46,0.6)" }}
+            className="text-sm max-w-xl mx-auto"
           >
-            {t("Zilizohifadhiwa", "Saved Properties")}
-          </h1>
-          <span
-            style={{ background: COLORS.night, color: COLORS.sand }}
-            className="text-xs font-semibold px-2.5 py-1 rounded-full"
-          >
-            {saved.length}
-          </span>
+            {t(
+              "Mali ulizozihifadhi kwa ajili ya baadaye.",
+              "Properties you've saved for later."
+            )}
+          </p>
         </div>
-        <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-2">
-          {t(
-            "Mali ulizozihifadhi kwa ajili ya baadaye.",
-            "Properties you've saved for later."
-          )}
-        </p>
 
-        {/* Notifications info */}
+        {/* ============================================================ */}
+        {/* NOTIFICATIONS INFO — CENTERED */}
+        {/* ============================================================ */}
         <div
           style={{
             background: "rgba(37,99,235,0.08)",
             color: "#1E3A8A",
             borderColor: "rgba(37,99,235,0.2)",
           }}
-          className="flex items-start gap-2 text-xs rounded-lg border px-3 py-2.5 mb-5"
+          className="flex flex-col items-center text-center gap-2 text-xs rounded-lg border px-3 py-2.5 mb-5 max-w-2xl mx-auto"
         >
-          <Bell size={14} className="shrink-0 mt-0.5" />
+          <Bell size={14} />
           <span>
             {t(
               "Utapata taarifa listings hizi zinapobadilika (bei, sold, reserved).",
@@ -276,9 +294,11 @@ export default function SavedPropertiesPage() {
           </span>
         </div>
 
-        {/* Search + View toggle */}
+        {/* ============================================================ */}
+        {/* SEARCH + VIEW TOGGLE — CENTERED */}
+        {/* ============================================================ */}
         {saved.length > 0 && (
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4 max-w-md mx-auto">
             <div className="relative flex-1">
               <Search
                 size={16}
@@ -297,11 +317,11 @@ export default function SavedPropertiesPage() {
                   borderColor: COLORS.sandLine,
                   color: COLORS.night,
                 }}
-                className="w-full rounded-xl border pl-10 pr-3 py-2.5 text-sm outline-none"
+                className="w-full rounded-xl border pl-10 pr-3 py-2.5 text-sm outline-none text-center"
               />
             </div>
             <div
-              className="flex border rounded-xl overflow-hidden"
+              className="flex border rounded-xl overflow-hidden shrink-0 mx-auto sm:mx-0"
               style={{ borderColor: COLORS.sandLine }}
             >
               <button
@@ -311,7 +331,7 @@ export default function SavedPropertiesPage() {
                   color: viewMode === "grid" ? COLORS.sand : COLORS.night,
                 }}
                 className="p-2.5 transition-colors"
-                aria-label="Grid"
+                aria-label={t("Grid", "Grid")}
               >
                 <Grid3x3 size={16} />
               </button>
@@ -322,7 +342,7 @@ export default function SavedPropertiesPage() {
                   color: viewMode === "list" ? COLORS.sand : COLORS.night,
                 }}
                 className="p-2.5 transition-colors"
-                aria-label="List"
+                aria-label={t("Orodha", "List")}
               >
                 <List size={16} />
               </button>
@@ -330,19 +350,27 @@ export default function SavedPropertiesPage() {
           </div>
         )}
 
-        {/* List */}
+        {/* ============================================================ */}
+        {/* LIST — kadi zimeachwa kushoto */}
+        {/* ============================================================ */}
         {filtered.length === 0 ? (
           <div
             style={{ borderColor: COLORS.sandLine }}
             className="rounded-2xl border-2 border-dashed p-12 text-center bg-white"
           >
             <Heart size={48} className="mx-auto text-gray-300 mb-3" />
-            <h3 style={{ color: COLORS.night }} className="font-semibold mb-1">
+            <h3
+              style={{ color: COLORS.night }}
+              className="font-semibold mb-1"
+            >
               {searchQuery
                 ? t("Hakuna matokeo", "No results")
                 : t("Hakuna mali iliyohifadhiwa", "No saved properties")}
             </h3>
-            <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-sm mb-5">
+            <p
+              style={{ color: "rgba(16,26,46,0.55)" }}
+              className="text-sm mb-5"
+            >
               {searchQuery
                 ? t(
                     "Jaribu kutafuta kwa neno lingine",
