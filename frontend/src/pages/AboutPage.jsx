@@ -171,7 +171,9 @@ export default function AboutSafetyPage() {
       {/* NAVBAR */}
       <Navbar />
 
-      {/* HERO SECTION - About */}
+      {/* ============================================================ */}
+      {/* HERO SECTION — CENTERED */}
+      {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-14 px-4 text-center">
         <h1 className="text-3xl md:text-4xl font-bold">
           {t("about_heading")}
@@ -181,12 +183,16 @@ export default function AboutSafetyPage() {
         </p>
       </section>
 
-      {/* MISSION SECTION */}
+      {/* ============================================================ */}
+      {/* MISSION SECTION — CENTERED */}
+      {/* ============================================================ */}
       <section className="py-14 px-4 max-w-3xl mx-auto text-center">
         <p className="text-gray-700 leading-relaxed">{t("about_mission")}</p>
       </section>
 
-      {/* VALUES SECTION */}
+      {/* ============================================================ */}
+      {/* VALUES SECTION — CENTERED */}
+      {/* ============================================================ */}
       <section className="pb-14 px-4 max-w-6xl mx-auto">
         <h2 className="text-2xl font-bold text-gray-800 text-center mb-8">
           {t("about_values_heading")}
@@ -214,7 +220,9 @@ export default function AboutSafetyPage() {
         <div className="border-t border-gray-200"></div>
       </div>
 
-      {/* SAFETY SECTION - id="usalama" */}
+      {/* ============================================================ */}
+      {/* SAFETY SECTION — CENTERED */}
+      {/* ============================================================ */}
       <section id="usalama" className="py-14 px-4 max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <div className="w-14 h-14 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -245,12 +253,12 @@ export default function AboutSafetyPage() {
           </p>
         </div>
 
-        {/* Tips */}
+        {/* Tips — kila tip centered */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {tips.map((tip, i) => (
             <div key={i} className="p-6 bg-[#F5F3EC] rounded-xl">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
                   {tip.icon}
                 </div>
                 <div>
@@ -262,8 +270,8 @@ export default function AboutSafetyPage() {
           ))}
         </div>
 
-        {/* ALERT - REPORT NOTE */}
-        <div className="mt-8 p-5 rounded-xl border-2 border-red-300 bg-red-50 flex items-start gap-3">
+        {/* ALERT - REPORT NOTE — centered */}
+        <div className="mt-8 p-5 rounded-xl border-2 border-red-300 bg-red-50 flex flex-col items-center text-center gap-3">
           <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
             <svg
               width="20"
@@ -280,11 +288,11 @@ export default function AboutSafetyPage() {
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
           </div>
-          <div className="flex-1">
+          <div>
             <p className="text-sm font-semibold text-red-800 mb-1">
               {t("safety_report_heading")}
             </p>
-            <p className="text-red-700 text-sm leading-relaxed">
+            <p className="text-red-700 text-sm leading-relaxed max-w-md mx-auto">
               {t("safety_report_note")}
             </p>
           </div>
