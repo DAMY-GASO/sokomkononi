@@ -22,6 +22,7 @@ import {
   LogOut,
   User,
   Inbox,
+  Shield,
 } from "lucide-react";
 import { COLORS, FONTS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -41,9 +42,10 @@ import { useNotifications, notifyListingFeePaid } from "../../../config/notifica
 import { checkReservationReminders } from "../../../config/dealsStore.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
 import { useNewLeadsCount } from "../../../config/leadsStore.js";
+import { useSearchesCount } from "../../../config/searchesStore.js";
 import PostPropertyForm from "./PostPropertyForm";
 import MyListings from "./MyListings";
-import LeadsSection from "../seller/LeadsSection";
+import LeadsSection from "../seller/LeadsSection.jsx";
 import BoostSasa from "./BoostSasa";
 import LeadingSasa from "./LeadingSasa";
 import AdvertiseSasa from "./AdvertiseSasa";
@@ -56,6 +58,10 @@ import BottomNav from "../../../components/BottomNav.jsx";
 import SellerOverview from "../seller/SellerOverview.jsx";
 import BuyerOverview from "../buyer/BuyerOverview.jsx";
 
+// Buyer Sections
+import MySearchesSection from "../buyer/MySearchesSection.jsx";
+import SafetySupportSection from "../buyer/SafetySupportSection.jsx";
+
 // Kurasa mpya
 import SavedPropertiesPage from "../../SavedPropertiesPage";
 import MessagesPage from "../../MessagesPage";
@@ -65,7 +71,7 @@ import WaitingListPage from "../../WaitingListPage";
 import { useWaitingList, leaveWaitingList } from "../../../config/waitingListStore.js";
 
 // ============================================================
-// SELLER NAV — Kiswahili kimeboreshwa + leads
+// SELLER NAV — Bilingual kamili
 // ============================================================
 const SELLER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
@@ -74,7 +80,7 @@ const SELLER_NAV = [
   { key: "leads", label: { sw: "Maulizio", en: "Enquiries" }, icon: Inbox },
   { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
   { key: "boost", label: { sw: "Boost Sasa", en: "Boost Now" }, icon: Rocket },
-  { key: "leading", label: { sw: "Leading Fee", en: "Leading Fee" }, icon: TrendingUp },
+  { key: "leading", label: { sw: "Ada ya Kipaumbele", en: "Leading Fee" }, icon: TrendingUp },
   { key: "advertise", label: { sw: "Tangaza Sasa", en: "Advertise Now" }, icon: Megaphone },
   { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
   { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
@@ -83,17 +89,19 @@ const SELLER_NAV = [
 ];
 
 // ============================================================
-// BUYER NAV — Kiswahili kimeboreshwa
+// BUYER NAV — Bilingual kamili + searches + safety
 // ============================================================
 const BUYER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
   { key: "browse", label: { sw: "Tafuta Mali", en: "Browse Properties" }, icon: Search },
   { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
+  { key: "searches", label: { sw: "Utafutaji Wangu", en: "My Searches" }, icon: Bell },
   { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
   { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
   { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
   { key: "waiting", label: { sw: "Orodha ya Kusubiri", en: "Waiting List" }, icon: Clock3 },
   { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
+  { key: "safety", label: { sw: "Usalama & Msaada", en: "Safety & Support" }, icon: Shield },
 ];
 
 const URL_TO_STATE = {
@@ -118,10 +126,12 @@ const URL_TO_STATE = {
   "/dashboard/buyer/overview": { side: "buyer", key: "overview" },
   "/dashboard/buyer/browse": { side: "buyer", key: "browse" },
   "/dashboard/buyer/saved": { side: "buyer", key: "saved" },
+  "/dashboard/buyer/searches": { side: "buyer", key: "searches" },
   "/dashboard/buyer/messages": { side: "buyer", key: "messages" },
   "/dashboard/buyer/notifications": { side: "buyer", key: "notifications" },
   "/dashboard/buyer/waiting": { side: "buyer", key: "waiting" },
   "/dashboard/buyer/transactions": { side: "buyer", key: "transactions" },
+  "/dashboard/buyer/safety": { side: "buyer", key: "safety" },
 };
 
 const STATE_TO_URL = {
@@ -143,11 +153,13 @@ const STATE_TO_URL = {
     overview: "/dashboard/buyer",
     browse: "/dashboard/buyer/browse",
     saved: "/dashboard/buyer/saved",
+    searches: "/dashboard/buyer/searches",
     deals: "/dashboard/deals",
     messages: "/dashboard/buyer/messages",
     notifications: "/dashboard/buyer/notifications",
     waiting: "/dashboard/buyer/waiting",
     transactions: "/dashboard/buyer/transactions",
+    safety: "/dashboard/buyer/safety",
   },
 };
 
@@ -182,6 +194,7 @@ export default function DashboardShell() {
   const announcements = useSentAnnouncements();
   const waitingList = useWaitingList();
   const newLeadsCount = useNewLeadsCount();
+  const buyerSearchesCount = useSearchesCount();
   const [boostTarget, setBoostTarget] = useState(null);
   const [leadingTarget, setLeadingTarget] = useState(null);
   const [advertiseTarget, setAdvertiseTarget] = useState(null);
@@ -404,6 +417,12 @@ export default function DashboardShell() {
     if (activeKey === "saved") {
       return <SavedPropertiesPage />;
     }
+    if (activeKey === "searches") {
+      return <MySearchesSection />;
+    }
+    if (activeKey === "safety") {
+      return <SafetySupportSection />;
+    }
     if (activeKey === "boost") {
       return (
         <BoostSasa
@@ -523,7 +542,7 @@ export default function DashboardShell() {
         <button
           onClick={() => setSidebarOpen((v) => !v)}
           className="text-white/80 hover:text-white md:hidden"
-          aria-label="Fungua menyu"
+          aria-label={lang === "sw" ? "Fungua menyu" : "Open menu"}
         >
           <Menu size={22} />
         </button>
@@ -622,7 +641,7 @@ export default function DashboardShell() {
           <a
             href="/"
             className="text-white/80 hover:text-white p-1.5 transition-colors"
-            aria-label="Rudi kwenye HomePage"
+            aria-label={lang === "sw" ? "Rudi kwenye ukurasa wa mwanzo" : "Back to homepage"}
           >
             <Home size={20} />
           </a>
@@ -631,7 +650,7 @@ export default function DashboardShell() {
           <button
             onClick={() => handleNavClick("notifications")}
             className="relative text-white/80 hover:text-white p-1.5 transition-colors"
-            aria-label="Notifications"
+            aria-label={lang === "sw" ? "Taarifa" : "Notifications"}
           >
             <Bell size={20} />
             {unreadNotifCount > 0 && (
@@ -789,6 +808,18 @@ export default function DashboardShell() {
                     {newLeadsCount}
                   </span>
                 )}
+                {/* Badge ya searches */}
+                {key === "searches" && buyerSearchesCount > 0 && (
+                  <span
+                    style={{
+                      background: isActive ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                      color: isActive ? COLORS.sand : COLORS.night,
+                    }}
+                    className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                  >
+                    {buyerSearchesCount}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -810,7 +841,10 @@ export default function DashboardShell() {
               className="w-64 h-full py-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto"
             >
               <div className="flex justify-end mb-2">
-                <button onClick={() => setSidebarOpen(false)} aria-label="Funga">
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  aria-label={lang === "sw" ? "Funga" : "Close"}
+                >
                   <X size={20} color={COLORS.night} />
                 </button>
               </div>
@@ -840,6 +874,17 @@ export default function DashboardShell() {
                         className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                       >
                         {newLeadsCount}
+                      </span>
+                    )}
+                    {key === "searches" && buyerSearchesCount > 0 && (
+                      <span
+                        style={{
+                          background: isActive ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                          color: isActive ? COLORS.sand : COLORS.night,
+                        }}
+                        className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                      >
+                        {buyerSearchesCount}
                       </span>
                     )}
                   </button>
