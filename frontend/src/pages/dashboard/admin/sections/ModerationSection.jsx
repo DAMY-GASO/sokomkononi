@@ -1,7 +1,7 @@
 // ============================================================
 // ModerationSection.jsx
 // Uidhinishaji wa mali & matangazo — approve/reject listings.
-// Bilingual + mobile-responsive (card list kwenye simu).
+// Bilingual + mobile-responsive (filters centered).
 // ============================================================
 
 import React, { useState } from "react";
@@ -89,8 +89,8 @@ export default function ModerationSection() {
         }
       />
 
-      {/* FILTERS */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+      {/* FILTERS — centered */}
+      <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full">
         {filters.map((f) => (
           <button
             key={f.key}
