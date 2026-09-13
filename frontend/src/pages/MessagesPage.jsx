@@ -1,5 +1,17 @@
+// ============================================================
+// MessagesPage.jsx
+// Mazungumzo ya wanunuzi na wauzaji.
+//
+// MABADILIKO:
+//   - Bilingual imerekebishwa kikamilifu (sw/en)
+//   - Mock data imeondolewa — sasa inatumia data halisi kutoka
+//     messagesStore.js + AuthContext
+//   - Loading / error / empty states zimeongezwa
+//   - sender === "me" imebadilishwa kuwa senderId === currentUserId
+//   - markConversationRead inaitwa kila selectedId inabadilika
+// ============================================================
+
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import {
   MessageSquare,
   Search,
@@ -9,12 +21,50 @@ import {
   MoreVertical,
   Check,
   CheckCheck,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
-import { COLORS, FONTS, formatTZS, timeAgo } from "./dashboard/components/shared";
-import { useConversations, sendMessage, markConversationRead } from "../config/messagesStore.js";
+import { COLORS, FONTS, timeAgo } from "./dashboard/components/shared";
+import {
+  useConversations,
+  sendMessage,
+  markConversationRead,
+} from "../config/messagesStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx"; // 👈 badilisha path kama ni tofauti
 
-function ConversationListItem({ convo, active, onSelect, lang }) {
+// ============================================================
+// HELPER — tafsiri fupi
+// ============================================================
+function t(lang, sw, en) {
+  return lang === "sw" ? sw : en;
+}
+
+// ============================================================
+// HELPER — pata jina la mwenzake na avatar kutoka convo
+// ============================================================
+function getCounterparty(convo, currentUserId) {
+  if (!convo?.participants || !currentUserId) {
+    return { name: convo?.name || "—", avatar: convo?.avatar || "?" };
+  }
+  const other = convo.participants.find((p) => p.id !== currentUserId);
+  if (!other) {
+    return { name: convo.name || "—", avatar: convo.avatar || "?" };
+  }
+  return {
+    name: other.name || other.username || "—",
+    avatar: other.avatar || (other.name ? other.name[0].toUpperCase() : "?"),
+  };
+}
+
+// ============================================================
+// ConversationListItem
+// ============================================================
+function ConversationListItem({ convo, currentUserId, active, onSelect, lang }) {
+  const { name, avatar } = getCounterparty(convo, currentUserId);
+  const lastMessage = convo.lastMessage || "";
+  const unread = convo.unreadCount || 0;
+
   return (
     <button
       onClick={() => onSelect(convo.id)}
@@ -29,45 +79,55 @@ function ConversationListItem({ convo, active, onSelect, lang }) {
           style={{ background: COLORS.night, color: COLORS.sand }}
           className="w-11 h-11 rounded-full flex items-center justify-center font-semibold"
         >
-          {convo.avatar}
+          {avatar}
         </div>
         {convo.online && (
           <span
             style={{ background: COLORS.green, borderColor: COLORS.sand }}
             className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
+            aria-label={t(lang, "Yupo mtandaoni", "Online")}
           />
         )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <p style={{ color: COLORS.night }} className="text-sm font-semibold truncate">
-            {convo.name}
+            {name}
           </p>
-          <span style={{ color: "rgba(16,26,46,0.4)" }} className="text-[10px] shrink-0">
-            {timeAgo(convo.lastAt, lang)}
+          <span
+            style={{ color: "rgba(16,26,46,0.4)" }}
+            className="text-[10px] shrink-0"
+          >
+            {convo.lastAt ? timeAgo(convo.lastAt, lang) : ""}
           </span>
         </div>
         <p
-          style={{ color: convo.unread ? COLORS.night : "rgba(16,26,46,0.55)" }}
-          className={`text-xs truncate ${convo.unread ? "font-medium" : ""}`}
+          style={{
+            color: unread ? COLORS.night : "rgba(16,26,46,0.55)",
+          }}
+          className={`text-xs truncate ${unread ? "font-medium" : ""}`}
         >
-          {convo.lastMessage}
+          {lastMessage}
         </p>
       </div>
-      {convo.unread > 0 && (
+      {unread > 0 && (
         <span
           style={{ background: COLORS.rust, color: "white" }}
           className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 self-center"
         >
-          {convo.unread}
+          {unread}
         </span>
       )}
     </button>
   );
 }
 
-function ChatView({ convo, onBack, onSend, lang }) {
+// ============================================================
+// ChatView
+// ============================================================
+function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
   const [text, setText] = useState("");
+  const { name, avatar } = getCounterparty(convo, currentUserId);
 
   const handleSend = () => {
     if (!text.trim()) return;
@@ -85,7 +145,7 @@ function ChatView({ convo, onBack, onSend, lang }) {
         <button
           onClick={onBack}
           className="md:hidden shrink-0"
-          aria-label={lang === "sw" ? "Rudi" : "Back"}
+          aria-label={t(lang, "Rudi", "Back")}
         >
           <ArrowLeft size={18} color={COLORS.night} />
         </button>
@@ -94,7 +154,7 @@ function ChatView({ convo, onBack, onSend, lang }) {
             style={{ background: COLORS.night, color: COLORS.sand }}
             className="w-10 h-10 rounded-full flex items-center justify-center font-semibold"
           >
-            {convo.avatar}
+            {avatar}
           </div>
           {convo.online && (
             <span
@@ -105,25 +165,27 @@ function ChatView({ convo, onBack, onSend, lang }) {
         </div>
         <div className="flex-1 min-w-0">
           <p style={{ color: COLORS.night }} className="text-sm font-semibold truncate">
-            {convo.name}
+            {name}
           </p>
           <p
             style={{ color: convo.online ? COLORS.green : "rgba(16,26,46,0.5)" }}
             className="text-xs"
           >
             {convo.online
-              ? lang === "sw"
-                ? "Yupo mtandaoni"
-                : "Online"
-              : lang === "sw"
-                ? "Hayupo mtandaoni"
-                : "Offline"}
+              ? t(lang, "Yupo mtandaoni", "Online")
+              : t(lang, "Hayupo mtandaoni", "Offline")}
           </p>
         </div>
-        <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+        <button
+          className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label={t(lang, "Piga simu", "Call")}
+        >
           <Phone size={18} />
         </button>
-        <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+        <button
+          className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label={t(lang, "Zaidi", "More")}
+        >
           <MoreVertical size={18} />
         </button>
       </div>
@@ -133,37 +195,60 @@ function ChatView({ convo, onBack, onSend, lang }) {
         style={{ background: COLORS.sand }}
         className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5"
       >
-        {convo.messages.map((m) => {
-          const isMe = m.sender === "me";
-          return (
-            <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+        {(convo.messages || []).length === 0 ? (
+          <div className="flex-1 flex items-center justify-center">
+            <p
+              style={{ color: "rgba(16,26,46,0.45)" }}
+              className="text-sm text-center"
+            >
+              {t(
+                lang,
+                "Hakuna ujumbe bado. Anza mazungumzo.",
+                "No messages yet. Start the conversation."
+              )}
+            </p>
+          </div>
+        ) : (
+          convo.messages.map((m) => {
+            const isMe = m.senderId === currentUserId;
+            return (
               <div
-                style={{
-                  background: isMe ? COLORS.night : "white",
-                  color: isMe ? COLORS.sand : COLORS.night,
-                  borderColor: COLORS.sandLine,
-                }}
-                className="border rounded-2xl px-4 py-2.5 max-w-[75%]"
+                key={m.id}
+                className={`flex ${isMe ? "justify-end" : "justify-start"}`}
               >
-                <p className="text-sm">{m.text}</p>
                 <div
-                  className="flex items-center gap-1 justify-end mt-1"
                   style={{
-                    color: isMe ? "rgba(245,243,236,0.6)" : "rgba(16,26,46,0.4)",
+                    background: isMe ? COLORS.night : "white",
+                    color: isMe ? COLORS.sand : COLORS.night,
+                    borderColor: COLORS.sandLine,
                   }}
+                  className="border rounded-2xl px-4 py-2.5 max-w-[75%]"
                 >
-                  <span className="text-[10px]">
-                    {new Date(m.at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                  {isMe && (m.read ? <CheckCheck size={12} /> : <Check size={12} />)}
+                  <p className="text-sm whitespace-pre-wrap break-words">
+                    {m.text}
+                  </p>
+                  <div
+                    className="flex items-center gap-1 justify-end mt-1"
+                    style={{
+                      color: isMe
+                        ? "rgba(245,243,236,0.6)"
+                        : "rgba(16,26,46,0.4)",
+                    }}
+                  >
+                    <span className="text-[10px]">
+                      {new Date(m.at).toLocaleTimeString(
+                        lang === "sw" ? "sw-TZ" : "en-US",
+                        { hour: "2-digit", minute: "2-digit" }
+                      )}
+                    </span>
+                    {isMe &&
+                      (m.read ? <CheckCheck size={12} /> : <Check size={12} />)}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       {/* Composer */}
@@ -178,10 +263,11 @@ function ChatView({ convo, onBack, onSend, lang }) {
             color: COLORS.night,
           }}
           className="flex-1 rounded-full border px-4 py-2.5 text-sm outline-none"
-          placeholder={lang === "sw" ? "Andika ujumbe..." : "Type a message..."}
+          placeholder={t(lang, "Andika ujumbe...", "Type a message...")}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          aria-label={t(lang, "Andika ujumbe", "Type a message")}
         />
         <button
           onClick={handleSend}
@@ -190,8 +276,8 @@ function ChatView({ convo, onBack, onSend, lang }) {
             background: text.trim() ? COLORS.gold : COLORS.sandLine,
             color: text.trim() ? COLORS.night : "rgba(16,26,46,0.4)",
           }}
-          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-          aria-label={lang === "sw" ? "Tuma" : "Send"}
+          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 disabled:cursor-not-allowed"
+          aria-label={t(lang, "Tuma", "Send")}
         >
           <Send size={16} />
         </button>
@@ -200,15 +286,37 @@ function ChatView({ convo, onBack, onSend, lang }) {
   );
 }
 
+// ============================================================
+// MessagesPage
+// ============================================================
 export default function MessagesPage({ initialConversationId = null }) {
   const { lang } = useLanguage();
-  const convos = useConversations();
+  const { user } = useAuth();
+  const currentUserId = user?.id || null;
+
+  // Data halisi kutoka store
+  const {
+    conversations = [],
+    isLoading = false,
+    error = null,
+  } = useConversations() || {};
+
   const [selectedId, setSelectedId] = useState(
-    initialConversationId || convos[0]?.id || null
+    initialConversationId || null
   );
-  const [mobileShowChat, setMobileShowChat] = useState(!!initialConversationId);
+  const [mobileShowChat, setMobileShowChat] = useState(
+    !!initialConversationId
+  );
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Chagua convo ya kwanza ukisha-load (kama hakuna initialConversationId)
+  useEffect(() => {
+    if (!selectedId && conversations.length > 0 && !mobileShowChat) {
+      setSelectedId(conversations[0].id);
+    }
+  }, [conversations, selectedId, mobileShowChat]);
+
+  // Handle initialConversationId kutoka nje
   useEffect(() => {
     if (initialConversationId) {
       setSelectedId(initialConversationId);
@@ -216,23 +324,37 @@ export default function MessagesPage({ initialConversationId = null }) {
     }
   }, [initialConversationId]);
 
-  const selectedConvo = convos.find((c) => c.id === selectedId);
-  const totalUnread = convos.reduce((sum, c) => sum + c.unread, 0);
+  // Mark read kila selectedId inabadilika
+  useEffect(() => {
+    if (selectedId) {
+      markConversationRead(selectedId);
+    }
+  }, [selectedId]);
 
-  const filteredConvos = convos.filter((c) =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const selectedConvo = conversations.find((c) => c.id === selectedId);
+  const totalUnread = conversations.reduce(
+    (sum, c) => sum + (c.unreadCount || 0),
+    0
   );
+
+  const filteredConvos = conversations.filter((c) => {
+    const { name } = getCounterparty(c, currentUserId);
+    return name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const handleSelect = (id) => {
     setSelectedId(id);
     setMobileShowChat(true);
-    markConversationRead(id);
   };
 
   const handleSend = (id, text) => {
-    sendMessage(id, text, "me");
+    if (!currentUserId) return;
+    sendMessage(id, text, currentUserId);
   };
 
+  // ============================================================
+  // RENDER
+  // ============================================================
   return (
     <div
       style={{ background: COLORS.sand, fontFamily: FONTS.body, height: "100%" }}
@@ -248,7 +370,7 @@ export default function MessagesPage({ initialConversationId = null }) {
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
             className="text-2xl sm:text-3xl font-semibold"
           >
-            {lang === "sw" ? "Ujumbe" : "Messages"}
+            {t(lang, "Ujumbe", "Messages")}
           </h1>
           {totalUnread > 0 && (
             <span
@@ -260,9 +382,11 @@ export default function MessagesPage({ initialConversationId = null }) {
           )}
         </div>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-4">
-          {lang === "sw"
-            ? "Mazungumzo yako na wanunuzi na wauzaji."
-            : "Your conversations with buyers and sellers."}
+          {t(
+            lang,
+            "Mazungumzo yako na wanunuzi na wauzaji.",
+            "Your conversations with buyers and sellers."
+          )}
         </p>
 
         {/* Search */}
@@ -275,9 +399,11 @@ export default function MessagesPage({ initialConversationId = null }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={
-              lang === "sw" ? "Tafuta mazungumzo..." : "Search conversations..."
-            }
+            placeholder={t(
+              lang,
+              "Tafuta mazungumzo...",
+              "Search conversations..."
+            )}
             style={{
               background: "white",
               borderColor: COLORS.sandLine,
@@ -296,36 +422,93 @@ export default function MessagesPage({ initialConversationId = null }) {
             mobileShowChat ? "hidden" : "flex"
           } md:flex flex-col w-full md:w-80 shrink-0 border-r px-3 sm:px-4 pb-4 gap-2 overflow-y-auto`}
         >
-          {filteredConvos.length === 0 ? (
+          {/* Loading */}
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2
+                size={28}
+                className="animate-spin mb-3"
+                color={COLORS.gold}
+              />
+              <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-sm">
+                {t(lang, "Inapakia mazungumzo...", "Loading conversations...")}
+              </p>
+            </div>
+          )}
+
+          {/* Error */}
+          {!isLoading && error && (
+            <div
+              style={{
+                borderColor: COLORS.rust,
+                background: "rgba(193,80,46,0.06)",
+              }}
+              className="rounded-2xl border p-4 flex items-start gap-2"
+            >
+              <AlertCircle size={18} color={COLORS.rust} className="shrink-0 mt-0.5" />
+              <div>
+                <p
+                  style={{ color: COLORS.rust }}
+                  className="text-sm font-semibold"
+                >
+                  {t(lang, "Hitilafu", "Error")}
+                </p>
+                <p
+                  style={{ color: "rgba(16,26,46,0.6)" }}
+                  className="text-xs mt-0.5"
+                >
+                  {typeof error === "string"
+                    ? error
+                    : t(
+                        lang,
+                        "Imeshindwa kupakia mazungumzo. Jaribu tena.",
+                        "Failed to load conversations. Try again."
+                      )}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Empty */}
+          {!isLoading && !error && filteredConvos.length === 0 && (
             <div
               style={{ borderColor: COLORS.sandLine }}
               className="rounded-2xl border-2 border-dashed p-8 text-center"
             >
               <MessageSquare size={40} className="mx-auto text-gray-300 mb-2" />
               <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-sm">
-                {lang === "sw" ? "Hakuna mazungumzo" : "No conversations"}
+                {searchQuery
+                  ? t(lang, "Hakuna matokeo", "No results")
+                  : t(lang, "Hakuna mazungumzo", "No conversations")}
               </p>
             </div>
-          ) : (
+          )}
+
+          {/* List */}
+          {!isLoading &&
+            !error &&
             filteredConvos.map((c) => (
               <ConversationListItem
                 key={c.id}
                 convo={c}
+                currentUserId={currentUserId}
                 active={c.id === selectedId}
                 onSelect={handleSelect}
                 lang={lang}
               />
-            ))
-          )}
+            ))}
         </div>
 
         {/* Chat pane */}
         <div
-          className={`${mobileShowChat ? "flex" : "hidden"} md:flex flex-1 min-w-0 flex-col`}
+          className={`${
+            mobileShowChat ? "flex" : "hidden"
+          } md:flex flex-1 min-w-0 flex-col`}
         >
           {selectedConvo ? (
             <ChatView
               convo={selectedConvo}
+              currentUserId={currentUserId}
               onBack={() => setMobileShowChat(false)}
               onSend={handleSend}
               lang={lang}
@@ -334,10 +517,15 @@ export default function MessagesPage({ initialConversationId = null }) {
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <MessageSquare size={56} className="text-gray-300 mx-auto mb-3" />
-                <p style={{ color: "rgba(16,26,46,0.45)" }} className="text-sm">
-                  {lang === "sw"
-                    ? "Chagua mazungumzo kuanza."
-                    : "Select a conversation to start."}
+                <p
+                  style={{ color: "rgba(16,26,46,0.45)" }}
+                  className="text-sm"
+                >
+                  {t(
+                    lang,
+                    "Chagua mazungumzo kuanza.",
+                    "Select a conversation to start."
+                  )}
                 </p>
               </div>
             </div>
