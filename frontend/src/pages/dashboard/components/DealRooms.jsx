@@ -38,6 +38,20 @@ function getMessageText(m, lang) {
   return m.text?.[lang] || m.text?.sw || "";
 }
 
+// ============================================================
+// HELPER — money input auto-comma
+// ============================================================
+function formatMoneyInput(value) {
+  if (!value) return "";
+  const digits = String(value).replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("en-US");
+}
+
+function cleanMoneyInput(value) {
+  return String(value).replace(/[^0-9]/g, "");
+}
+
 const getDealStatus = (lang) => ({
   negotiating: { label: lang === "sw" ? "Inaendelea" : "Negotiating", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
   offer_sent: { label: lang === "sw" ? "Ofa Imetumwa" : "Offer Sent", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
@@ -794,7 +808,7 @@ function DealDetail({
   };
 
   const handleOffer = () => {
-    const value = parseInt(offerAmount.replace(/\D/g, ""), 10);
+    const value = parseInt(cleanMoneyInput(offerAmount), 10);
     if (!value) return;
     onSendOffer(deal.id, value);
     setOfferAmount("");
@@ -955,8 +969,10 @@ function DealDetail({
             style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }}
             className="flex-1 rounded-lg border px-3 py-2 text-sm outline-none"
             placeholder={lang === "sw" ? "Kiasi cha ofa (TZS)" : "Offer amount (TZS)"}
-            value={offerAmount}
-            onChange={(e) => setOfferAmount(e.target.value)}
+            type="text"
+            inputMode="numeric"
+            value={formatMoneyInput(offerAmount)}
+            onChange={(e) => setOfferAmount(cleanMoneyInput(e.target.value))}
           />
           <button
             onClick={handleOffer}
