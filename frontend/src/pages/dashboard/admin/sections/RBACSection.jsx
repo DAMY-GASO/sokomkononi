@@ -7,16 +7,12 @@
 import React, { useState } from "react";
 import {
   ShieldCheck,
-  Users,
   Plus,
   Trash2,
   Pencil,
   Save,
-  X,
-  Check,
   Lock,
   UserCog,
-  KeyRound,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -129,7 +125,6 @@ function RoleCard({ role, lang, onEdit, onDelete }) {
 // ============================================================
 function RoleForm({ initial, lang, onSave, onCancel }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
-  const isEditing = Boolean(initial?.key && initial?.isSystem !== undefined);
 
   const [form, setForm] = useState({
     key: initial?.key || "",
@@ -366,8 +361,7 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
     active: initial?.active ?? true,
   });
 
-  const canSave =
-    form.name.trim() && form.email.trim() && form.roleKey;
+  const canSave = form.name.trim() && form.email.trim() && form.roleKey;
 
   return (
     <div
@@ -454,7 +448,7 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
 }
 
 // ============================================================
-// MAIN SECTION
+// MAIN SECTION — export default
 // ============================================================
 export default function RBACSection() {
   const { lang } = useLanguage();
@@ -469,7 +463,7 @@ export default function RBACSection() {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
       <SectionHeader
         title={t("Roles & Ruhusa", "Roles & Permissions")}
         subtitle={t(
@@ -478,8 +472,8 @@ export default function RBACSection() {
         )}
       />
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-5 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+      {/* Tabs — centered */}
+      <div className="flex justify-center gap-2 mb-5 overflow-x-auto pb-2 w-full min-w-0">
         {TABS.map(({ key, label, icon: Icon }) => {
           const isActive = activeTab === key;
           return (
@@ -509,7 +503,7 @@ export default function RBACSection() {
               setEditingRole(null);
             }}
             style={{ background: COLORS.gold, color: COLORS.night }}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
           >
             <Plus size={13} />
             {t("Role Mpya", "New Role")}
@@ -575,7 +569,7 @@ export default function RBACSection() {
               setEditingStaff(null);
             }}
             style={{ background: COLORS.gold, color: COLORS.night }}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
           >
             <Plus size={13} />
             {t("Mfanyakazi Mpya", "New Staff")}
@@ -632,10 +626,7 @@ export default function RBACSection() {
                 onRemove={(s) => {
                   if (
                     window.confirm(
-                      t(
-                        `Ondoa ${s.name}?`,
-                        `Remove ${s.name}?`
-                      )
+                      t(`Ondoa ${s.name}?`, `Remove ${s.name}?`)
                     )
                   ) {
                     removeSubAdmin(s.id);
