@@ -1,8 +1,17 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import ScrollToHash from "./components/ScrollToHash.jsx";
+
+// ============================================================
+// INITIALIZE — categories za awali
+// ============================================================
+import {
+  initializeCategories,
+  getCategories,
+} from "./config/categoriesStore.js";
+import { SEED_CATEGORIES } from "./config/seedCategories.js";
 
 // ============================================================
 // PUBLIC PAGES
@@ -45,6 +54,26 @@ import DashboardShell from "./pages/dashboard/components/DashboardShell.jsx";
 import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
 
 function App() {
+  // ============================================================
+  // INITIALIZE CATEGORIES — mara moja tu
+  // ============================================================
+  // Inaweka categories 11 za awali KAMA bado hazipo.
+  // Kama Admin ameongeza/kubadilisha, haitagusa (inaheshimu
+  // mabadiliko yake).
+  //
+  // Backend halisi ikiwepo: ondoa hii, badala yake
+  // categoriesStore itafetch kutoka API kwenye useCategories().
+  // ============================================================
+  useEffect(() => {
+    initializeCategories(SEED_CATEGORIES);
+
+    // DEV PEKEE — ondoa comment kama unataka reset kila reload:
+    // if (import.meta.env.DEV) {
+    //   localStorage.removeItem("sokomkononi_categories_v2");
+    //   initializeCategories(SEED_CATEGORIES);
+    // }
+  }, []);
+
   return (
     <AuthProvider>
       <LanguageProvider>
