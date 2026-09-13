@@ -469,7 +469,7 @@ export default function Navbar({
         )}
       </header>
 
-      {/* MOBILE MENU */}
+      {/* MOBILE MENU — inatokea KUSHOTO */}
       <div
         className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${
           menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -477,8 +477,8 @@ export default function Navbar({
         onClick={handleOverlayClick}
       />
       <div
-        className={`fixed top-0 right-0 h-full w-72 max-w-[80%] bg-[#101A2E] z-50 transition-transform duration-300 ease-out ${
-          menuOpen ? "translate-x-0" : "translate-x-full"
+        className={`fixed top-0 left-0 h-full w-72 max-w-[80%] bg-[#101A2E] z-50 transition-transform duration-300 ease-out ${
+          menuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <button
