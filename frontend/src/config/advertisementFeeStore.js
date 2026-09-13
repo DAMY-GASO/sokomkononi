@@ -5,16 +5,6 @@
 // seller side zote mbili), ikitangaza listing yake maalum, kwa muda
 // fulani (default: wiki 1 / siku 7).
 //
-// Kabla ya hii, "Advertisement Fee" kwenye Admin > Revenue ilikuwa
-// namba tuli (INITIAL_FLAT_FEES.ads, TZS 25,000/wiki) isiyounganishwa
-// na bidhaa yoyote — hakuna banner iliyowahi kuonekana popote. Sasa:
-// AdvertiseSasa.jsx (ukurasa wa muuzaji) inasoma bei kutoka hapa, na
-// baada ya malipo huunda rekodi ya banner kwenye bannerAdsStore.js
-// (chanzo cha rekodi za banner zenyewe). DashboardShell.jsx husoma
-// banner hai (active) kutoka bannerAdsStore na kuzizungusha kila
-// sekunde 5. Admin > Revenue > Advertisement Fee sasa inasoma/
-// kuandika bei hapa hapa.
-//
 // Kama stores nyingine — demo ya front-end pekee, localStorage +
 // custom event. Backend halisi ikiwepo, badilisha functions hizi
 // ziite API; useAdvertisementFeeConfig() na getAdvertisementFeeConfig()
@@ -26,11 +16,18 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "sokomkononi_advertisement_fee_config_v1";
 const UPDATE_EVENT = "sokomkononi:advertisement-fee-config-updated";
 
+// ============================================================
+// SEED_ADVERTISEMENT_FEE_CONFIG — bilingual
+// `label` na `desc` zina { sw, en }.
+// ============================================================
 export const SEED_ADVERTISEMENT_FEE_CONFIG = {
   price: 25000,
   days: 7,
-  label: "Advertisement Fee",
-  desc: "Banner inayozunguka kwenye Dashboard (5s rotation) kwa siku 7",
+  label: { sw: "Ada ya Matangazo", en: "Advertisement Fee" },
+  desc: {
+    sw: "Banner inayozunguka kwenye Dashboard (5s rotation) kwa siku 7",
+    en: "Rotating banner on the Dashboard (5s rotation) for 7 days",
+  },
 };
 
 function readFromStorage() {
@@ -58,8 +55,7 @@ export function saveAdvertisementFeeConfig(config) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-/** Badilisha bei pekee — hii ndiyo inayoitwa na EditableAmount
- * kwenye Admin > Revenue > Advertisement Fee. */
+/** Badilisha bei pekee. */
 export function updateAdvertisementFeePrice(price) {
   const current = getAdvertisementFeeConfig();
   const next = { ...current, price: Number(price) };
@@ -68,9 +64,7 @@ export function updateAdvertisementFeePrice(price) {
 }
 
 /**
- * Hook ya React inayosoma config na kujisasisha yenyewe — kwenye
- * AdvertiseSasa (muuzaji) na AdminDashboard (Revenue) papo hapo,
- * bila reload.
+ * Hook ya React inayosoma config na kujisasisha yenyewe.
  */
 export function useAdvertisementFeeConfig() {
   const [config, setConfig] = useState(() => getAdvertisementFeeConfig());
