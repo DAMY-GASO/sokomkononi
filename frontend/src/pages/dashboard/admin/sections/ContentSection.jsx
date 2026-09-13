@@ -17,7 +17,6 @@ import {
   Plus,
   Trash2,
   Pencil,
-  X,
   Save,
   Check,
 } from "lucide-react";
@@ -609,7 +608,7 @@ function SinglePageEditor({ section, lang }) {
 }
 
 // ============================================================
-// MAIN SECTION
+// MAIN SECTION — export default
 // ============================================================
 export default function ContentSection() {
   const { lang } = useLanguage();
@@ -627,8 +626,8 @@ export default function ContentSection() {
         )}
       />
 
-      {/* Tabs — scroll horizontal kwenye simu */}
-      <div className="flex gap-2 mb-5 overflow-x-auto pb-2 w-full min-w-0">
+      {/* Tabs — CENTERED + scroll horizontal kwenye simu */}
+      <div className="flex justify-center gap-2 mb-5 overflow-x-auto pb-2 w-full min-w-0">
         {TABS.map(({ key, label, icon: Icon }) => {
           const isActive = activeTab === key;
           return (
