@@ -1,96 +1,43 @@
 // ============================================================
 // messagesStore.js
-// CHANZO KIMOJA CHA UKWELI kwa mazungumzo/ujumbe (Messages), kwa
-// mtindo uleule wa dealsStore.js / notificationsStore.js.
+// CHANZO KIMOJA CHA UKWELI kwa mazungumzo/ujumbe (Messages).
 //
-// Kabla ya hii, MessagesPage.jsx ilikuwa na SEED_CONVERSATIONS + useState
-// ya ndani — hivyo ujumbe mpya haukuweza kuzalisha notification (bell ya
-// DashboardShell) wala kuonekana sehemu nyingine yoyote nje ya
-// MessagesPage yenyewe. Sasa conversations zinahifadhiwa hapa
-// (localStorage + custom event), na kila ujumbe unaoongezwa kwa
-// sender:"them" (yaani mwenzake ndiye ametuma) huita moja kwa moja
-// notifyNewMessage() kwenye notificationsStore.js.
+// MABADILIKO MAKUU:
+//   - SEED_CONVERSATIONS imeondolewa — hakuna data ya kubuni.
+//   - sender: "me" | "them" -> senderId (halisi kutoka auth).
+//   - name/avatar za convo zimeondolewa — sasa zinachukuliwa
+//     kutoka participants[] (kila convo ina washiriki).
+//   - simulateIncomingMessage imeondolewa — badala yake kuna
+//     receiveMessage() inayotarajiwa kuitwa na websocket/polling.
+//   - useConversations() inarudisha { conversations, isLoading, error }.
 //
-// Backend halisi ikiwepo: badilisha readFromStorage/saveAll ziite API
-// (na incoming messages zije kupitia websocket/polling badala ya
-// simulateIncomingMessage), bila kugusa UI ya MessagesPage.jsx.
+// BACKEND HALISI IKIWEPO:
+//   Badilisha readFromStorage/saveAll ziite API (fetch/axios), na
+//   incoming messages zije kupitia websocket (receiveMessage) badala
+//   ya localStorage. UI ya MessagesPage.jsx haitagusa.
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { notifyNewMessage } from "./notificationsStore.js";
 
-const STORAGE_KEY = "sokomkononi_messages_v1";
+const STORAGE_KEY = "sokomkononi_messages_v2";
 const UPDATE_EVENT = "sokomkononi:messages-updated";
 
-export const SEED_CONVERSATIONS = [
-  {
-    id: "c1",
-    name: "Fatma Juma",
-    avatar: "F",
-    lastMessage: "Sawa, nitakuja kuona kesho asubuhi.",
-    lastAt: "2026-09-13T08:30:00.000Z",
-    unread: 2,
-    online: true,
-    messages: [
-      { id: "m1", sender: "them", text: "Habari, nyumba bado ipo?", at: "2026-09-12T10:00:00.000Z", read: true },
-      { id: "m2", sender: "me", text: "Habari Fatma, ndiyo bado ipo.", at: "2026-09-12T10:05:00.000Z", read: true },
-      { id: "m3", sender: "them", text: "Naomba kuja kuiona kesho.", at: "2026-09-13T08:28:00.000Z", read: false },
-      { id: "m4", sender: "them", text: "Sawa, nitakuja kuona kesho asubuhi.", at: "2026-09-13T08:30:00.000Z", read: false },
-    ],
-  },
-  {
-    id: "c2",
-    name: "Hamisi Rajabu",
-    avatar: "H",
-    lastMessage: "Asante kwa maelezo, nitafikiria.",
-    lastAt: "2026-09-12T16:00:00.000Z",
-    unread: 0,
-    online: false,
-    messages: [
-      { id: "m1", sender: "them", text: "Gari hii mileage ni kiasi gani?", at: "2026-09-11T14:00:00.000Z", read: true },
-      { id: "m2", sender: "me", text: "85,000 km, single owner.", at: "2026-09-11T14:05:00.000Z", read: true },
-      { id: "m3", sender: "them", text: "Asante kwa maelezo, nitafikiria.", at: "2026-09-12T16:00:00.000Z", read: true },
-    ],
-  },
-  {
-    id: "c3",
-    name: "Neema Mushi",
-    avatar: "N",
-    lastMessage: "Tumekubaliana kwenye bei.",
-    lastAt: "2026-09-10T11:00:00.000Z",
-    unread: 0,
-    online: true,
-    messages: [
-      { id: "m1", sender: "them", text: "Tumekubaliana kwenye bei TZS 14,200,000.", at: "2026-09-10T11:00:00.000Z", read: true },
-      { id: "m2", sender: "me", text: "Sahihi kabisa.", at: "2026-09-10T11:03:00.000Z", read: true },
-    ],
-  },
-  {
-    id: "c4",
-    name: "Peter Lema",
-    avatar: "P",
-    lastMessage: "Je, naweza kuja na mtu wa kuthibitisha hati?",
-    lastAt: "2026-09-09T15:30:00.000Z",
-    unread: 1,
-    online: false,
-    messages: [
-      { id: "m1", sender: "them", text: "Habari, kiwanja hiki kina hati miliki?", at: "2026-09-09T15:00:00.000Z", read: true },
-      { id: "m2", sender: "me", text: "Ndiyo, kina hati miliki kamili.", at: "2026-09-09T15:10:00.000Z", read: true },
-      { id: "m3", sender: "them", text: "Je, naweza kuja na mtu wa kuthibitisha hati?", at: "2026-09-09T15:30:00.000Z", read: false },
-    ],
-  },
-];
+// ============================================================
+// STORAGE LAYER
+// ============================================================
+// Badilisha hizi kuwa fetch()/axios ukiwa na backend.
+// ============================================================
 
 function readFromStorage() {
-  if (typeof window === "undefined") return SEED_CONVERSATIONS;
+  if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_CONVERSATIONS;
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_CONVERSATIONS;
-    return parsed;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return SEED_CONVERSATIONS;
+    return [];
   }
 }
 
@@ -105,33 +52,66 @@ export function getConversations() {
   return readFromStorage();
 }
 
+// ============================================================
+// HOOK — useConversations
+// ============================================================
 /**
- * Hook ya React — hutumika kwenye MessagesPage.jsx. Inajisasisha yenyewe
- * papo hapo popote sendMessage()/markConversationRead() zinapoitwa,
- * hivyo bell ya DashboardShell na badge ya "Ujumbe" hazihitaji reload.
+ * Hook ya React — hutumika kwenye MessagesPage.jsx.
+ *
+ * Inarudisha: { conversations, isLoading, error }
+ *
+ * Inajisasisha yenyewe papo hapo popote sendMessage()/
+ * markConversationRead()/receiveMessage() zinapoitwa, hivyo bell ya
+ * DashboardShell na badge ya "Ujumbe" hazihitaji reload.
  */
 export function useConversations() {
-  const [conversations, setConversations] = useState(() => getConversations());
+  const [state, setState] = useState({
+    conversations: [],
+    isLoading: true,
+    error: null,
+  });
+
+  const sync = useCallback(() => {
+    try {
+      const conversations = readFromStorage();
+      setState({ conversations, isLoading: false, error: null });
+    } catch (err) {
+      setState({
+        conversations: [],
+        isLoading: false,
+        error: err?.message || "Failed to load conversations",
+      });
+    }
+  }, []);
 
   useEffect(() => {
-    const sync = () => setConversations(getConversations());
+    sync();
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
     return () => {
       window.removeEventListener("storage", sync);
       window.removeEventListener(UPDATE_EVENT, sync);
     };
-  }, []);
+  }, [sync]);
 
-  return conversations;
+  return state;
 }
 
+// ============================================================
+// MUTATIONS
+// ============================================================
+
 /**
- * Tuma ujumbe kwenye mazungumzo. sender ni "me" (mtumiaji wa sasa
- * anatuma) au "them" (mwenzake ndiye ametuma — hii ndiyo huzalisha
- * notification, mfano wa backend kutuma webhook/socket event).
+ * Tuma ujumbe kwenye mazungumzo.
+ *
+ * @param {string} conversationId
+ * @param {string} text
+ * @param {string} senderId — ID ya mtumiaji anayetuma (kutoka AuthContext)
+ *
+ * Kama senderId si currentUserId, basi ni "them" — hii huzalisha
+ * notification. Backend halisi: hii inaitwa na websocket/receiveMessage.
  */
-export function sendMessage(conversationId, text, sender = "me") {
+export function sendMessage(conversationId, text, senderId) {
   const trimmed = (text || "").trim();
   if (!trimmed) return getConversations();
 
@@ -140,7 +120,18 @@ export function sendMessage(conversationId, text, sender = "me") {
   if (!convo) return current;
 
   const at = new Date().toISOString();
-  const newMessage = { id: `m_${Date.now()}`, sender, text: trimmed, at, read: sender === "me" };
+  const newMessage = {
+    id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    senderId,
+    text: trimmed,
+    at,
+    read: false,
+  };
+
+  // Tambua kama ni "me" au "them" kwa kulinganisha na currentUserId.
+  // currentUserId inapaswa kuwekwa kwenye convo wakati wa kuisoma
+  // (mfano convo.currentUserId), au tunapitisha kama param ya nne.
+  const isMine = senderId === convo.currentUserId;
 
   const next = current.map((c) =>
     c.id === conversationId
@@ -148,34 +139,136 @@ export function sendMessage(conversationId, text, sender = "me") {
           ...c,
           lastMessage: trimmed,
           lastAt: at,
-          unread: sender === "them" ? (c.unread || 0) + 1 : c.unread,
-          messages: [...c.messages, newMessage],
+          unreadCount: isMine ? c.unreadCount || 0 : (c.unreadCount || 0) + 1,
+          messages: [...(c.messages || []), newMessage],
         }
       : c
   );
   saveAll(next);
 
-  if (sender === "them") {
-    notifyNewMessage({ conversationId, senderName: convo.name, preview: trimmed });
+  if (!isMine) {
+    // Mwenzake ametuma — zalisha notification.
+    const sender = (convo.participants || []).find((p) => p.id === senderId);
+    notifyNewMessage({
+      conversationId,
+      senderName: sender?.name || "Mtumiaji",
+      preview: trimmed,
+    });
   }
 
   return next;
 }
 
-/** Weka mazungumzo fulani kama yamesomwa (unread -> 0). */
+/**
+ * Pokea ujumbe kutoka kwa mwenzake (backend halisi: websocket/polling).
+ *
+ * Tofauti na sendMessage, hii HAIHITAJI currentUserId — inachukua
+ * moja kwa moja kutoka convo. Backend ikiwepo, hii inaitwa na
+ * websocket listener.
+ */
+export function receiveMessage(conversationId, senderId, text) {
+  const current = getConversations();
+  const convo = current.find((c) => c.id === conversationId);
+  if (!convo) return current;
+
+  const at = new Date().toISOString();
+  const newMessage = {
+    id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    senderId,
+    text: (text || "").trim(),
+    at,
+    read: false,
+  };
+
+  if (!newMessage.text) return current;
+
+  const next = current.map((c) =>
+    c.id === conversationId
+      ? {
+          ...c,
+          lastMessage: newMessage.text,
+          lastAt: at,
+          unreadCount: (c.unreadCount || 0) + 1,
+          messages: [...(c.messages || []), newMessage],
+        }
+      : c
+  );
+  saveAll(next);
+
+  const sender = (convo.participants || []).find((p) => p.id === senderId);
+  notifyNewMessage({
+    conversationId,
+    senderName: sender?.name || "Mtumiaji",
+    preview: newMessage.text,
+  });
+
+  return next;
+}
+
+/** Weka mazungumzo fulani kama yamesomwa (unreadCount -> 0). */
 export function markConversationRead(conversationId) {
   const next = getConversations().map((c) =>
-    c.id === conversationId ? { ...c, unread: 0, messages: c.messages.map((m) => ({ ...m, read: true })) } : c
+    c.id === conversationId
+      ? {
+          ...c,
+          unreadCount: 0,
+          messages: (c.messages || []).map((m) => ({ ...m, read: true })),
+        }
+      : c
   );
   saveAll(next);
   return next;
 }
 
+// ============================================================
+// BACKEND INTEGRATION — mifano ya kuunganisha na API halisi
+// ============================================================
+// Hizi ni stubs — zitumike badala ya readFromStorage/saveAll
+// ukiwa na backend.
+// ============================================================
+
 /**
- * DEMO PEKEE: inaiga mwenzake akituma ujumbe (backend halisi ikiwepo,
- * hii inaondolewa na inabadilishwa na tukio halisi la websocket/polling
- * — sendMessage(id, text, "them") ndiyo itaendelea kuitwa palepale).
+ * Mfano: pakia conversations kutoka API.
+ *
+ * export async function fetchConversations() {
+ *   const res = await fetch("/api/conversations", {
+ *     headers: { Authorization: `Bearer ${token}` },
+ *   });
+ *   if (!res.ok) throw new Error("Failed to fetch conversations");
+ *   return res.json();
+ * }
  */
-export function simulateIncomingMessage(conversationId, text) {
-  return sendMessage(conversationId, text, "them");
-}
+
+/**
+ * Mfano: tuma ujumbe kwa API.
+ *
+ * export async function postMessage(conversationId, text) {
+ *   const res = await fetch(`/api/conversations/${conversationId}/messages`, {
+ *     method: "POST",
+ *     headers: {
+ *       "Content-Type": "application/json",
+ *       Authorization: `Bearer ${token}`,
+ *     },
+ *     body: JSON.stringify({ text }),
+ *   });
+ *   if (!res.ok) throw new Error("Failed to send message");
+ *   return res.json();
+ * }
+ */
+
+/**
+ * Mfano: websocket listener kwa incoming messages.
+ *
+ * export function subscribeToMessages(conversationId, onMessage) {
+ *   const ws = new WebSocket(`wss://api.sokomkononi.com/ws`);
+ *   ws.onopen = () => ws.send(JSON.stringify({ type: "subscribe", conversationId }));
+ *   ws.onmessage = (event) => {
+ *     const data = JSON.parse(event.data);
+ *     if (data.type === "message") {
+ *       receiveMessage(conversationId, data.senderId, data.text);
+ *       onMessage?.(data);
+ *     }
+ *   };
+ *   return () => ws.close();
+ * }
+ */
