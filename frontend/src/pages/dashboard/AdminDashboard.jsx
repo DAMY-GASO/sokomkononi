@@ -5,7 +5,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
-import { useNotifications } from "../../config/notificationsStore.js";
+import {
+  useNotifications,
+  getLocalizedField,
+} from "../../config/notificationsStore.js";
 import { Menu, X, Bell, LogOut, User as UserIcon, Settings } from "lucide-react";
 
 import { COLORS, FONTS, NAV, ADMIN_NOTIFICATION_ICONS, timeAgo } from "./admin/shared/constants.js";
@@ -18,7 +21,7 @@ import SystemSettingsSection from "./admin/sections/SystemSettingsSection.jsx";
 import AdminProfile from "./admin/sections/AdminProfile.jsx";
 
 // ============================================================
-// AVATAR — inatumika header + dropdown
+// AVATAR
 // ============================================================
 function Avatar({ user, size = "md" }) {
   const sizeClass = size === "lg" ? "w-10 h-10 text-sm" : "w-8 h-8 text-xs";
@@ -46,7 +49,7 @@ function Avatar({ user, size = "md" }) {
 }
 
 // ============================================================
-// LANGUAGE SWITCHER — header pekee (kama Navbar)
+// LANGUAGE SWITCHER
 // ============================================================
 function LanguageSwitcher({ lang, setLang }) {
   const [open, setOpen] = useState(false);
@@ -222,7 +225,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Language Switcher — header pekee */}
+          {/* Language Switcher */}
           <LanguageSwitcher lang={lang} setLang={setLang} />
 
           {/* Notifications */}
@@ -280,7 +283,9 @@ export default function AdminDashboard() {
                           <Icon size={14} color={COLORS.night} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs text-gray-700 leading-snug">{n.title}</p>
+                          <p className="text-xs text-gray-700 leading-snug">
+                            {getLocalizedField(n.title, lang)}
+                          </p>
                           <p className="text-[11px] text-gray-400 mt-1">
                             {timeAgo(n.at, lang)}
                           </p>
@@ -331,7 +336,6 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Profile */}
                   <button
                     onClick={() => {
                       setActiveSection("profile");
@@ -343,7 +347,6 @@ export default function AdminDashboard() {
                     {lang === "sw" ? "Wasifu" : "Profile"}
                   </button>
 
-                  {/* Settings */}
                   <button
                     onClick={() => {
                       setActiveSection("system");
@@ -357,7 +360,6 @@ export default function AdminDashboard() {
 
                   <div className="border-t border-gray-100" />
 
-                  {/* Logout */}
                   <button
                     onClick={() => {
                       setProfileMenuOpen(false);
