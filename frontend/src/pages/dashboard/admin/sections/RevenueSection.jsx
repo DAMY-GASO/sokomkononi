@@ -32,8 +32,18 @@ import { useLeadingFeeConfig, updateLeadingFeePrice } from "../../../../config/l
 import { useAdvertisementFeeConfig, updateAdvertisementFeePrice } from "../../../../config/advertisementFeeStore.js";
 import {
   useActiveCategories,
+  getCategory,
   getCategoryIcon,
 } from "../../../../config/categoriesStore.js";
+
+// ============================================================
+// HELPER — kuchagua lugha sahihi kwa field inayoweza kuwa { sw, en }
+// ============================================================
+function getLocalized(field, lang) {
+  if (!field) return "";
+  if (typeof field === "string") return field;
+  return field?.[lang] || field?.sw || "";
+}
 
 export default function RevenueSection() {
   const { lang } = useLanguage();
@@ -45,6 +55,8 @@ export default function RevenueSection() {
   const activeCategories = useActiveCategories();
   const [saved, setSaved] = useState(false);
   const [flash, setFlash] = useState(null);
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const showFlash = (msg, type = "success") => {
     setFlash({ msg, type });
@@ -93,9 +105,10 @@ export default function RevenueSection() {
     try {
       addFeeConfig(cat.key, cat.label?.sw || cat.key);
       showFlash(
-        lang === "sw"
-          ? `Fee config ya "${cat.key}" imeongezwa kwa default (1%, min 10,000, max 100,000). Hariri hapa chini kubadilisha.`
-          : `Fee config for "${cat.key}" added with default (1%, min 10,000, max 100,000). Edit below to change.`
+        t(
+          `Fee config ya "${cat.key}" imeongezwa kwa default (1%, min 10,000, max 100,000). Hariri hapa chini kubadilisha.`,
+          `Fee config for "${cat.key}" added with default (1%, min 10,000, max 100,000). Edit below to change.`
+        )
       );
     } catch (e) {
       showFlash(e.message, "error");
@@ -105,12 +118,11 @@ export default function RevenueSection() {
   return (
     <>
       <SectionHeader
-        title={lang === "sw" ? "Mapato & Fedha" : "Revenue & Financial Settings"}
-        subtitle={
-          lang === "sw"
-            ? "Vyanzo vyote 5 vya mapato — bofya kiasi kubadilisha"
-            : "All 5 revenue streams — tap amount to edit"
-        }
+        title={t("Mapato & Fedha", "Revenue & Financial Settings")}
+        subtitle={t(
+          "Vyanzo vyote 5 vya mapato — bofya kiasi kubadilisha",
+          "All 5 revenue streams — tap amount to edit"
+        )}
       />
 
       {(saved || flash) && (
@@ -120,7 +132,7 @@ export default function RevenueSection() {
               style={{ background: `${COLORS.green}15`, color: COLORS.green }}
               className="text-xs font-semibold px-3 py-2 rounded-lg"
             >
-              {lang === "sw" ? "Imehifadhiwa" : "Saved"}
+              {t("Imehifadhiwa", "Saved")}
             </div>
           )}
           {flash && (
@@ -154,14 +166,16 @@ export default function RevenueSection() {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-800">
-                  {lang === "sw"
-                    ? `Categories Bila Fee Config (${missingFeeCategories.length})`
-                    : `Categories Without Fee Config (${missingFeeCategories.length})`}
+                  {t(
+                    `Categories Bila Fee Config (${missingFeeCategories.length})`,
+                    `Categories Without Fee Config (${missingFeeCategories.length})`
+                  )}
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {lang === "sw"
-                    ? 'Categories hizi ni hai lakini wauzaji hawawezi kuunda listing — bofya "Ongeza Fee" kwa kila moja'
-                    : 'These categories are active but sellers cannot create listings — click "Add Fee" for each'}
+                  {t(
+                    'Categories hizi ni hai lakini wauzaji hawawezi kuunda listing — bofya "Ongeza Fee" kwa kila moja',
+                    'These categories are active but sellers cannot create listings — click "Add Fee" for each'
+                  )}
                 </p>
               </div>
             </div>
@@ -169,17 +183,17 @@ export default function RevenueSection() {
               {missingFeeCategories.map((cat) => {
                 const Icon = getCategoryIcon(cat.iconKey);
                 const hasPhoto = Boolean(cat.imageUrl);
+                const catLabel = cat.label?.[lang] || cat.label?.sw || cat.key;
                 return (
                   <div
                     key={cat.key}
                     style={{ borderColor: COLORS.sandLine }}
                     className="flex items-center gap-2 sm:gap-3 border rounded-lg px-2.5 sm:px-3 py-2"
                   >
-                    {/* PHOTO / ICON */}
                     {hasPhoto ? (
                       <img
                         src={cat.imageUrl}
-                        alt={cat.label?.sw || cat.key}
+                        alt={catLabel}
                         className="w-9 h-9 rounded-lg object-cover shrink-0"
                       />
                     ) : (
@@ -193,7 +207,7 @@ export default function RevenueSection() {
 
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-800 truncate">
-                        {cat.label?.sw || cat.key}
+                        {catLabel}
                       </p>
                       <p className="text-[11px] text-gray-400 font-mono truncate">
                         {cat.key}
@@ -207,10 +221,10 @@ export default function RevenueSection() {
                     >
                       <Plus size={12} />
                       <span className="hidden sm:inline">
-                        {lang === "sw" ? "Ongeza Fee" : "Add Fee"}
+                        {t("Ongeza Fee", "Add Fee")}
                       </span>
                       <span className="sm:hidden">
-                        {lang === "sw" ? "Ongeza" : "Add"}
+                        {t("Ongeza", "Add")}
                       </span>
                     </button>
                   </div>
@@ -229,58 +243,63 @@ export default function RevenueSection() {
             >
               <Home size={16} color={COLORS.gold} />
             </div>
-            <p className="text-sm font-semibold text-gray-800">Listing Fee</p>
+            <p className="text-sm font-semibold text-gray-800">
+              {t("Ada ya Kuchapisha", "Listing Fee")}
+            </p>
           </div>
           <p className="text-xs text-gray-500 mb-3">
-            {lang === "sw"
-              ? "Asilimia ya bei ya mali kwa category, na ukomo wa chini/juu"
-              : "Percentage of property price per category, with min/max caps"}
+            {t(
+              "Asilimia ya bei ya mali kwa category, na ukomo wa chini/juu",
+              "Percentage of property price per category, with min/max caps"
+            )}
           </p>
           <div className="divide-y divide-gray-100">
-            {listingFeeConfigs.map((c) => (
-              <div key={c.key} className="py-3">
-                {/* Label */}
-                <p className="text-sm font-medium text-gray-800 mb-2">
-                  {c.label}
-                </p>
-                {/* Rate / Min / Max — grid kwenye mobile */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                  <div className="flex flex-col items-start min-w-0">
-                    <span className="text-[10px] text-gray-400 uppercase tracking-wide">
-                      Rate
-                    </span>
-                    <div className="w-full min-w-0">
-                      <EditablePercent
-                        value={c.rate}
-                        onSave={(v) => updateListingFeeRate(c.key, v)}
-                      />
+            {listingFeeConfigs.map((c) => {
+              const category = getCategory(c.key);
+              const catLabel = category?.label?.[lang] || category?.label?.sw || c.key;
+              return (
+                <div key={c.key} className="py-3">
+                  <p className="text-sm font-medium text-gray-800 mb-2">
+                    {catLabel}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                    <div className="flex flex-col items-start min-w-0">
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                        {t("Kiwango", "Rate")}
+                      </span>
+                      <div className="w-full min-w-0">
+                        <EditablePercent
+                          value={c.rate}
+                          onSave={(v) => updateListingFeeRate(c.key, v)}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col items-start min-w-0">
-                    <span className="text-[10px] text-gray-400 uppercase tracking-wide">
-                      Min
-                    </span>
-                    <div className="w-full min-w-0">
-                      <EditableAmount
-                        value={c.min}
-                        onSave={(v) => updateListingFeeMin(c.key, v)}
-                      />
+                    <div className="flex flex-col items-start min-w-0">
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                        {t("Chini", "Min")}
+                      </span>
+                      <div className="w-full min-w-0">
+                        <EditableAmount
+                          value={c.min}
+                          onSave={(v) => updateListingFeeMin(c.key, v)}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col items-start min-w-0">
-                    <span className="text-[10px] text-gray-400 uppercase tracking-wide">
-                      Max
-                    </span>
-                    <div className="w-full min-w-0">
-                      <EditableAmount
-                        value={c.max}
-                        onSave={(v) => updateListingFeeMax(c.key, v)}
-                      />
+                    <div className="flex flex-col items-start min-w-0">
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                        {t("Juu", "Max")}
+                      </span>
+                      <div className="w-full min-w-0">
+                        <EditableAmount
+                          value={c.max}
+                          onSave={(v) => updateListingFeeMax(c.key, v)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -294,13 +313,14 @@ export default function RevenueSection() {
               <Clock size={16} color={COLORS.green} />
             </div>
             <p className="text-sm font-semibold text-gray-800">
-              Reservation Fee
+              {t("Ada ya Reservation", "Reservation Fee")}
             </p>
           </div>
           <p className="text-xs text-gray-500 mb-3">
-            {lang === "sw"
-              ? "100% mapato ya SokoMkononi — hakuna 50/50 split"
-              : "100% SokoMkononi revenue — no 50/50 split"}
+            {t(
+              "100% mapato ya SokoMkononi — hakuna 50/50 split",
+              "100% SokoMkononi revenue — no 50/50 split"
+            )}
           </p>
           <div className="divide-y divide-gray-100">
             {reservationRates.map((r) => (
@@ -309,7 +329,7 @@ export default function RevenueSection() {
                 className="flex items-center justify-between gap-3 py-2.5"
               >
                 <span className="text-sm text-gray-600 min-w-0 truncate">
-                  {r.label}
+                  {r.label?.[lang] || r.label?.sw || r.id}
                 </span>
                 <div className="shrink-0">
                   <EditableAmount
@@ -332,13 +352,14 @@ export default function RevenueSection() {
               <Rocket size={16} color={COLORS.rust} />
             </div>
             <p className="text-sm font-semibold text-gray-800">
-              Boost Packages
+              {t("Vifurushi vya Boost", "Boost Packages")}
             </p>
           </div>
           <p className="text-xs text-gray-500 mb-3">
-            {lang === "sw"
-              ? "Bei za Boost Sasa (Basic/Featured/Premium)"
-              : "Boost Now prices (Basic/Featured/Premium)"}
+            {t(
+              "Bei za Boost Sasa (Basic/Featured/Premium)",
+              "Boost Now prices (Basic/Featured/Premium)"
+            )}
           </p>
           <div className="divide-y divide-gray-100">
             {boostPackages.map((pkg) => (
@@ -347,9 +368,9 @@ export default function RevenueSection() {
                 className="flex items-center justify-between gap-3 py-2.5"
               >
                 <span className="text-sm text-gray-600 min-w-0 truncate">
-                  {pkg.label}{" "}
+                  {pkg.label?.[lang] || pkg.label?.sw || pkg.key}{" "}
                   <span className="text-gray-400">
-                    ({pkg.days} {lang === "sw" ? "siku" : "days"})
+                    ({pkg.days} {t("siku", "days")})
                   </span>
                 </span>
                 <div className="shrink-0">
@@ -374,16 +395,18 @@ export default function RevenueSection() {
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-800">
-                {leadingFee.label}
+                {getLocalized(leadingFee.label, lang)}
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">{leadingFee.desc}</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {getLocalized(leadingFee.desc, lang)}
+              </p>
             </div>
             <EditableAmount
               value={leadingFee.price}
               onSave={updateLeadingPrice}
             />
             <span className="text-[11px] text-gray-400 -mt-2">
-              / {lang === "sw" ? `siku ${leadingFee.days}` : `${leadingFee.days} days`}
+              / {t(`siku ${leadingFee.days}`, `${leadingFee.days} days`)}
             </span>
           </div>
 
@@ -396,16 +419,18 @@ export default function RevenueSection() {
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-800">
-                {adFee.label}
+                {getLocalized(adFee.label, lang)}
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">{adFee.desc}</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {getLocalized(adFee.desc, lang)}
+              </p>
             </div>
             <EditableAmount
               value={adFee.price}
               onSave={updateAdvertisementPrice}
             />
             <span className="text-[11px] text-gray-400 -mt-2">
-              / {lang === "sw" ? `siku ${adFee.days}` : `${adFee.days} days`}
+              / {t(`siku ${adFee.days}`, `${adFee.days} days`)}
             </span>
           </div>
         </div>
