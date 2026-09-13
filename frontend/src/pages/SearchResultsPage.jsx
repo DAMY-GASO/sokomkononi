@@ -29,7 +29,10 @@ import {
 } from "lucide-react";
 import { usePublicListings } from "../config/listingsStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
-import { isBoostActive, isLeadingActive } from "./dashboard/components/shared";
+import {
+  isBoostActive,
+  isLeadingActive,
+} from "./dashboard/components/shared";
 
 const COLORS = {
   night: "#101A2E",
@@ -51,7 +54,6 @@ const CATEGORY_INFO = {
   mashine: { label: { sw: "Mashine", en: "Machinery" }, icon: Wrench },
 };
 
-// Mikoa 31 ya Tanzania
 const REGIONS = [
   "Arusha", "Dar es Salaam", "Dodoma", "Geita", "Iringa", "Kagera", "Katavi",
   "Kigoma", "Kilimanjaro", "Lindi", "Manyara", "Mara", "Mbeya", "Morogoro",
@@ -69,14 +71,20 @@ function formatTZS(amount) {
 }
 
 function timeAgo(dateStr, lang) {
-  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  const days = Math.floor(
+    (Date.now() - new Date(dateStr).getTime()) / 86400000
+  );
   if (days <= 0) return lang === "sw" ? "Leo" : "Today";
   if (days === 1) return lang === "sw" ? "Jana" : "Yesterday";
   if (days < 30) return lang === "sw" ? `Siku ${days}` : `${days} days`;
   const months = Math.floor(days / 30);
   return months === 1
-    ? lang === "sw" ? "Mwezi 1" : "1 month"
-    : lang === "sw" ? `Miezi ${months}` : `${months} months`;
+    ? lang === "sw"
+      ? "Mwezi 1"
+      : "1 month"
+    : lang === "sw"
+      ? `Miezi ${months}`
+      : `${months} months`;
 }
 
 function reservationCountdown(reservedUntil, lang) {
@@ -84,19 +92,32 @@ function reservationCountdown(reservedUntil, lang) {
   const ms = new Date(reservedUntil).getTime() - Date.now();
   if (ms <= 0) return lang === "sw" ? "Inaisha hivi karibuni" : "Ending soon";
   const hours = Math.floor(ms / 3600000);
-  if (hours < 24) return lang === "sw" ? `Inaisha baada ya saa ${hours}` : `Ends in ${hours}hrs`;
+  if (hours < 24)
+    return lang === "sw"
+      ? `Inaisha baada ya saa ${hours}`
+      : `Ends in ${hours}hrs`;
   const days = Math.floor(hours / 24);
   const remainingHours = hours % 24;
-  if (remainingHours === 0) return lang === "sw" ? `Inaisha baada ya siku ${days}` : `Ends in ${days} days`;
+  if (remainingHours === 0)
+    return lang === "sw"
+      ? `Inaisha baada ya siku ${days}`
+      : `Ends in ${days} days`;
   return lang === "sw"
     ? `Inaisha baada ya siku ${days} ${remainingHours}saa`
     : `Ends in ${days}d ${remainingHours}h`;
 }
 
 // ============================================================
-// PROPERTY CARD
+// PROPERTY CARD — imeachwa (kadi zina data nyingi)
 // ============================================================
-function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, lang }) {
+function PropertyCard({
+  property,
+  viewMode,
+  isSaved,
+  onToggleSave,
+  searchQuery,
+  lang,
+}) {
   const categoryInfo = CATEGORY_INFO[property.category] || CATEGORY_INFO.nyumba;
   const Icon = categoryInfo.icon;
   const isFeatured = isBoostActive(property);
@@ -110,7 +131,10 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
     const parts = String(text).split(new RegExp(`(${searchQuery})`, "gi"));
     return parts.map((part, i) =>
       part.toLowerCase() === searchQuery.toLowerCase() ? (
-        <mark key={i} className="bg-[#E8A33D]/30 text-[#101A2E] rounded px-0.5">
+        <mark
+          key={i}
+          className="bg-[#E8A33D]/30 text-[#101A2E] rounded px-0.5"
+        >
           {part}
         </mark>
       ) : (
@@ -139,12 +163,12 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
           <Icon size={32} className="text-gray-300" />
           {isReserved && (
             <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Clock3 size={10} /> RESERVED
+              <Clock3 size={10} /> {lang === "sw" ? "IMEHIFADHIWA" : "RESERVED"}
             </span>
           )}
           {isSold && (
             <span className="absolute top-2 left-2 bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Ban size={10} /> SOLD
+              <Ban size={10} /> {lang === "sw" ? "IMEUZWA" : "SOLD"}
             </span>
           )}
         </Link>
@@ -157,7 +181,8 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
                 </h3>
                 {isLeading && (
                   <span className="shrink-0 bg-[#2F6D4F]/10 text-[#2F6D4F] text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                    <TrendingUp size={9} /> Priority
+                    <TrendingUp size={9} />{" "}
+                    {lang === "sw" ? "Kipaumbele" : "Priority"}
                   </span>
                 )}
               </div>
@@ -165,8 +190,19 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
             <button
               onClick={handleSave}
               className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                isSaved ? "bg-[#C1502E] text-white" : "text-gray-400 hover:text-[#C1502E]"
+                isSaved
+                  ? "bg-[#C1502E] text-white"
+                  : "text-gray-400 hover:text-[#C1502E]"
               }`}
+              aria-label={
+                isSaved
+                  ? lang === "sw"
+                    ? "Ondoa kwenye saved"
+                    : "Remove from saved"
+                  : lang === "sw"
+                    ? "Hifadhi"
+                    : "Save"
+              }
             >
               <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
             </button>
@@ -185,15 +221,30 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
           </p>
           {isReserved && property.reservedUntil && (
             <p className="text-[11px] font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
-              <Clock3 size={11} /> {reservationCountdown(property.reservedUntil, lang)}
+              <Clock3 size={11} />{" "}
+              {reservationCountdown(property.reservedUntil, lang)}
             </p>
           )}
           <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
-            {property.bedrooms && <span>🛏 {property.bedrooms} {lang === "sw" ? "vyumba" : "bed"}</span>}
-            {property.bathrooms && <span>🚿 {property.bathrooms} {lang === "sw" ? "bafu" : "bath"}</span>}
+            {property.bedrooms && (
+              <span>
+                🛏 {property.bedrooms}{" "}
+                {lang === "sw" ? "vyumba" : "bed"}
+              </span>
+            )}
+            {property.bathrooms && (
+              <span>
+                🚿 {property.bathrooms}{" "}
+                {lang === "sw" ? "bafu" : "bath"}
+              </span>
+            )}
             {property.area && <span>📐 {property.area}</span>}
             {property.titleStatus && <span>📜 {property.titleStatus}</span>}
-            {property.make && <span>🚗 {property.make} {property.model}</span>}
+            {property.make && (
+              <span>
+                🚗 {property.make} {property.model}
+              </span>
+            )}
             {property.type && <span>🏢 {property.type}</span>}
           </div>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
@@ -206,8 +257,8 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
             </div>
             {isVerified && (
               <span className="flex items-center gap-1 text-xs text-[#2F6D4F] font-medium">
-                <Shield size={12} />
-                Verified
+                <Shield size={12} />{" "}
+                {lang === "sw" ? "Imethibitishwa" : "Verified"}
               </span>
             )}
           </div>
@@ -224,43 +275,59 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
     >
       <Link to={`/mali/${property.id}`} className="block relative">
         <div className="w-full h-44 bg-gray-100 flex items-center justify-center">
-          <Icon size={40} className="text-gray-300 group-hover:scale-110 transition-transform" />
+          <Icon
+            size={40}
+            className="text-gray-300 group-hover:scale-110 transition-transform"
+          />
         </div>
 
         <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
           {isLeading && (
             <span className="bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <TrendingUp size={10} /> Search Priority
+              <TrendingUp size={10} />{" "}
+              {lang === "sw" ? "Kipaumbele cha Utafutaji" : "Search Priority"}
             </span>
           )}
           {isFeatured && (
             <span className="bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Star size={10} fill="#101A2E" /> Featured
+              <Star size={10} fill="#101A2E" />{" "}
+              {lang === "sw" ? "Imeangaziwa" : "Featured"}
             </span>
           )}
           {isReserved && (
             <span className="bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
-              <Clock3 size={10} /> RESERVED
+              <Clock3 size={10} /> {lang === "sw" ? "IMEHIFADHIWA" : "RESERVED"}
             </span>
           )}
           {isSold && (
             <span className="bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
-              <Ban size={10} /> SOLD
+              <Ban size={10} /> {lang === "sw" ? "IMEUZWA" : "SOLD"}
             </span>
           )}
         </div>
 
         {isVerified && (
           <span className="absolute top-2 right-2 bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Shield size={10} />
-            Verified
+            <Shield size={10} />{" "}
+            {lang === "sw" ? "Imethibitishwa" : "Verified"}
           </span>
         )}
         <button
           onClick={handleSave}
           className={`absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-            isSaved ? "bg-[#C1502E] text-white" : "bg-white/90 text-gray-400 hover:text-[#C1502E]"
+            isSaved
+              ? "bg-[#C1502E] text-white"
+              : "bg-white/90 text-gray-400 hover:text-[#C1502E]"
           }`}
+          aria-label={
+            isSaved
+              ? lang === "sw"
+                ? "Ondoa kwenye saved"
+                : "Remove from saved"
+              : lang === "sw"
+                ? "Hifadhi"
+                : "Save"
+          }
         >
           <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
         </button>
@@ -276,14 +343,17 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
         </h3>
         <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
           <MapPin size={12} />
-          <span className="truncate">{highlightText(property.location)}</span>
+          <span className="truncate">
+            {highlightText(property.location)}
+          </span>
         </div>
         <p className="text-[#C1502E] font-bold text-base mt-2">
           {formatTZS(property.price)}
         </p>
         {isReserved && property.reservedUntil && (
           <p className="text-[11px] font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
-            <Clock3 size={11} /> {reservationCountdown(property.reservedUntil, lang)}
+            <Clock3 size={11} />{" "}
+            {reservationCountdown(property.reservedUntil, lang)}
           </p>
         )}
         <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
@@ -305,9 +375,16 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, searchQuery, 
 }
 
 // ============================================================
-// FILTERS SIDEBAR
+// FILTER SIDEBAR — imeachwa kushoto
 // ============================================================
-function FilterSidebar({ filters, setFilters, isOpen, onClose, lang, onApply }) {
+function FilterSidebar({
+  filters,
+  setFilters,
+  isOpen,
+  onClose,
+  lang,
+  onApply,
+}) {
   const [localFilters, setLocalFilters] = useState(filters);
 
   const priceRanges = [
@@ -360,19 +437,25 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang, onApply }) 
           <SlidersHorizontal size={16} />
           {lang === "sw" ? "Vichujio" : "Filters"}
         </h3>
-        <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-600">
+        <button
+          onClick={onClose}
+          className="lg:hidden text-gray-400 hover:text-gray-600"
+          aria-label={lang === "sw" ? "Funga" : "Close"}
+        >
           <X size={20} />
         </button>
       </div>
 
-      {/* Categories */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">
           {lang === "sw" ? "Kategoria" : "Category"}
         </h4>
         <div className="space-y-2">
           {Object.entries(CATEGORY_INFO).map(([key, info]) => (
-            <label key={key} className="flex items-center gap-2 cursor-pointer">
+            <label
+              key={key}
+              className="flex items-center gap-2 cursor-pointer"
+            >
               <input
                 type="checkbox"
                 checked={localFilters.categories.includes(key)}
@@ -385,7 +468,6 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang, onApply }) 
         </div>
       </div>
 
-      {/* Price Range */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">
           {lang === "sw" ? "Bei" : "Price"}
@@ -397,7 +479,9 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang, onApply }) 
                 type="radio"
                 name="priceRange"
                 checked={localFilters.priceRange === idx}
-                onChange={() => setLocalFilters({ ...localFilters, priceRange: idx })}
+                onChange={() =>
+                  setLocalFilters({ ...localFilters, priceRange: idx })
+                }
                 className="w-4 h-4 text-[#E8A33D] focus:ring-[#E8A33D]"
               />
               <span className="text-sm text-gray-600">
@@ -408,14 +492,16 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang, onApply }) 
         </div>
       </div>
 
-      {/* Regions */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">
           {lang === "sw" ? "Mkoa" : "Region"}
         </h4>
         <div className="space-y-2 max-h-48 overflow-y-auto">
           {REGIONS.map((region) => (
-            <label key={region} className="flex items-center gap-2 cursor-pointer">
+            <label
+              key={region}
+              className="flex items-center gap-2 cursor-pointer"
+            >
               <input
                 type="checkbox"
                 checked={localFilters.regions.includes(region)}
@@ -428,7 +514,6 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang, onApply }) 
         </div>
       </div>
 
-      {/* Other */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">
           {lang === "sw" ? "Vigezo Vingine" : "Other"}
@@ -438,7 +523,12 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang, onApply }) 
             <input
               type="checkbox"
               checked={localFilters.verified}
-              onChange={(e) => setLocalFilters({ ...localFilters, verified: e.target.checked })}
+              onChange={(e) =>
+                setLocalFilters({
+                  ...localFilters,
+                  verified: e.target.checked,
+                })
+              }
               className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
             />
             <span className="text-sm text-gray-600">
@@ -449,7 +539,12 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang, onApply }) 
             <input
               type="checkbox"
               checked={localFilters.featured}
-              onChange={(e) => setLocalFilters({ ...localFilters, featured: e.target.checked })}
+              onChange={(e) =>
+                setLocalFilters({
+                  ...localFilters,
+                  featured: e.target.checked,
+                })
+              }
               className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
             />
             <span className="text-sm text-gray-600">
@@ -459,7 +554,6 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang, onApply }) 
         </div>
       </div>
 
-      {/* Actions */}
       <div className="space-y-2 pt-4 border-t border-gray-100">
         <button
           onClick={handleApply}
@@ -488,7 +582,9 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang, onApply }) 
       {isOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="flex-1 bg-black/50" onClick={onClose} />
-          <div className="w-80 max-w-[85%] bg-white h-full overflow-y-auto p-5">{content}</div>
+          <div className="w-80 max-w-[85%] bg-white h-full overflow-y-auto p-5">
+            {content}
+          </div>
         </div>
       )}
     </>
@@ -520,16 +616,13 @@ export default function SearchResultsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 9;
 
-  // === Soma listings halisi kutoka store ===
   const allListings = usePublicListings();
 
-  // Update URL when search changes
   useEffect(() => {
     setSearchQuery(query);
     setCurrentPage(1);
   }, [query]);
 
-  // Search and filter properties
   const searchResults = useMemo(() => {
     if (!query.trim()) return [];
 
@@ -666,21 +759,31 @@ export default function SearchResultsPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* SEARCH HEADER */}
+      {/* ============================================================ */}
+      {/* SEARCH HEADER — CENTERED */}
+      {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-10 px-4">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-2xl sm:text-3xl font-bold">
             {lang === "sw" ? "Matokeo ya Utafutaji" : "Search Results"}
           </h1>
           {query && (
-            <p className="text-white/60 text-sm mt-1">
-              {lang === "sw" ? `Matokeo ya "${query}"` : `Results for "${query}"`}
+            <p className="text-white/60 text-sm mt-2 max-w-xl mx-auto">
+              {lang === "sw"
+                ? `Matokeo ya "${query}"`
+                : `Results for "${query}"`}
             </p>
           )}
 
-          <form onSubmit={handleSearchSubmit} className="mt-6 max-w-2xl">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="mt-6 max-w-2xl mx-auto"
+          >
             <div className="relative">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40"
+              />
               <input
                 type="text"
                 value={searchQuery}
@@ -703,7 +806,9 @@ export default function SearchResultsPage() {
         </div>
       </section>
 
+      {/* ============================================================ */}
       {/* MAIN CONTENT */}
+      {/* ============================================================ */}
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex gap-6">
           <FilterSidebar
@@ -716,12 +821,16 @@ export default function SearchResultsPage() {
           />
 
           <div className="flex-1 min-w-0">
-            {/* Toolbar */}
+            {/* Toolbar — imeachwa */}
             <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm text-gray-600">
-                  <span className="font-semibold text-gray-800">{searchResults.length}</span>{" "}
-                  {lang === "sw" ? "matokeo yamepatikana" : "results found"}
+                  <span className="font-semibold text-gray-800">
+                    {searchResults.length}
+                  </span>{" "}
+                  {lang === "sw"
+                    ? "matokeo yamepatikana"
+                    : "results found"}
                 </p>
                 {query && (
                   <p className="text-xs text-gray-400 mt-0.5">
@@ -737,7 +846,9 @@ export default function SearchResultsPage() {
                 >
                   <SlidersHorizontal size={14} />
                   {lang === "sw" ? "Vichujio" : "Filters"}
-                  {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-[#C1502E]" />}
+                  {hasActiveFilters && (
+                    <span className="w-2 h-2 rounded-full bg-[#C1502E]" />
+                  )}
                 </button>
 
                 <div className="relative">
@@ -753,10 +864,14 @@ export default function SearchResultsPage() {
                       {lang === "sw" ? "Mpya Kwanza" : "Newest First"}
                     </option>
                     <option value="price_low">
-                      {lang === "sw" ? "Bei: Chini → Juu" : "Price: Low → High"}
+                      {lang === "sw"
+                        ? "Bei: Chini → Juu"
+                        : "Price: Low → High"}
                     </option>
                     <option value="price_high">
-                      {lang === "sw" ? "Bei: Juu → Chini" : "Price: High → Low"}
+                      {lang === "sw"
+                        ? "Bei: Juu → Chini"
+                        : "Price: High → Low"}
                     </option>
                     <option value="popular">
                       {lang === "sw" ? "Maarufu" : "Popular"}
@@ -772,18 +887,22 @@ export default function SearchResultsPage() {
                   <button
                     onClick={() => setViewMode("grid")}
                     className={`p-2 transition-colors ${
-                      viewMode === "grid" ? "bg-[#E8A33D] text-[#101A2E]" : "text-gray-500 hover:bg-gray-50"
+                      viewMode === "grid"
+                        ? "bg-[#E8A33D] text-[#101A2E]"
+                        : "text-gray-500 hover:bg-gray-50"
                     }`}
-                    aria-label="Grid view"
+                    aria-label={lang === "sw" ? "Grid" : "Grid"}
                   >
                     <Grid3x3 size={16} />
                   </button>
                   <button
                     onClick={() => setViewMode("list")}
                     className={`p-2 transition-colors ${
-                      viewMode === "list" ? "bg-[#E8A33D] text-[#101A2E]" : "text-gray-500 hover:bg-gray-50"
+                      viewMode === "list"
+                        ? "bg-[#E8A33D] text-[#101A2E]"
+                        : "text-gray-500 hover:bg-gray-50"
                     }`}
-                    aria-label="List view"
+                    aria-label={lang === "sw" ? "Orodha" : "List"}
                   >
                     <List size={16} />
                   </button>
@@ -791,7 +910,7 @@ export default function SearchResultsPage() {
               </div>
             </div>
 
-            {/* Active Filters */}
+            {/* Active Filters — imeachwa kushoto */}
             {hasActiveFilters && (
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className="text-xs text-gray-500">
@@ -807,9 +926,12 @@ export default function SearchResultsPage() {
                       onClick={() =>
                         setFilters({
                           ...filters,
-                          categories: filters.categories.filter((c) => c !== cat),
+                          categories: filters.categories.filter(
+                            (c) => c !== cat
+                          ),
                         })
                       }
+                      aria-label={lang === "sw" ? "Ondoa" : "Remove"}
                     >
                       <X size={12} />
                     </button>
@@ -828,6 +950,7 @@ export default function SearchResultsPage() {
                           regions: filters.regions.filter((r) => r !== region),
                         })
                       }
+                      aria-label={lang === "sw" ? "Ondoa" : "Remove"}
                     >
                       <X size={12} />
                     </button>
@@ -835,16 +958,26 @@ export default function SearchResultsPage() {
                 ))}
                 {filters.verified && (
                   <span className="inline-flex items-center gap-1 bg-[#2F6D4F]/10 text-[#2F6D4F] text-xs px-2.5 py-1 rounded-full">
-                    Verified
-                    <button onClick={() => setFilters({ ...filters, verified: false })}>
+                    {lang === "sw" ? "Zilizothibitishwa" : "Verified"}
+                    <button
+                      onClick={() =>
+                        setFilters({ ...filters, verified: false })
+                      }
+                      aria-label={lang === "sw" ? "Ondoa" : "Remove"}
+                    >
                       <X size={12} />
                     </button>
                   </span>
                 )}
                 {filters.featured && (
                   <span className="inline-flex items-center gap-1 bg-[#E8A33D]/10 text-[#8A5A16] text-xs px-2.5 py-1 rounded-full">
-                    Featured
-                    <button onClick={() => setFilters({ ...filters, featured: false })}>
+                    {lang === "sw" ? "Imeangaziwa" : "Featured"}
+                    <button
+                      onClick={() =>
+                        setFilters({ ...filters, featured: false })
+                      }
+                      aria-label={lang === "sw" ? "Ondoa" : "Remove"}
+                    >
                       <X size={12} />
                     </button>
                   </span>
@@ -898,13 +1031,19 @@ export default function SearchResultsPage() {
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-8">
                     <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.max(1, p - 1))
+                      }
                       disabled={currentPage === 1}
                       className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                      aria-label={lang === "sw" ? "Nyuma" : "Previous"}
                     >
                       <ChevronLeft size={16} />
                     </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    {Array.from(
+                      { length: totalPages },
+                      (_, i) => i + 1
+                    ).map((page) => (
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
@@ -918,9 +1057,12 @@ export default function SearchResultsPage() {
                       </button>
                     ))}
                     <button
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={currentPage === totalPages}
                       className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                      aria-label={lang === "sw" ? "Mbele" : "Next"}
                     >
                       <ChevronRight size={16} />
                     </button>
@@ -933,14 +1075,16 @@ export default function SearchResultsPage() {
                   <Search size={24} className="text-gray-400" />
                 </div>
                 <h3 className="font-semibold text-gray-800">
-                  {lang === "sw" ? "Hakuna matokeo yaliyopatikana" : "No results found"}
+                  {lang === "sw"
+                    ? "Hakuna matokeo yaliyopatikana"
+                    : "No results found"}
                 </h3>
                 <p className="text-gray-500 text-sm mt-1">
                   {lang === "sw"
                     ? `Hakuna mali inayolingana na "${query}"`
                     : `No properties match "${query}"`}
                 </p>
-                <div className="mt-4 flex items-center justify-center gap-2">
+                <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
                   <button
                     onClick={() => {
                       setSearchParams({});
@@ -965,20 +1109,27 @@ export default function SearchResultsPage() {
                     {lang === "sw" ? "Mapendekezo:" : "Suggestions:"}
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2">
-                    {["Nyumba", "Magari", "Viwanja", "Dar es Salaam", "Arusha"].map(
-                      (suggestion) => (
+                    {[
+                      { sw: "Nyumba", en: "Houses" },
+                      { sw: "Magari", en: "Cars" },
+                      { sw: "Viwanja", en: "Plots" },
+                      { sw: "Dar es Salaam", en: "Dar es Salaam" },
+                      { sw: "Arusha", en: "Arusha" },
+                    ].map((suggestion) => {
+                      const label = suggestion[lang];
+                      return (
                         <button
-                          key={suggestion}
+                          key={label}
                           onClick={() => {
-                            setSearchQuery(suggestion);
-                            setSearchParams({ tafuta: suggestion });
+                            setSearchQuery(label);
+                            setSearchParams({ tafuta: label });
                           }}
                           className="px-3 py-1.5 bg-gray-100 hover:bg-[#E8A33D]/10 hover:text-[#E8A33D] text-gray-600 text-xs font-medium rounded-full transition-colors"
                         >
-                          {suggestion}
+                          {label}
                         </button>
-                      )
-                    )}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
