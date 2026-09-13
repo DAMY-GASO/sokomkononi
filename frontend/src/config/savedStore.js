@@ -2,9 +2,9 @@
 // savedStore.js
 // CHANZO KIMOJA CHA UKWELI kwa saved-properties (Zilizohifadhiwa).
 //
-// Kabla ya hii, BrowseProperties ilikuwa na savedIds yake ya ndani,
-// na SavedPropertiesPage ilikuwa na SEED_SAVED yake — mtumiaji
-// akihifadhi kwenye Browse, haionekani SavedPropertiesPage.
+// Kama stores nyingine — demo ya front-end pekee, localStorage +
+// custom event. Backend halisi ikiwepo, badilisha functions hizi
+// ziite API; hooks (useSavedIds) hazitahitaji kubadilika.
 // ============================================================
 
 import { useEffect, useState } from "react";
@@ -12,7 +12,10 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "sokomkononi_saved_v1";
 const UPDATE_EVENT = "sokomkononi:saved-updated";
 
-const SEED_SAVED_IDS = ["l1", "l2", "l3"];
+// ============================================================
+// SEED_SAVED_IDS — tupu. Data itakuja kutoka backend baadaye.
+// ============================================================
+const SEED_SAVED_IDS = [];
 
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_SAVED_IDS;
