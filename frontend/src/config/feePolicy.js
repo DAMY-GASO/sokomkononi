@@ -9,11 +9,10 @@
 //   LAZIMA isome kutoka hapa kwa kutumia getReservationRates() au
 //   useReservationRates() — kamwe isiandike namba zake tofauti.
 //
-// Hii ni demo ya front-end pekee (hakuna backend bado), kwa hiyo
-// tunatumia localStorage kuhifadhi mabadiliko ya admin ili DealRooms
-// (na tab/ukurasa mwingine wowote) uone bei mpya papo hapo. Backend
-// ikiwepo baadaye, badilisha tu functions hizi ziite API badala ya
-// localStorage — sehemu zinazotumia hook hazitahitaji kubadilika.
+// Kama stores nyingine — demo ya front-end pekee, localStorage +
+// custom event. Backend ikiwepo baadaye, badilisha tu functions hizi
+// ziite API badala ya localStorage — sehemu zinazotumia hook
+// hazitahitaji kubadilika.
 // ============================================================
 
 import { useEffect, useState } from "react";
@@ -21,14 +20,39 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "sokomkononi_reservation_rates_v1";
 const UPDATE_EVENT = "sokomkononi:reservation-rates-updated";
 
-// Hizi ndizo thamani rasmi za Admin Dashboard — ndizo zinazotumika
-// kama default na pia ndizo zinazoonekana kwenye DealRooms sasa.
+// ============================================================
+// DEFAULT_RESERVATION_RATES — bilingual
+// `label` na `sub` zina { sw, en }.
+// ============================================================
 export const DEFAULT_RESERVATION_RATES = [
-  { id: "24h", hours: 24, label: "Saa 24", sub: "Siku 1", fee: 10000 },
-  { id: "48h", hours: 48, label: "Saa 48", sub: "Siku 2", fee: 18000 },
-  { id: "72h", hours: 72, label: "Saa 72", sub: "Siku 3", fee: 25000 },
-  // "custom" = kiwango cha ziada KWA SIKU kwa muda unaozidi saa 72
-  { id: "custom", hours: null, label: "Custom (kwa siku)", fee: 8000 },
+  {
+    id: "24h",
+    hours: 24,
+    label: { sw: "Saa 24", en: "24 Hours" },
+    sub: { sw: "Siku 1", en: "1 Day" },
+    fee: 10000,
+  },
+  {
+    id: "48h",
+    hours: 48,
+    label: { sw: "Saa 48", en: "48 Hours" },
+    sub: { sw: "Siku 2", en: "2 Days" },
+    fee: 18000,
+  },
+  {
+    id: "72h",
+    hours: 72,
+    label: { sw: "Saa 72", en: "72 Hours" },
+    sub: { sw: "Siku 3", en: "3 Days" },
+    fee: 25000,
+  },
+  {
+    id: "custom",
+    hours: null,
+    label: { sw: "Custom (kwa siku)", en: "Custom (per day)" },
+    sub: null,
+    fee: 8000,
+  },
 ];
 
 function readFromStorage() {
@@ -37,7 +61,7 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_RESERVATION_RATES;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_RESERVATION_RATES;
+    if (!Array.isArray(parsed)) return DEFAULT_RESERVATION_RATES;
     return parsed;
   } catch {
     return DEFAULT_RESERVATION_RATES;
@@ -49,15 +73,14 @@ export function getReservationRates() {
   return readFromStorage();
 }
 
-/** Andika seti mpya kamili ya rates (Admin pekee anapaswa kuita hii). */
+/** Andika seti mpya kamili ya rates. */
 export function saveReservationRates(rates) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(rates));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-/** Badilisha fee ya tier moja tu (kwa mfano "24h") — hii ndiyo
- * inayoitwa na EditableAmount kwenye Admin > Revenue. */
+/** Badilisha fee ya tier moja tu. */
 export function updateReservationRate(id, fee) {
   const current = getReservationRates();
   const next = current.map((r) => (r.id === id ? { ...r, fee: Number(fee) } : r));
@@ -65,11 +88,7 @@ export function updateReservationRate(id, fee) {
   return next;
 }
 
-/**
- * Hook ya React inayosoma rates na kujisasisha yenyewe kila admin
- * anapobadilisha bei — kwenye tab ileile (custom event) na kwenye
- * tab/dirisha nyingine (storage event).
- */
+/** Hook ya React inayosoma rates na kujisasisha yenyewe. */
 export function useReservationRates() {
   const [rates, setRates] = useState(() => getReservationRates());
 
@@ -87,10 +106,7 @@ export function useReservationRates() {
 }
 
 /**
- * Kokotoa Reservation Fee kwa saa yoyote, kwa kutumia rates za sasa
- * kutoka Admin Dashboard. Tiers 24/48/72 zinatumika moja kwa moja;
- * chochote zaidi ya saa 72 kinaongezewa kiwango cha "custom" kwa kila
- * siku (blocks za saa 24) zinazozidi.
+ * Kokotoa Reservation Fee kwa saa yoyote.
  */
 export function calcReservationFee(hours) {
   const rates = getReservationRates();
