@@ -73,7 +73,6 @@ function reservationCountdown(reservedUntil, lang) {
 
 // ============================================================
 // CARD IMAGE RESOLVER
-// Priority: property.imageUrl → category.imageUrl → null (icon fallback)
 // ============================================================
 function resolveCardImage(property, category) {
   if (property?.imageUrl) return property.imageUrl;
@@ -619,7 +618,6 @@ export default function BrowseProperties({ lang = "sw" }) {
       }
     };
 
-    // Leading Fee inapewa kipaumbele; kisha AVAILABLE → RESERVED → SOLD
     const statusRank = (p) => {
       if (p.status === "live") return 0;
       if (p.status === "reserved") return 1;
@@ -646,14 +644,10 @@ export default function BrowseProperties({ lang = "sw" }) {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // ============================================================
-  // TOGGLE SAVE — pamoja na snapshot kwa favorites notifications
-  // ============================================================
   const toggleSave = (id, property) => {
     const isCurrentlySaved = getSavedIds().includes(id);
     const next = toggleSaved(id);
 
-    // Kama amehifadhi sasa (sio kuondoa), hifadhi snapshot
     if (!isCurrentlySaved) {
       const listing =
         property || allProperties.find((p) => p.id === id);
@@ -691,7 +685,11 @@ export default function BrowseProperties({ lang = "sw" }) {
 
   return (
     <div
-      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "100%" }}
+      style={{
+        background: COLORS.sand,
+        fontFamily: FONTS.body,
+        minHeight: "100%",
+      }}
       className="w-full p-4 sm:p-6"
     >
       <style>{`
@@ -699,20 +697,31 @@ export default function BrowseProperties({ lang = "sw" }) {
       `}</style>
 
       <div className="max-w-7xl mx-auto">
-        <h1
-          style={{ fontFamily: FONTS.display, color: COLORS.night }}
-          className="text-2xl sm:text-3xl font-semibold mb-1"
-        >
-          {lang === "sw" ? "Tafuta Mali" : "Browse Properties"}
-        </h1>
-        <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-5">
-          {lang === "sw"
-            ? "Pata mali unayoitafuta kutoka kwa wauzaji walioidhinishwa."
-            : "Find the property you're looking for from verified sellers."}
-        </p>
+        {/* ============================================================ */}
+        {/* HEADER — CENTERED */}
+        {/* ============================================================ */}
+        <div className="mb-5 text-center">
+          <h1
+            style={{ fontFamily: FONTS.display, color: COLORS.night }}
+            className="text-2xl sm:text-3xl font-semibold"
+          >
+            {lang === "sw" ? "Tafuta Mali" : "Browse Properties"}
+          </h1>
+          <p
+            style={{ color: "rgba(16,26,46,0.6)" }}
+            className="text-sm mt-2 max-w-xl mx-auto"
+          >
+            {lang === "sw"
+              ? "Pata mali unayoitafuta kutoka kwa wauzaji walioidhinishwa."
+              : "Find the property you're looking for from verified sellers."}
+          </p>
+        </div>
 
+        {/* ============================================================ */}
+        {/* SEARCH BAR — CENTERED */}
+        {/* ============================================================ */}
         <form onSubmit={handleSearchSubmit} className="mb-5">
-          <div className="relative max-w-2xl">
+          <div className="relative max-w-2xl mx-auto">
             <Search
               size={18}
               className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
