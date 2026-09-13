@@ -1,7 +1,7 @@
 // ============================================================
 // MySearchesSection.jsx
 // Buyer — saved searches (alerts) zake.
-// Bilingual + mobile-responsive.
+// Bilingual + mobile-responsive + KILA KITU CENTERED.
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -115,8 +115,10 @@ export default function MySearchesSection() {
       `}</style>
 
       <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="flex items-start sm:items-center justify-between gap-3 mb-6 flex-wrap">
+        {/* ============================================================ */}
+        {/* HEADER — CENTERED */}
+        {/* ============================================================ */}
+        <div className="flex flex-col items-center text-center gap-3 mb-6">
           <div>
             <h1
               style={{ fontFamily: FONTS.display, color: COLORS.night }}
@@ -124,7 +126,10 @@ export default function MySearchesSection() {
             >
               {t("Utafutaji Wangu", "My Searches")}
             </h1>
-            <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mt-1">
+            <p
+              style={{ color: "rgba(16,26,46,0.6)" }}
+              className="text-sm mt-2 max-w-xl mx-auto"
+            >
               {t(
                 "Hifadhi utafutaji wako na upate taarifa listings mpya zinapolingana.",
                 "Save your searches and get notified when new listings match."
@@ -134,21 +139,26 @@ export default function MySearchesSection() {
           <button
             onClick={() => setShowForm((v) => !v)}
             style={{ background: COLORS.gold, color: COLORS.night }}
-            className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2 shrink-0"
+            className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-4 py-2.5"
           >
             <Plus size={13} />
             {t("Utafutaji Mpya", "New Search")}
           </button>
         </div>
 
-        {/* Form */}
+        {/* ============================================================ */}
+        {/* FORM — CENTERED */}
+        {/* ============================================================ */}
         {showForm && (
           <div
             style={{ borderColor: COLORS.sandLine, background: "white" }}
-            className="rounded-2xl border p-4 mb-4 flex flex-col gap-3"
+            className="rounded-2xl border p-4 mb-4 flex flex-col gap-3 max-w-md mx-auto"
           >
             <div className="flex items-center justify-between">
-              <p style={{ color: COLORS.night }} className="text-sm font-semibold">
+              <p
+                style={{ color: COLORS.night }}
+                className="text-sm font-semibold"
+              >
                 {t("Utafutaji Mpya", "New Search")}
               </p>
               <button
@@ -160,20 +170,23 @@ export default function MySearchesSection() {
             </div>
 
             {/* Name */}
-            <label className="flex flex-col gap-1.5">
+            <label className="flex flex-col gap-1.5 text-center">
               <span className="text-[11px] font-semibold text-gray-500">
                 {t("Jina la Utafutaji", "Search Name")}
               </span>
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder={t("mfano: Toyota Harrier Dar", "e.g. Toyota Harrier Dar")}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+                placeholder={t(
+                  "mfano: Toyota Harrier Dar",
+                  "e.g. Toyota Harrier Dar"
+                )}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
               />
             </label>
 
             {/* Query */}
-            <label className="flex flex-col gap-1.5">
+            <label className="flex flex-col gap-1.5 text-center">
               <span className="text-[11px] font-semibold text-gray-500">
                 {t("Neno la Utafutaji (hiari)", "Search Query (optional)")}
               </span>
@@ -181,12 +194,12 @@ export default function MySearchesSection() {
                 value={form.query}
                 onChange={(e) => setForm({ ...form, query: e.target.value })}
                 placeholder={t("mfano: Harrier", "e.g. Harrier")}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
               />
             </label>
 
             {/* Category */}
-            <label className="flex flex-col gap-1.5">
+            <label className="flex flex-col gap-1.5 text-center">
               <span className="text-[11px] font-semibold text-gray-500">
                 {t("Kategoria (hiari)", "Category (optional)")}
               </span>
@@ -195,7 +208,7 @@ export default function MySearchesSection() {
                 onChange={(e) =>
                   setForm({ ...form, category: e.target.value || null })
                 }
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
               >
                 <option value="">{t("Zote", "All")}</option>
                 {categories.map((cat) => (
@@ -207,7 +220,7 @@ export default function MySearchesSection() {
             </label>
 
             {/* Region */}
-            <label className="flex flex-col gap-1.5">
+            <label className="flex flex-col gap-1.5 text-center">
               <span className="text-[11px] font-semibold text-gray-500">
                 {t("Mkoa (hiari)", "Region (optional)")}
               </span>
@@ -216,7 +229,7 @@ export default function MySearchesSection() {
                 onChange={(e) =>
                   setForm({ ...form, region: e.target.value || null })
                 }
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
               >
                 <option value="">{t("Zote", "All")}</option>
                 {REGIONS.map((r) => (
@@ -229,32 +242,36 @@ export default function MySearchesSection() {
 
             {/* Price */}
             <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1.5">
+              <label className="flex flex-col gap-1.5 text-center">
                 <span className="text-[11px] font-semibold text-gray-500">
                   {t("Bei ya Chini (TZS)", "Min Price (TZS)")}
                 </span>
                 <input
                   value={form.minPrice}
-                  onChange={(e) => setForm({ ...form, minPrice: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, minPrice: e.target.value })
+                  }
                   placeholder="0"
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
                 />
               </label>
-              <label className="flex flex-col gap-1.5">
+              <label className="flex flex-col gap-1.5 text-center">
                 <span className="text-[11px] font-semibold text-gray-500">
                   {t("Bei ya Juu (TZS)", "Max Price (TZS)")}
                 </span>
                 <input
                   value={form.maxPrice}
-                  onChange={(e) => setForm({ ...form, maxPrice: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, maxPrice: e.target.value })
+                  }
                   placeholder="100,000,000"
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
                 />
               </label>
             </div>
 
             {/* Verified only */}
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center justify-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.verifiedOnly}
@@ -290,7 +307,9 @@ export default function MySearchesSection() {
           </div>
         )}
 
-        {/* List */}
+        {/* ============================================================ */}
+        {/* EMPTY STATE — CENTERED */}
+        {/* ============================================================ */}
         {searchesWithCounts.length === 0 ? (
           <div
             style={{ borderColor: COLORS.sandLine }}
@@ -308,6 +327,9 @@ export default function MySearchesSection() {
             </p>
           </div>
         ) : (
+          /* ============================================================ */
+          /* LIST — kadi za search zimeachwa kushoto kwa urahisi */
+          /* ============================================================ */
           <div className="flex flex-col gap-3">
             {searchesWithCounts.map((s) => (
               <div
@@ -332,8 +354,10 @@ export default function MySearchesSection() {
                       {s.category && (
                         <span className="flex items-center gap-1">
                           <Filter size={10} />{" "}
-                          {categories.find((c) => c.key === s.category)?.label?.[lang] ||
-                            categories.find((c) => c.key === s.category)?.label?.sw ||
+                          {categories.find((c) => c.key === s.category)
+                            ?.label?.[lang] ||
+                            categories.find((c) => c.key === s.category)?.label
+                              ?.sw ||
                             s.category}
                         </span>
                       )}
@@ -344,7 +368,8 @@ export default function MySearchesSection() {
                       )}
                       {s.verifiedOnly && (
                         <span className="flex items-center gap-1">
-                          <CheckCircle size={10} /> {t("Imethibitishwa", "Verified")}
+                          <CheckCircle size={10} />{" "}
+                          {t("Imethibitishwa", "Verified")}
                         </span>
                       )}
                     </p>
