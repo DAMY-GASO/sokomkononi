@@ -7,10 +7,14 @@
 // MUHIMU — UNGANISHO NA categoriesStore.js:
 //   Categories zinatoka categoriesStore.js (chanzo kimoja cha ukweli,
 //   Admin anaongeza/kufuta kupitia System Settings > Categories).
-//   Fee configs hapa zinatakiwa kuwa na key MOJA kwa MOJA kwa kila
+//   Fee configs hapa zinatakiwa kuwa na key MOJA KWA MOJA kwa kila
 //   category hai. Kama category hai lakini haina fee config,
 //   calculateListingFee() inarudi { error: "NO_FEE_CONFIG" } — UI
 //   inamuelekeza Admin kwenye Revenue > Categories Bila Fee Config.
+//
+//   LABEL: `label` kwenye config hii imeondolewa — UI inasoma label
+//   kutoka categoriesStore.js kwa kutumia `key`, ili kuepuka
+//   duplication na kuhakikisha consistency.
 //
 // Kama stores nyingine — demo ya front-end pekee, localStorage +
 // custom event. Backend halisi ikiwepo, badilisha functions hizi
@@ -23,12 +27,16 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "sokomkononi_listing_fee_config_v1";
 const UPDATE_EVENT = "sokomkononi:listing-fee-config-updated";
 
+// ============================================================
+// SEED_LISTING_FEE_CONFIG — bila `label`
+// Label inasomwa kutoka categoriesStore.js kwa kutumia `key`.
+// ============================================================
 export const SEED_LISTING_FEE_CONFIG = [
-  { key: "nyumba", label: "Nyumba & Majengo", rate: 0.010, min: 20000, max: 300000 },
-  { key: "viwanja", label: "Viwanja & Mashamba", rate: 0.008, min: 15000, max: 250000 },
-  { key: "magari", label: "Magari", rate: 0.015, min: 10000, max: 150000 },
-  { key: "biashara", label: "Biashara Zinazouzwa", rate: 0.012, min: 20000, max: 200000 },
-  { key: "mashine", label: "Mashine / Heavy Equipment", rate: 0.010, min: 15000, max: 180000 },
+  { key: "nyumba", rate: 0.010, min: 20000, max: 300000 },
+  { key: "viwanja", rate: 0.008, min: 15000, max: 250000 },
+  { key: "magari", rate: 0.015, min: 10000, max: 150000 },
+  { key: "biashara", rate: 0.012, min: 20000, max: 200000 },
+  { key: "mashine", rate: 0.010, min: 15000, max: 180000 },
 ];
 
 function readFromStorage() {
@@ -37,34 +45,31 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_LISTING_FEE_CONFIG;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_LISTING_FEE_CONFIG;
+    if (!Array.isArray(parsed)) return SEED_LISTING_FEE_CONFIG;
     return parsed;
   } catch {
     return SEED_LISTING_FEE_CONFIG;
   }
 }
 
-/** Soma configs za sasa (snapshot moja, si reactive) — hutumika na
- * shared.js (calculateListingFee) ambayo si component ya React. */
+/** Soma configs za sasa (snapshot moja, si reactive). */
 export function getListingFeeConfigs() {
   return readFromStorage();
 }
 
-/** Pata config ya category moja kwa key yake. Inarudi undefined kama
- *  haipo — calculateListingFee() inashughulikia hilo kwa NO_FEE_CONFIG. */
+/** Pata config ya category moja kwa key yake. */
 export function getListingFeeConfig(categoryKey) {
   return getListingFeeConfigs().find((c) => c.key === categoryKey);
 }
 
-/** Andika seti mpya kamili ya configs (Admin pekee anapaswa kuita hii). */
+/** Andika seti mpya kamili ya configs. */
 export function saveListingFeeConfigs(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-/** Badilisha (merge patch) config ya category moja — mfano
- * updateListingFeeConfig("magari", { rate: 0.02 }) au { min, max }. */
+/** Badilisha (merge patch) config ya category moja. */
 export function updateListingFeeConfig(categoryKey, patch) {
   const current = getListingFeeConfigs();
   const next = current.map((c) => (c.key === categoryKey ? { ...c, ...patch } : c));
@@ -76,22 +81,19 @@ export function updateListingFeeConfig(categoryKey, patch) {
 // FEE CONFIG MANAGEMENT kwa categories mpya
 // ============================================================
 
-/**
- * Je, category hii ina fee config? Hutumika na RevenueSection
- * kuonyesha categories zilizo hai lakini hazina fee bado.
- */
+/** Je, category hii ina fee config? */
 export function hasFeeConfig(categoryKey) {
   return getListingFeeConfigs().some((c) => c.key === categoryKey);
 }
 
 /**
  * Ongeza fee config ya category mpya kwa default rate/min/max.
- * Admin anaweza kuhariri baadaye kwa EditablePercent/EditableAmount.
  *
  * @param {string} categoryKey - key ya category (mf. "pikipiki")
- * @param {string} label - label ya kuonyesha (mf. "Pikipiki")
+ * @param {string} _label - haitumiki (label inasomwa kutoka
+ *   categoriesStore.js). Imebaki kwa backward compatibility.
  */
-export function addFeeConfig(categoryKey, label) {
+export function addFeeConfig(categoryKey, _label) {
   const current = getListingFeeConfigs();
   if (current.some((c) => c.key === categoryKey)) {
     throw new Error(`Fee config ya "${categoryKey}" ipo tayari.`);
@@ -100,7 +102,6 @@ export function addFeeConfig(categoryKey, label) {
     ...current,
     {
       key: categoryKey,
-      label: label || categoryKey,
       rate: 0.01,      // 1%
       min: 10000,      // TZS 10,000
       max: 100000,     // TZS 100,000
@@ -110,22 +111,14 @@ export function addFeeConfig(categoryKey, label) {
   return next;
 }
 
-/**
- * Ondoa fee config. Kwa kawaida haihitajiki kwa sababu kufuta
- * category kunazuia kama kuna listings — lakini hii inasaidia Admin
- * kama anataka kufuta config pekee (mf. aliyekuwa ameongeza config
- * ya category isiyotumika).
- */
+/** Ondoa fee config. */
 export function removeFeeConfig(categoryKey) {
   const next = getListingFeeConfigs().filter((c) => c.key !== categoryKey);
   saveListingFeeConfigs(next);
   return next;
 }
 
-/**
- * Hook ya React inayosoma configs na kujisasisha yenyewe — kwenye
- * AdminDashboard (Revenue > Listing Fee) papo hapo, bila reload.
- */
+/** Hook ya React inayosoma configs na kujisasisha yenyewe. */
 export function useListingFeeConfigs() {
   const [configs, setConfigs] = useState(() => getListingFeeConfigs());
 
