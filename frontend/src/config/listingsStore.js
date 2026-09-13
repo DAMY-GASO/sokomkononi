@@ -2,18 +2,9 @@
 // listingsStore.js
 // CHANZO KIMOJA CHA UKWELI kwa Listings (mali/matangazo).
 //
-
-//   - listing.expiresAt     (listing inaisha muda — status -> "expired")
-//   - listing.reservedUntil (deal ikiwa "reserved", listing inaonyesha
-//                            "Reservation ends in: ...")
-//   - listing.reservedBy    (jina la mnunuzi aliyereserve — kwa DB: buyer_id)
-//   - findListingByTitle()  (mpito: deals za zamani zina listingTitle pekee)
-//   - checkListingExpiry()  (huitwa na DashboardShell kila dakika 5 — kama
-//                            checkReservationReminders kwenye dealsStore)
-//   - LISTING_STATUS_MAP    (ramani ya frontend -> DB kwa Developer A)
-//
 // STATUS VOCABULARY (frontend) -> DB (per Muongozo §6):
 //   live              -> active
+//   paused            -> paused
 //   reserved          -> reserved
 //   sold              -> sold
 //   expired           -> expired
@@ -23,8 +14,7 @@
 //
 // MUDA WA MAISHA YA LISTING: siku 60 kwa default, lakini
 // inasomwa kutoka platform policy (Admin > System Settings >
-// Platform Policy) kila listing mpya inapoundwa — hivyo Admin
-// anaweza kuongeza/kupunguza bila kugusa code.
+// Platform Policy) kila listing mpya inapoundwa.
 // ============================================================
 
 import { useEffect, useState } from "react";
@@ -34,8 +24,7 @@ const STORAGE_KEY = "sokomkononi_listings_v1";
 const UPDATE_EVENT = "sokomkononi:listings-updated";
 
 // Fallback ikiwa policy haijasomwa kwa sababu yoyote (SSR, error,
-// n.k.). Thamani hii sasa ni 60 — ila chanzo cha ukweli ni
-// getPlatformPolicy().listingLifetimeDays.
+// n.k.). Chanzo cha ukweli ni getPlatformPolicy().listingLifetimeDays.
 export const LISTING_LIFETIME_DAYS_FALLBACK = 60;
 
 function getListingLifetimeDays() {
@@ -87,8 +76,6 @@ export function saveListings(listings) {
 
 /** Ongeza tangazo jipya (mf. kutoka PostPropertyForm). */
 export function addListing(listing) {
-  // Weka expiresAt kwa kutumia policy ya sasa — isipokuwa listing
-  // imeletwa na expiresAt yake (mf. import/seed/testing).
   const withExpiry = listing.expiresAt
     ? listing
     : { ...listing, expiresAt: computeExpiresAt() };
@@ -142,7 +129,8 @@ export function updateListingByTitle(title, patch) {
 }
 
 /**
- * Angalia listings zenye `expiresAt` zilizopita.
+ * Angalia listings zenye `expiresAt` zilizopita. Zilizokuwa "live"
+ * zinakuwa "expired".
  */
 export function checkListingExpiry() {
   const now = Date.now();
@@ -159,8 +147,45 @@ export function checkListingExpiry() {
   return next;
 }
 
+// ============================================================
+// PAUSE / UNPAUSE / MARK AS SOLD
+// ============================================================
+
 /**
- * Hook ya React inayosoma listings na kujisasisha yenyewe.
+ * Pause listing — inaondolewa kwa muda kwenye Browse,
+ * lakini bado inaonekana kwa seller kwenye My Listings.
+ */
+export function pauseListing(id) {
+  return updateListing(id, {
+    status: "paused",
+    pausedAt: new Date().toISOString(),
+  });
+}
+
+/**
+ * Unpause listing — inarudi kwenye "live".
+ */
+export function unpauseListing(id) {
+  return updateListing(id, {
+    status: "live",
+    pausedAt: null,
+  });
+}
+
+/**
+ * Mark as Sold — seller anaweka mwenyewe (sio kupitia deal).
+ */
+export function markAsSold(id) {
+  return updateListing(id, {
+    status: "sold",
+    soldAt: new Date().toISOString(),
+  });
+}
+
+/**
+ * Hook ya React inayosoma listings na kujisasisha yenyewe — kwenye
+ * DashboardShell (My Listings), AdminDashboard (Moderation), na
+ * BrowseProperties (feed ya mnunuzi) papo hapo, bila reload.
  */
 export function useListings() {
   const [listings, setListings] = useState(() => getListings());
@@ -179,7 +204,12 @@ export function useListings() {
 }
 
 /**
- * Listing zinazoonekana hadharani kwa wanunuzi.
+ * Listing zinazoonekana hadharani kwa wanunuzi (Browse, Category, Home):
+ *   - "live"     -> zinaonekana kawaida
+ *   - "reserved" -> ZINAONEKANA pia, lakini zina badge ya RESERVED
+ *   - "sold"     -> zinaonekana kwa historia (badge SOLD)
+ *
+ * `paused` HAIWI hapa — haionekani kwa wanunuzi.
  */
 export function usePublicListings() {
   const listings = useListings();
@@ -197,8 +227,10 @@ export function useLiveListings() {
 }
 
 // ---- STATUS SYNC (ramani rasmi kwa Developer A) ----
+// Backend mapping: frontend status -> DB enum value.
 export const LISTING_STATUS_MAP = {
   live: "active",
+  paused: "paused",
   reserved: "reserved",
   sold: "sold",
   expired: "expired",
