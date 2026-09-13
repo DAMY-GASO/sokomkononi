@@ -1,7 +1,7 @@
 // ============================================================
 // MyListings.jsx
 // Mali Zangu — tabs, views, enquiries, actions.
-// Bilingual kamili + Pause/Resume/Mark as Sold.
+// Bilingual kamili + Pause/Resume/Mark as Sold + KILA KITU CENTERED.
 // ============================================================
 
 import React, { useState } from "react";
@@ -33,7 +33,10 @@ import {
   isLeadingActive,
   leadingDaysRemaining,
 } from "./shared";
-import { useActiveBannerAds, bannerDaysRemaining } from "../../../config/bannerAdsStore.js";
+import {
+  useActiveBannerAds,
+  bannerDaysRemaining,
+} from "../../../config/bannerAdsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import PaymentGateway from "./PaymentGateway";
@@ -103,8 +106,16 @@ function ActionButton({ icon: Icon, label, onClick, tone = "default" }) {
       : tone === "success"
         ? { background: COLORS.green, color: "white" }
         : tone === "danger"
-          ? { background: "transparent", color: COLORS.rust, borderColor: "rgba(193,80,46,0.35)" }
-          : { background: "transparent", color: COLORS.night, borderColor: COLORS.sandLine };
+          ? {
+              background: "transparent",
+              color: COLORS.rust,
+              borderColor: "rgba(193,80,46,0.35)",
+            }
+          : {
+              background: "transparent",
+              color: COLORS.night,
+              borderColor: COLORS.sandLine,
+            };
 
   return (
     <button
@@ -138,7 +149,8 @@ function ListingCard({
 }) {
   const category = getCategory(listing.category);
   const Icon = getCategoryIcon(category?.iconKey);
-  const categoryLabel = category?.label?.[lang] || category?.label?.sw || listing.category;
+  const categoryLabel =
+    category?.label?.[lang] || category?.label?.sw || listing.category;
   const isFaded = listing.status === "sold" || listing.status === "expired";
   const isReserved = listing.status === "reserved";
 
@@ -153,7 +165,13 @@ function ListingCard({
         style={{ background: COLORS.night }}
         className="w-full sm:w-24 h-24 rounded-xl flex items-center justify-center shrink-0"
       >
-        {Icon && <Icon size={26} color={COLORS.gold} style={{ opacity: isFaded ? 0.5 : 1 }} />}
+        {Icon && (
+          <Icon
+            size={26}
+            color={COLORS.gold}
+            style={{ opacity: isFaded ? 0.5 : 1 }}
+          />
+        )}
       </div>
 
       <div className="flex-1 min-w-0">
@@ -167,7 +185,10 @@ function ListingCard({
           <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
             {isLeadingActive(listing) && (
               <span
-                style={{ background: "rgba(47,109,79,0.14)", color: COLORS.green }}
+                style={{
+                  background: "rgba(47,109,79,0.14)",
+                  color: COLORS.green,
+                }}
                 className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full"
               >
                 <TrendingUp size={11} /> {leadingDaysRemaining(listing)}d
@@ -175,7 +196,10 @@ function ListingCard({
             )}
             {activeBanner && (
               <span
-                style={{ background: "rgba(193,80,46,0.14)", color: COLORS.rust }}
+                style={{
+                  background: "rgba(193,80,46,0.14)",
+                  color: COLORS.rust,
+                }}
                 className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full"
               >
                 <Megaphone size={11} /> {bannerDaysRemaining(activeBanner)}d
@@ -183,7 +207,10 @@ function ListingCard({
             )}
             {isBoostActive(listing) && (
               <span
-                style={{ background: "rgba(232,163,61,0.16)", color: "#8A5A16" }}
+                style={{
+                  background: "rgba(232,163,61,0.16)",
+                  color: "#8A5A16",
+                }}
                 className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full"
               >
                 <Rocket size={11} /> {boostDaysRemaining(listing)}d
@@ -228,7 +255,8 @@ function ListingCard({
               <Eye size={13} /> {listing.views ?? 0} {t("walioangalia", "views")}
             </span>
             <span className="flex items-center gap-1">
-              <Inbox size={13} /> {listing.inquiries ?? 0} {t("maswali", "inquiries")}
+              <Inbox size={13} /> {listing.inquiries ?? 0}{" "}
+              {t("maswali", "inquiries")}
             </span>
           </div>
         )}
@@ -255,13 +283,13 @@ function ListingCard({
           >
             {lang === "sw" ? (
               <>
-                Lipa <b>{formatTZS(listing.listingFee)}</b> ili mali hii ianze kuonekana kwa
-                wanunuzi.
+                Lipa <b>{formatTZS(listing.listingFee)}</b> ili mali hii ianze
+                kuonekana kwa wanunuzi.
               </>
             ) : (
               <>
-                Pay <b>{formatTZS(listing.listingFee)}</b> so this listing starts being visible to
-                buyers.
+                Pay <b>{formatTZS(listing.listingFee)}</b> so this listing starts
+                being visible to buyers.
               </>
             )}
           </div>
@@ -469,7 +497,10 @@ export default function MyListings({
     { key: "live", label: { sw: "Hai", en: "Live" } },
     { key: "paused", label: { sw: "Imesimamishwa", en: "Paused" } },
     { key: "reserved", label: { sw: "Imehifadhiwa", en: "Reserved" } },
-    { key: "pending_payment", label: { sw: "Inasubiri Malipo", en: "Pending" } },
+    {
+      key: "pending_payment",
+      label: { sw: "Inasubiri Malipo", en: "Pending" },
+    },
     { key: "in_review", label: { sw: "Inakaguliwa", en: "In Review" } },
     { key: "sold", label: { sw: "Imeuzwa", en: "Sold" } },
     { key: "expired", label: { sw: "Imeisha Muda", en: "Expired" } },
@@ -478,15 +509,22 @@ export default function MyListings({
 
   const counts = TABS.reduce((acc, t) => {
     acc[t.key] =
-      t.key === "all" ? listings.length : listings.filter((l) => l.status === t.key).length;
+      t.key === "all"
+        ? listings.length
+        : listings.filter((l) => l.status === t.key).length;
     return acc;
   }, {});
 
-  const filtered = tab === "all" ? listings : listings.filter((l) => l.status === tab);
+  const filtered =
+    tab === "all" ? listings : listings.filter((l) => l.status === tab);
 
   return (
     <div
-      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }}
+      style={{
+        background: COLORS.sand,
+        fontFamily: FONTS.body,
+        minHeight: "600px",
+      }}
       className="w-full p-4 sm:p-6"
     >
       <style>{`
@@ -494,20 +532,31 @@ export default function MyListings({
       `}</style>
 
       <div className="max-w-3xl mx-auto">
-        <h1
-          style={{ fontFamily: FONTS.display, color: COLORS.night }}
-          className="text-2xl sm:text-3xl font-semibold mb-1"
-        >
-          {t("Mali Zangu", "My Listings")}
-        </h1>
-        <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-5">
-          {t(
-            "Dhibiti mali zako zote ulizoziweka na fuatilia status ya kila moja.",
-            "Manage all your listings and track the status of each one."
-          )}
-        </p>
+        {/* ============================================================ */}
+        {/* HEADER — CENTERED */}
+        {/* ============================================================ */}
+        <div className="mb-5 text-center">
+          <h1
+            style={{ fontFamily: FONTS.display, color: COLORS.night }}
+            className="text-2xl sm:text-3xl font-semibold"
+          >
+            {t("Mali Zangu", "My Listings")}
+          </h1>
+          <p
+            style={{ color: "rgba(16,26,46,0.6)" }}
+            className="text-sm mt-2 max-w-xl mx-auto"
+          >
+            {t(
+              "Dhibiti mali zako zote ulizoziweka na fuatilia status ya kila moja.",
+              "Manage all your listings and track the status of each one."
+            )}
+          </p>
+        </div>
 
-        <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+        {/* ============================================================ */}
+        {/* TABS — CENTERED */}
+        {/* ============================================================ */}
+        <div className="flex justify-center gap-2 mb-5 overflow-x-auto pb-1">
           {TABS.map((tabItem) => {
             const active = tab === tabItem.key;
             const label = tabItem.label?.[lang] || tabItem.label?.sw;
@@ -525,7 +574,9 @@ export default function MyListings({
                 {label}
                 <span
                   style={{
-                    background: active ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                    background: active
+                      ? "rgba(245,243,236,0.18)"
+                      : COLORS.sandLine,
                     color: active ? COLORS.sand : COLORS.night,
                   }}
                   className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
