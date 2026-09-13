@@ -31,6 +31,20 @@ const inputStyle = {
   color: COLORS.night,
 };
 
+// ---- Money input helpers (comma auto-format) ----
+// Format na comma: "85000000" -> "85,000,000"
+function formatPriceInput(value) {
+  if (!value) return "";
+  const digits = String(value).replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("en-US");
+}
+
+// Safisha kwa ajili ya kuhifadhi: "85,000,000" -> "85000000"
+function cleanPriceInput(value) {
+  return String(value).replace(/[^0-9]/g, "");
+}
+
 export default function PostPropertyForm({
   onSubmit = () => {},
   onGoToListings = () => {},
@@ -441,10 +455,13 @@ export default function PostPropertyForm({
                 <input
                   style={inputStyle}
                   type="text"
+                  inputMode="numeric"
                   className="rounded-xl border px-3 py-2.5 text-sm outline-none"
                   placeholder={lang === "sw" ? "mfano: 85,000,000" : "e.g. 85,000,000"}
-                  value={base.price}
-                  onChange={(e) => setBase({ ...base, price: e.target.value })}
+                  value={formatPriceInput(base.price)}
+                  onChange={(e) =>
+                    setBase({ ...base, price: cleanPriceInput(e.target.value) })
+                  }
                 />
                 {noFeeConfig ? (
                   <span style={{ color: COLORS.rust }} className="text-xs font-semibold">
