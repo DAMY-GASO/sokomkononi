@@ -15,6 +15,110 @@ function formatTZS(amount) {
   return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
 }
 
+// ============================================================
+// PAGE LOADER
+// ============================================================
+function PageLoader() {
+  return (
+    <div className="fixed inset-0 z-[100] bg-[#101A2E] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-6">
+        {/* Logo */}
+        <div className="relative">
+          <div className="w-20 h-20 rounded-2xl bg-[#E8A33D] flex items-center justify-center shadow-2xl animate-pulse">
+            <span className="text-[#101A2E] font-bold text-3xl">S</span>
+          </div>
+          {/* Spinning ring */}
+          <div className="absolute inset-0 rounded-2xl border-4 border-[#E8A33D]/30 border-t-[#E8A33D] animate-spin" />
+        </div>
+
+        {/* Brand name */}
+        <div className="text-center">
+          <h1 className="text-white font-bold text-2xl tracking-tight">
+            SokoMkononi
+          </h1>
+          <p className="text-white/50 text-sm mt-1">
+            Inapakia...
+          </p>
+        </div>
+
+        {/* Loading bar */}
+        <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-[#E8A33D] rounded-full"
+            style={{
+              animation: "loaderBar 1.5s ease-in-out infinite",
+            }}
+          />
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes loaderBar {
+          0% { width: 0%; margin-left: 0%; }
+          50% { width: 75%; margin-left: 12.5%; }
+          100% { width: 0%; margin-left: 100%; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ============================================================
+// ANIMATED TEXT — maelezo yanatembea
+// ============================================================
+function AnimatedText({ text, className = "" }) {
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      <p
+        className="whitespace-nowrap"
+        style={{
+          animation: "marquee 25s linear infinite",
+        }}
+      >
+        {text}
+      </p>
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ============================================================
+// TYPEWRITER TEXT — maelezo yanajiprinta
+// ============================================================
+function TypewriterText({ text, speed = 50, className = "" }) {
+  const [displayed, setDisplayed] = useState("");
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    setDisplayed("");
+    setIndex(0);
+  }, [text]);
+
+  useEffect(() => {
+    if (index < text.length) {
+      const timeout = setTimeout(() => {
+        setDisplayed((prev) => prev + text[index]);
+        setIndex((prev) => prev + 1);
+      }, speed);
+      return () => clearTimeout(timeout);
+    }
+  }, [index, text, speed]);
+
+  return (
+    <span className={className}>
+      {displayed}
+      {index < text.length && (
+        <span className="inline-block w-0.5 h-6 bg-[#E8A33D] ml-1 animate-pulse" />
+      )}
+    </span>
+  );
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const { lang, setLang } = useLanguage();
@@ -23,6 +127,15 @@ export default function HomePage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [appToastShouldRender, setAppToastShouldRender] = useState(false);
   const [appToastVisible, setAppToastVisible] = useState(false);
+
+  // === PAGE LOADER ===
+  const [pageLoading, setPageLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading — 1.2s
+    const timer = setTimeout(() => setPageLoading(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   // === Categories kutoka store ===
   const popularCategories = usePopularCategories();
@@ -92,7 +205,7 @@ export default function HomePage() {
     {
       q: { sw: "SokoMkononi ni nini?", en: "What is SokoMkononi?" },
       a: {
-        sw: "SokoMkononi ni soko linalowaunganisha wanunuzi na wauzaji sehemu moja, ili kurahisisha kutafuta, kuuza na kufanya biashara.",
+        sw: "SokoMkononi ni marketplace inayowaunganisha wanunuzi na wauzaji sehemu moja, ili kurahisisha kutafuta, kuuza na kufanya biashara.",
         en: "SokoMkononi is a marketplace that connects buyers and sellers in one place, making it easier to find, sell and do business.",
       },
     },
@@ -293,24 +406,38 @@ export default function HomePage() {
 
   const toggleFaq = (index) => setOpenFaq((prev) => (prev === index ? null : index));
 
+  // ============================================================
+  // PAGE LOADER — kama inapakia, onyesha loader
+  // ============================================================
+  if (pageLoading) {
+    return <PageLoader />;
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar lang={lang} setLang={setLang} categories={categories} />
 
       {/* HERO */}
-      <section className="bg-[#101A2E] text-white py-12 sm:py-16 px-4">
+      <section className="bg-[#101A2E] text-white py-12 sm:py-16 px-4 overflow-hidden">
         <div className="max-w-4xl mx-auto text-center">
           {/* Big Headline */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight">
             {lang === "sw" ? "Nunua na Uza Mali kwa Urahisi" : "Buy and Sell Property Easily"}
           </h1>
 
-          {/* Big Subtitle */}
-          <p className="text-white/75 text-lg sm:text-xl md:text-2xl mt-6 max-w-3xl mx-auto leading-relaxed font-light">
-            {lang === "sw"
-              ? "SokoMkononi ni jukwaa linalowaunganisha wanunuzi na wauzaji sehemu moja, kwa kurahisisha kutafuta, kuuza na kununua kwa urahisi na kujiamini."
-              : "SokoMkononi is a safe platform that combines buyers and sellers in one place, for simplifying search, selling and buying in a simple way confidently."}
-          </p>
+          {/* Typewriter Subtitle — maelezo yanajiprinta */}
+          <div className="mt-6 max-w-3xl mx-auto min-h-[4rem] sm:min-h-[5rem]">
+            <p className="text-white/75 text-lg sm:text-xl md:text-2xl leading-relaxed font-light">
+              <TypewriterText
+                text={
+                  lang === "sw"
+                    ? "SokoMkononi ni jukwaa salama la kununua na kuuza nyumba, magari, viwanja na mali nyingine Tanzania."
+                    : "SokoMkononi is a safe platform to buy and sell houses, cars, land and other properties in Tanzania."
+                }
+                speed={40}
+              />
+            </p>
+          </div>
 
           {/* BUTTONS — vertically on mobile, horizontally on desktop */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-stretch sm:items-center mt-10 max-w-md sm:max-w-none mx-auto">
@@ -378,23 +505,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* STATS */}
-      <section className="bg-[#0D1524] text-white py-8">
-        <div className="max-w-3xl mx-auto px-4 grid grid-cols-2 gap-8 text-center">
-          <div>
-            <p className="text-2xl md:text-3xl font-bold text-[#E8A33D]">5,000+</p>
-            <p className="text-white/50 text-xs md:text-sm mt-1">
-              {lang === "sw" ? "Wauzaji" : "Sellers"}
-            </p>
-          </div>
-          <div>
-            <p className="text-2xl md:text-3xl font-bold text-[#E8A33D]">10,000+</p>
-            <p className="text-white/50 text-xs md:text-sm mt-1">
-              {lang === "sw" ? "Mali" : "Properties"}
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* STATS — SECTION IMEONDOLEWA */}
+      {/* Haipo kwa maombi yako */}
 
       {/* WHY */}
       <section className="py-16 px-4 max-w-6xl mx-auto">
