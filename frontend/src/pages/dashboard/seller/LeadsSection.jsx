@@ -14,7 +14,7 @@ import {
   User,
   ExternalLink,
 } from "lucide-react";
-import { COLORS, FONTS, timeAgo } from "./shared";
+import { COLORS, FONTS, timeAgo } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useLeads, markLeadResponded, removeLead } from "../../../config/leadsStore.js";
 
