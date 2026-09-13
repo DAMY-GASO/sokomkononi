@@ -2,6 +2,7 @@
 // BuyerOverview.jsx
 // Muhtasari wa mnunuzi — search, categories, listings, quick actions.
 // Bilingual kamili + mobile-responsive + watcher.
+// KILA KITU CENTERED.
 // ============================================================
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -49,13 +50,11 @@ export default function BuyerOverview({ onNavigate }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   // ============================================================
-  // WATCHER — angalia saved listings mabadiliko
+  // WATCHER
   // ============================================================
   useEffect(() => {
-    // Angalia mara moja kwenye mount
     checkSavedListingsChanges();
 
-    // Kisha kila dakika 2
     const interval = setInterval(() => {
       checkSavedListingsChanges();
     }, 2 * 60 * 1000);
@@ -81,7 +80,7 @@ export default function BuyerOverview({ onNavigate }) {
   }, [listings, savedIds, recentlyViewedIds, searches]);
 
   // ============================================================
-  // RECOMMENDED — listings zenye boost au leading
+  // RECOMMENDED
   // ============================================================
   const recommended = useMemo(() => {
     return listings
@@ -98,7 +97,7 @@ export default function BuyerOverview({ onNavigate }) {
   }, [listings]);
 
   // ============================================================
-  // NEW LISTINGS — zilizopost hivi karibuni
+  // NEW LISTINGS
   // ============================================================
   const newListings = useMemo(() => {
     return listings
@@ -108,7 +107,7 @@ export default function BuyerOverview({ onNavigate }) {
   }, [listings]);
 
   // ============================================================
-  // RECENTLY VIEWED — listings alizoziona buyer
+  // RECENTLY VIEWED
   // ============================================================
   const recentlyViewedListings = useMemo(() => {
     return recentlyViewedIds
@@ -118,7 +117,7 @@ export default function BuyerOverview({ onNavigate }) {
   }, [recentlyViewedIds, listings]);
 
   // ============================================================
-  // NEARBY — listings zenye region ya buyer (mock: Dar es Salaam)
+  // NEARBY
   // ============================================================
   const nearby = useMemo(() => {
     const userRegion = "Dar es Salaam";
@@ -128,7 +127,7 @@ export default function BuyerOverview({ onNavigate }) {
   }, [listings]);
 
   // ============================================================
-  // QUICK ACTIONS — zinapeleka kwenye sections husika
+  // QUICK ACTIONS
   // ============================================================
   const quickActions = [
     {
@@ -183,18 +182,20 @@ export default function BuyerOverview({ onNavigate }) {
 
   return (
     <div style={{ fontFamily: FONTS.body }} className="p-4 sm:p-6">
-      {/* GREETING */}
-      <div className="mb-6">
+      {/* ============================================================ */}
+      {/* WELCOME — CENTERED */}
+      {/* ============================================================ */}
+      <div className="mb-6 text-center">
         <h1
           style={{ fontFamily: FONTS.display, color: COLORS.night }}
           className="text-2xl sm:text-3xl font-semibold"
         >
           {t(
-            `Karibu, ${user?.name?.split(" ")[0] || "Buyer"} 👋`,
+            `Karibu, ${user?.name?.split(" ")[0] || "Mnunuzi"} 👋`,
             `Welcome, ${user?.name?.split(" ")[0] || "Buyer"} 👋`
           )}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-gray-500 mt-2 max-w-xl mx-auto">
           {t(
             "Tafuta mali unayoitafuta, hifadhi, na fuatilia deals zako.",
             "Find the property you're looking for, save, and track your deals."
@@ -202,9 +203,11 @@ export default function BuyerOverview({ onNavigate }) {
         </p>
       </div>
 
-      {/* SEARCH BAR */}
+      {/* ============================================================ */}
+      {/* SEARCH BAR — CENTERED */}
+      {/* ============================================================ */}
       <form onSubmit={handleSearch} className="mb-6">
-        <div className="relative max-w-2xl">
+        <div className="relative max-w-2xl mx-auto">
           <Search
             size={18}
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
@@ -231,7 +234,9 @@ export default function BuyerOverview({ onNavigate }) {
         </div>
       </form>
 
+      {/* ============================================================ */}
       {/* QUICK STATS */}
+      {/* ============================================================ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatTile
           label={t("Mali Zinazopatikana", "Available Listings")}
@@ -266,11 +271,13 @@ export default function BuyerOverview({ onNavigate }) {
         />
       </div>
 
-      {/* QUICK ACTIONS */}
+      {/* ============================================================ */}
+      {/* QUICK ACTIONS — header centered */}
+      {/* ============================================================ */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
         <h2
           style={{ color: COLORS.night }}
-          className="text-sm font-semibold mb-3"
+          className="text-sm font-semibold mb-4 text-center"
         >
           {t("Vitendo vya Haraka", "Quick Actions")}
         </h2>
@@ -295,9 +302,11 @@ export default function BuyerOverview({ onNavigate }) {
         </div>
       </div>
 
-      {/* CATEGORIES */}
+      {/* ============================================================ */}
+      {/* CATEGORIES — header centered */}
+      {/* ============================================================ */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-col items-center gap-1 mb-4 text-center">
           <h2
             style={{ color: COLORS.night }}
             className="text-sm font-semibold"
@@ -346,7 +355,9 @@ export default function BuyerOverview({ onNavigate }) {
         </div>
       </div>
 
-      {/* RECOMMENDED */}
+      {/* ============================================================ */}
+      {/* SECTIONS ZA LISTINGS */}
+      {/* ============================================================ */}
       {recommended.length > 0 && (
         <ListingSection
           title={t("Zinazopendekezwa", "Recommended")}
@@ -359,7 +370,6 @@ export default function BuyerOverview({ onNavigate }) {
         />
       )}
 
-      {/* RECENTLY VIEWED */}
       {recentlyViewedListings.length > 0 && (
         <ListingSection
           title={t("Zilizoangaliwa Hivi Karibuni", "Recently Viewed")}
@@ -372,7 +382,6 @@ export default function BuyerOverview({ onNavigate }) {
         />
       )}
 
-      {/* NEW LISTINGS */}
       {newListings.length > 0 && (
         <ListingSection
           title={t("Mali Mpya", "New Listings")}
@@ -385,7 +394,6 @@ export default function BuyerOverview({ onNavigate }) {
         />
       )}
 
-      {/* NEARBY */}
       {nearby.length > 0 && (
         <ListingSection
           title={t("Karibu Nawe", "Near You")}
@@ -402,7 +410,7 @@ export default function BuyerOverview({ onNavigate }) {
 }
 
 // ============================================================
-// LISTING SECTION — kadi ya listings nne
+// LISTING SECTION — header centered
 // ============================================================
 function ListingSection({
   title,
@@ -417,7 +425,7 @@ function ListingSection({
 
   return (
     <div className="mb-6">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-col items-center gap-1 mb-4 text-center">
         <h2
           style={{ color: COLORS.night }}
           className="text-sm font-semibold flex items-center gap-2"
