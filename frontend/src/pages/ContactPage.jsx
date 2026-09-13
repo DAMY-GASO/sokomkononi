@@ -20,17 +20,25 @@ export default function ContactPage() {
       {/* NAVBAR */}
       <Navbar />
 
-      {/* HERO SECTION */}
+      {/* ============================================================ */}
+      {/* HERO SECTION — CENTERED */}
+      {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-14 px-4 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold">{t("contact_heading")}</h1>
-        <p className="text-white/70 mt-3 max-w-xl mx-auto">{t("contact_subtext")}</p>
+        <h1 className="text-3xl md:text-4xl font-bold">
+          {t("contact_heading")}
+        </h1>
+        <p className="text-white/70 mt-3 max-w-xl mx-auto">
+          {t("contact_subtext")}
+        </p>
       </section>
 
-      {/* CONTACT SECTION */}
-      <section className="py-14 px-4 max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
-        {/* Contact details */}
-        <div className="space-y-6">
-          <div className="flex items-start gap-3">
+      {/* ============================================================ */}
+      {/* CONTACT SECTION — CENTERED */}
+      {/* ============================================================ */}
+      <section className="py-14 px-4 max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
+        {/* Contact details — kila item centered */}
+        <div className="space-y-6 text-center">
+          <div className="flex flex-col items-center text-center gap-2">
             <svg
               width="22"
               height="22"
@@ -40,7 +48,7 @@ export default function ContactPage() {
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="flex-shrink-0 mt-0.5"
+              className="flex-shrink-0"
             >
               <rect x="3" y="5" width="18" height="14" rx="2" />
               <path d="m3 7 9 6 9-6" />
@@ -49,10 +57,13 @@ export default function ContactPage() {
               <p className="font-semibold text-gray-800 text-sm">
                 {t("contact_email_label")}
               </p>
-              <p className="text-gray-600 text-sm">support@sokomkononi.co.tz</p>
+              <p className="text-gray-600 text-sm">
+                support@sokomkononi.co.tz
+              </p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
+
+          <div className="flex flex-col items-center text-center gap-2">
             <svg
               width="22"
               height="22"
@@ -62,7 +73,7 @@ export default function ContactPage() {
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="flex-shrink-0 mt-0.5"
+              className="flex-shrink-0"
             >
               <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 2 .6 2.9a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.5 2.9.6a2 2 0 0 1 1.8 2.1Z" />
             </svg>
@@ -73,7 +84,8 @@ export default function ContactPage() {
               <p className="text-gray-600 text-sm">+255 743 895 038</p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
+
+          <div className="flex flex-col items-center text-center gap-2">
             <svg
               width="22"
               height="22"
@@ -83,7 +95,7 @@ export default function ContactPage() {
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="flex-shrink-0 mt-0.5"
+              className="flex-shrink-0"
             >
               <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
               <circle cx="12" cy="10" r="3" />
@@ -97,13 +109,13 @@ export default function ContactPage() {
           </div>
         </div>
 
-        {/* Contact form */}
+        {/* Contact form — centered */}
         <div>
           {!sent ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <input
                 required
-                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8A33D] focus:border-transparent transition-colors"
+                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8A33D] focus:border-transparent transition-colors text-center"
                 placeholder={t("contact_name_placeholder")}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -111,7 +123,7 @@ export default function ContactPage() {
               <input
                 required
                 type="email"
-                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8A33D] focus:border-transparent transition-colors"
+                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8A33D] focus:border-transparent transition-colors text-center"
                 placeholder={t("contact_email_placeholder")}
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -119,7 +131,7 @@ export default function ContactPage() {
               <textarea
                 required
                 rows={4}
-                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8A33D] focus:border-transparent transition-colors"
+                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8A33D] focus:border-transparent transition-colors resize-none text-center"
                 placeholder={t("contact_message_placeholder")}
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
@@ -130,8 +142,12 @@ export default function ContactPage() {
             </form>
           ) : (
             <div className="bg-[#F5F3EC] rounded-xl p-6 text-center">
-              <p className="font-semibold text-gray-800">{t("contact_success_heading")}</p>
-              <p className="text-gray-600 text-sm mt-2">{t("contact_success_subtext")}</p>
+              <p className="font-semibold text-gray-800">
+                {t("contact_success_heading")}
+              </p>
+              <p className="text-gray-600 text-sm mt-2">
+                {t("contact_success_subtext")}
+              </p>
             </div>
           )}
         </div>
