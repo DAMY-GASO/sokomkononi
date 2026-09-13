@@ -1,7 +1,7 @@
 // ============================================================
 // VerificationSection.jsx
 // Admin — Verifications za seller, buyer, property, vehicle, business.
-// Bilingual + mobile-responsive.
+// Bilingual + mobile-responsive (imeboreshwa).
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -73,7 +73,7 @@ function StatusBadge({ status, lang }) {
   return (
     <span
       style={{ background: s.bg, color: s.fg }}
-      className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+      className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
     >
       {label}
     </span>
@@ -81,7 +81,7 @@ function StatusBadge({ status, lang }) {
 }
 
 // ============================================================
-// VERIFICATION CARD
+// VERIFICATION CARD — responsive
 // ============================================================
 function VerificationCard({ request, lang }) {
   const [expanded, setExpanded] = useState(false);
@@ -117,23 +117,23 @@ function VerificationCard({ request, lang }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border overflow-hidden"
+      className="rounded-xl border overflow-hidden w-full min-w-0"
     >
       {/* Header */}
-      <div className="p-4">
-        <div className="flex items-start gap-3">
+      <div className="p-3 sm:p-4">
+        <div className="flex items-start gap-2 sm:gap-3">
           <div
             style={{ background: `${COLORS.night}0D` }}
-            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
           >
-            <TypeIcon size={18} color={COLORS.night} />
+            <TypeIcon size={16} color={COLORS.night} />
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span
                 style={{ background: `${COLORS.gold}20`, color: "#8A5A16" }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
               >
                 {VERIFICATION_TYPES.find((v) => v.key === request.type)?.label?.[lang] ||
                   request.type}
@@ -147,7 +147,7 @@ function VerificationCard({ request, lang }) {
             >
               {request.subject}
             </p>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5 truncate">
               {request.userName} · {request.userEmail}
             </p>
             <p className="text-[11px] text-gray-400 mt-1">
@@ -157,7 +157,7 @@ function VerificationCard({ request, lang }) {
 
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="p-1.5 text-gray-400 hover:text-gray-600"
+            className="p-1.5 text-gray-400 hover:text-gray-600 shrink-0"
             aria-label={expanded ? "Funga" : "Fungua"}
           >
             {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -176,15 +176,15 @@ function VerificationCard({ request, lang }) {
       {expanded && (
         <div
           style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-          className="border-t p-4 flex flex-col gap-3"
+          className="border-t p-3 sm:p-4 flex flex-col gap-3 min-w-0"
         >
           {/* Notes */}
           {request.notes && (
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1">
                 {t("Maelezo", "Notes")}
               </p>
-              <p className="text-xs text-gray-700 bg-white rounded-lg p-2.5 leading-relaxed">
+              <p className="text-xs text-gray-700 bg-white rounded-lg p-2.5 leading-relaxed break-words">
                 {request.notes}
               </p>
             </div>
@@ -192,7 +192,7 @@ function VerificationCard({ request, lang }) {
 
           {/* Documents */}
           {request.documents && request.documents.length > 0 && (
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1">
                 {t("Nyaraka", "Documents")}
               </p>
@@ -203,7 +203,7 @@ function VerificationCard({ request, lang }) {
                     href={doc.url || "#"}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-2 text-xs text-gray-700 bg-white rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-2 text-xs text-gray-700 bg-white rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors min-w-0"
                   >
                     <FileText size={12} className="text-gray-400 shrink-0" />
                     <span className="truncate">{doc.name}</span>
@@ -220,7 +220,7 @@ function VerificationCard({ request, lang }) {
                 background: "rgba(193,80,46,0.08)",
                 color: COLORS.rust,
               }}
-              className="rounded-lg px-3 py-2 text-xs"
+              className="rounded-lg px-3 py-2 text-xs break-words"
             >
               <span className="font-semibold">
                 {t("Sababu ya kukataliwa", "Rejection reason")}:
@@ -241,7 +241,7 @@ function VerificationCard({ request, lang }) {
 
           {/* Reject reason input */}
           {rejecting && (
-            <div>
+            <div className="min-w-0">
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
@@ -256,7 +256,7 @@ function VerificationCard({ request, lang }) {
             </div>
           )}
 
-          {/* Actions */}
+          {/* Actions — responsive */}
           {request.status === "pending" && (
             <div className="flex items-center gap-2 flex-wrap">
               <button
@@ -380,7 +380,7 @@ export default function VerificationSection() {
   }, [requests, typeFilter, statusFilter, query]);
 
   return (
-    <>
+    <div className="w-full max-w-7xl mx-auto">
       <SectionHeader
         title={t("Uthibitisho", "Verification")}
         subtitle={t(
@@ -389,39 +389,45 @@ export default function VerificationSection() {
         )}
       />
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+      {/* Summary Stats — responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5">
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-3"
+          className="rounded-xl border p-2.5 sm:p-3 min-w-0"
         >
           <p className="text-[10px] font-semibold text-gray-500 uppercase">
             {t("Zote", "Total")}
           </p>
-          <p style={{ color: COLORS.night }} className="text-lg font-bold mt-0.5">
+          <p
+            style={{ color: COLORS.night }}
+            className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
+          >
             {counts.total}
           </p>
         </div>
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-3"
+          className="rounded-xl border p-2.5 sm:p-3 min-w-0"
         >
           <p className="text-[10px] font-semibold text-gray-500 uppercase">
             {t("Zinasubiri", "Pending")}
           </p>
-          <p className="text-lg font-bold mt-0.5" style={{ color: "#8A5A16" }}>
+          <p
+            className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
+            style={{ color: "#8A5A16" }}
+          >
             {counts.pending}
           </p>
         </div>
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-3"
+          className="rounded-xl border p-2.5 sm:p-3 min-w-0"
         >
           <p className="text-[10px] font-semibold text-gray-500 uppercase">
             {t("Zimeidhinishwa", "Approved")}
           </p>
           <p
-            className="text-lg font-bold mt-0.5"
+            className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
             style={{ color: COLORS.green }}
           >
             {counts.approved}
@@ -429,13 +435,13 @@ export default function VerificationSection() {
         </div>
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-3"
+          className="rounded-xl border p-2.5 sm:p-3 min-w-0"
         >
           <p className="text-[10px] font-semibold text-gray-500 uppercase">
             {t("Zimekataliwa", "Rejected")}
           </p>
           <p
-            className="text-lg font-bold mt-0.5"
+            className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
             style={{ color: COLORS.rust }}
           >
             {counts.rejected}
@@ -443,8 +449,8 @@ export default function VerificationSection() {
         </div>
       </div>
 
-      {/* Type Tabs */}
-      <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+      {/* Type Tabs — scroll horizontal */}
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
         <button
           onClick={() => setTypeFilter("all")}
           style={{
@@ -452,7 +458,7 @@ export default function VerificationSection() {
             color: typeFilter === "all" ? COLORS.sand : COLORS.night,
             borderColor: COLORS.sandLine,
           }}
-          className="text-xs font-semibold px-3.5 py-2 rounded-full border whitespace-nowrap shrink-0"
+          className="text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
         >
           {t("Zote", "All")} ({typeCounts.all})
         </button>
@@ -465,16 +471,16 @@ export default function VerificationSection() {
               color: typeFilter === type.key ? COLORS.sand : COLORS.night,
               borderColor: COLORS.sandLine,
             }}
-            className="text-xs font-semibold px-3.5 py-2 rounded-full border whitespace-nowrap shrink-0"
+            className="text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
           >
             {type.label?.[lang] || type.label?.sw} ({typeCounts[type.key]})
           </button>
         ))}
       </div>
 
-      {/* Status Tabs + Search */}
+      {/* Status Tabs + Search — responsive */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 shrink-0">
           {VERIFICATION_STATUSES.map((status) => (
             <button
               key={status.key}
@@ -502,7 +508,7 @@ export default function VerificationSection() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 sm:max-w-xs">
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 min-w-0 sm:max-w-xs">
           <Search size={14} className="text-gray-400 shrink-0" />
           <input
             value={query}
@@ -517,9 +523,9 @@ export default function VerificationSection() {
       {filtered.length === 0 ? (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-2xl border-2 border-dashed p-10 text-center"
+          className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
         >
-          <ShieldCheck size={48} className="mx-auto text-gray-300 mb-3" />
+          <ShieldCheck size={40} className="mx-auto text-gray-300 mb-3" />
           <h3 style={{ color: COLORS.night }} className="font-semibold mb-1">
             {t("Hakuna maombi ya uthibitisho", "No verification requests")}
           </h3>
@@ -536,7 +542,7 @@ export default function VerificationSection() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full min-w-0">
           {filtered.map((request) => (
             <VerificationCard
               key={request.id}
@@ -546,6 +552,6 @@ export default function VerificationSection() {
           ))}
         </div>
       )}
-    </>
+    </div>
   );
 }
