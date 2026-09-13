@@ -38,7 +38,10 @@ import {
   markAsSold,
 } from "../../../config/listingsStore.js";
 import { useSentAnnouncements } from "../../../config/announcementsStore.js";
-import { useNotifications, notifyListingFeePaid } from "../../../config/notificationsStore.js";
+import {
+  useNotifications,
+  notifyListingFeePaid,
+} from "../../../config/notificationsStore.js";
 import { checkReservationReminders } from "../../../config/dealsStore.js";
 import { checkSavedListingsChanges } from "../../../config/savedListingsWatcher.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
@@ -69,40 +72,123 @@ import MessagesPage from "../../MessagesPage";
 import NotificationsPage from "../../NotificationsPage";
 import MyTransactionsPage from "../../MyTransactionsPage";
 import WaitingListPage from "../../WaitingListPage";
-import { useWaitingList, leaveWaitingList } from "../../../config/waitingListStore.js";
+import {
+  useWaitingList,
+  leaveWaitingList,
+} from "../../../config/waitingListStore.js";
 
 // ============================================================
 // SELLER NAV — Bilingual kamili
 // ============================================================
 const SELLER_NAV = [
-  { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
-  { key: "post", label: { sw: "Weka Mali Yako", en: "Post Property" }, icon: PlusCircle },
-  { key: "listings", label: { sw: "Mali Zangu", en: "My Listings" }, icon: ListChecks },
+  {
+    key: "overview",
+    label: { sw: "Muhtasari", en: "Overview" },
+    icon: LayoutGrid,
+  },
+  {
+    key: "post",
+    label: { sw: "Weka Mali Yako", en: "Post Property" },
+    icon: PlusCircle,
+  },
+  {
+    key: "listings",
+    label: { sw: "Mali Zangu", en: "My Listings" },
+    icon: ListChecks,
+  },
   { key: "leads", label: { sw: "Maulizio", en: "Enquiries" }, icon: Inbox },
-  { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
+  {
+    key: "saved",
+    label: { sw: "Zilizohifadhiwa", en: "Saved" },
+    icon: Heart,
+  },
   { key: "boost", label: { sw: "Boost Sasa", en: "Boost Now" }, icon: Rocket },
-  { key: "leading", label: { sw: "Ada ya Kipaumbele", en: "Leading Fee" }, icon: TrendingUp },
-  { key: "advertise", label: { sw: "Tangaza Sasa", en: "Advertise Now" }, icon: Megaphone },
-  { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
-  { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
-  { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
-  { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
+  {
+    key: "leading",
+    label: { sw: "Ada ya Kipaumbele", en: "Leading Fee" },
+    icon: TrendingUp,
+  },
+  {
+    key: "advertise",
+    label: { sw: "Tangaza Sasa", en: "Advertise Now" },
+    icon: Megaphone,
+  },
+  {
+    key: "deals",
+    label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" },
+    icon: MessagesSquare,
+  },
+  {
+    key: "messages",
+    label: { sw: "Ujumbe", en: "Messages" },
+    icon: MessageSquare,
+  },
+  {
+    key: "notifications",
+    label: { sw: "Taarifa", en: "Notifications" },
+    icon: Bell,
+  },
+  {
+    key: "transactions",
+    label: { sw: "Miamala Yangu", en: "My Transactions" },
+    icon: Receipt,
+  },
 ];
 
 // ============================================================
 // BUYER NAV — Bilingual kamili + searches + safety
 // ============================================================
 const BUYER_NAV = [
-  { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
-  { key: "browse", label: { sw: "Tafuta Mali", en: "Browse Properties" }, icon: Search },
-  { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
-  { key: "searches", label: { sw: "Utafutaji Wangu", en: "My Searches" }, icon: Bell },
-  { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
-  { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
-  { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
-  { key: "waiting", label: { sw: "Orodha ya Kusubiri", en: "Waiting List" }, icon: Clock3 },
-  { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
-  { key: "safety", label: { sw: "Usalama & Msaada", en: "Safety & Support" }, icon: Shield },
+  {
+    key: "overview",
+    label: { sw: "Muhtasari", en: "Overview" },
+    icon: LayoutGrid,
+  },
+  {
+    key: "browse",
+    label: { sw: "Tafuta Mali", en: "Browse Properties" },
+    icon: Search,
+  },
+  {
+    key: "saved",
+    label: { sw: "Zilizohifadhiwa", en: "Saved" },
+    icon: Heart,
+  },
+  {
+    key: "searches",
+    label: { sw: "Utafutaji Wangu", en: "My Searches" },
+    icon: Bell,
+  },
+  {
+    key: "deals",
+    label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" },
+    icon: MessagesSquare,
+  },
+  {
+    key: "messages",
+    label: { sw: "Ujumbe", en: "Messages" },
+    icon: MessageSquare,
+  },
+  {
+    key: "notifications",
+    label: { sw: "Taarifa", en: "Notifications" },
+    icon: Bell,
+  },
+  {
+    key: "waiting",
+    label: { sw: "Orodha ya Kusubiri", en: "Waiting List" },
+    icon: Clock3,
+  },
+  {
+    key: "transactions",
+    label: { sw: "Miamala Yangu", en: "My Transactions" },
+    icon: Receipt,
+  },
+  {
+    key: "safety",
+    label: { sw: "Usalama & Msaada", en: "Safety & Support" },
+    icon: Shield,
+  },
 ];
 
 const URL_TO_STATE = {
@@ -210,6 +296,8 @@ export default function DashboardShell() {
 
   const currentLang = languages.find((l) => l.code === lang) || languages[0];
 
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
   // ============================================================
   // SOMA URL NA KUFUNGUA TAB SAHIHI
   // ============================================================
@@ -267,7 +355,6 @@ export default function DashboardShell() {
   const removeListing = (id) => removeListingFromStore(id);
   const updateListing = (id, patch) => updateListingInStore(id, patch);
 
-  // Pause / Resume / Mark as Sold
   const handlePause = (id) => pauseListing(id);
   const handleResume = (id) => unpauseListing(id);
   const handleMarkSold = (id) => markAsSold(id);
@@ -289,7 +376,11 @@ export default function DashboardShell() {
     });
   };
 
-  const handleFinalPaymentConfirmed = (deal, dealSide, { method, reference }) => {
+  const handleFinalPaymentConfirmed = (
+    deal,
+    dealSide,
+    { method, reference }
+  ) => {
     const isSeller = dealSide === "seller";
     addTransaction({
       type: isSeller ? "sale" : "purchase",
@@ -463,7 +554,13 @@ export default function DashboardShell() {
       );
     }
     if (activeKey === "messages") {
-      return <MessagesPage initialConversationId={new URLSearchParams(location.search).get("c")} />;
+      return (
+        <MessagesPage
+          initialConversationId={
+            new URLSearchParams(location.search).get("c")
+          }
+        />
+      );
     }
     if (activeKey === "notifications") {
       return <NotificationsPage />;
@@ -480,25 +577,40 @@ export default function DashboardShell() {
         />
       );
     }
+    // ============================================================
+    // FALLBACK — centered + bilingual
+    // ============================================================
     return (
-      <main className="flex-1 p-4 sm:p-6">
+      <main className="flex-1 p-4 sm:p-6 text-center">
         <h1
           style={{ fontFamily: FONTS.display, color: COLORS.night }}
-          className="text-2xl sm:text-3xl font-semibold mb-1"
+          className="text-2xl sm:text-3xl font-semibold"
         >
           {nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}
         </h1>
-        <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-6">
+        <p
+          style={{ color: "rgba(16,26,46,0.6)" }}
+          className="text-sm mt-2 max-w-xl mx-auto"
+        >
           {side === "seller"
-            ? "Sehemu ya Uza Sasa — dhibiti mali zako, malipo na maombi ya wanunuzi."
-            : "Sehemu ya Nunua Sasa — tafuta, negotiate na fuatilia manunuzi yako."}
+            ? t(
+                "Sehemu ya Uza Sasa — dhibiti mali zako, malipo na maombi ya wanunuzi.",
+                "Sell Now section — manage your listings, payments, and buyer enquiries."
+              )
+            : t(
+                "Sehemu ya Nunua Sasa — tafuta, negotiate na fuatilia manunuzi yako.",
+                "Buy Now section — find, negotiate, and track your purchases."
+              )}
         </p>
         <div
           style={{ borderColor: COLORS.sandLine }}
-          className="rounded-2xl border-2 border-dashed p-10 text-center"
+          className="rounded-2xl border-2 border-dashed p-10 text-center mt-6"
         >
           <p style={{ color: "rgba(16,26,46,0.45)" }} className="text-sm">
-            Sehemu ya "{nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}" itajengwa hapa
+            {t(
+              `Sehemu ya "${nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}" itajengwa hapa`,
+              `The "${nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}" section will be built here`
+            )}
           </p>
         </div>
       </main>
@@ -506,7 +618,7 @@ export default function DashboardShell() {
   };
 
   // ============================================================
-  // USER AVATAR — herufi au picha
+  // USER AVATAR
   // ============================================================
   const renderAvatar = (size = "w-8 h-8", textSize = "text-sm") => {
     if (user?.avatar) {
@@ -530,7 +642,11 @@ export default function DashboardShell() {
 
   return (
     <div
-      style={{ fontFamily: FONTS.body, background: COLORS.sand, minHeight: "100vh" }}
+      style={{
+        fontFamily: FONTS.body,
+        background: COLORS.sand,
+        minHeight: "100vh",
+      }}
       className="w-full flex flex-col pb-16 md:pb-0"
     >
       <style>{`
@@ -545,7 +661,7 @@ export default function DashboardShell() {
         <button
           onClick={() => setSidebarOpen((v) => !v)}
           className="text-white/80 hover:text-white md:hidden"
-          aria-label={lang === "sw" ? "Fungua menyu" : "Open menu"}
+          aria-label={t("Fungua menyu", "Open menu")}
         >
           <Menu size={22} />
         </button>
@@ -559,12 +675,15 @@ export default function DashboardShell() {
         </a>
 
         <div
-          style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.12)" }}
+          style={{
+            background: COLORS.nightSoft,
+            borderColor: "rgba(245,243,236,0.12)",
+          }}
           className="hidden sm:flex items-center flex-1 max-w-md rounded-full border px-3 py-1.5 gap-2"
         >
           <Search size={16} color="rgba(245,243,236,0.6)" />
           <input
-            placeholder={lang === "sw" ? "Tafuta mali..." : "Search properties..."}
+            placeholder={t("Tafuta mali...", "Search properties...")}
             className="bg-transparent outline-none text-sm flex-1"
             style={{ color: COLORS.sand }}
           />
@@ -584,7 +703,7 @@ export default function DashboardShell() {
               }}
               className="text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
-              {lang === "sw" ? "Uza Sasa" : "Sell Now"}
+              {t("Uza Sasa", "Sell Now")}
             </button>
             <button
               onClick={() => handleSideChange("buyer")}
@@ -594,7 +713,7 @@ export default function DashboardShell() {
               }}
               className="text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
-              {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
+              {t("Nunua Sasa", "Buy Now")}
             </button>
           </div>
 
@@ -602,24 +721,37 @@ export default function DashboardShell() {
           <div className="relative">
             <button
               onClick={() => setLangOpen((v) => !v)}
-              style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.15)" }}
+              style={{
+                background: COLORS.nightSoft,
+                borderColor: "rgba(245,243,236,0.15)",
+              }}
               className="text-white/80 hover:text-white text-sm font-medium border rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
             >
               <Globe size={14} />
-              <span className="hidden sm:inline">{currentLang?.native || "Kiswahili"}</span>
-              <span className="sm:hidden">{currentLang?.code?.toUpperCase() || "SW"}</span>
+              <span className="hidden sm:inline">
+                {currentLang?.native || "Kiswahili"}
+              </span>
+              <span className="sm:hidden">
+                {currentLang?.code?.toUpperCase() || "SW"}
+              </span>
             </button>
             {langOpen && (
               <div
-                style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.1)" }}
+                style={{
+                  background: COLORS.nightSoft,
+                  borderColor: "rgba(245,243,236,0.1)",
+                }}
                 className="absolute right-0 mt-2 w-48 border rounded-lg shadow-xl py-2 z-50"
               >
                 <div
                   style={{ borderColor: "rgba(245,243,236,0.1)" }}
                   className="px-4 py-2 border-b"
                 >
-                  <p style={{ color: "rgba(245,243,236,0.5)" }} className="text-xs font-semibold">
-                    {lang === "sw" ? "Chagua Lugha" : "Choose Language"}
+                  <p
+                    style={{ color: "rgba(245,243,236,0.5)" }}
+                    className="text-xs font-semibold"
+                  >
+                    {t("Chagua Lugha", "Choose Language")}
                   </p>
                 </div>
                 {languages.map((l) => (
@@ -627,7 +759,10 @@ export default function DashboardShell() {
                     key={l.code}
                     onClick={() => handleLanguageSelect(l.code)}
                     style={{
-                      background: lang === l.code ? "rgba(245,243,236,0.05)" : "transparent",
+                      background:
+                        lang === l.code
+                          ? "rgba(245,243,236,0.05)"
+                          : "transparent",
                       color: COLORS.sand,
                     }}
                     className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-white/5 transition-colors"
@@ -644,7 +779,7 @@ export default function DashboardShell() {
           <a
             href="/"
             className="text-white/80 hover:text-white p-1.5 transition-colors"
-            aria-label={lang === "sw" ? "Rudi kwenye ukurasa wa mwanzo" : "Back to homepage"}
+            aria-label={t("Rudi kwenye ukurasa wa mwanzo", "Back to homepage")}
           >
             <Home size={20} />
           </a>
@@ -653,7 +788,7 @@ export default function DashboardShell() {
           <button
             onClick={() => handleNavClick("notifications")}
             className="relative text-white/80 hover:text-white p-1.5 transition-colors"
-            aria-label={lang === "sw" ? "Taarifa" : "Notifications"}
+            aria-label={t("Taarifa", "Notifications")}
           >
             <Bell size={20} />
             {unreadNotifCount > 0 && (
@@ -672,7 +807,7 @@ export default function DashboardShell() {
                 setUserMenuOpen((v) => !v);
               }}
               className="rounded-full transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#E8A33D]/50"
-              aria-label={lang === "sw" ? "Menyu ya mtumiaji" : "User menu"}
+              aria-label={t("Menyu ya mtumiaji", "User menu")}
               aria-expanded={userMenuOpen}
             >
               {renderAvatar("w-8 h-8", "text-sm")}
@@ -680,7 +815,10 @@ export default function DashboardShell() {
 
             {userMenuOpen && (
               <div
-                style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.1)" }}
+                style={{
+                  background: COLORS.nightSoft,
+                  borderColor: "rgba(245,243,236,0.1)",
+                }}
                 className="absolute right-0 mt-2 w-56 border rounded-lg shadow-xl py-2 z-50"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -688,10 +826,16 @@ export default function DashboardShell() {
                   style={{ borderColor: "rgba(245,243,236,0.1)" }}
                   className="px-4 py-3 border-b"
                 >
-                  <p style={{ color: COLORS.sand }} className="text-sm font-semibold truncate">
+                  <p
+                    style={{ color: COLORS.sand }}
+                    className="text-sm font-semibold truncate"
+                  >
                     {user?.name || "User"}
                   </p>
-                  <p style={{ color: "rgba(245,243,236,0.5)" }} className="text-xs truncate">
+                  <p
+                    style={{ color: "rgba(245,243,236,0.5)" }}
+                    className="text-xs truncate"
+                  >
                     {user?.email || ""}
                   </p>
                 </div>
@@ -705,7 +849,7 @@ export default function DashboardShell() {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
                 >
                   <User size={16} color="rgba(245,243,236,0.7)" />
-                  {lang === "sw" ? "Wasifu" : "Profile"}
+                  {t("Wasifu", "Profile")}
                 </button>
 
                 <button
@@ -713,7 +857,7 @@ export default function DashboardShell() {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#C1502E] hover:bg-[#C1502E]/10 transition-colors text-left"
                 >
                   <LogOut size={16} />
-                  {lang === "sw" ? "Toka" : "Logout"}
+                  {t("Toka", "Logout")}
                 </button>
               </div>
             )}
@@ -734,7 +878,7 @@ export default function DashboardShell() {
           }}
           className="flex-1 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
-          {lang === "sw" ? "Uza Sasa" : "Sell Now"}
+          {t("Uza Sasa", "Sell Now")}
         </button>
         <button
           onClick={() => handleSideChange("buyer")}
@@ -744,7 +888,7 @@ export default function DashboardShell() {
           }}
           className="flex-1 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
-          {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
+          {t("Nunua Sasa", "Buy Now")}
         </button>
       </div>
 
@@ -760,9 +904,10 @@ export default function DashboardShell() {
                 announcements[tickerIndex % announcements.length],
                 lang
               )
-            : lang === "sw"
-              ? "Karibu SokoMkononi — tafuta au weka mali yako leo."
-              : "Welcome to SokoMkononi — find or list your property today."}
+            : t(
+                "Karibu SokoMkononi — tafuta au weka mali yako leo.",
+                "Welcome to SokoMkononi — find or list your property today."
+              )}
         </span>
       </div>
 
@@ -791,7 +936,9 @@ export default function DashboardShell() {
                 {key === "listings" && listings.length > 0 && (
                   <span
                     style={{
-                      background: isActive ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                      background: isActive
+                        ? "rgba(245,243,236,0.18)"
+                        : COLORS.sandLine,
                       color: isActive ? COLORS.sand : COLORS.night,
                     }}
                     className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
@@ -803,7 +950,9 @@ export default function DashboardShell() {
                 {key === "leads" && newLeadsCount > 0 && (
                   <span
                     style={{
-                      background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust,
+                      background: isActive
+                        ? "rgba(245,243,236,0.18)"
+                        : COLORS.rust,
                       color: isActive ? COLORS.sand : "white",
                     }}
                     className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
@@ -815,7 +964,9 @@ export default function DashboardShell() {
                 {key === "searches" && buyerSearchesCount > 0 && (
                   <span
                     style={{
-                      background: isActive ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                      background: isActive
+                        ? "rgba(245,243,236,0.18)"
+                        : COLORS.sandLine,
                       color: isActive ? COLORS.sand : COLORS.night,
                     }}
                     className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
@@ -833,7 +984,7 @@ export default function DashboardShell() {
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4"
           >
             <Home size={17} color={COLORS.night} />
-            {lang === "sw" ? "Rudi Nyumbani" : "Back to Home"}
+            {t("Rudi Nyumbani", "Back to Home")}
           </a>
         </aside>
 
@@ -846,7 +997,7 @@ export default function DashboardShell() {
               <div className="flex justify-end mb-2">
                 <button
                   onClick={() => setSidebarOpen(false)}
-                  aria-label={lang === "sw" ? "Funga" : "Close"}
+                  aria-label={t("Funga", "Close")}
                 >
                   <X size={20} color={COLORS.night} />
                 </button>
@@ -871,7 +1022,9 @@ export default function DashboardShell() {
                     {key === "leads" && newLeadsCount > 0 && (
                       <span
                         style={{
-                          background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust,
+                          background: isActive
+                            ? "rgba(245,243,236,0.18)"
+                            : COLORS.rust,
                           color: isActive ? COLORS.sand : "white",
                         }}
                         className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
@@ -882,7 +1035,9 @@ export default function DashboardShell() {
                     {key === "searches" && buyerSearchesCount > 0 && (
                       <span
                         style={{
-                          background: isActive ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                          background: isActive
+                            ? "rgba(245,243,236,0.18)"
+                            : COLORS.sandLine,
                           color: isActive ? COLORS.sand : COLORS.night,
                         }}
                         className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
@@ -900,10 +1055,13 @@ export default function DashboardShell() {
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4"
               >
                 <Home size={17} color={COLORS.night} />
-                {lang === "sw" ? "Rudi Nyumbani" : "Back to Home"}
+                {t("Rudi Nyumbani", "Back to Home")}
               </a>
             </div>
-            <div onClick={() => setSidebarOpen(false)} className="flex-1 bg-black/30" />
+            <div
+              onClick={() => setSidebarOpen(false)}
+              className="flex-1 bg-black/30"
+            />
           </div>
         )}
 
