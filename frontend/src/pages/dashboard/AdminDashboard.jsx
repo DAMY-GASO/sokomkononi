@@ -210,29 +210,22 @@ export default function AdminDashboard() {
   // STAFF PERMISSIONS — nani anaweza kuona nini
   // ============================================================
   const staffRole = useMemo(() => {
-    // Super Admin (default) — anaona kila kitu
     if (isAdmin && !user?.roleKey) {
       return getRole("super_admin");
     }
-    // Staff aliye na roleKey — anaona kulingana na permissions zake
     if (user?.roleKey) {
       return getRole(user.roleKey);
     }
-    // Fallback: Super Admin
     return getRole("super_admin");
   }, [isAdmin, user?.roleKey]);
 
   const canAccess = (sectionKey) => {
-    // Profile na System — kila mtu anaweza kufikia yake
     if (sectionKey === "profile" || sectionKey === "system") return true;
-    // Overview — kila mtu
     if (sectionKey === "overview") return true;
-    // Angalia permissions
     if (!staffRole) return false;
     return staffRole.permissions?.includes(sectionKey);
   };
 
-  // Filter NAV kulingana na permissions
   const visibleNav = useMemo(() => {
     return NAV.filter((item) => canAccess(item.key));
   }, [staffRole]);
@@ -261,9 +254,6 @@ export default function AdminDashboard() {
     navigate("/admin/login");
   };
 
-  // ============================================================
-  // NAVIGATION — setActiveSection inatumika kama navigate
-  // ============================================================
   const handleNavClick = (key) => {
     const url = STATE_TO_URL[key];
     if (url) {
@@ -288,7 +278,6 @@ export default function AdminDashboard() {
   }
 
   const renderSection = () => {
-    // Kama hana ruhusa — onyesha "Access Denied"
     if (!canAccess(activeSection)) {
       return (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -356,7 +345,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Badge helper
   const getBadge = (key) => {
     if (key === "verification" && pendingVerificationsCount > 0) {
       return pendingVerificationsCount;
@@ -370,7 +358,7 @@ export default function AdminDashboard() {
   return (
     <div
       style={{ fontFamily: FONTS.body, background: COLORS.sand }}
-      className="min-h-screen"
+      className="min-h-screen w-full overflow-x-hidden"
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
@@ -380,32 +368,31 @@ export default function AdminDashboard() {
         style={{ background: COLORS.night }}
         className="sticky top-0 z-50 w-full flex items-center justify-between px-4 sm:px-6 py-3"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            className="text-white/70 hover:text-white md:hidden"
+            className="text-white/70 hover:text-white md:hidden shrink-0"
             aria-label={lang === "sw" ? "Fungua menyu" : "Open menu"}
           >
             <Menu size={20} />
           </button>
           <span
             style={{ fontFamily: FONTS.display, color: COLORS.sand }}
-            className="text-lg sm:text-xl font-semibold tracking-tight"
+            className="text-lg sm:text-xl font-semibold tracking-tight truncate"
           >
             SokoMkononi
           </span>
-          <span className="text-[10px] font-semibold bg-[#E8A33D]/20 text-[#E8A33D] px-2.5 py-0.5 rounded-full">
+          <span className="text-[10px] font-semibold bg-[#E8A33D]/20 text-[#E8A33D] px-2.5 py-0.5 rounded-full shrink-0">
             ADMIN
           </span>
           {staffRole && staffRole.key !== "super_admin" && (
-            <span className="hidden sm:inline text-[10px] font-semibold bg-white/10 text-white/70 px-2 py-0.5 rounded-full">
+            <span className="hidden sm:inline text-[10px] font-semibold bg-white/10 text-white/70 px-2 py-0.5 rounded-full truncate">
               {staffRole.label?.[lang] || staffRole.label?.sw}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Language Switcher */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <LanguageSwitcher lang={lang} setLang={setLang} />
 
           {/* Notifications */}
@@ -505,7 +492,7 @@ export default function AdminDashboard() {
                   className="fixed inset-0 z-40"
                   onClick={() => setProfileMenuOpen(false)}
                 />
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-64 max-w-[85vw] bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden">
                   <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
                     <Avatar user={user} size="lg" />
                     <div className="min-w-0">
@@ -557,11 +544,11 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex w-full">
         {/* SIDEBAR — DESKTOP */}
         <aside
           style={{ borderColor: COLORS.sandLine }}
-          className="hidden md:flex w-64 shrink-0 border-r flex-col py-4 px-3 gap-1 min-h-[calc(100vh-56px)]"
+          className="hidden md:flex w-64 shrink-0 border-r flex-col py-4 px-3 gap-1 min-h-[calc(100vh-56px)] overflow-y-auto"
         >
           {visibleNav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeSection;
@@ -574,9 +561,9 @@ export default function AdminDashboard() {
                   background: isActive ? COLORS.night : "transparent",
                   color: isActive ? COLORS.sand : COLORS.night,
                 }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left w-full min-w-0"
               >
-                <Icon size={17} color={isActive ? COLORS.gold : COLORS.night} />
+                <Icon size={17} color={isActive ? COLORS.gold : COLORS.night} className="shrink-0" />
                 <span className="flex-1 truncate">{label[lang] || label.sw}</span>
                 {badge && (
                   <span
@@ -622,11 +609,12 @@ export default function AdminDashboard() {
                       background: isActive ? COLORS.night : "transparent",
                       color: isActive ? COLORS.sand : COLORS.night,
                     }}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left w-full min-w-0"
                   >
                     <Icon
                       size={17}
                       color={isActive ? COLORS.gold : COLORS.night}
+                      className="shrink-0"
                     />
                     <span className="flex-1 truncate">{label[lang] || label.sw}</span>
                     {badge && (
@@ -651,7 +639,8 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <main className="flex-1 max-w-7xl px-4 sm:px-6 py-6">
+        {/* MAIN — overflow-x-hidden inazuia kila kitu kisipite upana */}
+        <main className="flex-1 min-w-0 max-w-7xl px-4 sm:px-6 py-6 overflow-x-hidden">
           {renderSection()}
         </main>
       </div>
