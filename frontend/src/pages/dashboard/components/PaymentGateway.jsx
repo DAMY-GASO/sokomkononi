@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Smartphone, CreditCard, Check, ChevronLeft, ShieldCheck, Loader2 } from "lucide-react";
+import {
+  Smartphone,
+  CreditCard,
+  Check,
+  ChevronLeft,
+  ShieldCheck,
+  Loader2,
+} from "lucide-react";
 import { COLORS, FONTS, PAYMENT_METHODS, formatTZS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 
@@ -12,8 +19,6 @@ const inputStyle = {
 // ============================================================
 // HELPERS — input formatting (phone, card, expiry)
 // ============================================================
-
-// Simu: "0712345678" -> "0712 345 678"
 function formatPhoneInput(value) {
   const digits = String(value).replace(/[^0-9]/g, "").slice(0, 10);
   if (!digits) return "";
@@ -22,14 +27,12 @@ function formatPhoneInput(value) {
   return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
 }
 
-// Kadi: "4111111111111111" -> "4111 1111 1111 1111"
 function formatCardInput(value) {
   const digits = String(value).replace(/[^0-9]/g, "").slice(0, 16);
   if (!digits) return "";
   return digits.replace(/(.{4})/g, "$1 ").trim();
 }
 
-// Expiry: "1225" -> "12/25"
 function formatExpiryInput(value) {
   const digits = String(value).replace(/[^0-9]/g, "").slice(0, 4);
   if (!digits) return "";
@@ -37,6 +40,9 @@ function formatExpiryInput(value) {
   return `${digits.slice(0, 2)}/${digits.slice(2)}`;
 }
 
+// ============================================================
+// METHOD OPTION — centered (icon + label + check)
+// ============================================================
 function MethodOption({ method, selected, onSelect }) {
   const Icon = method.type === "card" ? CreditCard : Smartphone;
   return (
@@ -46,7 +52,7 @@ function MethodOption({ method, selected, onSelect }) {
         borderColor: selected ? COLORS.gold : COLORS.sandLine,
         background: selected ? "rgba(232,163,61,0.08)" : "white",
       }}
-      className="flex items-center gap-3 p-3 rounded-xl border text-left transition-colors"
+      className="flex items-center justify-center gap-3 p-3 rounded-xl border text-center transition-colors"
     >
       <div
         style={{ background: COLORS.night }}
@@ -54,7 +60,10 @@ function MethodOption({ method, selected, onSelect }) {
       >
         <Icon size={16} color={COLORS.gold} />
       </div>
-      <span style={{ color: COLORS.night }} className="text-sm font-medium flex-1">
+      <span
+        style={{ color: COLORS.night }}
+        className="text-sm font-medium flex-1 text-center"
+      >
         {method.label}
       </span>
       <span
@@ -74,13 +83,15 @@ function MethodOption({ method, selected, onSelect }) {
  * Simulated payment step, unified for Listing Fee, Boost, Leading,
  * Advertisement, and Reservation Fee.
  *
- * This mocks the mobile-money / card UX for demo purposes. Wiring a real
- * provider (e.g. Selcom, ClickPesa, Flutterwave) means calling their API
- * from a backend endpoint that holds the provider credentials — never
- * from the browser — then confirming the charge via webhook before
- * calling onSuccess.
+ * KILA KITU CENTERED + bilingual kamili.
  */
-export default function PaymentGateway({ amount, title, description, onSuccess, onCancel }) {
+export default function PaymentGateway({
+  amount,
+  title,
+  description,
+  onSuccess,
+  onCancel,
+}) {
   const { lang } = useLanguage();
   const [methodKey, setMethodKey] = useState(null);
   const [phone, setPhone] = useState("");
@@ -108,14 +119,24 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
     setStep("processing");
   };
 
+  // ============================================================
+  // PROCESSING STATE
+  // ============================================================
   if (step === "processing") {
     return (
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="rounded-2xl border p-8 text-center"
       >
-        <Loader2 size={30} className="animate-spin mx-auto mb-4" color={COLORS.gold} />
-        <p style={{ color: COLORS.night }} className="text-sm font-semibold mb-1.5">
+        <Loader2
+          size={30}
+          className="animate-spin mx-auto mb-4"
+          color={COLORS.gold}
+        />
+        <p
+          style={{ color: COLORS.night }}
+          className="text-sm font-semibold mb-1.5"
+        >
           {method.type === "mobile"
             ? lang === "sw"
               ? "Inasubiri uthibitisho..."
@@ -137,6 +158,9 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
     );
   }
 
+  // ============================================================
+  // SUCCESS STATE
+  // ============================================================
   if (step === "success") {
     return (
       <div
@@ -149,10 +173,16 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
         >
           <Check color="white" size={22} />
         </div>
-        <p style={{ color: COLORS.night }} className="text-sm font-semibold mb-1">
+        <p
+          style={{ color: COLORS.night }}
+          className="text-sm font-semibold mb-1"
+        >
           {lang === "sw" ? "Malipo Yamefanikiwa" : "Payment Successful"}
         </p>
-        <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs mb-5">
+        <p
+          style={{ color: "rgba(16,26,46,0.55)" }}
+          className="text-xs mb-5"
+        >
           {formatTZS(amount)}{" "}
           {lang === "sw" ? "kupitia" : "via"} {method.label}
         </p>
@@ -167,37 +197,57 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
     );
   }
 
+  // ============================================================
+  // SELECT STATE — KILA KITU CENTERED
+  // ============================================================
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
       className="rounded-2xl border p-5"
     >
-      <button
-        onClick={onCancel}
-        style={{ color: COLORS.night }}
-        className="flex items-center gap-1 text-xs font-medium mb-3 opacity-70"
-      >
-        <ChevronLeft size={14} />{" "}
-        {lang === "sw" ? "Rudi Nyuma" : "Back"}
-      </button>
+      {/* Back button — centered */}
+      <div className="flex justify-center mb-3">
+        <button
+          onClick={onCancel}
+          style={{ color: COLORS.night }}
+          className="flex items-center gap-1 text-xs font-medium opacity-70"
+        >
+          <ChevronLeft size={14} />{" "}
+          {lang === "sw" ? "Rudi Nyuma" : "Back"}
+        </button>
+      </div>
 
-      <div className="flex items-center justify-between mb-4">
-        <span style={{ color: COLORS.night }} className="text-sm font-semibold">
+      {/* Title + Amount — centered */}
+      <div className="flex flex-col items-center text-center gap-1 mb-4">
+        <span
+          style={{ color: COLORS.night }}
+          className="text-sm font-semibold"
+        >
           {title}
         </span>
         <span style={{ color: COLORS.rust }} className="text-lg font-bold">
           {formatTZS(amount)}
         </span>
       </div>
+
       {description && (
-        <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs mb-4 -mt-2">
+        <p
+          style={{ color: "rgba(16,26,46,0.55)" }}
+          className="text-xs mb-4 text-center"
+        >
           {description}
         </p>
       )}
 
-      <p style={{ color: COLORS.night }} className="text-xs font-semibold mb-2">
+      {/* Method label — centered */}
+      <p
+        style={{ color: COLORS.night }}
+        className="text-xs font-semibold mb-2 text-center"
+      >
         {lang === "sw" ? "Chagua Njia ya Malipo" : "Choose Payment Method"}
       </p>
+
+      {/* Methods — kila kitu centered */}
       <div className="flex flex-col gap-2 mb-4">
         {PAYMENT_METHODS.map((m) => (
           <MethodOption
@@ -209,16 +259,21 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
         ))}
       </div>
 
+      {/* Mobile phone input — centered */}
       {method?.type === "mobile" && (
-        <label className="flex flex-col gap-1.5 mb-4">
-          <span style={{ color: COLORS.night }} className="text-xs font-medium">
-            {lang === "sw" ? "Namba ya Simu" : "Phone Number"} ({method.label})
+        <label className="flex flex-col gap-1.5 mb-4 text-center">
+          <span
+            style={{ color: COLORS.night }}
+            className="text-xs font-medium"
+          >
+            {lang === "sw" ? "Namba ya Simu" : "Phone Number"} (
+            {method.label})
           </span>
           <input
             style={inputStyle}
             type="text"
             inputMode="tel"
-            className="rounded-xl border px-3 py-2.5 text-sm outline-none"
+            className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
             placeholder={
               lang === "sw" ? "mfano: 0712 345 678" : "e.g. 0712 345 678"
             }
@@ -228,50 +283,66 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
         </label>
       )}
 
+      {/* Card inputs — centered */}
       {method?.type === "card" && (
         <div className="flex flex-col gap-3 mb-4">
-          <label className="flex flex-col gap-1.5">
-            <span style={{ color: COLORS.night }} className="text-xs font-medium">
+          <label className="flex flex-col gap-1.5 text-center">
+            <span
+              style={{ color: COLORS.night }}
+              className="text-xs font-medium"
+            >
               {lang === "sw" ? "Namba ya Kadi" : "Card Number"}
             </span>
             <input
               style={inputStyle}
               type="text"
               inputMode="numeric"
-              className="rounded-xl border px-3 py-2.5 text-sm outline-none"
+              className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center tracking-wider"
               placeholder="0000 0000 0000 0000"
               value={card.number}
               onChange={(e) =>
-                setCard({ ...card, number: formatCardInput(e.target.value) })
+                setCard({
+                  ...card,
+                  number: formatCardInput(e.target.value),
+                })
               }
             />
           </label>
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span style={{ color: COLORS.night }} className="text-xs font-medium">
+            <label className="flex flex-col gap-1.5 text-center">
+              <span
+                style={{ color: COLORS.night }}
+                className="text-xs font-medium"
+              >
                 {lang === "sw" ? "Muda wa Mwisho" : "Expiry"}
               </span>
               <input
                 style={inputStyle}
                 type="text"
                 inputMode="numeric"
-                className="rounded-xl border px-3 py-2.5 text-sm outline-none"
+                className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
                 placeholder="MM/YY"
                 value={card.expiry}
                 onChange={(e) =>
-                  setCard({ ...card, expiry: formatExpiryInput(e.target.value) })
+                  setCard({
+                    ...card,
+                    expiry: formatExpiryInput(e.target.value),
+                  })
                 }
               />
             </label>
-            <label className="flex flex-col gap-1.5">
-              <span style={{ color: COLORS.night }} className="text-xs font-medium">
+            <label className="flex flex-col gap-1.5 text-center">
+              <span
+                style={{ color: COLORS.night }}
+                className="text-xs font-medium"
+              >
                 CVV
               </span>
               <input
                 style={inputStyle}
                 type="text"
                 inputMode="numeric"
-                className="rounded-xl border px-3 py-2.5 text-sm outline-none"
+                className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
                 placeholder="123"
                 value={card.cvv}
                 onChange={(e) =>
@@ -286,6 +357,7 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
         </div>
       )}
 
+      {/* Pay button — centered */}
       <button
         onClick={handlePay}
         disabled={!canPay}
@@ -293,19 +365,24 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
           background: canPay ? COLORS.gold : COLORS.sandLine,
           color: canPay ? COLORS.night : "rgba(16,26,46,0.4)",
         }}
-        className="w-full py-3 rounded-xl font-semibold text-sm mb-3"
+        className="w-full py-3 rounded-xl font-semibold text-sm mb-3 disabled:cursor-not-allowed"
       >
-        {lang === "sw" ? `Lipa ${formatTZS(amount)}` : `Pay ${formatTZS(amount)}`}
+        {lang === "sw"
+          ? `Lipa ${formatTZS(amount)}`
+          : `Pay ${formatTZS(amount)}`}
       </button>
 
+      {/* Security note — centered */}
       <p
         style={{ color: "rgba(16,26,46,0.4)" }}
-        className="flex items-start gap-1.5 text-[11px] leading-snug"
+        className="flex items-start justify-center gap-1.5 text-[11px] leading-snug text-center"
       >
         <ShieldCheck size={13} className="shrink-0 mt-0.5" />
-        {lang === "sw"
-          ? "Huu ni mfumo wa maonyesho (demo). Muunganiko halisi na M-Pesa/Mixx by Yas/Airtel Money au kadi utafanywa kupitia provider kama Selcom au ClickPesa, kwa njia salama ya backend."
-          : "This is a demo. Real integration with M-Pesa/Mixx by Yas/Airtel Money or cards will be done via a provider like Selcom or ClickPesa, using a secure backend."}
+        <span>
+          {lang === "sw"
+            ? "Huu ni mfumo wa maonyesho (demo). Muunganiko halisi na M-Pesa/Mixx by Yas/Airtel Money au kadi utafanywa kupitia provider kama Selcom au ClickPesa, kwa njia salama ya backend."
+            : "This is a demo. Real integration with M-Pesa/Mixx by Yas/Airtel Money or cards will be done via a provider like Selcom or ClickPesa, using a secure backend."}
+        </span>
       </p>
     </div>
   );
