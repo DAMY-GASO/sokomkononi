@@ -2,7 +2,7 @@
 // ContentSection.jsx
 // Admin — Content Management (banners, testimonials, FAQs, About,
 // Terms, Privacy, Help).
-// Bilingual + mobile-responsive.
+// Bilingual + mobile-responsive (imeboreshwa).
 // ============================================================
 
 import React, { useState } from "react";
@@ -58,7 +58,7 @@ const TABS = [
 ];
 
 // ============================================================
-// BILINGUAL FIELD
+// BILINGUAL FIELD — responsive
 // ============================================================
 function BilingualField({ label, value, onChange, multiline = false, rows = 3 }) {
   const swVal = value?.sw || "";
@@ -66,10 +66,10 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3 })
   const Input = multiline ? "textarea" : "input";
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 min-w-0">
       <span className="text-[11px] font-semibold text-gray-500">{label}</span>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <div>
+        <div className="min-w-0">
           <span className="text-[10px] font-semibold text-gray-400 uppercase">
             Kiswahili
           </span>
@@ -77,10 +77,10 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3 })
             value={swVal}
             onChange={(e) => onChange({ ...value, sw: e.target.value })}
             rows={multiline ? rows : undefined}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1"
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <span className="text-[10px] font-semibold text-gray-400 uppercase">
             English
           </span>
@@ -88,7 +88,7 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3 })
             value={enVal}
             onChange={(e) => onChange({ ...value, en: e.target.value })}
             rows={multiline ? rows : undefined}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1"
           />
         </div>
       </div>
@@ -97,7 +97,7 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3 })
 }
 
 // ============================================================
-// BANNERS TAB
+// BANNERS TAB — responsive
 // ============================================================
 function BannersTab({ lang }) {
   const content = useContent();
@@ -156,7 +156,7 @@ function BannersTab({ lang }) {
       {(adding || editing) && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-4 flex flex-col gap-3"
+          className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3"
         >
           <BilingualField
             label={t("Kichwa", "Title")}
@@ -221,7 +221,7 @@ function BannersTab({ lang }) {
         <div
           key={banner.id}
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-4"
+          className="rounded-xl border p-3 sm:p-4"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -238,13 +238,13 @@ function BannersTab({ lang }) {
                   {banner.active ? t("Hai", "Active") : t("Imezimwa", "Inactive")}
                 </span>
               </div>
-              <p className="text-sm font-semibold text-gray-800">
+              <p className="text-sm font-semibold text-gray-800 truncate">
                 {banner.title?.[lang] || banner.title?.sw}
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
                 {banner.subtitle?.[lang] || banner.subtitle?.sw}
               </p>
-              <p className="text-[11px] text-gray-400 mt-1">
+              <p className="text-[11px] text-gray-400 mt-1 truncate">
                 CTA: {banner.ctaText?.[lang] || banner.ctaText?.sw} → {banner.ctaLink}
               </p>
             </div>
@@ -274,7 +274,7 @@ function BannersTab({ lang }) {
 }
 
 // ============================================================
-// TESTIMONIALS TAB
+// TESTIMONIALS TAB — responsive
 // ============================================================
 function TestimonialsTab({ lang }) {
   const content = useContent();
@@ -327,7 +327,7 @@ function TestimonialsTab({ lang }) {
       {(adding || editing) && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-4 flex flex-col gap-3"
+          className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3"
         >
           <label className="flex flex-col gap-1">
             <span className="text-[11px] font-semibold text-gray-500">
@@ -370,12 +370,14 @@ function TestimonialsTab({ lang }) {
         <div
           key={item.id}
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-4"
+          className="rounded-xl border p-3 sm:p-4"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-              <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+              <p className="text-sm font-semibold text-gray-800 truncate">
+                {item.name}
+              </p>
+              <p className="text-xs text-gray-600 mt-1 leading-relaxed line-clamp-3">
                 "{item.quote?.[lang] || item.quote?.sw}"
               </p>
             </div>
@@ -405,7 +407,7 @@ function TestimonialsTab({ lang }) {
 }
 
 // ============================================================
-// FAQS TAB
+// FAQS TAB — responsive
 // ============================================================
 function FaqsTab({ lang }) {
   const content = useContent();
@@ -458,7 +460,7 @@ function FaqsTab({ lang }) {
       {(adding || editing) && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-4 flex flex-col gap-3"
+          className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3"
         >
           <BilingualField
             label={t("Swali", "Question")}
@@ -495,14 +497,14 @@ function FaqsTab({ lang }) {
         <div
           key={faq.id}
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-4"
+          className="rounded-xl border p-3 sm:p-4"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-gray-800">
                 {faq.question?.[lang] || faq.question?.sw}
               </p>
-              <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+              <p className="text-xs text-gray-600 mt-1 leading-relaxed line-clamp-3">
                 {faq.answer?.[lang] || faq.answer?.sw}
               </p>
             </div>
@@ -532,7 +534,7 @@ function FaqsTab({ lang }) {
 }
 
 // ============================================================
-// SINGLE-PAGE EDITORS (About, Terms, Privacy, Help)
+// SINGLE-PAGE EDITORS — responsive
 // ============================================================
 function SinglePageEditor({ section, lang }) {
   const content = useContent();
@@ -554,7 +556,7 @@ function SinglePageEditor({ section, lang }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-4 flex flex-col gap-3"
+      className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3"
     >
       <BilingualField
         label={t("Kichwa", "Heading")}
@@ -587,7 +589,7 @@ function SinglePageEditor({ section, lang }) {
           value={form.content || { sw: "", en: "" }}
           onChange={(v) => setForm({ ...form, content: v })}
           multiline
-          rows={8}
+          rows={6}
         />
       )}
 
@@ -598,7 +600,7 @@ function SinglePageEditor({ section, lang }) {
         </p>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={handleSave}
           style={{ background: COLORS.gold, color: COLORS.night }}
@@ -631,7 +633,7 @@ export default function ContentSection() {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   return (
-    <>
+    <div className="w-full max-w-7xl mx-auto">
       <SectionHeader
         title={t("Usimamizi wa Maudhui", "Content Management")}
         subtitle={t(
@@ -640,8 +642,8 @@ export default function ContentSection() {
         )}
       />
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+      {/* Tabs — scroll horizontal kwenye simu */}
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
         {TABS.map(({ key, label, icon: Icon }) => {
           const isActive = activeTab === key;
           return (
@@ -653,7 +655,7 @@ export default function ContentSection() {
                 color: isActive ? COLORS.sand : COLORS.night,
                 borderColor: COLORS.sandLine,
               }}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-full border whitespace-nowrap shrink-0"
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
             >
               <Icon size={13} />
               {label?.[lang] || label?.sw}
@@ -663,13 +665,15 @@ export default function ContentSection() {
       </div>
 
       {/* Content */}
-      {activeTab === "banners" && <BannersTab lang={lang} />}
-      {activeTab === "testimonials" && <TestimonialsTab lang={lang} />}
-      {activeTab === "faqs" && <FaqsTab lang={lang} />}
-      {activeTab === "about" && <SinglePageEditor section="about" lang={lang} />}
-      {activeTab === "terms" && <SinglePageEditor section="terms" lang={lang} />}
-      {activeTab === "privacy" && <SinglePageEditor section="privacy" lang={lang} />}
-      {activeTab === "help" && <SinglePageEditor section="help" lang={lang} />}
-    </>
+      <div className="w-full">
+        {activeTab === "banners" && <BannersTab lang={lang} />}
+        {activeTab === "testimonials" && <TestimonialsTab lang={lang} />}
+        {activeTab === "faqs" && <FaqsTab lang={lang} />}
+        {activeTab === "about" && <SinglePageEditor section="about" lang={lang} />}
+        {activeTab === "terms" && <SinglePageEditor section="terms" lang={lang} />}
+        {activeTab === "privacy" && <SinglePageEditor section="privacy" lang={lang} />}
+        {activeTab === "help" && <SinglePageEditor section="help" lang={lang} />}
+      </div>
+    </div>
   );
 }
