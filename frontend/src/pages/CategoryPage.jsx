@@ -43,7 +43,6 @@ function t(lang, sw, en) {
   return lang === "sw" ? sw : en;
 }
 
-// Format namba na comma (kwa input): "50000000" -> "50,000,000"
 function formatNumberInput(value) {
   if (!value) return "";
   const digits = String(value).replace(/[^0-9]/g, "");
@@ -51,7 +50,6 @@ function formatNumberInput(value) {
   return Number(digits).toLocaleString("en-US");
 }
 
-// Toa comma: "50,000,000" -> "50000000"
 function cleanNumberInput(value) {
   return String(value ?? "").replace(/[^0-9]/g, "");
 }
@@ -130,7 +128,7 @@ function reservationCountdown(reservedUntil, lang) {
 }
 
 // ============================================================
-// FILTER SIDEBAR
+// FILTER SIDEBAR — imeachwa kushoto
 // ============================================================
 function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang }) {
   const [localFilters, setLocalFilters] = useState(filters);
@@ -279,7 +277,6 @@ export default function CategoryPage() {
   const categoryDescription =
     categoryInfo?.description?.[lang] || categoryInfo?.description?.sw || "";
 
-  // Data halisi
   const allPublic = usePublicListings();
   const savedIds = useSavedIds();
 
@@ -363,7 +360,6 @@ export default function CategoryPage() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Reset page kila filters/search zinabadilika
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, filters, sortBy, categoryKey]);
@@ -411,9 +407,13 @@ export default function CategoryPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
+      {/* ============================================================ */}
+      {/* HERO — CENTERED */}
+      {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-10 px-4">
         <div className="max-w-7xl mx-auto">
-          <nav className="flex items-center gap-2 text-sm text-white/60 mb-4">
+          {/* Breadcrumb — centered */}
+          <nav className="flex items-center justify-center gap-2 text-sm text-white/60 mb-4">
             <Link to="/" className="hover:text-white transition-colors">
               {t(lang, "Nyumbani", "Home")}
             </Link>
@@ -421,7 +421,8 @@ export default function CategoryPage() {
             <span className="text-white">{categoryLabel}</span>
           </nav>
 
-          <div className="flex items-center gap-4">
+          {/* Icon + Title + Description — centered */}
+          <div className="flex flex-col items-center text-center gap-3">
             <div className="w-14 h-14 rounded-2xl bg-[#E8A33D]/20 flex items-center justify-center flex-shrink-0">
               {CategoryIcon && <CategoryIcon size={28} color={COLORS.gold} />}
             </div>
@@ -430,14 +431,15 @@ export default function CategoryPage() {
                 {categoryLabel}
               </h1>
               {categoryDescription && (
-                <p className="text-white/60 text-sm mt-1">
+                <p className="text-white/60 text-sm mt-2 max-w-xl mx-auto">
                   {categoryDescription}
                 </p>
               )}
             </div>
           </div>
 
-          <form onSubmit={handleSearchSubmit} className="mt-6 max-w-2xl">
+          {/* Search — centered */}
+          <form onSubmit={handleSearchSubmit} className="mt-6 max-w-2xl mx-auto">
             <div className="relative">
               <Search
                 size={18}
@@ -709,8 +711,7 @@ export default function CategoryPage() {
 }
 
 // ============================================================
-// CATEGORY PROPERTY CARD — inaonyesha picha halisi ya mali
-// (property.photos[0]) kama ipo, vinginevyo icon ya category
+// CATEGORY PROPERTY CARD — imeachwa (kadi zina data nyingi)
 // ============================================================
 function CategoryPropertyCard({
   property,
