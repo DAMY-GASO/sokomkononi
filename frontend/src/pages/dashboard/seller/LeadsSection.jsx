@@ -1,7 +1,7 @@
 // ============================================================
 // LeadsSection.jsx
 // Seller anaona leads zote (maulizio ya wanunuzi) kwa listings zake.
-// Bilingual + mobile-responsive.
+// Bilingual + mobile-responsive + KILA KITU CENTERED.
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -16,7 +16,11 @@ import {
 } from "lucide-react";
 import { COLORS, FONTS, timeAgo } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-import { useLeads, markLeadResponded, removeLead } from "../../../config/leadsStore.js";
+import {
+  useLeads,
+  markLeadResponded,
+  removeLead,
+} from "../../../config/leadsStore.js";
 
 export default function LeadsSection({ onNavigate }) {
   const { lang } = useLanguage();
@@ -42,8 +46,16 @@ export default function LeadsSection({ onNavigate }) {
   const TABS = [
     { key: "all", label: t("Zote", "All"), count: counts.all },
     { key: "new", label: t("Mpya", "New"), count: counts.new },
-    { key: "responded", label: t("Zilizojibiwa", "Responded"), count: counts.responded },
-    { key: "converted", label: t("Ziligeuka Deal", "Converted"), count: counts.converted },
+    {
+      key: "responded",
+      label: t("Zilizojibiwa", "Responded"),
+      count: counts.responded,
+    },
+    {
+      key: "converted",
+      label: t("Ziligeuka Deal", "Converted"),
+      count: counts.converted,
+    },
   ];
 
   const getStatusBadge = (status) => {
@@ -74,7 +86,11 @@ export default function LeadsSection({ onNavigate }) {
 
   return (
     <div
-      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "100%" }}
+      style={{
+        background: COLORS.sand,
+        fontFamily: FONTS.body,
+        minHeight: "100%",
+      }}
       className="w-full p-4 sm:p-6"
     >
       <style>{`
@@ -82,15 +98,20 @@ export default function LeadsSection({ onNavigate }) {
       `}</style>
 
       <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
+        {/* ============================================================ */}
+        {/* HEADER — CENTERED */}
+        {/* ============================================================ */}
+        <div className="mb-6 text-center">
           <h1
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
             className="text-2xl sm:text-3xl font-semibold"
           >
             {t("Maulizio (Leads)", "Enquiries (Leads)")}
           </h1>
-          <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mt-1">
+          <p
+            style={{ color: "rgba(16,26,46,0.6)" }}
+            className="text-sm mt-2 max-w-xl mx-auto"
+          >
             {t(
               "Wanunuzi wanaoulizia mali zako — jibu haraka ili usikose fursa.",
               "Buyers enquiring about your listings — respond quickly to not miss opportunities."
@@ -98,9 +119,11 @@ export default function LeadsSection({ onNavigate }) {
           </p>
         </div>
 
-        {/* Tabs */}
+        {/* ============================================================ */}
+        {/* TABS — CENTERED */}
+        {/* ============================================================ */}
         {leads.length > 0 && (
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-1">
             {TABS.map((tab) => {
               const active = filter === tab.key;
               return (
@@ -117,7 +140,9 @@ export default function LeadsSection({ onNavigate }) {
                   {tab.label}
                   <span
                     style={{
-                      background: active ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                      background: active
+                        ? "rgba(245,243,236,0.18)"
+                        : COLORS.sandLine,
                       color: active ? COLORS.sand : COLORS.night,
                     }}
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
@@ -130,7 +155,9 @@ export default function LeadsSection({ onNavigate }) {
           </div>
         )}
 
-        {/* List */}
+        {/* ============================================================ */}
+        {/* EMPTY STATE — CENTERED */}
+        {/* ============================================================ */}
         {filtered.length === 0 ? (
           <div
             style={{ borderColor: COLORS.sandLine }}
@@ -150,6 +177,9 @@ export default function LeadsSection({ onNavigate }) {
             </p>
           </div>
         ) : (
+          /* ============================================================ */
+          /* LIST — kadi za lead zimeachwa kushoto kwa urahisi */
+          /* ============================================================ */
           <div className="flex flex-col gap-3">
             {filtered.map((lead) => {
               const status = getStatusBadge(lead.status);
@@ -193,7 +223,9 @@ export default function LeadsSection({ onNavigate }) {
                   {/* Buyer info */}
                   <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
                     <User size={12} />
-                    <span className="font-medium text-gray-700">{lead.buyerName}</span>
+                    <span className="font-medium text-gray-700">
+                      {lead.buyerName}
+                    </span>
                     <span className="text-gray-300">•</span>
                     <span>{timeAgo(lead.lastMessageAt, lang)}</span>
                   </div>
