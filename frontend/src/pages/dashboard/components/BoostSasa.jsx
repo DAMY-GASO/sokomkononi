@@ -16,6 +16,21 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import PaymentGateway from "./PaymentGateway";
 
+// ============================================================
+// HELPER — kuchagua lugha sahihi kwa field inayoweza kuwa { sw, en }
+// ============================================================
+function getLocalized(field, lang) {
+  if (!field) return "";
+  if (typeof field === "string") return field;
+  return field?.[lang] || field?.sw || "";
+}
+
+function getLocalizedArray(field, lang) {
+  if (!field) return [];
+  if (Array.isArray(field)) return field;
+  return field?.[lang] || field?.sw || [];
+}
+
 function ListingPicker({ listings, selectedId, onSelect, lang }) {
   if (listings.length === 0) {
     return (
@@ -86,6 +101,9 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
 
 function PackageCard({ pkg, selected, onSelect, lang }) {
   const isFeatured = pkg.key === "featured";
+  const label = getLocalized(pkg.label, lang);
+  const benefits = getLocalizedArray(pkg.benefits, lang);
+
   return (
     <button
       onClick={() => onSelect(pkg.key)}
@@ -105,7 +123,7 @@ function PackageCard({ pkg, selected, onSelect, lang }) {
       )}
       <div className="flex items-center justify-between">
         <span style={{ color: COLORS.night }} className="text-sm font-bold">
-          {pkg.label}
+          {label}
         </span>
         <span
           style={{
@@ -126,7 +144,7 @@ function PackageCard({ pkg, selected, onSelect, lang }) {
         </span>
       </div>
       <ul className="flex flex-col gap-1.5">
-        {pkg.benefits.map((b, i) => (
+        {benefits.map((b, i) => (
           <li
             key={i}
             style={{ color: "rgba(16,26,46,0.65)" }}
@@ -169,6 +187,13 @@ export default function BoostSasa({
   const selectedPackage = boostPackages.find((p) => p.key === packageKey);
   const canBoost = Boolean(selectedListing && selectedPackage);
 
+  // ============================================================
+  // BILINGUAL — package label
+  // ============================================================
+  const selectedPackageLabel = selectedPackage
+    ? getLocalized(selectedPackage.label, lang)
+    : "";
+
   const handleConfirm = () => {
     if (!canBoost) return;
     setStage("paying");
@@ -182,7 +207,7 @@ export default function BoostSasa({
     notifyBoostPurchased({
       listingId: selectedListing.id,
       listingTitle: selectedListing.title,
-      packageLabel: selectedPackage.label,
+      packageLabel: selectedPackageLabel,
       expiresAt: patch.boostExpiresAt,
       amount: selectedPackage.price,
     });
@@ -190,7 +215,7 @@ export default function BoostSasa({
     // 2) Rekodi transaction kwenye My Transactions
     addTransaction({
       type: "boost",
-      title: `${selectedPackage.label} — ${selectedListing.title}`,
+      title: `${selectedPackageLabel} — ${selectedListing.title}`,
       property: selectedListing.title,
       amount: selectedPackage.price,
       status: "completed",
@@ -198,7 +223,12 @@ export default function BoostSasa({
       listingId: selectedListing.id,
     });
 
-    setDone({ listing: selectedListing, pkg: selectedPackage, expiresAt: patch.boostExpiresAt });
+    setDone({
+      listing: selectedListing,
+      pkg: selectedPackage,
+      pkgLabel: selectedPackageLabel,
+      expiresAt: patch.boostExpiresAt,
+    });
     setStage("done");
   };
 
@@ -227,7 +257,7 @@ export default function BoostSasa({
           <p style={{ color: "rgba(16,26,46,0.65)" }} className="text-sm mb-5">
             {lang === "sw" ? (
               <>
-                "{done.listing.title}" sasa ina <b>{done.pkg.label}</b> na itaonekana zaidi kwa
+                "{done.listing.title}" sasa ina <b>{done.pkgLabel}</b> na itaonekana zaidi kwa
                 wanunuzi hadi{" "}
                 {new Date(done.expiresAt).toLocaleDateString("sw-TZ", {
                   day: "numeric",
@@ -237,7 +267,7 @@ export default function BoostSasa({
               </>
             ) : (
               <>
-                "{done.listing.title}" now has <b>{done.pkg.label}</b> and will be more visible to
+                "{done.listing.title}" now has <b>{done.pkgLabel}</b> and will be more visible to
                 buyers until{" "}
                 {new Date(done.expiresAt).toLocaleDateString("en-US", {
                   day: "numeric",
@@ -328,7 +358,7 @@ export default function BoostSasa({
             {stage === "paying" ? (
               <PaymentGateway
                 amount={selectedPackage.price}
-                title={selectedPackage.label}
+                title={selectedPackageLabel}
                 description={
                   lang === "sw"
                     ? `Boost kwa "${selectedListing.title}"`
@@ -349,13 +379,13 @@ export default function BoostSasa({
                       <>
                         Mali hii tayari ina Boost inayoisha baada ya siku{" "}
                         {boostDaysRemaining(selectedListing)} — ukiendelea, siku{" "}
-                        {selectedPackage.days} za {selectedPackage.label} zitaongezwa baada ya hapo.
+                        {selectedPackage.days} za {selectedPackageLabel} zitaongezwa baada ya hapo.
                       </>
                     ) : (
                       <>
                         This listing already has a Boost expiring in{" "}
                         {boostDaysRemaining(selectedListing)} days — if you continue,{" "}
-                        {selectedPackage.days} more days of {selectedPackage.label} will be added
+                        {selectedPackage.days} more days of {selectedPackageLabel} will be added
                         after that.
                       </>
                     )}
