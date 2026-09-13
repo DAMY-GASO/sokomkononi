@@ -106,7 +106,7 @@ export default function RegisterPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   // ============================================
-  // MAANDISHI YA UPANDE WA KUSHOTO (LEFT PANEL) - SASA YANATUMIA t()
+  // MAANDISHI YA UPANDE WA KUSHOTO (LEFT PANEL)
   // ============================================
   function leftHeading() {
     if (intent === "buy") return t("register_panel_heading_buy");
@@ -121,7 +121,7 @@ export default function RegisterPage() {
   }
 
   // ============================================
-  // MAANDISHI YA UPANDE WA KULIA (RIGHT PANEL - FORM) - SASA YANATUMIA t()
+  // MAANDISHI YA UPANDE WA KULIA (RIGHT PANEL - FORM)
   // ============================================
   function formHeading() {
     if (intent === "buy") return t("register_form_heading_buy");
@@ -177,11 +177,6 @@ export default function RegisterPage() {
       await verifyOtp(form.email, otp.trim());
       const { confirmPassword, ...payload } = form;
       await register({ ...payload, intent: intent || null });
-
-      // ============================================================
-      // IMEBADILISHWA: kila mtumiaji mpya anapelekwa kwenye
-      // /dashboard/post ("Weka Mali Yako") — sio /dashboard (My Listings)
-      // ============================================================
       navigate("/dashboard/post");
     } catch (err) {
       setError(err?.response?.data?.message || t("register_error_otp_invalid"));
@@ -227,28 +222,18 @@ export default function RegisterPage() {
             <span className="font-bold tracking-tight">SokoMkononi</span>
           </Link>
 
+          {/* Heading + Subtext pekee (stats na testimonial zimeondolewa) */}
           <div className="relative z-10 max-w-sm mx-auto text-center py-8 md:py-0">
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">{leftHeading()}</h2>
-            <p className="text-white/60 text-sm mt-3 leading-relaxed">{leftSubtext()}</p>
-
-            <div className="flex items-center justify-center gap-6 mt-8">
-              <div>
-                <p className="text-xl font-bold text-[#E8A33D]">5,000+</p>
-                <p className="text-white/40 text-xs">{t("stats_sellers")}</p>
-              </div>
-              <div className="w-px h-8 bg-white/10" />
-              <div>
-                <p className="text-xl font-bold text-[#E8A33D]">10,000+</p>
-                <p className="text-white/40 text-xs">{t("stats_properties")}</p>
-              </div>
-              <div className="w-px h-8 bg-white/10" />
-            </div>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
+              {leftHeading()}
+            </h2>
+            <p className="text-white/60 text-sm mt-3 leading-relaxed">
+              {leftSubtext()}
+            </p>
           </div>
 
-          <div className="relative z-10 border-t border-white/10 pt-6 max-w-sm mx-auto text-center">
-            <p className="text-white/70 text-sm italic leading-relaxed">"{t("testimonial1_quote")}"</p>
-            <p className="text-[#E8A33D] text-xs font-semibold mt-2">{t("testimonial1_name")}</p>
-          </div>
+          {/* Spacer ili skyline ibaki chini */}
+          <div className="relative z-10" />
 
           <SkylineDecoration />
         </div>
