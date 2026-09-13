@@ -1,3 +1,9 @@
+// ============================================================
+// MyListings.jsx
+// Mali Zangu — tabs, views, enquiries, actions.
+// Bilingual kamili.
+// ============================================================
+
 import React, { useState } from "react";
 import {
   Eye,
@@ -29,23 +35,55 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import PaymentGateway from "./PaymentGateway";
 
+// ============================================================
+// STATUS BADGE — bilingual kamili
+// ============================================================
 function StatusBadge({ status, lang }) {
   const config = {
-    live: { label: lang === "sw" ? "Live" : "Live", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
-    reserved: { label: lang === "sw" ? "Ina Reservation" : "Reserved", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
-    sold: { label: lang === "sw" ? "Imeuzwa" : "Sold", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
-    pending_payment: { label: lang === "sw" ? "Inasubiri Malipo" : "Pending Payment", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
-    in_review: { label: lang === "sw" ? "Inakaguliwa" : "In Review", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
-    expired: { label: lang === "sw" ? "Imeisha Muda" : "Expired", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
-    rejected: { label: lang === "sw" ? "Imekataliwa" : "Rejected", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
+    live: {
+      label: { sw: "Hai", en: "Live" },
+      bg: "rgba(47,109,79,0.12)",
+      fg: COLORS.green,
+    },
+    reserved: {
+      label: { sw: "Imehifadhiwa", en: "Reserved" },
+      bg: "rgba(232,163,61,0.16)",
+      fg: "#8A5A16",
+    },
+    sold: {
+      label: { sw: "Imeuzwa", en: "Sold" },
+      bg: "rgba(16,26,46,0.08)",
+      fg: COLORS.night,
+    },
+    pending_payment: {
+      label: { sw: "Inasubiri Malipo", en: "Pending Payment" },
+      bg: "rgba(232,163,61,0.16)",
+      fg: "#8A5A16",
+    },
+    in_review: {
+      label: { sw: "Inakaguliwa", en: "In Review" },
+      bg: "rgba(16,26,46,0.08)",
+      fg: COLORS.night,
+    },
+    expired: {
+      label: { sw: "Imeisha Muda", en: "Expired" },
+      bg: "rgba(193,80,46,0.12)",
+      fg: COLORS.rust,
+    },
+    rejected: {
+      label: { sw: "Imekataliwa", en: "Rejected" },
+      bg: "rgba(193,80,46,0.12)",
+      fg: COLORS.rust,
+    },
   };
   const s = config[status] || config.pending_payment;
+  const label = s.label?.[lang] || s.label?.sw;
   return (
     <span
       style={{ background: s.bg, color: s.fg }}
       className="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
     >
-      {s.label}
+      {label}
     </span>
   );
 }
@@ -90,6 +128,8 @@ function ListingCard({
   const categoryLabel = category?.label?.[lang] || category?.label?.sw || listing.category;
   const isFaded = listing.status === "sold" || listing.status === "expired";
   const isReserved = listing.status === "reserved";
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
   return (
     <div
@@ -169,10 +209,10 @@ function ListingCard({
             className="flex items-center gap-4 text-xs mb-3"
           >
             <span className="flex items-center gap-1">
-              <Eye size={13} /> {listing.views ?? 0} {lang === "sw" ? "walioangalia" : "views"}
+              <Eye size={13} /> {listing.views ?? 0} {t("walioangalia", "views")}
             </span>
             <span className="flex items-center gap-1">
-              <Inbox size={13} /> {listing.inquiries ?? 0} {lang === "sw" ? "maswali" : "inquiries"}
+              <Inbox size={13} /> {listing.inquiries ?? 0} {t("maswali", "inquiries")}
             </span>
           </div>
         )}
@@ -181,12 +221,11 @@ function ListingCard({
           <div className="mb-3">
             <PaymentGateway
               amount={listing.listingFee}
-              title={lang === "sw" ? "Listing Fee" : "Listing Fee"}
-              description={
-                lang === "sw"
-                  ? `Kuchapisha "${listing.title}"`
-                  : `Publishing "${listing.title}"`
-              }
+              title={t("Ada ya Kuchapisha", "Listing Fee")}
+              description={t(
+                `Kuchapisha "${listing.title}"`,
+                `Publishing "${listing.title}"`
+              )}
               onCancel={onCancelPay}
               onSuccess={onPaySuccess}
             />
@@ -218,9 +257,10 @@ function ListingCard({
             className="flex items-center gap-1.5 text-xs mb-3"
           >
             <Clock size={13} />{" "}
-            {lang === "sw"
-              ? "Timu yetu inakagua taarifa zako — kwa kawaida chini ya saa 24."
-              : "Our team is reviewing your listing — usually within 24 hours."}
+            {t(
+              "Timu yetu inakagua taarifa zako — kwa kawaida chini ya saa 24.",
+              "Our team is reviewing your listing — usually within 24 hours."
+            )}
           </div>
         )}
 
@@ -230,9 +270,10 @@ function ListingCard({
             className="flex items-center gap-1.5 text-xs rounded-lg px-3 py-2 mb-3"
           >
             <Clock size={13} />{" "}
-            {lang === "sw"
-              ? "Mali hii ina Reservation hai — inaonekana kwa wanunuzi wengine kama RESERVED."
-              : "This listing has an active reservation — other buyers see it as RESERVED."}
+            {t(
+              "Mali hii ina Reservation hai — inaonekana kwa wanunuzi wengine kama RESERVED.",
+              "This listing has an active reservation — other buyers see it as RESERVED."
+            )}
           </div>
         )}
 
@@ -240,31 +281,31 @@ function ListingCard({
           <div className="flex flex-wrap gap-2">
             {listing.status === "live" && (
               <>
-                <ActionButton icon={Eye} label={lang === "sw" ? "Angalia" : "View"} />
+                <ActionButton icon={Eye} label={t("Angalia", "View")} />
                 <ActionButton
                   icon={Rocket}
-                  label={lang === "sw" ? "Boost Sasa" : "Boost Now"}
+                  label={t("Boost Sasa", "Boost Now")}
                   tone="primary"
                   onClick={() => onBoost(listing.id)}
                 />
                 <ActionButton
                   icon={TrendingUp}
-                  label={lang === "sw" ? "Panda Juu" : "Promote"}
+                  label={t("Panda Juu", "Promote")}
                   onClick={() => onLeading(listing.id)}
                 />
                 <ActionButton
                   icon={Megaphone}
                   label={
                     activeBanner
-                      ? lang === "sw" ? "Inatangazwa" : "Advertising"
-                      : lang === "sw" ? "Tangaza" : "Advertise"
+                      ? t("Inatangazwa", "Advertising")
+                      : t("Tangaza", "Advertise")
                   }
                   onClick={() => onAdvertise(listing.id)}
                 />
-                <ActionButton icon={Pencil} label={lang === "sw" ? "Hariri" : "Edit"} />
+                <ActionButton icon={Pencil} label={t("Hariri", "Edit")} />
                 <ActionButton
                   icon={Trash2}
-                  label={lang === "sw" ? "Ondoa" : "Remove"}
+                  label={t("Ondoa", "Remove")}
                   tone="danger"
                   onClick={() => onRemove(listing.id)}
                 />
@@ -272,46 +313,45 @@ function ListingCard({
             )}
             {listing.status === "reserved" && (
               <>
-                <ActionButton icon={Eye} label={lang === "sw" ? "Angalia" : "View"} />
-                <ActionButton icon={Pencil} label={lang === "sw" ? "Hariri" : "Edit"} />
+                <ActionButton icon={Eye} label={t("Angalia", "View")} />
+                <ActionButton icon={Pencil} label={t("Hariri", "Edit")} />
               </>
             )}
             {listing.status === "pending_payment" && (
               <>
                 <ActionButton
                   icon={CreditCard}
-                  label={
-                    lang === "sw"
-                      ? `Lipa ${formatTZS(listing.listingFee)}`
-                      : `Pay ${formatTZS(listing.listingFee)}`
-                  }
+                  label={t(
+                    `Lipa ${formatTZS(listing.listingFee)}`,
+                    `Pay ${formatTZS(listing.listingFee)}`
+                  )}
                   tone="primary"
                   onClick={() => onStartPay(listing.id)}
                 />
                 <ActionButton
                   icon={Trash2}
-                  label={lang === "sw" ? "Futa" : "Delete"}
+                  label={t("Futa", "Delete")}
                   tone="danger"
                   onClick={() => onRemove(listing.id)}
                 />
               </>
             )}
             {listing.status === "in_review" && (
-              <ActionButton icon={Pencil} label={lang === "sw" ? "Hariri" : "Edit"} />
+              <ActionButton icon={Pencil} label={t("Hariri", "Edit")} />
             )}
             {listing.status === "sold" && (
-              <ActionButton icon={Eye} label={lang === "sw" ? "Angalia" : "View"} />
+              <ActionButton icon={Eye} label={t("Angalia", "View")} />
             )}
             {listing.status === "expired" && (
               <>
                 <ActionButton
                   icon={RefreshCw}
-                  label={lang === "sw" ? "Chapisha Tena" : "Republish"}
+                  label={t("Chapisha Tena", "Republish")}
                   tone="primary"
                 />
                 <ActionButton
                   icon={Trash2}
-                  label={lang === "sw" ? "Futa" : "Delete"}
+                  label={t("Futa", "Delete")}
                   tone="danger"
                   onClick={() => onRemove(listing.id)}
                 />
@@ -319,10 +359,10 @@ function ListingCard({
             )}
             {listing.status === "rejected" && (
               <>
-                <ActionButton icon={Pencil} label={lang === "sw" ? "Hariri" : "Edit"} />
+                <ActionButton icon={Pencil} label={t("Hariri", "Edit")} />
                 <ActionButton
                   icon={Trash2}
-                  label={lang === "sw" ? "Futa" : "Delete"}
+                  label={t("Futa", "Delete")}
                   tone="danger"
                   onClick={() => onRemove(listing.id)}
                 />
@@ -348,15 +388,20 @@ export default function MyListings({
   const [payingId, setPayingId] = useState(null);
   const activeBanners = useActiveBannerAds();
 
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ============================================================
+  // TABS — bilingual kamili
+  // ============================================================
   const TABS = [
-    { key: "all", label: lang === "sw" ? "Zote" : "All" },
-    { key: "live", label: "Live" },
-    { key: "reserved", label: lang === "sw" ? "Ina Reservation" : "Reserved" },
-    { key: "pending_payment", label: lang === "sw" ? "Inasubiri Malipo" : "Pending" },
-    { key: "in_review", label: lang === "sw" ? "Inakaguliwa" : "In Review" },
-    { key: "sold", label: lang === "sw" ? "Imeuzwa" : "Sold" },
-    { key: "expired", label: lang === "sw" ? "Imeisha Muda" : "Expired" },
-    { key: "rejected", label: lang === "sw" ? "Imekataliwa" : "Rejected" },
+    { key: "all", label: { sw: "Zote", en: "All" } },
+    { key: "live", label: { sw: "Hai", en: "Live" } },
+    { key: "reserved", label: { sw: "Imehifadhiwa", en: "Reserved" } },
+    { key: "pending_payment", label: { sw: "Inasubiri Malipo", en: "Pending" } },
+    { key: "in_review", label: { sw: "Inakaguliwa", en: "In Review" } },
+    { key: "sold", label: { sw: "Imeuzwa", en: "Sold" } },
+    { key: "expired", label: { sw: "Imeisha Muda", en: "Expired" } },
+    { key: "rejected", label: { sw: "Imekataliwa", en: "Rejected" } },
   ];
 
   const counts = TABS.reduce((acc, t) => {
@@ -381,21 +426,23 @@ export default function MyListings({
           style={{ fontFamily: FONTS.display, color: COLORS.night }}
           className="text-2xl sm:text-3xl font-semibold mb-1"
         >
-          {lang === "sw" ? "Mali Zangu" : "My Listings"}
+          {t("Mali Zangu", "My Listings")}
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-5">
-          {lang === "sw"
-            ? "Dhibiti mali zako zote ulizoziweka na fuatilia status ya kila moja."
-            : "Manage all your listings and track the status of each one."}
+          {t(
+            "Dhibiti mali zako zote ulizoziweka na fuatilia status ya kila moja.",
+            "Manage all your listings and track the status of each one."
+          )}
         </p>
 
         <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
-          {TABS.map((t) => {
-            const active = tab === t.key;
+          {TABS.map((tabItem) => {
+            const active = tab === tabItem.key;
+            const label = tabItem.label?.[lang] || tabItem.label?.sw;
             return (
               <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
+                key={tabItem.key}
+                onClick={() => setTab(tabItem.key)}
                 style={{
                   background: active ? COLORS.night : "white",
                   color: active ? COLORS.sand : COLORS.night,
@@ -403,7 +450,7 @@ export default function MyListings({
                 }}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-full border whitespace-nowrap shrink-0"
               >
-                {t.label}
+                {label}
                 <span
                   style={{
                     background: active ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
@@ -411,7 +458,7 @@ export default function MyListings({
                   }}
                   className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                 >
-                  {counts[t.key]}
+                  {counts[tabItem.key]}
                 </span>
               </button>
             );
@@ -446,9 +493,10 @@ export default function MyListings({
             className="rounded-2xl border-2 border-dashed p-10 text-center"
           >
             <p style={{ color: "rgba(16,26,46,0.45)" }} className="text-sm">
-              {lang === "sw"
-                ? "Huna mali yoyote yenye status hii kwa sasa."
-                : "You don't have any listing with this status yet."}
+              {t(
+                "Huna mali yoyote yenye status hii kwa sasa.",
+                "You don't have any listing with this status yet."
+              )}
             </p>
           </div>
         )}
