@@ -1,7 +1,7 @@
 // ============================================================
 // SafetySupportSection.jsx
 // Buyer — Safety & Support (report, help center, complaints).
-// Bilingual + mobile-responsive.
+// Bilingual + mobile-responsive + KILA KITU CENTERED.
 // ============================================================
 
 import React, { useState } from "react";
@@ -107,15 +107,20 @@ export default function SafetySupportSection() {
       `}</style>
 
       <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
+        {/* ============================================================ */}
+        {/* HEADER — CENTERED */}
+        {/* ============================================================ */}
+        <div className="mb-6 text-center">
           <h1
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
             className="text-2xl sm:text-3xl font-semibold"
           >
             {t("Usalama & Msaada", "Safety & Support")}
           </h1>
-          <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mt-1">
+          <p
+            style={{ color: "rgba(16,26,46,0.6)" }}
+            className="text-sm mt-2 max-w-xl mx-auto"
+          >
             {t(
               "Ripoti tatizo, soma vidokezo vya usalama, au wasiliana nasi.",
               "Report an issue, read safety tips, or contact us."
@@ -123,7 +128,9 @@ export default function SafetySupportSection() {
           </p>
         </div>
 
-        {/* Safety Tips Card */}
+        {/* ============================================================ */}
+        {/* SAFETY TIPS — CENTERED */}
+        {/* ============================================================ */}
         <div
           style={{
             background: "rgba(47,109,79,0.08)",
@@ -132,7 +139,7 @@ export default function SafetySupportSection() {
           }}
           className="rounded-2xl border p-4 sm:p-5 mb-4"
         >
-          <div className="flex items-start gap-3 mb-3">
+          <div className="flex flex-col items-center text-center gap-2 mb-4">
             <div
               style={{ background: COLORS.green }}
               className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -143,7 +150,10 @@ export default function SafetySupportSection() {
               <p style={{ color: COLORS.green }} className="text-sm font-bold">
                 {t("Vidokezo vya Usalama", "Safety Tips")}
               </p>
-              <p style={{ color: "rgba(16,26,46,0.7)" }} className="text-xs mt-0.5">
+              <p
+                style={{ color: "rgba(16,26,46,0.7)" }}
+                className="text-xs mt-0.5"
+              >
                 {t(
                   "Fuata vidokezo hivi ili kulinda pesa zako.",
                   "Follow these tips to protect your money."
@@ -152,9 +162,12 @@ export default function SafetySupportSection() {
             </div>
           </div>
 
-          <ul className="space-y-2 text-xs text-gray-700">
-            <li className="flex items-start gap-2">
-              <CheckCircle size={14} className="text-green-600 shrink-0 mt-0.5" />
+          <ul className="space-y-2 text-xs text-gray-700 max-w-md mx-auto">
+            <li className="flex items-start gap-2 text-left">
+              <CheckCircle
+                size={14}
+                className="text-green-600 shrink-0 mt-0.5"
+              />
               <span>
                 {t(
                   "Thibitisha akaunti ya muuzaji kabla ya kuendelea.",
@@ -162,8 +175,11 @@ export default function SafetySupportSection() {
                 )}
               </span>
             </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle size={14} className="text-green-600 shrink-0 mt-0.5" />
+            <li className="flex items-start gap-2 text-left">
+              <CheckCircle
+                size={14}
+                className="text-green-600 shrink-0 mt-0.5"
+              />
               <span>
                 {t(
                   "Kutana sehemu za wazi, wakati wa mchana.",
@@ -171,8 +187,11 @@ export default function SafetySupportSection() {
                 )}
               </span>
             </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle size={14} className="text-green-600 shrink-0 mt-0.5" />
+            <li className="flex items-start gap-2 text-left">
+              <CheckCircle
+                size={14}
+                className="text-green-600 shrink-0 mt-0.5"
+              />
               <span>
                 {t(
                   "Usilipe kabla ya kuona mali na hati zake.",
@@ -180,8 +199,11 @@ export default function SafetySupportSection() {
                 )}
               </span>
             </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle size={14} className="text-green-600 shrink-0 mt-0.5" />
+            <li className="flex items-start gap-2 text-left">
+              <CheckCircle
+                size={14}
+                className="text-green-600 shrink-0 mt-0.5"
+              />
               <span>
                 {t(
                   "Tumia Deal Room yetu — mazungumzo yote yanahifadhiwa.",
@@ -192,23 +214,28 @@ export default function SafetySupportSection() {
           </ul>
         </div>
 
-        {/* Report Card */}
+        {/* ============================================================ */}
+        {/* REPORT — CENTERED */}
+        {/* ============================================================ */}
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="rounded-2xl border p-4 sm:p-5 mb-4"
         >
-          <div className="flex items-start gap-3 mb-3">
+          <div className="flex flex-col items-center text-center gap-2 mb-4">
             <div
               style={{ background: `${COLORS.rust}15` }}
               className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
             >
               <Flag size={18} color={COLORS.rust} />
             </div>
-            <div className="flex-1">
+            <div>
               <p style={{ color: COLORS.night }} className="text-sm font-bold">
                 {t("Ripoti Tatizo", "Report an Issue")}
               </p>
-              <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-xs mt-0.5">
+              <p
+                style={{ color: "rgba(16,26,46,0.6)" }}
+                className="text-xs mt-0.5 max-w-md mx-auto"
+              >
                 {t(
                   "Unaona tangazo la udanganyifu au mtumiaji mwenye tabia ya kutiliwa shaka?",
                   "See a fraudulent listing or suspicious user?"
@@ -223,7 +250,7 @@ export default function SafetySupportSection() {
                 background: "rgba(47,109,79,0.1)",
                 color: COLORS.green,
               }}
-              className="flex items-center gap-2 text-xs font-semibold rounded-lg px-3 py-2.5"
+              className="flex items-center justify-center gap-2 text-xs font-semibold rounded-lg px-3 py-2.5 max-w-md mx-auto text-center"
             >
               <CheckCircle size={14} />
               {t(
@@ -232,16 +259,18 @@ export default function SafetySupportSection() {
               )}
             </div>
           ) : !showReportForm ? (
-            <button
-              onClick={() => setShowReportForm(true)}
-              style={{ background: COLORS.rust, color: "white" }}
-              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-lg"
-            >
-              <Flag size={13} />
-              {t("Anza Ripoti", "Start Report")}
-            </button>
+            <div className="flex justify-center">
+              <button
+                onClick={() => setShowReportForm(true)}
+                style={{ background: COLORS.rust, color: "white" }}
+                className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-lg"
+              >
+                <Flag size={13} />
+                {t("Anza Ripoti", "Start Report")}
+              </button>
+            </div>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 max-w-md mx-auto">
               {/* Type */}
               <div className="flex gap-2">
                 <button
@@ -249,7 +278,8 @@ export default function SafetySupportSection() {
                   style={{
                     background:
                       reportType === "listing" ? COLORS.night : "transparent",
-                    color: reportType === "listing" ? COLORS.sand : COLORS.night,
+                    color:
+                      reportType === "listing" ? COLORS.sand : COLORS.night,
                     borderColor: COLORS.sandLine,
                   }}
                   className="flex-1 text-xs font-semibold px-3 py-2 rounded-lg border"
@@ -279,7 +309,7 @@ export default function SafetySupportSection() {
                   "Describe the issue briefly (required)..."
                 )}
                 rows={4}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:border-[#E8A33D]"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none resize-none focus:border-[#E8A33D] text-center sm:text-left"
               />
 
               <div className="flex items-center gap-2">
@@ -296,8 +326,12 @@ export default function SafetySupportSection() {
                   onClick={handleReportSubmit}
                   disabled={!reportDetails.trim()}
                   style={{
-                    background: reportDetails.trim() ? COLORS.rust : COLORS.sandLine,
-                    color: reportDetails.trim() ? "white" : "rgba(16,26,46,0.4)",
+                    background: reportDetails.trim()
+                      ? COLORS.rust
+                      : COLORS.sandLine,
+                    color: reportDetails.trim()
+                      ? "white"
+                      : "rgba(16,26,46,0.4)",
                   }}
                   className="flex-1 text-xs font-semibold px-3 py-2 rounded-lg"
                 >
@@ -308,12 +342,14 @@ export default function SafetySupportSection() {
           )}
         </div>
 
-        {/* FAQ */}
+        {/* ============================================================ */}
+        {/* FAQ — CENTERED (title centered, items zimeachwa) */}
+        {/* ============================================================ */}
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="rounded-2xl border p-4 sm:p-5 mb-4"
         >
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex flex-col items-center text-center gap-2 mb-4">
             <div
               style={{ background: `${COLORS.gold}15` }}
               className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -347,9 +383,15 @@ export default function SafetySupportSection() {
                       {item.q?.[lang] || item.q?.sw}
                     </span>
                     {isOpen ? (
-                      <ChevronUp size={16} className="text-gray-400 shrink-0" />
+                      <ChevronUp
+                        size={16}
+                        className="text-gray-400 shrink-0"
+                      />
                     ) : (
-                      <ChevronDown size={16} className="text-gray-400 shrink-0" />
+                      <ChevronDown
+                        size={16}
+                        className="text-gray-400 shrink-0"
+                      />
                     )}
                   </button>
                   {isOpen && (
@@ -366,12 +408,14 @@ export default function SafetySupportSection() {
           </div>
         </div>
 
-        {/* Contact */}
+        {/* ============================================================ */}
+        {/* CONTACT — CENTERED */}
+        {/* ============================================================ */}
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="rounded-2xl border p-4 sm:p-5"
         >
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex flex-col items-center text-center gap-2 mb-4">
             <div
               style={{ background: `${COLORS.night}10` }}
               className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -382,7 +426,10 @@ export default function SafetySupportSection() {
               <p style={{ color: COLORS.night }} className="text-sm font-bold">
                 {t("Wasiliana Nasi", "Contact Us")}
               </p>
-              <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-xs mt-0.5">
+              <p
+                style={{ color: "rgba(16,26,46,0.6)" }}
+                className="text-xs mt-0.5"
+              >
                 {t(
                   "Timu yetu iko tayari kukusaidia.",
                   "Our team is ready to help."
@@ -391,10 +438,10 @@ export default function SafetySupportSection() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 max-w-md mx-auto">
             <a
               href="mailto:support@sokomkononi.co.tz"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center justify-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <Mail size={16} className="text-gray-400" />
               <span className="text-sm text-gray-700">
@@ -403,7 +450,7 @@ export default function SafetySupportSection() {
             </a>
             <a
               href="tel:+255700000000"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center justify-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <Phone size={16} className="text-gray-400" />
               <span className="text-sm text-gray-700">+255 700 000 000</span>
