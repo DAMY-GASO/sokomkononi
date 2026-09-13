@@ -2,7 +2,7 @@
 // listingsStore.js
 // CHANZO KIMOJA CHA UKWELI kwa Listings (mali/matangazo).
 //
-// Awamu hii imeongezwa (kulingana na Muongozo wa Mfumo §3.5, §6):
+
 //   - listing.expiresAt     (listing inaisha muda — status -> "expired")
 //   - listing.reservedUntil (deal ikiwa "reserved", listing inaonyesha
 //                            "Reservation ends in: ...")
