@@ -401,7 +401,7 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
 }
 
 // ============================================================
-// MAIN SECTION
+// MAIN SECTION — export default
 // ============================================================
 export default function PromotionsSection() {
   const { lang } = useLanguage();
@@ -624,8 +624,8 @@ export default function PromotionsSection() {
         </div>
       </div>
 
-      {/* Tabs — scroll horizontal kwenye simu */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
+      {/* Tabs — CENTERED + scroll horizontal kwenye simu */}
+      <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
         {TABS.map(({ key, label, icon: Icon, count }) => {
           const isActive = activeTab === key;
           return (
