@@ -56,27 +56,26 @@ const translations = {
     why_point3_title: "Bei za Ushindani",
     why_point3_body: "Pata bei nzuri na uwezo wa kujadili moja kwa moja na wauzaji.",
 
-// deal room
-deal_room: "Deal Room",
-deal_rooms: "Deal Rooms",
-deal_active: "Inaendelea",
-deal_negotiating: "Inajadiliwa",
-deal_inspecting: "Inakaguliwa",
-deal_completed: "Imekamilika",
-deal_cancelled: "Imefutwa",
-deal_negotiation: "Negotiation",
-deal_inspection: "Inspection",
-deal_messages: "Ujumbe",
-deal_offer_price: "Ofa yako",
-deal_seller_price: "Bei ya Muuzaji",
-deal_counter_offer: "Counter Offer",
-deal_accept: "Kubali",
-deal_reject: "Kataa",
-deal_send: "Tuma",
-deal_no_deals: "Hakuna deal rooms",
-deal_select_deal: "Chagua Deal Room",
-deal_no_messages: "Hakuna ujumbe",
-
+    // Deal room
+    deal_room: "Deal Room",
+    deal_rooms: "Deal Rooms",
+    deal_active: "Inaendelea",
+    deal_negotiating: "Inajadiliwa",
+    deal_inspecting: "Inakaguliwa",
+    deal_completed: "Imekamilika",
+    deal_cancelled: "Imefutwa",
+    deal_negotiation: "Negotiation",
+    deal_inspection: "Inspection",
+    deal_messages: "Ujumbe",
+    deal_offer_price: "Ofa yako",
+    deal_seller_price: "Bei ya Muuzaji",
+    deal_counter_offer: "Counter Offer",
+    deal_accept: "Kubali",
+    deal_reject: "Kataa",
+    deal_send: "Tuma",
+    deal_no_deals: "Hakuna deal rooms",
+    deal_select_deal: "Chagua Deal Room",
+    deal_no_messages: "Hakuna ujumbe",
 
     // Testimonials
     testimonials_heading: "Wanachosema Wateja Wetu",
@@ -126,26 +125,19 @@ deal_no_messages: "Hakuna ujumbe",
     footer_rights: "Haki zote zimehifadhiwa.",
     footer_payments_label: "Malipo yanakubaliwa:",
 
-    // ============================================================
     // AUTH - REGISTER
-    // ============================================================
-    // Left Panel (Brand)
     register_panel_heading_buy: "Nunua Mali kwa Urahisi",
     register_panel_heading_sell: "Uza Mali kwa Urahisi",
     register_panel_heading_default: "SokoMkononi",
     register_panel_subtext_buy: "Jisajili na uanze kununua mali yako inayotakiwa leo.",
     register_panel_subtext_sell: "Jisajili na uanze kuuza mali yako kwa wateja wengi.",
     register_panel_subtext_default: "Jisajili sasa na upate fursa za kibiashara.",
-
-    // Right Panel (Form)
     register_form_heading_buy: "Anza Kununua",
     register_form_heading_sell: "Anza Kuuza",
     register_form_heading_default: "Jiunge Nasi",
     register_form_subtext_buy: "Jaza taarifa zako ili uanze safari ya kununua mali.",
     register_form_subtext_sell: "Jaza taarifa zako ili uanze kuuza mali yako.",
-    register_form_subtext_default: "Und akaunti yako kwa sekunde chache.",
-
-    // Register Fields
+    register_form_subtext_default: "Unda akaunti yako kwa sekunde chache.",
     register_name_placeholder: "Jina lako kamili",
     register_email_placeholder: "Barua pepe",
     register_phone_placeholder: "Namba ya simu",
@@ -162,8 +154,6 @@ deal_no_messages: "Hakuna ujumbe",
     register_error_terms_required: "Tafadhali kubali Vigezo vya Matumizi na Sera ya Faragha ili kuendelea.",
     register_have_account: "Una akaunti tayari?",
     register_login_link: "Ingia",
-
-    // Register OTP
     register_otp_heading: "Thibitisha Barua Pepe",
     register_otp_subtext: "Tumetuma msimbo wa tarakimu kwenye:",
     register_verifying: "Inathibitisha...",
@@ -173,17 +163,12 @@ deal_no_messages: "Hakuna ujumbe",
     register_error_otp_required: "Tafadhali weka msimbo uliotumwa kwenye barua pepe yako.",
     register_error_otp_invalid: "Msimbo si sahihi au umeisha muda wake. Jaribu tena.",
 
-    // ============================================================
     // AUTH - LOGIN
-    // ============================================================
-    // Left Panel (Brand)
     login_panel_heading: "Karibu SokoMkononi",
     login_panel_subtext: "Jukwaa lako salama la kununua na kuuza mali nchini Tanzania.",
     login_trust1: "Muamala salama na wa uwazi",
     login_trust2: "Wauzaji na wanunuzi walioidhinishwa",
     login_trust3: "Msaada wa haraka na wa kuaminika",
-
-    // Right Panel (Form)
     login_heading: "Ingia kwenye Akaunti Yako",
     login_subtext: "Ingiza barua pepe na nenosiri lako ili uingie.",
     login_identifier_placeholder: "Barua pepe au namba ya simu",
@@ -196,9 +181,7 @@ deal_no_messages: "Hakuna ujumbe",
     login_no_account: "Huna akaunti?",
     login_register_link: "Jisajili",
 
-    // ============================================================
     // AUTH - FORGOT PASSWORD
-    // ============================================================
     forgot_panel_heading: "Weka Nenosiri Jipya",
     forgot_panel_subtext: "Tunakusaidia kurejesha akaunti yako kwa haraka na kwa usalama.",
     forgot_heading: "Umesahau Nenosiri?",
@@ -225,14 +208,9 @@ deal_no_messages: "Hakuna ujumbe",
     forgot_success_subtext: "Nenosiri lako jipya limehifadhiwa kwa mafanikio. Sasa unaweza kuingia kwenye akaunti yako kwa nenosiri hilo jipya.",
     forgot_go_to_login: "Ingia Sasa",
 
-    // ============================================================
-    // WAITLIST (APP YA SIMU) - ILIYOSASISHWA KABISA
-    // ============================================================
-    // Left Panel (Brand)
+    // WAITLIST
     waitlist_panel_heading: "App Inakuja Hivi Karibuni",
     waitlist_panel_subtext: "Jiunge na waitlist yetu ili uwe wa kwanza kujua app ya SokoMkononi itakapopatikana.",
-
-    // Right Panel (Form)
     waitlist_form_heading: "Jiunge na Waitlist",
     waitlist_form_subtext: "Weka barua pepe yako ili upate taarifa za app.",
     waitlist_email_placeholder: "Barua pepe yako",
@@ -244,7 +222,6 @@ deal_no_messages: "Hakuna ujumbe",
     waitlist_success_subtext: "Tutakutumia ujumbe pindi app itakapokuwa tayari kupakuliwa.",
     waitlist_back_home: "← Rudi Nyumbani",
 
-    // Auth - Legal footnote (Register/Login)
     auth_legal_prefix: "Kwa kuendelea, unakubaliana na",
     auth_legal_and: "na",
 
@@ -252,6 +229,7 @@ deal_no_messages: "Hakuna ujumbe",
     about_heading: "Kuhusu SokoMkononi",
     about_subtext: "Tunaunganisha wanunuzi na wauzaji wa mali kote Tanzania kwa urahisi na uwazi.",
     about_mission: "SokoMkononi ilianzishwa kwa lengo moja: kufanya ununuzi na uuzaji wa mali — nyumba, magari, viwanja na zaidi — kuwa rahisi, salama na wa kuaminika kwa kila Mtanzania, popote alipo.",
+    about_values_heading: "Maadili Yetu",                       // ✅ IMEONGEZWA
     about_value1_title: "Uwazi",
     about_value1_body: "Taarifa zote za mali na bei zinaonyeshwa wazi bila kuficha gharama za ziada.",
     about_value2_title: "Usalama",
@@ -259,25 +237,24 @@ deal_no_messages: "Hakuna ujumbe",
     about_value3_title: "Ubunifu",
     about_value3_body: "Tunatumia teknolojia kurahisisha mchakato mzima wa kununua na kuuza mali.",
 
-    // admin login
-admin_panel_heading: "Dhibiti SokoMkononi",
-admin_panel_subtext: "Ingia kwenye paneli ya msimamizi ili kudhibiti mali, wateja na matangazo.",
-admin_feature1: "Dhibiti mali zote",
-admin_feature2: "Simamia wateja na wauzaji",
-admin_feature3: "Thibitisha matangazo",
-admin_feature4: "Angalia taarifa za mauzo",
-admin_login_heading: "Ingia kama Msimamizi",
-admin_login_subtext: "Ingiza barua pepe na nenosiri lako la msimamizi.",
-admin_login_email: "Barua pepe",
-admin_login_password: "Nenosiri",
-admin_login_submit: "Ingia kama Msimamizi",
-admin_login_submitting: "Inaingia...",
-admin_login_error_required: "Tafadhali jaza sehemu zote.",
-admin_login_error_default: "Barua pepe au nenosiri si sahihi.",
-admin_secure_access: "Mwamini Msimamizi tu ndiye anayepata mamlaka ya kuingia.",
-admin_back_to_user_login: "← Rudi kwenye Ingia la Mtumiaji",
+    // Admin login
+    admin_panel_heading: "Dhibiti SokoMkononi",
+    admin_panel_subtext: "Ingia kwenye paneli ya msimamizi ili kudhibiti mali, wateja na matangazo.",
+    admin_feature1: "Dhibiti mali zote",
+    admin_feature2: "Simamia wateja na wauzaji",
+    admin_feature3: "Thibitisha matangazo",
+    admin_feature4: "Angalia taarifa za mauzo",
+    admin_login_heading: "Ingia kama Msimamizi",
+    admin_login_subtext: "Ingiza barua pepe na nenosiri lako la msimamizi.",
+    admin_login_email: "Barua pepe",
+    admin_login_password: "Nenosiri",
+    admin_login_submit: "Ingia kama Msimamizi",
+    admin_login_submitting: "Inaingia...",
+    admin_login_error_required: "Tafadhali jaza sehemu zote.",
+    admin_login_error_default: "Barua pepe au nenosiri si sahihi.",
+    admin_secure_access: "Mwamini Msimamizi tu ndiye anayepata mamlaka ya kuingia.",
+    admin_back_to_user_login: "← Rudi kwenye Ingia la Mtumiaji",
 
-    
     // Safety Page
     safety_heading: "Usalama Wako ni Kipaumbele Chetu",
     safety_subtext: "Vidokezo na hatua tunazochukua kuhakikisha muamala wako ni salama.",
@@ -289,6 +266,7 @@ admin_back_to_user_login: "← Rudi kwenye Ingia la Mtumiaji",
     safety_tip3_body: "Kamwe usitume malipo kabla ya kuthibitisha mali na hati zake halisi.",
     safety_tip4_title: "Tumia 'Deal Room' Yetu",
     safety_tip4_body: "Wasiliana na muuzaji ndani ya jukwaa letu ili mazungumzo yote yawe na kumbukumbu.",
+    safety_report_heading: "Ripoti Matangazo ya Udanganyifu",   // ✅ IMEONGEZWA
     safety_report_note: "Ukiona tangazo la udanganyifu au tabia ya kutiliwa shaka, ripoti mara moja kupitia ukurasa wa Mawasiliano ili timu yetu ichukue hatua.",
 
     // Contact Page
@@ -359,28 +337,27 @@ admin_back_to_user_login: "← Rudi kwenye Ingia la Mtumiaji",
     why_point3_title: "Competitive Prices",
     why_point3_body: "Get great prices and negotiate directly with sellers.",
 
+    // Deal room
+    deal_room: "Deal Room",
+    deal_rooms: "Deal Rooms",
+    deal_active: "Active",
+    deal_negotiating: "Negotiating",
+    deal_inspecting: "Inspection",
+    deal_completed: "Completed",
+    deal_cancelled: "Cancelled",
+    deal_negotiation: "Negotiation",
+    deal_inspection: "Inspection",
+    deal_messages: "Messages",
+    deal_offer_price: "Your Offer",
+    deal_seller_price: "Seller's Price",
+    deal_counter_offer: "Counter Offer",
+    deal_accept: "Accept",
+    deal_reject: "Reject",
+    deal_send: "Send",
+    deal_no_deals: "No deal rooms",
+    deal_select_deal: "Select a Deal Room",
+    deal_no_messages: "No messages",
 
-    // deal room
-deal_room: "Deal Room",
-deal_rooms: "Deal Rooms",
-deal_active: "Active",
-deal_negotiating: "Negotiating",
-deal_inspecting: "Inspection",
-deal_completed: "Completed",
-deal_cancelled: "Cancelled",
-deal_negotiation: "Negotiation",
-deal_inspection: "Inspection",
-deal_messages: "Messages",
-deal_offer_price: "Your Offer",
-deal_seller_price: "Seller's Price",
-deal_counter_offer: "Counter Offer",
-deal_accept: "Accept",
-deal_reject: "Reject",
-deal_send: "Send",
-deal_no_deals: "No deal rooms",
-deal_select_deal: "Select a Deal Room",
-deal_no_messages: "No messages",
-    
     // Testimonials
     testimonials_heading: "What Our Customers Say",
     testimonial1_quote: "I bought my house easily through SokoMkononi. The whole process was simple and secure.",
@@ -399,24 +376,24 @@ deal_no_messages: "No messages",
     badge_download_on: "Download on",
     badge_app_store: "App Store",
 
-// admin login
-admin_panel_heading: "Manage SokoMkononi",
-admin_panel_subtext: "Login to the admin panel to manage properties, customers and ads.",
-admin_feature1: "Manage all properties",
-admin_feature2: "Manage customers and sellers",
-admin_feature3: "Verify listings",
-admin_feature4: "View sales reports",
-admin_login_heading: "Admin Login",
-admin_login_subtext: "Enter your admin email and password.",
-admin_login_email: "Email",
-admin_login_password: "Password",
-admin_login_submit: "Login as Admin",
-admin_login_submitting: "Logging in...",
-admin_login_error_required: "Please fill in all fields.",
-admin_login_error_default: "Incorrect email or password.",
-admin_secure_access: "Only authorized admins can access this panel.",
-admin_back_to_user_login: "← Back to User Login",
-    
+    // Admin login
+    admin_panel_heading: "Manage SokoMkononi",
+    admin_panel_subtext: "Login to the admin panel to manage properties, customers and ads.",
+    admin_feature1: "Manage all properties",
+    admin_feature2: "Manage customers and sellers",
+    admin_feature3: "Verify listings",
+    admin_feature4: "View sales reports",
+    admin_login_heading: "Admin Login",
+    admin_login_subtext: "Enter your admin email and password.",
+    admin_login_email: "Email",
+    admin_login_password: "Password",
+    admin_login_submit: "Login as Admin",
+    admin_login_submitting: "Logging in...",
+    admin_login_error_required: "Please fill in all fields.",
+    admin_login_error_default: "Incorrect email or password.",
+    admin_secure_access: "Only authorized admins can access this panel.",
+    admin_back_to_user_login: "← Back to User Login",
+
     // FAQ
     faq_heading: "Frequently Asked Questions",
     faq_q1: "Is SokoMkononi safe?",
@@ -447,26 +424,19 @@ admin_back_to_user_login: "← Back to User Login",
     footer_rights: "All rights reserved.",
     footer_payments_label: "Payments accepted:",
 
-    // ============================================================
     // AUTH - REGISTER
-    // ============================================================
-    // Left Panel (Brand)
     register_panel_heading_buy: "Buy Property Easily",
     register_panel_heading_sell: "Sell Property Easily",
     register_panel_heading_default: "SokoMkononi",
     register_panel_subtext_buy: "Sign up and start buying your desired property today.",
     register_panel_subtext_sell: "Sign up and start selling your property to many customers.",
     register_panel_subtext_default: "Sign up now and get business opportunities.",
-
-    // Right Panel (Form)
     register_form_heading_buy: "Start Buying",
     register_form_heading_sell: "Start Selling",
     register_form_heading_default: "Join Us",
     register_form_subtext_buy: "Fill in your details to start your property buying journey.",
     register_form_subtext_sell: "Fill in your details to start selling your property.",
     register_form_subtext_default: "Create your account in a few seconds.",
-
-    // Register Fields
     register_name_placeholder: "Full name",
     register_email_placeholder: "Email address",
     register_phone_placeholder: "Phone number",
@@ -483,8 +453,6 @@ admin_back_to_user_login: "← Back to User Login",
     register_error_terms_required: "Please agree to the Terms of Use and Privacy Policy to continue.",
     register_have_account: "Already have an account?",
     register_login_link: "Login",
-
-    // Register OTP
     register_otp_heading: "Verify Your Email",
     register_otp_subtext: "We've sent a verification code to:",
     register_verifying: "Verifying...",
@@ -494,17 +462,12 @@ admin_back_to_user_login: "← Back to User Login",
     register_error_otp_required: "Please enter the code sent to your email.",
     register_error_otp_invalid: "Invalid or expired code. Please try again.",
 
-    // ============================================================
     // AUTH - LOGIN
-    // ============================================================
-    // Left Panel (Brand)
     login_panel_heading: "Welcome to SokoMkononi",
     login_panel_subtext: "Your safe platform to buy and sell property in Tanzania.",
     login_trust1: "Safe and transparent transactions",
     login_trust2: "Verified sellers and buyers",
     login_trust3: "Fast and reliable support",
-
-    // Right Panel (Form)
     login_heading: "Login to Your Account",
     login_subtext: "Enter your email and password to sign in.",
     login_identifier_placeholder: "Email or phone number",
@@ -517,9 +480,7 @@ admin_back_to_user_login: "← Back to User Login",
     login_no_account: "Don't have an account?",
     login_register_link: "Register",
 
-    // ============================================================
     // AUTH - FORGOT PASSWORD
-    // ============================================================
     forgot_panel_heading: "Set a New Password",
     forgot_panel_subtext: "We'll help you get back into your account quickly and safely.",
     forgot_heading: "Forgot Password?",
@@ -546,14 +507,9 @@ admin_back_to_user_login: "← Back to User Login",
     forgot_success_subtext: "Your new password has been saved successfully. You can now log in to your account using your new password.",
     forgot_go_to_login: "Login Now",
 
-    // ============================================================
-    // WAITLIST (MOBILE APP) - FULLY UPDATED
-    // ============================================================
-    // Left Panel (Brand)
+    // WAITLIST
     waitlist_panel_heading: "The App Is Coming Soon",
     waitlist_panel_subtext: "Join our waitlist to be the first to know when the SokoMkononi app is available.",
-
-    // Right Panel (Form)
     waitlist_form_heading: "Join the Waitlist",
     waitlist_form_subtext: "Enter your email to get notified about the app.",
     waitlist_email_placeholder: "Your email",
@@ -565,7 +521,6 @@ admin_back_to_user_login: "← Back to User Login",
     waitlist_success_subtext: "We'll notify you as soon as the app is ready to download.",
     waitlist_back_home: "← Back to Home",
 
-    // Auth - Legal footnote (Register/Login)
     auth_legal_prefix: "By continuing, you agree to our",
     auth_legal_and: "and",
 
@@ -573,6 +528,7 @@ admin_back_to_user_login: "← Back to User Login",
     about_heading: "About SokoMkononi",
     about_subtext: "We connect property buyers and sellers across Tanzania with ease and transparency.",
     about_mission: "SokoMkononi was founded with one goal: to make buying and selling property — houses, cars, land and more — simple, safe, and trustworthy for every Tanzanian, wherever they are.",
+    about_values_heading: "Our Values",                          // ✅ IMEONGEZWA
     about_value1_title: "Transparency",
     about_value1_body: "All property details and prices are shown clearly with no hidden extra costs.",
     about_value2_title: "Safety",
@@ -591,6 +547,7 @@ admin_back_to_user_login: "← Back to User Login",
     safety_tip3_body: "Never send payment before verifying the property and its official documents.",
     safety_tip4_title: "Use Our 'Deal Room'",
     safety_tip4_body: "Communicate with sellers inside our platform so every conversation is recorded.",
+    safety_report_heading: "Report Fraudulent Listings",         // ✅ IMEONGEZWA
     safety_report_note: "If you see a fraudulent listing or suspicious behavior, report it immediately via our Contact page so our team can take action.",
 
     // Contact Page
@@ -610,7 +567,6 @@ admin_back_to_user_login: "← Back to User Login",
 
 export function LanguageProvider({ children }) {
   const [lang, setLang] = useState(() => {
-    // Load from localStorage
     const saved = localStorage.getItem("preferred_language");
     return saved || "sw";
   });
