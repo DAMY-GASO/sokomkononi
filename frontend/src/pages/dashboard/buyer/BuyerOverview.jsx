@@ -1,10 +1,10 @@
 // ============================================================
 // BuyerOverview.jsx
 // Muhtasari wa mnunuzi — search, categories, listings, quick actions.
-// Bilingual kamili + mobile-responsive.
+// Bilingual kamili + mobile-responsive + watcher.
 // ============================================================
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -27,6 +27,7 @@ import { usePublicListings } from "../../../config/listingsStore.js";
 import { useSavedIds } from "../../../config/savedStore.js";
 import { useRecentlyViewedIds } from "../../../config/recentlyViewedStore.js";
 import { useSearches } from "../../../config/searchesStore.js";
+import { checkSavedListingsChanges } from "../../../config/savedListingsWatcher.js";
 import {
   useActiveCategories,
   getCategoryIcon,
@@ -46,6 +47,21 @@ export default function BuyerOverview({ onNavigate }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ============================================================
+  // WATCHER — angalia saved listings mabadiliko
+  // ============================================================
+  useEffect(() => {
+    // Angalia mara moja kwenye mount
+    checkSavedListingsChanges();
+
+    // Kisha kila dakika 2
+    const interval = setInterval(() => {
+      checkSavedListingsChanges();
+    }, 2 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // ============================================================
   // STATS
