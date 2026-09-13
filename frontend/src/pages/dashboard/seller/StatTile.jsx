@@ -1,6 +1,7 @@
 // ============================================================
 // StatTile.jsx
 // Kadi ndogo ya stat kwa Seller/Buyer Overview.
+// Kila kitu centered: icon, value, label.
 // ============================================================
 
 import React from "react";
@@ -18,28 +19,37 @@ export default function StatTile({
   const padding = size === "sm" ? "p-3" : "p-3.5 sm:p-4";
   const iconSize = size === "sm" ? 16 : 18;
   const iconBox = size === "sm" ? "w-8 h-8" : "w-9 h-9";
-  const valueSize = size === "sm" ? "text-base sm:text-lg" : "text-lg sm:text-2xl";
-  const labelSize = size === "sm" ? "text-[10px] sm:text-[11px]" : "text-[11px] sm:text-xs";
+  const valueSize =
+    size === "sm" ? "text-base sm:text-lg" : "text-lg sm:text-2xl";
+  const labelSize =
+    size === "sm" ? "text-[10px] sm:text-[11px]" : "text-[11px] sm:text-xs";
 
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-xl border border-gray-100 ${padding} min-w-0 transition-all ${
-        isClickable ? "cursor-pointer hover:shadow-md hover:border-gray-200" : ""
+      className={`bg-white rounded-xl border border-gray-100 ${padding} min-w-0 transition-all flex flex-col items-center text-center ${
+        isClickable
+          ? "cursor-pointer hover:shadow-md hover:border-gray-200"
+          : ""
       }`}
     >
-      <div className="flex items-start justify-between gap-2 mb-1.5">
-        <div
-          style={{ background: `${color}15` }}
-          className={`${iconBox} rounded-lg flex items-center justify-center shrink-0`}
-        >
-          <Icon size={iconSize} color={color} />
-        </div>
+      {/* Icon — centered */}
+      <div
+        style={{ background: `${color}15` }}
+        className={`${iconBox} rounded-lg flex items-center justify-center shrink-0 mb-2`}
+      >
+        <Icon size={iconSize} color={color} />
       </div>
+
+      {/* Value — centered */}
       <p className={`${valueSize} font-bold text-gray-800 break-words`}>
         {value}
       </p>
-      <p className={`${labelSize} text-gray-500 leading-tight mt-0.5 line-clamp-2`}>
+
+      {/* Label — centered */}
+      <p
+        className={`${labelSize} text-gray-500 leading-tight mt-0.5 line-clamp-2`}
+      >
         {label}
       </p>
     </div>
