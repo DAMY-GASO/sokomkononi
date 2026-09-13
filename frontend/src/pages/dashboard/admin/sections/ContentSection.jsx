@@ -2,7 +2,7 @@
 // ContentSection.jsx
 // Admin — Content Management (banners, testimonials, FAQs, About,
 // Terms, Privacy, Help).
-// Bilingual + mobile-responsive (imeboreshwa).
+// Bilingual + mobile-responsive (imeboreshwa zaidi).
 // ============================================================
 
 import React, { useState } from "react";
@@ -20,9 +20,6 @@ import {
   X,
   Save,
   Check,
-  Eye,
-  EyeOff,
-  Upload,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -66,10 +63,12 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3 })
   const Input = multiline ? "textarea" : "input";
 
   return (
-    <div className="flex flex-col gap-2 min-w-0">
-      <span className="text-[11px] font-semibold text-gray-500">{label}</span>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <div className="min-w-0">
+    <div className="flex flex-col gap-2 w-full min-w-0">
+      <span className="text-[11px] font-semibold text-gray-500 break-words">
+        {label}
+      </span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
+        <div className="min-w-0 w-full">
           <span className="text-[10px] font-semibold text-gray-400 uppercase">
             Kiswahili
           </span>
@@ -77,10 +76,10 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3 })
             value={swVal}
             onChange={(e) => onChange({ ...value, sw: e.target.value })}
             rows={multiline ? rows : undefined}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1"
           />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 w-full">
           <span className="text-[10px] font-semibold text-gray-400 uppercase">
             English
           </span>
@@ -88,10 +87,35 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3 })
             value={enVal}
             onChange={(e) => onChange({ ...value, en: e.target.value })}
             rows={multiline ? rows : undefined}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1"
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// FORM ACTIONS — reusable
+// ============================================================
+function FormActions({ onCancel, onSave, lang, saveLabel = null }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  return (
+    <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
+      <button
+        onClick={onCancel}
+        className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600 shrink-0"
+      >
+        {t("Ghairi", "Cancel")}
+      </button>
+      <button
+        onClick={onSave}
+        style={{ background: COLORS.gold, color: COLORS.night }}
+        className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+      >
+        <Save size={13} />
+        {saveLabel || t("Hifadhi", "Save")}
+      </button>
     </div>
   );
 }
@@ -143,11 +167,11 @@ function BannersTab({ lang }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 w-full min-w-0">
       <button
         onClick={handleAdd}
         style={{ background: COLORS.gold, color: COLORS.night }}
-        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start"
+        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
       >
         <Plus size={13} />
         {t("Banner Mpya", "New Banner")}
@@ -156,7 +180,7 @@ function BannersTab({ lang }) {
       {(adding || editing) && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3"
+          className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0 overflow-hidden"
         >
           <BilingualField
             label={t("Kichwa", "Title")}
@@ -175,7 +199,7 @@ function BannersTab({ lang }) {
             value={form.ctaText || { sw: "", en: "" }}
             onChange={(v) => setForm({ ...form, ctaText: v })}
           />
-          <label className="flex flex-col gap-1">
+          <label className="flex flex-col gap-1 w-full min-w-0">
             <span className="text-[11px] font-semibold text-gray-500">
               {t("Kiungo (URL)", "Link (URL)")}
             </span>
@@ -183,7 +207,7 @@ function BannersTab({ lang }) {
               value={form.ctaLink || ""}
               onChange={(e) => setForm({ ...form, ctaLink: e.target.value })}
               placeholder="/tafuta"
-              className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+              className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
             />
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
@@ -191,29 +215,14 @@ function BannersTab({ lang }) {
               type="checkbox"
               checked={form.active !== false}
               onChange={(e) => setForm({ ...form, active: e.target.checked })}
-              className="w-4 h-4 rounded text-[#E8A33D]"
+              className="w-4 h-4 rounded text-[#E8A33D] shrink-0"
             />
             <span className="text-xs text-gray-600">
               {t("Inaonekana HomePage", "Show on HomePage")}
             </span>
           </label>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCancel}
-              className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600"
-            >
-              {t("Ghairi", "Cancel")}
-            </button>
-            <button
-              onClick={handleSave}
-              style={{ background: COLORS.gold, color: COLORS.night }}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
-            >
-              <Save size={13} />
-              {t("Hifadhi", "Save")}
-            </button>
-          </div>
+          <FormActions onCancel={handleCancel} onSave={handleSave} lang={lang} />
         </div>
       )}
 
@@ -221,9 +230,9 @@ function BannersTab({ lang }) {
         <div
           key={banner.id}
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-3 sm:p-4"
+          className="rounded-xl border p-3 sm:p-4 w-full min-w-0 overflow-hidden"
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-3 w-full min-w-0">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span
@@ -233,18 +242,18 @@ function BannersTab({ lang }) {
                       : "rgba(16,26,46,0.08)",
                     color: banner.active ? COLORS.green : COLORS.night,
                   }}
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 >
                   {banner.active ? t("Hai", "Active") : t("Imezimwa", "Inactive")}
                 </span>
               </div>
-              <p className="text-sm font-semibold text-gray-800 truncate">
+              <p className="text-sm font-semibold text-gray-800 truncate w-full">
                 {banner.title?.[lang] || banner.title?.sw}
               </p>
               <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
                 {banner.subtitle?.[lang] || banner.subtitle?.sw}
               </p>
-              <p className="text-[11px] text-gray-400 mt-1 truncate">
+              <p className="text-[11px] text-gray-400 mt-1 truncate w-full">
                 CTA: {banner.ctaText?.[lang] || banner.ctaText?.sw} → {banner.ctaLink}
               </p>
             </div>
@@ -252,6 +261,7 @@ function BannersTab({ lang }) {
               <button
                 onClick={() => handleEdit(banner)}
                 className="p-1.5 text-gray-400 hover:text-[#E8A33D]"
+                aria-label={t("Hariri", "Edit")}
               >
                 <Pencil size={14} />
               </button>
@@ -262,6 +272,7 @@ function BannersTab({ lang }) {
                   }
                 }}
                 className="p-1.5 text-gray-400 hover:text-[#C1502E]"
+                aria-label={t("Ondoa", "Remove")}
               >
                 <Trash2 size={14} />
               </button>
@@ -314,11 +325,11 @@ function TestimonialsTab({ lang }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 w-full min-w-0">
       <button
         onClick={handleAdd}
         style={{ background: COLORS.gold, color: COLORS.night }}
-        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start"
+        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
       >
         <Plus size={13} />
         {t("Ushuhuda Mpya", "New Testimonial")}
@@ -327,9 +338,9 @@ function TestimonialsTab({ lang }) {
       {(adding || editing) && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3"
+          className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0 overflow-hidden"
         >
-          <label className="flex flex-col gap-1">
+          <label className="flex flex-col gap-1 w-full min-w-0">
             <span className="text-[11px] font-semibold text-gray-500">
               {t("Jina", "Name")}
             </span>
@@ -337,7 +348,7 @@ function TestimonialsTab({ lang }) {
               value={form.name || ""}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Mary, Dar es Salaam"
-              className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+              className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
             />
           </label>
           <BilingualField
@@ -347,22 +358,7 @@ function TestimonialsTab({ lang }) {
             multiline
             rows={3}
           />
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCancel}
-              className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600"
-            >
-              {t("Ghairi", "Cancel")}
-            </button>
-            <button
-              onClick={handleSave}
-              style={{ background: COLORS.gold, color: COLORS.night }}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
-            >
-              <Save size={13} />
-              {t("Hifadhi", "Save")}
-            </button>
-          </div>
+          <FormActions onCancel={handleCancel} onSave={handleSave} lang={lang} />
         </div>
       )}
 
@@ -370,14 +366,14 @@ function TestimonialsTab({ lang }) {
         <div
           key={item.id}
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-3 sm:p-4"
+          className="rounded-xl border p-3 sm:p-4 w-full min-w-0 overflow-hidden"
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-3 w-full min-w-0">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-gray-800 truncate">
+              <p className="text-sm font-semibold text-gray-800 truncate w-full">
                 {item.name}
               </p>
-              <p className="text-xs text-gray-600 mt-1 leading-relaxed line-clamp-3">
+              <p className="text-xs text-gray-600 mt-1 leading-relaxed line-clamp-3 break-words">
                 "{item.quote?.[lang] || item.quote?.sw}"
               </p>
             </div>
@@ -385,6 +381,7 @@ function TestimonialsTab({ lang }) {
               <button
                 onClick={() => handleEdit(item)}
                 className="p-1.5 text-gray-400 hover:text-[#E8A33D]"
+                aria-label={t("Hariri", "Edit")}
               >
                 <Pencil size={14} />
               </button>
@@ -395,6 +392,7 @@ function TestimonialsTab({ lang }) {
                   }
                 }}
                 className="p-1.5 text-gray-400 hover:text-[#C1502E]"
+                aria-label={t("Ondoa", "Remove")}
               >
                 <Trash2 size={14} />
               </button>
@@ -447,11 +445,11 @@ function FaqsTab({ lang }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 w-full min-w-0">
       <button
         onClick={handleAdd}
         style={{ background: COLORS.gold, color: COLORS.night }}
-        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start"
+        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
       >
         <Plus size={13} />
         {t("Swali Jipya", "New FAQ")}
@@ -460,7 +458,7 @@ function FaqsTab({ lang }) {
       {(adding || editing) && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3"
+          className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0 overflow-hidden"
         >
           <BilingualField
             label={t("Swali", "Question")}
@@ -474,22 +472,7 @@ function FaqsTab({ lang }) {
             multiline
             rows={3}
           />
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCancel}
-              className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600"
-            >
-              {t("Ghairi", "Cancel")}
-            </button>
-            <button
-              onClick={handleSave}
-              style={{ background: COLORS.gold, color: COLORS.night }}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
-            >
-              <Save size={13} />
-              {t("Hifadhi", "Save")}
-            </button>
-          </div>
+          <FormActions onCancel={handleCancel} onSave={handleSave} lang={lang} />
         </div>
       )}
 
@@ -497,14 +480,14 @@ function FaqsTab({ lang }) {
         <div
           key={faq.id}
           style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="rounded-xl border p-3 sm:p-4"
+          className="rounded-xl border p-3 sm:p-4 w-full min-w-0 overflow-hidden"
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-3 w-full min-w-0">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-gray-800">
+              <p className="text-sm font-semibold text-gray-800 break-words">
                 {faq.question?.[lang] || faq.question?.sw}
               </p>
-              <p className="text-xs text-gray-600 mt-1 leading-relaxed line-clamp-3">
+              <p className="text-xs text-gray-600 mt-1 leading-relaxed line-clamp-3 break-words">
                 {faq.answer?.[lang] || faq.answer?.sw}
               </p>
             </div>
@@ -512,6 +495,7 @@ function FaqsTab({ lang }) {
               <button
                 onClick={() => handleEdit(faq)}
                 className="p-1.5 text-gray-400 hover:text-[#E8A33D]"
+                aria-label={t("Hariri", "Edit")}
               >
                 <Pencil size={14} />
               </button>
@@ -522,6 +506,7 @@ function FaqsTab({ lang }) {
                   }
                 }}
                 className="p-1.5 text-gray-400 hover:text-[#C1502E]"
+                aria-label={t("Ondoa", "Remove")}
               >
                 <Trash2 size={14} />
               </button>
@@ -556,7 +541,7 @@ function SinglePageEditor({ section, lang }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3"
+      className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0 overflow-hidden"
     >
       <BilingualField
         label={t("Kichwa", "Heading")}
@@ -589,22 +574,22 @@ function SinglePageEditor({ section, lang }) {
           value={form.content || { sw: "", en: "" }}
           onChange={(v) => setForm({ ...form, content: v })}
           multiline
-          rows={6}
+          rows={4}
         />
       )}
 
       {form.lastUpdated && (
-        <p className="text-[10px] text-gray-400">
+        <p className="text-[10px] text-gray-400 break-words">
           {t("Ilisasishwa", "Last updated")}:{" "}
           {new Date(form.lastUpdated).toLocaleString(lang === "sw" ? "sw-TZ" : "en-US")}
         </p>
       )}
 
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
         <button
           onClick={handleSave}
           style={{ background: COLORS.gold, color: COLORS.night }}
-          className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg"
+          className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg shrink-0"
         >
           <Save size={13} />
           {t("Hifadhi", "Save")}
@@ -612,7 +597,7 @@ function SinglePageEditor({ section, lang }) {
         {saved && (
           <span
             style={{ color: COLORS.green }}
-            className="flex items-center gap-1 text-xs font-semibold"
+            className="flex items-center gap-1 text-xs font-semibold shrink-0"
           >
             <Check size={13} />
             {t("Imehifadhiwa", "Saved")}
@@ -633,7 +618,7 @@ export default function ContentSection() {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
       <SectionHeader
         title={t("Usimamizi wa Maudhui", "Content Management")}
         subtitle={t(
@@ -643,7 +628,7 @@ export default function ContentSection() {
       />
 
       {/* Tabs — scroll horizontal kwenye simu */}
-      <div className="flex gap-2 mb-5 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-2 w-full min-w-0">
         {TABS.map(({ key, label, icon: Icon }) => {
           const isActive = activeTab === key;
           return (
@@ -665,7 +650,7 @@ export default function ContentSection() {
       </div>
 
       {/* Content */}
-      <div className="w-full">
+      <div className="w-full min-w-0">
         {activeTab === "banners" && <BannersTab lang={lang} />}
         {activeTab === "testimonials" && <TestimonialsTab lang={lang} />}
         {activeTab === "faqs" && <FaqsTab lang={lang} />}
