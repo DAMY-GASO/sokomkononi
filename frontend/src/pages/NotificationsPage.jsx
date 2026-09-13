@@ -1,3 +1,9 @@
+// ============================================================
+// NotificationsPage.jsx
+// Ukurasa wa taarifa za mtumiaji — bilingual.
+// notif.title na notif.body zinaweza kuwa { sw, en }.
+// ============================================================
+
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -18,13 +24,15 @@ import {
   BellRing,
 } from "lucide-react";
 import { COLORS, FONTS, formatTZS, timeAgo } from "./dashboard/components/shared";
-import { useNotifications } from "../config/notificationsStore.js";
+import {
+  useNotifications,
+  getLocalizedField,
+} from "../config/notificationsStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 
-// Notification types with icon + color — "leading", "advertisement" na
-// "listing_fee" ni matukio halisi (yanayotengenezwa na
-// notificationsStore.js moja kwa moja BoostSasa/LeadingSasa/AdvertiseSasa
-// na DashboardShell.markListingPaid zinapofanikiwa).
+// ============================================================
+// NOTIFICATION TYPES — icon + color
+// ============================================================
 const NOTIFICATION_TYPES = {
   message: { icon: MessageSquare, color: COLORS.gold, bg: "rgba(232,163,61,0.12)" },
   deal: { icon: HandCoins, color: COLORS.green, bg: "rgba(47,109,79,0.12)" },
@@ -36,7 +44,6 @@ const NOTIFICATION_TYPES = {
   reminder: { icon: Clock, color: "#2563EB", bg: "rgba(37,99,235,0.12)" },
   listing_released: { icon: BellRing, color: COLORS.rust, bg: "rgba(193,80,46,0.12)" },
   system: { icon: Info, color: COLORS.night, bg: "rgba(16,26,46,0.08)" },
-  // Canonical events kutoka notificationsStore
   "dispute.resolved": { icon: Shield, color: COLORS.green, bg: "rgba(47,109,79,0.12)" },
   "payment.proof_submitted": { icon: Receipt, color: "#8A5A16", bg: "rgba(232,163,61,0.16)" },
 };
@@ -44,6 +51,12 @@ const NOTIFICATION_TYPES = {
 function NotificationItem({ notif, onMarkRead, onRemove, lang }) {
   const config = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.system;
   const Icon = config.icon;
+
+  // ============================================================
+  // BILINGUAL — title na body zinaweza kuwa string au { sw, en }
+  // ============================================================
+  const title = getLocalizedField(notif.title, lang);
+  const body = getLocalizedField(notif.body, lang);
 
   return (
     <div
@@ -66,7 +79,7 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang }) {
             style={{ color: COLORS.night }}
             className={`text-sm ${notif.read ? "font-medium" : "font-semibold"}`}
           >
-            {notif.title}
+            {title}
           </p>
           {!notif.read && (
             <span
@@ -75,12 +88,14 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang }) {
             />
           )}
         </div>
-        <p
-          style={{ color: "rgba(16,26,46,0.65)" }}
-          className="text-xs mb-2 leading-relaxed"
-        >
-          {notif.body}
-        </p>
+        {body && (
+          <p
+            style={{ color: "rgba(16,26,46,0.65)" }}
+            className="text-xs mb-2 leading-relaxed"
+          >
+            {body}
+          </p>
+        )}
         <div className="flex items-center gap-3">
           <span style={{ color: "rgba(16,26,46,0.4)" }} className="text-[10px]">
             {timeAgo(notif.at, lang)}
@@ -123,7 +138,7 @@ export default function NotificationsPage() {
   const { lang } = useLanguage();
   const { notifications, unreadCount, markRead, markAllRead, remove, clearAll } =
     useNotifications("user");
-  const [filter, setFilter] = useState("all"); // all | unread
+  const [filter, setFilter] = useState("all");
 
   const filtered =
     filter === "unread" ? notifications.filter((n) => !n.read) : notifications;
@@ -174,7 +189,6 @@ export default function NotificationsPage() {
             : "Notifications about transactions, messages, and account changes."}
         </p>
 
-        {/* Filters and actions */}
         {notifications.length > 0 && (
           <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
             <div
