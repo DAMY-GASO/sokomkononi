@@ -31,7 +31,12 @@ function getLocalizedArray(field, lang) {
   return field?.[lang] || field?.sw || [];
 }
 
-function ListingPicker({ listings, selectedId, onSelect, lang }) {
+function ListingPicker({
+  listings,
+  selectedId,
+  onSelect,
+  lang,
+}) {
   if (listings.length === 0) {
     return (
       <div
@@ -71,7 +76,10 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
               {Icon && <Icon size={18} color={COLORS.gold} />}
             </div>
             <div className="flex-1 min-w-0">
-              <p style={{ color: COLORS.night }} className="text-sm font-semibold truncate">
+              <p
+                style={{ color: COLORS.night }}
+                className="text-sm font-semibold truncate"
+              >
                 {l.title}
               </p>
               <p
@@ -83,7 +91,10 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
             </div>
             {boosted && (
               <span
-                style={{ background: "rgba(232,163,61,0.16)", color: "#8A5A16" }}
+                style={{
+                  background: "rgba(232,163,61,0.16)",
+                  color: "#8A5A16",
+                }}
                 className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full shrink-0"
               >
                 <Rocket size={11} />{" "}
@@ -99,6 +110,10 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
   );
 }
 
+// ============================================================
+// PACKAGE CARD — layout ya ndani centered (label + check juu,
+// price katikati, benefits chini)
+// ============================================================
 function PackageCard({ pkg, selected, onSelect, lang }) {
   const isFeatured = pkg.key === "featured";
   const label = getLocalized(pkg.label, lang);
@@ -111,17 +126,19 @@ function PackageCard({ pkg, selected, onSelect, lang }) {
         borderColor: selected ? COLORS.gold : COLORS.sandLine,
         background: "white",
       }}
-      className="relative flex flex-col gap-3 p-4 rounded-2xl border text-left w-full"
+      className="relative flex flex-col items-center text-center gap-3 p-4 rounded-2xl border w-full"
     >
       {isFeatured && (
         <span
           style={{ background: COLORS.rust, color: "white" }}
-          className="absolute -top-2.5 left-4 text-[10px] font-bold px-2 py-0.5 rounded-full"
+          className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
         >
           {lang === "sw" ? "Maarufu Zaidi" : "Most Popular"}
         </span>
       )}
-      <div className="flex items-center justify-between">
+
+      {/* Label + Check juu */}
+      <div className="flex items-center justify-center gap-2 w-full">
         <span style={{ color: COLORS.night }} className="text-sm font-bold">
           {label}
         </span>
@@ -135,7 +152,9 @@ function PackageCard({ pkg, selected, onSelect, lang }) {
           {selected && <Check size={12} color={COLORS.night} />}
         </span>
       </div>
-      <div className="flex items-baseline gap-1.5">
+
+      {/* Price katikati */}
+      <div className="flex items-baseline justify-center gap-1.5">
         <span style={{ color: COLORS.rust }} className="text-lg font-bold">
           {formatTZS(pkg.price)}
         </span>
@@ -143,14 +162,20 @@ function PackageCard({ pkg, selected, onSelect, lang }) {
           / {lang === "sw" ? `siku ${pkg.days}` : `${pkg.days} days`}
         </span>
       </div>
-      <ul className="flex flex-col gap-1.5">
+
+      {/* Benefits chini */}
+      <ul className="flex flex-col gap-1.5 w-full text-left">
         {benefits.map((b, i) => (
           <li
             key={i}
             style={{ color: "rgba(16,26,46,0.65)" }}
             className="flex items-start gap-1.5 text-xs"
           >
-            <TrendingUp size={12} className="shrink-0 mt-0.5" color={COLORS.green} />
+            <TrendingUp
+              size={12}
+              className="shrink-0 mt-0.5"
+              color={COLORS.green}
+            />
             {b}
           </li>
         ))}
@@ -177,7 +202,10 @@ export default function BoostSasa({
   const [done, setDone] = useState(null);
 
   useEffect(() => {
-    if (initialListingId && liveListings.some((l) => l.id === initialListingId)) {
+    if (
+      initialListingId &&
+      liveListings.some((l) => l.id === initialListingId)
+    ) {
       setSelectedId(initialListingId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -235,7 +263,11 @@ export default function BoostSasa({
   if (stage === "done" && done) {
     return (
       <div
-        style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }}
+        style={{
+          background: COLORS.sand,
+          fontFamily: FONTS.body,
+          minHeight: "600px",
+        }}
         className="w-full flex items-center justify-center p-6"
       >
         <div
@@ -254,11 +286,14 @@ export default function BoostSasa({
           >
             {lang === "sw" ? "Boost Imewekwa" : "Boost Applied"}
           </h2>
-          <p style={{ color: "rgba(16,26,46,0.65)" }} className="text-sm mb-5">
+          <p
+            style={{ color: "rgba(16,26,46,0.65)" }}
+            className="text-sm mb-5"
+          >
             {lang === "sw" ? (
               <>
-                "{done.listing.title}" sasa ina <b>{done.pkgLabel}</b> na itaonekana zaidi kwa
-                wanunuzi hadi{" "}
+                "{done.listing.title}" sasa ina <b>{done.pkgLabel}</b> na itaonekana
+                zaidi kwa wanunuzi hadi{" "}
                 {new Date(done.expiresAt).toLocaleDateString("sw-TZ", {
                   day: "numeric",
                   month: "long",
@@ -267,8 +302,8 @@ export default function BoostSasa({
               </>
             ) : (
               <>
-                "{done.listing.title}" now has <b>{done.pkgLabel}</b> and will be more visible to
-                buyers until{" "}
+                "{done.listing.title}" now has <b>{done.pkgLabel}</b> and will be
+                more visible to buyers until{" "}
                 {new Date(done.expiresAt).toLocaleDateString("en-US", {
                   day: "numeric",
                   month: "long",
@@ -294,7 +329,11 @@ export default function BoostSasa({
 
   return (
     <div
-      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }}
+      style={{
+        background: COLORS.sand,
+        fontFamily: FONTS.body,
+        minHeight: "600px",
+      }}
       className="w-full p-4 sm:p-6"
     >
       <style>{`
@@ -302,23 +341,37 @@ export default function BoostSasa({
       `}</style>
 
       <div className="max-w-2xl mx-auto">
-        <h1
-          style={{ fontFamily: FONTS.display, color: COLORS.night }}
-          className="text-2xl sm:text-3xl font-semibold mb-1"
-        >
-          {lang === "sw" ? "Boost Sasa" : "Boost Now"}
-        </h1>
-        <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-6">
-          {lang === "sw"
-            ? "Ongeza mwonekano wa mali yako kwa wanunuzi wengi zaidi."
-            : "Increase your property's visibility to more buyers."}
-        </p>
+        {/* ============================================================ */}
+        {/* HEADER — CENTERED */}
+        {/* ============================================================ */}
+        <div className="mb-6 text-center">
+          <h1
+            style={{ fontFamily: FONTS.display, color: COLORS.night }}
+            className="text-2xl sm:text-3xl font-semibold"
+          >
+            {lang === "sw" ? "Boost Sasa" : "Boost Now"}
+          </h1>
+          <p
+            style={{ color: "rgba(16,26,46,0.6)" }}
+            className="text-sm mt-2 max-w-xl mx-auto"
+          >
+            {lang === "sw"
+              ? "Ongeza mwonekano wa mali yako kwa wanunuzi wengi zaidi."
+              : "Increase your property's visibility to more buyers."}
+          </p>
+        </div>
 
         {stage !== "paying" && (
           <>
-            <div className="flex flex-col gap-2 mb-3">
-              <span style={{ color: COLORS.night }} className="text-sm font-medium">
-                1. {lang === "sw" ? "Chagua Mali (Live pekee)" : "Select Property (Live only)"}
+            <div className="flex flex-col gap-2 mb-3 text-center">
+              <span
+                style={{ color: COLORS.night }}
+                className="text-sm font-medium"
+              >
+                1.{" "}
+                {lang === "sw"
+                  ? "Chagua Mali (Live pekee)"
+                  : "Select Property (Live only)"}
               </span>
             </div>
             <div className="mb-6">
@@ -336,8 +389,11 @@ export default function BoostSasa({
           <>
             {stage !== "paying" && (
               <>
-                <div className="flex flex-col gap-2 mb-3">
-                  <span style={{ color: COLORS.night }} className="text-sm font-medium">
+                <div className="flex flex-col gap-2 mb-3 text-center">
+                  <span
+                    style={{ color: COLORS.night }}
+                    className="text-sm font-medium"
+                  >
                     2. {lang === "sw" ? "Chagua Package" : "Choose Package"}
                   </span>
                 </div>
@@ -369,32 +425,40 @@ export default function BoostSasa({
               />
             ) : (
               <>
+                {/* Warning — centered */}
                 {selectedListing && isBoostActive(selectedListing) && (
                   <div
-                    style={{ background: "rgba(232,163,61,0.1)", color: "#8A5A16" }}
-                    className="flex items-center gap-2 text-xs rounded-lg px-3 py-2.5 mb-4"
+                    style={{
+                      background: "rgba(232,163,61,0.1)",
+                      color: "#8A5A16",
+                    }}
+                    className="flex flex-col items-center text-center gap-2 text-xs rounded-lg px-3 py-3 mb-4"
                   >
                     <Clock size={14} />
-                    {lang === "sw" ? (
-                      <>
-                        Mali hii tayari ina Boost inayoisha baada ya siku{" "}
-                        {boostDaysRemaining(selectedListing)} — ukiendelea, siku{" "}
-                        {selectedPackage.days} za {selectedPackageLabel} zitaongezwa baada ya hapo.
-                      </>
-                    ) : (
-                      <>
-                        This listing already has a Boost expiring in{" "}
-                        {boostDaysRemaining(selectedListing)} days — if you continue,{" "}
-                        {selectedPackage.days} more days of {selectedPackageLabel} will be added
-                        after that.
-                      </>
-                    )}
+                    <span className="max-w-md">
+                      {lang === "sw" ? (
+                        <>
+                          Mali hii tayari ina Boost inayoisha baada ya siku{" "}
+                          {boostDaysRemaining(selectedListing)} — ukiendelea, siku{" "}
+                          {selectedPackage.days} za {selectedPackageLabel}{" "}
+                          zitaongezwa baada ya hapo.
+                        </>
+                      ) : (
+                        <>
+                          This listing already has a Boost expiring in{" "}
+                          {boostDaysRemaining(selectedListing)} days — if you
+                          continue, {selectedPackage.days} more days of{" "}
+                          {selectedPackageLabel} will be added after that.
+                        </>
+                      )}
+                    </span>
                   </div>
                 )}
 
+                {/* Total + Button — centered */}
                 <div
                   style={{ borderColor: COLORS.sandLine, background: "white" }}
-                  className="rounded-2xl border p-4 flex items-center justify-between mb-4"
+                  className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"
                 >
                   <div>
                     <p
@@ -403,7 +467,10 @@ export default function BoostSasa({
                     >
                       {lang === "sw" ? "Jumla ya Malipo" : "Total Payment"}
                     </p>
-                    <p style={{ color: COLORS.rust }} className="text-lg font-bold">
+                    <p
+                      style={{ color: COLORS.rust }}
+                      className="text-lg font-bold"
+                    >
                       {formatTZS(selectedPackage.price)}
                     </p>
                   </div>
@@ -414,7 +481,7 @@ export default function BoostSasa({
                       background: canBoost ? COLORS.gold : COLORS.sandLine,
                       color: canBoost ? COLORS.night : "rgba(16,26,46,0.4)",
                     }}
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm"
+                    className="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
                   >
                     <Rocket size={15} />
                     {lang === "sw" ? "Lipa na Boost" : "Pay and Boost"}
