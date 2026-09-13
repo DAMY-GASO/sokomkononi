@@ -2,7 +2,7 @@
 // PromotionsSection.jsx
 // Admin — Promotions Dashboard (boosted, featured, leading,
 // advertised, campaigns).
-// Bilingual + mobile-responsive.
+// Bilingual + mobile-responsive (imeboreshwa).
 // ============================================================
 
 import React, { useState } from "react";
@@ -57,7 +57,7 @@ const PROMO_TYPES = {
 };
 
 // ============================================================
-// PROMOTION CARD
+// PROMOTION CARD — responsive
 // ============================================================
 function PromotionCard({ listing, lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -73,21 +73,21 @@ function PromotionCard({ listing, lang }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-3 sm:p-4"
+      className="rounded-xl border p-3 sm:p-4 w-full min-w-0"
     >
       <div className="flex items-start gap-3">
         <div
           style={{ background: type.bg }}
-          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
         >
-          <Icon size={16} color={type.color} />
+          <Icon size={15} color={type.color} />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span
               style={{ background: type.bg, color: type.color }}
-              className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
             >
               {type.label?.[lang] || type.label?.sw}
             </span>
@@ -97,7 +97,7 @@ function PromotionCard({ listing, lang }) {
                   background: "rgba(193,80,46,0.14)",
                   color: COLORS.rust,
                 }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
               >
                 {t("Inaisha Hivi Karibuni", "Expiring Soon")}
               </span>
@@ -109,12 +109,12 @@ function PromotionCard({ listing, lang }) {
           </p>
 
           <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5 flex-wrap">
-            <span className="flex items-center gap-1">
-              <CatIcon size={11} />
-              {catLabel}
+            <span className="flex items-center gap-1 min-w-0">
+              <CatIcon size={11} className="shrink-0" />
+              <span className="truncate">{catLabel}</span>
             </span>
-            <span className="text-gray-300">•</span>
-            <span>{formatTZS(listing.price)}</span>
+            <span className="text-gray-300 shrink-0">•</span>
+            <span className="shrink-0">{formatTZS(listing.price)}</span>
           </div>
 
           <p className="text-[11px] text-gray-400 mt-1 truncate">
@@ -131,7 +131,7 @@ function PromotionCard({ listing, lang }) {
           >
             {listing.daysRemaining}d
           </p>
-          <p className="text-[10px] text-gray-400">
+          <p className="text-[10px] text-gray-400 whitespace-nowrap">
             {t("zimebaki", "remaining")}
           </p>
         </div>
@@ -141,7 +141,7 @@ function PromotionCard({ listing, lang }) {
 }
 
 // ============================================================
-// CAMPAIGN CARD
+// CAMPAIGN CARD — responsive
 // ============================================================
 function CampaignCard({ campaign, lang, onEdit }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -163,21 +163,21 @@ function CampaignCard({ campaign, lang, onEdit }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-4"
+      className="rounded-xl border p-3 sm:p-4 w-full min-w-0"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
           <div
             style={{ background: "rgba(232,163,61,0.16)" }}
-            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
           >
-            <Sparkles size={16} color="#8A5A16" />
+            <Sparkles size={15} color="#8A5A16" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span
                 style={{ background: `${status.color}15`, color: status.color }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
               >
                 {status.label}
               </span>
@@ -187,29 +187,31 @@ function CampaignCard({ campaign, lang, onEdit }) {
                     background: "rgba(193,80,46,0.14)",
                     color: COLORS.rust,
                   }}
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
                 >
                   -{campaign.discountPercent}%
                 </span>
               )}
             </div>
-            <p className="text-sm font-semibold text-gray-800">
+            <p className="text-sm font-semibold text-gray-800 truncate">
               {campaign.name?.[lang] || campaign.name?.sw}
             </p>
             {campaign.description?.[lang] && (
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
                 {campaign.description[lang]}
               </p>
             )}
-            <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
-              <Calendar size={10} />
-              {new Date(campaign.startDate).toLocaleDateString(
-                lang === "sw" ? "sw-TZ" : "en-US"
-              )}{" "}
-              →{" "}
-              {new Date(campaign.endDate).toLocaleDateString(
-                lang === "sw" ? "sw-TZ" : "en-US"
-              )}
+            <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1 flex-wrap">
+              <Calendar size={10} className="shrink-0" />
+              <span className="truncate">
+                {new Date(campaign.startDate).toLocaleDateString(
+                  lang === "sw" ? "sw-TZ" : "en-US"
+                )}{" "}
+                →{" "}
+                {new Date(campaign.endDate).toLocaleDateString(
+                  lang === "sw" ? "sw-TZ" : "en-US"
+                )}
+              </span>
             </p>
           </div>
         </div>
@@ -217,7 +219,8 @@ function CampaignCard({ campaign, lang, onEdit }) {
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => onEdit(campaign)}
-            className="p-1.5 text-gray-400 hover:text-[#E8A33D]"
+            className="p-1.5 text-gray-400 hover:text-[#E8A33D] transition-colors"
+            aria-label={t("Hariri", "Edit")}
           >
             <Pencil size={14} />
           </button>
@@ -227,7 +230,8 @@ function CampaignCard({ campaign, lang, onEdit }) {
                 removeCampaign(campaign.id);
               }
             }}
-            className="p-1.5 text-gray-400 hover:text-[#C1502E]"
+            className="p-1.5 text-gray-400 hover:text-[#C1502E] transition-colors"
+            aria-label={t("Ondoa", "Remove")}
           >
             <Trash2 size={14} />
           </button>
@@ -238,7 +242,7 @@ function CampaignCard({ campaign, lang, onEdit }) {
 }
 
 // ============================================================
-// CAMPAIGN FORM
+// CAMPAIGN FORM — responsive
 // ============================================================
 function CampaignForm({ initial, onSave, onCancel, lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -255,11 +259,11 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-4 flex flex-col gap-3"
+      className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0"
     >
       {/* Name bilingual */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Jina (SW)", "Name (SW)")}
           </span>
@@ -268,10 +272,10 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             onChange={(e) =>
               setForm({ ...form, name: { ...form.name, sw: e.target.value } })
             }
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Jina (EN)", "Name (EN)")}
           </span>
@@ -280,14 +284,14 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             onChange={(e) =>
               setForm({ ...form, name: { ...form.name, en: e.target.value } })
             }
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
       </div>
 
       {/* Description bilingual */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Maelezo (SW)", "Description (SW)")}
           </span>
@@ -300,10 +304,10 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
               })
             }
             rows={2}
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Maelezo (EN)", "Description (EN)")}
           </span>
@@ -316,14 +320,14 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
               })
             }
             rows={2}
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
           />
         </label>
       </div>
 
-      {/* Discount + Dates */}
+      {/* Discount + Dates — grid 1 kwenye simu, 3 kwenye desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Punguzo (%)", "Discount (%)")}
           </span>
@@ -338,10 +342,10 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
                 discountPercent: Number(e.target.value) || 0,
               })
             }
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Tarehe ya Kuanza", "Start Date")}
           </span>
@@ -349,10 +353,10 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             type="date"
             value={form.startDate?.slice(0, 10) || ""}
             onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Tarehe ya Mwisho", "End Date")}
           </span>
@@ -360,7 +364,7 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             type="date"
             value={form.endDate?.slice(0, 10) || ""}
             onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
       </div>
@@ -371,7 +375,7 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
           type="checkbox"
           checked={form.active !== false}
           onChange={(e) => setForm({ ...form, active: e.target.checked })}
-          className="w-4 h-4 rounded text-[#E8A33D]"
+          className="w-4 h-4 rounded text-[#E8A33D] shrink-0"
         />
         <span className="text-xs text-gray-600">
           {t("Kampeni hai", "Active campaign")}
@@ -379,7 +383,7 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
       </label>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={onCancel}
           className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600"
@@ -389,7 +393,7 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
         <button
           onClick={() => onSave(form)}
           style={{ background: COLORS.gold, color: COLORS.night }}
-          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
         >
           <Save size={13} />
           {t("Hifadhi", "Save")}
@@ -450,7 +454,7 @@ export default function PromotionsSection() {
           )}
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full min-w-0">
           {promotions.boostedListings.map((l) => (
             <PromotionCard key={l.id} listing={l} lang={lang} />
           ))}
@@ -469,7 +473,7 @@ export default function PromotionsSection() {
           )}
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full min-w-0">
           {promotions.leadingListings.map((l) => (
             <PromotionCard key={l.id} listing={l} lang={lang} />
           ))}
@@ -488,7 +492,7 @@ export default function PromotionsSection() {
           )}
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full min-w-0">
           {promotions.advertisedListings.map((l) => (
             <PromotionCard key={l.id} listing={l} lang={lang} />
           ))}
@@ -498,7 +502,7 @@ export default function PromotionsSection() {
 
     if (activeTab === "campaigns") {
       return (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full min-w-0">
           <button
             onClick={() => {
               setAddingCampaign(true);
@@ -559,7 +563,7 @@ export default function PromotionsSection() {
   };
 
   return (
-    <>
+    <div className="w-full max-w-7xl mx-auto">
       <SectionHeader
         title={t("Matangazo & Kampeni", "Promotions & Campaigns")}
         subtitle={t(
@@ -568,8 +572,8 @@ export default function PromotionsSection() {
         )}
       />
 
-      {/* Primary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
+      {/* Primary Stats — responsive */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-5">
         <StatBox
           label={t("Boosted", "Boosted")}
           value={promotions.counts.boosted}
@@ -599,12 +603,12 @@ export default function PromotionsSection() {
       {/* Revenue Breakdown */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
-        className="rounded-xl border p-4 mb-5"
+        className="rounded-xl border p-3 sm:p-4 mb-5"
       >
         <h3 className="text-sm font-semibold text-gray-800 mb-3">
           {t("Mapato kwa Aina", "Revenue by Type")}
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
           <RevenueRow
             label={t("Boost", "Boost")}
             value={promotions.revenueByType.boost}
@@ -623,8 +627,8 @@ export default function PromotionsSection() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+      {/* Tabs — scroll horizontal kwenye simu */}
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
         {TABS.map(({ key, label, icon: Icon, count }) => {
           const isActive = activeTab === key;
           return (
@@ -636,7 +640,7 @@ export default function PromotionsSection() {
                 color: isActive ? COLORS.sand : COLORS.night,
                 borderColor: COLORS.sandLine,
               }}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-full border whitespace-nowrap shrink-0"
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
             >
               <Icon size={13} />
               {label}
@@ -658,29 +662,29 @@ export default function PromotionsSection() {
 
       {/* Tab Content */}
       {renderTabContent()}
-    </>
+    </div>
   );
 }
 
 // ============================================================
-// HELPER COMPONENTS
+// HELPER COMPONENTS — responsive
 // ============================================================
 function StatBox({ label, value, icon: Icon, color }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-3 min-w-0"
+      className="rounded-xl border p-2.5 sm:p-3 min-w-0"
     >
       <div
         style={{ background: `${color}15` }}
-        className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5"
+        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center mb-1.5"
       >
-        <Icon size={14} color={color} />
+        <Icon size={13} color={color} />
       </div>
-      <p className="text-base sm:text-lg font-bold text-gray-800 break-words">
+      <p className="text-sm sm:text-base lg:text-lg font-bold text-gray-800 break-words leading-tight">
         {value}
       </p>
-      <p className="text-[10px] text-gray-500 leading-tight">{label}</p>
+      <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{label}</p>
     </div>
   );
 }
@@ -689,14 +693,14 @@ function RevenueRow({ label, value, color }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-      className="rounded-lg border p-3"
+      className="rounded-lg border p-2.5 sm:p-3 min-w-0"
     >
       <p className="text-[10px] font-semibold text-gray-500 uppercase">
         {label}
       </p>
       <p
         style={{ color }}
-        className="text-sm sm:text-base font-bold mt-1"
+        className="text-sm sm:text-base font-bold mt-1 break-words leading-tight"
       >
         {formatTZS(value)}
       </p>
@@ -708,9 +712,9 @@ function EmptyState({ icon: Icon, title, subtitle }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-2xl border-2 border-dashed p-10 text-center"
+      className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
     >
-      <Icon size={48} className="mx-auto text-gray-300 mb-3" />
+      <Icon size={40} className="mx-auto text-gray-300 mb-3" />
       <h3 className="font-semibold text-gray-800 mb-1">{title}</h3>
       <p className="text-sm text-gray-500">{subtitle}</p>
     </div>
