@@ -1,14 +1,11 @@
 // ============================================================
 // RecentActivity.jsx
 // Recent activity — inahesabu events kutoka listings + deals.
+// Bilingual + header centered.
 // ============================================================
 
 import React, { useMemo } from "react";
-import {
-  PlusCircle,
-  Rocket,
-  MessagesSquare,
-} from "lucide-react";
+import { PlusCircle, Rocket, MessagesSquare } from "lucide-react";
 import { COLORS, timeAgo } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 
@@ -75,8 +72,14 @@ export default function RecentActivity({ listings, deals, onNavigate, lang }) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-3 gap-2">
-        <h2 style={{ color: COLORS.night }} className="text-sm font-semibold">
+      {/* ============================================================ */}
+      {/* HEADER — CENTERED */}
+      {/* ============================================================ */}
+      <div className="flex flex-col items-center gap-1 mb-4 text-center">
+        <h2
+          style={{ color: COLORS.night }}
+          className="text-sm font-semibold"
+        >
           {t("Shughuli za Hivi Karibuni", "Recent Activity")}
         </h2>
         <button
