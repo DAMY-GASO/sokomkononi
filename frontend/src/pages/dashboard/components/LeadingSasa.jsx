@@ -16,6 +16,15 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import PaymentGateway from "./PaymentGateway";
 
+// ============================================================
+// HELPER — kuchagua lugha sahihi kwa field inayoweza kuwa { sw, en }
+// ============================================================
+function getLocalized(field, lang) {
+  if (!field) return "";
+  if (typeof field === "string") return field;
+  return field?.[lang] || field?.sw || "";
+}
+
 function ListingPicker({ listings, selectedId, onSelect, lang }) {
   if (listings.length === 0) {
     return (
@@ -110,6 +119,12 @@ export default function LeadingSasa({
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const canLead = Boolean(selectedListing);
 
+  // ============================================================
+  // BILINGUAL — label na desc
+  // ============================================================
+  const leadingLabel = getLocalized(leadingFee.label, lang);
+  const leadingDesc = getLocalized(leadingFee.desc, lang);
+
   const handleConfirm = () => {
     if (!canLead) return;
     setStage("paying");
@@ -130,7 +145,7 @@ export default function LeadingSasa({
     // 2) Rekodi transaction kwenye My Transactions
     addTransaction({
       type: "leading",
-      title: `${leadingFee.label} — ${selectedListing.title}`,
+      title: `${leadingLabel} — ${selectedListing.title}`,
       property: selectedListing.title,
       amount: leadingFee.price,
       status: "completed",
@@ -216,7 +231,7 @@ export default function LeadingSasa({
           style={{ fontFamily: FONTS.display, color: COLORS.night }}
           className="text-2xl sm:text-3xl font-semibold mb-1"
         >
-          {lang === "sw" ? "Leading Fee" : "Leading Fee"}
+          {lang === "sw" ? "Ada ya Kipaumbele" : "Leading Fee"}
         </h1>
         <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-6">
           {lang === "sw"
@@ -247,11 +262,11 @@ export default function LeadingSasa({
             {stage === "paying" ? (
               <PaymentGateway
                 amount={leadingFee.price}
-                title={leadingFee.label}
+                title={leadingLabel}
                 description={
                   lang === "sw"
-                    ? `Leading Fee kwa "${selectedListing.title}" — siku ${leadingFee.days}`
-                    : `Leading Fee for "${selectedListing.title}" — ${leadingFee.days} days`
+                    ? `${leadingLabel} kwa "${selectedListing.title}" — siku ${leadingFee.days}`
+                    : `${leadingLabel} for "${selectedListing.title}" — ${leadingFee.days} days`
                 }
                 onCancel={() => setStage("select")}
                 onSuccess={handlePaymentSuccess}
@@ -273,13 +288,13 @@ export default function LeadingSasa({
                       style={{ color: COLORS.night }}
                       className="text-sm font-semibold mb-0.5"
                     >
-                      {leadingFee.label} —{" "}
+                      {leadingLabel} —{" "}
                       {lang === "sw"
                         ? `siku ${leadingFee.days}`
                         : `${leadingFee.days} days`}
                     </p>
                     <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs">
-                      {leadingFee.desc}
+                      {leadingDesc}
                     </p>
                   </div>
                 </div>
