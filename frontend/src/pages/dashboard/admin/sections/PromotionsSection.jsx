@@ -21,7 +21,8 @@ import {
   Users,
   Sparkles,
 } from "lucide-react";
-import { COLORS, formatTZS, timeAgo, getCategory } from "../shared/constants.js";
+import { COLORS, formatTZS, timeAgo } from "../shared/constants.js";
+import { getCategory, getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
@@ -30,7 +31,6 @@ import {
   updateCampaign,
   removeCampaign,
 } from "../../../../config/promotionsStore.js";
-import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 
 // ============================================================
 // PROMOTION TYPE CONFIG
