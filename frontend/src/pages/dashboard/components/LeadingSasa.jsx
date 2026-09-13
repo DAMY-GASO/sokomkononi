@@ -65,7 +65,10 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
               {Icon && <Icon size={18} color={COLORS.gold} />}
             </div>
             <div className="flex-1 min-w-0">
-              <p style={{ color: COLORS.night }} className="text-sm font-semibold truncate">
+              <p
+                style={{ color: COLORS.night }}
+                className="text-sm font-semibold truncate"
+              >
                 {l.title}
               </p>
               <p
@@ -77,7 +80,10 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
             </div>
             {leading && (
               <span
-                style={{ background: "rgba(47,109,79,0.14)", color: COLORS.green }}
+                style={{
+                  background: "rgba(47,109,79,0.14)",
+                  color: COLORS.green,
+                }}
                 className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full shrink-0"
               >
                 <TrendingUp size={11} />{" "}
@@ -110,7 +116,10 @@ export default function LeadingSasa({
   const [done, setDone] = useState(null);
 
   useEffect(() => {
-    if (initialListingId && liveListings.some((l) => l.id === initialListingId)) {
+    if (
+      initialListingId &&
+      liveListings.some((l) => l.id === initialListingId)
+    ) {
       setSelectedId(initialListingId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,7 +169,11 @@ export default function LeadingSasa({
   if (stage === "done" && done) {
     return (
       <div
-        style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }}
+        style={{
+          background: COLORS.sand,
+          fontFamily: FONTS.body,
+          minHeight: "600px",
+        }}
         className="w-full flex items-center justify-center p-6"
       >
         <div
@@ -179,11 +192,14 @@ export default function LeadingSasa({
           >
             {lang === "sw" ? "Leading Fee Imewekwa" : "Leading Fee Applied"}
           </h2>
-          <p style={{ color: "rgba(16,26,46,0.65)" }} className="text-sm mb-5">
+          <p
+            style={{ color: "rgba(16,26,46,0.65)" }}
+            className="text-sm mb-5"
+          >
             {lang === "sw" ? (
               <>
-                "{done.listing.title}" sasa itaonekana JUU ya matokeo ya utafutaji na kivinjari
-                (browse) hadi{" "}
+                "{done.listing.title}" sasa itaonekana JUU ya matokeo ya utafutaji
+                na kivinjari (browse) hadi{" "}
                 {new Date(done.expiresAt).toLocaleDateString("sw-TZ", {
                   day: "numeric",
                   month: "long",
@@ -192,8 +208,8 @@ export default function LeadingSasa({
               </>
             ) : (
               <>
-                "{done.listing.title}" will now appear at the TOP of search and browse results
-                until{" "}
+                "{done.listing.title}" will now appear at the TOP of search and
+                browse results until{" "}
                 {new Date(done.expiresAt).toLocaleDateString("en-US", {
                   day: "numeric",
                   month: "long",
@@ -210,7 +226,9 @@ export default function LeadingSasa({
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="w-full py-3 rounded-xl font-semibold text-sm"
           >
-            {lang === "sw" ? "Weka Leading Nyingine" : "Apply Leading to Another"}
+            {lang === "sw"
+              ? "Weka Leading Nyingine"
+              : "Apply Leading to Another"}
           </button>
         </div>
       </div>
@@ -219,7 +237,11 @@ export default function LeadingSasa({
 
   return (
     <div
-      style={{ background: COLORS.sand, fontFamily: FONTS.body, minHeight: "600px" }}
+      style={{
+        background: COLORS.sand,
+        fontFamily: FONTS.body,
+        minHeight: "600px",
+      }}
       className="w-full p-4 sm:p-6"
     >
       <style>{`
@@ -227,23 +249,36 @@ export default function LeadingSasa({
       `}</style>
 
       <div className="max-w-2xl mx-auto">
-        <h1
-          style={{ fontFamily: FONTS.display, color: COLORS.night }}
-          className="text-2xl sm:text-3xl font-semibold mb-1"
-        >
-          {lang === "sw" ? "Ada ya Kipaumbele" : "Leading Fee"}
-        </h1>
-        <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-6">
-          {lang === "sw"
-            ? 'Pandisha bidhaa yako JUU kabisa ya matokeo ya utafutaji kwa wanunuzi wote — kipaumbele maalum, si tu "featured".'
-            : 'Push your listing to the very TOP of search results for all buyers — real priority, not just "featured".'}
-        </p>
+        {/* ============================================================ */}
+        {/* HEADER — CENTERED */}
+        {/* ============================================================ */}
+        <div className="mb-6 text-center">
+          <h1
+            style={{ fontFamily: FONTS.display, color: COLORS.night }}
+            className="text-2xl sm:text-3xl font-semibold"
+          >
+            {lang === "sw" ? "Ada ya Kipaumbele" : "Leading Fee"}
+          </h1>
+          <p
+            style={{ color: "rgba(16,26,46,0.6)" }}
+            className="text-sm mt-2 max-w-xl mx-auto"
+          >
+            {lang === "sw"
+              ? 'Pandisha bidhaa yako JUU kabisa ya matokeo ya utafutaji kwa wanunuzi wote — kipaumbele maalum, si tu "featured".'
+              : 'Push your listing to the very TOP of search results for all buyers — real priority, not just "featured".'}
+          </p>
+        </div>
 
         {stage !== "paying" && (
           <>
-            <div className="flex flex-col gap-2 mb-3">
-              <span style={{ color: COLORS.night }} className="text-sm font-medium">
-                {lang === "sw" ? "Chagua Mali (Live pekee)" : "Select Property (Live only)"}
+            <div className="flex flex-col gap-2 mb-3 text-center">
+              <span
+                style={{ color: COLORS.night }}
+                className="text-sm font-medium"
+              >
+                {lang === "sw"
+                  ? "Chagua Mali (Live pekee)"
+                  : "Select Property (Live only)"}
               </span>
             </div>
             <div className="mb-6">
@@ -273,9 +308,10 @@ export default function LeadingSasa({
               />
             ) : (
               <>
+                {/* Info card — centered */}
                 <div
                   style={{ borderColor: COLORS.sandLine, background: "white" }}
-                  className="rounded-2xl border p-4 flex items-start gap-3 mb-4"
+                  className="rounded-2xl border p-4 flex flex-col items-center text-center gap-2 mb-4"
                 >
                   <div
                     style={{ background: `${COLORS.green}15` }}
@@ -293,37 +329,48 @@ export default function LeadingSasa({
                         ? `siku ${leadingFee.days}`
                         : `${leadingFee.days} days`}
                     </p>
-                    <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-xs">
+                    <p
+                      style={{ color: "rgba(16,26,46,0.55)" }}
+                      className="text-xs max-w-md mx-auto"
+                    >
                       {leadingDesc}
                     </p>
                   </div>
                 </div>
 
+                {/* Warning — centered */}
                 {selectedListing && isLeadingActive(selectedListing) && (
                   <div
-                    style={{ background: "rgba(47,109,79,0.1)", color: COLORS.green }}
-                    className="flex items-center gap-2 text-xs rounded-lg px-3 py-2.5 mb-4"
+                    style={{
+                      background: "rgba(47,109,79,0.1)",
+                      color: COLORS.green,
+                    }}
+                    className="flex flex-col items-center text-center gap-2 text-xs rounded-lg px-3 py-3 mb-4"
                   >
                     <Clock size={14} />
-                    {lang === "sw" ? (
-                      <>
-                        Mali hii tayari ina Leading inayoisha baada ya siku{" "}
-                        {leadingDaysRemaining(selectedListing)} — ukiendelea, siku{" "}
-                        {leadingFee.days} zaidi zitaongezwa baada ya hapo.
-                      </>
-                    ) : (
-                      <>
-                        This listing already has Leading expiring in{" "}
-                        {leadingDaysRemaining(selectedListing)} days — if you continue,{" "}
-                        {leadingFee.days} more days will be added after that.
-                      </>
-                    )}
+                    <span className="max-w-md">
+                      {lang === "sw" ? (
+                        <>
+                          Mali hii tayari ina Leading inayoisha baada ya siku{" "}
+                          {leadingDaysRemaining(selectedListing)} — ukiendelea,
+                          siku {leadingFee.days} zaidi zitaongezwa baada ya hapo.
+                        </>
+                      ) : (
+                        <>
+                          This listing already has Leading expiring in{" "}
+                          {leadingDaysRemaining(selectedListing)} days — if you
+                          continue, {leadingFee.days} more days will be added
+                          after that.
+                        </>
+                      )}
+                    </span>
                   </div>
                 )}
 
+                {/* Total + Button — centered */}
                 <div
                   style={{ borderColor: COLORS.sandLine, background: "white" }}
-                  className="rounded-2xl border p-4 flex items-center justify-between mb-4"
+                  className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"
                 >
                   <div>
                     <p
@@ -332,7 +379,10 @@ export default function LeadingSasa({
                     >
                       {lang === "sw" ? "Jumla ya Malipo" : "Total Payment"}
                     </p>
-                    <p style={{ color: COLORS.rust }} className="text-lg font-bold">
+                    <p
+                      style={{ color: COLORS.rust }}
+                      className="text-lg font-bold"
+                    >
                       {formatTZS(leadingFee.price)}
                     </p>
                   </div>
@@ -343,10 +393,12 @@ export default function LeadingSasa({
                       background: canLead ? COLORS.gold : COLORS.sandLine,
                       color: canLead ? COLORS.night : "rgba(16,26,46,0.4)",
                     }}
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm"
+                    className="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
                   >
                     <TrendingUp size={15} />
-                    {lang === "sw" ? "Lipa na Panda Juu" : "Pay and Promote"}
+                    {lang === "sw"
+                      ? "Lipa na Panda Juu"
+                      : "Pay and Promote"}
                   </button>
                 </div>
               </>
