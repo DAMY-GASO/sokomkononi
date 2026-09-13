@@ -2,7 +2,7 @@
 // PromotionsSection.jsx
 // Admin — Promotions Dashboard (boosted, featured, leading,
 // advertised, campaigns).
-// Bilingual + mobile-responsive (imeboreshwa).
+// Bilingual + mobile-responsive (imeboreshwa zaidi).
 // ============================================================
 
 import React, { useState } from "react";
@@ -10,15 +10,12 @@ import {
   Rocket,
   TrendingUp,
   Megaphone,
-  Award,
   DollarSign,
   Plus,
   Trash2,
   Pencil,
   Save,
-  X,
   Calendar,
-  Users,
   Sparkles,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../shared/constants.js";
@@ -73,9 +70,9 @@ function PromotionCard({ listing, lang }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-3 sm:p-4 w-full min-w-0"
+      className="rounded-xl border p-3 sm:p-4 w-full max-w-full min-w-0 overflow-hidden"
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2 sm:gap-3 w-full min-w-0">
         <div
           style={{ background: type.bg }}
           className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
@@ -83,11 +80,11 @@ function PromotionCard({ listing, lang }) {
           <Icon size={15} color={type.color} />
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-1.5 flex-wrap mb-1">
             <span
               style={{ background: type.bg, color: type.color }}
-              className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
             >
               {type.label?.[lang] || type.label?.sw}
             </span>
@@ -97,14 +94,14 @@ function PromotionCard({ listing, lang }) {
                   background: "rgba(193,80,46,0.14)",
                   color: COLORS.rust,
                 }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {t("Inaisha Hivi Karibuni", "Expiring Soon")}
               </span>
             )}
           </div>
 
-          <p className="text-sm font-semibold text-gray-800 truncate">
+          <p className="text-sm font-semibold text-gray-800 truncate w-full">
             {listing.title}
           </p>
 
@@ -117,7 +114,7 @@ function PromotionCard({ listing, lang }) {
             <span className="shrink-0">{formatTZS(listing.price)}</span>
           </div>
 
-          <p className="text-[11px] text-gray-400 mt-1 truncate">
+          <p className="text-[11px] text-gray-400 mt-1 truncate w-full">
             {t("Muuzaji", "Seller")}: {listing.seller_name || listing.seller || "—"}
           </p>
         </div>
@@ -163,21 +160,21 @@ function CampaignCard({ campaign, lang, onEdit }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-3 sm:p-4 w-full min-w-0"
+      className="rounded-xl border p-3 sm:p-4 w-full max-w-full min-w-0 overflow-hidden"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
+      <div className="flex items-start justify-between gap-3 w-full min-w-0">
+        <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
           <div
             style={{ background: "rgba(232,163,61,0.16)" }}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
           >
             <Sparkles size={15} color="#8A5A16" />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-1.5 flex-wrap mb-1">
               <span
                 style={{ background: `${status.color}15`, color: status.color }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {status.label}
               </span>
@@ -187,21 +184,21 @@ function CampaignCard({ campaign, lang, onEdit }) {
                     background: "rgba(193,80,46,0.14)",
                     color: COLORS.rust,
                   }}
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 >
                   -{campaign.discountPercent}%
                 </span>
               )}
             </div>
-            <p className="text-sm font-semibold text-gray-800 truncate">
+            <p className="text-sm font-semibold text-gray-800 truncate w-full">
               {campaign.name?.[lang] || campaign.name?.sw}
             </p>
             {campaign.description?.[lang] && (
-              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 break-words">
                 {campaign.description[lang]}
               </p>
             )}
-            <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1 flex-wrap">
+            <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1 flex-wrap w-full">
               <Calendar size={10} className="shrink-0" />
               <span className="truncate">
                 {new Date(campaign.startDate).toLocaleDateString(
@@ -259,11 +256,11 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0"
+      className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full max-w-full min-w-0 overflow-hidden"
     >
       {/* Name bilingual */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1 min-w-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
+        <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Jina (SW)", "Name (SW)")}
           </span>
@@ -272,10 +269,10 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             onChange={(e) =>
               setForm({ ...form, name: { ...form.name, sw: e.target.value } })
             }
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
-        <label className="flex flex-col gap-1 min-w-0">
+        <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Jina (EN)", "Name (EN)")}
           </span>
@@ -284,14 +281,14 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             onChange={(e) =>
               setForm({ ...form, name: { ...form.name, en: e.target.value } })
             }
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
       </div>
 
       {/* Description bilingual */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1 min-w-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
+        <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Maelezo (SW)", "Description (SW)")}
           </span>
@@ -304,10 +301,10 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
               })
             }
             rows={2}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
           />
         </label>
-        <label className="flex flex-col gap-1 min-w-0">
+        <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Maelezo (EN)", "Description (EN)")}
           </span>
@@ -320,14 +317,14 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
               })
             }
             rows={2}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
           />
         </label>
       </div>
 
-      {/* Discount + Dates — grid 1 kwenye simu, 3 kwenye desktop */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        <label className="flex flex-col gap-1 min-w-0">
+      {/* Discount + Dates */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full min-w-0">
+        <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Punguzo (%)", "Discount (%)")}
           </span>
@@ -342,10 +339,10 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
                 discountPercent: Number(e.target.value) || 0,
               })
             }
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
-        <label className="flex flex-col gap-1 min-w-0">
+        <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Tarehe ya Kuanza", "Start Date")}
           </span>
@@ -353,10 +350,10 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             type="date"
             value={form.startDate?.slice(0, 10) || ""}
             onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
-        <label className="flex flex-col gap-1 min-w-0">
+        <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Tarehe ya Mwisho", "End Date")}
           </span>
@@ -364,13 +361,13 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             type="date"
             value={form.endDate?.slice(0, 10) || ""}
             onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
       </div>
 
       {/* Active */}
-      <label className="flex items-center gap-2 cursor-pointer">
+      <label className="flex items-center gap-2 cursor-pointer w-full min-w-0">
         <input
           type="checkbox"
           checked={form.active !== false}
@@ -383,10 +380,10 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
       </label>
 
       {/* Actions */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
         <button
           onClick={onCancel}
-          className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600"
+          className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600 shrink-0"
         >
           {t("Ghairi", "Cancel")}
         </button>
@@ -509,7 +506,7 @@ export default function PromotionsSection() {
               setEditingCampaign(null);
             }}
             style={{ background: COLORS.gold, color: COLORS.night }}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
           >
             <Plus size={13} />
             {t("Kampeni Mpya", "New Campaign")}
@@ -563,7 +560,7 @@ export default function PromotionsSection() {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
       <SectionHeader
         title={t("Matangazo & Kampeni", "Promotions & Campaigns")}
         subtitle={t(
@@ -573,7 +570,7 @@ export default function PromotionsSection() {
       />
 
       {/* Primary Stats — responsive */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-5 w-full">
         <StatBox
           label={t("Boosted", "Boosted")}
           value={promotions.counts.boosted}
@@ -600,15 +597,15 @@ export default function PromotionsSection() {
         />
       </div>
 
-      {/* Revenue Breakdown */}
+      {/* Revenue Breakdown — responsive */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
-        className="rounded-xl border p-3 sm:p-4 mb-5"
+        className="rounded-xl border p-3 sm:p-4 mb-5 w-full min-w-0 overflow-hidden"
       >
         <h3 className="text-sm font-semibold text-gray-800 mb-3">
           {t("Mapato kwa Aina", "Revenue by Type")}
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full">
           <RevenueRow
             label={t("Boost", "Boost")}
             value={promotions.revenueByType.boost}
@@ -628,7 +625,7 @@ export default function PromotionsSection() {
       </div>
 
       {/* Tabs — scroll horizontal kwenye simu */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
         {TABS.map(({ key, label, icon: Icon, count }) => {
           const isActive = activeTab === key;
           return (
@@ -661,7 +658,7 @@ export default function PromotionsSection() {
       </div>
 
       {/* Tab Content */}
-      {renderTabContent()}
+      <div className="w-full min-w-0">{renderTabContent()}</div>
     </div>
   );
 }
@@ -673,18 +670,20 @@ function StatBox({ label, value, icon: Icon, color }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-2.5 sm:p-3 min-w-0"
+      className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full overflow-hidden"
     >
       <div
         style={{ background: `${color}15` }}
-        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center mb-1.5"
+        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center mb-1.5 shrink-0"
       >
         <Icon size={13} color={color} />
       </div>
       <p className="text-sm sm:text-base lg:text-lg font-bold text-gray-800 break-words leading-tight">
         {value}
       </p>
-      <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{label}</p>
+      <p className="text-[10px] text-gray-500 leading-tight mt-0.5 break-words">
+        {label}
+      </p>
     </div>
   );
 }
@@ -693,9 +692,9 @@ function RevenueRow({ label, value, color }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-      className="rounded-lg border p-2.5 sm:p-3 min-w-0"
+      className="rounded-lg border p-2.5 sm:p-3 min-w-0 w-full overflow-hidden"
     >
-      <p className="text-[10px] font-semibold text-gray-500 uppercase">
+      <p className="text-[10px] font-semibold text-gray-500 uppercase truncate">
         {label}
       </p>
       <p
@@ -715,8 +714,8 @@ function EmptyState({ icon: Icon, title, subtitle }) {
       className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
     >
       <Icon size={40} className="mx-auto text-gray-300 mb-3" />
-      <h3 className="font-semibold text-gray-800 mb-1">{title}</h3>
-      <p className="text-sm text-gray-500">{subtitle}</p>
+      <h3 className="font-semibold text-gray-800 mb-1 break-words">{title}</h3>
+      <p className="text-sm text-gray-500 break-words">{subtitle}</p>
     </div>
   );
 }
