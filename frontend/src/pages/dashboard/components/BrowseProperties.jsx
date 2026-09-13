@@ -64,7 +64,6 @@ function reservationCountdown(reservedUntil, lang) {
 
 // ============================================================
 // CARD IMAGE RESOLVER
-// Priority: property.imageUrl → category.imageUrl → null (icon fallback)
 // ============================================================
 function resolveCardImage(property, category) {
   if (property?.imageUrl) return property.imageUrl;
@@ -388,7 +387,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
                   <CatIcon size={16} className="text-gray-400 flex-shrink-0" />
                 )}
                 <span className="text-sm text-gray-600">
-                  {cat.label[lang] || cat.label.sw}
+                  {cat.label?.[lang] || cat.label?.sw}
                 </span>
               </label>
             );
@@ -531,12 +530,18 @@ export default function BrowseProperties({ lang = "sw" }) {
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (p) =>
+      result = result.filter((p) => {
+        const category = getCategory(p.category);
+        const catLabelSw = category?.label?.sw?.toLowerCase() || "";
+        const catLabelEn = category?.label?.en?.toLowerCase() || "";
+        return (
           p.title.toLowerCase().includes(q) ||
           p.location.toLowerCase().includes(q) ||
-          (p.region && p.region.toLowerCase().includes(q))
-      );
+          (p.region && p.region.toLowerCase().includes(q)) ||
+          catLabelSw.includes(q) ||
+          catLabelEn.includes(q)
+        );
+      });
     }
 
     if (filters.categories.length > 0) {
@@ -581,7 +586,6 @@ export default function BrowseProperties({ lang = "sw" }) {
       }
     };
 
-    // Leading Fee inapewa kipaumbele; kisha AVAILABLE → RESERVED → SOLD
     const statusRank = (p) => {
       if (p.status === "live") return 0;
       if (p.status === "reserved") return 1;
