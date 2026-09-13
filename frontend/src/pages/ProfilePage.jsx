@@ -41,76 +41,13 @@ const COLORS = {
   sandLine: "#E6E2D6",
 };
 
-// ============================================================
-// MOCK DATA (bilingual)
-// ============================================================
-const MOCK_USER = {
-  id: "u1",
-  name: "John Doe",
-  email: "john@email.com",
-  phone: "0743 895 038",
-  location: { sw: "Dar es Salaam, Tanzania", en: "Dar es Salaam, Tanzania" },
-  bio: {
-    sw: "Muuzaji wa mali na mfanyabiashara wa Tanzania. Nina uzoefu wa miaka 5 katika sekta ya mali.",
-    en: "Property seller and Tanzanian businessman. I have 5 years of experience in the real estate sector.",
-  },
-  avatar: null,
-  role: "seller",
-  memberSince: "2024-01-15",
-  verified: true,
-  stats: {
-    listings: 12,
-    saved: 8,
-    deals: 5,
-    rating: 4.8,
-    reviews: 23,
-  },
-};
-
-const RECENT_ACTIVITY = [
-  {
-    id: 1,
-    type: "listing",
-    title: { sw: "Umeongeza mali mpya", en: "You added a new listing" },
-    description: { sw: "Nyumba ya Ghorofa Mbezi Beach", en: "Mbezi Beach Apartment Building" },
-    time: { sw: "Saa 2 zilizopita", en: "2 hours ago" },
-  },
-  {
-    id: 2,
-    type: "message",
-    title: { sw: "Ujumbe mpya kutoka kwa Sarah", en: "New message from Sarah" },
-    description: {
-      sw: "Habari! Nina nia ya kununua nyumba yako...",
-      en: "Hi! I'm interested in buying your house...",
-    },
-    time: { sw: "Siku 1 iliyopita", en: "1 day ago" },
-  },
-  {
-    id: 3,
-    type: "sale",
-    title: { sw: "Mali yako imeuzwa", en: "Your listing was sold" },
-    description: {
-      sw: "Toyota Harrier 2016 — TZS 42,000,000",
-      en: "Toyota Harrier 2016 — TZS 42,000,000",
-    },
-    time: { sw: "Siku 3 zilizopita", en: "3 days ago" },
-  },
-  {
-    id: 4,
-    type: "save",
-    title: { sw: "Umehifadhi mali", en: "You saved a listing" },
-    description: { sw: "Kiwanja Ubungo — Hati Miliki", en: "Ubungo Plot — Full Title" },
-    time: { sw: "Wiki 1 iliyopita", en: "1 week ago" },
-  },
-];
-
 // Mikoa 31 ya Tanzania
 const REGIONS = [
   "Arusha", "Dar es Salaam", "Dodoma", "Geita", "Iringa", "Kagera", "Katavi",
   "Kigoma", "Kilimanjaro", "Lindi", "Manyara", "Mara", "Mbeya", "Morogoro",
   "Mtwara", "Mwanza", "Njombe", "Pwani", "Rukwa", "Ruvuma", "Shinyanga",
   "Simiyu", "Singida", "Songwe", "Tabora", "Tanga",
-  "Kaskazini Pemba", "Kusini Pemba", "Kaskazini Ungujaa", "Kusini Unguja",
+  "Kaskazini Pemba", "Kusini Pemba", "Kaskazini Unguja", "Kusini Unguja",
   "Mjini Magharibi",
 ];
 
@@ -130,11 +67,11 @@ const TABS = [
 // ============================================================
 function StatCard({ icon: Icon, value, label, color }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4">
-      <div className="flex items-center gap-3">
+    <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+      <div className="flex flex-col items-center gap-2">
         <div
           style={{ background: `${color}15` }}
-          className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
         >
           <Icon size={18} color={color} />
         </div>
@@ -150,8 +87,14 @@ function StatCard({ icon: Icon, value, label, color }) {
 // ============================================================
 // OVERVIEW TAB
 // ============================================================
-function OverviewTab({ user, lang, activities }) {
-  const stats = user?.stats || MOCK_USER.stats;
+function OverviewTab({ user, lang, activities = [] }) {
+  const stats = user?.stats || {
+    listings: 0,
+    saved: 0,
+    deals: 0,
+    rating: 0,
+    reviews: 0,
+  };
   const bioText =
     typeof user.bio === "object"
       ? user.bio?.[lang] || user.bio?.sw
@@ -215,7 +158,9 @@ function OverviewTab({ user, lang, activities }) {
               <p className="text-xs text-gray-500">
                 {lang === "sw" ? "Barua Pepe" : "Email"}
               </p>
-              <p className="text-sm text-gray-800 truncate">{user.email || "—"}</p>
+              <p className="text-sm text-gray-800 truncate">
+                {user.email || "—"}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -261,43 +206,51 @@ function OverviewTab({ user, lang, activities }) {
         </div>
       </div>
 
-      {/* Recent Activity */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-800">
-            {lang === "sw" ? "Shughuli za Hivi Karibuni" : "Recent Activity"}
-          </h3>
-          <Link
-            to="/dashboard"
-            className="text-xs text-[#E8A33D] font-medium hover:underline"
-          >
-            {lang === "sw" ? "Tazama Zote" : "View All"} →
-          </Link>
-        </div>
-        <div className="space-y-3">
-          {activities.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0"
+      {/* Recent Activity — kama ipo */}
+      {activities.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <div className="flex flex-col items-center text-center gap-1 mb-4">
+            <h3 className="font-semibold text-gray-800">
+              {lang === "sw"
+                ? "Shughuli za Hivi Karibuni"
+                : "Recent Activity"}
+            </h3>
+            <Link
+              to="/dashboard"
+              className="text-xs text-[#E8A33D] font-medium hover:underline"
             >
-              <div className="w-2 h-2 rounded-full bg-[#E8A33D] mt-2 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-800">
-                  {typeof activity.title === "object" ? activity.title[lang] : activity.title}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {typeof activity.description === "object"
-                    ? activity.description[lang]
-                    : activity.description}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {typeof activity.time === "object" ? activity.time[lang] : activity.time}
-                </p>
+              {lang === "sw" ? "Tazama Zote" : "View All"} →
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {activities.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0"
+              >
+                <div className="w-2 h-2 rounded-full bg-[#E8A33D] mt-2 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-800">
+                    {typeof activity.title === "object"
+                      ? activity.title[lang]
+                      : activity.title}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {typeof activity.description === "object"
+                      ? activity.description[lang]
+                      : activity.description}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {typeof activity.time === "object"
+                      ? activity.time[lang]
+                      : activity.time}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -306,9 +259,12 @@ function OverviewTab({ user, lang, activities }) {
 // EDIT PROFILE TAB
 // ============================================================
 function EditProfileTab({ user, lang, onSave }) {
-  const initialBio = typeof user.bio === "object" ? user.bio?.[lang] || "" : user.bio || "";
+  const initialBio =
+    typeof user.bio === "object" ? user.bio?.[lang] || "" : user.bio || "";
   const initialLocation =
-    typeof user.location === "object" ? user.location?.[lang] || "" : user.location || "";
+    typeof user.location === "object"
+      ? user.location?.[lang] || ""
+      : user.location || "";
 
   const [form, setForm] = useState({
     name: user.name || "",
@@ -344,24 +300,33 @@ function EditProfileTab({ user, lang, onSave }) {
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Avatar */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-800 mb-4">
+        <h3 className="font-semibold text-gray-800 mb-4 text-center">
           {lang === "sw" ? "Picha ya Wasifu" : "Profile Picture"}
         </h3>
-        <div className="flex items-center gap-5">
+        <div className="flex flex-col items-center gap-4">
           <div className="relative">
             <div className="w-20 h-20 rounded-full bg-[#E8A33D]/10 flex items-center justify-center text-[#E8A33D] font-bold text-3xl overflow-hidden">
               {avatar ? (
-                <img src={avatar} alt="" className="w-full h-full object-cover" />
+                <img
+                  src={avatar}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 user.name?.charAt(0) || "U"
               )}
             </div>
             <label className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#E8A33D] text-[#101A2E] flex items-center justify-center cursor-pointer hover:bg-[#B87A1F] transition-colors">
               <Camera size={14} />
-              <input type="file" accept="image/*" hidden onChange={handleAvatarChange} />
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={handleAvatarChange}
+              />
             </label>
           </div>
-          <div>
+          <div className="text-center">
             <p className="text-sm font-medium text-gray-800">
               {lang === "sw" ? "Badilisha Picha" : "Change Picture"}
             </p>
@@ -376,81 +341,97 @@ function EditProfileTab({ user, lang, onSave }) {
 
       {/* Personal Info */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-800 mb-4">
+        <h3 className="font-semibold text-gray-800 mb-4 text-center">
           {lang === "sw" ? "Taarifa za Kibinafsi" : "Personal Information"}
         </h3>
-        <div className="space-y-4">
+        <div className="space-y-4 max-w-md mx-auto">
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 text-center">
               {lang === "sw" ? "Jina Kamili" : "Full Name"}
             </label>
             <div className="relative">
-              <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <User
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
               <input
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 text-center">
               {lang === "sw" ? "Barua Pepe" : "Email"}
             </label>
             <div className="relative">
-              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Mail
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
               <input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 text-center">
               {lang === "sw" ? "Namba ya Simu" : "Phone Number"}
             </label>
             <div className="relative">
-              <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Phone
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
               <input
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 text-center">
               {lang === "sw" ? "Mahali" : "Location"}
             </label>
             <div className="relative">
-              <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <MapPin
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
               <input
                 type="text"
                 value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+                onChange={(e) =>
+                  setForm({ ...form, location: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 text-center">
               {lang === "sw" ? "Kuhusu Mimi" : "About Me"}
             </label>
             <textarea
               rows={4}
               value={form.bio}
               onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors resize-none text-center"
               placeholder={
-                lang === "sw" ? "Andika kuhusu wewe mwenyewe..." : "Write about yourself..."
+                lang === "sw"
+                  ? "Andika kuhusu wewe mwenyewe..."
+                  : "Write about yourself..."
               }
             />
           </div>
@@ -458,7 +439,7 @@ function EditProfileTab({ user, lang, onSave }) {
       </div>
 
       {/* Save Button */}
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-col items-center gap-2">
         {saved && (
           <span className="flex items-center gap-1.5 text-sm text-[#2F6D4F] font-medium">
             <Check size={16} />
@@ -471,8 +452,12 @@ function EditProfileTab({ user, lang, onSave }) {
           className="px-6 py-2.5 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
         >
           {saving
-            ? lang === "sw" ? "Inahifadhi..." : "Saving..."
-            : lang === "sw" ? "Hifadhi Mabadiliko" : "Save Changes"}
+            ? lang === "sw"
+              ? "Inahifadhi..."
+              : "Saving..."
+            : lang === "sw"
+              ? "Hifadhi Mabadiliko"
+              : "Save Changes"}
         </button>
       </div>
     </form>
@@ -508,7 +493,9 @@ function SecurityTab({ lang }) {
       return;
     }
     if (form.new !== form.confirm) {
-      setError(lang === "sw" ? "Nenosiri hazifanani" : "Passwords don't match");
+      setError(
+        lang === "sw" ? "Nenosiri hazifanani" : "Passwords don't match"
+      );
       return;
     }
 
@@ -522,27 +509,36 @@ function SecurityTab({ lang }) {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-800 mb-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-xl border border-gray-100 p-5"
+      >
+        <h3 className="font-semibold text-gray-800 mb-4 text-center">
           {lang === "sw" ? "Badilisha Nenosiri" : "Change Password"}
         </h3>
-        <div className="space-y-4">
+        <div className="space-y-4 max-w-md mx-auto">
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 text-center">
               {lang === "sw" ? "Nenosiri la Sasa" : "Current Password"}
             </label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Lock
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
               <input
                 type={showCurrent ? "text" : "password"}
                 value={form.current}
-                onChange={(e) => setForm({ ...form, current: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+                onChange={(e) =>
+                  setForm({ ...form, current: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
               />
               <button
                 type="button"
                 onClick={() => setShowCurrent(!showCurrent)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label={lang === "sw" ? "Onyesha" : "Show"}
               >
                 {showCurrent ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
@@ -550,21 +546,25 @@ function SecurityTab({ lang }) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 text-center">
               {lang === "sw" ? "Nenosiri Jipya" : "New Password"}
             </label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Lock
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
               <input
                 type={showNew ? "text" : "password"}
                 value={form.new}
                 onChange={(e) => setForm({ ...form, new: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
               />
               <button
                 type="button"
                 onClick={() => setShowNew(!showNew)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label={lang === "sw" ? "Onyesha" : "Show"}
               >
                 {showNew ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
@@ -572,21 +572,29 @@ function SecurityTab({ lang }) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-              {lang === "sw" ? "Thibitisha Nenosiri Jipya" : "Confirm New Password"}
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 text-center">
+              {lang === "sw"
+                ? "Thibitisha Nenosiri Jipya"
+                : "Confirm New Password"}
             </label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Lock
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
               <input
                 type={showConfirm ? "text" : "password"}
                 value={form.confirm}
-                onChange={(e) => setForm({ ...form, confirm: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+                onChange={(e) =>
+                  setForm({ ...form, confirm: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label={lang === "sw" ? "Onyesha" : "Show"}
               >
                 {showConfirm ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
@@ -594,48 +602,54 @@ function SecurityTab({ lang }) {
           </div>
 
           {error && (
-            <p className="text-sm text-[#C1502E] flex items-center gap-1.5">
+            <p className="text-sm text-[#C1502E] flex items-center justify-center gap-1.5">
               <AlertTriangle size={14} />
               {error}
             </p>
           )}
 
           {saved && (
-            <p className="text-sm text-[#2F6D4F] flex items-center gap-1.5">
+            <p className="text-sm text-[#2F6D4F] flex items-center justify-center gap-1.5">
               <Check size={16} />
-              {lang === "sw" ? "Nenosiri limebadilishwa!" : "Password changed!"}
+              {lang === "sw"
+                ? "Nenosiri limebadilishwa!"
+                : "Password changed!"}
             </p>
           )}
 
           <button
             type="submit"
             disabled={saving}
-            className="w-full sm:w-auto px-6 py-2.5 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
+            className="w-full px-6 py-2.5 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
           >
             {saving
-              ? lang === "sw" ? "Inabadilisha..." : "Changing..."
-              : lang === "sw" ? "Badilisha Nenosiri" : "Change Password"}
+              ? lang === "sw"
+                ? "Inabadilisha..."
+                : "Changing..."
+              : lang === "sw"
+                ? "Badilisha Nenosiri"
+                : "Change Password"}
           </button>
         </div>
       </form>
 
       {/* Two Factor */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#2F6D4F]/10 flex items-center justify-center">
-              <Shield size={18} className="text-[#2F6D4F]" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-800 text-sm">
-                {lang === "sw" ? "Uthibitishaji wa Hatua Mbili" : "Two-Factor Authentication"}
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {lang === "sw"
-                  ? "Ongeza usalama kwa akaunti yako"
-                  : "Add extra security to your account"}
-              </p>
-            </div>
+        <div className="flex flex-col items-center text-center gap-2">
+          <div className="w-10 h-10 rounded-lg bg-[#2F6D4F]/10 flex items-center justify-center">
+            <Shield size={18} className="text-[#2F6D4F]" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-800 text-sm">
+              {lang === "sw"
+                ? "Uthibitishaji wa Hatua Mbili"
+                : "Two-Factor Authentication"}
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {lang === "sw"
+                ? "Ongeza usalama kwa akaunti yako"
+                : "Add extra security to your account"}
+            </p>
           </div>
           <button className="text-sm font-medium text-[#E8A33D] hover:underline">
             {lang === "sw" ? "Washa" : "Enable"}
@@ -645,7 +659,7 @@ function SecurityTab({ lang }) {
 
       {/* Sessions */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-800 mb-4">
+        <h3 className="font-semibold text-gray-800 mb-4 text-center">
           {lang === "sw" ? "Vifaa Vilivyounganishwa" : "Active Sessions"}
         </h3>
         <div className="space-y-3">
@@ -656,7 +670,8 @@ function SecurityTab({ lang }) {
               </div>
               <div>
                 <p className="text-sm text-gray-800">
-                  Chrome • {lang === "sw" ? "Dar es Salaam" : "Dar es Salaam"}
+                  Chrome •{" "}
+                  {lang === "sw" ? "Dar es Salaam" : "Dar es Salaam"}
                 </p>
                 <p className="text-xs text-gray-500">
                   {lang === "sw" ? "Kifaa cha sasa" : "Current device"}
@@ -672,12 +687,12 @@ function SecurityTab({ lang }) {
 
       {/* Danger Zone */}
       <div className="bg-white rounded-xl border border-[#C1502E]/30 p-5">
-        <h3 className="font-semibold text-[#C1502E] mb-4 flex items-center gap-2">
+        <h3 className="font-semibold text-[#C1502E] mb-4 flex items-center justify-center gap-2 text-center">
           <AlertTriangle size={18} />
           {lang === "sw" ? "Eneo la Hatari" : "Danger Zone"}
         </h3>
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-center text-center gap-3">
             <div>
               <p className="text-sm font-medium text-gray-800">
                 {lang === "sw" ? "Futa Akaunti" : "Delete Account"}
@@ -716,7 +731,8 @@ function NotificationsTab({ lang }) {
     push_promotions: false,
   });
 
-  const toggle = (key) => setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggle = (key) =>
+    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const Toggle = ({ checked, onChange }) => (
     <button
@@ -739,26 +755,50 @@ function NotificationsTab({ lang }) {
     {
       title: lang === "sw" ? "Barua Pepe" : "Email",
       items: [
-        { key: "email_deals", label: lang === "sw" ? "Deals na Mali" : "Deals and Properties" },
+        {
+          key: "email_deals",
+          label: lang === "sw" ? "Deals na Mali" : "Deals and Properties",
+        },
         { key: "email_messages", label: lang === "sw" ? "Ujumbe" : "Messages" },
-        { key: "email_promotions", label: lang === "sw" ? "Matangazo" : "Promotions" },
-        { key: "email_newsletter", label: lang === "sw" ? "Newsletter" : "Newsletter" },
+        {
+          key: "email_promotions",
+          label: lang === "sw" ? "Matangazo" : "Promotions",
+        },
+        {
+          key: "email_newsletter",
+          label: lang === "sw" ? "Newsletter" : "Newsletter",
+        },
       ],
     },
     {
       title: "SMS",
       items: [
-        { key: "sms_deals", label: lang === "sw" ? "Deals na Mali" : "Deals and Properties" },
+        {
+          key: "sms_deals",
+          label: lang === "sw" ? "Deals na Mali" : "Deals and Properties",
+        },
         { key: "sms_messages", label: lang === "sw" ? "Ujumbe" : "Messages" },
-        { key: "sms_promotions", label: lang === "sw" ? "Matangazo" : "Promotions" },
+        {
+          key: "sms_promotions",
+          label: lang === "sw" ? "Matangazo" : "Promotions",
+        },
       ],
     },
     {
       title: lang === "sw" ? "Taarifa za Ndani" : "Push Notifications",
       items: [
-        { key: "push_deals", label: lang === "sw" ? "Deals na Mali" : "Deals and Properties" },
-        { key: "push_messages", label: lang === "sw" ? "Ujumbe" : "Messages" },
-        { key: "push_promotions", label: lang === "sw" ? "Matangazo" : "Promotions" },
+        {
+          key: "push_deals",
+          label: lang === "sw" ? "Deals na Mali" : "Deals and Properties",
+        },
+        {
+          key: "push_messages",
+          label: lang === "sw" ? "Ujumbe" : "Messages",
+        },
+        {
+          key: "push_promotions",
+          label: lang === "sw" ? "Matangazo" : "Promotions",
+        },
       ],
     },
   ];
@@ -766,13 +806,24 @@ function NotificationsTab({ lang }) {
   return (
     <div className="space-y-5">
       {sections.map((section) => (
-        <div key={section.title} className="bg-white rounded-xl border border-gray-100 p-5">
-          <h3 className="font-semibold text-gray-800 mb-4">{section.title}</h3>
+        <div
+          key={section.title}
+          className="bg-white rounded-xl border border-gray-100 p-5"
+        >
+          <h3 className="font-semibold text-gray-800 mb-4 text-center">
+            {section.title}
+          </h3>
           <div className="space-y-3">
             {section.items.map((item) => (
-              <div key={item.key} className="flex items-center justify-between">
+              <div
+                key={item.key}
+                className="flex items-center justify-between"
+              >
                 <span className="text-sm text-gray-700">{item.label}</span>
-                <Toggle checked={settings[item.key]} onChange={() => toggle(item.key)} />
+                <Toggle
+                  checked={settings[item.key]}
+                  onChange={() => toggle(item.key)}
+                />
               </div>
             ))}
           </div>
@@ -802,18 +853,18 @@ function PreferencesTab({ lang, setLang }) {
   return (
     <div className="space-y-5">
       <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-800 mb-4">
+        <h3 className="font-semibold text-gray-800 mb-4 text-center">
           {lang === "sw" ? "Mapendeleo ya Jumla" : "General Preferences"}
         </h3>
-        <div className="space-y-4">
+        <div className="space-y-4 max-w-md mx-auto">
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 text-center">
               {lang === "sw" ? "Lugha" : "Language"}
             </label>
             <select
               value={prefs.language}
               onChange={(e) => handleLanguageChange(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
             >
               <option value="sw">Kiswahili</option>
               <option value="en">English</option>
@@ -821,13 +872,15 @@ function PreferencesTab({ lang, setLang }) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 text-center">
               {lang === "sw" ? "Sarafu" : "Currency"}
             </label>
             <select
               value={prefs.currency}
-              onChange={(e) => setPrefs({ ...prefs, currency: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+              onChange={(e) =>
+                setPrefs({ ...prefs, currency: e.target.value })
+              }
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
             >
               <option value="TZS">TZS - Tanzania Shilling</option>
               <option value="USD">USD - US Dollar</option>
@@ -835,13 +888,13 @@ function PreferencesTab({ lang, setLang }) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 text-center">
               {lang === "sw" ? "Mkoa wa Default" : "Default Region"}
             </label>
             <select
               value={prefs.region}
               onChange={(e) => setPrefs({ ...prefs, region: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
             >
               {REGIONS.map((r) => (
                 <option key={r} value={r}>
@@ -855,7 +908,7 @@ function PreferencesTab({ lang, setLang }) {
 
       {/* Privacy */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-800 mb-4">
+        <h3 className="font-semibold text-gray-800 mb-4 text-center">
           {lang === "sw" ? "Faragha" : "Privacy"}
         </h3>
         <div className="space-y-3">
@@ -871,7 +924,9 @@ function PreferencesTab({ lang, setLang }) {
               </p>
             </div>
             <button
-              onClick={() => setPrefs({ ...prefs, showPhone: !prefs.showPhone })}
+              onClick={() =>
+                setPrefs({ ...prefs, showPhone: !prefs.showPhone })
+              }
               className={`relative w-11 h-6 rounded-full transition-colors ${
                 prefs.showPhone ? "bg-[#E8A33D]" : "bg-gray-200"
               }`}
@@ -896,7 +951,9 @@ function PreferencesTab({ lang, setLang }) {
               </p>
             </div>
             <button
-              onClick={() => setPrefs({ ...prefs, showEmail: !prefs.showEmail })}
+              onClick={() =>
+                setPrefs({ ...prefs, showEmail: !prefs.showEmail })
+              }
               className={`relative w-11 h-6 rounded-full transition-colors ${
                 prefs.showEmail ? "bg-[#E8A33D]" : "bg-gray-200"
               }`}
@@ -925,10 +982,13 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("overview");
 
   const [profileUser, setProfileUser] = useState({
-    ...MOCK_USER,
     ...(user || {}),
     stats: {
-      ...MOCK_USER.stats,
+      listings: 0,
+      saved: 0,
+      deals: 0,
+      rating: 0,
+      reviews: 0,
       ...(user?.stats || {}),
     },
   });
@@ -951,7 +1011,7 @@ export default function ProfilePage() {
     if (setUser) setUser(updated);
   };
 
-  if (!profileUser) {
+  if (!profileUser || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -973,10 +1033,12 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* HERO */}
+      {/* ============================================================ */}
+      {/* HERO — CENTERED */}
+      {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-12 px-4">
         <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+          <div className="flex flex-col items-center text-center gap-4">
             <div className="relative flex-shrink-0">
               <div className="w-24 h-24 rounded-full bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-4xl">
                 {profileUser.name?.charAt(0) || "U"}
@@ -988,17 +1050,23 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <div className="flex-1 text-center sm:text-left">
+            <div>
               <h1 className="text-2xl sm:text-3xl font-bold">
                 {profileUser.name || "User"}
               </h1>
-              <p className="text-white/60 text-sm mt-1">{profileUser.email || "—"}</p>
-              <div className="flex items-center justify-center sm:justify-start gap-3 mt-3">
+              <p className="text-white/60 text-sm mt-1">
+                {profileUser.email || "—"}
+              </p>
+              <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
                 <span className="text-xs font-medium bg-[#E8A33D]/20 text-[#E8A33D] px-3 py-1 rounded-full capitalize">
                   {profileUser.role === "seller"
-                    ? lang === "sw" ? "Muuzaji" : "Seller"
+                    ? lang === "sw"
+                      ? "Muuzaji"
+                      : "Seller"
                     : profileUser.role === "buyer"
-                      ? lang === "sw" ? "Mnunuzi" : "Buyer"
+                      ? lang === "sw"
+                        ? "Mnunuzi"
+                        : "Buyer"
                       : profileUser.role || "user"}
                 </span>
                 {profileUser.verified && (
@@ -1021,10 +1089,12 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* TABS */}
+      {/* ============================================================ */}
+      {/* TABS — CENTERED */}
+      {/* ============================================================ */}
       <div className="bg-white border-b border-gray-100 sticky top-16 z-40">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="flex overflow-x-auto -mb-px">
+          <div className="flex justify-center overflow-x-auto -mb-px">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -1047,17 +1117,25 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* ============================================================ */}
       {/* CONTENT */}
+      {/* ============================================================ */}
       <div className="max-w-5xl mx-auto px-4 py-6">
         {activeTab === "overview" && (
-          <OverviewTab user={profileUser} lang={lang} activities={RECENT_ACTIVITY} />
+          <OverviewTab user={profileUser} lang={lang} activities={[]} />
         )}
         {activeTab === "edit" && (
-          <EditProfileTab user={profileUser} lang={lang} onSave={handleSaveProfile} />
+          <EditProfileTab
+            user={profileUser}
+            lang={lang}
+            onSave={handleSaveProfile}
+          />
         )}
         {activeTab === "security" && <SecurityTab lang={lang} />}
         {activeTab === "notifications" && <NotificationsTab lang={lang} />}
-        {activeTab === "preferences" && <PreferencesTab lang={lang} setLang={setLang} />}
+        {activeTab === "preferences" && (
+          <PreferencesTab lang={lang} setLang={setLang} />
+        )}
       </div>
 
       <Footer />
