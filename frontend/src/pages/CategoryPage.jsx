@@ -28,10 +28,7 @@ import {
   useActiveCategories,
   getCategoryIcon,
 } from "../config/categoriesStore.js";
-import {
-  useSavedListings,
-  toggleSavedListing,
-} from "../config/savedListingsStore.js"; // 👈 kama huna store hii, tazama maelezo chini
+import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import {
   isBoostActive,
   isLeadingActive,
@@ -70,10 +67,6 @@ const COLORS = {
 
 // ============================================================
 // PRICE RANGES — bilingual
-// ============================================================
-// Kama unataka comma kamili (mfano "TZS 50,000,000") badilisha
-// `label` kuwa `formatTZS(min)` / `formatTZS(max)`.
-// Kwa sasa natumia "TZS 50M" (fupi) — rahisi kwa mobile.
 // ============================================================
 const PRICE_RANGES = {
   nyumba: [
@@ -142,7 +135,6 @@ function reservationCountdown(reservedUntil, lang) {
 function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang }) {
   const [localFilters, setLocalFilters] = useState(filters);
 
-  // Sync local filters na props kila filters inabadilika
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
@@ -289,11 +281,7 @@ export default function CategoryPage() {
 
   // Data halisi
   const allPublic = usePublicListings();
-  const savedListings = useSavedListings(); // 👈 array ya IDs au objects
-  const savedIds = useMemo(() => {
-    if (!Array.isArray(savedListings)) return [];
-    return savedListings.map((s) => (typeof s === "string" ? s : s.id));
-  }, [savedListings]);
+  const savedIds = useSavedIds();
 
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("newest");
@@ -381,7 +369,7 @@ export default function CategoryPage() {
   }, [searchQuery, filters, sortBy, categoryKey]);
 
   const handleToggleSave = (id) => {
-    toggleSavedListing(id); // 👈 store halisi
+    toggleSaved(id);
   };
 
   const handleSearchSubmit = (e) => {
@@ -434,7 +422,6 @@ export default function CategoryPage() {
           </nav>
 
           <div className="flex items-center gap-4">
-            {/* === CATEGORY ICON === */}
             <div className="w-14 h-14 rounded-2xl bg-[#E8A33D]/20 flex items-center justify-center flex-shrink-0">
               {CategoryIcon && <CategoryIcon size={28} color={COLORS.gold} />}
             </div>
@@ -738,7 +725,6 @@ function CategoryPropertyCard({
   );
   const Icon = getCategoryIcon(categoryInfo?.iconKey);
 
-  // Picha halisi ya mali (si picha ya category)
   const photoUrl = property.photos?.[0] || property.imageUrl || null;
   const hasImage = Boolean(photoUrl);
 
