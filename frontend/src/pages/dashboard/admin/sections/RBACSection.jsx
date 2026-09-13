@@ -1,7 +1,7 @@
 // ============================================================
 // RBACSection.jsx
 // Admin — Roles & Permissions (RBAC).
-// Bilingual + mobile-responsive.
+// Bilingual + mobile-responsive (imeboreshwa).
 // ============================================================
 
 import React, { useState } from "react";
@@ -42,7 +42,7 @@ const TABS = [
 ];
 
 // ============================================================
-// ROLE CARD
+// ROLE CARD — responsive
 // ============================================================
 function RoleCard({ role, lang, onEdit, onDelete }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -51,12 +51,12 @@ function RoleCard({ role, lang, onEdit, onDelete }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-4"
+      className="rounded-xl border p-3 sm:p-4 w-full min-w-0"
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <p className="text-sm font-semibold text-gray-800">
+            <p className="text-sm font-semibold text-gray-800 truncate">
               {role.label?.[lang] || role.label?.sw || role.key}
             </p>
             {role.isSystem && (
@@ -65,14 +65,14 @@ function RoleCard({ role, lang, onEdit, onDelete }) {
                   background: `${COLORS.night}0D`,
                   color: COLORS.night,
                 }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0"
               >
                 <Lock size={9} />
                 {t("Mfumo", "System")}
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-500 leading-relaxed">
+          <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">
             {role.description?.[lang] || role.description?.sw}
           </p>
         </div>
@@ -112,7 +112,7 @@ function RoleCard({ role, lang, onEdit, onDelete }) {
                   background: `${COLORS.green}15`,
                   color: COLORS.green,
                 }}
-                className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
               >
                 {permission?.label?.[lang] || permission?.label?.sw || perm}
               </span>
@@ -125,7 +125,7 @@ function RoleCard({ role, lang, onEdit, onDelete }) {
 }
 
 // ============================================================
-// ROLE FORM
+// ROLE FORM — responsive
 // ============================================================
 function RoleForm({ initial, lang, onSave, onCancel }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -153,11 +153,11 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-4 flex flex-col gap-3"
+      className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0"
     >
       {/* Label bilingual */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Jina (SW)", "Name (SW)")}
           </span>
@@ -167,10 +167,10 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
               setForm({ ...form, label: { ...form.label, sw: e.target.value } })
             }
             placeholder="Msimamizi wa Mali"
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Jina (EN)", "Name (EN)")}
           </span>
@@ -180,14 +180,14 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
               setForm({ ...form, label: { ...form.label, en: e.target.value } })
             }
             placeholder="Moderator"
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
       </div>
 
       {/* Description bilingual */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Maelezo (SW)", "Description (SW)")}
           </span>
@@ -200,10 +200,10 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
               })
             }
             rows={2}
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Maelezo (EN)", "Description (EN)")}
           </span>
@@ -216,23 +216,23 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
               })
             }
             rows={2}
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
           />
         </label>
       </div>
 
-      {/* Permissions */}
-      <div>
+      {/* Permissions — responsive grid */}
+      <div className="min-w-0">
         <p className="text-[11px] font-semibold text-gray-500 mb-2">
           {t("Ruhusa", "Permissions")}
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {PERMISSIONS.map((perm) => {
             const isChecked = form.permissions.includes(perm.key);
             return (
               <label
                 key={perm.key}
-                className="flex items-center gap-2 px-2.5 py-2 rounded-lg border cursor-pointer transition-colors"
+                className="flex items-center gap-2 px-2.5 py-2 rounded-lg border cursor-pointer transition-colors min-w-0"
                 style={{
                   borderColor: isChecked ? COLORS.green : COLORS.sandLine,
                   background: isChecked ? "rgba(47,109,79,0.05)" : "white",
@@ -242,7 +242,7 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
                   type="checkbox"
                   checked={isChecked}
                   onChange={() => togglePermission(perm.key)}
-                  className="w-4 h-4 rounded text-[#2F6D4F] focus:ring-[#2F6D4F]"
+                  className="w-4 h-4 rounded text-[#2F6D4F] focus:ring-[#2F6D4F] shrink-0"
                 />
                 <span className="text-xs text-gray-700 truncate">
                   {perm.label?.[lang] || perm.label?.sw}
@@ -254,7 +254,7 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={onCancel}
           className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600"
@@ -268,7 +268,7 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
             background: canSave ? COLORS.gold : COLORS.sandLine,
             color: canSave ? COLORS.night : "rgba(16,26,46,0.4)",
           }}
-          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
         >
           <Save size={13} />
           {t("Hifadhi", "Save")}
@@ -279,7 +279,7 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
 }
 
 // ============================================================
-// STAFF CARD
+// STAFF CARD — responsive
 // ============================================================
 function StaffCard({ staff, roles, lang, onEdit, onRemove }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -288,12 +288,12 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-4"
+      className="rounded-xl border p-3 sm:p-4 w-full min-w-0"
     >
       <div className="flex items-start gap-3">
         <div
           style={{ background: `${COLORS.night}0D` }}
-          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0"
         >
           <span className="text-sm font-bold text-[#101A2E]">
             {staff.name?.charAt(0)?.toUpperCase() || "?"}
@@ -308,7 +308,7 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove }) {
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <span
               style={{ background: `${COLORS.gold}20`, color: "#8A5A16" }}
-              className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
             >
               {role?.label?.[lang] || role?.label?.sw || staff.roleKey}
             </span>
@@ -319,7 +319,7 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove }) {
                   : "rgba(16,26,46,0.08)",
                 color: staff.active ? COLORS.green : COLORS.night,
               }}
-              className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
             >
               {staff.active
                 ? t("Hai", "Active")
@@ -337,12 +337,14 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove }) {
           <button
             onClick={() => onEdit(staff)}
             className="p-1.5 text-gray-400 hover:text-[#E8A33D] transition-colors"
+            aria-label={t("Hariri", "Edit")}
           >
             <Pencil size={14} />
           </button>
           <button
             onClick={() => onRemove(staff)}
             className="p-1.5 text-gray-400 hover:text-[#C1502E] transition-colors"
+            aria-label={t("Ondoa", "Remove")}
           >
             <Trash2 size={14} />
           </button>
@@ -353,7 +355,7 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove }) {
 }
 
 // ============================================================
-// STAFF FORM
+// STAFF FORM — responsive
 // ============================================================
 function StaffForm({ initial, roles, lang, onSave, onCancel }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -370,10 +372,10 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-4 flex flex-col gap-3"
+      className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0"
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Jina", "Name")}
           </span>
@@ -381,10 +383,10 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Amina Rashid"
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-gray-500">
             {t("Barua Pepe", "Email")}
           </span>
@@ -393,19 +395,19 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             placeholder="amina@sokomkononi.co.tz"
-            className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
           />
         </label>
       </div>
 
-      <label className="flex flex-col gap-1">
+      <label className="flex flex-col gap-1 min-w-0">
         <span className="text-[11px] font-semibold text-gray-500">
           {t("Role", "Role")}
         </span>
         <select
           value={form.roleKey}
           onChange={(e) => setForm({ ...form, roleKey: e.target.value })}
-          className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
         >
           {roles.map((role) => (
             <option key={role.key} value={role.key}>
@@ -420,14 +422,14 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
           type="checkbox"
           checked={form.active}
           onChange={(e) => setForm({ ...form, active: e.target.checked })}
-          className="w-4 h-4 rounded text-[#E8A33D]"
+          className="w-4 h-4 rounded text-[#E8A33D] shrink-0"
         />
         <span className="text-xs text-gray-600">
           {t("Hai (anaweza kuingia)", "Active (can log in)")}
         </span>
       </label>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={onCancel}
           className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600"
@@ -441,7 +443,7 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
             background: canSave ? COLORS.gold : COLORS.sandLine,
             color: canSave ? COLORS.night : "rgba(16,26,46,0.4)",
           }}
-          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
         >
           <Save size={13} />
           {t("Hifadhi", "Save")}
@@ -467,7 +469,7 @@ export default function RBACSection() {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   return (
-    <>
+    <div className="w-full max-w-7xl mx-auto">
       <SectionHeader
         title={t("Roles & Ruhusa", "Roles & Permissions")}
         subtitle={t(
@@ -477,7 +479,7 @@ export default function RBACSection() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-5">
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
         {TABS.map(({ key, label, icon: Icon }) => {
           const isActive = activeTab === key;
           return (
@@ -489,7 +491,7 @@ export default function RBACSection() {
                 color: isActive ? COLORS.sand : COLORS.night,
                 borderColor: COLORS.sandLine,
               }}
-              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full border whitespace-nowrap"
+              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full border whitespace-nowrap shrink-0"
             >
               <Icon size={13} />
               {label?.[lang] || label?.sw}
@@ -500,7 +502,7 @@ export default function RBACSection() {
 
       {/* ROLES TAB */}
       {activeTab === "roles" && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full min-w-0">
           <button
             onClick={() => {
               setAddingRole(true);
@@ -566,7 +568,7 @@ export default function RBACSection() {
 
       {/* STAFF TAB */}
       {activeTab === "staff" && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full min-w-0">
           <button
             onClick={() => {
               setAddingStaff(true);
@@ -603,9 +605,9 @@ export default function RBACSection() {
           {staff.length === 0 && !addingStaff ? (
             <div
               style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-2xl border-2 border-dashed p-10 text-center"
+              className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
             >
-              <UserCog size={48} className="mx-auto text-gray-300 mb-3" />
+              <UserCog size={40} className="mx-auto text-gray-300 mb-3" />
               <h3 className="font-semibold text-gray-800 mb-1">
                 {t("Hakuna wafanyakazi", "No staff members")}
               </h3>
@@ -644,6 +646,6 @@ export default function RBACSection() {
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }
