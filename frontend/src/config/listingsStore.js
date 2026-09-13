@@ -55,12 +55,10 @@ function computeExpiresAt() {
   ).toISOString();
 }
 
-// SEED_LISTINGS inabaki kama ilivyo — nakala kamili kutoka faili
-// yako ya awali (l1–l12). Sijaandika upya ili usiingize makosa;
-// bandika orodha ileile hapa.
-export const SEED_LISTINGS = [
-  // ... (bandika SEED_LISTINGS yako ya awali hapa — haijabadilika)
-];
+// ============================================================
+// SEED_LISTINGS — tupu. Data itakuja kutoka backend baadaye.
+// ============================================================
+export const SEED_LISTINGS = [];
 
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_LISTINGS;
@@ -68,7 +66,7 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_LISTINGS;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_LISTINGS;
+    if (!Array.isArray(parsed)) return SEED_LISTINGS;
     return parsed;
   } catch {
     return SEED_LISTINGS;
@@ -116,8 +114,6 @@ export function updateListing(id, patch) {
 /**
  * Uamuzi wa Admin kwenye Moderation (Idhinisha / Kataa).
  * status: "live" | "rejected"
- * Listing inapoidhinishwa kwa mara ya kwanza, tunaiwekea expiresAt
- * kutoka policy ya sasa.
  */
 export function decideListing(id, status) {
   const patch = { status };
@@ -131,9 +127,7 @@ export function decideListing(id, status) {
 }
 
 /**
- * Msaidizi kwa deals za zamani ambazo zina `listingTitle` pekee —
- * hutumika hadi zote zihamishwe kwa `listingId` (Pass 2 inahamisha
- * DealRooms; seeds zote zimekwisha hamishwa).
+ * Msaidizi kwa deals za zamani ambazo zina `listingTitle` pekee.
  */
 export function findListingByTitle(title) {
   if (!title) return null;
@@ -148,14 +142,7 @@ export function updateListingByTitle(title, patch) {
 }
 
 /**
- * Angalia listings zenye `expiresAt` zilizopita. Zilizokuwa "live"
- * zinakuwa "expired". Hii inaitwa na DashboardShell mara moja
- * kwenye mount, kisha kila dakika 5 (pamoja na
- * checkReservationReminders).
- *
- * "reserved" haigusi — listing iliyo kwenye deal bado iko hai
- * kwa mfumo, hata kama expiresAt yake imepita. Inaisha kuwa "expired"
- * tu baada ya deal kuisha/kughairi (kurudi "live") na muda kupita.
+ * Angalia listings zenye `expiresAt` zilizopita.
  */
 export function checkListingExpiry() {
   const now = Date.now();
@@ -173,9 +160,7 @@ export function checkListingExpiry() {
 }
 
 /**
- * Hook ya React inayosoma listings na kujisasisha yenyewe — kwenye
- * DashboardShell (My Listings), AdminDashboard (Moderation), na
- * BrowseProperties (feed ya mnunuzi) papo hapo, bila reload.
+ * Hook ya React inayosoma listings na kujisasisha yenyewe.
  */
 export function useListings() {
   const [listings, setListings] = useState(() => getListings());
@@ -194,14 +179,7 @@ export function useListings() {
 }
 
 /**
- * Listing zinazoonekana hadharani kwa wanunuzi (Browse, Category, Home):
- *   - "live"     -> zinaonekana kawaida
- *   - "reserved" -> ZINAONEKANA pia, lakini zina badge ya RESERVED na
- *                   kitufe "Join Waiting List" badala ya "Nunua Hii".
- *   - "sold"     -> zinaonekana kwa historia (badge SOLD)
- *
- * Doc §3.3: buyer anaona AVAILABLE / RESERVED / SOLD — hivyo tatu
- * hizi lazima zipite.
+ * Listing zinazoonekana hadharani kwa wanunuzi.
  */
 export function usePublicListings() {
   const listings = useListings();
@@ -212,12 +190,6 @@ export function usePublicListings() {
 
 /**
  * @deprecated Tumia usePublicListings() badala yake.
- *
- * Hii inarudi listings "live" pekee (bila reserved/sold) — mtindo wa
- * awali kabla ya reservation kuwa public. Inabaki kwa backward-compat
- * kwa sehemu yoyote isiyojulikana, ILA sehemu zote za UI
- * (BrowseProperties, CategoryPage, HomePage, PropertyDetailPage)
- * zimehamishwa kwa usePublicListings() kwenye Pass 2.
  */
 export function useLiveListings() {
   const listings = useListings();
@@ -225,7 +197,6 @@ export function useLiveListings() {
 }
 
 // ---- STATUS SYNC (ramani rasmi kwa Developer A) ----
-// Backend mapping: frontend status -> DB enum value.
 export const LISTING_STATUS_MAP = {
   live: "active",
   reserved: "reserved",
