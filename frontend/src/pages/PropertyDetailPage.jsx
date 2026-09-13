@@ -34,8 +34,14 @@ import {
   Ban,
 } from "lucide-react";
 import { useListings } from "../config/listingsStore.js";
-import { useWaitingList, joinWaitingList } from "../config/waitingListStore.js";
-import { isBoostActive, isLeadingActive } from "./dashboard/components/shared";
+import {
+  useWaitingList,
+  joinWaitingList,
+} from "../config/waitingListStore.js";
+import {
+  isBoostActive,
+  isLeadingActive,
+} from "./dashboard/components/shared";
 
 const COLORS = {
   night: "#101A2E",
@@ -54,43 +60,65 @@ const CATEGORY_ICONS = {
   mashine: Wrench,
 };
 
+// ============================================================
+// CATEGORY LABELS — bilingual
+// ============================================================
 const CATEGORY_LABELS = {
-  nyumba: "Nyumba & Majengo",
-  viwanja: "Viwanja & Mashamba",
-  magari: "Magari",
-  biashara: "Biashara Zinazouzwa",
-  mashine: "Mashine / Heavy Equipment",
+  nyumba: { sw: "Nyumba & Majengo", en: "Houses & Buildings" },
+  viwanja: { sw: "Viwanja & Mashamba", en: "Plots & Land" },
+  magari: { sw: "Magari", en: "Cars" },
+  biashara: { sw: "Biashara Zinazouzwa", en: "Businesses for Sale" },
+  mashine: { sw: "Mashine / Heavy Equipment", en: "Machinery / Heavy Equipment" },
 };
 
+// ============================================================
+// HELPERS — bilingual
+// ============================================================
+function t(lang, sw, en) {
+  return lang === "sw" ? sw : en;
+}
+
 function formatTZS(amount) {
-  return "TZS " + Math.round(amount).toLocaleString("en-US");
+  return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
 }
 
-function timeAgo(dateStr) {
-  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-  if (days <= 0) return "Leo";
-  if (days === 1) return "Jana";
-  if (days < 30) return `Siku ${days} zilizopita`;
+function timeAgo(dateStr, lang) {
+  const days = Math.floor(
+    (Date.now() - new Date(dateStr).getTime()) / 86400000
+  );
+  if (days <= 0) return t(lang, "Leo", "Today");
+  if (days === 1) return t(lang, "Jana", "Yesterday");
+  if (days < 30)
+    return t(lang, `Siku ${days} zilizopita`, `${days} days ago`);
   const months = Math.floor(days / 30);
-  return months === 1 ? "Mwezi 1 uliopita" : `Miezi ${months} iliyopita`;
+  return months === 1
+    ? t(lang, "Mwezi 1 uliopita", "1 month ago")
+    : t(lang, `Miezi ${months} iliyopita`, `${months} months ago`);
 }
 
-function reservationCountdown(reservedUntil) {
+function reservationCountdown(reservedUntil, lang) {
   if (!reservedUntil) return "";
   const ms = new Date(reservedUntil).getTime() - Date.now();
-  if (ms <= 0) return "Inaisha hivi karibuni";
+  if (ms <= 0)
+    return t(lang, "Inaisha hivi karibuni", "Ending soon");
   const hours = Math.floor(ms / 3600000);
-  if (hours < 24) return `Saa ${hours} zimebaki`;
+  if (hours < 24)
+    return t(lang, `Saa ${hours} zimebaki`, `${hours}hrs left`);
   const days = Math.floor(hours / 24);
   const remainingHours = hours % 24;
-  if (remainingHours === 0) return `Siku ${days} zimebaki`;
-  return `Siku ${days} ${remainingHours}saa zimebaki`;
+  if (remainingHours === 0)
+    return t(lang, `Siku ${days} zimebaki`, `${days} days left`);
+  return t(
+    lang,
+    `Siku ${days} ${remainingHours}saa zimebaki`,
+    `${days}d ${remainingHours}h left`
+  );
 }
 
 // ============================================================
 // IMAGE GALLERY
 // ============================================================
-function ImageGallery({ property }) {
+function ImageGallery({ property, lang }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const images = property.images || [];
   const Icon = CATEGORY_ICONS[property.category] || HomeIcon;
@@ -107,7 +135,9 @@ function ImageGallery({ property }) {
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <span className="bg-[#101A2E] text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-2">
               {isSold ? <Ban size={16} /> : <Clock3 size={16} />}
-              {isSold ? "Imeuzwa" : "Ina Reservation"}
+              {isSold
+                ? t(lang, "Imeuzwa", "Sold")
+                : t(lang, "Ina Reservation", "Reserved")}
             </span>
           </div>
         )}
@@ -115,8 +145,10 @@ function ImageGallery({ property }) {
     );
   }
 
-  const nextImage = () => setCurrentIndex((prev) => (prev + 1) % images.length);
-  const prevImage = () => setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+  const nextImage = () =>
+    setCurrentIndex((prev) => (prev + 1) % images.length);
+  const prevImage = () =>
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
 
   return (
     <>
@@ -125,7 +157,9 @@ function ImageGallery({ property }) {
           src={images[currentIndex]}
           alt={property.title}
           className="w-full h-full object-cover"
-          onError={(e) => { e.target.style.display = "none"; }}
+          onError={(e) => {
+            e.target.style.display = "none";
+          }}
         />
 
         {images.length > 1 && (
@@ -133,14 +167,14 @@ function ImageGallery({ property }) {
             <button
               onClick={prevImage}
               className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors z-10"
-              aria-label="Previous image"
+              aria-label={t(lang, "Picha iliyotangulia", "Previous image")}
             >
               <ChevronLeft size={20} />
             </button>
             <button
               onClick={nextImage}
               className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors z-10"
-              aria-label="Next image"
+              aria-label={t(lang, "Picha inayofuata", "Next image")}
             >
               <ChevronRight size={20} />
             </button>
@@ -155,14 +189,14 @@ function ImageGallery({ property }) {
         {isFeatured && (
           <div className="absolute top-3 left-3 bg-[#E8A33D] text-[#101A2E] text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Star size={12} fill="#101A2E" />
-            Featured
+            {t(lang, "Imeangaziwa", "Featured")}
           </div>
         )}
 
         {isVerified && (
           <div className="absolute top-3 right-3 bg-[#2F6D4F] text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Shield size={12} />
-            Verified
+            {t(lang, "Imethibitishwa", "Verified")}
           </div>
         )}
 
@@ -170,7 +204,9 @@ function ImageGallery({ property }) {
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10 pointer-events-none">
             <span className="bg-[#101A2E] text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-2">
               {isSold ? <Ban size={16} /> : <Clock3 size={16} />}
-              {isSold ? "Imeuzwa" : "Ina Reservation"}
+              {isSold
+                ? t(lang, "Imeuzwa", "Sold")
+                : t(lang, "Ina Reservation", "Reserved")}
             </span>
           </div>
         )}
@@ -187,6 +223,7 @@ function ImageGallery({ property }) {
                   ? "border-[#E8A33D] opacity-100"
                   : "border-transparent opacity-60 hover:opacity-100"
               }`}
+              aria-label={t(lang, `Picha ${idx + 1}`, `Image ${idx + 1}`)}
             >
               <img src={img} alt="" className="w-full h-full object-cover" />
             </button>
@@ -214,23 +251,72 @@ function FeatureItem({ icon: Icon, label, value }) {
   );
 }
 
-function FeaturesSection({ property }) {
+function FeaturesSection({ property, lang }) {
   const items = [];
 
-  if (property.bedrooms) items.push({ icon: Bed, label: "Vyumba vya Kulala", value: property.bedrooms });
-  if (property.bathrooms) items.push({ icon: Bath, label: "Bafu", value: property.bathrooms });
-  if (property.area) items.push({ icon: Maximize, label: "Ukubwa", value: property.area });
-  if (property.year) items.push({ icon: Calendar, label: "Mwaka", value: property.year });
-  if (property.titleStatus) items.push({ icon: CheckCircle, label: "Hati", value: property.titleStatus });
-  if (property.make) items.push({ icon: Car, label: "Gari", value: `${property.make} ${property.model || ""}`.trim() });
-  if (property.mileage) items.push({ icon: Settings, label: "Mileage", value: property.mileage });
-  if (property.type) items.push({ icon: Settings, label: "Aina", value: property.type });
-  if (property.hours) items.push({ icon: Settings, label: "Saa za Matumizi", value: property.hours });
+  if (property.bedrooms)
+    items.push({
+      icon: Bed,
+      label: t(lang, "Vyumba vya Kulala", "Bedrooms"),
+      value: property.bedrooms,
+    });
+  if (property.bathrooms)
+    items.push({
+      icon: Bath,
+      label: t(lang, "Bafu", "Bathrooms"),
+      value: property.bathrooms,
+    });
+  if (property.area)
+    items.push({
+      icon: Maximize,
+      label: t(lang, "Ukubwa", "Size"),
+      value: property.area,
+    });
+  if (property.year)
+    items.push({
+      icon: Calendar,
+      label: t(lang, "Mwaka", "Year"),
+      value: property.year,
+    });
+  if (property.titleStatus)
+    items.push({
+      icon: CheckCircle,
+      label: t(lang, "Hati", "Title"),
+      value: property.titleStatus,
+    });
+  if (property.make)
+    items.push({
+      icon: Car,
+      label: t(lang, "Gari", "Car"),
+      value: `${property.make} ${property.model || ""}`.trim(),
+    });
+  if (property.mileage)
+    items.push({
+      icon: Settings,
+      label: t(lang, "Mileage", "Mileage"),
+      value: property.mileage,
+    });
+  if (property.type)
+    items.push({
+      icon: Settings,
+      label: t(lang, "Aina", "Type"),
+      value: property.type,
+    });
+  if (property.hours)
+    items.push({
+      icon: Settings,
+      label: t(lang, "Saa za Matumizi", "Usage Hours"),
+      value: property.hours,
+    });
 
   if (items.length === 0) {
     return (
       <p className="text-sm text-gray-500 text-center py-4">
-        Hakuna sifa za ziada zilizoainishwa
+        {t(
+          lang,
+          "Hakuna sifa za ziada zilizoainishwa",
+          "No additional features specified"
+        )}
       </p>
     );
   }
@@ -247,11 +333,19 @@ function FeaturesSection({ property }) {
 // ============================================================
 // SELLER CARD
 // ============================================================
-function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onContact }) {
+function SellerCard({
+  property,
+  status,
+  alreadyOnWaitlist,
+  onJoinWaitlist,
+  onContact,
+  lang,
+}) {
   const isReserved = status === "reserved";
   const isSold = status === "sold";
   const isUnavailable = isReserved || isSold;
-  const sellerName = property.seller_name || "Muuzaji";
+  const sellerName =
+    property.seller_name || t(lang, "Muuzaji", "Seller");
   const sellerInitial = sellerName.charAt(0).toUpperCase();
 
   return (
@@ -262,13 +356,15 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-800 truncate">{sellerName}</h3>
+            <h3 className="font-semibold text-gray-800 truncate">
+              {sellerName}
+            </h3>
             {property.verified && (
               <CheckCircle size={16} className="text-[#2F6D4F] flex-shrink-0" />
             )}
           </div>
           <p className="text-xs text-gray-400 mt-0.5">
-            Muuzaji kwenye SokoMkononi
+            {t(lang, "Muuzaji kwenye SokoMkononi", "Seller on SokoMkononi")}
           </p>
         </div>
       </div>
@@ -278,15 +374,29 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
           <div className="mb-3 p-3 rounded-xl bg-[#E8A33D]/10 border border-[#E8A33D]/30">
             <p className="text-xs font-semibold text-[#8A5A16] flex items-center gap-1.5">
               {isSold ? <Ban size={13} /> : <Clock3 size={13} />}
-              {isSold ? "Mali hii tayari imeuzwa." : "Mali hii tayari ina Reservation."}
+              {isSold
+                ? t(
+                    lang,
+                    "Mali hii tayari imeuzwa.",
+                    "This property has already been sold."
+                  )
+                : t(
+                    lang,
+                    "Mali hii tayari ina Reservation.",
+                    "This property already has a Reservation."
+                  )}
             </p>
             {isReserved && property.reservedUntil && (
               <p className="text-[11px] text-[#8A5A16] mt-1">
-                {reservationCountdown(property.reservedUntil)}
+                {reservationCountdown(property.reservedUntil, lang)}
               </p>
             )}
             <p className="text-[11px] text-[#8A5A16]/80 mt-1">
-              Jiunge na Waiting List ili tukutaarifu papo hapo endapo itaachiwa huru.
+              {t(
+                lang,
+                "Jiunge na Waiting List ili tukutaarifu papo hapo endapo itaachiwa huru.",
+                "Join the Waiting List so we notify you immediately if it becomes available."
+              )}
             </p>
           </div>
           <button
@@ -300,10 +410,10 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
           >
             <BellRing size={16} />
             {isSold
-              ? "Imeuzwa Tayari"
+              ? t(lang, "Imeuzwa Tayari", "Already Sold")
               : alreadyOnWaitlist
-              ? "Tayari Umejiunga"
-              : "Jiunge na Waiting List"}
+                ? t(lang, "Tayari Umejiunga", "Already Joined")
+                : t(lang, "Jiunge na Waiting List", "Join Waiting List")}
           </button>
         </>
       ) : (
@@ -312,13 +422,17 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
           className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
         >
           <MessageSquare size={16} />
-          Wasiliana na Muuzaji
+          {t(lang, "Wasiliana na Muuzaji", "Contact Seller")}
         </button>
       )}
 
       <div className="mt-4 pt-4 border-t border-gray-100">
         <p className="text-xs text-gray-500 text-center">
-          Muuzaji amethibitishwa na SokoMkononi
+          {t(
+            lang,
+            "Muuzaji amethibitishwa na SokoMkononi",
+            "Seller verified by SokoMkononi"
+          )}
         </p>
       </div>
     </div>
@@ -335,18 +449,20 @@ function ListingNotFound({ lang }) {
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <HomeIcon size={64} className="mx-auto text-gray-300 mb-4" />
         <h1 className="text-2xl font-bold text-gray-800 mb-2">
-          {lang === "sw" ? "Mali haipatikani" : "Listing not found"}
+          {t(lang, "Mali haipatikani", "Listing not found")}
         </h1>
         <p className="text-gray-500 text-sm mb-6">
-          {lang === "sw"
-            ? "Tangazo hili huenda limefutwa au halipo. Tafuta mali nyingine."
-            : "This listing may have been removed or does not exist. Browse other properties."}
+          {t(
+            lang,
+            "Tangazo hili huenda limefutwa au halipo. Tafuta mali nyingine.",
+            "This listing may have been removed or does not exist. Browse other properties."
+          )}
         </p>
         <Link
           to="/dashboard/buyer"
           className="inline-block bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] px-6 py-2.5 rounded-xl font-semibold text-sm transition-colors"
         >
-          {lang === "sw" ? "Tafuta Mali Nyingine" : "Browse Other Properties"}
+          {t(lang, "Tafuta Mali Nyingine", "Browse Other Properties")}
         </Link>
       </div>
       <Footer />
@@ -364,9 +480,11 @@ export default function PropertyDetailPage() {
   const { lang } = useLanguage();
   const { user } = useAuth();
 
-  // === BADILIKO KUU: soma listing halisi kutoka store ===
   const allListings = useListings();
-  const property = useMemo(() => allListings.find((l) => l.id === id), [allListings, id]);
+  const property = useMemo(
+    () => allListings.find((l) => l.id === id),
+    [allListings, id]
+  );
 
   const [isSaved, setIsSaved] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
@@ -385,7 +503,6 @@ export default function PropertyDetailPage() {
     [waitingListEntries, property]
   );
 
-  // Kama listing haipo (id si sahihi) — onyesha "haipatikani".
   if (!property) {
     return <ListingNotFound lang={lang} />;
   }
@@ -414,7 +531,7 @@ export default function PropertyDetailPage() {
       });
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
-      alert(lang === "sw" ? "Link imenakiliwa!" : "Link copied!");
+      alert(t(lang, "Link imenakiliwa!", "Link copied!"));
     }
   };
 
@@ -426,17 +543,23 @@ export default function PropertyDetailPage() {
     setShowContactModal(true);
   };
 
-  const categoryLabel = CATEGORY_LABELS[property.category] || "Mali";
+  const categoryLabel =
+    CATEGORY_LABELS[property.category]?.[lang] ||
+    CATEGORY_LABELS[property.category]?.sw ||
+    t(lang, "Mali", "Property");
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Breadcrumb */}
+        {/* Breadcrumb — imeachwa kushoto */}
         <nav className="flex items-center gap-2 text-sm text-gray-500 mb-4 overflow-x-auto">
-          <Link to="/" className="hover:text-[#E8A33D] transition-colors whitespace-nowrap">
-            {lang === "sw" ? "Nyumbani" : "Home"}
+          <Link
+            to="/"
+            className="hover:text-[#E8A33D] transition-colors whitespace-nowrap"
+          >
+            {t(lang, "Nyumbani", "Home")}
           </Link>
           <ChevronRight size={14} className="flex-shrink-0" />
           <Link
@@ -446,13 +569,15 @@ export default function PropertyDetailPage() {
             {categoryLabel}
           </Link>
           <ChevronRight size={14} className="flex-shrink-0" />
-          <span className="text-gray-800 font-medium truncate">{property.title}</span>
+          <span className="text-gray-800 font-medium truncate">
+            {property.title}
+          </span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* LEFT */}
           <div className="lg:col-span-2 space-y-6">
-            <ImageGallery property={property} />
+            <ImageGallery property={property} lang={lang} />
 
             {/* Title & Price */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
@@ -467,10 +592,11 @@ export default function PropertyDetailPage() {
                   </div>
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 flex-wrap">
                     <span className="flex items-center gap-1">
-                      <Eye size={12} /> {property.views || 0} {lang === "sw" ? "walioangalia" : "views"}
+                      <Eye size={12} /> {property.views || 0}{" "}
+                      {t(lang, "walioangalia", "views")}
                     </span>
                     <span>•</span>
-                    <span>{timeAgo(property.postedAt)}</span>
+                    <span>{timeAgo(property.postedAt, lang)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -481,20 +607,20 @@ export default function PropertyDetailPage() {
                         ? "bg-[#C1502E] border-[#C1502E] text-white"
                         : "border-gray-200 text-gray-400 hover:text-[#C1502E] hover:border-[#C1502E]"
                     }`}
-                    aria-label="Save"
+                    aria-label={t(lang, "Hifadhi", "Save")}
                   >
                     <Heart size={18} fill={isSaved ? "currentColor" : "none"} />
                   </button>
                   <button
                     onClick={handleShare}
                     className="w-10 h-10 rounded-full border border-gray-200 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors"
-                    aria-label="Share"
+                    aria-label={t(lang, "Shiriki", "Share")}
                   >
                     <Share2 size={18} />
                   </button>
                   <button
                     className="w-10 h-10 rounded-full border border-gray-200 text-gray-400 hover:text-[#C1502E] flex items-center justify-center transition-colors"
-                    aria-label="Report"
+                    aria-label={t(lang, "Ripoti", "Report")}
                   >
                     <Flag size={18} />
                   </button>
@@ -508,17 +634,17 @@ export default function PropertyDetailPage() {
                   </p>
                   {property.status === "live" && (
                     <span className="text-xs font-medium text-[#2F6D4F] bg-[#2F6D4F]/10 px-2.5 py-1 rounded-full mb-1">
-                      {lang === "sw" ? "Inapatikana" : "Available"}
+                      {t(lang, "Inapatikana", "Available")}
                     </span>
                   )}
                   {property.status === "reserved" && (
                     <span className="text-xs font-medium text-[#8A5A16] bg-[#E8A33D]/15 px-2.5 py-1 rounded-full mb-1">
-                      {lang === "sw" ? "Ina Reservation" : "Reserved"}
+                      {t(lang, "Ina Reservation", "Reserved")}
                     </span>
                   )}
                   {property.status === "sold" && (
                     <span className="text-xs font-medium text-white bg-[#101A2E] px-2.5 py-1 rounded-full mb-1">
-                      {lang === "sw" ? "Imeuzwa" : "Sold"}
+                      {t(lang, "Imeuzwa", "Sold")}
                     </span>
                   )}
                 </div>
@@ -536,7 +662,7 @@ export default function PropertyDetailPage() {
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  {lang === "sw" ? "Maelezo" : "Details"}
+                  {t(lang, "Maelezo", "Details")}
                 </button>
                 <button
                   onClick={() => setActiveTab("location")}
@@ -546,7 +672,7 @@ export default function PropertyDetailPage() {
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  {lang === "sw" ? "Mahali" : "Location"}
+                  {t(lang, "Mahali", "Location")}
                 </button>
               </div>
 
@@ -555,18 +681,23 @@ export default function PropertyDetailPage() {
                   <div className="space-y-6">
                     <div>
                       <h3 className="font-semibold text-gray-800 mb-3">
-                        {lang === "sw" ? "Maelezo" : "Description"}
+                        {t(lang, "Maelezo", "Description")}
                       </h3>
                       <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">
-                        {property.description || (lang === "sw" ? "Hakuna maelezo yaliyotolewa." : "No description provided.")}
+                        {property.description ||
+                          t(
+                            lang,
+                            "Hakuna maelezo yaliyotolewa.",
+                            "No description provided."
+                          )}
                       </p>
                     </div>
 
                     <div>
                       <h3 className="font-semibold text-gray-800 mb-3">
-                        {lang === "sw" ? "Sifa za Mali" : "Property Features"}
+                        {t(lang, "Sifa za Mali", "Property Features")}
                       </h3>
-                      <FeaturesSection property={property} />
+                      <FeaturesSection property={property} lang={lang} />
                     </div>
                   </div>
                 )}
@@ -574,14 +705,20 @@ export default function PropertyDetailPage() {
                 {activeTab === "location" && (
                   <div>
                     <h3 className="font-semibold text-gray-800 mb-4">
-                      {lang === "sw" ? "Mahali" : "Location"}
+                      {t(lang, "Mahali", "Location")}
                     </h3>
                     <div className="w-full h-64 bg-gray-100 rounded-xl flex items-center justify-center">
                       <div className="text-center">
                         <MapPin size={32} className="text-gray-300 mx-auto" />
-                        <p className="text-gray-500 text-sm mt-2">{property.location}</p>
+                        <p className="text-gray-500 text-sm mt-2">
+                          {property.location}
+                        </p>
                         <p className="text-gray-400 text-xs">
-                          {lang === "sw" ? "Ramani itaonekana hapa" : "Map will appear here"}
+                          {t(
+                            lang,
+                            "Ramani itaonekana hapa",
+                            "Map will appear here"
+                          )}
                         </p>
                       </div>
                     </div>
@@ -599,30 +736,45 @@ export default function PropertyDetailPage() {
               alreadyOnWaitlist={alreadyOnWaitlist}
               onJoinWaitlist={handleJoinWaitlist}
               onContact={handleContact}
+              lang={lang}
             />
 
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                 <Shield size={16} className="text-[#E8A33D]" />
-                {lang === "sw" ? "Vidokezo vya Usalama" : "Safety Tips"}
+                {t(lang, "Vidokezo vya Usalama", "Safety Tips")}
               </h3>
               <ul className="space-y-2.5">
-                {(lang === "sw"
-                  ? [
-                      "Kutana na muuzaji sehemu za wazi",
-                      "Angalia mali kabla ya kulipa",
-                      "Thibitisha hati za mali",
-                      "Tumia Deal Room yetu kwa mazungumzo",
-                    ]
-                  : [
-                      "Meet the seller in open places",
-                      "Inspect the property before paying",
-                      "Verify property documents",
-                      "Use our Deal Room for conversations",
-                    ]
-                ).map((tip, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-xs text-gray-600">
-                    <CheckCircle size={14} className="text-[#2F6D4F] mt-0.5 flex-shrink-0" />
+                {[
+                  t(
+                    lang,
+                    "Kutana na muuzaji sehemu za wazi",
+                    "Meet the seller in open places"
+                  ),
+                  t(
+                    lang,
+                    "Angalia mali kabla ya kulipa",
+                    "Inspect the property before paying"
+                  ),
+                  t(
+                    lang,
+                    "Thibitisha hati za mali",
+                    "Verify property documents"
+                  ),
+                  t(
+                    lang,
+                    "Tumia Deal Room yetu kwa mazungumzo",
+                    "Use our Deal Room for conversations"
+                  ),
+                ].map((tip, idx) => (
+                  <li
+                    key={idx}
+                    className="flex items-start gap-2 text-xs text-gray-600"
+                  >
+                    <CheckCircle
+                      size={14}
+                      className="text-[#2F6D4F] mt-0.5 flex-shrink-0"
+                    />
                     {tip}
                   </li>
                 ))}
@@ -631,19 +783,23 @@ export default function PropertyDetailPage() {
 
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <h3 className="font-semibold text-gray-800 mb-3">
-                {lang === "sw" ? "Takwimu" : "Statistics"}
+                {t(lang, "Takwimu", "Statistics")}
               </h3>
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div>
-                  <p className="text-lg font-bold text-gray-800">{property.views || 0}</p>
+                  <p className="text-lg font-bold text-gray-800">
+                    {property.views || 0}
+                  </p>
                   <p className="text-xs text-gray-500">
-                    {lang === "sw" ? "Walioangalia" : "Views"}
+                    {t(lang, "Walioangalia", "Views")}
                   </p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-gray-800">{property.inquiries || 0}</p>
+                  <p className="text-lg font-bold text-gray-800">
+                    {property.inquiries || 0}
+                  </p>
                   <p className="text-xs text-gray-500">
-                    {lang === "sw" ? "Maswali" : "Inquiries"}
+                    {t(lang, "Maswali", "Inquiries")}
                   </p>
                 </div>
               </div>
@@ -655,14 +811,17 @@ export default function PropertyDetailPage() {
       {/* Contact Modal */}
       {showContactModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 text-center">
             <h3 className="text-lg font-bold text-gray-800 mb-2">
-              {lang === "sw" ? "Wasiliana na" : "Contact"} {property.seller_name || "Muuzaji"}
+              {t(lang, "Wasiliana na", "Contact")}{" "}
+              {property.seller_name || t(lang, "Muuzaji", "Seller")}
             </h3>
             <p className="text-sm text-gray-500 mb-4">
-              {lang === "sw"
-                ? "Chagua jinsi ungependa kuwasiliana:"
-                : "Choose how you'd like to get in touch:"}
+              {t(
+                lang,
+                "Chagua jinsi ungependa kuwasiliana:",
+                "Choose how you'd like to get in touch:"
+              )}
             </p>
             <div className="space-y-2">
               <button
@@ -675,12 +834,14 @@ export default function PropertyDetailPage() {
                 <MessageSquare size={20} className="text-[#E8A33D]" />
                 <div>
                   <p className="text-sm font-medium text-gray-800">
-                    {lang === "sw" ? "Tuma Ujumbe" : "Send Message"}
+                    {t(lang, "Tuma Ujumbe", "Send Message")}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {lang === "sw"
-                      ? "Anzisha mazungumzo kwenye Deal Room"
-                      : "Start a conversation in the Deal Room"}
+                    {t(
+                      lang,
+                      "Anzisha mazungumzo kwenye Deal Room",
+                      "Start a conversation in the Deal Room"
+                    )}
                   </p>
                 </div>
               </button>
@@ -689,7 +850,7 @@ export default function PropertyDetailPage() {
               onClick={() => setShowContactModal(false)}
               className="w-full mt-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
             >
-              {lang === "sw" ? "Funga" : "Close"}
+              {t(lang, "Funga", "Close")}
             </button>
           </div>
         </div>
