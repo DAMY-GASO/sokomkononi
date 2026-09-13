@@ -29,7 +29,12 @@ import {
   isLeadingActive,
 } from "./shared";
 import { usePublicListings } from "../../../config/listingsStore.js";
-import { useSavedIds, toggleSaved } from "../../../config/savedStore.js";
+import {
+  useSavedIds,
+  toggleSaved,
+  getSavedIds,
+  saveSnapshot,
+} from "../../../config/savedStore.js";
 import {
   useActiveCategories,
   getCategoryIcon,
@@ -53,10 +58,14 @@ function reservationCountdown(reservedUntil, lang) {
   const ms = new Date(reservedUntil).getTime() - Date.now();
   if (ms <= 0) return lang === "sw" ? "Inaisha hivi karibuni" : "Ending soon";
   const hours = Math.floor(ms / 3600000);
-  if (hours < 24) return lang === "sw" ? `Inaisha baada ya saa ${hours}` : `Ends in ${hours}hrs`;
+  if (hours < 24)
+    return lang === "sw" ? `Inaisha baada ya saa ${hours}` : `Ends in ${hours}hrs`;
   const days = Math.floor(hours / 24);
   const remainingHours = hours % 24;
-  if (remainingHours === 0) return lang === "sw" ? `Inaisha baada ya siku ${days}` : `Ends in ${days} days`;
+  if (remainingHours === 0)
+    return lang === "sw"
+      ? `Inaisha baada ya siku ${days}`
+      : `Ends in ${days} days`;
   return lang === "sw"
     ? `Inaisha baada ya siku ${days} ${remainingHours}saa`
     : `Ends in ${days}d ${remainingHours}h`;
@@ -64,6 +73,7 @@ function reservationCountdown(reservedUntil, lang) {
 
 // ============================================================
 // CARD IMAGE RESOLVER
+// Priority: property.imageUrl → category.imageUrl → null (icon fallback)
 // ============================================================
 function resolveCardImage(property, category) {
   if (property?.imageUrl) return property.imageUrl;
@@ -77,7 +87,8 @@ function resolveCardImage(property, category) {
 function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
   const category = getCategory(property.category);
   const Icon = getCategoryIcon(category?.iconKey);
-  const categoryLabel = category?.label?.[lang] || category?.label?.sw || property.category;
+  const categoryLabel =
+    category?.label?.[lang] || category?.label?.sw || property.category;
   const cardImage = resolveCardImage(property, category);
 
   const isFeatured = isBoostActive(property);
@@ -89,7 +100,7 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
   const handleSave = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    onToggleSave(property.id);
+    onToggleSave(property.id, property);
   };
 
   if (viewMode === "list") {
@@ -165,10 +176,14 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
           )}
           <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
             {property.bedrooms && (
-              <span>🛏 {property.bedrooms} {lang === "sw" ? "vyumba" : "bed"}</span>
+              <span>
+                🛏 {property.bedrooms} {lang === "sw" ? "vyumba" : "bed"}
+              </span>
             )}
             {property.bathrooms && (
-              <span>🚿 {property.bathrooms} {lang === "sw" ? "bafu" : "bath"}</span>
+              <span>
+                🚿 {property.bathrooms} {lang === "sw" ? "bafu" : "bath"}
+              </span>
             )}
             {property.area && <span>📐 {property.area}</span>}
             {property.make && (
@@ -328,7 +343,13 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
   };
 
   const handleReset = () => {
-    const reset = { categories: [], priceRange: null, regions: [], verified: false, featured: false };
+    const reset = {
+      categories: [],
+      priceRange: null,
+      regions: [],
+      verified: false,
+      featured: false,
+    };
     setLocalFilters(reset);
   };
 
@@ -357,7 +378,10 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
           <SlidersHorizontal size={16} />
           {lang === "sw" ? "Vichujio" : "Filters"}
         </h3>
-        <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-600">
+        <button
+          onClick={onClose}
+          className="lg:hidden text-gray-400 hover:text-gray-600"
+        >
           <X size={20} />
         </button>
       </div>
@@ -370,7 +394,10 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
           {allCategories.map((cat) => {
             const CatIcon = getCategoryIcon(cat.iconKey);
             return (
-              <label key={cat.key} className="flex items-center gap-2 cursor-pointer">
+              <label
+                key={cat.key}
+                className="flex items-center gap-2 cursor-pointer"
+              >
                 <input
                   type="checkbox"
                   checked={localFilters.categories.includes(cat.key)}
@@ -406,7 +433,9 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
                 type="radio"
                 name="priceRange"
                 checked={localFilters.priceRange === idx}
-                onChange={() => setLocalFilters({ ...localFilters, priceRange: idx })}
+                onChange={() =>
+                  setLocalFilters({ ...localFilters, priceRange: idx })
+                }
                 className="w-4 h-4 text-[#E8A33D] focus:ring-[#E8A33D]"
               />
               <span className="text-sm text-gray-600">
@@ -445,7 +474,9 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
             <input
               type="checkbox"
               checked={localFilters.verified}
-              onChange={(e) => setLocalFilters({ ...localFilters, verified: e.target.checked })}
+              onChange={(e) =>
+                setLocalFilters({ ...localFilters, verified: e.target.checked })
+              }
               className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
             />
             <span className="text-sm text-gray-600">
@@ -456,7 +487,9 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
             <input
               type="checkbox"
               checked={localFilters.featured}
-              onChange={(e) => setLocalFilters({ ...localFilters, featured: e.target.checked })}
+              onChange={(e) =>
+                setLocalFilters({ ...localFilters, featured: e.target.checked })
+              }
               className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
             />
             <span className="text-sm text-gray-600">
@@ -586,6 +619,7 @@ export default function BrowseProperties({ lang = "sw" }) {
       }
     };
 
+    // Leading Fee inapewa kipaumbele; kisha AVAILABLE → RESERVED → SOLD
     const statusRank = (p) => {
       if (p.status === "live") return 0;
       if (p.status === "reserved") return 1;
@@ -612,7 +646,22 @@ export default function BrowseProperties({ lang = "sw" }) {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const toggleSave = (id) => toggleSaved(id);
+  // ============================================================
+  // TOGGLE SAVE — pamoja na snapshot kwa favorites notifications
+  // ============================================================
+  const toggleSave = (id, property) => {
+    const isCurrentlySaved = getSavedIds().includes(id);
+    const next = toggleSaved(id);
+
+    // Kama amehifadhi sasa (sio kuondoa), hifadhi snapshot
+    if (!isCurrentlySaved) {
+      const listing =
+        property || allProperties.find((p) => p.id === id);
+      if (listing) saveSnapshot(listing);
+    }
+
+    return next;
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -677,7 +726,11 @@ export default function BrowseProperties({ lang = "sw" }) {
                   ? "Tafuta mali kwa jina, mahali, au kategoria..."
                   : "Search by title, location, or category..."
               }
-              style={{ background: "white", borderColor: COLORS.sandLine, color: COLORS.night }}
+              style={{
+                background: "white",
+                borderColor: COLORS.sandLine,
+                color: COLORS.night,
+              }}
               className="w-full rounded-full border pl-12 pr-32 py-3.5 text-sm outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-all"
             />
             <button
@@ -792,7 +845,9 @@ export default function BrowseProperties({ lang = "sw" }) {
                         onClick={() =>
                           setFilters({
                             ...filters,
-                            categories: filters.categories.filter((c) => c !== cat),
+                            categories: filters.categories.filter(
+                              (c) => c !== cat
+                            ),
                           })
                         }
                       >
@@ -840,21 +895,25 @@ export default function BrowseProperties({ lang = "sw" }) {
                     >
                       <ChevronLeft size={16} />
                     </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                          currentPage === page
-                            ? "bg-[#E8A33D] text-[#101A2E]"
-                            : "border border-gray-200 text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                            currentPage === page
+                              ? "bg-[#E8A33D] text-[#101A2E]"
+                              : "border border-gray-200 text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      )
+                    )}
                     <button
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={currentPage === totalPages}
                       className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
                     >
@@ -867,7 +926,9 @@ export default function BrowseProperties({ lang = "sw" }) {
               <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
                 <Search size={48} className="mx-auto text-gray-300 mb-3" />
                 <h3 className="font-semibold text-gray-800">
-                  {lang === "sw" ? "Hakuna mali iliyopatikana" : "No properties found"}
+                  {lang === "sw"
+                    ? "Hakuna mali iliyopatikana"
+                    : "No properties found"}
                 </h3>
                 <p className="text-gray-500 text-sm mt-1">
                   {lang === "sw"
