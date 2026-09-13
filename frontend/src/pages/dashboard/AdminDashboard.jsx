@@ -34,11 +34,11 @@ import RBACSection from "./admin/sections/RBACSection.jsx";
 import AdminProfile from "./admin/sections/AdminProfile.jsx";
 
 // Badges
-import { usePendingVerificationsCount } from "../../../config/verificationsStore.js";
-import { useOpenTicketsCount } from "../../../config/ticketsStore.js";
+import { usePendingVerificationsCount } from "../../config/verificationsStore.js";
+import { useOpenTicketsCount } from "../../config/ticketsStore.js";
 
 // Permissions
-import { useRoles, getRole } from "../../../config/rolesStore.js";
+import { useRoles, getRole } from "../../config/rolesStore.js";
 
 // ============================================================
 // URL ↔ STATE MAPPING
