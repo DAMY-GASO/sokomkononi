@@ -1,3 +1,9 @@
+// ============================================================
+// SavedPropertiesPage.jsx
+// Zilizohifadhiwa — buyer anaona listings alizozihifadhi.
+// Bilingual kamili + notifications info + category images.
+// ============================================================
+
 import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -8,36 +14,44 @@ import {
   Grid3x3,
   List,
   Search,
-  Home as HomeIcon,
-  Trees,
-  Car,
-  Briefcase,
-  Wrench,
+  Bell,
   Clock3,
   Ban,
+  Shield,
 } from "lucide-react";
 import {
   COLORS,
   FONTS,
   formatTZS,
   timeAgo,
+  getCategory,
 } from "./dashboard/components/shared";
 import { usePublicListings } from "../config/listingsStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
+import { getCategoryIcon } from "../config/categoriesStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 
-const CATEGORY_ICONS = {
-  nyumba: HomeIcon,
-  viwanja: Trees,
-  magari: Car,
-  biashara: Briefcase,
-  mashine: Wrench,
-};
+// ============================================================
+// CARD IMAGE RESOLVER — kama BrowseProperties
+// ============================================================
+function resolveCardImage(property, category) {
+  if (property?.imageUrl) return property.imageUrl;
+  if (category?.imageUrl) return category.imageUrl;
+  return null;
+}
 
 function SavedCard({ property, viewMode, onRemove, lang }) {
-  const Icon = CATEGORY_ICONS[property.category] || HomeIcon;
+  const category = getCategory(property.category);
+  const Icon = getCategoryIcon(category?.iconKey);
+  const categoryLabel =
+    category?.label?.[lang] || category?.label?.sw || property.category;
+  const cardImage = resolveCardImage(property, category);
+
   const isReserved = property.status === "reserved";
   const isSold = property.status === "sold";
+  const isVerified = Boolean(property.verified);
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const handleRemove = (e) => {
     e.preventDefault();
@@ -54,9 +68,18 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
       >
         <Link
           to={`/mali/${property.id}`}
-          className="w-full sm:w-48 h-40 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative"
+          className="w-full sm:w-48 h-40 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative overflow-hidden"
         >
-          <Icon size={32} className="text-gray-300" />
+          {cardImage ? (
+            <img
+              src={cardImage}
+              alt={property.title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <Icon size={32} className="text-gray-300" />
+          )}
           {isReserved && (
             <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
               <Clock3 size={10} /> RESERVED
@@ -78,25 +101,33 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
             <button
               onClick={handleRemove}
               className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
-              aria-label={lang === "sw" ? "Ondoa" : "Remove"}
+              aria-label={t("Ondoa", "Remove")}
             >
               <Trash2 size={16} />
             </button>
           </div>
-          <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
+
+          {/* Category label */}
+          <span className="inline-block mt-1.5 text-[10px] font-medium text-[#E8A33D] bg-[#E8A33D]/10 px-2 py-0.5 rounded-full w-fit">
+            {categoryLabel}
+          </span>
+
+          <div className="flex items-center gap-1 mt-1.5 text-xs text-gray-500">
             <MapPin size={12} />
             {property.location}
           </div>
-          <p className="text-[#C1502E] font-bold text-base mt-2">{formatTZS(property.price)}</p>
+          <p className="text-[#C1502E] font-bold text-base mt-2">
+            {formatTZS(property.price)}
+          </p>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
             <span className="text-xs text-gray-400">
-              {lang === "sw" ? "Ilifadhiwa" : "Saved"} {timeAgo(property.postedAt, lang)}
+              {timeAgo(property.postedAt, lang)}
             </span>
             <Link
               to={`/mali/${property.id}`}
               className="text-xs font-semibold text-[#E8A33D] hover:underline"
             >
-              {lang === "sw" ? "Angalia" : "View"} →
+              {t("Angalia", "View")} →
             </Link>
           </div>
         </div>
@@ -111,8 +142,20 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
       }`}
     >
       <Link to={`/mali/${property.id}`} className="block relative">
-        <div className="w-full h-44 bg-gray-100 flex items-center justify-center">
-          <Icon size={40} className="text-gray-300 group-hover:scale-110 transition-transform" />
+        <div className="w-full h-44 bg-gray-100 flex items-center justify-center overflow-hidden">
+          {cardImage ? (
+            <img
+              src={cardImage}
+              alt={property.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              loading="lazy"
+            />
+          ) : (
+            <Icon
+              size={40}
+              className="text-gray-300 group-hover:scale-110 transition-transform"
+            />
+          )}
         </div>
         {isReserved && (
           <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
@@ -124,26 +167,33 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
             <Ban size={10} /> SOLD
           </span>
         )}
-        {property.verified && (
-          <span className="absolute top-2 right-2 bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full">
-            Verified
+        {isVerified && (
+          <span className="absolute top-2 right-2 bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+            <Shield size={10} /> Verified
           </span>
         )}
         <button
           onClick={handleRemove}
           className="absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center bg-white/90 text-[#C1502E] hover:bg-red-500 hover:text-white transition-colors"
-          aria-label={lang === "sw" ? "Ondoa" : "Remove"}
+          aria-label={t("Ondoa", "Remove")}
         >
           <Trash2 size={16} />
         </button>
       </Link>
       <Link to={`/mali/${property.id}`} className="block p-4">
-        <h3 className="font-semibold text-gray-800 text-sm truncate">{property.title}</h3>
+        <span className="inline-block text-[10px] font-medium text-[#E8A33D] bg-[#E8A33D]/10 px-2 py-0.5 rounded-full mb-1">
+          {categoryLabel}
+        </span>
+        <h3 className="font-semibold text-gray-800 text-sm truncate">
+          {property.title}
+        </h3>
         <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
           <MapPin size={12} />
           <span className="truncate">{property.location}</span>
         </div>
-        <p className="text-[#C1502E] font-bold text-base mt-2">{formatTZS(property.price)}</p>
+        <p className="text-[#C1502E] font-bold text-base mt-2">
+          {formatTZS(property.price)}
+        </p>
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">
           <span className="flex items-center gap-1">
             <Eye size={12} /> {property.views || 0}
@@ -161,6 +211,8 @@ export default function SavedPropertiesPage() {
   const allListings = usePublicListings();
   const [viewMode, setViewMode] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const saved = useMemo(() => {
     return allListings.filter((l) => savedIds.includes(l.id));
@@ -184,12 +236,13 @@ export default function SavedPropertiesPage() {
       `}</style>
 
       <div className="max-w-5xl mx-auto">
+        {/* Header */}
         <div className="flex items-center justify-between mb-1">
           <h1
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
             className="text-2xl sm:text-3xl font-semibold"
           >
-            {lang === "sw" ? "Zilizohifadhiwa" : "Saved Properties"}
+            {t("Zilizohifadhiwa", "Saved Properties")}
           </h1>
           <span
             style={{ background: COLORS.night, color: COLORS.sand }}
@@ -198,12 +251,32 @@ export default function SavedPropertiesPage() {
             {saved.length}
           </span>
         </div>
-        <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-5">
-          {lang === "sw"
-            ? "Mali ulizozihifadhi kwa ajili ya baadaye."
-            : "Properties you've saved for later."}
+        <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-2">
+          {t(
+            "Mali ulizozihifadhi kwa ajili ya baadaye.",
+            "Properties you've saved for later."
+          )}
         </p>
 
+        {/* Notifications info */}
+        <div
+          style={{
+            background: "rgba(37,99,235,0.08)",
+            color: "#1E3A8A",
+            borderColor: "rgba(37,99,235,0.2)",
+          }}
+          className="flex items-start gap-2 text-xs rounded-lg border px-3 py-2.5 mb-5"
+        >
+          <Bell size={14} className="shrink-0 mt-0.5" />
+          <span>
+            {t(
+              "Utapata taarifa listings hizi zinapobadilika (bei, sold, reserved).",
+              "You'll be notified when these listings change (price, sold, reserved)."
+            )}
+          </span>
+        </div>
+
+        {/* Search + View toggle */}
         {saved.length > 0 && (
           <div className="flex items-center gap-2 mb-4">
             <div className="relative flex-1">
@@ -215,11 +288,10 @@ export default function SavedPropertiesPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={
-                  lang === "sw"
-                    ? "Tafuta kwenye zilizohifadhiwa..."
-                    : "Search in saved..."
-                }
+                placeholder={t(
+                  "Tafuta kwenye zilizohifadhiwa...",
+                  "Search in saved..."
+                )}
                 style={{
                   background: "white",
                   borderColor: COLORS.sandLine,
@@ -258,6 +330,7 @@ export default function SavedPropertiesPage() {
           </div>
         )}
 
+        {/* List */}
         {filtered.length === 0 ? (
           <div
             style={{ borderColor: COLORS.sandLine }}
@@ -266,21 +339,19 @@ export default function SavedPropertiesPage() {
             <Heart size={48} className="mx-auto text-gray-300 mb-3" />
             <h3 style={{ color: COLORS.night }} className="font-semibold mb-1">
               {searchQuery
-                ? lang === "sw"
-                  ? "Hakuna matokeo"
-                  : "No results"
-                : lang === "sw"
-                  ? "Hakuna mali iliyohifadhiwa"
-                  : "No saved properties"}
+                ? t("Hakuna matokeo", "No results")
+                : t("Hakuna mali iliyohifadhiwa", "No saved properties")}
             </h3>
             <p style={{ color: "rgba(16,26,46,0.55)" }} className="text-sm mb-5">
               {searchQuery
-                ? lang === "sw"
-                  ? "Jaribu kutafuta kwa neno lingine"
-                  : "Try searching with a different term"
-                : lang === "sw"
-                  ? "Mali unayovutiwa nayo, ihifadhi ili uikumbuke baadaye."
-                  : "Save properties you're interested in so you can find them later."}
+                ? t(
+                    "Jaribu kutafuta kwa neno lingine",
+                    "Try searching with a different term"
+                  )
+                : t(
+                    "Mali unayovutiwa nayo, ihifadhi ili uikumbuke baadaye.",
+                    "Save properties you're interested in so you can find them later."
+                  )}
             </p>
             {!searchQuery && (
               <Link
@@ -288,7 +359,7 @@ export default function SavedPropertiesPage() {
                 style={{ background: COLORS.gold, color: COLORS.night }}
                 className="inline-block px-5 py-2.5 rounded-xl font-semibold text-sm"
               >
-                {lang === "sw" ? "Tafuta Mali" : "Browse Properties"}
+                {t("Tafuta Mali", "Browse Properties")}
               </Link>
             )}
           </div>
