@@ -199,7 +199,9 @@ export default function PostPropertyForm({
                   style={{ borderColor: COLORS.sandLine }}
                   className="flex justify-between text-sm pt-2 mt-1 border-t font-semibold"
                 >
-                  <span style={{ color: COLORS.night }}>Listing Fee</span>
+                  <span style={{ color: COLORS.night }}>
+                    {lang === "sw" ? "Ada ya Kuchapisha" : "Listing Fee"}
+                  </span>
                   <span style={{ color: COLORS.rust }}>{formatTZS(feeInfo.fee)}</span>
                 </div>
               </div>
@@ -218,7 +220,7 @@ export default function PostPropertyForm({
                 style={{ color: COLORS.night }}
                 className="w-full py-2.5 mt-2 text-sm font-medium underline underline-offset-2"
               >
-                {lang === "sw" ? "Angalia kwenye My Listings" : "View in My Listings"}
+                {lang === "sw" ? "Angalia kwenye Mali Zangu" : "View in My Listings"}
               </button>
             </div>
           )}
@@ -226,7 +228,7 @@ export default function PostPropertyForm({
           {stage === "paying" && (
             <PaymentGateway
               amount={feeInfo.fee}
-              title="Listing Fee"
+              title={lang === "sw" ? "Ada ya Kuchapisha" : "Listing Fee"}
               description={
                 lang === "sw"
                   ? `Kuchapisha "${base.title}"`
@@ -275,7 +277,7 @@ export default function PostPropertyForm({
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="w-full py-3 rounded-xl font-semibold text-sm"
           >
-            {lang === "sw" ? "Angalia kwenye My Listings" : "View in My Listings"}
+            {lang === "sw" ? "Angalia kwenye Mali Zangu" : "View in My Listings"}
           </button>
           <button
             onClick={() => onGoToBoost(createdListing.id)}
@@ -336,6 +338,7 @@ export default function PostPropertyForm({
             {categories.map((cat) => {
               const Icon = getCategoryIcon(cat.iconKey);
               const hasPhoto = Boolean(cat.imageUrl);
+              const catLabel = cat.label?.[lang] || cat.label?.sw;
               return (
                 <button
                   key={cat.key}
@@ -346,7 +349,7 @@ export default function PostPropertyForm({
                   {hasPhoto ? (
                     <img
                       src={cat.imageUrl}
-                      alt={cat.label[lang] || cat.label.sw}
+                      alt={catLabel}
                       className="w-full h-20 rounded-xl object-cover"
                     />
                   ) : (
@@ -358,7 +361,7 @@ export default function PostPropertyForm({
                     </div>
                   )}
                   <span style={{ color: COLORS.night }} className="text-sm font-semibold">
-                    {cat.label[lang] || cat.label.sw}
+                    {catLabel}
                   </span>
                 </button>
               );
@@ -471,7 +474,7 @@ export default function PostPropertyForm({
               </Field>
             </div>
 
-            {/* Category-specific fields */}
+            {/* Category-specific fields — BILINGUAL */}
             {category.extra && category.extra.length > 0 && (
               <div
                 style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -482,7 +485,7 @@ export default function PostPropertyForm({
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {category.extra.map((f) => (
-                    <Field key={f.key} label={f.label}>
+                    <Field key={f.key} label={f.label?.[lang] || f.label?.sw}>
                       {f.type === "select" ? (
                         <select
                           style={inputStyle}
@@ -492,8 +495,8 @@ export default function PostPropertyForm({
                         >
                           <option value="">{lang === "sw" ? "Chagua..." : "Choose..."}</option>
                           {f.options.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
+                            <option key={o.value} value={o.value}>
+                              {o.label?.[lang] || o.label?.sw}
                             </option>
                           ))}
                         </select>
@@ -502,7 +505,7 @@ export default function PostPropertyForm({
                           style={inputStyle}
                           type={f.type}
                           className="rounded-xl border px-3 py-2.5 text-sm outline-none"
-                          placeholder={f.placeholder}
+                          placeholder={f.placeholder?.[lang] || f.placeholder?.sw}
                           value={extra[f.key] || ""}
                           onChange={(e) => setExtraField(f.key, e.target.value)}
                         />
@@ -561,7 +564,7 @@ export default function PostPropertyForm({
               <span style={{ color: COLORS.night }}>
                 {lang === "sw" ? (
                   <>
-                    Baada ya kuwasilisha, utaelekezwa kulipa <b>Listing Fee</b> kabla mali yako
+                    Baada ya kuwasilisha, utaelekezwa kulipa <b>Ada ya Kuchapisha</b> kabla mali yako
                     haijachapishwa. Fee inategemea bei uliyoweka.
                   </>
                 ) : (
