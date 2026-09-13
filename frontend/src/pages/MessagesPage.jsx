@@ -1,14 +1,7 @@
 // ============================================================
 // MessagesPage.jsx
 // Mazungumzo ya wanunuzi na wauzaji.
-//
-// MABADILIKO:
-//   - Bilingual imerekebishwa kikamilifu (sw/en)
-//   - Mock data imeondolewa — sasa inatumia data halisi kutoka
-//     messagesStore.js + AuthContext
-//   - Loading / error / empty states zimeongezwa
-//   - sender === "me" imebadilishwa kuwa senderId === currentUserId
-//   - markConversationRead inaitwa kila selectedId inabadilika
+// Bilingual kamili + KILA KITU CENTERED (header, search).
 // ============================================================
 
 import React, { useState, useEffect } from "react";
@@ -31,7 +24,7 @@ import {
   markConversationRead,
 } from "../config/messagesStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import { useAuth } from "../context/AuthContext.jsx"; // 👈 badilisha path kama ni tofauti
+import { useAuth } from "../context/AuthContext.jsx";
 
 // ============================================================
 // HELPER — tafsiri fupi
@@ -58,9 +51,15 @@ function getCounterparty(convo, currentUserId) {
 }
 
 // ============================================================
-// ConversationListItem
+// ConversationListItem — kadi imeachwa kushoto (data nyingi)
 // ============================================================
-function ConversationListItem({ convo, currentUserId, active, onSelect, lang }) {
+function ConversationListItem({
+  convo,
+  currentUserId,
+  active,
+  onSelect,
+  lang,
+}) {
   const { name, avatar } = getCounterparty(convo, currentUserId);
   const lastMessage = convo.lastMessage || "";
   const unread = convo.unreadCount || 0;
@@ -91,7 +90,10 @@ function ConversationListItem({ convo, currentUserId, active, onSelect, lang }) 
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <p style={{ color: COLORS.night }} className="text-sm font-semibold truncate">
+          <p
+            style={{ color: COLORS.night }}
+            className="text-sm font-semibold truncate"
+          >
             {name}
           </p>
           <span
@@ -123,7 +125,7 @@ function ConversationListItem({ convo, currentUserId, active, onSelect, lang }) 
 }
 
 // ============================================================
-// ChatView
+// ChatView — messages bubbles zimeachwa (kushoto/kulia)
 // ============================================================
 function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
   const [text, setText] = useState("");
@@ -164,11 +166,16 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p style={{ color: COLORS.night }} className="text-sm font-semibold truncate">
+          <p
+            style={{ color: COLORS.night }}
+            className="text-sm font-semibold truncate"
+          >
             {name}
           </p>
           <p
-            style={{ color: convo.online ? COLORS.green : "rgba(16,26,46,0.5)" }}
+            style={{
+              color: convo.online ? COLORS.green : "rgba(16,26,46,0.5)",
+            }}
             className="text-xs"
           >
             {convo.online
@@ -287,14 +294,13 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
 }
 
 // ============================================================
-// MessagesPage
+// MessagesPage — MAIN
 // ============================================================
 export default function MessagesPage({ initialConversationId = null }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
   const currentUserId = user?.id || null;
 
-  // Data halisi kutoka store
   const {
     conversations = [],
     isLoading = false,
@@ -309,14 +315,12 @@ export default function MessagesPage({ initialConversationId = null }) {
   );
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Chagua convo ya kwanza ukisha-load (kama hakuna initialConversationId)
   useEffect(() => {
     if (!selectedId && conversations.length > 0 && !mobileShowChat) {
       setSelectedId(conversations[0].id);
     }
   }, [conversations, selectedId, mobileShowChat]);
 
-  // Handle initialConversationId kutoka nje
   useEffect(() => {
     if (initialConversationId) {
       setSelectedId(initialConversationId);
@@ -324,7 +328,6 @@ export default function MessagesPage({ initialConversationId = null }) {
     }
   }, [initialConversationId]);
 
-  // Mark read kila selectedId inabadilika
   useEffect(() => {
     if (selectedId) {
       markConversationRead(selectedId);
@@ -352,9 +355,6 @@ export default function MessagesPage({ initialConversationId = null }) {
     sendMessage(id, text, currentUserId);
   };
 
-  // ============================================================
-  // RENDER
-  // ============================================================
   return (
     <div
       style={{ background: COLORS.sand, fontFamily: FONTS.body, height: "100%" }}
@@ -364,8 +364,11 @@ export default function MessagesPage({ initialConversationId = null }) {
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 
-      <div className="p-4 sm:p-6 pb-2">
-        <div className="flex items-center gap-3 mb-1">
+      {/* ============================================================ */}
+      {/* HEADER — CENTERED */}
+      {/* ============================================================ */}
+      <div className="p-4 sm:p-6 pb-2 text-center">
+        <div className="flex items-center justify-center gap-3 mb-1">
           <h1
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
             className="text-2xl sm:text-3xl font-semibold"
@@ -381,7 +384,10 @@ export default function MessagesPage({ initialConversationId = null }) {
             </span>
           )}
         </div>
-        <p style={{ color: "rgba(16,26,46,0.6)" }} className="text-sm mb-4">
+        <p
+          style={{ color: "rgba(16,26,46,0.6)" }}
+          className="text-sm mb-4 max-w-xl mx-auto"
+        >
           {t(
             lang,
             "Mazungumzo yako na wanunuzi na wauzaji.",
@@ -389,8 +395,8 @@ export default function MessagesPage({ initialConversationId = null }) {
           )}
         </p>
 
-        {/* Search */}
-        <div className="relative max-w-md">
+        {/* Search — centered */}
+        <div className="relative max-w-md mx-auto">
           <Search
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -443,9 +449,9 @@ export default function MessagesPage({ initialConversationId = null }) {
                 borderColor: COLORS.rust,
                 background: "rgba(193,80,46,0.06)",
               }}
-              className="rounded-2xl border p-4 flex items-start gap-2"
+              className="rounded-2xl border p-4 flex flex-col items-center text-center gap-2"
             >
-              <AlertCircle size={18} color={COLORS.rust} className="shrink-0 mt-0.5" />
+              <AlertCircle size={18} color={COLORS.rust} />
               <div>
                 <p
                   style={{ color: COLORS.rust }}
