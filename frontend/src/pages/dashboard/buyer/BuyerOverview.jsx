@@ -1,7 +1,7 @@
 // ============================================================
 // BuyerOverview.jsx
 // Muhtasari wa mnunuzi — search, categories, listings, quick actions.
-// Bilingual + mobile-responsive.
+// Bilingual kamili + mobile-responsive.
 // ============================================================
 
 import React, { useMemo, useState } from "react";
@@ -17,12 +17,16 @@ import {
   Eye,
   MapPin,
   Star,
+  Bell,
+  Shield,
 } from "lucide-react";
-import { COLORS, FONTS, formatTZS, timeAgo } from "../components/shared";
+import { COLORS, FONTS, formatTZS } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import { usePublicListings } from "../../../config/listingsStore.js";
 import { useSavedIds } from "../../../config/savedStore.js";
+import { useRecentlyViewedIds } from "../../../config/recentlyViewedStore.js";
+import { useSearches } from "../../../config/searchesStore.js";
 import {
   useActiveCategories,
   getCategoryIcon,
@@ -35,6 +39,8 @@ export default function BuyerOverview({ onNavigate }) {
   const { user } = useAuth();
   const listings = usePublicListings();
   const savedIds = useSavedIds();
+  const recentlyViewedIds = useRecentlyViewedIds();
+  const searches = useSearches();
   const categories = useActiveCategories();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,21 +48,21 @@ export default function BuyerOverview({ onNavigate }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   // ============================================================
-  // STATS — hesabu kutoka listings + saved
+  // STATS
   // ============================================================
   const stats = useMemo(() => {
     const totalAvailable = listings.filter((l) => l.status === "live").length;
     const savedCount = savedIds.length;
-    const recentlyViewedCount = 0; // itahesabiwa baadaye
-    const activeDeals = 0; // itahesabiwa baadaye kutoka deals
+    const recentlyViewedCount = recentlyViewedIds.length;
+    const activeSearches = searches.length;
 
     return {
       totalAvailable,
       savedCount,
       recentlyViewedCount,
-      activeDeals,
+      activeSearches,
     };
-  }, [listings, savedIds]);
+  }, [listings, savedIds, recentlyViewedIds, searches]);
 
   // ============================================================
   // RECOMMENDED — listings zenye boost au leading
@@ -65,8 +71,10 @@ export default function BuyerOverview({ onNavigate }) {
     return listings
       .filter((l) => l.status === "live")
       .sort((a, b) => {
-        const aScore = (a.boostExpiresAt ? 2 : 0) + (a.leadingExpiresAt ? 1 : 0);
-        const bScore = (b.boostExpiresAt ? 2 : 0) + (b.leadingExpiresAt ? 1 : 0);
+        const aScore =
+          (a.boostExpiresAt ? 2 : 0) + (a.leadingExpiresAt ? 1 : 0);
+        const bScore =
+          (b.boostExpiresAt ? 2 : 0) + (b.leadingExpiresAt ? 1 : 0);
         if (aScore !== bScore) return bScore - aScore;
         return (b.views || 0) - (a.views || 0);
       })
@@ -84,10 +92,19 @@ export default function BuyerOverview({ onNavigate }) {
   }, [listings]);
 
   // ============================================================
+  // RECENTLY VIEWED — listings alizoziona buyer
+  // ============================================================
+  const recentlyViewedListings = useMemo(() => {
+    return recentlyViewedIds
+      .map((id) => listings.find((l) => l.id === id))
+      .filter(Boolean)
+      .slice(0, 4);
+  }, [recentlyViewedIds, listings]);
+
+  // ============================================================
   // NEARBY — listings zenye region ya buyer (mock: Dar es Salaam)
   // ============================================================
   const nearby = useMemo(() => {
-    // TODO: tumia user.location baadaye
     const userRegion = "Dar es Salaam";
     return listings
       .filter((l) => l.status === "live" && l.region === userRegion)
@@ -95,7 +112,7 @@ export default function BuyerOverview({ onNavigate }) {
   }, [listings]);
 
   // ============================================================
-  // QUICK ACTIONS
+  // QUICK ACTIONS — zinapeleka kwenye sections husika
   // ============================================================
   const quickActions = [
     {
@@ -111,8 +128,14 @@ export default function BuyerOverview({ onNavigate }) {
       color: COLORS.rust,
     },
     {
+      key: "searches",
+      label: t("Utafutaji Wangu", "My Searches"),
+      icon: Bell,
+      color: "#2563EB",
+    },
+    {
       key: "deals",
-      label: t("My Deals", "My Deals"),
+      label: t("Vyumba vya Majadiliano", "Deal Rooms"),
       icon: MessagesSquare,
       color: COLORS.gold,
     },
@@ -120,7 +143,13 @@ export default function BuyerOverview({ onNavigate }) {
       key: "messages",
       label: t("Ujumbe", "Messages"),
       icon: MessageSquare,
-      color: "#2563EB",
+      color: COLORS.night,
+    },
+    {
+      key: "safety",
+      label: t("Usalama & Msaada", "Safety & Support"),
+      icon: Shield,
+      color: COLORS.rust,
     },
   ];
 
@@ -205,19 +234,19 @@ export default function BuyerOverview({ onNavigate }) {
           onClick={() => onNavigate("saved")}
         />
         <StatTile
-          label={t("Zilizoangaliwa Hivi Karibuni", "Recently Viewed")}
+          label={t("Zilizoangaliwa", "Recently Viewed")}
           value={stats.recentlyViewedCount}
           icon={Eye}
           color={COLORS.gold}
           size="sm"
         />
         <StatTile
-          label={t("Active Deals", "Active Deals")}
-          value={stats.activeDeals}
-          icon={MessagesSquare}
+          label={t("Utafutaji Wangu", "My Searches")}
+          value={stats.activeSearches}
+          icon={Bell}
           color="#2563EB"
           size="sm"
-          onClick={() => onNavigate("deals")}
+          onClick={() => onNavigate("searches")}
         />
       </div>
 
@@ -229,7 +258,7 @@ export default function BuyerOverview({ onNavigate }) {
         >
           {t("Vitendo vya Haraka", "Quick Actions")}
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
           {quickActions.map(({ key, label, icon: Icon, color }) => (
             <button
               key={key}
@@ -242,7 +271,7 @@ export default function BuyerOverview({ onNavigate }) {
               >
                 <Icon size={18} color={color} />
               </div>
-              <span className="text-xs font-semibold text-gray-700 text-center">
+              <span className="text-xs font-semibold text-gray-700 text-center leading-tight">
                 {label}
               </span>
             </button>
@@ -271,6 +300,7 @@ export default function BuyerOverview({ onNavigate }) {
           {categories.slice(0, 6).map((cat) => {
             const Icon = getCategoryIcon(cat.iconKey);
             const hasPhoto = Boolean(cat.imageUrl);
+            const catLabel = cat.label?.[lang] || cat.label?.sw || cat.key;
             return (
               <button
                 key={cat.key}
@@ -280,7 +310,7 @@ export default function BuyerOverview({ onNavigate }) {
                 {hasPhoto ? (
                   <img
                     src={cat.imageUrl}
-                    alt={cat.label?.sw}
+                    alt={catLabel}
                     className="w-10 h-10 rounded-lg object-cover"
                   />
                 ) : (
@@ -292,7 +322,7 @@ export default function BuyerOverview({ onNavigate }) {
                   </div>
                 )}
                 <span className="text-[10px] sm:text-xs font-semibold text-gray-700 text-center line-clamp-2">
-                  {cat.label?.[lang] || cat.label?.sw}
+                  {catLabel}
                 </span>
               </button>
             );
@@ -309,7 +339,19 @@ export default function BuyerOverview({ onNavigate }) {
           listings={recommended}
           lang={lang}
           onViewAll={() => onNavigate("browse")}
-          savedIds={savedIds}
+          navigate={navigate}
+        />
+      )}
+
+      {/* RECENTLY VIEWED */}
+      {recentlyViewedListings.length > 0 && (
+        <ListingSection
+          title={t("Zilizoangaliwa Hivi Karibuni", "Recently Viewed")}
+          icon={Eye}
+          iconColor={COLORS.gold}
+          listings={recentlyViewedListings}
+          lang={lang}
+          onViewAll={() => onNavigate("browse")}
           navigate={navigate}
         />
       )}
@@ -323,7 +365,6 @@ export default function BuyerOverview({ onNavigate }) {
           listings={newListings}
           lang={lang}
           onViewAll={() => onNavigate("browse")}
-          savedIds={savedIds}
           navigate={navigate}
         />
       )}
@@ -337,7 +378,6 @@ export default function BuyerOverview({ onNavigate }) {
           listings={nearby}
           lang={lang}
           onViewAll={() => onNavigate("browse")}
-          savedIds={savedIds}
           navigate={navigate}
         />
       )}
@@ -355,7 +395,6 @@ function ListingSection({
   listings,
   lang,
   onViewAll,
-  savedIds,
   navigate,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
