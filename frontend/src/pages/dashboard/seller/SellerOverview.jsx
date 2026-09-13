@@ -1,7 +1,7 @@
 // ============================================================
 // SellerOverview.jsx
 // Muhtasari wa muuzaji — stats, quick actions, recent activity.
-// Bilingual kamili + mobile-responsive.
+// Bilingual kamili + mobile-responsive + KILA KITU CENTERED.
 // ============================================================
 
 import React, { useMemo } from "react";
@@ -51,8 +51,9 @@ export default function SellerOverview({ onNavigate }) {
     const activeDeals = deals.filter((d) =>
       ["negotiating", "offer_sent", "accepted"].includes(d.status)
     ).length;
-    const pendingReservations = deals.filter((d) => d.status === "reserved")
-      .length;
+    const pendingReservations = deals.filter(
+      (d) => d.status === "reserved"
+    ).length;
 
     return {
       totalListings,
@@ -98,18 +99,20 @@ export default function SellerOverview({ onNavigate }) {
 
   return (
     <div style={{ fontFamily: FONTS.body }} className="p-4 sm:p-6">
-      {/* GREETING */}
-      <div className="mb-6">
+      {/* ============================================================ */}
+      {/* GREETING — CENTERED */}
+      {/* ============================================================ */}
+      <div className="mb-6 text-center">
         <h1
           style={{ fontFamily: FONTS.display, color: COLORS.night }}
           className="text-2xl sm:text-3xl font-semibold"
         >
           {t(
-            `Karibu, ${user?.name?.split(" ")[0] || "Seller"} 👋`,
+            `Karibu, ${user?.name?.split(" ")[0] || "Muuzaji"} 👋`,
             `Welcome, ${user?.name?.split(" ")[0] || "Seller"} 👋`
           )}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-gray-500 mt-2 max-w-xl mx-auto">
           {t(
             "Hii ni muhtasari wa mali zako, maulizio, na deals.",
             "Here's a summary of your listings, enquiries, and deals."
@@ -117,7 +120,9 @@ export default function SellerOverview({ onNavigate }) {
         </p>
       </div>
 
-      {/* STATS GRID — bilingual kamili */}
+      {/* ============================================================ */}
+      {/* STATS GRID */}
+      {/* ============================================================ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatTile
           label={t("Mali Hai", "Active Listings")}
@@ -148,7 +153,9 @@ export default function SellerOverview({ onNavigate }) {
         />
       </div>
 
-      {/* SECONDARY STATS — bilingual kamili */}
+      {/* ============================================================ */}
+      {/* SECONDARY STATS */}
+      {/* ============================================================ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatTile
           label={t("Jumla ya Mali", "Total Listings")}
@@ -180,11 +187,13 @@ export default function SellerOverview({ onNavigate }) {
         />
       </div>
 
-      {/* QUICK ACTIONS */}
+      {/* ============================================================ */}
+      {/* QUICK ACTIONS — header centered */}
+      {/* ============================================================ */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
         <h2
           style={{ color: COLORS.night }}
-          className="text-sm font-semibold mb-3"
+          className="text-sm font-semibold mb-4 text-center"
         >
           {t("Vitendo vya Haraka", "Quick Actions")}
         </h2>
@@ -209,7 +218,11 @@ export default function SellerOverview({ onNavigate }) {
         </div>
       </div>
 
-      {/* RECENT ACTIVITY */}
+      {/* ============================================================
+          RECENT ACTIVITY — component yake ndani inaweza kuwa
+          na headers zake. Kama unataka ziwe centered pia,
+          niambie nirekebishe RecentActivity.jsx.
+          ============================================================ */}
       <RecentActivity
         listings={listings}
         deals={deals}
