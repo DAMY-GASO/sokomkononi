@@ -9,6 +9,34 @@ const inputStyle = {
   color: COLORS.night,
 };
 
+// ============================================================
+// HELPERS — input formatting (phone, card, expiry)
+// ============================================================
+
+// Simu: "0712345678" -> "0712 345 678"
+function formatPhoneInput(value) {
+  const digits = String(value).replace(/[^0-9]/g, "").slice(0, 10);
+  if (!digits) return "";
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+  return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+}
+
+// Kadi: "4111111111111111" -> "4111 1111 1111 1111"
+function formatCardInput(value) {
+  const digits = String(value).replace(/[^0-9]/g, "").slice(0, 16);
+  if (!digits) return "";
+  return digits.replace(/(.{4})/g, "$1 ").trim();
+}
+
+// Expiry: "1225" -> "12/25"
+function formatExpiryInput(value) {
+  const digits = String(value).replace(/[^0-9]/g, "").slice(0, 4);
+  if (!digits) return "";
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
 function MethodOption({ method, selected, onSelect }) {
   const Icon = method.type === "card" ? CreditCard : Smartphone;
   return (
@@ -188,12 +216,14 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
           </span>
           <input
             style={inputStyle}
+            type="text"
+            inputMode="tel"
             className="rounded-xl border px-3 py-2.5 text-sm outline-none"
             placeholder={
               lang === "sw" ? "mfano: 0712 345 678" : "e.g. 0712 345 678"
             }
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
           />
         </label>
       )}
@@ -206,10 +236,14 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
             </span>
             <input
               style={inputStyle}
+              type="text"
+              inputMode="numeric"
               className="rounded-xl border px-3 py-2.5 text-sm outline-none"
               placeholder="0000 0000 0000 0000"
               value={card.number}
-              onChange={(e) => setCard({ ...card, number: e.target.value })}
+              onChange={(e) =>
+                setCard({ ...card, number: formatCardInput(e.target.value) })
+              }
             />
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -219,10 +253,14 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
               </span>
               <input
                 style={inputStyle}
+                type="text"
+                inputMode="numeric"
                 className="rounded-xl border px-3 py-2.5 text-sm outline-none"
                 placeholder="MM/YY"
                 value={card.expiry}
-                onChange={(e) => setCard({ ...card, expiry: e.target.value })}
+                onChange={(e) =>
+                  setCard({ ...card, expiry: formatExpiryInput(e.target.value) })
+                }
               />
             </label>
             <label className="flex flex-col gap-1.5">
@@ -231,10 +269,17 @@ export default function PaymentGateway({ amount, title, description, onSuccess, 
               </span>
               <input
                 style={inputStyle}
+                type="text"
+                inputMode="numeric"
                 className="rounded-xl border px-3 py-2.5 text-sm outline-none"
                 placeholder="123"
                 value={card.cvv}
-                onChange={(e) => setCard({ ...card, cvv: e.target.value })}
+                onChange={(e) =>
+                  setCard({
+                    ...card,
+                    cvv: e.target.value.replace(/[^0-9]/g, "").slice(0, 4),
+                  })
+                }
               />
             </label>
           </div>
