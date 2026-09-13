@@ -2,20 +2,12 @@
 // categoriesStore.js
 // CHANZO KIMOJA CHA UKWELI kwa categories za SokoMkononi.
 //
-// MABADILIKO MAKUU:
-//   - SEED_CATEGORIES imeondolewa — hakuna data ya kubuni.
-//     Categories sasa zinapaswa kuja kutoka backend halisi.
-//     Kama bado hujaunda backend, Admin anaweza kuongeza
-//     categories kupitia addCategory().
-//   - getCategoryExtra() — rudisha fields za extra kwa lugha.
-//   - useCategory(key) — hook mpya kwa category moja.
-//   - initializeCategories() — Admin kupandisha categories
-//     kwa mara moja (kutoka seed file tofauti au API).
-//   - Storage iko tayari kwa backend: badilisha readFromStorage/
-//     saveAll ziite fetch()/axios bila kugusa hooks.
-//
-// LABELS: `label`, `description`, na `extra[].label` zina { sw, en }.
-// `extra[].options` ina array ya { value, label: { sw, en } }.
+// MABADILIKO:
+//   - SEED_CATEGORIES imeondolewa — sasa iko kwenye
+//     seedCategories.js tofauti.
+//   - initializeCategories() imeongezwa — inaweka categories
+//     za awali MARA MOJA TU (kama bado hazipo).
+//   - Helpers za extra fields zimeongezwa.
 // ============================================================
 
 import { useEffect, useState } from "react";
@@ -76,7 +68,7 @@ export function getCategoryIcon(iconKey) {
 }
 
 // ============================================================
-// STORAGE LAYER (badilisha kuwa API ukiwa na backend)
+// STORAGE
 // ============================================================
 function readFromStorage() {
   if (typeof window === "undefined") return [];
@@ -124,35 +116,63 @@ export function getCategoryLabel(key, lang = "sw") {
   return cat.label?.[lang] || cat.label?.sw || key;
 }
 
-/**
- * getCategoryExtra(key) — rudisha extra fields za category.
- * Kila field ina label/placeholder za { sw, en }.
- */
 export function getCategoryExtra(key) {
   const cat = getCategory(key);
   if (!cat || !Array.isArray(cat.extra)) return [];
   return cat.extra;
 }
 
-/**
- * getCategoryFieldLabel(field, lang) — label ya field moja kwa lugha.
- */
 export function getCategoryFieldLabel(field, lang = "sw") {
   return field?.label?.[lang] || field?.label?.sw || field?.key || "";
 }
 
-/**
- * getCategoryFieldPlaceholder(field, lang) — placeholder kwa lugha.
- */
 export function getCategoryFieldPlaceholder(field, lang = "sw") {
   return field?.placeholder?.[lang] || field?.placeholder?.sw || "";
 }
 
-/**
- * getCategoryOptionLabel(option, lang) — label ya option kwa lugha.
- */
 export function getCategoryOptionLabel(option, lang = "sw") {
   return option?.label?.[lang] || option?.label?.sw || option?.value || "";
+}
+
+// ============================================================
+// INITIALIZE — weka categories za awali MARA MOJA TU
+// ============================================================
+/**
+ * initializeCategories(list) — weka categories za awali.
+ *
+ * MUHIMU: Kama categories zipo tayari (Admin ameongeza/kubadilisha),
+ * function hii HAITAFANYA KITU. Inaheshimu mabadiliko ya Admin.
+ *
+ * Tumia mara moja kwenye App.jsx:
+ *
+ *   useEffect(() => {
+ *     initializeCategories(SEED_CATEGORIES);
+ *   }, []);
+ */
+export function initializeCategories(list) {
+  if (!Array.isArray(list) || list.length === 0) {
+    return getCategories();
+  }
+
+  // 🛑 Kama categories zipo tayari — usiguse (heshimu Admin)
+  const current = getCategories();
+  if (current.length > 0) {
+    return current;
+  }
+
+  // ✅ Weka seed mara ya kwanza
+  saveAll(list);
+  return list;
+}
+
+/**
+ * resetCategories(list) — Admin pekee. Futa zote na weka upya.
+ * Tofauti na initializeCategories, hii HAINA check ya "zipo tayari".
+ */
+export function resetCategories(list) {
+  if (!Array.isArray(list)) return getCategories();
+  saveAll(list);
+  return list;
 }
 
 // ============================================================
@@ -216,20 +236,6 @@ export function removeCategory(key, listingsCount = 0) {
   return { success: true, categories: next };
 }
 
-/**
- * initializeCategories(list) — Admin kupandisha categories kwa
- * mara moja (kutoka seed file tofauti au API).
- *
- * Kama list ni tupu, haitafanya kitu.
- */
-export function initializeCategories(list) {
-  if (!Array.isArray(list) || list.length === 0) {
-    return getCategories();
-  }
-  saveAll(list);
-  return list;
-}
-
 // ============================================================
 // IMAGE HELPERS
 // ============================================================
@@ -270,9 +276,6 @@ export function usePopularCategories() {
   return list.filter((c) => c.active !== false && c.isPopular === true);
 }
 
-/**
- * useCategory(key) — category moja kwa key.
- */
 export function useCategory(key) {
   const list = useCategories();
   if (!key) return null;
