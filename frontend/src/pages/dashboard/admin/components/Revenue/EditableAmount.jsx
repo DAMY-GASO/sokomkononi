@@ -2,28 +2,51 @@
 // EditableAmount.jsx
 // Kiasi kinachoweza kuhaririwa — kwa Revenue section.
 // Responsive: inafanya kazi kwenye grid-cols-3 ya simu.
+// Comma inajiweka automatically mtumiaji anapoandika.
 // ============================================================
 
 import React, { useState } from "react";
 import { Save, Pencil, X } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 
+// Format namba na comma: 8500000 -> "8,500,000"
+function formatWithCommas(value) {
+  if (value === "" || value === null || value === undefined) return "";
+  const digits = String(value).replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("en-US");
+}
+
+// Toa comma na kurudi namba: "8,500,000" -> 8500000
+function parseNumber(value) {
+  const digits = String(value).replace(/[^0-9]/g, "");
+  return digits ? parseInt(digits, 10) : 0;
+}
+
 export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value ?? 0);
+  const [draft, setDraft] = useState("");
 
   const safeValue = value ?? 0;
 
+  const startEditing = () => {
+    setDraft(formatWithCommas(safeValue));
+    setEditing(true);
+  };
+
+  const handleChange = (e) => {
+    const raw = e.target.value.replace(/[^0-9]/g, "");
+    setDraft(raw ? Number(raw).toLocaleString("en-US") : "");
+  };
+
   const handleSave = () => {
-    const num = Number(draft);
-    if (!isNaN(num)) {
-      onSave(num);
-    }
+    const num = parseNumber(draft);
+    onSave(num);
     setEditing(false);
   };
 
   const handleCancel = () => {
-    setDraft(safeValue);
+    setDraft(formatWithCommas(safeValue));
     setEditing(false);
   };
 
@@ -31,9 +54,10 @@ export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
     return (
       <div className="flex items-center gap-1 w-full min-w-0">
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={handleChange}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSave();
             if (e.key === "Escape") handleCancel();
@@ -62,10 +86,7 @@ export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
 
   return (
     <button
-      onClick={() => {
-        setDraft(safeValue);
-        setEditing(true);
-      }}
+      onClick={startEditing}
       className="flex items-center gap-1.5 group w-full min-w-0 text-left"
     >
       <span
