@@ -1,7 +1,7 @@
 // ============================================================
 // SellerOverview.jsx
 // Muhtasari wa muuzaji — stats, quick actions, recent activity.
-// Bilingual + mobile-responsive.
+// Bilingual kamili + mobile-responsive.
 // ============================================================
 
 import React, { useMemo } from "react";
@@ -66,6 +66,9 @@ export default function SellerOverview({ onNavigate }) {
     };
   }, [listings, deals]);
 
+  // ============================================================
+  // QUICK ACTIONS — bilingual kamili
+  // ============================================================
   const quickActions = [
     {
       key: "post",
@@ -74,8 +77,8 @@ export default function SellerOverview({ onNavigate }) {
       color: COLORS.gold,
     },
     {
-      key: "listings",
-      label: t("Leads", "Leads"),
+      key: "leads",
+      label: t("Maulizio", "Leads"),
       icon: Inbox,
       color: COLORS.green,
     },
@@ -87,7 +90,7 @@ export default function SellerOverview({ onNavigate }) {
     },
     {
       key: "deals",
-      label: t("My Deals", "My Deals"),
+      label: t("Vyumba vya Majadiliano", "Deal Rooms"),
       icon: MessagesSquare,
       color: COLORS.rust,
     },
@@ -108,36 +111,36 @@ export default function SellerOverview({ onNavigate }) {
         </h1>
         <p className="text-sm text-gray-500 mt-1">
           {t(
-            "Hii ni muhtasari wa mali zako, leads, na deals.",
-            "Here's a summary of your listings, leads, and deals."
+            "Hii ni muhtasari wa mali zako, maulizio, na deals.",
+            "Here's a summary of your listings, enquiries, and deals."
           )}
         </p>
       </div>
 
-      {/* STATS GRID */}
+      {/* STATS GRID — bilingual kamili */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatTile
-          label={t("Active Listings", "Active Listings")}
+          label={t("Mali Hai", "Active Listings")}
           value={stats.activeListings}
           icon={ListChecks}
           color={COLORS.green}
           onClick={() => onNavigate("listings")}
         />
         <StatTile
-          label={t("Total Views", "Total Views")}
+          label={t("Jumla ya Mionekano", "Total Views")}
           value={stats.totalViews.toLocaleString()}
           icon={Eye}
           color={COLORS.gold}
         />
         <StatTile
-          label={t("New Enquiries", "New Enquiries")}
+          label={t("Maulizio Mapya", "New Enquiries")}
           value={stats.totalEnquiries}
           icon={MessageSquare}
           color="#2563EB"
-          onClick={() => onNavigate("listings")}
+          onClick={() => onNavigate("leads")}
         />
         <StatTile
-          label={t("Active Deals", "Active Deals")}
+          label={t("Deals Hai", "Active Deals")}
           value={stats.activeDeals}
           icon={MessagesSquare}
           color={COLORS.rust}
@@ -145,31 +148,31 @@ export default function SellerOverview({ onNavigate }) {
         />
       </div>
 
-      {/* SECONDARY STATS */}
+      {/* SECONDARY STATS — bilingual kamili */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatTile
-          label={t("Total Listings", "Total Listings")}
+          label={t("Jumla ya Mali", "Total Listings")}
           value={stats.totalListings}
           icon={Package}
           color={COLORS.night}
           size="sm"
         />
         <StatTile
-          label={t("Pending Approval", "Pending Approval")}
+          label={t("Zinasubiri Idhini", "Pending Approval")}
           value={stats.pendingApproval}
           icon={Clock3}
           color={COLORS.gold}
           size="sm"
         />
         <StatTile
-          label={t("Sold", "Sold")}
+          label={t("Zimeuzwa", "Sold")}
           value={stats.soldListings}
           icon={CheckCircle}
           color={COLORS.green}
           size="sm"
         />
         <StatTile
-          label={t("Pending Reservations", "Pending Reservations")}
+          label={t("Reservation Zinasubiri", "Pending Reservations")}
           value={stats.pendingReservations}
           icon={AlertCircle}
           color={COLORS.rust}
