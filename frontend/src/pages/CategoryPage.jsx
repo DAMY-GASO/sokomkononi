@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Navbar from "../components/Navbar.jsx";
@@ -29,11 +29,35 @@ import {
   getCategoryIcon,
 } from "../config/categoriesStore.js";
 import {
+  useSavedListings,
+  toggleSavedListing,
+} from "../config/savedListingsStore.js"; // 👈 kama huna store hii, tazama maelezo chini
+import {
   isBoostActive,
   isLeadingActive,
   formatTZS,
   timeAgo,
 } from "./dashboard/components/shared";
+
+// ============================================================
+// HELPERS — bilingual + comma
+// ============================================================
+function t(lang, sw, en) {
+  return lang === "sw" ? sw : en;
+}
+
+// Format namba na comma (kwa input): "50000000" -> "50,000,000"
+function formatNumberInput(value) {
+  if (!value) return "";
+  const digits = String(value).replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("en-US");
+}
+
+// Toa comma: "50,000,000" -> "50000000"
+function cleanNumberInput(value) {
+  return String(value ?? "").replace(/[^0-9]/g, "");
+}
 
 const COLORS = {
   night: "#101A2E",
@@ -45,22 +69,71 @@ const COLORS = {
 };
 
 // ============================================================
-// HELPERS
+// PRICE RANGES — bilingual
+// ============================================================
+// Kama unataka comma kamili (mfano "TZS 50,000,000") badilisha
+// `label` kuwa `formatTZS(min)` / `formatTZS(max)`.
+// Kwa sasa natumia "TZS 50M" (fupi) — rahisi kwa mobile.
+// ============================================================
+const PRICE_RANGES = {
+  nyumba: [
+    { label: { sw: "Chini ya TZS 50M", en: "Under TZS 50M" }, min: 0, max: 50000000 },
+    { label: { sw: "TZS 50M - 100M", en: "TZS 50M - 100M" }, min: 50000000, max: 100000000 },
+    { label: { sw: "TZS 100M - 200M", en: "TZS 100M - 200M" }, min: 100000000, max: 200000000 },
+    { label: { sw: "Juu ya TZS 200M", en: "Above TZS 200M" }, min: 200000000, max: Infinity },
+  ],
+  viwanja: [
+    { label: { sw: "Chini ya TZS 10M", en: "Under TZS 10M" }, min: 0, max: 10000000 },
+    { label: { sw: "TZS 10M - 20M", en: "TZS 10M - 20M" }, min: 10000000, max: 20000000 },
+    { label: { sw: "TZS 20M - 50M", en: "TZS 20M - 50M" }, min: 20000000, max: 50000000 },
+    { label: { sw: "Juu ya TZS 50M", en: "Above TZS 50M" }, min: 50000000, max: Infinity },
+  ],
+  magari: [
+    { label: { sw: "Chini ya TZS 20M", en: "Under TZS 20M" }, min: 0, max: 20000000 },
+    { label: { sw: "TZS 20M - 50M", en: "TZS 20M - 50M" }, min: 20000000, max: 50000000 },
+    { label: { sw: "TZS 50M - 100M", en: "TZS 50M - 100M" }, min: 50000000, max: 100000000 },
+    { label: { sw: "Juu ya TZS 100M", en: "Above TZS 100M" }, min: 100000000, max: Infinity },
+  ],
+  biashara: [
+    { label: { sw: "Chini ya TZS 20M", en: "Under TZS 20M" }, min: 0, max: 20000000 },
+    { label: { sw: "TZS 20M - 50M", en: "TZS 20M - 50M" }, min: 20000000, max: 50000000 },
+    { label: { sw: "TZS 50M - 100M", en: "TZS 50M - 100M" }, min: 50000000, max: 100000000 },
+    { label: { sw: "Juu ya TZS 100M", en: "Above TZS 100M" }, min: 100000000, max: Infinity },
+  ],
+  mashine: [
+    { label: { sw: "Chini ya TZS 30M", en: "Under TZS 30M" }, min: 0, max: 30000000 },
+    { label: { sw: "TZS 30M - 70M", en: "TZS 30M - 70M" }, min: 30000000, max: 70000000 },
+    { label: { sw: "TZS 70M - 150M", en: "TZS 70M - 150M" }, min: 70000000, max: 150000000 },
+    { label: { sw: "Juu ya TZS 150M", en: "Above TZS 150M" }, min: 150000000, max: Infinity },
+  ],
+};
+
+const DEFAULT_RANGES = [
+  { label: { sw: "Chini ya TZS 20M", en: "Under TZS 20M" }, min: 0, max: 20000000 },
+  { label: { sw: "TZS 20M - 50M", en: "TZS 20M - 50M" }, min: 20000000, max: 50000000 },
+  { label: { sw: "TZS 50M - 100M", en: "TZS 50M - 100M" }, min: 50000000, max: 100000000 },
+  { label: { sw: "Juu ya TZS 100M", en: "Above TZS 100M" }, min: 100000000, max: Infinity },
+];
+
+// ============================================================
+// HELPERS — reservation countdown
 // ============================================================
 function reservationCountdown(reservedUntil, lang) {
   if (!reservedUntil) return "";
   const ms = new Date(reservedUntil).getTime() - Date.now();
-  if (ms <= 0) return lang === "sw" ? "Inaisha hivi karibuni" : "Ending soon";
+  if (ms <= 0) return t(lang, "Inaisha hivi karibuni", "Ending soon");
   const hours = Math.floor(ms / 3600000);
   if (hours < 24)
-    return lang === "sw" ? `Inaisha baada ya saa ${hours}` : `Ends in ${hours}hrs`;
+    return t(lang, `Inaisha baada ya saa ${hours}`, `Ends in ${hours}hrs`);
   const days = Math.floor(hours / 24);
   const remainingHours = hours % 24;
   if (remainingHours === 0)
-    return lang === "sw" ? `Inaisha baada ya siku ${days}` : `Ends in ${days} days`;
-  return lang === "sw"
-    ? `Inaisha baada ya siku ${days} ${remainingHours}saa`
-    : `Ends in ${days}d ${remainingHours}h`;
+    return t(lang, `Inaisha baada ya siku ${days}`, `Ends in ${days} days`);
+  return t(
+    lang,
+    `Inaisha baada ya siku ${days} ${remainingHours}saa`,
+    `Ends in ${days}d ${remainingHours}h`
+  );
 }
 
 // ============================================================
@@ -69,47 +142,12 @@ function reservationCountdown(reservedUntil, lang) {
 function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang }) {
   const [localFilters, setLocalFilters] = useState(filters);
 
-  const priceRanges = {
-    nyumba: [
-      { label: "Chini ya TZS 50M", min: 0, max: 50000000 },
-      { label: "TZS 50M - 100M", min: 50000000, max: 100000000 },
-      { label: "TZS 100M - 200M", min: 100000000, max: 200000000 },
-      { label: "Juu ya TZS 200M", min: 200000000, max: Infinity },
-    ],
-    viwanja: [
-      { label: "Chini ya TZS 10M", min: 0, max: 10000000 },
-      { label: "TZS 10M - 20M", min: 10000000, max: 20000000 },
-      { label: "TZS 20M - 50M", min: 20000000, max: 50000000 },
-      { label: "Juu ya TZS 50M", min: 50000000, max: Infinity },
-    ],
-    magari: [
-      { label: "Chini ya TZS 20M", min: 0, max: 20000000 },
-      { label: "TZS 20M - 50M", min: 20000000, max: 50000000 },
-      { label: "TZS 50M - 100M", min: 50000000, max: 100000000 },
-      { label: "Juu ya TZS 100M", min: 100000000, max: Infinity },
-    ],
-    biashara: [
-      { label: "Chini ya TZS 20M", min: 0, max: 20000000 },
-      { label: "TZS 20M - 50M", min: 20000000, max: 50000000 },
-      { label: "TZS 50M - 100M", min: 50000000, max: 100000000 },
-      { label: "Juu ya TZS 100M", min: 100000000, max: Infinity },
-    ],
-    mashine: [
-      { label: "Chini ya TZS 30M", min: 0, max: 30000000 },
-      { label: "TZS 30M - 70M", min: 30000000, max: 70000000 },
-      { label: "TZS 70M - 150M", min: 70000000, max: 150000000 },
-      { label: "Juu ya TZS 150M", min: 150000000, max: Infinity },
-    ],
-  };
+  // Sync local filters na props kila filters inabadilika
+  useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
 
-  const defaultRanges = [
-    { label: "Chini ya TZS 20M", min: 0, max: 20000000 },
-    { label: "TZS 20M - 50M", min: 20000000, max: 50000000 },
-    { label: "TZS 50M - 100M", min: 50000000, max: 100000000 },
-    { label: "Juu ya TZS 100M", min: 100000000, max: Infinity },
-  ];
-
-  const activeRanges = priceRanges[category] || defaultRanges;
+  const activeRanges = PRICE_RANGES[category] || DEFAULT_RANGES;
 
   const handleApply = () => {
     setFilters(localFilters);
@@ -125,11 +163,12 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-800 flex items-center gap-2">
           <SlidersHorizontal size={16} />
-          {lang === "sw" ? "Vichujio" : "Filters"}
+          {t(lang, "Vichujio", "Filters")}
         </h3>
         <button
           onClick={onClose}
           className="lg:hidden text-gray-400 hover:text-gray-600"
+          aria-label={t(lang, "Funga", "Close")}
         >
           <X size={20} />
         </button>
@@ -137,7 +176,7 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
 
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">
-          {lang === "sw" ? "Bei" : "Price"}
+          {t(lang, "Bei", "Price")}
         </h4>
         <div className="space-y-2">
           {activeRanges.map((range, idx) => (
@@ -151,7 +190,9 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
                 }
                 className="w-4 h-4 text-[#E8A33D] focus:ring-[#E8A33D]"
               />
-              <span className="text-sm text-gray-600">{range.label}</span>
+              <span className="text-sm text-gray-600">
+                {range.label?.[lang] || range.label?.sw}
+              </span>
             </label>
           ))}
         </div>
@@ -159,7 +200,7 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
 
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">
-          {lang === "sw" ? "Vigezo Vingine" : "Other"}
+          {t(lang, "Vigezo Vingine", "Other")}
         </h4>
         <div className="space-y-2">
           <label className="flex items-center gap-2 cursor-pointer">
@@ -172,7 +213,7 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
               className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
             />
             <span className="text-sm text-gray-600">
-              {lang === "sw" ? "Zilizothibitishwa tu" : "Verified only"}
+              {t(lang, "Zilizothibitishwa tu", "Verified only")}
             </span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
@@ -185,7 +226,7 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
               className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
             />
             <span className="text-sm text-gray-600">
-              {lang === "sw" ? "Featured tu" : "Featured only"}
+              {t(lang, "Featured tu", "Featured only")}
             </span>
           </label>
         </div>
@@ -196,13 +237,13 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
           onClick={handleApply}
           className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors"
         >
-          {lang === "sw" ? "Tumia Vichujio" : "Apply Filters"}
+          {t(lang, "Tumia Vichujio", "Apply Filters")}
         </button>
         <button
           onClick={handleReset}
           className="w-full border border-gray-200 text-gray-600 hover:bg-gray-50 py-2.5 rounded-lg font-medium text-sm transition-colors"
         >
-          {lang === "sw" ? "Safisha" : "Reset"}
+          {t(lang, "Safisha", "Reset")}
         </button>
       </div>
     </div>
@@ -245,8 +286,14 @@ export default function CategoryPage() {
     categoryInfo?.label?.[lang] || categoryInfo?.label?.sw || categoryKey;
   const categoryDescription =
     categoryInfo?.description?.[lang] || categoryInfo?.description?.sw || "";
-  const categoryImage = categoryInfo?.imageUrl || null;
-  const hasCategoryImage = Boolean(categoryImage);
+
+  // Data halisi
+  const allPublic = usePublicListings();
+  const savedListings = useSavedListings(); // 👈 array ya IDs au objects
+  const savedIds = useMemo(() => {
+    if (!Array.isArray(savedListings)) return [];
+    return savedListings.map((s) => (typeof s === "string" ? s : s.id));
+  }, [savedListings]);
 
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("newest");
@@ -255,7 +302,6 @@ export default function CategoryPage() {
     verified: false,
     featured: false,
   });
-  const [savedIds, setSavedIds] = useState([]);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState(
     searchParams.get("tafuta") || ""
@@ -263,7 +309,6 @@ export default function CategoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 9;
 
-  const allPublic = usePublicListings();
   const allProperties = useMemo(
     () => allPublic.filter((l) => l.category === categoryKey),
     [allPublic, categoryKey]
@@ -276,8 +321,8 @@ export default function CategoryPage() {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.location.toLowerCase().includes(q)
+          p.title?.toLowerCase().includes(q) ||
+          p.location?.toLowerCase().includes(q)
       );
     }
 
@@ -285,48 +330,13 @@ export default function CategoryPage() {
     if (filters.featured) result = result.filter((p) => isBoostActive(p));
 
     if (filters.priceRange !== null) {
-      const ranges = {
-        nyumba: [
-          [0, 50000000],
-          [50000000, 100000000],
-          [100000000, 200000000],
-          [200000000, Infinity],
-        ],
-        viwanja: [
-          [0, 10000000],
-          [10000000, 20000000],
-          [20000000, 50000000],
-          [50000000, Infinity],
-        ],
-        magari: [
-          [0, 20000000],
-          [20000000, 50000000],
-          [50000000, 100000000],
-          [100000000, Infinity],
-        ],
-        biashara: [
-          [0, 20000000],
-          [20000000, 50000000],
-          [50000000, 100000000],
-          [100000000, Infinity],
-        ],
-        mashine: [
-          [0, 30000000],
-          [30000000, 70000000],
-          [70000000, 150000000],
-          [150000000, Infinity],
-        ],
-      };
-      const fallback = [
-        [0, 20000000],
-        [20000000, 50000000],
-        [50000000, 100000000],
-        [100000000, Infinity],
-      ];
-      const [min, max] = (ranges[categoryKey] || fallback)[
-        filters.priceRange
-      ];
-      result = result.filter((p) => p.price >= min && p.price < max);
+      const ranges = PRICE_RANGES[categoryKey] || DEFAULT_RANGES;
+      const range = ranges[filters.priceRange];
+      if (range) {
+        result = result.filter(
+          (p) => p.price >= range.min && p.price < range.max
+        );
+      }
     }
 
     const sortComparator = (a, b) => {
@@ -365,10 +375,13 @@ export default function CategoryPage() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const toggleSave = (id) => {
-    setSavedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+  // Reset page kila filters/search zinabadilika
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filters, sortBy, categoryKey]);
+
+  const handleToggleSave = (id) => {
+    toggleSavedListing(id); // 👈 store halisi
   };
 
   const handleSearchSubmit = (e) => {
@@ -384,18 +397,20 @@ export default function CategoryPage() {
         <div className="max-w-2xl mx-auto px-4 py-20 text-center">
           <HomeIcon size={64} className="mx-auto text-gray-300 mb-4" />
           <h1 className="text-2xl font-bold text-gray-800 mb-2">
-            {lang === "sw" ? "Category haipatikani" : "Category not found"}
+            {t(lang, "Category haipatikani", "Category not found")}
           </h1>
           <p className="text-gray-500 text-sm mb-6">
-            {lang === "sw"
-              ? "Category hii haipo au imezimwa. Tafuta mali nyingine."
-              : "This category doesn't exist or has been disabled. Browse other properties."}
+            {t(
+              lang,
+              "Category hii haipo au imezimwa. Tafuta mali nyingine.",
+              "This category doesn't exist or has been disabled. Browse other properties."
+            )}
           </p>
           <Link
             to="/kategoria"
             className="inline-block bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] px-6 py-2.5 rounded-xl font-semibold text-sm transition-colors"
           >
-            {lang === "sw" ? "Ona Categories Zote" : "View All Categories"}
+            {t(lang, "Ona Categories Zote", "View All Categories")}
           </Link>
         </div>
         <Footer />
@@ -412,25 +427,17 @@ export default function CategoryPage() {
         <div className="max-w-7xl mx-auto">
           <nav className="flex items-center gap-2 text-sm text-white/60 mb-4">
             <Link to="/" className="hover:text-white transition-colors">
-              {lang === "sw" ? "Nyumbani" : "Home"}
+              {t(lang, "Nyumbani", "Home")}
             </Link>
             <ChevronRight size={14} />
             <span className="text-white">{categoryLabel}</span>
           </nav>
 
           <div className="flex items-center gap-4">
-            {/* === CATEGORY IMAGE / ICON === */}
-            {hasCategoryImage ? (
-              <img
-                src={categoryImage}
-                alt={categoryLabel}
-                className="w-14 h-14 rounded-2xl object-cover flex-shrink-0"
-              />
-            ) : (
-              <div className="w-14 h-14 rounded-2xl bg-[#E8A33D]/20 flex items-center justify-center flex-shrink-0">
-                <CategoryIcon size={28} color={COLORS.gold} />
-              </div>
-            )}
+            {/* === CATEGORY ICON === */}
+            <div className="w-14 h-14 rounded-2xl bg-[#E8A33D]/20 flex items-center justify-center flex-shrink-0">
+              {CategoryIcon && <CategoryIcon size={28} color={COLORS.gold} />}
+            </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">
                 {categoryLabel}
@@ -453,18 +460,18 @@ export default function CategoryPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={
-                  lang === "sw"
-                    ? "Tafuta kwenye category hii..."
-                    : "Search in this category..."
-                }
+                placeholder={t(
+                  lang,
+                  "Tafuta kwenye category hii...",
+                  "Search in this category..."
+                )}
                 className="w-full bg-white/10 border border-white/20 rounded-full pl-12 pr-32 py-3 text-white placeholder-white/40 focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/30 transition-all"
               />
               <button
                 type="submit"
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] px-5 py-2 rounded-full font-semibold text-sm transition-colors"
               >
-                {lang === "sw" ? "Tafuta" : "Search"}
+                {t(lang, "Tafuta", "Search")}
               </button>
             </div>
           </form>
@@ -488,7 +495,7 @@ export default function CategoryPage() {
                 <span className="font-semibold text-gray-800">
                   {filteredProperties.length}
                 </span>{" "}
-                {lang === "sw" ? "mali zimepatikana" : "properties found"}
+                {t(lang, "mali zimepatikana", "properties found")}
               </p>
 
               <div className="flex items-center gap-2">
@@ -497,7 +504,7 @@ export default function CategoryPage() {
                   className="lg:hidden flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <SlidersHorizontal size={14} />
-                  {lang === "sw" ? "Vichujio" : "Filters"}
+                  {t(lang, "Vichujio", "Filters")}
                 </button>
 
                 <div className="relative">
@@ -507,20 +514,16 @@ export default function CategoryPage() {
                     className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 pr-8 text-sm font-medium text-gray-700 focus:outline-none focus:border-[#E8A33D] cursor-pointer"
                   >
                     <option value="newest">
-                      {lang === "sw" ? "Mpya Kwanza" : "Newest First"}
+                      {t(lang, "Mpya Kwanza", "Newest First")}
                     </option>
                     <option value="price_low">
-                      {lang === "sw"
-                        ? "Bei: Chini → Juu"
-                        : "Price: Low → High"}
+                      {t(lang, "Bei: Chini → Juu", "Price: Low → High")}
                     </option>
                     <option value="price_high">
-                      {lang === "sw"
-                        ? "Bei: Juu → Chini"
-                        : "Price: High → Low"}
+                      {t(lang, "Bei: Juu → Chini", "Price: High → Low")}
                     </option>
                     <option value="popular">
-                      {lang === "sw" ? "Maarufu" : "Popular"}
+                      {t(lang, "Maarufu", "Popular")}
                     </option>
                   </select>
                   <ChevronDown
@@ -537,7 +540,7 @@ export default function CategoryPage() {
                         ? "bg-[#E8A33D] text-[#101A2E]"
                         : "text-gray-500 hover:bg-gray-50"
                     }`}
-                    aria-label="Grid view"
+                    aria-label={t(lang, "Grid", "Grid")}
                   >
                     <Grid3x3 size={16} />
                   </button>
@@ -548,7 +551,7 @@ export default function CategoryPage() {
                         ? "bg-[#E8A33D] text-[#101A2E]"
                         : "text-gray-500 hover:bg-gray-50"
                     }`}
-                    aria-label="List view"
+                    aria-label={t(lang, "Orodha", "List")}
                   >
                     <List size={16} />
                   </button>
@@ -562,25 +565,27 @@ export default function CategoryPage() {
               searchQuery) && (
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <span className="text-xs text-gray-500">
-                  {lang === "sw"
-                    ? "Vichujio vilivyotumika:"
-                    : "Active filters:"}
+                  {t(lang, "Vichujio vilivyotumika:", "Active filters:")}
                 </span>
                 {searchQuery && (
                   <span className="inline-flex items-center gap-1 bg-[#E8A33D]/10 text-[#8A5A16] text-xs px-2.5 py-1 rounded-full">
                     "{searchQuery}"
-                    <button onClick={() => setSearchQuery("")}>
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      aria-label={t(lang, "Ondoa", "Remove")}
+                    >
                       <X size={12} />
                     </button>
                   </span>
                 )}
                 {filters.verified && (
                   <span className="inline-flex items-center gap-1 bg-[#2F6D4F]/10 text-[#2F6D4F] text-xs px-2.5 py-1 rounded-full">
-                    Verified
+                    {t(lang, "Zilizothibitishwa", "Verified")}
                     <button
                       onClick={() =>
                         setFilters({ ...filters, verified: false })
                       }
+                      aria-label={t(lang, "Ondoa", "Remove")}
                     >
                       <X size={12} />
                     </button>
@@ -588,11 +593,12 @@ export default function CategoryPage() {
                 )}
                 {filters.featured && (
                   <span className="inline-flex items-center gap-1 bg-[#E8A33D]/10 text-[#8A5A16] text-xs px-2.5 py-1 rounded-full">
-                    Featured
+                    {t(lang, "Featured", "Featured")}
                     <button
                       onClick={() =>
                         setFilters({ ...filters, featured: false })
                       }
+                      aria-label={t(lang, "Ondoa", "Remove")}
                     >
                       <X size={12} />
                     </button>
@@ -609,7 +615,7 @@ export default function CategoryPage() {
                   }}
                   className="text-xs text-[#C1502E] hover:underline font-medium"
                 >
-                  {lang === "sw" ? "Safisha zote" : "Clear all"}
+                  {t(lang, "Safisha zote", "Clear all")}
                 </button>
               </div>
             )}
@@ -629,9 +635,8 @@ export default function CategoryPage() {
                       property={property}
                       viewMode={viewMode}
                       isSaved={savedIds.includes(property.id)}
-                      onToggleSave={toggleSave}
+                      onToggleSave={handleToggleSave}
                       lang={lang}
-                      categoryImage={categoryImage}
                     />
                   ))}
                 </div>
@@ -644,6 +649,7 @@ export default function CategoryPage() {
                       }
                       disabled={currentPage === 1}
                       className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                      aria-label={t(lang, "Nyuma", "Previous")}
                     >
                       <ChevronLeft size={16} />
                     </button>
@@ -668,6 +674,7 @@ export default function CategoryPage() {
                       }
                       disabled={currentPage === totalPages}
                       className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                      aria-label={t(lang, "Mbele", "Next")}
                     >
                       <ChevronRight size={16} />
                     </button>
@@ -680,14 +687,14 @@ export default function CategoryPage() {
                   <Search size={24} className="text-gray-400" />
                 </div>
                 <h3 className="font-semibold text-gray-800">
-                  {lang === "sw"
-                    ? "Hakuna mali iliyopatikana"
-                    : "No properties found"}
+                  {t(lang, "Hakuna mali iliyopatikana", "No properties found")}
                 </h3>
                 <p className="text-gray-500 text-sm mt-1">
-                  {lang === "sw"
-                    ? "Jaribu kubadilisha vichujio au utafutaji wako"
-                    : "Try changing your filters or search"}
+                  {t(
+                    lang,
+                    "Jaribu kubadilisha vichujio au utafutaji wako",
+                    "Try changing your filters or search"
+                  )}
                 </p>
                 <button
                   onClick={() => {
@@ -700,7 +707,7 @@ export default function CategoryPage() {
                   }}
                   className="mt-4 px-5 py-2 bg-[#E8A33D] text-[#101A2E] rounded-lg text-sm font-semibold hover:bg-[#B87A1F] transition-colors"
                 >
-                  {lang === "sw" ? "Safisha Vichujio" : "Clear Filters"}
+                  {t(lang, "Safisha Vichujio", "Clear Filters")}
                 </button>
               </div>
             )}
@@ -715,8 +722,8 @@ export default function CategoryPage() {
 }
 
 // ============================================================
-// CATEGORY PROPERTY CARD — inaonyesha picha ya category kama
-// imageUrl ipo, vinginevyo icon
+// CATEGORY PROPERTY CARD — inaonyesha picha halisi ya mali
+// (property.photos[0]) kama ipo, vinginevyo icon ya category
 // ============================================================
 function CategoryPropertyCard({
   property,
@@ -724,13 +731,17 @@ function CategoryPropertyCard({
   isSaved,
   onToggleSave,
   lang,
-  categoryImage,
 }) {
-  const categoryInfo = useActiveCategories().find(
+  const allCategories = useActiveCategories();
+  const categoryInfo = allCategories.find(
     (c) => c.key === property.category
   );
   const Icon = getCategoryIcon(categoryInfo?.iconKey);
-  const hasImage = Boolean(categoryImage);
+
+  // Picha halisi ya mali (si picha ya category)
+  const photoUrl = property.photos?.[0] || property.imageUrl || null;
+  const hasImage = Boolean(photoUrl);
+
   const isFeatured = isBoostActive(property);
   const isLeading = isLeadingActive(property);
   const isVerified = Boolean(property.verified);
@@ -756,21 +767,22 @@ function CategoryPropertyCard({
         >
           {hasImage ? (
             <img
-              src={categoryImage}
+              src={photoUrl}
               alt={property.title}
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           ) : (
-            <Icon size={32} className="text-gray-300" />
+            Icon && <Icon size={32} className="text-gray-300" />
           )}
           {isReserved && (
             <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Clock3 size={10} /> RESERVED
+              <Clock3 size={10} /> {t(lang, "IMEHIFADHIWA", "RESERVED")}
             </span>
           )}
           {isSold && (
             <span className="absolute top-2 left-2 bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Ban size={10} /> SOLD
+              <Ban size={10} /> {t(lang, "IMEUZWA", "SOLD")}
             </span>
           )}
         </Link>
@@ -783,7 +795,7 @@ function CategoryPropertyCard({
                 </h3>
                 {isLeading && (
                   <span className="shrink-0 bg-[#2F6D4F]/10 text-[#2F6D4F] text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                    <TrendingUp size={9} /> Priority
+                    <TrendingUp size={9} /> {t(lang, "Kipaumbele", "Priority")}
                   </span>
                 )}
               </div>
@@ -795,6 +807,11 @@ function CategoryPropertyCard({
                   ? "bg-[#C1502E] text-white"
                   : "text-gray-400 hover:text-[#C1502E]"
               }`}
+              aria-label={
+                isSaved
+                  ? t(lang, "Ondoa kwenye saved", "Remove from saved")
+                  : t(lang, "Hifadhi", "Save")
+              }
             >
               <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
             </button>
@@ -833,7 +850,7 @@ function CategoryPropertyCard({
             </div>
             {isVerified && (
               <span className="flex items-center gap-1 text-xs text-[#2F6D4F] font-medium">
-                <Shield size={12} /> Verified
+                <Shield size={12} /> {t(lang, "Imethibitishwa", "Verified")}
               </span>
             )}
           </div>
@@ -852,44 +869,49 @@ function CategoryPropertyCard({
         <div className="w-full h-44 bg-gray-100 flex items-center justify-center overflow-hidden">
           {hasImage ? (
             <img
-              src={categoryImage}
+              src={photoUrl}
               alt={property.title}
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+              loading="lazy"
             />
           ) : (
-            <Icon
-              size={40}
-              className="text-gray-300 group-hover:scale-110 transition-transform"
-            />
+            Icon && (
+              <Icon
+                size={40}
+                className="text-gray-300 group-hover:scale-110 transition-transform"
+              />
+            )
           )}
         </div>
 
         <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
           {isLeading && (
             <span className="bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <TrendingUp size={10} /> Search Priority
+              <TrendingUp size={10} />{" "}
+              {t(lang, "Kipaumbele cha Utafutaji", "Search Priority")}
             </span>
           )}
           {isFeatured && (
             <span className="bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Star size={10} fill="#101A2E" /> Featured
+              <Star size={10} fill="#101A2E" />{" "}
+              {t(lang, "Imeangaziwa", "Featured")}
             </span>
           )}
           {isReserved && (
             <span className="bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
-              <Clock3 size={10} /> RESERVED
+              <Clock3 size={10} /> {t(lang, "IMEHIFADHIWA", "RESERVED")}
             </span>
           )}
           {isSold && (
             <span className="bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
-              <Ban size={10} /> SOLD
+              <Ban size={10} /> {t(lang, "IMEUZWA", "SOLD")}
             </span>
           )}
         </div>
 
         {isVerified && (
           <span className="absolute top-2 right-2 bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Shield size={10} /> Verified
+            <Shield size={10} /> {t(lang, "Imethibitishwa", "Verified")}
           </span>
         )}
         <button
@@ -899,6 +921,11 @@ function CategoryPropertyCard({
               ? "bg-[#C1502E] text-white"
               : "bg-white/90 text-gray-400 hover:text-[#C1502E]"
           }`}
+          aria-label={
+            isSaved
+              ? t(lang, "Ondoa kwenye saved", "Remove from saved")
+              : t(lang, "Hifadhi", "Save")
+          }
         >
           <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
         </button>
@@ -925,7 +952,7 @@ function CategoryPropertyCard({
           {property.bathrooms && <span>🚿 {property.bathrooms}</span>}
           {property.area && <span>📐 {property.area}</span>}
           {property.titleStatus && <span>📜 {property.titleStatus}</span>}
-          {property.make && <span>🚗 {property.year}</span>}
+          {property.make && <span>🚗 {property.make}</span>}
         </div>
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">
           <span className="flex items-center gap-1">
