@@ -23,7 +23,7 @@ import { useAuth } from "../../../context/AuthContext.jsx";
 import { useListings } from "../../../config/listingsStore.js";
 import { useDeals } from "../../../config/dealsStore.js";
 import StatTile from "./StatTile.jsx";
-import RecentActivity from "./RecentActivity.jsx";
+import RecentActivity from "../components/RecentActivity.jsx";
 
 export default function SellerOverview({ onNavigate }) {
   const { lang } = useLanguage();
