@@ -5,13 +5,18 @@ import { LanguageProvider } from "./context/LanguageContext.jsx";
 import ScrollToHash from "./components/ScrollToHash.jsx";
 
 // ============================================================
-// INITIALIZE — categories za awali
+// INITIALIZE — categories + bundles za awali
 // ============================================================
 import {
   initializeCategories,
   getCategories,
 } from "./config/categoriesStore.js";
 import { SEED_CATEGORIES } from "./config/seedCategories.js";
+import {
+  initializeBundles,
+  getBundles,
+} from "./config/bundlesStore.js";
+import { SEED_BUNDLES } from "./config/bundlesStore.js";
 
 // ============================================================
 // PUBLIC PAGES
@@ -44,6 +49,12 @@ import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 
 // ============================================================
+// BUNDLES (user + admin)
+// ============================================================
+import BundlesPage from "./pages/BundlesPage.jsx";
+import AdminBundles from "./pages/AdminBundles.jsx";
+
+// ============================================================
 // DASHBOARD (Seller + Buyer — moja inashughulikia zote mbili)
 // ============================================================
 import DashboardShell from "./pages/dashboard/components/DashboardShell.jsx";
@@ -55,22 +66,28 @@ import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
 
 function App() {
   // ============================================================
-  // INITIALIZE CATEGORIES — mara moja tu
+  // INITIALIZE CATEGORIES + BUNDLES — mara moja tu
   // ============================================================
-  // Inaweka categories 11 za awali KAMA bado hazipo.
-  // Kama Admin ameongeza/kubadilisha, haitagusa (inaheshimu
-  // mabadiliko yake).
+  // Inaweka categories 11 na bundles 20+ za awali KAMA bado
+  // hazipo. Kama Admin ameongeza/kubadilisha, haitagusa
+  // (inaheshimu mabadiliko yake).
   //
   // Backend halisi ikiwepo: ondoa hii, badala yake
-  // categoriesStore itafetch kutoka API kwenye useCategories().
+  // stores zitafetch kutoka API kwenye hooks.
   // ============================================================
   useEffect(() => {
+    // Categories
     initializeCategories(SEED_CATEGORIES);
+
+    // Bundles
+    initializeBundles(SEED_BUNDLES);
 
     // DEV PEKEE — ondoa comment kama unataka reset kila reload:
     // if (import.meta.env.DEV) {
     //   localStorage.removeItem("sokomkononi_categories_v2");
+    //   localStorage.removeItem("sokomkononi_bundles_v1");
     //   initializeCategories(SEED_CATEGORIES);
+    //   initializeBundles(SEED_BUNDLES);
     // }
   }, []);
 
@@ -108,6 +125,11 @@ function App() {
             <Route path="/search" element={<SearchResultsPage />} />
 
             {/* ============================================================ */}
+            {/* BUNDLES — user anaweza kununua bundle hapa */}
+            {/* ============================================================ */}
+            <Route path="/bundles" element={<BundlesPage />} />
+
+            {/* ============================================================ */}
             {/* DASHBOARD ROUTES — SELLER SIDE */}
             {/* ============================================================ */}
             <Route path="/dashboard" element={<DashboardShell />} />
@@ -120,6 +142,7 @@ function App() {
             <Route path="/dashboard/boost" element={<DashboardShell />} />
             <Route path="/dashboard/leading" element={<DashboardShell />} />
             <Route path="/dashboard/advertise" element={<DashboardShell />} />
+            <Route path="/dashboard/bundles" element={<DashboardShell />} />
             <Route path="/dashboard/deals" element={<DashboardShell />} />
             <Route path="/dashboard/messages" element={<DashboardShell />} />
             <Route path="/dashboard/notifications" element={<DashboardShell />} />
@@ -133,6 +156,7 @@ function App() {
             <Route path="/dashboard/buyer/browse" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/saved" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/searches" element={<DashboardShell />} />
+            <Route path="/dashboard/buyer/bundles" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/messages" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/notifications" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/waiting" element={<DashboardShell />} />
@@ -144,7 +168,7 @@ function App() {
             {/* ============================================================ */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
 
-            {/* Admin Dashboard — sections zote 13 + profile */}
+            {/* Admin Dashboard — sections zote 13 + profile + bundles */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/overview" element={<AdminDashboard />} />
@@ -153,6 +177,7 @@ function App() {
             <Route path="/admin/verification" element={<AdminDashboard />} />
             <Route path="/admin/deals" element={<AdminDashboard />} />
             <Route path="/admin/revenue" element={<AdminDashboard />} />
+            <Route path="/admin/bundles" element={<AdminBundles />} />
             <Route path="/admin/promotions" element={<AdminDashboard />} />
             <Route path="/admin/reports" element={<AdminDashboard />} />
             <Route path="/admin/support" element={<AdminDashboard />} />
