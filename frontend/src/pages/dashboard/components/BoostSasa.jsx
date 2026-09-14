@@ -1,5 +1,11 @@
+// ============================================================
+// BoostSasa.jsx
+// Boost — inatumia credits kama user ana, vinginevyo cash.
+// Bilingual kamili + centered + credits integration.
+// ============================================================
+
 import React, { useState, useEffect } from "react";
-import { Rocket, Check, MapPin, TrendingUp, Clock } from "lucide-react";
+import { Rocket, Check, MapPin, TrendingUp, Clock, Wallet } from "lucide-react";
 import {
   COLORS,
   FONTS,
@@ -14,6 +20,11 @@ import { notifyBoostPurchased } from "../../../config/notificationsStore.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { useAuth } from "../../../context/AuthContext.jsx";
+import {
+  checkCredit,
+  consumeCredit,
+} from "../../../config/userCreditsStore.js";
 import PaymentGateway from "./PaymentGateway";
 
 // ============================================================
@@ -31,12 +42,7 @@ function getLocalizedArray(field, lang) {
   return field?.[lang] || field?.sw || [];
 }
 
-function ListingPicker({
-  listings,
-  selectedId,
-  onSelect,
-  lang,
-}) {
+function ListingPicker({ listings, selectedId, onSelect, lang }) {
   if (listings.length === 0) {
     return (
       <div
@@ -110,10 +116,6 @@ function ListingPicker({
   );
 }
 
-// ============================================================
-// PACKAGE CARD — layout ya ndani centered (label + check juu,
-// price katikati, benefits chini)
-// ============================================================
 function PackageCard({ pkg, selected, onSelect, lang }) {
   const isFeatured = pkg.key === "featured";
   const label = getLocalized(pkg.label, lang);
@@ -137,7 +139,6 @@ function PackageCard({ pkg, selected, onSelect, lang }) {
         </span>
       )}
 
-      {/* Label + Check juu */}
       <div className="flex items-center justify-center gap-2 w-full">
         <span style={{ color: COLORS.night }} className="text-sm font-bold">
           {label}
@@ -153,7 +154,6 @@ function PackageCard({ pkg, selected, onSelect, lang }) {
         </span>
       </div>
 
-      {/* Price katikati */}
       <div className="flex items-baseline justify-center gap-1.5">
         <span style={{ color: COLORS.rust }} className="text-lg font-bold">
           {formatTZS(pkg.price)}
@@ -163,7 +163,6 @@ function PackageCard({ pkg, selected, onSelect, lang }) {
         </span>
       </div>
 
-      {/* Benefits chini */}
       <ul className="flex flex-col gap-1.5 w-full text-left">
         {benefits.map((b, i) => (
           <li
@@ -190,6 +189,7 @@ export default function BoostSasa({
   onBoosted = () => {},
 }) {
   const { lang } = useLanguage();
+  const { user } = useAuth();
   const liveListings = listings.filter((l) => l.status === "live");
   const boostPackages = useBoostPackages();
   const [selectedId, setSelectedId] = useState(
@@ -198,8 +198,10 @@ export default function BoostSasa({
       : liveListings[0]?.id ?? null
   );
   const [packageKey, setPackageKey] = useState("featured");
-  const [stage, setStage] = useState("select"); // select | paying | done
+  const [stage, setStage] = useState("select");
   const [done, setDone] = useState(null);
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
   useEffect(() => {
     if (
@@ -216,8 +218,11 @@ export default function BoostSasa({
   const canBoost = Boolean(selectedListing && selectedPackage);
 
   // ============================================================
-  // BILINGUAL — package label
+  // CREDITS — angalia kama user ana boost credits
   // ============================================================
+  const creditInfo = checkCredit(user?.id, "boost");
+  const hasCredit = creditInfo.hasCredit;
+
   const selectedPackageLabel = selectedPackage
     ? getLocalized(selectedPackage.label, lang)
     : "";
@@ -227,39 +232,74 @@ export default function BoostSasa({
     setStage("paying");
   };
 
-  const handlePaymentSuccess = () => {
+  // ============================================================
+  // USE CREDIT — tumia credit moja kwa moja (bila malipo)
+  // ============================================================
+  const handleUseCredit = () => {
+    if (!canBoost || !user) return;
+
+    const result = consumeCredit(user.id, "boost");
+    if (!result.success) {
+      // Credit haitoshi — lipa kwa cash
+      setStage("paying");
+      return;
+    }
+
+    // Credit imetumika — endelea na boost
+    handlePaymentSuccess("credits");
+  };
+
+  const handlePaymentSuccess = (method = "cash") => {
     const patch = applyBoost(selectedListing, packageKey);
     onBoosted(selectedListing.id, patch);
 
-    // 1) Taarifa (user + admin)
+    // Taarifa
     notifyBoostPurchased({
       listingId: selectedListing.id,
       listingTitle: selectedListing.title,
       packageLabel: selectedPackageLabel,
       expiresAt: patch.boostExpiresAt,
-      amount: selectedPackage.price,
+      amount: method === "credits" ? 0 : selectedPackage.price,
+      paidWith: method,
     });
 
-    // 2) Rekodi transaction kwenye My Transactions
-    addTransaction({
-      type: "boost",
-      title: `${selectedPackageLabel} — ${selectedListing.title}`,
-      property: selectedListing.title,
-      amount: selectedPackage.price,
-      status: "completed",
-      method: "M-Pesa",
-      listingId: selectedListing.id,
-    });
+    // Rekodi transaction (kama ni cash tu)
+    if (method === "cash") {
+      addTransaction({
+        type: "boost",
+        title: `${selectedPackageLabel} — ${selectedListing.title}`,
+        property: selectedListing.title,
+        amount: selectedPackage.price,
+        status: "completed",
+        method: "M-Pesa",
+        listingId: selectedListing.id,
+      });
+    } else {
+      // Rekodi kama credit usage
+      addTransaction({
+        type: "boost",
+        title: `${selectedPackageLabel} — ${selectedListing.title} (Credits)`,
+        property: selectedListing.title,
+        amount: 0,
+        status: "completed",
+        method: "Credits",
+        listingId: selectedListing.id,
+      });
+    }
 
     setDone({
       listing: selectedListing,
       pkg: selectedPackage,
       pkgLabel: selectedPackageLabel,
       expiresAt: patch.boostExpiresAt,
+      paidWith: method,
     });
     setStage("done");
   };
 
+  // ============================================================
+  // DONE STATE
+  // ============================================================
   if (stage === "done" && done) {
     return (
       <div
@@ -284,7 +324,7 @@ export default function BoostSasa({
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
             className="text-2xl font-semibold mb-2"
           >
-            {lang === "sw" ? "Boost Imewekwa" : "Boost Applied"}
+            {t("Boost Imewekwa", "Boost Applied")}
           </h2>
           <p
             style={{ color: "rgba(16,26,46,0.65)" }}
@@ -292,8 +332,8 @@ export default function BoostSasa({
           >
             {lang === "sw" ? (
               <>
-                "{done.listing.title}" sasa ina <b>{done.pkgLabel}</b> na itaonekana
-                zaidi kwa wanunuzi hadi{" "}
+                "{done.listing.title}" sasa ina <b>{done.pkgLabel}</b> na
+                itaonekana zaidi kwa wanunuzi hadi{" "}
                 {new Date(done.expiresAt).toLocaleDateString("sw-TZ", {
                   day: "numeric",
                   month: "long",
@@ -302,8 +342,8 @@ export default function BoostSasa({
               </>
             ) : (
               <>
-                "{done.listing.title}" now has <b>{done.pkgLabel}</b> and will be
-                more visible to buyers until{" "}
+                "{done.listing.title}" now has <b>{done.pkgLabel}</b> and will
+                be more visible to buyers until{" "}
                 {new Date(done.expiresAt).toLocaleDateString("en-US", {
                   day: "numeric",
                   month: "long",
@@ -312,6 +352,14 @@ export default function BoostSasa({
               </>
             )}
           </p>
+          {done.paidWith === "credits" && (
+            <p className="text-xs text-[#2F6D4F] mb-4">
+              {t(
+                `Umetumia credit 1 — balance: ${creditInfo.remaining - 1}`,
+                `Used 1 credit — balance: ${creditInfo.remaining - 1}`
+              )}
+            </p>
+          )}
           <button
             onClick={() => {
               setDone(null);
@@ -320,7 +368,7 @@ export default function BoostSasa({
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="w-full py-3 rounded-xl font-semibold text-sm"
           >
-            {lang === "sw" ? "Boost Mali Nyingine" : "Boost Another Listing"}
+            {t("Boost Mali Nyingine", "Boost Another Listing")}
           </button>
         </div>
       </div>
@@ -341,25 +389,46 @@ export default function BoostSasa({
       `}</style>
 
       <div className="max-w-2xl mx-auto">
-        {/* ============================================================ */}
         {/* HEADER — CENTERED */}
-        {/* ============================================================ */}
         <div className="mb-6 text-center">
           <h1
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
             className="text-2xl sm:text-3xl font-semibold"
           >
-            {lang === "sw" ? "Boost Sasa" : "Boost Now"}
+            {t("Boost Sasa", "Boost Now")}
           </h1>
           <p
             style={{ color: "rgba(16,26,46,0.6)" }}
             className="text-sm mt-2 max-w-xl mx-auto"
           >
-            {lang === "sw"
-              ? "Ongeza mwonekano wa mali yako kwa wanunuzi wengi zaidi."
-              : "Increase your property's visibility to more buyers."}
+            {t(
+              "Ongeza mwonekano wa mali yako kwa wanunuzi wengi zaidi.",
+              "Increase your property's visibility to more buyers."
+            )}
           </p>
         </div>
+
+        {/* CREDITS BANNER — kama ana credits */}
+        {hasCredit && stage !== "paying" && (
+          <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
+            <div className="flex items-center gap-2">
+              <Wallet size={16} color={COLORS.green} />
+              <span className="text-sm text-[#2F6D4F] font-medium">
+                {t(
+                  `Una Boost Credits ${creditInfo.remaining} — tumia bila kulipa`,
+                  `You have ${creditInfo.remaining} Boost Credits — use for free`
+                )}
+              </span>
+            </div>
+            <button
+              onClick={handleUseCredit}
+              disabled={!canBoost}
+              className="text-xs font-semibold px-3 py-2 rounded-lg bg-[#2F6D4F] text-white disabled:opacity-50"
+            >
+              {t("Tumia Credit", "Use Credit")}
+            </button>
+          </div>
+        )}
 
         {stage !== "paying" && (
           <>
@@ -368,10 +437,7 @@ export default function BoostSasa({
                 style={{ color: COLORS.night }}
                 className="text-sm font-medium"
               >
-                1.{" "}
-                {lang === "sw"
-                  ? "Chagua Mali (Live pekee)"
-                  : "Select Property (Live only)"}
+                1. {t("Chagua Mali (Live pekee)", "Select Property (Live only)")}
               </span>
             </div>
             <div className="mb-6">
@@ -394,7 +460,7 @@ export default function BoostSasa({
                     style={{ color: COLORS.night }}
                     className="text-sm font-medium"
                   >
-                    2. {lang === "sw" ? "Chagua Package" : "Choose Package"}
+                    2. {t("Chagua Package", "Choose Package")}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
@@ -415,17 +481,15 @@ export default function BoostSasa({
               <PaymentGateway
                 amount={selectedPackage.price}
                 title={selectedPackageLabel}
-                description={
-                  lang === "sw"
-                    ? `Boost kwa "${selectedListing.title}"`
-                    : `Boost for "${selectedListing.title}"`
-                }
+                description={t(
+                  `Boost kwa "${selectedListing.title}"`,
+                  `Boost for "${selectedListing.title}"`
+                )}
                 onCancel={() => setStage("select")}
-                onSuccess={handlePaymentSuccess}
+                onSuccess={() => handlePaymentSuccess("cash")}
               />
             ) : (
               <>
-                {/* Warning — centered */}
                 {selectedListing && isBoostActive(selectedListing) && (
                   <div
                     style={{
@@ -439,9 +503,9 @@ export default function BoostSasa({
                       {lang === "sw" ? (
                         <>
                           Mali hii tayari ina Boost inayoisha baada ya siku{" "}
-                          {boostDaysRemaining(selectedListing)} — ukiendelea, siku{" "}
-                          {selectedPackage.days} za {selectedPackageLabel}{" "}
-                          zitaongezwa baada ya hapo.
+                          {boostDaysRemaining(selectedListing)} — ukiendelea,
+                          siku {selectedPackage.days} za{" "}
+                          {selectedPackageLabel} zitaongezwa baada ya hapo.
                         </>
                       ) : (
                         <>
@@ -455,7 +519,6 @@ export default function BoostSasa({
                   </div>
                 )}
 
-                {/* Total + Button — centered */}
                 <div
                   style={{ borderColor: COLORS.sandLine, background: "white" }}
                   className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"
@@ -465,7 +528,7 @@ export default function BoostSasa({
                       style={{ color: "rgba(16,26,46,0.55)" }}
                       className="text-xs mb-0.5"
                     >
-                      {lang === "sw" ? "Jumla ya Malipo" : "Total Payment"}
+                      {t("Jumla ya Malipo", "Total Payment")}
                     </p>
                     <p
                       style={{ color: COLORS.rust }}
@@ -474,18 +537,30 @@ export default function BoostSasa({
                       {formatTZS(selectedPackage.price)}
                     </p>
                   </div>
-                  <button
-                    onClick={handleConfirm}
-                    disabled={!canBoost}
-                    style={{
-                      background: canBoost ? COLORS.gold : COLORS.sandLine,
-                      color: canBoost ? COLORS.night : "rgba(16,26,46,0.4)",
-                    }}
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
-                  >
-                    <Rocket size={15} />
-                    {lang === "sw" ? "Lipa na Boost" : "Pay and Boost"}
-                  </button>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
+                    {hasCredit && (
+                      <button
+                        onClick={handleUseCredit}
+                        disabled={!canBoost}
+                        className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm bg-[#2F6D4F] text-white disabled:cursor-not-allowed"
+                      >
+                        <Wallet size={15} />
+                        {t("Tumia Credit", "Use Credit")}
+                      </button>
+                    )}
+                    <button
+                      onClick={handleConfirm}
+                      disabled={!canBoost}
+                      style={{
+                        background: canBoost ? COLORS.gold : COLORS.sandLine,
+                        color: canBoost ? COLORS.night : "rgba(16,26,46,0.4)",
+                      }}
+                      className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
+                    >
+                      <Rocket size={15} />
+                      {t("Lipa na Boost", "Pay and Boost")}
+                    </button>
+                  </div>
                 </div>
               </>
             )}
