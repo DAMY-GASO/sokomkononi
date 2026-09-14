@@ -1,5 +1,17 @@
+// ============================================================
+// PostPropertyForm.jsx
+// Weka Mali — inatumia listing credits kama user ana, vinginevyo cash.
+// Bilingual kamili + centered + credits integration.
+// ============================================================
+
 import React, { useState } from "react";
-import { ImagePlus, X, ChevronLeft, Check } from "lucide-react";
+import {
+  ImagePlus,
+  X,
+  ChevronLeft,
+  Check,
+  Wallet,
+} from "lucide-react";
 import {
   COLORS,
   FONTS,
@@ -11,8 +23,13 @@ import {
   useActiveCategories,
   getCategoryIcon,
 } from "../../../config/categoriesStore.js";
-import PaymentGateway from "./PaymentGateway";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { useAuth } from "../../../context/AuthContext.jsx";
+import {
+  checkCredit,
+  consumeCredit,
+} from "../../../config/userCreditsStore.js";
+import PaymentGateway from "./PaymentGateway";
 
 function Field({ label, children }) {
   return (
@@ -31,7 +48,6 @@ const inputStyle = {
   color: COLORS.night,
 };
 
-// ---- Money input helpers (comma auto-format) ----
 function formatPriceInput(value) {
   if (!value) return "";
   const digits = String(value).replace(/[^0-9]/g, "");
@@ -50,11 +66,12 @@ export default function PostPropertyForm({
   onGoToBoost = () => {},
 }) {
   const { lang } = useLanguage();
+  const { user } = useAuth();
   const categories = useActiveCategories();
 
   const [categoryKey, setCategoryKey] = useState(null);
   const [photos, setPhotos] = useState([]);
-  const [stage, setStage] = useState("form"); // form | review | paying | paid
+  const [stage, setStage] = useState("form");
   const [createdListing, setCreatedListing] = useState(null);
   const [base, setBase] = useState({
     title: "",
@@ -66,12 +83,19 @@ export default function PostPropertyForm({
   });
   const [extra, setExtra] = useState({});
 
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
   const category = categories.find((c) => c.key === categoryKey);
   const categoryLabel =
     category?.label?.[lang] || category?.label?.sw || "";
   const feeInfo = calculateListingFee(categoryKey, base.price);
-
   const noFeeConfig = feeInfo.error === "NO_FEE_CONFIG";
+
+  // ============================================================
+  // CREDITS — angalia kama user ana listing credits
+  // ============================================================
+  const creditInfo = checkCredit(user?.id, "listing");
+  const hasCredit = creditInfo.hasCredit;
 
   const handlePhotoAdd = (e) => {
     const files = Array.from(e.target.files || []).slice(0, 8 - photos.length);
@@ -126,6 +150,24 @@ export default function PostPropertyForm({
     setStage("review");
   };
 
+  // ============================================================
+  // USE CREDIT — tumia listing credit moja kwa moja
+  // ============================================================
+  const handleUseCredit = () => {
+    if (!createdListing || !user) return;
+
+    const result = consumeCredit(user.id, "listing");
+    if (!result.success) {
+      // Credit haitoshi — lipa kwa cash
+      setStage("paying");
+      return;
+    }
+
+    // Credit imetumika — endelea
+    onPaid(createdListing.id);
+    setStage("paid");
+  };
+
   const handlePaymentSuccess = () => {
     onPaid(createdListing.id);
     setStage("paid");
@@ -140,6 +182,9 @@ export default function PostPropertyForm({
     },
   ];
 
+  // ============================================================
+  // REVIEW / PAYING
+  // ============================================================
   if (stage === "review" || stage === "paying") {
     return (
       <div
@@ -166,7 +211,7 @@ export default function PostPropertyForm({
                 style={{ fontFamily: FONTS.display, color: COLORS.night }}
                 className="text-2xl font-semibold mb-2"
               >
-                {lang === "sw" ? "Taarifa zimehifadhiwa" : "Details Saved"}
+                {t("Taarifa zimehifadhiwa", "Details Saved")}
               </h2>
               <p
                 style={{ color: "rgba(16,26,46,0.65)" }}
@@ -194,7 +239,7 @@ export default function PostPropertyForm({
               >
                 <div className="flex justify-between text-xs mb-1.5">
                   <span style={{ color: "rgba(16,26,46,0.6)" }}>
-                    {lang === "sw" ? "Bei ya Mali" : "Property Price"}
+                    {t("Bei ya Mali", "Property Price")}
                   </span>
                   <span
                     style={{ color: COLORS.night }}
@@ -218,12 +263,14 @@ export default function PostPropertyForm({
                   <div className="flex justify-between text-xs mb-1.5">
                     <span style={{ color: COLORS.rust }}>
                       {feeInfo.capped === "min"
-                        ? lang === "sw"
-                          ? "Fee ya chini kabisa imetumika"
-                          : "Minimum fee was applied"
-                        : lang === "sw"
-                          ? "Fee ya juu kabisa imetumika (imekomaa)"
-                          : "Maximum fee was applied (capped)"}
+                        ? t(
+                            "Fee ya chini kabisa imetumika",
+                            "Minimum fee was applied"
+                          )
+                        : t(
+                            "Fee ya juu kabisa imetumika (imekomaa)",
+                            "Maximum fee was applied (capped)"
+                          )}
                     </span>
                   </div>
                 )}
@@ -232,7 +279,7 @@ export default function PostPropertyForm({
                   className="flex justify-between text-sm pt-2 mt-1 border-t font-semibold"
                 >
                   <span style={{ color: COLORS.night }}>
-                    {lang === "sw" ? "Ada ya Kuchapisha" : "Listing Fee"}
+                    {t("Ada ya Kuchapisha", "Listing Fee")}
                   </span>
                   <span style={{ color: COLORS.rust }}>
                     {formatTZS(feeInfo.fee)}
@@ -240,23 +287,43 @@ export default function PostPropertyForm({
                 </div>
               </div>
 
+              {/* Credit info — kama ana listing credits */}
+              {hasCredit && (
+                <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col items-center gap-2 text-center">
+                  <div className="flex items-center gap-2">
+                    <Wallet size={16} color={COLORS.green} />
+                    <span className="text-xs text-[#2F6D4F] font-medium">
+                      {t(
+                        `Una Listing Credits ${creditInfo.remaining} — tumia bila kulipa`,
+                        `You have ${creditInfo.remaining} Listing Credits — use for free`
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleUseCredit}
+                    className="w-full py-2.5 rounded-xl font-semibold text-xs bg-[#2F6D4F] text-white"
+                  >
+                    {t("Tumia Credit — Chapisha Bila Malipo", "Use Credit — Publish for Free")}
+                  </button>
+                </div>
+              )}
+
               <button
                 onClick={() => setStage("paying")}
                 style={{ background: COLORS.gold, color: COLORS.night }}
                 className="w-full py-3 rounded-xl font-semibold text-sm"
               >
-                {lang === "sw"
-                  ? `Lipa ${formatTZS(feeInfo.fee)} — Endelea`
-                  : `Pay ${formatTZS(feeInfo.fee)} — Continue`}
+                {t(
+                  `Lipa ${formatTZS(feeInfo.fee)} — Endelea`,
+                  `Pay ${formatTZS(feeInfo.fee)} — Continue`
+                )}
               </button>
               <button
                 onClick={onGoToListings}
                 style={{ color: COLORS.night }}
                 className="w-full py-2.5 mt-2 text-sm font-medium underline underline-offset-2"
               >
-                {lang === "sw"
-                  ? "Angalia kwenye Mali Zangu"
-                  : "View in My Listings"}
+                {t("Angalia kwenye Mali Zangu", "View in My Listings")}
               </button>
             </div>
           )}
@@ -264,12 +331,11 @@ export default function PostPropertyForm({
           {stage === "paying" && (
             <PaymentGateway
               amount={feeInfo.fee}
-              title={lang === "sw" ? "Ada ya Kuchapisha" : "Listing Fee"}
-              description={
-                lang === "sw"
-                  ? `Kuchapisha "${base.title}"`
-                  : `Publishing "${base.title}"`
-              }
+              title={t("Ada ya Kuchapisha", "Listing Fee")}
+              description={t(
+                `Kuchapisha "${base.title}"`,
+                `Publishing "${base.title}"`
+              )}
               onCancel={() => setStage("review")}
               onSuccess={handlePaymentSuccess}
             />
@@ -279,6 +345,9 @@ export default function PostPropertyForm({
     );
   }
 
+  // ============================================================
+  // PAID
+  // ============================================================
   if (stage === "paid") {
     return (
       <div
@@ -303,7 +372,7 @@ export default function PostPropertyForm({
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
             className="text-2xl font-semibold mb-2"
           >
-            {lang === "sw" ? "Imechapishwa!" : "Published!"}
+            {t("Imechapishwa!", "Published!")}
           </h2>
           <p style={{ color: "rgba(16,26,46,0.65)" }} className="text-sm mb-6">
             {lang === "sw" ? (
@@ -317,27 +386,30 @@ export default function PostPropertyForm({
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="w-full py-3 rounded-xl font-semibold text-sm"
           >
-            {lang === "sw" ? "Angalia kwenye Mali Zangu" : "View in My Listings"}
+            {t("Angalia kwenye Mali Zangu", "View in My Listings")}
           </button>
           <button
             onClick={() => onGoToBoost(createdListing.id)}
             style={{ color: COLORS.night }}
             className="w-full py-2.5 mt-2 text-sm font-medium underline underline-offset-2"
           >
-            {lang === "sw" ? "Boost Mali Hii Sasa" : "Boost This Listing Now"}
+            {t("Boost Mali Hii Sasa", "Boost This Listing Now")}
           </button>
           <button
             onClick={resetForm}
             style={{ color: "rgba(16,26,46,0.55)" }}
             className="w-full py-2 mt-1 text-xs font-medium"
           >
-            {lang === "sw" ? "Weka Mali Nyingine" : "Post Another Property"}
+            {t("Weka Mali Nyingine", "Post Another Property")}
           </button>
         </div>
       </div>
     );
   }
 
+  // ============================================================
+  // FORM
+  // ============================================================
   return (
     <div
       style={{
@@ -360,32 +432,45 @@ export default function PostPropertyForm({
               className="flex items-center gap-1 text-sm font-medium opacity-70"
             >
               <ChevronLeft size={16} />{" "}
-              {lang === "sw" ? "Badilisha Category" : "Change Category"}
+              {t("Badilisha Category", "Change Category")}
             </button>
           </div>
         )}
 
-        {/* ============================================================ */}
-        {/* HEADER — CENTERED */}
-        {/* ============================================================ */}
         <div className="mb-6 text-center">
           <h1
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
             className="text-2xl sm:text-3xl font-semibold"
           >
-            {lang === "sw" ? "Weka Mali Yako" : "Post Your Property"}
+            {t("Weka Mali Yako", "Post Your Property")}
           </h1>
           <p
             style={{ color: "rgba(16,26,46,0.6)" }}
             className="text-sm mt-2 max-w-xl mx-auto"
           >
             {category
-              ? `${lang === "sw" ? "Category" : "Category"}: ${categoryLabel}`
-              : lang === "sw"
-                ? "Chagua category ya mali unayotaka kuiweka"
-                : "Choose the category of the property you want to list"}
+              ? `${t("Category", "Category")}: ${categoryLabel}`
+              : t(
+                  "Chagua category ya mali unayotaka kuiweka",
+                  "Choose the category of the property you want to list"
+                )}
           </p>
         </div>
+
+        {/* CREDITS BANNER */}
+        {hasCredit && (
+          <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col items-center gap-1 text-center">
+            <div className="flex items-center gap-2">
+              <Wallet size={16} color={COLORS.green} />
+              <span className="text-sm text-[#2F6D4F] font-medium">
+                {t(
+                  `Una Listing Credits ${creditInfo.remaining} — chapisha bila kulipa`,
+                  `You have ${creditInfo.remaining} Listing Credits — publish for free`
+                )}
+              </span>
+            </div>
+          </div>
+        )}
 
         {!category && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -434,7 +519,6 @@ export default function PostPropertyForm({
             onSubmit={handleFormSubmit}
             className="max-w-md mx-auto flex flex-col gap-5"
           >
-            {/* ERROR: category haina fee config */}
             {noFeeConfig && (
               <div
                 style={{
@@ -448,13 +532,11 @@ export default function PostPropertyForm({
               </div>
             )}
 
-            {/* Photos */}
             <Field
-              label={
-                lang === "sw"
-                  ? "Picha za Mali (angalau 1, mpaka 8)"
-                  : "Property Photos (at least 1, up to 8)"
-              }
+              label={t(
+                "Picha za Mali (angalau 1, mpaka 8)",
+                "Property Photos (at least 1, up to 8)"
+              )}
             >
               <div className="flex flex-wrap justify-center gap-2">
                 {photos.map((p, i) => (
@@ -486,7 +568,7 @@ export default function PostPropertyForm({
                     className="w-20 h-20 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 cursor-pointer text-xs"
                   >
                     <ImagePlus size={18} />
-                    {lang === "sw" ? "Ongeza" : "Add"}
+                    {t("Ongeza", "Add")}
                     <input
                       type="file"
                       accept="image/*"
@@ -499,30 +581,27 @@ export default function PostPropertyForm({
               </div>
             </Field>
 
-            <Field label={lang === "sw" ? "Jina la Mali" : "Property Title"}>
+            <Field label={t("Jina la Mali", "Property Title")}>
               <input
                 style={inputStyle}
                 className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-                placeholder={
-                  lang === "sw"
-                    ? "mfano: Nyumba ya Ghorofa Mbezi Beach"
-                    : "e.g. Mbezi Beach Apartment Building"
-                }
+                placeholder={t(
+                  "mfano: Nyumba ya Ghorofa Mbezi Beach",
+                  "e.g. Mbezi Beach Apartment Building"
+                )}
                 value={base.title}
                 onChange={(e) => setBase({ ...base, title: e.target.value })}
               />
             </Field>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field label={lang === "sw" ? "Bei (TZS)" : "Price (TZS)"}>
+              <Field label={t("Bei (TZS)", "Price (TZS)")}>
                 <input
                   style={inputStyle}
                   type="text"
                   inputMode="numeric"
                   className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-                  placeholder={
-                    lang === "sw" ? "mfano: 85,000,000" : "e.g. 85,000,000"
-                  }
+                  placeholder={t("mfano: 85,000,000", "e.g. 85,000,000")}
                   value={formatPriceInput(base.price)}
                   onChange={(e) =>
                     setBase({
@@ -536,9 +615,10 @@ export default function PostPropertyForm({
                     style={{ color: COLORS.rust }}
                     className="text-xs font-semibold"
                   >
-                    {lang === "sw"
-                      ? "Fee haipo — wasiliana na Admin"
-                      : "Fee missing — contact Admin"}
+                    {t(
+                      "Fee haipo — wasiliana na Admin",
+                      "Fee missing — contact Admin"
+                    )}
                   </span>
                 ) : (
                   feeInfo.price > 0 && (
@@ -546,9 +626,10 @@ export default function PostPropertyForm({
                       style={{ color: "rgba(16,26,46,0.55)" }}
                       className="text-xs"
                     >
-                      {lang === "sw"
-                        ? "Makadirio ya Listing Fee"
-                        : "Estimated Listing Fee"}
+                      {t(
+                        "Makadirio ya Listing Fee",
+                        "Estimated Listing Fee"
+                      )}
                       :{" "}
                       <b style={{ color: COLORS.rust }}>
                         {formatTZS(feeInfo.fee)}
@@ -557,15 +638,14 @@ export default function PostPropertyForm({
                   )
                 )}
               </Field>
-              <Field label={lang === "sw" ? "Mahali" : "Location"}>
+              <Field label={t("Mahali", "Location")}>
                 <input
                   style={inputStyle}
                   className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-                  placeholder={
-                    lang === "sw"
-                      ? "mfano: Mbezi Beach, Dar es Salaam"
-                      : "e.g. Mbezi Beach, Dar es Salaam"
-                  }
+                  placeholder={t(
+                    "mfano: Mbezi Beach, Dar es Salaam",
+                    "e.g. Mbezi Beach, Dar es Salaam"
+                  )}
                   value={base.location}
                   onChange={(e) =>
                     setBase({ ...base, location: e.target.value })
@@ -574,7 +654,6 @@ export default function PostPropertyForm({
               </Field>
             </div>
 
-            {/* Category-specific fields — BILINGUAL */}
             {category.extra && category.extra.length > 0 && (
               <div
                 style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -584,7 +663,7 @@ export default function PostPropertyForm({
                   style={{ color: COLORS.rust }}
                   className="text-xs font-semibold text-center"
                 >
-                  {lang === "sw" ? "Taarifa za Ziada" : "Additional Details"} —{" "}
+                  {t("Taarifa za Ziada", "Additional Details")} —{" "}
                   {categoryLabel}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -603,7 +682,7 @@ export default function PostPropertyForm({
                           }
                         >
                           <option value="">
-                            {lang === "sw" ? "Chagua..." : "Choose..."}
+                            {t("Chagua...", "Choose...")}
                           </option>
                           {f.options.map((o) => (
                             <option key={o.value} value={o.value}>
@@ -631,16 +710,15 @@ export default function PostPropertyForm({
               </div>
             )}
 
-            <Field label={lang === "sw" ? "Maelezo" : "Description"}>
+            <Field label={t("Maelezo", "Description")}>
               <textarea
                 style={inputStyle}
                 rows={4}
                 className="rounded-xl border px-3 py-2.5 text-sm outline-none resize-none text-center"
-                placeholder={
-                  lang === "sw"
-                    ? "Eleza kwa ufupi kuhusu mali yako..."
-                    : "Briefly describe your property..."
-                }
+                placeholder={t(
+                  "Eleza kwa ufupi kuhusu mali yako...",
+                  "Briefly describe your property..."
+                )}
                 value={base.description}
                 onChange={(e) =>
                   setBase({ ...base, description: e.target.value })
@@ -649,26 +727,18 @@ export default function PostPropertyForm({
             </Field>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field
-                label={lang === "sw" ? "Jina la Muuzaji" : "Seller Name"}
-              >
+              <Field label={t("Jina la Muuzaji", "Seller Name")}>
                 <input
                   style={inputStyle}
                   className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-                  placeholder={lang === "sw" ? "Jina lako" : "Your name"}
+                  placeholder={t("Jina lako", "Your name")}
                   value={base.seller_name}
                   onChange={(e) =>
                     setBase({ ...base, seller_name: e.target.value })
                   }
                 />
               </Field>
-              <Field
-                label={
-                  lang === "sw"
-                    ? "Contact Preference"
-                    : "Contact Preference"
-                }
-              >
+              <Field label={t("Contact Preference", "Contact Preference")}>
                 <select
                   style={inputStyle}
                   className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
@@ -697,8 +767,8 @@ export default function PostPropertyForm({
                 {lang === "sw" ? (
                   <>
                     Baada ya kuwasilisha, utaelekezwa kulipa{" "}
-                    <b>Ada ya Kuchapisha</b> kabla mali yako haijachapishwa. Fee
-                    inategemea bei uliyoweka.
+                    <b>Ada ya Kuchapisha</b> kabla mali yako haijachapishwa.
+                    Fee inategemea bei uliyoweka.
                   </>
                 ) : (
                   <>
@@ -719,9 +789,10 @@ export default function PostPropertyForm({
               }}
               className="w-full py-3.5 rounded-xl font-semibold text-sm transition-colors disabled:cursor-not-allowed"
             >
-              {lang === "sw"
-                ? "Wasilisha na Endelea Kulipa"
-                : "Submit and Continue to Payment"}
+              {t(
+                "Wasilisha na Endelea Kulipa",
+                "Submit and Continue to Payment"
+              )}
             </button>
           </form>
         )}
