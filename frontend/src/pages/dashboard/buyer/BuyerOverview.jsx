@@ -406,6 +406,11 @@ export default function BuyerOverview({ onNavigate }) {
           navigate={navigate}
         />
       )}
+
+      {/* ============================================================
+          RECENT ACTIVITY — inajipatia data yenyewe (side="buyer").
+          ============================================================ */}
+      <RecentActivity onNavigate={onNavigate} side="buyer" />
     </div>
   );
 }
