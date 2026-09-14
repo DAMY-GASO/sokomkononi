@@ -1,0 +1,398 @@
+import React, { useState } from "react";
+import {
+  Receipt,
+  Search,
+  Download,
+  CheckCircle,
+  Clock,
+  XCircle,
+  AlertCircle,
+  CreditCard,
+  HandCoins,
+  Rocket,
+  TrendingUp,
+  Megaphone,
+  Package,
+} from "lucide-react";
+import {
+  COLORS,
+  FONTS,
+  formatTZS,
+  timeAgo,
+} from "./dashboard/components/shared";
+import { useTransactions } from "../config/transactionsStore.js";
+import { useLanguage } from "../context/LanguageContext.jsx";
+
+// ============================================================
+// TRANSACTION TYPES — bilingual kamili
+// ============================================================
+const getTransactionTypes = (lang) => ({
+  listing_fee: {
+    label: lang === "sw" ? "Ada ya Kuchapisha" : "Listing Fee",
+    icon: CreditCard,
+    color: COLORS.rust,
+    bg: "rgba(193,80,46,0.12)",
+  },
+  reservation: {
+    label: lang === "sw" ? "Reservation Fee" : "Reservation Fee",
+    icon: HandCoins,
+    color: COLORS.green,
+    bg: "rgba(47,109,79,0.12)",
+  },
+  boost: {
+    label: lang === "sw" ? "Boost Fee" : "Boost Fee",
+    icon: Rocket,
+    color: COLORS.gold,
+    bg: "rgba(232,163,61,0.12)",
+  },
+  leading: {
+    label: lang === "sw" ? "Leading Fee" : "Leading Fee",
+    icon: TrendingUp,
+    color: "#2563EB",
+    bg: "rgba(37,99,235,0.12)",
+  },
+  advertisement: {
+    label: lang === "sw" ? "Advertisement Fee" : "Advertisement Fee",
+    icon: Megaphone,
+    color: COLORS.gold,
+    bg: "rgba(232,163,61,0.12)",
+  },
+  sale: {
+    label: lang === "sw" ? "Mauzo" : "Sale",
+    icon: TrendingUp,
+    color: COLORS.green,
+    bg: "rgba(47,109,79,0.16)",
+  },
+  purchase: {
+    label: lang === "sw" ? "Ununuzi" : "Purchase",
+    icon: HandCoins,
+    color: "#2563EB",
+    bg: "rgba(37,99,235,0.12)",
+  },
+  bundle_purchase: {
+    label: lang === "sw" ? "Ununuzi wa Kifurushi" : "Bundle Purchase",
+    icon: Package,
+    color: COLORS.gold,
+    bg: "rgba(232,163,61,0.12)",
+  },
+});
+
+const getStatus = (lang) => ({
+  completed: {
+    label: lang === "sw" ? "Imekamilika" : "Completed",
+    color: COLORS.green,
+    bg: "rgba(47,109,79,0.12)",
+    icon: CheckCircle,
+  },
+  pending: {
+    label: lang === "sw" ? "Inasubiri" : "Pending",
+    color: "#8A5A16",
+    bg: "rgba(232,163,61,0.16)",
+    icon: Clock,
+  },
+  failed: {
+    label: lang === "sw" ? "Imeshindikana" : "Failed",
+    color: COLORS.rust,
+    bg: "rgba(193,80,46,0.12)",
+    icon: XCircle,
+  },
+  refunded: {
+    label: lang === "sw" ? "Imerejeshwa" : "Refunded",
+    color: COLORS.night,
+    bg: "rgba(16,26,46,0.08)",
+    icon: AlertCircle,
+  },
+});
+
+// ============================================================
+// TRANSACTION ITEM — kadi zimeachwa kushoto (data nyingi)
+// ============================================================
+function TransactionItem({ txn, lang }) {
+  const type =
+    getTransactionTypes(lang)[txn.type] ||
+    getTransactionTypes(lang).listing_fee;
+  const status = getStatus(lang)[txn.status] || getStatus(lang).pending;
+  const TypeIcon = type.icon;
+  const StatusIcon = status.icon;
+
+  return (
+    <div
+      style={{ background: "white", borderColor: COLORS.sandLine }}
+      className="rounded-xl border p-4 flex items-start gap-3"
+    >
+      <div
+        style={{ background: type.bg }}
+        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+      >
+        <TypeIcon size={18} color={type.color} />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <div className="min-w-0">
+            <p
+              style={{ color: COLORS.night }}
+              className="text-sm font-semibold truncate"
+            >
+              {txn.title}
+            </p>
+            <p
+              style={{ color: "rgba(16,26,46,0.5)" }}
+              className="text-xs mt-0.5"
+            >
+              Ref: <span className="font-mono">{txn.ref}</span>
+            </p>
+          </div>
+          <span
+            style={{ background: status.bg, color: status.color }}
+            className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full shrink-0"
+          >
+            <StatusIcon size={11} />
+            {status.label}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4 mt-2 text-xs flex-wrap">
+          <span style={{ color: type.color }} className="font-bold text-sm">
+            {txn.type === "sale" ? "+" : "-"}
+            {formatTZS(txn.amount)}
+          </span>
+          <span style={{ color: "rgba(16,26,46,0.5)" }}>• {txn.method}</span>
+          <span style={{ color: "rgba(16,26,46,0.4)" }}>
+            • {timeAgo(txn.at, lang)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
+export default function MyTransactionsPage({ transactions: transactionsProp }) {
+  const { lang } = useLanguage();
+  const storeTransactions = useTransactions();
+  const transactions = transactionsProp ?? storeTransactions;
+  const [filter, setFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filters = [
+    { key: "all", label: lang === "sw" ? "Zote" : "All" },
+    {
+      key: "listing_fee",
+      label: lang === "sw" ? "Ada ya Kuchapisha" : "Listing Fee",
+    },
+    { key: "boost", label: lang === "sw" ? "Boost" : "Boost" },
+    { key: "leading", label: lang === "sw" ? "Leading" : "Leading" },
+    { key: "advertisement", label: lang === "sw" ? "Matangazo" : "Ads" },
+    { key: "reservation", label: lang === "sw" ? "Reservation" : "Reservation" },
+    { key: "sale", label: lang === "sw" ? "Mauzo" : "Sales" },
+    {
+      key: "bundle_purchase",
+      label: lang === "sw" ? "Vifurushi" : "Bundles",
+    },
+  ];
+
+  const filtered = transactions.filter((t) => {
+    const matchesFilter = filter === "all" || t.type === filter;
+    const matchesSearch =
+      !searchQuery ||
+      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.ref.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
+  const totals = transactions.reduce(
+    (acc, t) => {
+      if (t.status === "completed") {
+        if (t.type === "sale") acc.earned += t.amount;
+        else acc.spent += t.amount;
+      }
+      return acc;
+    },
+    { earned: 0, spent: 0 }
+  );
+
+  return (
+    <div
+      style={{
+        background: COLORS.sand,
+        fontFamily: FONTS.body,
+        minHeight: "100%",
+      }}
+      className="w-full p-4 sm:p-6"
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Manrope:wght@400;500;600;700&display=swap');
+      `}</style>
+
+      <div className="max-w-4xl mx-auto">
+        {/* ============================================================ */}
+        {/* HEADER — CENTERED */}
+        {/* ============================================================ */}
+        <div className="mb-5 text-center">
+          <h1
+            style={{ fontFamily: FONTS.display, color: COLORS.night }}
+            className="text-2xl sm:text-3xl font-semibold"
+          >
+            {lang === "sw" ? "Miamala Yangu" : "My Transactions"}
+          </h1>
+          <p
+            style={{ color: "rgba(16,26,46,0.6)" }}
+            className="text-sm mt-2 max-w-xl mx-auto"
+          >
+            {lang === "sw"
+              ? "Fuatilia malipo, mauzo, na miamala yako yote."
+              : "Track your payments, sales, and all transactions."}
+          </p>
+        </div>
+
+        {/* ============================================================ */}
+        {/* SUMMARY CARDS — CENTERED */}
+        {/* ============================================================ */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+          <div
+            style={{ background: "white", borderColor: COLORS.sandLine }}
+            className="rounded-xl border p-4 text-center"
+          >
+            <p
+              style={{ color: "rgba(16,26,46,0.55)" }}
+              className="text-xs mb-1"
+            >
+              {lang === "sw" ? "Jumla Iliyolipwa" : "Total Spent"}
+            </p>
+            <p style={{ color: COLORS.rust }} className="text-lg font-bold">
+              {formatTZS(totals.spent)}
+            </p>
+          </div>
+          <div
+            style={{ background: "white", borderColor: COLORS.sandLine }}
+            className="rounded-xl border p-4 text-center"
+          >
+            <p
+              style={{ color: "rgba(16,26,46,0.55)" }}
+              className="text-xs mb-1"
+            >
+              {lang === "sw" ? "Jumla Iliyopatikana" : "Total Earned"}
+            </p>
+            <p style={{ color: COLORS.green }} className="text-lg font-bold">
+              {formatTZS(totals.earned)}
+            </p>
+          </div>
+          <div
+            style={{
+              background: COLORS.night,
+              color: COLORS.sand,
+              borderColor: COLORS.night,
+            }}
+            className="rounded-xl border p-4 text-center"
+          >
+            <p className="text-xs mb-1 opacity-70">
+              {lang === "sw" ? "Idadi ya Miamala" : "Number of Transactions"}
+            </p>
+            <p className="text-lg font-bold">{transactions.length}</p>
+          </div>
+        </div>
+
+        {/* ============================================================ */}
+        {/* SEARCH + DOWNLOAD — CENTERED */}
+        {/* ============================================================ */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4 max-w-2xl mx-auto">
+          <div className="relative flex-1">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                lang === "sw"
+                  ? "Tafuta kwa ref au jina..."
+                  : "Search by ref or title..."
+              }
+              style={{
+                background: "white",
+                borderColor: COLORS.sandLine,
+                color: COLORS.night,
+              }}
+              className="w-full rounded-xl border pl-10 pr-3 py-2.5 text-sm outline-none text-center"
+            />
+          </div>
+          <button
+            className="flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2.5 rounded-xl border transition-colors"
+            style={{
+              borderColor: COLORS.sandLine,
+              color: COLORS.night,
+              background: "white",
+            }}
+          >
+            <Download size={14} />
+            {lang === "sw" ? "Pakua CSV" : "Download CSV"}
+          </button>
+        </div>
+
+        {/* ============================================================ */}
+        {/* FILTER TABS — CENTERED */}
+        {/* ============================================================ */}
+        <div className="flex justify-center gap-2 mb-5 overflow-x-auto pb-1">
+          {filters.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              style={{
+                background: filter === f.key ? COLORS.night : "white",
+                color: filter === f.key ? COLORS.sand : COLORS.night,
+                borderColor: COLORS.sandLine,
+              }}
+              className="text-xs font-semibold px-3.5 py-2 rounded-full border whitespace-nowrap shrink-0"
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ============================================================ */}
+        {/* EMPTY STATE — CENTERED */}
+        {/* ============================================================ */}
+        {filtered.length === 0 ? (
+          <div
+            style={{ borderColor: COLORS.sandLine }}
+            className="rounded-2xl border-2 border-dashed p-12 text-center bg-white"
+          >
+            <Receipt size={48} className="mx-auto text-gray-300 mb-3" />
+            <h3
+              style={{ color: COLORS.night }}
+              className="font-semibold mb-1"
+            >
+              {lang === "sw" ? "Hakuna miamala" : "No transactions"}
+            </h3>
+            <p
+              style={{ color: "rgba(16,26,46,0.55)" }}
+              className="text-sm"
+            >
+              {searchQuery
+                ? lang === "sw"
+                  ? "Jaribu kutafuta kwa neno lingine"
+                  : "Try searching with a different term"
+                : lang === "sw"
+                  ? "Miamala yako itaonekana hapa."
+                  : "Your transactions will appear here."}
+            </p>
+          </div>
+        ) : (
+          /* ============================================================ */
+          /* LIST — kadi zimeachwa kushoto kwa data nyingi */
+          /* ============================================================ */
+          <div className="flex flex-col gap-3">
+            {filtered.map((t) => (
+              <TransactionItem key={t.id} txn={t} lang={lang} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
