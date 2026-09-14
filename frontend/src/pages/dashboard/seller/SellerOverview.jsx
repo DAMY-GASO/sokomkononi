@@ -219,16 +219,9 @@ export default function SellerOverview({ onNavigate }) {
       </div>
 
       {/* ============================================================
-          RECENT ACTIVITY — component yake ndani inaweza kuwa
-          na headers zake. Kama unataka ziwe centered pia,
-          niambie nirekebishe RecentActivity.jsx.
+          RECENT ACTIVITY — sasa inajipatia data yenyewe.
           ============================================================ */}
-      <RecentActivity
-        listings={listings}
-        deals={deals}
-        onNavigate={onNavigate}
-        lang={lang}
-      />
+      <RecentActivity onNavigate={onNavigate} side="seller" />
     </div>
   );
 }
