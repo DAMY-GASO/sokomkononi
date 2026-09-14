@@ -11,6 +11,9 @@
 // Kama stores nyingine — demo ya front-end pekee, localStorage +
 // custom event. Backend halisi ikiwepo, badilisha functions hizi
 // ziite API; hooks (useNotifications) hazitahitaji kubadilika.
+//
+// MWISHO WA MABADILIKO:
+//   - notifyBundlePurchased() imeongezwa (Revenue Bundles)
 // ============================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -47,6 +50,8 @@ export const NOTIFICATION_EVENTS = {
   PAYMENT_CONFIRMED:        "payment.confirmed",
   INSPECTION_DECISION_MADE: "inspection.decision_made",
   DISPUTE_RESOLVED:         "dispute.resolved",
+  BUNDLE_PURCHASED:         "bundle.purchased",     // ← MPYA
+  BUNDLE_SALE_ADMIN:        "admin.bundle_sale",     // ← MPYA
   // --- Admin-side ---
   LISTING_PENDING:          "admin.listing_pending",
   DISPUTE_FILED:            "admin.dispute_filed",
@@ -182,12 +187,6 @@ export function useNotifications(audience) {
 // ============================================================
 // HELPER — kuchagua lugha sahihi kwa title/body
 // ============================================================
-/**
- * getLocalizedField(field, lang) — inarudisha string kwa lugha
- * sahihi. Inashughulikia:
- *   - string (neutral) → inarudi kama ilivyo
- *   - { sw, en } → inarudisha lugha sahihi
- */
 export function getLocalizedField(field, lang = "sw") {
   if (!field) return "";
   if (typeof field === "string") return field;
@@ -426,5 +425,90 @@ export function notifyPaymentProofSubmitted({ dealId, listingTitle, amount }) {
     },
     link: "/dashboard/deals",
     meta: { dealId },
+  });
+}
+
+// ============================================================
+// 11) BUNDLE PURCHASED (Revenue Bundles) — MPYA
+// ============================================================
+/**
+ * notifyBundlePurchased — taarifa kwa user + admin bundle inapolipwa.
+ *
+ * @param {object} params
+ * @param {string} params.bundleId       — ID ya bundle
+ * @param {object|string} params.bundleName — jina la bundle { sw, en } au string
+ * @param {number} params.amount         — kiasi kilicholipwa (TZS)
+ * @param {object|number} params.credits — credits zilizoongezwa { listing: 10, boost: 3 } au namba
+ * @param {string} params.expiresAt      — ISO date ya expiry
+ */
+export function notifyBundlePurchased({
+  bundleId,
+  bundleName,
+  amount,
+  credits,
+  expiresAt,
+}) {
+  // Credits text — inaweza kuwa object au namba
+  const creditsText =
+    credits && typeof credits === "object"
+      ? Object.entries(credits)
+          .map(([k, v]) => `${k}:${v}`)
+          .join(", ")
+      : String(credits || "");
+
+  const expiresText = expiresAt
+    ? new Date(expiresAt).toLocaleDateString("sw-TZ", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "";
+
+  // Bundle name — inaweza kuwa { sw, en } au string
+  const nameSw =
+    typeof bundleName === "object" ? bundleName?.sw : bundleName;
+  const nameEn =
+    typeof bundleName === "object" ? bundleName?.en || bundleName?.sw : bundleName;
+
+  // Taarifa kwa USER
+  pushNotification({
+    audience: "user",
+    type: "bundle",
+    title: {
+      sw: "Bundle Imenunuliwa!",
+      en: "Bundle Purchased!",
+    },
+    body: {
+      sw: `Umefanikiwa kununua "${nameSw}" kwa ${fmtTZS(amount)}. Credits zako zimeongezwa${expiresText ? ` na zinaisha ${expiresText}` : ""}.`,
+      en: `You successfully purchased "${nameEn}" for ${fmtTZS(amount)}. Your credits have been added${expiresText ? ` and will expire on ${expiresText}` : ""}.`,
+    },
+    link: "/dashboard/bundles",
+    meta: {
+      bundleId,
+      amount,
+      credits: creditsText,
+      expiresAt: expiresAt || null,
+    },
+  });
+
+  // Taarifa kwa ADMIN
+  pushNotification({
+    audience: "admin",
+    type: "bundle_sale",
+    title: {
+      sw: `Bundle Sale — "${nameSw}" (${fmtTZS(amount)})`,
+      en: `Bundle Sale — "${nameEn}" (${fmtTZS(amount)})`,
+    },
+    body: {
+      sw: `Credits: ${creditsText}${expiresText ? ` · Inaisha: ${expiresText}` : ""}`,
+      en: `Credits: ${creditsText}${expiresText ? ` · Expires: ${expiresText}` : ""}`,
+    },
+    target: "revenue",
+    meta: {
+      bundleId,
+      amount,
+      credits: creditsText,
+      expiresAt: expiresAt || null,
+    },
   });
 }
