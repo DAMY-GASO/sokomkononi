@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -116,6 +116,63 @@ function TypewriterText({ text, speed = 50, className = "" }) {
         <span className="inline-block w-0.5 h-6 bg-[#E8A33D] ml-1 animate-pulse" />
       )}
     </span>
+  );
+}
+
+// ============================================================
+// REVEAL — inafichua sehemu kwa mvuto unapo-scroll
+// ============================================================
+function Reveal({ children, className = "", direction = "up", delay = 0 }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    // Kama mtumiaji ame-set "reduced motion", onyesha moja kwa moja bila animation
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    if (prefersReducedMotion) {
+      setVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.unobserve(node);
+        }
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const directions = {
+    up: "translate-y-8",
+    down: "-translate-y-8",
+    left: "translate-x-8",
+    right: "-translate-x-8",
+    none: "",
+  };
+
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-700 ease-out ${
+        visible
+          ? "opacity-100 translate-x-0 translate-y-0"
+          : `opacity-0 ${directions[direction]}`
+      } ${className}`}
+      style={{ transitionDelay: visible ? `${delay}ms` : "0ms" }}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -510,117 +567,127 @@ export default function HomePage() {
 
       {/* WHY */}
       <section className="py-16 px-4 max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-800">
-            {lang === "sw" ? "Kwa Nini SokoMkononi?" : "Why SokoMkononi?"}
-          </h2>
-          <p className="text-sm text-gray-500 mt-4 italic">
-            {lang === "sw"
-              ? "SokoMkononi — Nunua na Uza kwa Kujiamini"
-              : "SokoMkononi — Buy and Sell with Confidence"}
-          </p>
-        </div>
+        <Reveal>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-800">
+              {lang === "sw" ? "Kwa Nini SokoMkononi?" : "Why SokoMkononi?"}
+            </h2>
+            <p className="text-sm text-gray-500 mt-4 italic">
+              {lang === "sw"
+                ? "SokoMkononi — Nunua na Uza kwa Kujiamini"
+                : "SokoMkononi — Buy and Sell with Confidence"}
+            </p>
+          </div>
+        </Reveal>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
-            <div className="w-16 h-16 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mb-5">
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#E8A33D"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 11.5 12 4l9 7.5" />
-                <path d="M5 10v10h14V10" />
-                <path d="M9 20v-6h6v6" />
-              </svg>
+          <Reveal delay={0}>
+            <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center h-full">
+              <div className="w-16 h-16 bg-[#E8A33D]/20 rounded-full flex items-center justify-center mb-5">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#E8A33D"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 11.5 12 4l9 7.5" />
+                  <path d="M5 10v10h14V10" />
+                  <path d="M9 20v-6h6v6" />
+                </svg>
+              </div>
+              <h3 className="font-bold text-lg text-gray-800">
+                {lang === "sw" ? "Jukwaa la Kisasa" : "A Modern Platform"}
+              </h3>
+              <p className="text-gray-600 text-sm mt-3 leading-relaxed">
+                {lang === "sw"
+                  ? "Jukwaa la kisasa linalowaunganisha wanunuzi na wauzaji wa mali Tanzania kwa urahisi, uwazi na kuaminiana."
+                  : "A modern platform connecting property buyers and sellers in Tanzania with ease, transparency and trust."}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-5 text-sm font-medium text-[#E8A33D]">
+                <span>🔎 {lang === "sw" ? "Tafuta" : "Search"}</span>
+                <span className="text-gray-300">|</span>
+                <span>🤝 {lang === "sw" ? "Ungana" : "Connect"}</span>
+                <span className="text-gray-300">|</span>
+                <span>💬 {lang === "sw" ? "Jadiliana" : "Negotiate"}</span>
+              </div>
             </div>
-            <h3 className="font-bold text-lg text-gray-800">
-              {lang === "sw" ? "Jukwaa la Kisasa" : "A Modern Platform"}
-            </h3>
-            <p className="text-gray-600 text-sm mt-3 leading-relaxed">
-              {lang === "sw"
-                ? "Jukwaa la kisasa linalowaunganisha wanunuzi na wauzaji wa mali Tanzania kwa urahisi, uwazi na kuaminiana."
-                : "A modern platform connecting property buyers and sellers in Tanzania with ease, transparency and trust."}
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-5 text-sm font-medium text-[#E8A33D]">
-              <span>🔎 {lang === "sw" ? "Tafuta" : "Search"}</span>
-              <span className="text-gray-300">|</span>
-              <span>🤝 {lang === "sw" ? "Ungana" : "Connect"}</span>
-              <span className="text-gray-300">|</span>
-              <span>💬 {lang === "sw" ? "Jadiliana" : "Negotiate"}</span>
-            </div>
-          </div>
+          </Reveal>
 
-          <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
-            <div className="w-16 h-16 bg-[#2F6D4F]/20 rounded-full flex items-center justify-center mb-5">
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#2F6D4F"
-                strokeWidth="1.8"
-              >
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
+          <Reveal delay={120}>
+            <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center h-full">
+              <div className="w-16 h-16 bg-[#2F6D4F]/20 rounded-full flex items-center justify-center mb-5">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#2F6D4F"
+                  strokeWidth="1.8"
+                >
+                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+              </div>
+              <h3 className="font-bold text-lg text-gray-800">
+                {lang === "sw" ? "Upatikanaji Rahisi" : "Easy Access"}
+              </h3>
+              <p className="text-gray-600 text-sm mt-3 leading-relaxed">
+                {lang === "sw"
+                  ? "Tafuta na pata mali unayohitaji popote Tanzania, kwa urahisi kupitia SokoMkononi Web Platform na Apps za iOS & Android."
+                  : "Find and get the property you need anywhere in Tanzania, easily through the SokoMkononi Web Platform and iOS & Android Apps."}
+              </p>
             </div>
-            <h3 className="font-bold text-lg text-gray-800">
-              {lang === "sw" ? "Upatikanaji Rahisi" : "Easy Access"}
-            </h3>
-            <p className="text-gray-600 text-sm mt-3 leading-relaxed">
-              {lang === "sw"
-                ? "Tafuta na pata mali unayohitaji popote Tanzania, kwa urahisi kupitia SokoMkononi Web Platform na Apps za iOS & Android."
-                : "Find and get the property you need anywhere in Tanzania, easily through the SokoMkononi Web Platform and iOS & Android Apps."}
-            </p>
-          </div>
+          </Reveal>
 
-          <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center">
-            <div className="w-16 h-16 bg-[#C1502E]/20 rounded-full flex items-center justify-center mb-5">
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#C1502E"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" strokeLinejoin="round" />
-                <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+          <Reveal delay={240}>
+            <div className="p-8 bg-[#F5F3EC] rounded-xl text-center flex flex-col items-center h-full">
+              <div className="w-16 h-16 bg-[#C1502E]/20 rounded-full flex items-center justify-center mb-5">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#C1502E"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" strokeLinejoin="round" />
+                  <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <h3 className="font-bold text-lg text-gray-800">
+                {lang === "sw" ? "Salama na Inaaminika" : "Safe & Trusted"}
+              </h3>
+              <p className="text-gray-600 text-sm mt-3 leading-relaxed">
+                {lang === "sw"
+                  ? "Tunajenga mazingira ya biashara yenye uwazi na uaminifu, huku watumiaji wakipewa nafasi ya kuthibitisha taarifa kabla ya kufanya muamala."
+                  : "We build a transparent and trustworthy trading environment, while giving users the opportunity to verify information before making a transaction."}
+              </p>
             </div>
-            <h3 className="font-bold text-lg text-gray-800">
-              {lang === "sw" ? "Salama na Inaaminika" : "Safe & Trusted"}
-            </h3>
-            <p className="text-gray-600 text-sm mt-3 leading-relaxed">
-              {lang === "sw"
-                ? "Tunajenga mazingira ya biashara yenye uwazi na uaminifu, huku watumiaji wakipewa nafasi ya kuthibitisha taarifa kabla ya kufanya muamala."
-                : "We build a transparent and trustworthy trading environment, while giving users the opportunity to verify information before making a transaction."}
-            </p>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* TRENDING */}
       <section id="matangazo" className="scroll-mt-16 py-8 px-4 max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">
-            {lang === "sw" ? "Mali Zinazotrendi" : "Trending Properties"}
-          </h2>
-          <Link
-            to="/tafuta?tafuta=trending"
-            className="text-[#E8A33D] text-sm font-semibold hover:underline"
-          >
-            {lang === "sw" ? "Tazama Zote →" : "View All →"}
-          </Link>
-        </div>
+        <Reveal>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">
+              {lang === "sw" ? "Mali Zinazotrendi" : "Trending Properties"}
+            </h2>
+            <Link
+              to="/tafuta?tafuta=trending"
+              className="text-[#E8A33D] text-sm font-semibold hover:underline"
+            >
+              {lang === "sw" ? "Tazama Zote →" : "View All →"}
+            </Link>
+          </div>
+        </Reveal>
 
         {trendingProperties.length === 0 ? (
           <div className="text-center py-10 text-gray-400 text-sm">
@@ -628,37 +695,43 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="flex gap-4 overflow-x-auto pb-4">
-            {trendingProperties.map((prop) => {
+            {trendingProperties.map((prop, i) => {
               const Icon = getCategoryIcon(prop.categoryIcon);
               const hasPhoto = Boolean(prop.categoryImage);
               return (
-                <Link
+                <Reveal
                   key={prop.id}
-                  to={`/mali/${prop.id}`}
-                  className="min-w-[200px] sm:min-w-[240px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0 hover:shadow-md transition-shadow"
+                  delay={Math.min(i * 70, 350)}
+                  direction="up"
+                  className="min-w-[200px] sm:min-w-[240px] flex-shrink-0"
                 >
-                  <div className="h-40 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
-                    {hasPhoto ? (
-                      <img
-                        src={prop.categoryImage}
-                        alt={prop.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Icon size={48} className="text-[#E8A33D]" />
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-800 text-sm truncate">{prop.title}</h3>
-                    <p className="text-[#E8A33D] font-bold text-lg">{prop.price}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-gray-500 text-xs truncate">📍 {prop.region}</span>
-                      <span className="text-green-600 text-xs font-medium whitespace-nowrap">
-                        ● {lang === "sw" ? "Inapatikana" : "Available"}
-                      </span>
+                  <Link
+                    to={`/mali/${prop.id}`}
+                    className="block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
+                  >
+                    <div className="h-40 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
+                      {hasPhoto ? (
+                        <img
+                          src={prop.categoryImage}
+                          alt={prop.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Icon size={48} className="text-[#E8A33D]" />
+                      )}
                     </div>
-                  </div>
-                </Link>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-gray-800 text-sm truncate">{prop.title}</h3>
+                      <p className="text-[#E8A33D] font-bold text-lg">{prop.price}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-gray-500 text-xs truncate">📍 {prop.region}</span>
+                        <span className="text-green-600 text-xs font-medium whitespace-nowrap">
+                          ● {lang === "sw" ? "Inapatikana" : "Available"}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                </Reveal>
               );
             })}
           </div>
@@ -667,47 +740,50 @@ export default function HomePage() {
 
       {/* CATEGORIES */}
       <section id="kategoria" className="scroll-mt-16 py-12 px-4 max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">
-            {lang === "sw" ? "Kategoria Maarufu" : "Popular Categories"}
-          </h2>
-          <Link to="/kategoria" className="text-[#E8A33D] text-sm font-semibold hover:underline">
-            {lang === "sw" ? "Tazama Yote →" : "View All →"}
-          </Link>
-        </div>
+        <Reveal>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">
+              {lang === "sw" ? "Kategoria Maarufu" : "Popular Categories"}
+            </h2>
+            <Link to="/kategoria" className="text-[#E8A33D] text-sm font-semibold hover:underline">
+              {lang === "sw" ? "Tazama Yote →" : "View All →"}
+            </Link>
+          </div>
+        </Reveal>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {categories.map((cat) => {
+          {categories.map((cat, i) => {
             const Icon = getCategoryIcon(cat.iconKey);
             const hasPhoto = Boolean(cat.imageUrl);
             return (
-              <Link
-                key={cat.key}
-                to={`/kategoria/${cat.key}`}
-                className="bg-white rounded-lg overflow-hidden text-center border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 group"
-              >
-                <div className="h-36 sm:h-40 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
-                  {hasPhoto ? (
-                    <img
-                      src={cat.imageUrl}
-                      alt={cat.label[lang] || cat.label.sw}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <Icon
-                      size={48}
-                      className="text-[#E8A33D] group-hover:scale-105 transition-transform"
-                    />
-                  )}
-                </div>
-                <div className="p-3">
-                  <h3 className="font-semibold text-gray-800 text-sm">
-                    {cat.label[lang] || cat.label.sw}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {cat.count} {lang === "sw" ? "mali" : "listings"}
-                  </p>
-                </div>
-              </Link>
+              <Reveal key={cat.key} delay={Math.min(i * 60, 360)}>
+                <Link
+                  to={`/kategoria/${cat.key}`}
+                  className="block bg-white rounded-lg overflow-hidden text-center border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 group"
+                >
+                  <div className="h-36 sm:h-40 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
+                    {hasPhoto ? (
+                      <img
+                        src={cat.imageUrl}
+                        alt={cat.label[lang] || cat.label.sw}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <Icon
+                        size={48}
+                        className="text-[#E8A33D] group-hover:scale-105 transition-transform"
+                      />
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <h3 className="font-semibold text-gray-800 text-sm">
+                      {cat.label[lang] || cat.label.sw}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {cat.count} {lang === "sw" ? "mali" : "listings"}
+                    </p>
+                  </div>
+                </Link>
+              </Reveal>
             );
           })}
         </div>
@@ -715,83 +791,92 @@ export default function HomePage() {
 
       {/* TESTIMONIALS */}
       <section className="py-16 px-4 max-w-7xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
-          {lang === "sw" ? "Wanachosema Wadau Wetu" : "What Our Contributors Say"}
-        </h2>
+        <Reveal>
+          <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">
+            {lang === "sw" ? "Wanachosema Wadau Wetu" : "What Our Contributors Say"}
+          </h2>
+        </Reveal>
         <div className="flex gap-4 overflow-x-auto pb-4 px-1 snap-x snap-mandatory">
           {testimonials.map((item, index) => (
-            <div
+            <Reveal
               key={index}
-              className="min-w-[220px] sm:min-w-[280px] max-w-[240px] sm:max-w-[300px] h-64 sm:h-72 bg-[#F5F3EC] rounded-xl p-5 sm:p-6 flex-shrink-0 snap-center flex flex-col"
+              delay={index * 100}
+              className="min-w-[220px] sm:min-w-[280px] max-w-[240px] sm:max-w-[300px] flex-shrink-0 snap-center"
             >
-              <img
-                src={item.avatar}
-                alt={item.name}
-                loading="lazy"
-                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover mx-auto mb-3 sm:mb-4 border-2 border-white shadow-sm flex-shrink-0"
-              />
-              <p
-                className="text-gray-700 text-sm leading-relaxed text-center overflow-hidden flex-1"
-                style={{ display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }}
-              >
-                "{lang === "sw" ? item.quote.sw : item.quote.en}"
-              </p>
-              <p className="text-[#E8A33D] font-semibold mt-3 text-sm text-center flex-shrink-0">
-                — {item.name}, {item.region}
-              </p>
-            </div>
+              <div className="h-64 sm:h-72 bg-[#F5F3EC] rounded-xl p-5 sm:p-6 flex flex-col">
+                <img
+                  src={item.avatar}
+                  alt={item.name}
+                  loading="lazy"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover mx-auto mb-3 sm:mb-4 border-2 border-white shadow-sm flex-shrink-0"
+                />
+                <p
+                  className="text-gray-700 text-sm leading-relaxed text-center overflow-hidden flex-1"
+                  style={{ display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical" }}
+                >
+                  "{lang === "sw" ? item.quote.sw : item.quote.en}"
+                </p>
+                <p className="text-[#E8A33D] font-semibold mt-3 text-sm text-center flex-shrink-0">
+                  — {item.name}, {item.region}
+                </p>
+              </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* FAQ */}
       <section id="faq" className="scroll-mt-16 py-16 px-4 max-w-3xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-800 text-center mb-4">
-          {lang === "sw" ? "Maswali Yanayoulizwa Mara kwa Mara" : "Frequently Asked Questions"}
-        </h2>
-        <p className="text-gray-500 text-sm text-center mb-12">
-          {lang === "sw"
-            ? "Majibu ya maswali yanayoulizwa sana kuhusu SokoMkononi"
-            : "Answers to the most frequently asked questions about SokoMkononi"}
-        </p>
+        <Reveal>
+          <h2 className="text-3xl font-bold text-gray-800 text-center mb-4">
+            {lang === "sw" ? "Maswali Yanayoulizwa Mara kwa Mara" : "Frequently Asked Questions"}
+          </h2>
+          <p className="text-gray-500 text-sm text-center mb-12">
+            {lang === "sw"
+              ? "Majibu ya maswali yanayoulizwa sana kuhusu SokoMkononi"
+              : "Answers to the most frequently asked questions about SokoMkononi"}
+          </p>
+        </Reveal>
         <div className="space-y-3">
           {faqs.map((faq, index) => {
             const isOpen = openFaq === index;
             return (
-              <div key={index} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-                <button
-                  onClick={() => toggleFaq(index)}
-                  aria-expanded={isOpen}
-                  className="w-full flex items-start justify-between gap-4 p-4 text-left hover:bg-[#F5F3EC]/60 transition-colors"
-                >
-                  <h3 className="font-semibold text-gray-800 text-sm sm:text-base flex-1">
-                    {lang === "sw" ? faq.q.sw : faq.q.en}
-                  </h3>
-                  <svg
-                    className={`w-5 h-5 flex-shrink-0 text-[#E8A33D] transition-transform duration-200 mt-0.5 ${
-                      isOpen ? "rotate-180" : ""
-                    }`}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+              <Reveal key={index} delay={Math.min(index * 40, 400)}>
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                  <button
+                    onClick={() => toggleFaq(index)}
+                    aria-expanded={isOpen}
+                    className="w-full flex items-start justify-between gap-4 p-4 text-left hover:bg-[#F5F3EC]/60 transition-colors"
                   >
-                    <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-                <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-                  }`}
-                  style={{ display: "grid" }}
-                >
-                  <div className="overflow-hidden">
-                    <div className="text-gray-600 text-sm px-4 pb-4 whitespace-pre-line leading-relaxed">
-                      {lang === "sw" ? faq.a.sw : faq.a.en}
+                    <h3 className="font-semibold text-gray-800 text-sm sm:text-base flex-1">
+                      {lang === "sw" ? faq.q.sw : faq.q.en}
+                    </h3>
+                    <svg
+                      className={`w-5 h-5 flex-shrink-0 text-[#E8A33D] transition-transform duration-200 mt-0.5 ${
+                        isOpen ? "rotate-180" : ""
+                      }`}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <div
+                    className={`grid transition-all duration-300 ease-in-out ${
+                      isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                    }`}
+                    style={{ display: "grid" }}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="text-gray-600 text-sm px-4 pb-4 whitespace-pre-line leading-relaxed">
+                        {lang === "sw" ? faq.a.sw : faq.a.en}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              </Reveal>
             );
           })}
         </div>
