@@ -154,7 +154,7 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
               style={{ background: COLORS.green, color: "white" }}
               className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
             >
-              {lang === "sw" ? "Nenda Deal Room" : "Go to Deal Room"}{" "}
+              {lang === "sw" ? "Nenda Chumba cha Mazungumzo" : "Go to Deal Room"}{" "}
               <ArrowRight size={12} />
             </button>
           </div>
@@ -234,7 +234,7 @@ export default function WaitingListPage({
               style={{ fontFamily: FONTS.display, color: COLORS.night }}
               className="text-2xl sm:text-3xl font-semibold"
             >
-              {lang === "sw" ? "Waiting List" : "Waiting List"}
+              {lang === "sw" ? "Orodha ya Kusubiri" : "Waiting List"}
             </h1>
           </div>
           <p
