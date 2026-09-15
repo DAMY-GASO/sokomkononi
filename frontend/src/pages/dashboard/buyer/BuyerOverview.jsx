@@ -34,6 +34,7 @@ import {
   getCategoryIcon,
 } from "../../../config/categoriesStore.js";
 import StatTile from "../seller/StatTile.jsx";
+import RecentActivity from "../components/RecentActivity.jsx";
 
 export default function BuyerOverview({ onNavigate }) {
   const navigate = useNavigate();
