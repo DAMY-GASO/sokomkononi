@@ -36,25 +36,25 @@ const getTransactionTypes = (lang) => ({
     bg: "rgba(193,80,46,0.12)",
   },
   reservation: {
-    label: lang === "sw" ? "Reservation Fee" : "Reservation Fee",
+    label: lang === "sw" ? "Ada ya Uhifadhi" : "Reservation Fee",
     icon: HandCoins,
     color: COLORS.green,
     bg: "rgba(47,109,79,0.12)",
   },
   boost: {
-    label: lang === "sw" ? "Boost Fee" : "Boost Fee",
+    label: lang === "sw" ? "Ada ya Kukuza Tangazo" : "Boost Fee",
     icon: Rocket,
     color: COLORS.gold,
     bg: "rgba(232,163,61,0.12)",
   },
   leading: {
-    label: lang === "sw" ? "Leading Fee" : "Leading Fee",
+    label: lang === "sw" ? "Ada ya Kuongoza" : "Leading Fee",
     icon: TrendingUp,
     color: "#2563EB",
     bg: "rgba(37,99,235,0.12)",
   },
   advertisement: {
-    label: lang === "sw" ? "Advertisement Fee" : "Advertisement Fee",
+    label: lang === "sw" ? "Ada ya Tangazo" : "Advertisement Fee",
     icon: Megaphone,
     color: COLORS.gold,
     bg: "rgba(232,163,61,0.12)",
@@ -247,10 +247,10 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
       key: "listing_fee",
       label: lang === "sw" ? "Ada ya Kuchapisha" : "Listing Fee",
     },
-    { key: "boost", label: lang === "sw" ? "Boost" : "Boost" },
-    { key: "leading", label: lang === "sw" ? "Leading" : "Leading" },
+    { key: "boost", label: lang === "sw" ? "Kukuza" : "Boost" },
+    { key: "leading", label: lang === "sw" ? "Kuongoza" : "Leading" },
     { key: "advertisement", label: lang === "sw" ? "Matangazo" : "Ads" },
-    { key: "reservation", label: lang === "sw" ? "Reservation" : "Reservation" },
+    { key: "reservation", label: lang === "sw" ? "Uhifadhi" : "Reservation" },
     { key: "sale", label: lang === "sw" ? "Mauzo" : "Sales" },
     {
       key: "bundle_purchase",
@@ -501,7 +501,9 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
               style={{ fontFamily: FONTS.display, color: COLORS.night }}
               className="text-lg font-semibold mb-1"
             >
-              {lang === "sw" ? "Success Fee Inahitajika" : "Success Fee Required"}
+              {lang === "sw"
+                ? "Ada ya Mafanikio Inahitajika"
+                : "Success Fee Required"}
             </h3>
             <p
               style={{ color: "rgba(16,26,46,0.6)" }}
