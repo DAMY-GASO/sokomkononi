@@ -1,11 +1,31 @@
-import React, { useMemo } from "react";
+// ============================================================
+// AboutSafetyPage.jsx
+// Kuhusu + Usalama — bilingual kamili + PageLoader.
+// ============================================================
+
+import React, { useMemo, useState, useEffect } from "react";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import Navbar from "../components/Navbar.jsx";
 
+// ============================================================
+// PAGE LOADER — rahisi, inaonekana mara moja tu
+// ============================================================
+import PageLoader from "../components/PageLoader.jsx";
+
 export default function AboutSafetyPage() {
   const { t, lang } = useLanguage();
+
+  // ============================================================
+  // LOADER — inaonekana mara moja tu ukurasa unapofunguka
+  // ============================================================
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setReady(true), 300);
+    return () => clearTimeout(id);
+  }, []);
 
   // ============================================================
   // VALUES — zinaundwa upya kila lugha inabadilika
@@ -165,6 +185,13 @@ export default function AboutSafetyPage() {
     ],
     [lang, t]
   );
+
+  // ============================================================
+  // LOADER — kama bado haijawa tayari, onyesha loader
+  // ============================================================
+  if (!ready) {
+    return <PageLoader lang={lang} />;
+  }
 
   return (
     <div className="min-h-screen bg-white">
