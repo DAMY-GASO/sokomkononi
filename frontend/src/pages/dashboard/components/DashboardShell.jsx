@@ -141,7 +141,7 @@ const SELLER_NAV = [
   },
   {
     key: "bundles",
-    label: { sw: "Vifurushi", en: "Bundles" },
+    label: { sw: "Nunua Vifurushi", en: "Buy Bundles" },
     icon: Package,
   },
 ];
@@ -197,7 +197,7 @@ const BUYER_NAV = [
   },
   {
     key: "bundles",
-    label: { sw: "Vifurushi", en: "Bundles" },
+    label: { sw: "Nunua Vifurushi", en: "Buy Bundles" },
     icon: Package,
   },
   {
@@ -739,7 +739,7 @@ export default function DashboardShell() {
               className="flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
               <Tag size={14} />
-              {t("Kama Muuzaji", "As Seller")}
+              {t("Dashibodi ya Muuzaji", "Seller Dashboard")}
             </button>
             <button
               onClick={() => handleSideChange("buyer")}
@@ -750,7 +750,7 @@ export default function DashboardShell() {
               className="flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
               <ShoppingBag size={14} />
-              {t("Kama Mnunuzi", "As Buyer")}
+              {t("Dashibodi ya Mnunuzi", "Buyer Dashboard")}
             </button>
           </div>
 
@@ -916,7 +916,7 @@ export default function DashboardShell() {
           className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
           <Tag size={14} />
-          {t("Kama Muuzaji", "As Seller")}
+          {t("Dashibodi ya Muuzaji", "Seller Dashboard")}
         </button>
         <button
           onClick={() => handleSideChange("buyer")}
@@ -927,7 +927,7 @@ export default function DashboardShell() {
           className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
           <ShoppingBag size={14} />
-          {t("Kama Mnunuzi", "As Buyer")}
+          {t("Dashibodi ya Mnunuzi", "Buyer Dashboard")}
         </button>
       </div>
 
