@@ -1,8 +1,7 @@
 // ============================================================
 // RevenueSection.jsx
 // Mapato & Fedha — fees zote 5 + Categories Bila Fee Config.
-// Bilingual + image support kwenye categories.
-// Mobile-responsive.
+// Bilingual + imeboreshwa kwa muonekano wazi.
 // ============================================================
 
 import React, { useState } from "react";
@@ -14,22 +13,36 @@ import {
   Smartphone,
   Plus,
   AlertTriangle,
+  Pencil,
+  Info,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import EditableAmount from "../components/Revenue/EditableAmount.jsx";
 import EditablePercent from "../components/Revenue/EditablePercent.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
-import { useReservationRates, updateReservationRate } from "../../../../config/feePolicy.js";
-import { useBoostPackages, updateBoostPackagePrice } from "../../../../config/boostPackagesStore.js";
+import {
+  useReservationRates,
+  updateReservationRate,
+} from "../../../../config/feePolicy.js";
+import {
+  useBoostPackages,
+  updateBoostPackagePrice,
+} from "../../../../config/boostPackagesStore.js";
 import {
   useListingFeeConfigs,
   updateListingFeeConfig,
   addFeeConfig,
   hasFeeConfig,
 } from "../../../../config/listingFeeStore.js";
-import { useLeadingFeeConfig, updateLeadingFeePrice } from "../../../../config/leadingFeeStore.js";
-import { useAdvertisementFeeConfig, updateAdvertisementFeePrice } from "../../../../config/advertisementFeeStore.js";
+import {
+  useLeadingFeeConfig,
+  updateLeadingFeePrice,
+} from "../../../../config/leadingFeeStore.js";
+import {
+  useAdvertisementFeeConfig,
+  updateAdvertisementFeePrice,
+} from "../../../../config/advertisementFeeStore.js";
 import {
   useActiveCategories,
   getCategory,
@@ -45,6 +58,39 @@ function getLocalized(field, lang) {
   return field?.[lang] || field?.sw || "";
 }
 
+// ============================================================
+// REVENUE CARD WRAPPER — border ya rangi + hover effect
+// ============================================================
+function RevenueCard({ accentColor, children }) {
+  return (
+    <div
+      className="bg-white rounded-xl border-2 p-4 sm:p-5 transition-all hover:shadow-md"
+      style={{ borderColor: `${accentColor}30` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ============================================================
+// HINT — "Bofya kuhariri"
+// ============================================================
+function EditHint({ lang, accentColor = COLORS.gold }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  return (
+    <p
+      className="text-[11px] font-medium mb-3 flex items-center gap-1.5"
+      style={{ color: accentColor }}
+    >
+      <Pencil size={11} />
+      {t("Bofya kiasi chochote kuhariri", "Click any amount to edit")}
+    </p>
+  );
+}
+
+// ============================================================
+// MAIN
+// ============================================================
 export default function RevenueSection() {
   const { lang } = useLanguage();
   const listingFeeConfigs = useListingFeeConfigs();
@@ -130,16 +176,18 @@ export default function RevenueSection() {
           {saved && (
             <div
               style={{ background: `${COLORS.green}15`, color: COLORS.green }}
-              className="text-xs font-semibold px-3 py-2 rounded-lg"
+              className="text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5"
             >
-              {t("Imehifadhiwa", "Saved")}
+              ✓ {t("Imehifadhiwa", "Saved")}
             </div>
           )}
           {flash && (
             <div
               style={{
                 background:
-                  flash.type === "error" ? `${COLORS.rust}15` : `${COLORS.green}15`,
+                  flash.type === "error"
+                    ? `${COLORS.rust}15`
+                    : `${COLORS.green}15`,
                 color: flash.type === "error" ? COLORS.rust : COLORS.green,
               }}
               className="text-xs font-semibold px-3 py-2 rounded-lg"
@@ -151,18 +199,23 @@ export default function RevenueSection() {
       )}
 
       <div className="flex flex-col gap-4">
-        {/* CATEGORIES BILA FEE CONFIG */}
+        {/* ============================================================
+            CATEGORIES BILA FEE CONFIG — warning card
+            ============================================================ */}
         {missingFeeCategories.length > 0 && (
           <div
-            className="bg-white rounded-xl border p-4 sm:p-5"
-            style={{ borderColor: COLORS.rust, borderWidth: "2px" }}
+            className="rounded-xl border-2 p-4 sm:p-5"
+            style={{
+              borderColor: COLORS.rust,
+              background: `${COLORS.rust}05`,
+            }}
           >
-            <div className="flex items-start gap-3 mb-3">
+            <div className="flex items-start gap-3 mb-4">
               <div
-                style={{ background: `${COLORS.rust}15` }}
-                className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: `${COLORS.rust}20` }}
+                className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
               >
-                <AlertTriangle size={16} color={COLORS.rust} />
+                <AlertTriangle size={18} color={COLORS.rust} />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-800">
@@ -188,7 +241,7 @@ export default function RevenueSection() {
                   <div
                     key={cat.key}
                     style={{ borderColor: COLORS.sandLine }}
-                    className="flex items-center gap-2 sm:gap-3 border rounded-lg px-2.5 sm:px-3 py-2"
+                    className="flex items-center gap-2 sm:gap-3 border rounded-lg px-2.5 sm:px-3 py-2 bg-white"
                   >
                     {hasPhoto ? (
                       <img
@@ -217,15 +270,13 @@ export default function RevenueSection() {
                     <button
                       onClick={() => handleAddFeeConfig(cat)}
                       style={{ background: COLORS.rust, color: "white" }}
-                      className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold px-2 sm:px-3 py-1.5 rounded-lg shrink-0"
+                      className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold px-2 sm:px-3 py-1.5 rounded-lg shrink-0 hover:opacity-90 transition-opacity"
                     >
                       <Plus size={12} />
                       <span className="hidden sm:inline">
                         {t("Ongeza Fee", "Add Fee")}
                       </span>
-                      <span className="sm:hidden">
-                        {t("Ongeza", "Add")}
-                      </span>
+                      <span className="sm:hidden">{t("Ongeza", "Add")}</span>
                     </button>
                   </div>
                 );
@@ -234,37 +285,45 @@ export default function RevenueSection() {
           </div>
         )}
 
-        {/* 1. Listing Fee */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+        {/* ============================================================
+            1. LISTING FEE
+            ============================================================ */}
+        <RevenueCard accentColor={COLORS.gold}>
           <div className="flex items-center gap-3 mb-1">
             <div
               style={{ background: `${COLORS.gold}15` }}
-              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Home size={16} color={COLORS.gold} />
+              <Home size={18} color={COLORS.gold} />
             </div>
-            <p className="text-sm font-semibold text-gray-800">
-              {t("Ada ya Kuchapisha", "Listing Fee")}
-            </p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-800">
+                {t("Ada ya Kuchapisha", "Listing Fee")}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {t(
+                  "Asilimia ya bei ya mali kwa category",
+                  "Percentage of property price per category"
+                )}
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-gray-500 mb-3">
-            {t(
-              "Asilimia ya bei ya mali kwa category, na ukomo wa chini/juu",
-              "Percentage of property price per category, with min/max caps"
-            )}
-          </p>
+
+          <EditHint lang={lang} accentColor={COLORS.gold} />
+
           <div className="divide-y divide-gray-100">
             {listingFeeConfigs.map((c) => {
               const category = getCategory(c.key);
-              const catLabel = category?.label?.[lang] || category?.label?.sw || c.key;
+              const catLabel =
+                category?.label?.[lang] || category?.label?.sw || c.key;
               return (
                 <div key={c.key} className="py-3">
                   <p className="text-sm font-medium text-gray-800 mb-2">
                     {catLabel}
                   </p>
-                  <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                     <div className="flex flex-col items-start min-w-0">
-                      <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mb-1">
                         {t("Kiwango", "Rate")}
                       </span>
                       <div className="w-full min-w-0">
@@ -275,7 +334,7 @@ export default function RevenueSection() {
                       </div>
                     </div>
                     <div className="flex flex-col items-start min-w-0">
-                      <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mb-1">
                         {t("Chini", "Min")}
                       </span>
                       <div className="w-full min-w-0">
@@ -286,7 +345,7 @@ export default function RevenueSection() {
                       </div>
                     </div>
                     <div className="flex flex-col items-start min-w-0">
-                      <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mb-1">
                         {t("Juu", "Max")}
                       </span>
                       <div className="w-full min-w-0">
@@ -301,37 +360,44 @@ export default function RevenueSection() {
               );
             })}
           </div>
-        </div>
+        </RevenueCard>
 
-        {/* 2. Reservation Fee */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+        {/* ============================================================
+            2. RESERVATION FEE
+            ============================================================ */}
+        <RevenueCard accentColor={COLORS.green}>
           <div className="flex items-center gap-3 mb-1">
             <div
               style={{ background: `${COLORS.green}15` }}
-              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Clock size={16} color={COLORS.green} />
+              <Clock size={18} color={COLORS.green} />
             </div>
-            <p className="text-sm font-semibold text-gray-800">
-              {t("Ada ya Reservation", "Reservation Fee")}
-            </p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-800">
+                {t("Ada ya Reservation", "Reservation Fee")}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {t(
+                  "100% mapato ya SokoMkononi — hakuna 50/50 split",
+                  "100% SokoMkononi revenue — no 50/50 split"
+                )}
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-gray-500 mb-3">
-            {t(
-              "100% mapato ya SokoMkononi — hakuna 50/50 split",
-              "100% SokoMkononi revenue — no 50/50 split"
-            )}
-          </p>
+
+          <EditHint lang={lang} accentColor={COLORS.green} />
+
           <div className="divide-y divide-gray-100">
             {reservationRates.map((r) => (
               <div
                 key={r.id}
-                className="flex items-center justify-between gap-3 py-2.5"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2.5"
               >
                 <span className="text-sm text-gray-600 min-w-0 truncate">
                   {r.label?.[lang] || r.label?.sw || r.id}
                 </span>
-                <div className="shrink-0">
+                <div className="w-full sm:w-40 shrink-0">
                   <EditableAmount
                     value={r.fee}
                     onSave={(v) => updateReservationFee(r.id, v)}
@@ -340,32 +406,39 @@ export default function RevenueSection() {
               </div>
             ))}
           </div>
-        </div>
+        </RevenueCard>
 
-        {/* 3. Boost Packages */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+        {/* ============================================================
+            3. BOOST PACKAGES
+            ============================================================ */}
+        <RevenueCard accentColor={COLORS.rust}>
           <div className="flex items-center gap-3 mb-1">
             <div
               style={{ background: `${COLORS.rust}15` }}
-              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Rocket size={16} color={COLORS.rust} />
+              <Rocket size={18} color={COLORS.rust} />
             </div>
-            <p className="text-sm font-semibold text-gray-800">
-              {t("Vifurushi vya Boost", "Boost Packages")}
-            </p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-800">
+                {t("Vifurushi vya Boost", "Boost Packages")}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {t(
+                  "Bei za Boost Sasa (Basic/Featured/Premium)",
+                  "Boost Now prices (Basic/Featured/Premium)"
+                )}
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-gray-500 mb-3">
-            {t(
-              "Bei za Boost Sasa (Basic/Featured/Premium)",
-              "Boost Now prices (Basic/Featured/Premium)"
-            )}
-          </p>
+
+          <EditHint lang={lang} accentColor={COLORS.rust} />
+
           <div className="divide-y divide-gray-100">
             {boostPackages.map((pkg) => (
               <div
                 key={pkg.key}
-                className="flex items-center justify-between gap-3 py-2.5"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2.5"
               >
                 <span className="text-sm text-gray-600 min-w-0 truncate">
                   {pkg.label?.[lang] || pkg.label?.sw || pkg.key}{" "}
@@ -373,7 +446,7 @@ export default function RevenueSection() {
                     ({pkg.days} {t("siku", "days")})
                   </span>
                 </span>
-                <div className="shrink-0">
+                <div className="w-full sm:w-40 shrink-0">
                   <EditableAmount
                     value={pkg.price}
                     onSave={(v) => updateBoostPrice(pkg.key, v)}
@@ -382,18 +455,21 @@ export default function RevenueSection() {
               </div>
             ))}
           </div>
-        </div>
+        </RevenueCard>
 
-        {/* 4 + 5. Leading Fee na Advertisement Fee */}
+        {/* ============================================================
+            4 + 5. LEADING FEE na ADVERTISEMENT FEE
+            ============================================================ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-3">
+          {/* 4. Leading Fee */}
+          <RevenueCard accentColor={COLORS.rust}>
             <div
               style={{ background: `${COLORS.rust}15` }}
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
             >
               <Search size={18} color={COLORS.rust} />
             </div>
-            <div>
+            <div className="mb-3">
               <p className="text-sm font-semibold text-gray-800">
                 {getLocalized(leadingFee.label, lang)}
               </p>
@@ -401,23 +477,25 @@ export default function RevenueSection() {
                 {getLocalized(leadingFee.desc, lang)}
               </p>
             </div>
+            <EditHint lang={lang} accentColor={COLORS.rust} />
             <EditableAmount
               value={leadingFee.price}
               onSave={updateLeadingPrice}
             />
-            <span className="text-[11px] text-gray-400 -mt-2">
+            <span className="text-[11px] text-gray-400 mt-1.5 block">
               / {t(`siku ${leadingFee.days}`, `${leadingFee.days} days`)}
             </span>
-          </div>
+          </RevenueCard>
 
-          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-3">
+          {/* 5. Advertisement Fee */}
+          <RevenueCard accentColor={COLORS.rust}>
             <div
               style={{ background: `${COLORS.rust}15` }}
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
             >
               <Smartphone size={18} color={COLORS.rust} />
             </div>
-            <div>
+            <div className="mb-3">
               <p className="text-sm font-semibold text-gray-800">
                 {getLocalized(adFee.label, lang)}
               </p>
@@ -425,14 +503,34 @@ export default function RevenueSection() {
                 {getLocalized(adFee.desc, lang)}
               </p>
             </div>
+            <EditHint lang={lang} accentColor={COLORS.rust} />
             <EditableAmount
               value={adFee.price}
               onSave={updateAdvertisementPrice}
             />
-            <span className="text-[11px] text-gray-400 -mt-2">
+            <span className="text-[11px] text-gray-400 mt-1.5 block">
               / {t(`siku ${adFee.days}`, `${adFee.days} days`)}
             </span>
-          </div>
+          </RevenueCard>
+        </div>
+
+        {/* ============================================================
+            INFO NOTE — mwisho wa section
+            ============================================================ */}
+        <div
+          className="rounded-xl border px-4 py-3 flex items-start gap-2.5"
+          style={{
+            background: `${COLORS.gold}08`,
+            borderColor: `${COLORS.gold}30`,
+          }}
+        >
+          <Info size={16} color={COLORS.gold} className="shrink-0 mt-0.5" />
+          <p className="text-xs text-gray-600 leading-relaxed">
+            {t(
+              "Mabadiliko yote yanahifadhiwa papo hapo. Hakuna haja ya kubofya kitufe cha 'Hifadhi'.",
+              "All changes are saved instantly. No need to click a 'Save' button."
+            )}
+          </p>
         </div>
       </div>
     </>
