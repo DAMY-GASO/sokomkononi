@@ -1,11 +1,32 @@
-import React, { useState } from "react";
+// ============================================================
+// ContactPage.jsx
+// Wasiliana Nasi — bilingual kamili + PageLoader.
+// ============================================================
+
+import React, { useState, useEffect } from "react";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import Navbar from "../components/Navbar.jsx";
 
+// ============================================================
+// PAGE LOADER — rahisi, inaonekana mara moja tu
+// ============================================================
+import PageLoader from "../components/PageLoader.jsx";
+
 export default function ContactPage() {
   const { t, lang } = useLanguage();
+
+  // ============================================================
+  // LOADER — inaonekana mara moja tu ukurasa unapofunguka
+  // ============================================================
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setReady(true), 300);
+    return () => clearTimeout(id);
+  }, []);
+
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
 
@@ -13,6 +34,13 @@ export default function ContactPage() {
     e.preventDefault();
     // TODO: unganisha na backend halisi, mfano: await apiPost("/contact", form)
     setSent(true);
+  }
+
+  // ============================================================
+  // LOADER — kama bado haijawa tayari, onyesha loader
+  // ============================================================
+  if (!ready) {
+    return <PageLoader lang={lang} />;
   }
 
   return (
