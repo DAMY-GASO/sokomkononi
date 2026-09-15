@@ -1,3 +1,8 @@
+// ============================================================
+// ProfilePage.jsx
+// Wasifu — bilingual kamili + PageLoader.
+// ============================================================
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -37,6 +42,11 @@ import {
   Tag,
   ShoppingBag,
 } from "lucide-react";
+
+// ============================================================
+// PAGE LOADER — rahisi, inaonekana mara moja tu
+// ============================================================
+import PageLoader from "../components/PageLoader.jsx";
 
 const COLORS = {
   night: "#101A2E",
@@ -114,7 +124,6 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
       ? user.location?.[lang] || user.location?.sw
       : user.location;
 
-  // Stats zinazoonyeshwa hutofautiana kulingana na Buyer / Seller view
   const sellerStats = [
     { icon: Home, value: stats.listings || 0, label: lang === "sw" ? "Mali Zangu" : "My Listings", color: COLORS.gold },
     { icon: MessageSquare, value: stats.deals || 0, label: lang === "sw" ? "Deals Zilizofungwa" : "Deals Closed", color: COLORS.green },
@@ -131,21 +140,18 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
 
   const activeStats = viewMode === "buyer" ? buyerStats : sellerStats;
 
-  // Chuja "Recent Activity" kulingana na role, ikiwa kila item ina field ya `type`
   const filteredActivities = activities.filter((a) =>
     a.type ? a.type === viewMode : true
   );
 
   return (
     <div className="space-y-6">
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {activeStats.map((s, i) => (
           <StatCard key={i} icon={s.icon} value={s.value} label={s.label} color={s.color} />
         ))}
       </div>
 
-      {/* Bio */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <h3 className="font-semibold text-gray-800 mb-3">
           {lang === "sw" ? "Kuhusu Mimi" : "About Me"}
@@ -155,7 +161,6 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
         </p>
       </div>
 
-      {/* Account Info */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <h3 className="font-semibold text-gray-800 mb-4">
           {lang === "sw" ? "Taarifa za Akaunti" : "Account Information"}
@@ -217,7 +222,6 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
         </div>
       </div>
 
-      {/* Recent Activity — kama ipo */}
       {filteredActivities.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <div className="flex flex-col items-center text-center gap-1 mb-4">
@@ -309,7 +313,6 @@ function EditProfileTab({ user, lang, onSave }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Avatar */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <h3 className="font-semibold text-gray-800 mb-4 text-center">
           {lang === "sw" ? "Picha ya Wasifu" : "Profile Picture"}
@@ -350,7 +353,6 @@ function EditProfileTab({ user, lang, onSave }) {
         </div>
       </div>
 
-      {/* Personal Info */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <h3 className="font-semibold text-gray-800 mb-4 text-center">
           {lang === "sw" ? "Taarifa za Kibinafsi" : "Personal Information"}
@@ -449,7 +451,6 @@ function EditProfileTab({ user, lang, onSave }) {
         </div>
       </div>
 
-      {/* Save Button */}
       <div className="flex flex-col items-center gap-2">
         {saved && (
           <span className="flex items-center gap-1.5 text-sm text-[#2F6D4F] font-medium">
@@ -644,7 +645,6 @@ function SecurityTab({ lang }) {
         </div>
       </form>
 
-      {/* Two Factor */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <div className="flex flex-col items-center text-center gap-2">
           <div className="w-10 h-10 rounded-lg bg-[#2F6D4F]/10 flex items-center justify-center">
@@ -668,7 +668,6 @@ function SecurityTab({ lang }) {
         </div>
       </div>
 
-      {/* Sessions */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <h3 className="font-semibold text-gray-800 mb-4 text-center">
           {lang === "sw" ? "Vifaa Vilivyounganishwa" : "Active Sessions"}
@@ -696,7 +695,6 @@ function SecurityTab({ lang }) {
         </div>
       </div>
 
-      {/* Danger Zone */}
       <div className="bg-white rounded-xl border border-[#C1502E]/30 p-5">
         <h3 className="font-semibold text-[#C1502E] mb-4 flex items-center justify-center gap-2 text-center">
           <AlertTriangle size={18} />
@@ -917,7 +915,6 @@ function PreferencesTab({ lang, setLang }) {
         </div>
       </div>
 
-      {/* Privacy */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <h3 className="font-semibold text-gray-800 mb-4 text-center">
           {lang === "sw" ? "Faragha" : "Privacy"}
@@ -990,6 +987,16 @@ export default function ProfilePage() {
   const { lang, setLang } = useLanguage();
   const navigate = useNavigate();
 
+  // ============================================================
+  // LOADER — inaonekana mara moja tu ukurasa unapofunguka
+  // ============================================================
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setReady(true), 300);
+    return () => clearTimeout(id);
+  }, []);
+
   const [activeTab, setActiveTab] = useState("overview");
 
   const [profileUser, setProfileUser] = useState({
@@ -1008,13 +1015,6 @@ export default function ProfilePage() {
     },
   });
 
-  // Hali ya kuangalia profile kama Muuzaji au Mnunuzi.
-  // Hii ni "view mode" tu — haibadilishi role halisi ya akaunti kwenye database,
-  // inaruhusu mtumiaji mmoja mwenye role zote mbili (buyer & seller) kubadilisha
-  // anachotaka kuona kwa wakati huo.
-  // Inaanza (na inaendelea kufuata) "side" ile ile ya sasa inayotumika
-  // kwenye Dashboard/BottomNav, ili kitufe cha Profile kifungue upande
-  // sahihi kulingana na mode aliyokuwepo mtumiaji.
   const dashboardSide = useDashboardSide();
   const [viewMode, setViewModeState] = useState(dashboardSide);
 
@@ -1045,6 +1045,13 @@ export default function ProfilePage() {
     if (setUser) setUser(updated);
   };
 
+  // ============================================================
+  // LOADER — kama bado haijawa tayari, onyesha loader
+  // ============================================================
+  if (!ready) {
+    return <PageLoader lang={lang} />;
+  }
+
   if (!profileUser || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1067,9 +1074,6 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* ============================================================ */}
-      {/* HERO — CENTERED */}
-      {/* ============================================================ */}
       <section className="bg-[#101A2E] text-white py-12 px-4">
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col items-center text-center gap-4">
@@ -1101,9 +1105,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* ============================================================ */}
-            {/* BUYER / SELLER VIEW TOGGLE */}
-            {/* ============================================================ */}
             <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl">
               <button
                 onClick={() => setViewMode("seller")}
@@ -1140,9 +1141,6 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* TABS — CENTERED */}
-      {/* ============================================================ */}
       <div className="bg-white border-b border-gray-100 sticky top-16 z-40">
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex justify-center overflow-x-auto -mb-px">
@@ -1168,9 +1166,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ============================================================ */}
-      {/* CONTENT */}
-      {/* ============================================================ */}
       <div className="max-w-5xl mx-auto px-4 py-6">
         {activeTab === "overview" && (
           <OverviewTab
