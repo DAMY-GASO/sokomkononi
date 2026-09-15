@@ -1,7 +1,7 @@
 // ============================================================
 // EditableAmount.jsx
 // Kiasi kinachoweza kuhaririwa — kwa Revenue section.
-// Responsive: inafanya kazi kwenye grid-cols-3 ya simu.
+// Kipenseli kinaonekana wazi — msimamizi anaweza kuliona haraka.
 // Comma inajiweka automatically mtumiaji anapoandika.
 // ============================================================
 
@@ -50,9 +50,12 @@ export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
     setEditing(false);
   };
 
+  // ============================================================
+  // EDITING MODE — input + save/cancel buttons
+  // ============================================================
   if (editing) {
     return (
-      <div className="flex items-center gap-1 w-full min-w-0">
+      <div className="flex items-center gap-1.5 w-full min-w-0">
         <input
           type="text"
           inputMode="numeric"
@@ -62,44 +65,63 @@ export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
             if (e.key === "Enter") handleSave();
             if (e.key === "Escape") handleCancel();
           }}
-          className="flex-1 min-w-0 text-xs sm:text-sm border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-[#E8A33D]"
+          className="flex-1 min-w-0 text-sm font-semibold border-2 rounded-lg px-2.5 py-1.5 outline-none transition-colors"
+          style={{
+            borderColor: COLORS.gold,
+            background: `${COLORS.gold}08`,
+            color: COLORS.night,
+          }}
           autoFocus
         />
         <button
           onClick={handleSave}
-          style={{ color: COLORS.green }}
-          className="shrink-0 p-0.5 hover:opacity-80 transition-opacity"
+          style={{ background: COLORS.green, color: "white" }}
+          className="shrink-0 p-1.5 rounded-lg hover:opacity-90 transition-opacity"
           aria-label="Save"
         >
-          <Save size={15} />
+          <Save size={14} />
         </button>
         <button
           onClick={handleCancel}
-          className="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
+          style={{ background: COLORS.sandLine, color: COLORS.night }}
+          className="shrink-0 p-1.5 rounded-lg hover:opacity-80 transition-opacity"
           aria-label="Cancel"
         >
-          <X size={15} />
+          <X size={14} />
         </button>
       </div>
     );
   }
 
+  // ============================================================
+  // DISPLAY MODE — kiasi + kipenseli kinachoonekana
+  // ============================================================
   return (
     <button
       onClick={startEditing}
-      className="flex items-center gap-1.5 group w-full min-w-0 text-left"
+      className="group flex items-center justify-between gap-2 w-full min-w-0 text-left rounded-lg border-2 px-2.5 py-1.5 transition-all hover:shadow-sm"
+      style={{
+        borderColor: COLORS.sandLine,
+        background: "white",
+      }}
+      title="Bofya kuhariri / Click to edit"
     >
       <span
         style={{ color: COLORS.night }}
-        className="text-xs sm:text-sm font-semibold truncate"
+        className="text-sm font-semibold truncate"
       >
         {prefix}
         {safeValue.toLocaleString()}
       </span>
-      <Pencil
-        size={12}
-        className="text-gray-300 group-hover:text-gray-500 shrink-0"
-      />
+      <span
+        className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
+        style={{
+          background: `${COLORS.gold}15`,
+          color: COLORS.gold,
+        }}
+      >
+        <Pencil size={13} />
+      </span>
     </button>
   );
 }
