@@ -1,4 +1,9 @@
-import React, { useState } from "react";
+// ============================================================
+// TermsPage.jsx
+// Sheria na Masharti — bilingual kamili + PageLoader.
+// ============================================================
+
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Navbar from "../components/Navbar.jsx";
@@ -16,6 +21,11 @@ import {
   Mail,
   ArrowLeft,
 } from "lucide-react";
+
+// ============================================================
+// PAGE LOADER — rahisi, inaonekana mara moja tu
+// ============================================================
+import PageLoader from "../components/PageLoader.jsx";
 
 const COLORS = {
   night: "#101A2E",
@@ -295,6 +305,16 @@ export default function TermsPage() {
   const { lang } = useLanguage();
   const content = TERMS_CONTENT[lang] || TERMS_CONTENT.sw;
 
+  // ============================================================
+  // LOADER — inaonekana mara moja tu ukurasa unapofunguka
+  // ============================================================
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setReady(true), 300);
+    return () => clearTimeout(id);
+  }, []);
+
   const [openSections, setOpenSections] = useState({});
 
   const toggleSection = (id) => {
@@ -315,6 +335,13 @@ export default function TermsPage() {
   const collapseAll = () => {
     setOpenSections({});
   };
+
+  // ============================================================
+  // LOADER — kama bado haijawa tayari, onyesha loader
+  // ============================================================
+  if (!ready) {
+    return <PageLoader lang={lang} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
