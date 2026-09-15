@@ -31,14 +31,33 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 // BILINGUAL — type labels
 // ============================================================
 const TYPE_LABELS = {
-  listing: { sw: "Listing", en: "Listing" },
-  leading: { sw: "Leading", en: "Leading" },
-  boost: { sw: "Boost", en: "Boost" },
-  reservation: { sw: "Reservation", en: "Reservation" },
+  listing: { sw: "Kuweka Mali", en: "Listing" },
+  leading: { sw: "Kuongoza", en: "Leading" },
+  boost: { sw: "Kukuza", en: "Boost" },
+  reservation: { sw: "Kuhifadhi", en: "Reservation" },
   ads: { sw: "Matangazo", en: "Ads" },
-  premium: { sw: "Premium", en: "Premium" },
+  premium: { sw: "Hadhi ya Juu", en: "Premium" },
   package: { sw: "Kifurushi", en: "Package" },
 };
+
+// ============================================================
+// BILINGUAL — service label za credits (zinalingana na
+// CREDIT_LABELS kwenye BundlesPage.jsx ili mtumiaji na admin
+// waone maneno yaleyale).
+// ============================================================
+const CREDIT_LABELS = {
+  listing: { sw: "Kuweka Mali", en: "Listing" },
+  leading: { sw: "Kuongoza", en: "Leading" },
+  boost: { sw: "Kukuza", en: "Boost" },
+  reservation: { sw: "Kuhifadhi", en: "Reservation" },
+  ads: { sw: "Matangazo", en: "Ads" },
+  premium: { sw: "Hadhi ya Juu", en: "Premium" },
+};
+
+// Fallback inayofuata lugha iliyochaguliwa, kisha lugha nyingine —
+// sio Kiswahili daima.
+const pickLang = (obj, lang) =>
+  obj?.[lang] || obj?.[lang === "sw" ? "en" : "sw"] || "";
 
 // ============================================================
 // FORM MODAL — bilingual + responsive
@@ -64,9 +83,31 @@ function BundleFormModal({ bundle, onSave, onClose, lang }) {
     }
   );
 
+  const [error, setError] = useState("");
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.id || !form.name?.sw || !form.price) return;
+
+    // Sehemu zote za lugha mbili ni lazima — bila hivyo mtumiaji wa
+    // lugha moja ataona maandishi ya lugha nyingine kwenye BundlesPage.
+    const missing = [];
+    if (!form.id?.trim()) missing.push(t("Kitambulisho (ID)", "Identifier (ID)"));
+    if (!form.name?.sw?.trim()) missing.push(t("Jina (SW)", "Name (SW)"));
+    if (!form.name?.en?.trim()) missing.push(t("Jina (EN)", "Name (EN)"));
+    if (!form.description?.sw?.trim())
+      missing.push(t("Maelezo (SW)", "Description (SW)"));
+    if (!form.description?.en?.trim())
+      missing.push(t("Maelezo (EN)", "Description (EN)"));
+    if (!form.price) missing.push(t("Bei (TZS)", "Price (TZS)"));
+
+    if (missing.length > 0) {
+      setError(
+        t("Jaza sehemu hizi: ", "Fill in these fields: ") + missing.join(", ")
+      );
+      return;
+    }
+
+    setError("");
     onSave(form);
     onClose();
   };
@@ -102,7 +143,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang }) {
           {/* ID */}
           <div>
             <label className="block text-[11px] sm:text-xs font-semibold text-gray-600 mb-1">
-              ID
+              {t("Kitambulisho (ID)", "Identifier (ID)")} <span className="text-[#C1502E]">*</span>
             </label>
             <input
               value={form.id}
@@ -125,7 +166,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang }) {
             >
               {Object.entries(TYPE_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>
-                  {label[lang] || label.sw}
+                  {pickLang(label, lang)}
                 </option>
               ))}
             </select>
@@ -135,7 +176,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-gray-600 mb-1">
-                {t("Jina (SW)", "Name (SW)")}
+                {t("Jina (SW)", "Name (SW)")} <span className="text-[#C1502E]">*</span>
               </label>
               <input
                 value={form.name?.sw || ""}
@@ -147,7 +188,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang }) {
             </div>
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-gray-600 mb-1">
-                {t("Jina (EN)", "Name (EN)")}
+                {t("Jina (EN)", "Name (EN)")} <span className="text-[#C1502E]">*</span>
               </label>
               <input
                 value={form.name?.en || ""}
@@ -163,7 +204,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-gray-600 mb-1">
-                {t("Maelezo (SW)", "Description (SW)")}
+                {t("Maelezo (SW)", "Description (SW)")} <span className="text-[#C1502E]">*</span>
               </label>
               <textarea
                 value={form.description?.sw || ""}
@@ -179,7 +220,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang }) {
             </div>
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-gray-600 mb-1">
-                {t("Maelezo (EN)", "Description (EN)")}
+                {t("Maelezo (EN)", "Description (EN)")} <span className="text-[#C1502E]">*</span>
               </label>
               <textarea
                 value={form.description?.en || ""}
@@ -199,7 +240,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-gray-600 mb-1">
-                {t("Bei (TZS)", "Price (TZS)")}
+                {t("Bei (TZS)", "Price (TZS)")} <span className="text-[#C1502E]">*</span>
               </label>
               <input
                 type="number"
@@ -210,7 +251,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang }) {
             </div>
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-gray-600 mb-1">
-                {t("Credits", "Credits")}
+                {t("Salio", "Credits")}
               </label>
               <input
                 type="number"
@@ -258,9 +299,16 @@ function BundleFormModal({ bundle, onSave, onClose, lang }) {
               className="w-4 h-4 rounded text-[#E8A33D]"
             />
             <span className="text-xs sm:text-sm text-gray-600">
-              {t("Onyesha kama Featured", "Mark as Featured")}
+              {t("Onyesha kama Maarufu", "Mark as Featured")}
             </span>
           </label>
+
+          {/* Ujumbe wa hitilafu */}
+          {error && (
+            <p className="text-[11px] sm:text-xs text-[#C1502E] bg-[#C1502E]/10 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
 
           {/* Submit — stacked kwenye mobile */}
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 pt-3 sticky bottom-0 bg-white pb-1">
@@ -336,7 +384,7 @@ export default function AdminBundles() {
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 max-w-xl px-2">
             {t(
-              "Dhibiti bundles/vifurushi vya huduma vinavyouzwa kwa watumiaji.",
+              "Dhibiti vifurushi vya huduma vinavyouzwa kwa watumiaji.",
               "Manage bundles sold to users."
             )}
           </p>
@@ -412,7 +460,7 @@ export default function AdminBundles() {
               const label =
                 key === "all"
                   ? t("Zote", "All")
-                  : TYPE_LABELS[key]?.[lang] || TYPE_LABELS[key]?.sw;
+                  : pickLang(TYPE_LABELS[key], lang);
               return (
                 <button
                   key={key}
@@ -454,10 +502,10 @@ export default function AdminBundles() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-xs sm:text-sm text-gray-800 truncate">
-                      {b.name?.[lang] || b.name?.sw}
+                      {pickLang(b.name, lang) || b.id}
                     </p>
                     <p className="text-[10px] sm:text-xs text-gray-500 capitalize">
-                      {TYPE_LABELS[b.type]?.[lang] || TYPE_LABELS[b.type]?.sw}
+                      {pickLang(TYPE_LABELS[b.type], lang) || b.type}
                     </p>
                   </div>
                   <span
@@ -478,10 +526,13 @@ export default function AdminBundles() {
 
                 {/* Credits */}
                 <p className="text-[10px] sm:text-xs text-gray-500 line-clamp-2">
-                  {t("Credits", "Credits")}:{" "}
+                  {t("Salio", "Credits")}:{" "}
                   {typeof b.credits === "object"
                     ? Object.entries(b.credits)
-                        .map(([k, v]) => `${k}:${v}`)
+                        .map(
+                          ([k, v]) =>
+                            `${pickLang(CREDIT_LABELS[k], lang) || k}: ${v}`
+                        )
                         .join(", ")
                     : b.credits}
                 </p>
