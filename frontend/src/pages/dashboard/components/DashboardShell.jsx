@@ -1,3 +1,9 @@
+// ============================================================
+// DashboardShell.jsx
+// Dashboard shell — seller + buyer.
+// Bilingual kamili + centered + PageLoader (mara moja tu).
+// ============================================================
+
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -82,6 +88,11 @@ import {
   useWaitingList,
   leaveWaitingList,
 } from "../../../config/waitingListStore.js";
+
+// ============================================================
+// PAGE LOADER — rahisi, inaonekana mara moja tu
+// ============================================================
+import PageLoader from "../../../components/PageLoader.jsx";
 
 // ============================================================
 // SELLER NAV — Bilingual kamili
@@ -292,6 +303,16 @@ export default function DashboardShell() {
   const { lang, setLang } = useLanguage();
   const { user, logout } = useAuth();
 
+  // ============================================================
+  // LOADER — inaonekana mara moja tu mtumiaji anapoingia dashboard
+  // ============================================================
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const id = setTimeout(() => setReady(true), 300);
+    return () => clearTimeout(id);
+  }, []);
+
   const [side, setSide] = useState("seller");
   const [activeKey, setActiveKey] = useState("overview");
   const [tickerIndex, setTickerIndex] = useState(0);
@@ -332,8 +353,7 @@ export default function DashboardShell() {
   }, [location.pathname]);
 
   // ============================================================
-  // HIFADHI "SIDE" YA SASA KWA STORE — ili BottomNav na sehemu
-  // nyingine nje ya DashboardShell zijue mtumiaji yuko upande gani
+  // HIFADHI "SIDE" YA SASA KWA STORE
   // ============================================================
   useEffect(() => {
     setDashboardSide(side);
@@ -352,7 +372,7 @@ export default function DashboardShell() {
       checkListingExpiry();
       checkListingExpiringSoon();
       checkSavedListingsChanges();
-    }, 2 * 60 * 1000); // kila dakika 2
+    }, 2 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -501,7 +521,6 @@ export default function DashboardShell() {
   // RENDER MAIN CONTENT
   // ============================================================
   const renderMain = () => {
-    // Overview — tofauti kwa seller na buyer
     if (activeKey === "overview") {
       if (side === "seller") {
         return <SellerOverview onNavigate={handleNavClick} />;
@@ -612,9 +631,7 @@ export default function DashboardShell() {
         />
       );
     }
-    // ============================================================
-    // FALLBACK — centered + bilingual
-    // ============================================================
+    // FALLBACK
     return (
       <main className="flex-1 p-4 sm:p-6 text-center">
         <h1
@@ -674,6 +691,13 @@ export default function DashboardShell() {
       </div>
     );
   };
+
+  // ============================================================
+  // LOADER — kama bado haijawa tayari, onyesha loader
+  // ============================================================
+  if (!ready) {
+    return <PageLoader lang={lang} />;
+  }
 
   return (
     <div
@@ -971,7 +995,6 @@ export default function DashboardShell() {
               >
                 <Icon size={17} color={isActive ? accent : COLORS.night} />
                 {label[lang] || label.sw}
-                {/* Badge ya listings */}
                 {key === "listings" && listings.length > 0 && (
                   <span
                     style={{
@@ -985,7 +1008,6 @@ export default function DashboardShell() {
                     {listings.length}
                   </span>
                 )}
-                {/* Badge ya leads mpya */}
                 {key === "leads" && newLeadsCount > 0 && (
                   <span
                     style={{
@@ -999,7 +1021,6 @@ export default function DashboardShell() {
                     {newLeadsCount}
                   </span>
                 )}
-                {/* Badge ya searches */}
                 {key === "searches" && buyerSearchesCount > 0 && (
                   <span
                     style={{
