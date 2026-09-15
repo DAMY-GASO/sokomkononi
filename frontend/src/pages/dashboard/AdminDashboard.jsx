@@ -1,5 +1,6 @@
 // ============================================================
 // AdminDashboard.jsx — SHELL PEKEE + Routes + Permissions
+// + PageLoader (mara moja tu)
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -9,9 +10,28 @@ import {
   useNotifications,
   getLocalizedField,
 } from "../../config/notificationsStore.js";
-import { Menu, X, Bell, LogOut, User as UserIcon, Settings, Lock } from "lucide-react";
+import {
+  Menu,
+  X,
+  Bell,
+  LogOut,
+  User as UserIcon,
+  Settings,
+  Lock,
+} from "lucide-react";
 
-import { COLORS, FONTS, NAV, ADMIN_NOTIFICATION_ICONS, timeAgo } from "./admin/shared/constants.js";
+import {
+  COLORS,
+  FONTS,
+  NAV,
+  ADMIN_NOTIFICATION_ICONS,
+  timeAgo,
+} from "./admin/shared/constants.js";
+
+// ============================================================
+// PAGE LOADER — rahisi, brand colors
+// ============================================================
+import PageLoader from "../../components/PageLoader.jsx";
 
 // Core sections
 import OverviewSection from "./admin/sections/OverviewSection.jsx";
@@ -33,8 +53,7 @@ import SystemSettingsSection from "./admin/sections/SystemSettingsSection.jsx";
 import RBACSection from "./admin/sections/RBACSection.jsx";
 import AdminProfile from "./admin/sections/AdminProfile.jsx";
 
-// Bundles (sits next to BundlesPage.jsx, not inside admin/sections —
-// it shares BundlesPage's relative import paths)
+// Bundles
 import AdminBundles from "../AdminBundles.jsx";
 
 // Badges
@@ -130,15 +149,26 @@ function LanguageSwitcher({ lang, setLang }) {
         className="text-white/60 hover:text-white text-sm font-medium border border-white/15 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
         aria-label={lang === "sw" ? "Badilisha lugha" : "Change language"}
       >
-        <span className="hidden sm:inline">{current?.native || "Kiswahili"}</span>
-        <span className="sm:hidden">{current?.code?.toUpperCase() || "SW"}</span>
+        <span className="hidden sm:inline">
+          {current?.native || "Kiswahili"}
+        </span>
+        <span className="sm:hidden">
+          {current?.code?.toUpperCase() || "SW"}
+        </span>
         <svg
-          className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`w-4 h-4 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
         </svg>
       </button>
 
@@ -164,9 +194,15 @@ function LanguageSwitcher({ lang, setLang }) {
                   lang === l.code ? "bg-white/5" : ""
                 }`}
               >
-                <span className="text-white text-sm font-medium">{l.native}</span>
+                <span className="text-white text-sm font-medium">
+                  {l.native}
+                </span>
                 {lang === l.code && (
-                  <svg className="w-4 h-4 text-[#E8A33D]" fill="currentColor" viewBox="0 0 20 20">
+                  <svg
+                    className="w-4 h-4 text-[#E8A33D]"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
                     <path
                       fillRule="evenodd"
                       d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -243,6 +279,9 @@ export default function AdminDashboard() {
     setNotifOpen(false);
   };
 
+  // ============================================================
+  // AUTH CHECK + LOADER
+  // ============================================================
   useEffect(() => {
     if (!user) {
       navigate("/admin/login");
@@ -252,7 +291,9 @@ export default function AdminDashboard() {
       navigate("/dashboard");
       return;
     }
-    setLoading(false);
+    // Onyesha loader kwa muda mfupi tu (300ms)
+    const id = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(id);
   }, [user, isAdmin, navigate]);
 
   const handleLogout = async () => {
@@ -268,19 +309,11 @@ export default function AdminDashboard() {
     setSidebarOpen(false);
   };
 
+  // ============================================================
+  // LOADER — PageLoader badala ya spinner ya kizamani
+  // ============================================================
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#E8A33D] border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-500 mt-4">
-            {lang === "sw"
-              ? "Inaangalia mamlaka yako..."
-              : "Checking your authorization..."}
-          </p>
-        </div>
-      </div>
-    );
+    return <PageLoader lang={lang} />;
   }
 
   const renderSection = () => {
@@ -428,7 +461,9 @@ export default function AdminDashboard() {
               >
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <span className="text-sm font-semibold text-gray-800">
-                    {lang === "sw" ? "Taarifa za Admin" : "Admin Notifications"}
+                    {lang === "sw"
+                      ? "Taarifa za Admin"
+                      : "Admin Notifications"}
                   </span>
                   {unreadCount > 0 && (
                     <span
@@ -507,7 +542,9 @@ export default function AdminDashboard() {
                       <p className="text-sm font-semibold text-gray-800 truncate">
                         {user?.name || "Admin"}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {user?.email}
+                      </p>
                     </div>
                   </div>
 
@@ -571,12 +608,20 @@ export default function AdminDashboard() {
                 }}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left w-full min-w-0"
               >
-                <Icon size={17} color={isActive ? COLORS.gold : COLORS.night} className="shrink-0" />
-                <span className="flex-1 truncate">{label[lang] || label.sw}</span>
+                <Icon
+                  size={17}
+                  color={isActive ? COLORS.gold : COLORS.night}
+                  className="shrink-0"
+                />
+                <span className="flex-1 truncate">
+                  {label[lang] || label.sw}
+                </span>
                 {badge && (
                   <span
                     style={{
-                      background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust,
+                      background: isActive
+                        ? "rgba(245,243,236,0.18)"
+                        : COLORS.rust,
                       color: isActive ? COLORS.sand : "white",
                     }}
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
@@ -624,11 +669,15 @@ export default function AdminDashboard() {
                       color={isActive ? COLORS.gold : COLORS.night}
                       className="shrink-0"
                     />
-                    <span className="flex-1 truncate">{label[lang] || label.sw}</span>
+                    <span className="flex-1 truncate">
+                      {label[lang] || label.sw}
+                    </span>
                     {badge && (
                       <span
                         style={{
-                          background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust,
+                          background: isActive
+                            ? "rgba(245,243,236,0.18)"
+                            : COLORS.rust,
                           color: isActive ? COLORS.sand : "white",
                         }}
                         className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
@@ -647,7 +696,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* MAIN — overflow-x-hidden inazuia kila kitu kisipite upana */}
+        {/* MAIN */}
         <main className="flex-1 min-w-0 max-w-7xl px-4 sm:px-6 py-6 overflow-x-hidden">
           {renderSection()}
         </main>
