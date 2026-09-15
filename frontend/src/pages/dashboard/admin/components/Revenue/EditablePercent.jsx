@@ -1,6 +1,7 @@
 // ============================================================
 // EditablePercent.jsx
 // Asilimia inayoweza kuhaririwa — kwa Revenue section.
+// Kipenseli kinaonekana wazi — msimamizi anaweza kuliona haraka.
 // Responsive: inafanya kazi kwenye grid-cols-3 ya simu.
 // ============================================================
 
@@ -13,9 +14,25 @@ export default function EditablePercent({ value, onSave }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState((safeValue * 100).toString());
 
+  const startEditing = () => {
+    setDraft((safeValue * 100).toString());
+    setEditing(true);
+  };
+
+  const handleChange = (e) => {
+    // Ruhusu digits na decimal moja tu
+    const raw = e.target.value.replace(/[^0-9.]/g, "");
+    const parts = raw.split(".");
+    const cleaned =
+      parts.length > 1
+        ? `${parts[0]}.${parts.slice(1).join("")}`
+        : parts[0];
+    setDraft(cleaned);
+  };
+
   const handleSave = () => {
     const num = Number(draft);
-    if (!isNaN(num)) {
+    if (!isNaN(num) && num >= 0) {
       onSave(num / 100);
     }
     setEditing(false);
@@ -26,59 +43,83 @@ export default function EditablePercent({ value, onSave }) {
     setEditing(false);
   };
 
+  // ============================================================
+  // EDITING MODE — input + % + save/cancel buttons
+  // ============================================================
   if (editing) {
     return (
-      <div className="flex items-center gap-1 w-full min-w-0">
+      <div className="flex items-center gap-1.5 w-full min-w-0">
         <input
-          type="number"
-          step="0.1"
+          type="text"
+          inputMode="decimal"
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={handleChange}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSave();
             if (e.key === "Escape") handleCancel();
           }}
-          className="flex-1 min-w-0 text-xs sm:text-sm border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-[#E8A33D]"
+          className="flex-1 min-w-0 text-sm font-semibold border-2 rounded-lg px-2.5 py-1.5 outline-none transition-colors"
+          style={{
+            borderColor: COLORS.gold,
+            background: `${COLORS.gold}08`,
+            color: COLORS.night,
+          }}
           autoFocus
         />
-        <span className="text-xs sm:text-sm text-gray-400 shrink-0">%</span>
+        <span
+          className="text-sm font-semibold shrink-0"
+          style={{ color: COLORS.night }}
+        >
+          %
+        </span>
         <button
           onClick={handleSave}
-          style={{ color: COLORS.green }}
-          className="shrink-0 p-0.5 hover:opacity-80 transition-opacity"
+          style={{ background: COLORS.green, color: "white" }}
+          className="shrink-0 p-1.5 rounded-lg hover:opacity-90 transition-opacity"
           aria-label="Save"
         >
-          <Save size={15} />
+          <Save size={14} />
         </button>
         <button
           onClick={handleCancel}
-          className="shrink-0 p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
+          style={{ background: COLORS.sandLine, color: COLORS.night }}
+          className="shrink-0 p-1.5 rounded-lg hover:opacity-80 transition-opacity"
           aria-label="Cancel"
         >
-          <X size={15} />
+          <X size={14} />
         </button>
       </div>
     );
   }
 
+  // ============================================================
+  // DISPLAY MODE — asilimia + kipenseli kinachoonekana
+  // ============================================================
   return (
     <button
-      onClick={() => {
-        setDraft((safeValue * 100).toString());
-        setEditing(true);
+      onClick={startEditing}
+      className="group flex items-center justify-between gap-2 w-full min-w-0 text-left rounded-lg border-2 px-2.5 py-1.5 transition-all hover:shadow-sm"
+      style={{
+        borderColor: COLORS.sandLine,
+        background: "white",
       }}
-      className="flex items-center gap-1.5 group w-full min-w-0 text-left"
+      title="Bofya kuhariri / Click to edit"
     >
       <span
         style={{ color: COLORS.night }}
-        className="text-xs sm:text-sm font-semibold truncate"
+        className="text-sm font-semibold truncate"
       >
         {(safeValue * 100).toFixed(1)}%
       </span>
-      <Pencil
-        size={12}
-        className="text-gray-300 group-hover:text-gray-500 shrink-0"
-      />
+      <span
+        className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
+        style={{
+          background: `${COLORS.gold}15`,
+          color: COLORS.gold,
+        }}
+      >
+        <Pencil size={13} />
+      </span>
     </button>
   );
 }
