@@ -49,12 +49,12 @@ const ICON_MAP = {
 // BILINGUAL — service label za credits
 // ============================================================
 const CREDIT_LABELS = {
-  listing: { sw: "Listing", en: "Listing" },
-  leading: { sw: "Leading", en: "Leading" },
-  boost: { sw: "Boost", en: "Boost" },
-  reservation: { sw: "Reservation", en: "Reservation" },
+  listing: { sw: "Kuweka Mali", en: "Listing" },
+  leading: { sw: "Kuongoza", en: "Leading" },
+  boost: { sw: "Kukuza", en: "Boost" },
+  reservation: { sw: "Kuhifadhi", en: "Reservation" },
   ads: { sw: "Matangazo", en: "Ads" },
-  premium: { sw: "Premium", en: "Premium" },
+  premium: { sw: "Hadhi ya Juu", en: "Premium" },
 };
 
 // ============================================================
@@ -62,21 +62,25 @@ const CREDIT_LABELS = {
 // ============================================================
 const TYPE_LABELS = {
   all: { sw: "Zote", en: "All" },
-  listing: { sw: "Listings", en: "Listings" },
-  leading: { sw: "Leading", en: "Leading" },
-  boost: { sw: "Boost", en: "Boost" },
-  reservation: { sw: "Reservation", en: "Reservation" },
+  listing: { sw: "Kuweka Mali", en: "Listings" },
+  leading: { sw: "Kuongoza", en: "Leading" },
+  boost: { sw: "Kukuza", en: "Boost" },
+  reservation: { sw: "Kuhifadhi", en: "Reservation" },
   ads: { sw: "Matangazo", en: "Ads" },
-  premium: { sw: "Premium", en: "Premium" },
+  premium: { sw: "Hadhi ya Juu", en: "Premium" },
   package: { sw: "Vifurushi", en: "Packages" },
 };
 
 function BundleCard({ bundle, lang, onBuy, owned }) {
   const Icon = ICON_MAP[bundle.icon] || Package;
-  const name = bundle.name?.[lang] || bundle.name?.sw || "Bundle";
-  const description =
-    bundle.description?.[lang] || bundle.description?.sw || "";
   const t = (sw, en) => (lang === "sw" ? sw : en);
+  // Fallback chain: lugha iliyochaguliwa → lugha nyingine → neno la jumla
+  // kwa lugha iliyochaguliwa (sio Kiswahili daima).
+  const other = lang === "sw" ? "en" : "sw";
+  const name =
+    bundle.name?.[lang] || bundle.name?.[other] || t("Kifurushi", "Bundle");
+  const description =
+    bundle.description?.[lang] || bundle.description?.[other] || "";
 
   return (
     <div
@@ -214,7 +218,7 @@ export default function BundlesPage() {
             className="text-xs sm:text-sm max-w-xl mx-auto px-2"
           >
             {t(
-              "Nunua vifurushi na uokoe pesa. Credits zinaingizwa kwenye akaunti yako papo hapo.",
+              "Nunua vifurushi na uokoe pesa. Salio linaingizwa kwenye akaunti yako papo hapo.",
               "Buy bundles and save money. Credits are added to your account instantly."
             )}
           </p>
@@ -228,7 +232,7 @@ export default function BundlesPage() {
             <div className="flex items-center justify-center gap-2 mb-3">
               <Wallet size={14} color={COLORS.green} />
               <h3 className="text-xs font-semibold text-gray-500">
-                {t("Credits Zako", "Your Credits")}
+                {t("Salio Lako", "Your Credits")}
               </h3>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
@@ -307,9 +311,13 @@ export default function BundlesPage() {
           <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
             <PaymentGateway
               amount={payingBundle.price}
-              title={payingBundle.name?.[lang] || payingBundle.name?.sw}
+              title={
+                payingBundle.name?.[lang] ||
+                payingBundle.name?.[lang === "sw" ? "en" : "sw"] ||
+                t("Kifurushi", "Bundle")
+              }
               description={t(
-                "Nunua bundle — credits zitaingizwa papo hapo",
+                "Nunua kifurushi — salio litaingizwa papo hapo",
                 "Buy bundle — credits will be added instantly"
               )}
               onCancel={() => setPayingBundle(null)}
