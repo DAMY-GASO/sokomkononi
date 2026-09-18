@@ -1,21 +1,22 @@
 // ============================================================
 // boostPackagesStore.js
-// CHANZO KIMOJA CHA UKWELI kwa bei za Boost Packages (Basic/Featured/
-// Premium) zinazotumika kwenye BoostSasa.jsx.
+// CHANZO KIMOJA CHA UKWELI kwa bei za Boost Packages.
 //
-// Kama stores nyingine — demo ya front-end pekee, localStorage + custom
-// event. Backend halisi ikiwepo, badilisha functions hizi ziite API;
-// useBoostPackages() na getBoostPackage() hazitahitaji kubadilika.
+// BACKEND: /api/boosting/packages/ (public GET)
+//          /api/boosting/ (seller CRUD)
+//          /api/boosting/{id}/pay/ (mark paid)
+//          /api/boosting/{id}/activate/ (activate)
+//          /api/boosting/{id}/cancel/ (cancel)
 // ============================================================
 
 import { useEffect, useState } from "react";
+import { boostingApi } from "../api/boosting.js";
 
 const STORAGE_KEY = "sokomkononi_boost_packages_v1";
 const UPDATE_EVENT = "sokomkononi:boost-packages-updated";
 
 // ============================================================
-// SEED_BOOST_PACKAGES — bilingual
-// `label` na `benefits` zina { sw, en }.
+// SEED_BOOST_PACKAGES — fallback kama API haipatikani
 // ============================================================
 export const SEED_BOOST_PACKAGES = [
   {
@@ -78,31 +79,27 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_BOOST_PACKAGES;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return SEED_BOOST_PACKAGES;
+    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_BOOST_PACKAGES;
     return parsed;
   } catch {
     return SEED_BOOST_PACKAGES;
   }
 }
 
-/** Soma packages za sasa (snapshot moja, si reactive). */
 export function getBoostPackages() {
   return readFromStorage();
 }
 
-/** Andika seti mpya kamili ya packages (Admin pekee anapaswa kuita hii). */
 export function saveBoostPackages(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-/** Pata package moja kwa key yake — hutumika na applyBoost(). */
 export function getBoostPackage(key) {
   return getBoostPackages().find((p) => p.key === key);
 }
 
-/** Badilisha bei ya package moja tu. */
 export function updateBoostPackagePrice(key, price) {
   const current = getBoostPackages();
   const next = current.map((p) =>
@@ -112,13 +109,97 @@ export function updateBoostPackagePrice(key, price) {
   return next;
 }
 
-/**
- * Hook ya React inayosoma packages na kujisasisha yenyewe.
- */
+// ============================================================
+// API → local shape normalizer
+// ============================================================
+function normalizePackageFromApi(raw) {
+  if (!raw) return null;
+  const slug = (raw.name || "")
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
+  const days = Math.round((raw.duration_hours || 0) / 24) || 1;
+  return {
+    id: raw.id,
+    key: slug,
+    label: { sw: raw.name, en: raw.name },
+    days,
+    price: Number(raw.price) || 0,
+    description: raw.description || "",
+    benefits: { sw: [], en: [] },
+    isActive: raw.is_active !== false,
+  };
+}
+
+// ============================================================
+// HYDRATE FROM API
+// ============================================================
+export async function hydrateBoostPackagesFromApi() {
+  try {
+    const data = await boostingApi.packages({ page_size: 100 });
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    if (!rawList.length) {
+      return { source: "seed", count: getBoostPackages().length };
+    }
+    const normalized = rawList.map(normalizePackageFromApi).filter(Boolean);
+    saveBoostPackages(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[boostPackagesStore] hydrate failed:", err);
+    return { source: "error", count: getBoostPackages().length };
+  }
+}
+
+// ============================================================
+// ASYNC ACTIONS — backend-backed
+// ============================================================
+export async function createBoostAsync({ listingId, packageId, context }) {
+  const boost = await boostingApi.create({
+    listing: listingId,
+    package: packageId,
+  });
+  window.dispatchEvent(new Event(UPDATE_EVENT));
+  return boost;
+}
+
+export async function payBoostAsync(boostId, payment_reference) {
+  const boost = await boostingApi.pay(boostId, payment_reference);
+  window.dispatchEvent(new Event(UPDATE_EVENT));
+  return boost;
+}
+
+export async function activateBoostAsync(boostId) {
+  const boost = await boostingApi.activate(boostId);
+  window.dispatchEvent(new Event(UPDATE_EVENT));
+  return boost;
+}
+
+export async function cancelBoostAsync(boostId) {
+  const boost = await boostingApi.cancel(boostId);
+  window.dispatchEvent(new Event(UPDATE_EVENT));
+  return boost;
+}
+
+export async function fetchMyBoostsAsync() {
+  try {
+    const data = await boostingApi.mine({ page_size: 100 });
+    return Array.isArray(data) ? data : data?.results || [];
+  } catch (err) {
+    console.warn("[boostPackagesStore] fetchMyBoosts failed:", err);
+    return [];
+  }
+}
+
+// ============================================================
+// HOOK
+// ============================================================
 export function useBoostPackages() {
   const [packages, setPackages] = useState(() => getBoostPackages());
 
   useEffect(() => {
+    // Hydrate once on mount
+    hydrateBoostPackagesFromApi();
+
     const sync = () => setPackages(getBoostPackages());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);

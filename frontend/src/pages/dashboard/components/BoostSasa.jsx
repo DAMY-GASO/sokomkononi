@@ -1,7 +1,7 @@
 // ============================================================
 // BoostSasa.jsx
-// Boost — inatumia credits kama user ana, vinginevyo cash.
-// Bilingual kamili + centered + credits integration.
+// Boost — backend-backed. Creates + pays + activates boost in
+// one flow when the user pays.
 // ============================================================
 
 import React, { useState, useEffect } from "react";
@@ -13,11 +13,13 @@ import {
   formatTZS,
   isBoostActive,
   boostDaysRemaining,
-  applyBoost,
 } from "./shared";
 import { useBoostPackages } from "../../../config/boostPackagesStore.js";
-import { notifyBoostPurchased } from "../../../config/notificationsStore.js";
-import { addTransaction } from "../../../config/transactionsStore.js";
+import {
+  createBoostAsync,
+  payBoostAsync,
+  activateBoostAsync,
+} from "../../../config/boostPackagesStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
@@ -27,9 +29,6 @@ import {
 } from "../../../config/userCreditsStore.js";
 import PaymentGateway from "./PaymentGateway";
 
-// ============================================================
-// HELPER — kuchagua lugha sahihi kwa field inayoweza kuwa { sw, en }
-// ============================================================
 function getLocalized(field, lang) {
   if (!field) return "";
   if (typeof field === "string") return field;
@@ -200,6 +199,7 @@ export default function BoostSasa({
   const [packageKey, setPackageKey] = useState("featured");
   const [stage, setStage] = useState("select");
   const [done, setDone] = useState(null);
+  const [apiError, setApiError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -217,9 +217,6 @@ export default function BoostSasa({
   const selectedPackage = boostPackages.find((p) => p.key === packageKey);
   const canBoost = Boolean(selectedListing && selectedPackage);
 
-  // ============================================================
-  // CREDITS — angalia kama user ana boost credits
-  // ============================================================
   const creditInfo = checkCredit(user?.id, "boost");
   const hasCredit = creditInfo.hasCredit;
 
@@ -229,77 +226,68 @@ export default function BoostSasa({
 
   const handleConfirm = () => {
     if (!canBoost) return;
+    setApiError("");
     setStage("paying");
   };
 
-  // ============================================================
-  // USE CREDIT — tumia credit moja kwa moja (bila malipo)
-  // ============================================================
   const handleUseCredit = () => {
     if (!canBoost || !user) return;
 
     const result = consumeCredit(user.id, "boost");
     if (!result.success) {
-      // Credit haitoshi — lipa kwa cash
       setStage("paying");
       return;
     }
 
-    // Credit imetumika — endelea na boost
     handlePaymentSuccess("credits");
   };
 
-  const handlePaymentSuccess = (method = "cash") => {
-    const patch = applyBoost(selectedListing, packageKey);
-    onBoosted(selectedListing.id, patch);
+  const handlePaymentSuccess = async (method = "cash") => {
+    if (!selectedListing || !selectedPackage) return;
 
-    // Taarifa
-    notifyBoostPurchased({
-      listingId: selectedListing.id,
-      listingTitle: selectedListing.title,
-      packageLabel: selectedPackageLabel,
-      expiresAt: patch.boostExpiresAt,
-      amount: method === "credits" ? 0 : selectedPackage.price,
-      paidWith: method,
-    });
+    setApiError("");
+    try {
+      const boost = await createBoostAsync({
+        listingId: selectedListing.id,
+        packageId: selectedPackage.id,
+      });
 
-    // Rekodi transaction (kama ni cash tu)
-    if (method === "cash") {
-      addTransaction({
-        type: "boost",
-        title: `${selectedPackageLabel} — ${selectedListing.title}`,
-        property: selectedListing.title,
-        amount: selectedPackage.price,
-        status: "completed",
-        method: "M-Pesa",
-        listingId: selectedListing.id,
+      if (method === "cash") {
+        await payBoostAsync(boost.id, `demo_${Date.now()}`);
+      } else {
+        // Credits path still requires a payment_reference backend-side
+        await payBoostAsync(boost.id, `credits_${Date.now()}`);
+      }
+
+      const activated = await activateBoostAsync(boost.id);
+
+      const patch = {
+        isBoosted: true,
+        is_boosted: true,
+        boostedUntil: activated.expires_at,
+        boosted_until: activated.expires_at,
+      };
+      onBoosted(selectedListing.id, patch);
+
+      setDone({
+        listing: selectedListing,
+        pkg: selectedPackage,
+        pkgLabel: selectedPackageLabel,
+        expiresAt: activated.expires_at,
+        paidWith: method,
       });
-    } else {
-      // Rekodi kama credit usage
-      addTransaction({
-        type: "boost",
-        title: `${selectedPackageLabel} — ${selectedListing.title} (Credits)`,
-        property: selectedListing.title,
-        amount: 0,
-        status: "completed",
-        method: "Credits",
-        listingId: selectedListing.id,
-      });
+      setStage("done");
+    } catch (err) {
+      const detail =
+        err?.data?.detail ||
+        (err?.data && Object.values(err.data).flat().find((v) => typeof v === "string")) ||
+        err?.message ||
+        "Imeshindikana kuweka boost. Tafadhali jaribu tena.";
+      setApiError(detail);
+      setStage("select");
     }
-
-    setDone({
-      listing: selectedListing,
-      pkg: selectedPackage,
-      pkgLabel: selectedPackageLabel,
-      expiresAt: patch.boostExpiresAt,
-      paidWith: method,
-    });
-    setStage("done");
   };
 
-  // ============================================================
-  // DONE STATE
-  // ============================================================
   if (stage === "done" && done) {
     return (
       <div
@@ -389,7 +377,6 @@ export default function BoostSasa({
       `}</style>
 
       <div className="max-w-2xl mx-auto">
-        {/* HEADER — CENTERED */}
         <div className="mb-6 text-center">
           <h1
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
@@ -408,7 +395,19 @@ export default function BoostSasa({
           </p>
         </div>
 
-        {/* CREDITS BANNER — kama ana credits */}
+        {apiError && (
+          <div
+            style={{
+              background: `${COLORS.rust}15`,
+              color: COLORS.rust,
+              borderColor: `${COLORS.rust}30`,
+            }}
+            className="rounded-xl border px-4 py-3 mb-4 text-sm text-center"
+          >
+            {apiError}
+          </div>
+        )}
+
         {hasCredit && stage !== "paying" && (
           <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex items-center gap-2">

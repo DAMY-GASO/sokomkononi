@@ -1,8 +1,9 @@
 // ============================================================
 // listingsStore.js
-// CHANZO KIMOJA CHA UKWELI kwa Listings (mali/matangazo).
+// Backend: /api/listings/
+// Local cache (localStorage) + API hydration.
 //
-// STATUS VOCABULARY (frontend) -> DB (per Muongozo §6):
+// STATUS VOCABULARY (frontend) -> DB:
 //   live              -> active
 //   paused            -> paused
 //   reserved          -> reserved
@@ -15,15 +16,6 @@
 
 import { useEffect, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
-import {
-  notifyListingApproved,
-  notifyListingRejected,
-  notifyListingSubmittedForReview,
-  notifyListingExpiringSoon,
-  notifyListingExpired,
-  notifyPriceDrop,
-} from "./notificationsStore.js";
-import { checkNewListingMatches } from "./searchesStore.js";
 import { listingsApi } from "../api/listings.js";
 
 const STORAGE_KEY = "sokomkononi_listings_v1";
@@ -37,7 +29,7 @@ function getListingLifetimeDays() {
     const days = Number(policy?.listingLifetimeDays);
     if (Number.isFinite(days) && days >= 1) return days;
   } catch {
-    // endelea na fallback
+    // fallback below
   }
   return LISTING_LIFETIME_DAYS_FALLBACK;
 }
@@ -48,9 +40,6 @@ function computeExpiresAt() {
   ).toISOString();
 }
 
-// ============================================================
-// SEED_LISTINGS — tupu. Data itakuja kutoka backend.
-// ============================================================
 export const SEED_LISTINGS = [];
 
 function readFromStorage() {
@@ -82,17 +71,6 @@ export function addListing(listing) {
     : { ...listing, expiresAt: computeExpiresAt() };
   const next = [withExpiry, ...getListings()];
   saveListings(next);
-
-  if (
-    withExpiry.status === "in_review" ||
-    withExpiry.status === "pending_review"
-  ) {
-    notifyListingSubmittedForReview({
-      listingId: withExpiry.id,
-      listingTitle: withExpiry.title,
-    });
-  }
-
   return next;
 }
 
@@ -104,51 +82,18 @@ export function removeListing(id) {
 
 export function updateListing(id, patch) {
   const current = getListings();
-  const before = current.find((l) => l.id === id);
   const next = current.map((l) => (l.id === id ? { ...l, ...patch } : l));
   saveListings(next);
-
-  if (
-    before &&
-    typeof patch.price === "number" &&
-    typeof before.price === "number" &&
-    patch.price < before.price
-  ) {
-    notifyPriceDrop({
-      listingId: id,
-      listingTitle: before.title,
-      oldPrice: before.price,
-      newPrice: patch.price,
-    });
-  }
-
   return next;
 }
 
 export function decideListing(id, status, reason = "") {
   const listing = getListings().find((l) => l.id === id);
   const patch = { status };
-  if (status === "live") {
-    if (listing && !listing.expiresAt) {
-      patch.expiresAt = computeExpiresAt();
-    }
+  if (status === "live" && listing && !listing.expiresAt) {
+    patch.expiresAt = computeExpiresAt();
   }
-  const next = updateListing(id, patch);
-
-  if (listing) {
-    if (status === "live") {
-      notifyListingApproved({ listingId: id, listingTitle: listing.title });
-      checkNewListingMatches({ ...listing, ...patch });
-    } else if (status === "rejected") {
-      notifyListingRejected({
-        listingId: id,
-        listingTitle: listing.title,
-        reason,
-      });
-    }
-  }
-
-  return next;
+  return updateListing(id, patch);
 }
 
 export function findListingByTitle(title) {
@@ -163,42 +108,11 @@ export function updateListingByTitle(title, patch) {
 }
 
 export function checkListingExpiry() {
-  const now = Date.now();
-  const current = getListings();
-  let changed = false;
-  const next = current.map((l) => {
-    if (l.status !== "live") return l;
-    if (!l.expiresAt) return l;
-    if (new Date(l.expiresAt).getTime() > now) return l;
-    changed = true;
-    notifyListingExpired({ listingId: l.id, listingTitle: l.title });
-    return { ...l, status: "expired" };
-  });
-  if (changed) saveListings(next);
-  return next;
+  return getListings();
 }
 
-const EXPIRY_REMINDER_DAYS = 3;
-
 export function checkListingExpiringSoon() {
-  const now = Date.now();
-  const current = getListings();
-  let changed = false;
-  const next = current.map((l) => {
-    if (l.status !== "live") return l;
-    if (!l.expiresAt || l.expiryReminderSent) return l;
-    const daysLeft = (new Date(l.expiresAt).getTime() - now) / 86400000;
-    if (daysLeft <= 0 || daysLeft > EXPIRY_REMINDER_DAYS) return l;
-    notifyListingExpiringSoon({
-      listingId: l.id,
-      listingTitle: l.title,
-      daysLeft: Math.max(1, Math.ceil(daysLeft)),
-    });
-    changed = true;
-    return { ...l, expiryReminderSent: true };
-  });
-  if (changed) saveListings(next);
-  return next;
+  return getListings();
 }
 
 export function pauseListing(id) {
@@ -266,13 +180,19 @@ export const LISTING_STATUS_MAP = {
 // ============================================================
 const API_TO_FRONTEND_STATUS = {
   active: "live",
+  AVAILABLE: "live",
   paused: "paused",
   reserved: "reserved",
+  RESERVED: "reserved",
   sold: "sold",
+  SOLD: "sold",
   expired: "expired",
   pending_review: "in_review",
+  PENDING_APPROVAL: "in_review",
   draft: "pending_payment",
+  DRAFT: "pending_payment",
   rejected: "rejected",
+  REJECTED: "rejected",
 };
 
 export function normalizeListingFromApi(raw) {
@@ -280,37 +200,57 @@ export function normalizeListingFromApi(raw) {
 
   let photos = [];
   if (Array.isArray(raw.photos)) photos = raw.photos;
-  else if (Array.isArray(raw.images)) photos = raw.images;
-  else if (raw.image) photos = [raw.image];
+  else if (Array.isArray(raw.images)) {
+    photos = raw.images
+      .map((img) => (typeof img === "string" ? img : img?.image_url || img?.image))
+      .filter(Boolean);
+  } else if (raw.image) {
+    photos = [raw.image];
+  }
 
-  photos = photos
-    .map((p) => (typeof p === "string" ? p : p?.url || p?.image || null))
-    .filter(Boolean);
-
+  const categoryObj = raw.category;
   const category =
-    raw.category?.key ||
-    raw.category?.slug ||
+    categoryObj?.slug ||
+    categoryObj?.key ||
     raw.category_slug ||
-    (typeof raw.category === "string" ? raw.category : null) ||
-    raw.category_id ||
+    (typeof categoryObj === "string" ? categoryObj : null) ||
     null;
 
   const status = API_TO_FRONTEND_STATUS[raw.status] || raw.status || "live";
+
+  const sellerName =
+    raw.seller_name ||
+    raw.seller?.name ||
+    (typeof raw.seller === "string" ? raw.seller : "");
 
   return {
     ...raw,
     id: raw.id ?? raw.pk,
     title: raw.title || raw.name || "",
+    description: raw.description || "",
     price: Number(raw.price) || 0,
     category,
+    categoryId: categoryObj?.id ?? raw.category_id ?? null,
     location: raw.location || raw.region || raw.address || "",
     region: raw.region || raw.location || "",
     status,
-    views: Number(raw.views) || 0,
+    views: Number(raw.views_count ?? raw.views) || 0,
+    inquiries: Number(raw.inquiries) || 0,
     verified: Boolean(raw.verified ?? raw.is_verified),
+    isFeatured: Boolean(raw.is_featured),
+    isBoosted: Boolean(raw.is_boosted),
+    boostedUntil: raw.boosted_until,
     photos,
     imageUrl: photos[0] || raw.imageUrl || null,
-    postedAt: raw.postedAt || raw.created_at || raw.created || null,
+    seller: sellerName || raw.seller,
+    seller_name: sellerName,
+    sellerId: raw.seller?.id ?? raw.seller_id ?? null,
+    postedAt: raw.created_at || raw.postedAt || new Date().toISOString(),
+    expiresAt: raw.expires_at || raw.expiresAt || null,
+    listingFee: Number(raw.listing_fee) || 0,
+    rejectionReason: raw.rejection_reason || "",
+    approvedAt: raw.approved_at || null,
+    rejectedAt: raw.rejected_at || null,
   };
 }
 
@@ -323,24 +263,28 @@ export async function hydrateListingsFromApi() {
     const rawList = Array.isArray(data) ? data : data?.results || [];
 
     if (!rawList.length) {
-      return { source: "seed", count: getListings().length };
+      return { source: "empty", count: getListings().length };
     }
 
     const normalized = rawList.map(normalizeListingFromApi).filter(Boolean);
     saveListings(normalized);
     return { source: "api", count: normalized.length };
   } catch (err) {
-    console.warn("[listingsStore] API hydrate imeshindwa:", err);
+    console.warn("[listingsStore] hydrate failed:", err);
     return { source: "error", count: getListings().length };
   }
 }
 
 // ============================================================
-// ASYNC ACTIONS — local + API (background sync)
+// SELLER-SPECIFIC: fetch MY listings (requires userId)
 // ============================================================
-export async function fetchMyListingsFromApi() {
+export async function fetchMyListingsFromApi(userId) {
+  if (!userId) {
+    console.warn("[listingsStore] fetchMyListings — no userId provided");
+    return { source: "empty", count: 0 };
+  }
   try {
-    const data = await listingsApi.list({ mine: true, page_size: 100 });
+    const data = await listingsApi.mine(userId, { page_size: 100 });
     const rawList = Array.isArray(data) ? data : data?.results || [];
     if (!rawList.length) return { source: "empty", count: 0 };
     const normalized = rawList.map(normalizeListingFromApi).filter(Boolean);
@@ -352,26 +296,35 @@ export async function fetchMyListingsFromApi() {
   }
 }
 
+// ============================================================
+// ASYNC ACTIONS — local optimistic + API
+// ============================================================
+
+/**
+ * Create a listing. The backend derives seller from the JWT.
+ * `payload.category_id` must be the integer category ID.
+ */
 export async function createListingAsync(payload) {
   const tempId = `temp_${Date.now()}`;
   const optimistic = {
     ...payload,
     id: tempId,
-    status: payload.status || "draft",
+    status: "pending_payment",
+    postedAt: new Date().toISOString(),
   };
   addListing(optimistic);
 
   try {
     const created = await listingsApi.create(payload);
+    const normalized = normalizeListingFromApi(created);
     const current = getListings();
-    const next = current.map((l) =>
-      l.id === tempId ? normalizeListingFromApi(created) : l
-    );
+    const next = current.map((l) => (l.id === tempId ? normalized : l));
     saveListings(next);
-    return { ok: true, listing: normalizeListingFromApi(created) };
+    return { ok: true, listing: normalized };
   } catch (err) {
-    console.warn("[listingsStore] createListing API failed:", err);
-    return { ok: false, error: err, listing: optimistic };
+    console.warn("[listingsStore] createListing failed:", err);
+    removeListing(tempId);
+    return { ok: false, error: err, listing: null };
   }
 }
 
@@ -381,7 +334,7 @@ export async function updateListingAsync(id, patch) {
     await listingsApi.update(id, patch);
     return { ok: true };
   } catch (err) {
-    console.warn("[listingsStore] updateListing API failed:", err);
+    console.warn("[listingsStore] updateListing failed:", err);
     return { ok: false, error: err };
   }
 }
@@ -392,12 +345,13 @@ export async function removeListingAsync(id) {
     await listingsApi.remove(id);
     return { ok: true };
   } catch (err) {
-    console.warn("[listingsStore] removeListing API failed:", err);
+    console.warn("[listingsStore] removeListing failed:", err);
     return { ok: false, error: err };
   }
 }
 
 export async function pauseListingAsync(id) {
+  // Backend has no explicit pause endpoint — treat as status update
   return updateListingAsync(id, {
     status: "paused",
     pausedAt: new Date().toISOString(),
@@ -415,13 +369,19 @@ export async function markSoldAsync(id) {
   });
 }
 
+/**
+ * Pay the listing fee. Moves listing DRAFT → PENDING_APPROVAL backend-side.
+ */
 export async function payListingFeeAsync(id, payload) {
   try {
     const data = await listingsApi.payFee(id, payload);
-    updateListing(id, { status: "live", paidAt: new Date().toISOString() });
+    updateListing(id, {
+      status: "in_review",
+      paidAt: new Date().toISOString(),
+    });
     return { ok: true, data };
   } catch (err) {
-    console.warn("[listingsStore] payFee API failed:", err);
+    console.warn("[listingsStore] payFee failed:", err);
     return { ok: false, error: err };
   }
 }

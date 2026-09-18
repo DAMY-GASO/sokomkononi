@@ -89,10 +89,8 @@ function FieldInput({ icon, type = "text", value, onChange, label, inputMode, re
   );
 }
 
-// Kuchukua field error kutoka DRF response
 function extractError(err, fallback) {
   if (err?.data && typeof err.data === "object") {
-    // { detail: "..." } au { email: ["..."] }
     if (err.data.detail) return err.data.detail;
     const first = Object.values(err.data).flat().find((v) => typeof v === "string");
     if (first) return first;
@@ -109,12 +107,19 @@ export default function RegisterPage() {
   const intent = searchParams.get("intent");
 
   const [step, setStep] = useState("form");
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [verificationType, setVerificationType] = useState("EMAIL");
 
   function leftHeading() {
     if (intent === "buy") return t("register_panel_heading_buy");
@@ -142,16 +147,18 @@ export default function RegisterPage() {
 
   function validateForm() {
     if (!form.name.trim()) return t("register_error_name_required");
-    if (!form.email.trim()) return t("register_error_email_required");
-    if (!form.phone.trim()) return t("register_error_phone_required");
-    if (!form.password || form.password.length < 6) return t("register_error_password_short");
-    if (form.confirmPassword !== form.password) return t("register_error_password_mismatch");
+    if (!form.email.trim() && !form.phone.trim())
+      return "Barua pepe au namba ya simu inahitajika.";
+    if (!form.password || form.password.length < 6)
+      return t("register_error_password_short");
+    if (form.confirmPassword !== form.password)
+      return t("register_error_password_mismatch");
     if (!agreedToTerms) return t("register_error_terms_required");
     return "";
   }
 
   // ============================================
-  // STEP 1: Register → API inatuma OTP
+  // STEP 1: Register → API sends OTP
   // ============================================
   async function handleRegister(e) {
     e.preventDefault();
@@ -165,6 +172,11 @@ export default function RegisterPage() {
     try {
       const { confirmPassword, ...payload } = form;
       await register({ ...payload, intent: intent || null });
+
+      // Detect which channel the OTP went to
+      const channel = form.email.trim() ? "EMAIL" : "PHONE";
+      setVerificationType(channel);
+
       setStep("otp");
       startResendCooldown();
     } catch (err) {
@@ -176,6 +188,9 @@ export default function RegisterPage() {
 
   // ============================================
   // STEP 2: Verify OTP → JWT + user
+  //
+  // Uses the correct verification_type based on the channel
+  // the user registered with (EMAIL or PHONE).
   // ============================================
   async function handleVerifyOtp(e) {
     e.preventDefault();
@@ -186,7 +201,14 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      await verifyOtp(form.email, otp.trim());
+      const identifier = form.email.trim() || form.phone.trim();
+
+      await verifyOtp({
+        identifier,
+        otp_code: otp.trim(),
+        verification_type: verificationType,
+      });
+
       navigate("/dashboard/post");
     } catch (err) {
       setError(extractError(err, t("register_error_otp_invalid")));
@@ -211,7 +233,6 @@ export default function RegisterPage() {
   async function handleResend() {
     if (resendCooldown > 0) return;
     setError("");
-    // TODO: backend haitoi /auth/resend-otp/ bado
     setError("Kama hukupokea OTP, tafadhali subiri kidogo au anza upya usajili.");
   }
 
@@ -256,7 +277,6 @@ export default function RegisterPage() {
                   <FieldInput
                     icon={icons.mail}
                     type="email"
-                    required
                     label={t("register_email_placeholder")}
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -325,7 +345,10 @@ export default function RegisterPage() {
 
                 <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{t("register_otp_heading")}</h1>
                 <p className="text-gray-500 text-sm mb-7 text-center">
-                  {t("register_otp_subtext")} <span className="font-semibold text-gray-800">{form.email}</span>
+                  {t("register_otp_subtext")}{" "}
+                  <span className="font-semibold text-gray-800">
+                    {form.email.trim() || form.phone.trim()}
+                  </span>
                 </p>
 
                 <form onSubmit={handleVerifyOtp} className="space-y-4">

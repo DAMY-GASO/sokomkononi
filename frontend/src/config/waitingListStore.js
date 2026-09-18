@@ -1,26 +1,20 @@
 // ============================================================
 // waitingListStore.js
-// CHANZO KIMOJA CHA UKWELI kwa Waiting List (foleni ya wanunuzi
-// wanaosubiri mali iliyo na Reservation/imeuzwa ipate kuachiwa huru).
-//
-// Kama stores nyingine — demo ya front-end pekee, localStorage +
-// custom event. Backend halisi ikiwepo, badilisha functions hizi
-// ziite API; hooks (useWaitingList) hazitahitaji kubadilika.
+// Backend: /api/waiting-list/
+//   GET    /api/waiting-list/           → list own / all (staff)
+//   POST   /api/waiting-list/           → join { listing: <id> }
+//   GET    /api/waiting-list/{id}/
+//   DELETE /api/waiting-list/{id}/      → leave
+//   GET    /api/waiting-list/mine/      → own entries
 // ============================================================
 
 import { useEffect, useState } from "react";
-import { notifyListingReleased } from "./notificationsStore.js";
+import { waitingListApi } from "../api/waitingList.js";
 
 const STORAGE_KEY = "sokomkononi_waiting_list_v1";
 const UPDATE_EVENT = "sokomkononi:waiting-list-updated";
-
-// Muda buyer anaopewa kuchukua nafasi kabla haijapita kwa mfuatiliaji
-// anayefuata kwenye foleni.
 const RESPOND_WINDOW_HOURS = 24;
 
-// ============================================================
-// SEED_WAITING_LIST — tupu. Data itakuja kutoka backend baadaye.
-// ============================================================
 export const SEED_WAITING_LIST = [];
 
 function readFromStorage() {
@@ -42,18 +36,87 @@ function saveAll(list) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-/** Soma waiting list ya sasa (snapshot moja, si reactive). */
 export function getWaitingList() {
   return readFromStorage();
 }
 
-/**
- * Hook ya React — hutumika kwenye WaitingListPage.jsx/DashboardShell.jsx.
- */
+// ============================================================
+// NORMALIZER — backend → frontend
+// ============================================================
+function normalizeEntryFromApi(raw) {
+  if (!raw) return null;
+  const listing = raw.listing || {};
+  return {
+    id: raw.id,
+    listingId: listing.id,
+    property: listing.title || "",
+    category: listing.category?.slug || listing.category || null,
+    price: Number(listing.price) || 0,
+    location: listing.location || "",
+    status: (raw.status || "WAITING").toLowerCase(),
+    position: raw.position ?? 1,
+    joinedAt: raw.joined_at,
+    notifiedAt: raw.notified_at,
+    updatedAt: raw.updated_at,
+  };
+}
+
+export async function hydrateWaitingListFromApi() {
+  try {
+    const data = await waitingListApi.mine();
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    const normalized = rawList.map(normalizeEntryFromApi).filter(Boolean);
+    saveAll(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[waitingListStore] hydrate failed:", err);
+    return { source: "error", count: getWaitingList().length };
+  }
+}
+
+// ============================================================
+// ASYNC ACTIONS
+// ============================================================
+export async function joinWaitingListAsync(listingId) {
+  const created = await waitingListApi.join(listingId);
+  const normalized = normalizeEntryFromApi(created);
+  const next = [normalized, ...getWaitingList()];
+  saveAll(next);
+  return normalized;
+}
+
+export async function leaveWaitingListAsync(id) {
+  await waitingListApi.leave(id);
+  const next = getWaitingList().filter((e) => e.id !== id);
+  saveAll(next);
+  return next;
+}
+
+// ============================================================
+// LOCAL-ONLY HELPERS (kept for backward compatibility)
+// ============================================================
+export function leaveWaitingList(id) {
+  const next = getWaitingList().filter((e) => e.id !== id);
+  saveAll(next);
+  // Fire-and-forget backend call
+  leaveWaitingListAsync(id).catch(() => {});
+  return next;
+}
+
+export function releaseListingToWaitlist(propertyTitle) {
+  // Backend handles this via Celery task; local stub returns current
+  return getWaitingList();
+}
+
+// ============================================================
+// HOOK
+// ============================================================
 export function useWaitingList() {
   const [entries, setEntries] = useState(() => getWaitingList());
 
   useEffect(() => {
+    hydrateWaitingListFromApi();
+
     const sync = () => setEntries(getWaitingList());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -64,64 +127,4 @@ export function useWaitingList() {
   }, []);
 
   return entries;
-}
-
-/**
- * Mnunuzi anajiunga na foleni ya mali fulani.
- */
-export function joinWaitingList({ property, category, price, location }) {
-  const current = getWaitingList();
-  const already = current.find(
-    (e) => e.property === property && (e.status === "pending" || e.status === "notified")
-  );
-  if (already) return already;
-
-  const position =
-    current.filter((e) => e.property === property && e.status === "pending").length + 1;
-
-  const entry = {
-    id: `w_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    property,
-    category,
-    price,
-    location,
-    status: "pending",
-    position,
-    joinedAt: new Date().toISOString(),
-  };
-  saveAll([entry, ...current]);
-  return entry;
-}
-
-export function leaveWaitingList(id) {
-  const next = getWaitingList().filter((e) => e.id !== id);
-  saveAll(next);
-  return next;
-}
-
-/**
- * Inaitwa na dealsStore.js pale deal yenye reservation inapoghairiwa.
- */
-export function releaseListingToWaitlist(propertyTitle) {
-  if (!propertyTitle) return getWaitingList();
-
-  const current = getWaitingList();
-  const queue = current
-    .filter((e) => e.property === propertyTitle && e.status === "pending")
-    .sort((a, b) => (a.position || 0) - (b.position || 0));
-
-  const nextInLine = queue[0];
-  if (!nextInLine) return current;
-
-  const at = new Date().toISOString();
-  const respondBy = new Date(Date.now() + RESPOND_WINDOW_HOURS * 3600000).toISOString();
-
-  const next = current.map((e) =>
-    e.id === nextInLine.id ? { ...e, status: "notified", notifiedAt: at, respondBy } : e
-  );
-  saveAll(next);
-
-  notifyListingReleased({ listingId: nextInLine.id, listingTitle: propertyTitle });
-
-  return next;
 }

@@ -1,36 +1,16 @@
 // ============================================================
 // listingFeeStore.js
-// CHANZO KIMOJA CHA UKWELI kwa Listing Fee (rate% + min/max kwa kila
-// category) — hii ndiyo namba HALISI zinazotozwa muuzaji wakati
-// akiweka mali (calculateListingFee() kwenye shared.js).
-//
-// MUHIMU — UNGANISHO NA categoriesStore.js:
-//   Categories zinatoka categoriesStore.js (chanzo kimoja cha ukweli,
-//   Admin anaongeza/kufuta kupitia System Settings > Categories).
-//   Fee configs hapa zinatakiwa kuwa na key MOJA KWA MOJA kwa kila
-//   category hai. Kama category hai lakini haina fee config,
-//   calculateListingFee() inarudi { error: "NO_FEE_CONFIG" } — UI
-//   inamuelekeza Admin kwenye Revenue > Categories Bila Fee Config.
-//
-//   LABEL: `label` kwenye config hii imeondolewa — UI inasoma label
-//   kutoka categoriesStore.js kwa kutumia `key`, ili kuepuka
-//   duplication na kuhakikisha consistency.
-//
-// Kama stores nyingine — demo ya front-end pekee, localStorage +
-// custom event. Backend halisi ikiwepo, badilisha functions hizi
-// ziite API; useListingFeeConfigs() na getListingFeeConfig()
-// hazitahitaji kubadilika.
+// Backend source: /api/listings/fee-rules/ (read-only for
+// non-admin). Backend stores `percentage` (e.g. 2.50 for 2.5%).
+// Frontend uses `rate` (e.g. 0.025). Conversion handled here.
 // ============================================================
 
 import { useEffect, useState } from "react";
+import { api } from "../api/client.js";
 
 const STORAGE_KEY = "sokomkononi_listing_fee_config_v1";
 const UPDATE_EVENT = "sokomkononi:listing-fee-config-updated";
 
-// ============================================================
-// SEED_LISTING_FEE_CONFIG — bila `label`
-// Label inasomwa kutoka categoriesStore.js kwa kutumia `key`.
-// ============================================================
 export const SEED_LISTING_FEE_CONFIG = [
   { key: "nyumba", rate: 0.010, min: 20000, max: 300000 },
   { key: "viwanja", rate: 0.008, min: 15000, max: 250000 },
@@ -45,31 +25,29 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_LISTING_FEE_CONFIG;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return SEED_LISTING_FEE_CONFIG;
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return SEED_LISTING_FEE_CONFIG;
+    }
     return parsed;
   } catch {
     return SEED_LISTING_FEE_CONFIG;
   }
 }
 
-/** Soma configs za sasa (snapshot moja, si reactive). */
 export function getListingFeeConfigs() {
   return readFromStorage();
 }
 
-/** Pata config ya category moja kwa key yake. */
 export function getListingFeeConfig(categoryKey) {
   return getListingFeeConfigs().find((c) => c.key === categoryKey);
 }
 
-/** Andika seti mpya kamili ya configs. */
 export function saveListingFeeConfigs(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-/** Badilisha (merge patch) config ya category moja. */
 export function updateListingFeeConfig(categoryKey, patch) {
   const current = getListingFeeConfigs();
   const next = current.map((c) => (c.key === categoryKey ? { ...c, ...patch } : c));
@@ -77,22 +55,10 @@ export function updateListingFeeConfig(categoryKey, patch) {
   return next;
 }
 
-// ============================================================
-// FEE CONFIG MANAGEMENT kwa categories mpya
-// ============================================================
-
-/** Je, category hii ina fee config? */
 export function hasFeeConfig(categoryKey) {
   return getListingFeeConfigs().some((c) => c.key === categoryKey);
 }
 
-/**
- * Ongeza fee config ya category mpya kwa default rate/min/max.
- *
- * @param {string} categoryKey - key ya category (mf. "pikipiki")
- * @param {string} _label - haitumiki (label inasomwa kutoka
- *   categoriesStore.js). Imebaki kwa backward compatibility.
- */
 export function addFeeConfig(categoryKey, _label) {
   const current = getListingFeeConfigs();
   if (current.some((c) => c.key === categoryKey)) {
@@ -100,29 +66,69 @@ export function addFeeConfig(categoryKey, _label) {
   }
   const next = [
     ...current,
-    {
-      key: categoryKey,
-      rate: 0.01,      // 1%
-      min: 10000,      // TZS 10,000
-      max: 100000,     // TZS 100,000
-    },
+    { key: categoryKey, rate: 0.01, min: 10000, max: 100000 },
   ];
   saveListingFeeConfigs(next);
   return next;
 }
 
-/** Ondoa fee config. */
 export function removeFeeConfig(categoryKey) {
   const next = getListingFeeConfigs().filter((c) => c.key !== categoryKey);
   saveListingFeeConfigs(next);
   return next;
 }
 
-/** Hook ya React inayosoma configs na kujisasisha yenyewe. */
+// ============================================================
+// BACKEND SYNC
+// Backend `name` field is the category key/slug.
+// ============================================================
+function toSlug(str) {
+  return String(str || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
+function normalizeFeeRuleFromApi(raw) {
+  if (!raw) return null;
+  const pct = Number(raw.percentage) || 0;
+  return {
+    id: raw.id,
+    key: toSlug(raw.name),
+    rate: pct / 100,
+    min: Number(raw.min_price) || 0,
+    max: raw.max_price != null ? Number(raw.max_price) : 999999999,
+    isActive: raw.is_active !== false,
+    priority: raw.priority ?? 0,
+  };
+}
+
+export async function hydrateListingFeeConfigsFromApi() {
+  try {
+    const data = await api.get("/listings/fee-rules/?page_size=100");
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    if (!rawList.length) {
+      return { source: "seed", count: getListingFeeConfigs().length };
+    }
+    const normalized = rawList.map(normalizeFeeRuleFromApi).filter(Boolean);
+    saveListingFeeConfigs(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[listingFeeStore] hydrate failed:", err);
+    return { source: "error", count: getListingFeeConfigs().length };
+  }
+}
+
+// ============================================================
+// HOOK
+// ============================================================
 export function useListingFeeConfigs() {
   const [configs, setConfigs] = useState(() => getListingFeeConfigs());
 
   useEffect(() => {
+    hydrateListingFeeConfigsFromApi();
+
     const sync = () => setConfigs(getListingFeeConfigs());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);

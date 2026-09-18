@@ -1,24 +1,16 @@
 // ============================================================
 // transactionsStore.js
-// CHANZO KIMOJA CHA UKWELI kwa transactions (My Transactions +
-// Admin revenue analytics + overview aggregates).
-//
-// Kama stores nyingine — demo ya front-end pekee, localStorage +
-// custom event. Backend halisi ikiwepo, badilisha functions hizi
-// ziite API; hooks (useTransactions) hazitahitaji kubadilika.
-//
-// TYPES (canonical, zinalingana na Muongozo §6):
-//   listing_fee | reservation | boost | leading | advertisement | sale | purchase
+// Backend sources:
+//   GET /api/finance/my-transactions/   → flat list of fee payments
+//   GET /api/transactions/mine/          → transaction rows
 // ============================================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { financeApi } from "../api/finance.js";
 
 const STORAGE_KEY = "sokomkononi_transactions_v1";
 const UPDATE_EVENT = "sokomkononi:transactions-updated";
 
-// ============================================================
-// SEED_TRANSACTIONS — tupu. Data itakuja kutoka backend baadaye.
-// ============================================================
 export const SEED_TRANSACTIONS = [];
 
 function readFromStorage() {
@@ -53,21 +45,57 @@ export function addTransaction(txn) {
   };
   const next = [entry, ...getTransactions()];
   saveTransactions(next);
-
-  // TAHADHARI: "sale"/"purchase" HAZINA notify hapa kwa makusudi —
-  // huja pekee kutoka DealRooms.handleProofConfirm(), ambayo tayari
-  // inaita updateDeal(id, { status: "completed" }) kabla ya hapa;
-  // dealsStore.js inatuma notifyDealCompleted kwa tukio hilohilo.
-  // Kutuma taarifa hapa pia kungerudia (double notification).
-  // notifyPaymentConfirmed() inabaki kwenye notificationsStore.js
-  // endapo itahitajika kwa njia nyingine ya malipo isiyopitia deal.
-
   return next;
 }
 
+// ============================================================
+// NORMALIZER — /api/finance/my-transactions/ shape → frontend shape
+// ============================================================
+function normalizeMyTransaction(raw) {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    ref: raw.ref,
+    type: raw.type,                    // "listing_fee" | "boost" | "reservation"
+    source: raw.source,
+    title: raw.title,
+    property: raw.listing_title || raw.title,
+    listingId: raw.listing_id,
+    amount: Number(raw.amount) || 0,
+    status: (raw.status || "pending").toLowerCase(),  // "completed" | "pending" | ...
+    paymentStatus: raw.payment_status,
+    paymentReference: raw.payment_reference,
+    method: raw.method || null,
+    paidAt: raw.paid_at,
+    at: raw.created_at || raw.paid_at,
+  };
+}
+
+// ============================================================
+// HYDRATE FROM API
+// ============================================================
+export async function hydrateTransactionsFromApi() {
+  try {
+    const data = await financeApi.myTransactions();
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    const normalized = rawList.map(normalizeMyTransaction).filter(Boolean);
+    saveTransactions(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[transactionsStore] hydrate failed:", err);
+    return { source: "error", count: getTransactions().length };
+  }
+}
+
+// ============================================================
+// HOOKS
+// ============================================================
 export function useTransactions() {
   const [list, setList] = useState(() => getTransactions());
+
   useEffect(() => {
+    hydrateTransactionsFromApi();
+
     const sync = () => setList(getTransactions());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -76,28 +104,25 @@ export function useTransactions() {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, []);
+
   return list;
 }
 
-/**
- * Aggregates kwa Admin Overview.
- */
 export function useMyTransactionsAggregate() {
   const list = useTransactions();
-  return useMemo(() => {
-    const FEE_TYPES = ["listing_fee", "reservation", "boost", "leading", "advertisement"];
-    const revenue = list
-      .filter((t) => t.status === "completed" && FEE_TYPES.includes(t.type))
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-    const spent = list
-      .filter((t) => t.status === "completed" && FEE_TYPES.includes(t.type))
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-    const earned = list
-      .filter((t) => t.status === "completed" && t.type === "sale")
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-    return { revenue, spent, earned, totalCount: list.length };
-  }, [list]);
+  const FEE_TYPES = [
+    "listing_fee",
+    "reservation",
+    "boost",
+    "leading",
+    "advertisement",
+  ];
+  const revenue = list
+    .filter((t) => t.status === "completed" && FEE_TYPES.includes(t.type))
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+  const spent = revenue;
+  const earned = list
+    .filter((t) => t.status === "completed" && t.type === "sale")
+    .reduce((sum, t) => sum + (t.amount || 0), 0);
+  return { revenue, spent, earned, totalCount: list.length };
 }
