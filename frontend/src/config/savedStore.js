@@ -1,26 +1,14 @@
 // ============================================================
-// savedStore.js
-// CHANZO KIMOJA CHA UKWELI kwa saved-properties (Zilizohifadhiwa).
-//
-// Kama stores nyingine — demo ya front-end pekee, localStorage +
-// custom event. Backend halisi ikiwepo, badilisha functions hizi
-// ziite API; hooks (useSavedIds) hazitahitaji kubadilika.
-//
-// SNAPSHOT: Tunahifadhi bei + status ya kila listing wakati
-// buyer anaihifadhi. Hii inaturuhusu kuona mabadiliko na kutuma
-// notifications.
+// savedStore.js — API-backed via /api/saved/
 // ============================================================
-
 import { useEffect, useState } from "react";
+import { api } from "../api/client";
 
 const STORAGE_KEY = "sokomkononi_saved_v1";
 const SNAPSHOT_KEY = "sokomkononi_saved_snapshots_v1";
 const UPDATE_EVENT = "sokomkononi:saved-updated";
 const SNAPSHOT_UPDATE_EVENT = "sokomkononi:saved-snapshots-updated";
 
-// ============================================================
-// SEED_SAVED_IDS — tupu
-// ============================================================
 const SEED_SAVED_IDS = [];
 
 function readFromStorage() {
@@ -29,8 +17,7 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_SAVED_IDS;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return SEED_SAVED_IDS;
-    return parsed;
+    return Array.isArray(parsed) ? parsed : SEED_SAVED_IDS;
   } catch {
     return SEED_SAVED_IDS;
   }
@@ -41,10 +28,6 @@ function saveAll(list) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
-
-// ============================================================
-// SNAPSHOTS — kuhifadhi bei + status ya listing wakati inahifadhiwa
-// ============================================================
 
 function readSnapshots() {
   if (typeof window === "undefined") return {};
@@ -64,7 +47,6 @@ function saveSnapshots(snapshots) {
   window.dispatchEvent(new Event(SNAPSHOT_UPDATE_EVENT));
 }
 
-/** Hifadhi snapshot ya listing (bei, status). */
 export function saveSnapshot(listing) {
   if (!listing?.id) return readSnapshots();
   const snapshots = readSnapshots();
@@ -81,7 +63,6 @@ export function saveSnapshot(listing) {
   return next;
 }
 
-/** Ondoa snapshot ya listing. */
 export function removeSnapshot(id) {
   const snapshots = readSnapshots();
   const next = { ...snapshots };
@@ -90,19 +71,13 @@ export function removeSnapshot(id) {
   return next;
 }
 
-/** Pata snapshot ya listing. */
 export function getSnapshot(id) {
   return readSnapshots()[id] || null;
 }
 
-/** Soma snapshots zote. */
 export function getSnapshots() {
   return readSnapshots();
 }
-
-// ============================================================
-// SAVED IDS
-// ============================================================
 
 export function getSavedIds() {
   return readFromStorage();
@@ -112,27 +87,18 @@ export function saveSavedIds(ids) {
   saveAll(ids);
 }
 
-/**
- * Badilisha hali ya "saved" ya listing.
- *
- * @param {string} id - ID ya listing.
- * @param {object|null} listing - Listing kamili (hiari). Ukiipitisha wakati
- *   wa KUHIFADHI (si kuondoa), snapshot yake (bei, status, savedAt) itaokolewa
- *   moja kwa moja kupitia saveSnapshot(). Ukiondoa, snapshot huondolewa
- *   kiotomatiki bila kujali `listing`.
- */
 export function toggleSaved(id, listing = null) {
   const current = getSavedIds();
   const wasSaved = current.includes(id);
-  const next = wasSaved
-    ? current.filter((i) => i !== id)
-    : [...current, id];
+  const next = wasSaved ? current.filter((i) => i !== id) : [...current, id];
   saveAll(next);
 
   if (wasSaved) {
     removeSnapshot(id);
-  } else if (listing) {
-    saveSnapshot(listing);
+    api.delete(`/saved/listing/${id}/`).catch(() => {});
+  } else {
+    if (listing) saveSnapshot(listing);
+    api.post("/saved/", { listing: id }).catch(() => {});
   }
 
   return next;
@@ -142,9 +108,36 @@ export function isSaved(id) {
   return getSavedIds().includes(id);
 }
 
+export async function hydrateSavedFromApi() {
+  try {
+    const data = await api.get("/saved/?page_size=100");
+    const list = Array.isArray(data) ? data : data?.results || [];
+    const ids = list.map((s) => s.listing?.id).filter(Boolean);
+
+    const snapshots = {};
+    for (const item of list) {
+      if (!item.listing?.id) continue;
+      snapshots[item.listing.id] = {
+        price: item.snapshot_price,
+        status: item.snapshot_status,
+        title: item.listing.title,
+        savedAt: item.saved_at,
+      };
+    }
+
+    saveAll(ids);
+    saveSnapshots(snapshots);
+    return { source: "api", count: ids.length };
+  } catch (err) {
+    console.warn("[savedStore] hydrate failed:", err);
+    return { source: "error", count: getSavedIds().length };
+  }
+}
+
 export function useSavedIds() {
   const [ids, setIds] = useState(() => getSavedIds());
   useEffect(() => {
+    hydrateSavedFromApi();
     const sync = () => setIds(getSavedIds());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -156,11 +149,6 @@ export function useSavedIds() {
   return ids;
 }
 
-/**
- * Hook ya reactive kwa snapshots zote ({ [listingId]: { price, status,
- * title, savedAt } }). Inatumika kupata `savedAt` halisi ya kila listing
- * — mfano kwenye "Recent Activity" ya mnunuzi.
- */
 export function useSavedSnapshots() {
   const [snapshots, setSnapshots] = useState(() => readSnapshots());
   useEffect(() => {

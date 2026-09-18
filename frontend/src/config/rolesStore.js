@@ -1,27 +1,14 @@
 // ============================================================
-// rolesStore.js
-// CHANZO KIMOJA CHA UKWELI kwa Roles & Permissions (RBAC).
-//
-// Roles zinaonyesha ni sections gani Admin/Staff anaweza kufikia:
-//   - Super Admin     → all access
-//   - Finance Admin   → revenue, transactions, refunds
-//   - Verification    → verification requests
-//   - Support         → tickets, complaints
-//   - Content Manager → banners, FAQs, Terms, Privacy
-//   - Moderator       → listings, users
-//
-// Kama stores nyingine — demo ya front-end pekee. Backend halisi
-// ikiwepo, badilisha functions hizi ziite API.
+// rolesStore.js — API-backed via /api/rbac/
 // ============================================================
-
 import { useEffect, useState } from "react";
+import { api } from "../api/client";
 
 const STORAGE_KEY = "sokomkononi_roles_v1";
 const UPDATE_EVENT = "sokomkononi:roles-updated";
+const SUBADMINS_KEY = "sokomkononi_subadmins_v1";
+const SUBADMINS_EVENT = "sokomkononi:subadmins-updated";
 
-// ============================================================
-// PERMISSIONS — kila section ina permission key
-// ============================================================
 export const PERMISSIONS = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" } },
   { key: "users", label: { sw: "Watumiaji", en: "Users" } },
@@ -39,216 +26,158 @@ export const PERMISSIONS = [
   { key: "bundles", label: { sw: "Vifurushi vya Huduma", en: "Service Bundles" } },
 ];
 
-// ============================================================
-// DEFAULT ROLES
-// ============================================================
-export const DEFAULT_ROLES = [
-  {
-    key: "super_admin",
-    label: { sw: "Msimamizi Mkuu", en: "Super Admin" },
-    description: {
-      sw: "Ufikiaji kamili wa mfumo wote",
-      en: "Full access to the entire system",
-    },
-    permissions: PERMISSIONS.map((p) => p.key),
-    isSystem: true,
-  },
-  {
-    key: "finance_admin",
-    label: { sw: "Msimamizi wa Fedha", en: "Finance Admin" },
-    description: {
-      sw: "Malipo, mapato, na refunds",
-      en: "Payments, revenue, and refunds",
-    },
-    permissions: ["overview", "revenue", "deals", "reports"],
-    isSystem: true,
-  },
-  {
-    key: "verification_officer",
-    label: { sw: "Afisa Uthibitisho", en: "Verification Officer" },
-    description: {
-      sw: "Uthibitisho wa wauzaji, wanunuzi, mali, magari",
-      en: "Verification of sellers, buyers, properties, vehicles",
-    },
-    permissions: ["overview", "verification", "users", "moderation"],
-    isSystem: true,
-  },
-  {
-    key: "support",
-    label: { sw: "Huduma kwa Wateja", en: "Customer Support" },
-    description: {
-      sw: "Tickets na malalamiko ya watumiaji",
-      en: "Tickets and user complaints",
-    },
-    permissions: ["overview", "support", "users", "deals"],
-    isSystem: true,
-  },
-  {
-    key: "content_manager",
-    label: { sw: "Msimamizi wa Maudhui", en: "Content Manager" },
-    description: {
-      sw: "Homepage, banners, FAQs, Terms, Privacy",
-      en: "Homepage, banners, FAQs, Terms, Privacy",
-    },
-    permissions: ["overview", "content", "promotions"],
-    isSystem: true,
-  },
-  {
-    key: "moderator",
-    label: { sw: "Msimamizi wa Mali", en: "Moderator" },
-    description: {
-      sw: "Mali na watumiaji",
-      en: "Listings and users",
-    },
-    permissions: ["overview", "moderation", "users", "deals"],
-    isSystem: true,
-  },
-];
-
-// ============================================================
-// SEED — roles za default
-// ============================================================
+export const DEFAULT_ROLES = [];
 export const SEED_ROLES = DEFAULT_ROLES;
 
-function readFromStorage() {
-  if (typeof window === "undefined") return SEED_ROLES;
+function readFromStorage(key, fallback) {
+  if (typeof window === "undefined") return fallback;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_ROLES;
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return fallback;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return SEED_ROLES;
-    return parsed;
+    return Array.isArray(parsed) ? parsed : fallback;
   } catch {
-    return SEED_ROLES;
+    return fallback;
   }
 }
 
-function saveAll(list) {
+function saveAll(key, event, list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(key, JSON.stringify(list));
+  window.dispatchEvent(new Event(event));
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
+function normalizeRoleFromApi(raw) {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    key: raw.key,
+    label: raw.label || { sw: raw.label_sw || raw.key, en: raw.label_en || raw.key },
+    description: raw.description || { sw: "", en: "" },
+    permissions: raw.permissions || [],
+    isSystem: !!raw.is_system,
+  };
+}
 
-/** Soma roles zote. */
+function normalizeStaffFromApi(raw) {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    userId: raw.user,
+    name: raw.name,
+    email: raw.email,
+    roleKey: raw.role_key,
+    active: !!raw.active,
+    addedAt: raw.added_at,
+  };
+}
+
 export function getRoles() {
-  return readFromStorage();
+  return readFromStorage(STORAGE_KEY, SEED_ROLES);
 }
-
-/** Pata role moja kwa key. */
 export function getRole(key) {
   return getRoles().find((r) => r.key === key) || null;
 }
+export function getSubAdmins() {
+  return readFromStorage(SUBADMINS_KEY, []);
+}
 
-/** Ongeza role mpya (custom). */
+export async function hydrateRolesFromApi() {
+  try {
+    const [rolesData, staffData] = await Promise.all([
+      api.get("/rbac/roles/").catch(() => null),
+      api.get("/rbac/staff/").catch(() => null),
+    ]);
+    if (rolesData) {
+      const roles = (Array.isArray(rolesData) ? rolesData : []).map(normalizeRoleFromApi).filter(Boolean);
+      saveAll(STORAGE_KEY, UPDATE_EVENT, roles);
+    }
+    if (staffData) {
+      const staff = (Array.isArray(staffData) ? staffData : []).map(normalizeStaffFromApi).filter(Boolean);
+      saveAll(SUBADMINS_KEY, SUBADMINS_EVENT, staff);
+    }
+    return { source: "api" };
+  } catch (err) {
+    console.warn("[rolesStore] hydrate failed:", err);
+    return { source: "error" };
+  }
+}
+
 export function addRole(role) {
   const current = getRoles();
   if (current.some((r) => r.key === role.key)) {
     throw new Error(`Role "${role.key}" already exists`);
   }
-  const entry = {
-    ...role,
-    isSystem: false,
-  };
-  const next = [...current, entry];
-  saveAll(next);
+  const entry = { ...role, isSystem: false };
+  saveAll(STORAGE_KEY, UPDATE_EVENT, [...current, entry]);
+  api.post("/rbac/roles/", {
+    key: role.key,
+    label: role.label,
+    description: role.description,
+    permissions: role.permissions,
+  }).catch(() => {});
   return entry;
 }
-
-/** Badilisha role. */
 export function updateRole(key, patch) {
   const next = getRoles().map((r) =>
     r.key === key ? { ...r, ...patch, key: r.key, isSystem: r.isSystem } : r
   );
-  saveAll(next);
+  saveAll(STORAGE_KEY, UPDATE_EVENT, next);
+  const role = next.find((r) => r.key === key);
+  if (role && role.id) {
+    api.patch(`/rbac/roles/${role.id}/`, {
+      label: role.label, description: role.description, permissions: role.permissions,
+    }).catch(() => {});
+  }
   return next;
 }
-
-/** Futa role (custom pekee). */
 export function removeRole(key) {
   const role = getRole(key);
-  if (role?.isSystem) {
-    throw new Error(`Cannot delete system role "${key}"`);
-  }
+  if (role?.isSystem) throw new Error(`Cannot delete system role "${key}"`);
   const next = getRoles().filter((r) => r.key !== key);
-  saveAll(next);
+  saveAll(STORAGE_KEY, UPDATE_EVENT, next);
   return next;
 }
-
-/** Angalia kama role ina permission. */
 export function hasPermission(roleKey, permission) {
   const role = getRole(roleKey);
   if (!role) return false;
   return role.permissions.includes(permission);
 }
 
-// ============================================================
-// SUB-ADMINS + ROLES
-// ============================================================
-const SUBADMINS_KEY = "sokomkononi_subadmins_v1";
-const SUBADMINS_EVENT = "sokomkononi:subadmins-updated";
-
-function readSubAdmins() {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(SUBADMINS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed;
-  } catch {
-    return [];
-  }
-}
-
-function saveSubAdmins(list) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(SUBADMINS_KEY, JSON.stringify(list));
-  window.dispatchEvent(new Event(SUBADMINS_EVENT));
-}
-
-export function getSubAdmins() {
-  return readSubAdmins();
-}
-
-export function addSubAdmin({ name, email, roleKey }) {
+export function addSubAdmin({ name, email, roleKey, userId }) {
   const entry = {
-    id: `sa_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    name,
-    email,
-    roleKey,
+    id: `sa_${Date.now()}`,
+    userId, name, email, roleKey,
     addedAt: new Date().toISOString(),
     active: true,
   };
-  const next = [...readSubAdmins(), entry];
-  saveSubAdmins(next);
+  saveAll(SUBADMINS_KEY, SUBADMINS_EVENT, [...getSubAdmins(), entry]);
+  if (userId) {
+    api.post("/rbac/staff/", { user_id: userId, role_key: roleKey, active: true }).catch(() => {});
+  }
   return entry;
 }
-
 export function updateSubAdmin(id, patch) {
-  const next = readSubAdmins().map((s) =>
-    s.id === id ? { ...s, ...patch } : s
-  );
-  saveSubAdmins(next);
+  const next = getSubAdmins().map((s) => (s.id === id ? { ...s, ...patch } : s));
+  saveAll(SUBADMINS_KEY, SUBADMINS_EVENT, next);
+  if (typeof id === "number") {
+    api.patch(`/rbac/staff/${id}/`, { role_key: patch.roleKey, active: patch.active }).catch(() => {});
+  }
   return next;
 }
-
 export function removeSubAdmin(id) {
-  const next = readSubAdmins().filter((s) => s.id !== id);
-  saveSubAdmins(next);
+  const next = getSubAdmins().filter((s) => s.id !== id);
+  saveAll(SUBADMINS_KEY, SUBADMINS_EVENT, next);
+  if (typeof id === "number") {
+    api.delete(`/rbac/staff/${id}/`).catch(() => {});
+  }
   return next;
 }
 
-// ============================================================
-// HOOKS
-// ============================================================
 export function useRoles() {
   const [roles, setRoles] = useState(() => getRoles());
-
   useEffect(() => {
+    hydrateRolesFromApi();
     const sync = () => setRoles(getRoles());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -257,15 +186,13 @@ export function useRoles() {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, []);
-
   return roles;
 }
 
 export function useSubAdminsWithRoles() {
-  const [list, setList] = useState(() => readSubAdmins());
-
+  const [list, setList] = useState(() => getSubAdmins());
   useEffect(() => {
-    const sync = () => setList(readSubAdmins());
+    const sync = () => setList(getSubAdmins());
     window.addEventListener("storage", sync);
     window.addEventListener(SUBADMINS_EVENT, sync);
     return () => {
@@ -273,6 +200,5 @@ export function useSubAdminsWithRoles() {
       window.removeEventListener(SUBADMINS_EVENT, sync);
     };
   }, []);
-
   return list;
 }

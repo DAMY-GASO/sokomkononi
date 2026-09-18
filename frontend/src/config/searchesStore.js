@@ -1,24 +1,12 @@
 // ============================================================
-// searchesStore.js
-// CHANZO KIMOJA CHA UKWELI kwa Saved Searches (Buyer Alerts).
-//
-// Buyer anaweka search ("Toyota Harrier chini ya TZS 50M Dar")
-// na mfumo unamjulishe listing mpya inayolingana.
-//
-// Kama stores nyingine — demo ya front-end pekee, localStorage +
-// custom event. Backend halisi ikiwepo, badilisha functions hizi
-// ziite API; hooks (useSearches) hazitahitaji kubadilika.
+// searchesStore.js — API-backed via /api/searches/
 // ============================================================
-
 import { useEffect, useState } from "react";
-import { notifySearchMatch } from "./notificationsStore.js";
+import { api } from "../api/client";
 
 const STORAGE_KEY = "sokomkononi_searches_v1";
 const UPDATE_EVENT = "sokomkononi:searches-updated";
 
-// ============================================================
-// SEED — tupu
-// ============================================================
 export const SEED_SEARCHES = [];
 
 function readFromStorage() {
@@ -27,8 +15,7 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_SEARCHES;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return SEED_SEARCHES;
-    return parsed;
+    return Array.isArray(parsed) ? parsed : SEED_SEARCHES;
   } catch {
     return SEED_SEARCHES;
   }
@@ -40,124 +27,116 @@ function saveAll(list) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
+function normalizeFromApi(raw) {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    name: raw.name,
+    query: raw.query || "",
+    category: raw.category_slug || null,
+    minPrice: raw.min_price != null ? Number(raw.min_price) : null,
+    maxPrice: raw.max_price != null ? Number(raw.max_price) : null,
+    region: raw.region || null,
+    verifiedOnly: !!raw.verified_only,
+    matchCount: raw.match_count || 0,
+    lastChecked: raw.last_checked,
+    createdAt: raw.created_at,
+  };
+}
 
-/** Soma saved searches zote. */
 export function getSearches() {
   return readFromStorage();
 }
 
-/**
- * Ongeza saved search.
- * @param {Object} search - { name, query, category, minPrice, maxPrice, region }
- */
+export async function hydrateSearchesFromApi() {
+  try {
+    const data = await api.get("/searches/?page_size=100");
+    const list = Array.isArray(data) ? data : data?.results || [];
+    const normalized = list.map(normalizeFromApi).filter(Boolean);
+    saveAll(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[searchesStore] hydrate failed:", err);
+    return { source: "error", count: getSearches().length };
+  }
+}
+
 export function addSearch(search) {
-  const current = getSearches();
-  const entry = {
-    id: `search_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+  const payload = {
     name: search.name || "Search",
     query: search.query || "",
+    category_slug: search.category || "",
+    region: search.region || "",
+    min_price: search.minPrice ?? null,
+    max_price: search.maxPrice ?? null,
+    verified_only: search.verifiedOnly ?? false,
+  };
+
+  api.post("/searches/", payload).then((raw) => {
+    const created = normalizeFromApi(raw);
+    const current = getSearches();
+    saveAll([created, ...current]);
+  }).catch(() => {});
+
+  const entry = {
+    id: `local_${Date.now()}`,
+    name: payload.name,
+    query: payload.query,
     category: search.category || null,
     minPrice: search.minPrice ?? null,
     maxPrice: search.maxPrice ?? null,
     region: search.region || null,
-    verifiedOnly: search.verifiedOnly ?? false,
+    verifiedOnly: payload.verified_only,
     createdAt: new Date().toISOString(),
     lastChecked: new Date().toISOString(),
     matchCount: 0,
   };
-  const next = [entry, ...current];
-  saveAll(next);
+  saveAll([entry, ...getSearches()]);
   return entry;
 }
 
-/** Badilisha saved search. */
 export function updateSearch(id, patch) {
   const next = getSearches().map((s) => (s.id === id ? { ...s, ...patch } : s));
   saveAll(next);
+  if (typeof id === "number") {
+    api.patch(`/searches/${id}/`, patch).catch(() => {});
+  }
   return next;
 }
 
-/** Ondoa saved search. */
 export function removeSearch(id) {
   const next = getSearches().filter((s) => s.id !== id);
   saveAll(next);
+  if (typeof id === "number") {
+    api.delete(`/searches/${id}/`).catch(() => {});
+  }
   return next;
 }
 
-/**
- * Hesabu listings zinazolingana na search.
- * Inatumika kuonyesha matchCount.
- */
 export function countMatches(search, listings) {
   if (!search || !Array.isArray(listings)) return 0;
-
   return listings.filter((l) => {
     if (l.status !== "live") return false;
-
     if (search.category && l.category !== search.category) return false;
-
     if (search.region && l.region !== search.region) return false;
-
     if (search.minPrice != null && l.price < search.minPrice) return false;
     if (search.maxPrice != null && l.price > search.maxPrice) return false;
-
     if (search.verifiedOnly && !l.verified) return false;
-
     if (search.query) {
       const q = search.query.toLowerCase();
-      const text = `${l.title || ""} ${l.location || ""} ${
-        l.description || ""
-      }`.toLowerCase();
+      const text = `${l.title || ""} ${l.location || ""} ${l.description || ""}`.toLowerCase();
       if (!text.includes(q)) return false;
     }
-
     return true;
   }).length;
 }
 
-/**
- * Itwe pale listing MOJA inapokuwa "live" (mf. kutoka
- * listingsStore.decideListing) — inaangalia saved searches zote na
- * kumtumia buyer "New Match" endapo listing hii inalingana.
- */
-export function checkNewListingMatches(listing) {
-  if (!listing || listing.status !== "live") return;
+export function checkNewListingMatches() {}
 
-  const current = getSearches();
-  let changed = false;
-
-  const next = current.map((s) => {
-    const matched = countMatches(s, [listing]) > 0;
-    if (!matched) return s;
-
-    changed = true;
-    notifySearchMatch({
-      searchId: s.id,
-      searchName: s.name,
-      matchCount: (s.matchCount || 0) + 1,
-    });
-    return {
-      ...s,
-      matchCount: (s.matchCount || 0) + 1,
-      lastChecked: new Date().toISOString(),
-    };
-  });
-
-  if (changed) saveAll(next);
-}
-
-// ============================================================
-// HOOKS
-// ============================================================
-
-/** Hook: saved searches zote. */
 export function useSearches() {
   const [searches, setSearches] = useState(() => getSearches());
-
   useEffect(() => {
+    hydrateSearchesFromApi();
     const sync = () => setSearches(getSearches());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -166,11 +145,9 @@ export function useSearches() {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, []);
-
   return searches;
 }
 
-/** Idadi ya searches. */
 export function useSearchesCount() {
   return useSearches().length;
 }

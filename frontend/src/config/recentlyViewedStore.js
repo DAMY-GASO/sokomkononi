@@ -1,24 +1,12 @@
 // ============================================================
-// recentlyViewedStore.js
-// CHANZO KIMOJA CHA UKWELI kwa Listings Alizoziona Buyer Hivi Karibuni.
-//
-// Kila buyer anafungua listing, tunaongeza kwenye historia yake.
-// Tunaweka max 20 za hivi karibuni.
-//
-// Kama stores nyingine — demo ya front-end pekee, localStorage +
-// custom event. Backend halisi ikiwepo, badilisha functions hizi
-// ziite API; hooks (useRecentlyViewed) hazitahitaji kubadilika.
+// recentlyViewedStore.js — local only (no backend endpoint)
 // ============================================================
-
 import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "sokomkononi_recently_viewed_v1";
 const UPDATE_EVENT = "sokomkononi:recently-viewed-updated";
 const MAX_ITEMS = 20;
 
-// ============================================================
-// SEED — tupu
-// ============================================================
 export const SEED_RECENTLY_VIEWED = [];
 
 function readFromStorage() {
@@ -40,16 +28,10 @@ function saveAll(list) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
-
-/** Soma historia ya sasa (snapshot moja, si reactive). */
 export function getRecentlyViewed() {
   return readFromStorage();
 }
 
-/** Ongeza listing kwenye historia (ikiwa ipo tayari, isonge juu). */
 export function trackViewed(listingId) {
   if (!listingId) return getRecentlyViewed();
   const current = getRecentlyViewed();
@@ -59,24 +41,17 @@ export function trackViewed(listingId) {
   return next;
 }
 
-/** Ondoa listing kwenye historia. */
 export function removeViewed(listingId) {
   const next = getRecentlyViewed().filter((id) => id !== listingId);
   saveAll(next);
   return next;
 }
 
-/** Futa historia yote. */
 export function clearRecentlyViewed() {
   saveAll([]);
   return [];
 }
 
-// ============================================================
-// HOOKS
-// ============================================================
-
-/** Hook: historia yote. */
 export function useRecentlyViewedIds() {
   const [ids, setIds] = useState(() => getRecentlyViewed());
 
@@ -93,7 +68,6 @@ export function useRecentlyViewedIds() {
   return ids;
 }
 
-/** Hook: idadi ya listings zilizoangaliwa. */
 export function useRecentlyViewedCount() {
   return useRecentlyViewedIds().length;
 }

@@ -4,19 +4,20 @@
 // Local cache (localStorage) + API hydration.
 //
 // STATUS VOCABULARY (frontend) -> DB:
-//   live              -> active
+//   live              -> active / AVAILABLE
 //   paused            -> paused
-//   reserved          -> reserved
-//   sold              -> sold
+//   reserved          -> reserved / RESERVED
+//   sold              -> sold / SOLD
 //   expired           -> expired
-//   in_review         -> pending_review
-//   pending_payment   -> draft
-//   rejected          -> rejected
+//   in_review         -> pending_review / PENDING_APPROVAL
+//   pending_payment   -> draft / DRAFT
+//   rejected          -> rejected / REJECTED
 // ============================================================
 
 import { useEffect, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
 import { listingsApi } from "../api/listings.js";
+import { authApi } from "../api/auth.js";
 
 const STORAGE_KEY = "sokomkononi_listings_v1";
 const UPDATE_EVENT = "sokomkononi:listings-updated";
@@ -255,7 +256,7 @@ export function normalizeListingFromApi(raw) {
 }
 
 // ============================================================
-// HYDRATE FROM API
+// HYDRATE PUBLIC LISTINGS
 // ============================================================
 export async function hydrateListingsFromApi() {
   try {
@@ -276,17 +277,30 @@ export async function hydrateListingsFromApi() {
 }
 
 // ============================================================
-// SELLER-SPECIFIC: fetch MY listings (requires userId)
+// FETCH MY LISTINGS (SELF-SUFFICIENT — no userId required)
+//
+// Steps:
+//   1. Get current user from /api/auth/me/
+//   2. Fetch /api/listings/?seller=<me.id>
+//
+// This means DashboardShell.jsx can call `fetchMyListingsFromApi()`
+// without arguments, exactly as it does today.
 // ============================================================
-export async function fetchMyListingsFromApi(userId) {
-  if (!userId) {
-    console.warn("[listingsStore] fetchMyListings — no userId provided");
-    return { source: "empty", count: 0 };
-  }
+export async function fetchMyListingsFromApi() {
   try {
-    const data = await listingsApi.mine(userId, { page_size: 100 });
+    // 1. Resolve current user id from token
+    const me = await authApi.me();
+    if (!me?.id) return { source: "empty", count: 0 };
+
+    // 2. Fetch only this seller's listings
+    const data = await listingsApi.mine(me.id, { page_size: 100 });
     const rawList = Array.isArray(data) ? data : data?.results || [];
-    if (!rawList.length) return { source: "empty", count: 0 };
+
+    if (!rawList.length) {
+      saveListings([]);
+      return { source: "empty", count: 0 };
+    }
+
     const normalized = rawList.map(normalizeListingFromApi).filter(Boolean);
     saveListings(normalized);
     return { source: "api", count: normalized.length };
@@ -351,7 +365,6 @@ export async function removeListingAsync(id) {
 }
 
 export async function pauseListingAsync(id) {
-  // Backend has no explicit pause endpoint — treat as status update
   return updateListingAsync(id, {
     status: "paused",
     pausedAt: new Date().toISOString(),
@@ -370,7 +383,7 @@ export async function markSoldAsync(id) {
 }
 
 /**
- * Pay the listing fee. Moves listing DRAFT → PENDING_APPROVAL backend-side.
+ * Pay the listing fee. Backend moves DRAFT → PENDING_APPROVAL.
  */
 export async function payListingFeeAsync(id, payload) {
   try {

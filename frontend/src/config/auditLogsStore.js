@@ -1,28 +1,12 @@
 // ============================================================
-// auditLogsStore.js
-// CHANZO KIMOJA CHA UKWELI kwa Audit Logs.
-//
-// Kila action ya Admin ina-log:
-//   - Nani (adminName)
-//   - Lini (at)
-//   - Nini (action)
-//   - Kwenye nini (target — listing, user, n.k.)
-//   - Maelezo (details)
-//
-// Kama stores nyingine — demo ya front-end pekee, localStorage +
-// custom event. Backend halisi ikiwepo, badilisha functions hizi
-// ziite API; hooks (useAuditLogs) hazitahitaji kubadilika.
+// auditLogsStore.js — API-backed via /api/audit/
 // ============================================================
-
 import { useEffect, useState } from "react";
+import { api } from "../api/client";
 
 const STORAGE_KEY = "sokomkononi_audit_logs_v1";
 const UPDATE_EVENT = "sokomkononi:audit-logs-updated";
-const MAX_LOGS = 500;
 
-// ============================================================
-// ACTION TYPES — aina za actions zinazoweza ku-log
-// ============================================================
 export const AUDIT_ACTIONS = [
   { key: "listing.approved", label: { sw: "Idhinisha Mali", en: "Approve Listing" }, color: "green" },
   { key: "listing.rejected", label: { sw: "Kataa Mali", en: "Reject Listing" }, color: "rust" },
@@ -41,9 +25,6 @@ export const AUDIT_ACTIONS = [
   { key: "subadmin.removed", label: { sw: "Ondoa Sub-Admin", en: "Remove Sub-Admin" }, color: "rust" },
 ];
 
-// ============================================================
-// SEED — tupu
-// ============================================================
 export const SEED_AUDIT_LOGS = [];
 
 function readFromStorage() {
@@ -52,8 +33,7 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_AUDIT_LOGS;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return SEED_AUDIT_LOGS;
-    return parsed;
+    return Array.isArray(parsed) ? parsed : SEED_AUDIT_LOGS;
   } catch {
     return SEED_AUDIT_LOGS;
   }
@@ -61,67 +41,61 @@ function readFromStorage() {
 
 function saveAll(list) {
   if (typeof window === "undefined") return;
-  const trimmed = list.slice(0, MAX_LOGS);
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 500)));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
+function normalizeFromApi(raw) {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    action: raw.action,
+    adminName: raw.admin_name || "Admin",
+    target: raw.target || "",
+    targetId: raw.target_id,
+    details: raw.details || "",
+    at: raw.created_at,
+  };
+}
 
-/** Soma logs zote. */
 export function getAuditLogs() {
   return readFromStorage();
 }
 
-/**
- * Ongeza log mpya.
- * @param {Object} log - { action, adminName, target, targetId, details }
- */
-export function addAuditLog({
-  action,
-  adminName = "Admin",
-  target = "",
-  targetId = null,
-  details = "",
-}) {
-  const entry = {
-    id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    action,
-    adminName,
-    target,
-    targetId,
-    details,
-    at: new Date().toISOString(),
-  };
-  const next = [entry, ...getAuditLogs()];
-  saveAll(next);
-  return entry;
+export async function hydrateAuditLogsFromApi() {
+  try {
+    const data = await api.get("/audit/?page_size=200");
+    const list = Array.isArray(data) ? data : data?.results || [];
+    const normalized = list.map(normalizeFromApi).filter(Boolean);
+    saveAll(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[auditLogsStore] hydrate failed:", err);
+    return { source: "error", count: getAuditLogs().length };
+  }
 }
 
-/** Ondoa log moja. */
+export function addAuditLog() {}
+
 export function removeAuditLog(id) {
   const next = getAuditLogs().filter((l) => l.id !== id);
   saveAll(next);
+  if (typeof id === "number") {
+    api.delete(`/audit/${id}/`).catch(() => {});
+  }
   return next;
 }
 
-/** Futa logs zote. */
 export function clearAuditLogs() {
   saveAll([]);
+  api.post("/audit/clear/", {}).catch(() => {});
   return [];
 }
 
-// ============================================================
-// HOOKS
-// ============================================================
-
-/** Hook: logs zote. */
 export function useAuditLogs() {
   const [logs, setLogs] = useState(() => getAuditLogs());
-
   useEffect(() => {
+    hydrateAuditLogsFromApi();
     const sync = () => setLogs(getAuditLogs());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -130,11 +104,9 @@ export function useAuditLogs() {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, []);
-
   return logs;
 }
 
-/** Idadi ya logs. */
 export function useAuditLogsCount() {
   return useAuditLogs().length;
 }

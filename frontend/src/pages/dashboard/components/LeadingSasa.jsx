@@ -1,7 +1,8 @@
 // ============================================================
 // LeadingSasa.jsx
 // Leading — inatumia credits kama user ana, vinginevyo cash.
-// Bilingual kamili + centered + credits integration.
+// NOTE: Backend has no /api/leading-fees/ endpoint yet. This
+// file remains localStorage-backed until that endpoint exists.
 // ============================================================
 
 import React, { useState, useEffect } from "react";
@@ -34,9 +35,6 @@ import {
 } from "../../../config/userCreditsStore.js";
 import PaymentGateway from "./PaymentGateway";
 
-// ============================================================
-// HELPER — kuchagua lugha sahihi kwa field inayoweza kuwa { sw, en }
-// ============================================================
 function getLocalized(field, lang) {
   if (!field) return "";
   if (typeof field === "string") return field;
@@ -131,7 +129,7 @@ export default function LeadingSasa({
       ? initialListingId
       : liveListings[0]?.id ?? null
   );
-  const [stage, setStage] = useState("select"); // select | paying | done
+  const [stage, setStage] = useState("select");
   const [done, setDone] = useState(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -149,9 +147,6 @@ export default function LeadingSasa({
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const canLead = Boolean(selectedListing);
 
-  // ============================================================
-  // CREDITS — angalia kama user ana leading credits
-  // ============================================================
   const creditInfo = checkCredit(user?.id, "leading");
   const hasCredit = creditInfo.hasCredit;
 
@@ -163,9 +158,6 @@ export default function LeadingSasa({
     setStage("paying");
   };
 
-  // ============================================================
-  // USE CREDIT
-  // ============================================================
   const handleUseCredit = () => {
     if (!canLead || !user) return;
 
@@ -182,7 +174,6 @@ export default function LeadingSasa({
     const patch = applyLeading(selectedListing);
     onLead(selectedListing.id, patch);
 
-    // Taarifa
     notifyLeadingPurchased({
       listingId: selectedListing.id,
       listingTitle: selectedListing.title,
@@ -191,7 +182,6 @@ export default function LeadingSasa({
       paidWith: method,
     });
 
-    // Rekodi transaction
     if (method === "cash") {
       addTransaction({
         type: "leading",
@@ -222,9 +212,6 @@ export default function LeadingSasa({
     setStage("done");
   };
 
-  // ============================================================
-  // DONE STATE
-  // ============================================================
   if (stage === "done" && done) {
     return (
       <div
@@ -258,7 +245,7 @@ export default function LeadingSasa({
             {lang === "sw" ? (
               <>
                 "{done.listing.title}" sasa itaonekana JUU ya matokeo ya
-                utafutaji na kivinjari (browse) hadi{" "}
+                utafutaji hadi{" "}
                 {new Date(done.expiresAt).toLocaleDateString("sw-TZ", {
                   day: "numeric",
                   month: "long",
@@ -267,8 +254,8 @@ export default function LeadingSasa({
               </>
             ) : (
               <>
-                "{done.listing.title}" will now appear at the TOP of search and
-                browse results until{" "}
+                "{done.listing.title}" will now appear at the TOP of search
+                results until{" "}
                 {new Date(done.expiresAt).toLocaleDateString("en-US", {
                   day: "numeric",
                   month: "long",
@@ -314,7 +301,6 @@ export default function LeadingSasa({
       `}</style>
 
       <div className="max-w-2xl mx-auto">
-        {/* HEADER — CENTERED */}
         <div className="mb-6 text-center">
           <h1
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
@@ -327,13 +313,12 @@ export default function LeadingSasa({
             className="text-sm mt-2 max-w-xl mx-auto"
           >
             {t(
-              'Pandisha bidhaa yako JUU kabisa ya matokeo ya utafutaji kwa wanunuzi wote — kipaumbele maalum, si tu "featured".',
-              'Push your listing to the very TOP of search results for all buyers — real priority, not just "featured".'
+              "Pandisha bidhaa yako JUU kabisa ya matokeo ya utafutaji kwa wanunuzi wote.",
+              "Push your listing to the very TOP of search results for all buyers."
             )}
           </p>
         </div>
 
-        {/* CREDITS BANNER */}
         {hasCredit && stage !== "paying" && (
           <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex items-center gap-2">
@@ -391,7 +376,6 @@ export default function LeadingSasa({
               />
             ) : (
               <>
-                {/* Info card — centered */}
                 <div
                   style={{ borderColor: COLORS.sandLine, background: "white" }}
                   className="rounded-2xl border p-4 flex flex-col items-center text-center gap-2 mb-4"
@@ -419,7 +403,6 @@ export default function LeadingSasa({
                   </div>
                 </div>
 
-                {/* Warning — centered */}
                 {selectedListing && isLeadingActive(selectedListing) && (
                   <div
                     style={{
@@ -433,23 +416,18 @@ export default function LeadingSasa({
                       {lang === "sw" ? (
                         <>
                           Mali hii tayari ina Leading inayoisha baada ya siku{" "}
-                          {leadingDaysRemaining(selectedListing)} — ukiendelea,
-                          siku {leadingFee.days} zaidi zitaongezwa baada ya
-                          hapo.
+                          {leadingDaysRemaining(selectedListing)}.
                         </>
                       ) : (
                         <>
                           This listing already has Leading expiring in{" "}
-                          {leadingDaysRemaining(selectedListing)} days — if you
-                          continue, {leadingFee.days} more days will be added
-                          after that.
+                          {leadingDaysRemaining(selectedListing)} days.
                         </>
                       )}
                     </span>
                   </div>
                 )}
 
-                {/* Total + Buttons — centered */}
                 <div
                   style={{ borderColor: COLORS.sandLine, background: "white" }}
                   className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"

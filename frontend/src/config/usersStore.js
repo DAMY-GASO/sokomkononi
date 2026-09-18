@@ -1,30 +1,12 @@
 // ============================================================
-// usersStore.js
-// CHANZO KIMOJA CHA UKWELI kwa Watumiaji (User Management).
-//
-// Kama dealsStore.js na listingsStore.js — demo ya front-end pekee
-// inayotumia localStorage + custom event kuiga "backend ya pamoja".
-// Backend halisi ikiwepo (mf. AuthContext inayosoma watumiaji halisi),
-// badilisha tu functions hizi ziite API; sehemu zinazotumia useUsers()
-// na setUserStatus() hazitahitaji kubadilika.
-//
-// Hii ndiyo pia mahali sahihi pa kuunganisha na AuthContext baadaye —
-// mf. mtumiaji "suspended" hapa asiruhusiwe kuingia (login) upande wa
-// mfumo mzima, badala ya Admin Dashboard pekee kujua hali yake.
+// usersStore.js — API-backed via /api/admin/users/
 // ============================================================
-
 import { useEffect, useState } from "react";
-import {
-  notifyAccountSuspended,
-  notifyAccountReactivated,
-} from "./notificationsStore.js";
+import { api } from "../api/client";
 
 const STORAGE_KEY = "sokomkononi_users_v1";
 const UPDATE_EVENT = "sokomkononi:users-updated";
 
-// ============================================================
-// SEED_USERS — tupu. Data itakuja kutoka backend baadaye.
-// ============================================================
 export const SEED_USERS = [];
 
 function readFromStorage() {
@@ -33,61 +15,81 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_USERS;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return SEED_USERS;
-    return parsed;
+    return Array.isArray(parsed) ? parsed : SEED_USERS;
   } catch {
     return SEED_USERS;
   }
 }
 
-/** Soma watumiaji wa sasa (snapshot moja, si reactive). */
+function saveAll(list) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event(UPDATE_EVENT));
+}
+
+function normalizeFromApi(raw) {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    name: raw.name || "",
+    email: raw.email || "",
+    phone: raw.phone || "",
+    role: raw.is_staff || raw.is_superuser ? "Admin" : "Buyer",
+    status: raw.is_deleted ? "suspended" : (raw.is_active === false ? "suspended" : "active"),
+    joined: raw.date_joined || raw.created_at,
+    isStaff: !!raw.is_staff,
+    isVerified: !!raw.is_verified,
+  };
+}
+
 export function getUsers() {
   return readFromStorage();
 }
 
-/** Andika orodha mpya kamili ya watumiaji. */
 export function saveUsers(users) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  saveAll(users);
 }
 
-/** Simamisha / washa tena mtumiaji mmoja kwa id yake. */
+export async function hydrateUsersFromApi() {
+  try {
+    const data = await api.get("/admin/users/?page_size=200");
+    const list = Array.isArray(data) ? data : data?.results || [];
+    const normalized = list.map(normalizeFromApi).filter(Boolean);
+    saveAll(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[usersStore] hydrate failed:", err);
+    return { source: "error", count: getUsers().length };
+  }
+}
+
 export function toggleUserStatus(id) {
   const current = getUsers();
   const user = current.find((u) => u.id === id);
   const next = current.map((u) =>
     u.id === id ? { ...u, status: u.status === "suspended" ? "active" : "suspended" } : u
   );
-  saveUsers(next);
-
+  saveAll(next);
   if (user) {
     if (user.status === "suspended") {
-      notifyAccountReactivated({ userId: id, userName: user.name });
+      api.post(`/admin/users/${id}/activate/`, {}).catch(() => {});
     } else {
-      notifyAccountSuspended({ userId: id, userName: user.name });
+      api.post(`/admin/users/${id}/suspend/`, {}).catch(() => {});
     }
   }
-
   return next;
 }
 
-/** Badilisha (merge patch) mtumiaji mmoja moja kwa moja. */
 export function updateUser(id, patch) {
-  const current = getUsers();
-  const next = current.map((u) => (u.id === id ? { ...u, ...patch } : u));
-  saveUsers(next);
+  const next = getUsers().map((u) => (u.id === id ? { ...u, ...patch } : u));
+  saveAll(next);
   return next;
 }
 
-/**
- * Hook ya React inayosoma watumiaji na kujisasisha yenyewe kwenye
- * AdminDashboard (User Management) papo hapo, bila reload.
- */
 export function useUsers() {
   const [users, setUsers] = useState(() => getUsers());
-
   useEffect(() => {
+    hydrateUsersFromApi();
     const sync = () => setUsers(getUsers());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -96,6 +98,5 @@ export function useUsers() {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, []);
-
   return users;
 }

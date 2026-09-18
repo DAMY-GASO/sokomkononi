@@ -1,12 +1,12 @@
+// ============================================================
+// advertisementFeeStore.js — API-backed via /api/advertisement-fees/
+// ============================================================
 import { useEffect, useState } from "react";
+import { api } from "../api/client";
 
 const STORAGE_KEY = "sokomkononi_advertisement_fee_config_v1";
 const UPDATE_EVENT = "sokomkononi:advertisement-fee-config-updated";
 
-// ============================================================
-// SEED_ADVERTISEMENT_FEE_CONFIG — bilingual
-// `label` na `desc` zina { sw, en }.
-// ============================================================
 export const SEED_ADVERTISEMENT_FEE_CONFIG = {
   price: 25000,
   days: 7,
@@ -30,33 +30,55 @@ function readFromStorage() {
   }
 }
 
-/** Soma config ya sasa (snapshot moja, si reactive). */
-export function getAdvertisementFeeConfig() {
-  return readFromStorage();
-}
-
-/** Andika config mpya kamili (Admin pekee anapaswa kuita hii). */
-export function saveAdvertisementFeeConfig(config) {
+function saveLocal(config) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-/** Badilisha bei pekee. */
+function normalizeFromApi(raw) {
+  if (!raw) return SEED_ADVERTISEMENT_FEE_CONFIG;
+  return {
+    price: Number(raw.price) || SEED_ADVERTISEMENT_FEE_CONFIG.price,
+    days: Number(raw.days) || SEED_ADVERTISEMENT_FEE_CONFIG.days,
+    label: raw.label || SEED_ADVERTISEMENT_FEE_CONFIG.label,
+    desc: raw.desc || SEED_ADVERTISEMENT_FEE_CONFIG.desc,
+  };
+}
+
+export function getAdvertisementFeeConfig() {
+  return readFromStorage();
+}
+
+export function saveAdvertisementFeeConfig(config) {
+  saveLocal(config);
+}
+
 export function updateAdvertisementFeePrice(price) {
   const current = getAdvertisementFeeConfig();
   const next = { ...current, price: Number(price) };
-  saveAdvertisementFeeConfig(next);
+  saveLocal(next);
+  api.patch("/advertisement-fees/", { price: next.price }).catch(() => {});
   return next;
 }
 
-/**
- * Hook ya React inayosoma config na kujisasisha yenyewe.
- */
+export async function hydrateAdvertisementFeeFromApi() {
+  try {
+    const data = await api.get("/advertisement-fees/");
+    const normalized = normalizeFromApi(data);
+    saveLocal(normalized);
+    return normalized;
+  } catch (err) {
+    console.warn("[advertisementFeeStore] hydrate failed:", err);
+    return getAdvertisementFeeConfig();
+  }
+}
+
 export function useAdvertisementFeeConfig() {
   const [config, setConfig] = useState(() => getAdvertisementFeeConfig());
 
   useEffect(() => {
+    hydrateAdvertisementFeeFromApi();
     const sync = () => setConfig(getAdvertisementFeeConfig());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);

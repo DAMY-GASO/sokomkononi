@@ -1,57 +1,20 @@
+// ============================================================
+// announcementsStore.js — API-backed via /api/announcements/
+// ============================================================
 import { useEffect, useState } from "react";
+import { api } from "../api/client";
 
 const STORAGE_KEY = "sokomkononi_announcements_v1";
 const UPDATE_EVENT = "sokomkononi:announcements-updated";
 
-// ============================================================
-// ANNOUNCEMENT TYPES — bilingual (sw + en)
-// Kila type ina `label: { sw, en }` — consistent na categoriesStore.
-// ============================================================
 export const ANNOUNCEMENT_TYPES = [
-  {
-    id: "fee_change",
-    label: { sw: "Mabadiliko ya Ada", en: "Fee Change" },
-  },
-  {
-    id: "new_category",
-    label: { sw: "Category Mpya", en: "New Category" },
-  },
-  {
-    id: "maintenance",
-    label: { sw: "Matengenezo ya Mfumo", en: "System Maintenance" },
-  },
-  {
-    id: "promotion",
-    label: { sw: "Kampeni/Promotion", en: "Campaign/Promotion" },
-  },
+  { id: "fee_change", label: { sw: "Mabadiliko ya Ada", en: "Fee Change" } },
+  { id: "new_category", label: { sw: "Category Mpya", en: "New Category" } },
+  { id: "maintenance", label: { sw: "Matengenezo ya Mfumo", en: "System Maintenance" } },
+  { id: "promotion", label: { sw: "Kampeni/Promotion", en: "Campaign/Promotion" } },
 ];
 
-export const SEED_ANNOUNCEMENTS = [
-  {
-    id: 1,
-    typeId: "maintenance",
-    title: "Matengenezo ya Mfumo — Jumamosi Usiku",
-    titleEn: "System Maintenance — Saturday Night",
-    message:
-      "Mfumo utakuwa chini kwa dakika 30 kuanzia saa 2:00 usiku kwa matengenezo ya database.",
-    messageEn:
-      "The system will be down for 30 minutes starting 2:00 AM for database maintenance.",
-    scheduledFor: "2026-09-13T23:00",
-    sent: true,
-  },
-  {
-    id: 2,
-    typeId: "fee_change",
-    title: "Boosting Fee Imepungua",
-    titleEn: "Boosting Fee Reduced",
-    message:
-      "Kuanzia wiki hii, Boosting Fee imepungua kutoka TZS 15,000 hadi TZS 12,000 kwa wiki.",
-    messageEn:
-      "Starting this week, Boosting Fee has been reduced from TZS 15,000 to TZS 12,000 per week.",
-    scheduledFor: "2026-09-08T09:00",
-    sent: true,
-  },
-];
+export const SEED_ANNOUNCEMENTS = [];
 
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_ANNOUNCEMENTS;
@@ -59,46 +22,97 @@ function readFromStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_ANNOUNCEMENTS;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0)
-      return SEED_ANNOUNCEMENTS;
+    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_ANNOUNCEMENTS;
     return parsed;
   } catch {
     return SEED_ANNOUNCEMENTS;
   }
 }
 
-/** Soma matangazo ya sasa (snapshot moja, si reactive). */
-export function getAnnouncements() {
-  return readFromStorage();
-}
-
-/** Andika orodha mpya kamili ya matangazo. */
-export function saveAnnouncements(list) {
+function saveAll(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-/** Tuma/panga tangazo jipya (Admin pekee anaita hii). */
-export function addAnnouncement(announcement) {
-  const current = getAnnouncements();
-  const next = [announcement, ...current];
-  saveAnnouncements(next);
-  return next;
+function normalizeFromApi(raw) {
+  if (!raw) return null;
+  const typeMap = {
+    FEE_CHANGE: "fee_change", NEW_CATEGORY: "new_category",
+    MAINTENANCE: "maintenance", PROMOTION: "promotion",
+  };
+  return {
+    id: raw.id,
+    typeId: typeMap[raw.type] || raw.typeId || raw.type,
+    title: raw.title,
+    titleEn: raw.title_en,
+    message: raw.message,
+    messageEn: raw.message_en,
+    scheduledFor: raw.scheduled_for,
+    sent: raw.sent,
+    createdAt: raw.created_at,
+  };
 }
 
-/** Futa tangazo. */
+export function getAnnouncements() {
+  return readFromStorage();
+}
+
+export function saveAnnouncements(list) {
+  saveAll(list);
+}
+
+export async function hydrateAnnouncementsFromApi() {
+  try {
+    const data = await api.get("/announcements/?page_size=100");
+    const list = Array.isArray(data) ? data : data?.results || [];
+    const normalized = list.map(normalizeFromApi).filter(Boolean);
+    saveAll(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[announcementsStore] hydrate failed:", err);
+    return { source: "error", count: getAnnouncements().length };
+  }
+}
+
+export function addAnnouncement(announcement) {
+  const typeMap = {
+    fee_change: "FEE_CHANGE", new_category: "NEW_CATEGORY",
+    maintenance: "MAINTENANCE", promotion: "PROMOTION",
+  };
+  const payload = {
+    typeId: typeMap[announcement.typeId] || "MAINTENANCE",
+    title: announcement.title,
+    titleEn: announcement.titleEn || "",
+    message: announcement.message,
+    messageEn: announcement.messageEn || "",
+    scheduledFor: announcement.scheduledFor || null,
+    sent: announcement.sent !== false,
+  };
+  const entry = { id: `local_${Date.now()}`, ...announcement };
+  saveAll([entry, ...getAnnouncements()]);
+
+  api.post("/announcements/", payload).then((raw) => {
+    const created = normalizeFromApi(raw);
+    saveAll([created, ...getAnnouncements().filter((a) => a.id !== entry.id)]);
+  }).catch(() => {});
+
+  return entry;
+}
+
 export function removeAnnouncement(id) {
-  const current = getAnnouncements();
-  const next = current.filter((a) => a.id !== id);
-  saveAnnouncements(next);
+  const next = getAnnouncements().filter((a) => a.id !== id);
+  saveAll(next);
+  if (typeof id === "number") {
+    api.delete(`/announcements/${id}/`).catch(() => {});
+  }
   return next;
 }
 
 export function useAnnouncements() {
   const [list, setList] = useState(() => getAnnouncements());
-
   useEffect(() => {
+    hydrateAnnouncementsFromApi();
     const sync = () => setList(getAnnouncements());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -107,11 +121,9 @@ export function useAnnouncements() {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, []);
-
   return list;
 }
 
 export function useSentAnnouncements() {
-  const list = useAnnouncements();
-  return list.filter((a) => a.sent);
+  return useAnnouncements().filter((a) => a.sent);
 }

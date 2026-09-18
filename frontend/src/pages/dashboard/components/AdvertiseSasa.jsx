@@ -1,3 +1,9 @@
+// ============================================================
+// AdvertiseSasa.jsx
+// Advertise — backend for banner ads not yet implemented.
+// Currently uses bannerAdsStore (localStorage) + advertisementFeeStore.
+// ============================================================
+
 import React, { useState, useEffect } from "react";
 import { Megaphone, MapPin, Clock, Sparkles, Wallet } from "lucide-react";
 import { COLORS, FONTS, getCategory, formatTZS } from "./shared";
@@ -121,7 +127,7 @@ export default function AdvertiseSasa({
       ? initialListingId
       : liveListings[0]?.id ?? null
   );
-  const [stage, setStage] = useState("select"); // select | paying | done
+  const [stage, setStage] = useState("select");
   const [done, setDone] = useState(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -142,9 +148,6 @@ export default function AdvertiseSasa({
     : false;
   const canAdvertise = Boolean(selectedListing) && !alreadyAdvertising;
 
-  // ============================================================
-  // CREDITS — ads credits ni TZS value (wallet)
-  // ============================================================
   const creditInfo = checkCredit(user?.id, "ads");
   const adsCreditRemaining = creditInfo.remaining || 0;
   const hasEnoughCredit = adsCreditRemaining >= adFee.price;
@@ -158,16 +161,10 @@ export default function AdvertiseSasa({
     setStage("paying");
   };
 
-  // ============================================================
-  // USE CREDIT — punguza kiasi cha ads credit
-  // ============================================================
   const handleUseCredit = () => {
     if (!canAdvertise || !user) return;
 
-    // Kama ads credit haitoshi — punguza kiasi tu (partial)
-    // au lipa kwa cash. Hapa tunatumia credit kama inatosha.
     if (!hasEnoughCredit) {
-      // Hana credit ya kutosha — lipa kwa cash
       setStage("paying");
       return;
     }
@@ -225,9 +222,6 @@ export default function AdvertiseSasa({
     setStage("done");
   };
 
-  // ============================================================
-  // DONE STATE
-  // ============================================================
   if (stage === "done" && done) {
     return (
       <div
@@ -261,7 +255,7 @@ export default function AdvertiseSasa({
             {lang === "sw" ? (
               <>
                 "{done.listing.title}" sasa itaonekana kwenye banner
-                inayozunguka ya Dashboard (buyer na seller) hadi{" "}
+                inayozunguka ya Dashboard hadi{" "}
                 {new Date(done.banner.expiresAt).toLocaleDateString("sw-TZ", {
                   day: "numeric",
                   month: "long",
@@ -271,7 +265,7 @@ export default function AdvertiseSasa({
             ) : (
               <>
                 "{done.listing.title}" will now appear in the rotating Dashboard
-                banner (buyer and seller) until{" "}
+                banner until{" "}
                 {new Date(done.banner.expiresAt).toLocaleDateString("en-US", {
                   day: "numeric",
                   month: "long",
@@ -283,12 +277,8 @@ export default function AdvertiseSasa({
           {done.paidWith === "credits" && (
             <p className="text-xs text-[#2F6D4F] mb-4">
               {t(
-                `Umetumia ${formatTZS(adFee.price)} kwenye Ads credit — balance: ${formatTZS(
-                  adsCreditRemaining - adFee.price
-                )}`,
-                `Used ${formatTZS(adFee.price)} from Ads credit — balance: ${formatTZS(
-                  adsCreditRemaining - adFee.price
-                )}`
+                `Umetumia ${formatTZS(adFee.price)} kwenye Ads credit — balance: ${formatTZS(adsCreditRemaining - adFee.price)}`,
+                `Used ${formatTZS(adFee.price)} from Ads credit — balance: ${formatTZS(adsCreditRemaining - adFee.price)}`
               )}
             </p>
           )}
@@ -321,7 +311,6 @@ export default function AdvertiseSasa({
       `}</style>
 
       <div className="max-w-2xl mx-auto">
-        {/* HEADER — CENTERED */}
         <div className="mb-6 text-center">
           <h1
             style={{ fontFamily: FONTS.display, color: COLORS.night }}
@@ -334,13 +323,12 @@ export default function AdvertiseSasa({
             className="text-sm mt-2 max-w-xl mx-auto"
           >
             {t(
-              "Weka bidhaa yako kwenye banner inayozunguka ya Dashboard — buyer na seller wote wataiona wanapoingia.",
-              "Place your product on the rotating Dashboard banner — all buyers and sellers will see it when they log in."
+              "Weka bidhaa yako kwenye banner inayozunguka ya Dashboard.",
+              "Place your product on the rotating Dashboard banner."
             )}
           </p>
         </div>
 
-        {/* CREDITS BANNER — Ads credits */}
         {hasCredit && stage !== "paying" && (
           <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex items-center gap-2">
@@ -409,7 +397,6 @@ export default function AdvertiseSasa({
               />
             ) : (
               <>
-                {/* Info card — centered */}
                 <div
                   style={{ borderColor: COLORS.sandLine, background: "white" }}
                   className="rounded-2xl border p-4 flex flex-col items-center text-center gap-2 mb-4"
@@ -437,7 +424,6 @@ export default function AdvertiseSasa({
                   </div>
                 </div>
 
-                {/* Warning — centered */}
                 {alreadyAdvertising && (
                   <div
                     style={{
@@ -456,7 +442,7 @@ export default function AdvertiseSasa({
                               (b) => b.listingId === selectedListing.id
                             )
                           )}{" "}
-                          zilizobaki. Subiri iishe kabla ya kununua nyingine.
+                          zilizobaki.
                         </>
                       ) : (
                         <>
@@ -466,15 +452,13 @@ export default function AdvertiseSasa({
                               (b) => b.listingId === selectedListing.id
                             )
                           )}{" "}
-                          days remaining. Wait for it to expire before buying
-                          another.
+                          days remaining.
                         </>
                       )}
                     </span>
                   </div>
                 )}
 
-                {/* Total + Buttons — centered */}
                 <div
                   style={{ borderColor: COLORS.sandLine, background: "white" }}
                   className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"
