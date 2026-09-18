@@ -192,6 +192,7 @@ export function useRoles() {
 export function useSubAdminsWithRoles() {
   const [list, setList] = useState(() => getSubAdmins());
   useEffect(() => {
+    hydrateRolesFromApi();
     const sync = () => setList(getSubAdmins());
     window.addEventListener("storage", sync);
     window.addEventListener(SUBADMINS_EVENT, sync);

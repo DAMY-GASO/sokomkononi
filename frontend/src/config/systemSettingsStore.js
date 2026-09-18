@@ -39,9 +39,10 @@ function makeSlice(storageKey, updateEvent, seed) {
     window.dispatchEvent(new Event(updateEvent));
   }
 
-  function useSlice() {
+  function useSlice(onMount) {
     const [value, setValue] = useState(() => read());
     useEffect(() => {
+      if (typeof onMount === "function") onMount();
       const sync = () => setValue(read());
       window.addEventListener("storage", sync);
       window.addEventListener(updateEvent, sync);
@@ -80,7 +81,7 @@ export function toggleWebhook(id) {
   if (typeof id === "number") api.post(`/system-settings/webhooks/${id}/toggle/`, {}).catch(() => {});
   return next;
 }
-export function useWebhooks() { return webhooksSlice.useSlice(); }
+export function useWebhooks() { return webhooksSlice.useSlice(hydrateWebhooksFromApi); }
 
 export async function hydrateWebhooksFromApi() {
   try {
@@ -118,7 +119,7 @@ export function saveAppStoreLinks(links) {
     play: links.play || "", appstore: links.appstore || "",
   }).catch(() => {});
 }
-export function useAppStoreLinks() { return appStoreLinksSlice.useSlice(); }
+export function useAppStoreLinks() { return appStoreLinksSlice.useSlice(hydrateAppStoreLinksFromApi); }
 
 export async function hydrateAppStoreLinksFromApi() {
   try {
@@ -146,7 +147,7 @@ export function updatePlatformPolicy(patch) {
   savePlatformPolicy(next);
   return next;
 }
-export function usePlatformPolicy() { return platformPolicySlice.useSlice(); }
+export function usePlatformPolicy() { return platformPolicySlice.useSlice(hydratePlatformPolicyFromApi); }
 
 export async function hydratePlatformPolicyFromApi() {
   try {

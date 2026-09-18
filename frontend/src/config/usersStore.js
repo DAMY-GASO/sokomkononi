@@ -34,7 +34,11 @@ function normalizeFromApi(raw) {
     name: raw.name || "",
     email: raw.email || "",
     phone: raw.phone || "",
-    role: raw.is_staff || raw.is_superuser ? "Admin" : "Buyer",
+    role: raw.is_staff || raw.is_superuser
+      ? "Admin"
+      : (raw.account_type === "BUSINESS" || raw.is_seller
+          ? "Seller"
+          : "Buyer"),
     status: raw.is_deleted ? "suspended" : (raw.is_active === false ? "suspended" : "active"),
     joined: raw.date_joined || raw.created_at,
     isStaff: !!raw.is_staff,
