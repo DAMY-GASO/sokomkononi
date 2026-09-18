@@ -1,9 +1,3 @@
-// ============================================================
-// AdvertiseSasa.jsx
-// Advertise — inatumia ads credits kama user ana, vinginevyo cash.
-// Bilingual kamili + centered + credits integration.
-// ============================================================
-
 import React, { useState, useEffect } from "react";
 import { Megaphone, MapPin, Clock, Sparkles, Wallet } from "lucide-react";
 import { COLORS, FONTS, getCategory, formatTZS } from "./shared";
