@@ -1,21 +1,4 @@
-// ============================================================
-// listingsStore.js
-// CHANZO KIMOJA CHA UKWELI kwa Listings (mali/matangazo).
-//
-// STATUS VOCABULARY (frontend) -> DB (per Muongozo §6):
-//   live              -> active
-//   paused            -> paused
-//   reserved          -> reserved
-//   sold              -> sold
-//   expired           -> expired
-//   in_review         -> pending_review
-//   pending_payment   -> draft
-//   rejected          -> rejected
-//
-// MUDA WA MAISHA YA LISTING: siku 60 kwa default, lakini
-// inasomwa kutoka platform policy (Admin > System Settings >
-// Platform Policy) kila listing mpya inapoundwa.
-// ============================================================
+
 
 import { useEffect, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
@@ -313,3 +296,52 @@ export const LISTING_STATUS_MAP = {
   pending_payment: "draft",
   rejected: "rejected",
 };
+
+import { listingsApi } from "../api/listings.js";
+
+const API_TO_FRONTEND_STATUS = {
+  active: "live", paused: "paused", reserved: "reserved", sold: "sold",
+  expired: "expired", pending_review: "in_review", draft: "pending_payment", rejected: "rejected",
+};
+
+function normalizeListingFromApi(raw) {
+  if (!raw) return null;
+  let photos = [];
+  if (Array.isArray(raw.photos)) photos = raw.photos;
+  else if (Array.isArray(raw.images)) photos = raw.images;
+  else if (raw.image) photos = [raw.image];
+  photos = photos.map((p) => (typeof p === "string" ? p : p?.url || p?.image || null)).filter(Boolean);
+  const category = raw.category?.key || raw.category?.slug || raw.category_slug || (typeof raw.category === "string" ? raw.category : null) || raw.category_id || null;
+  const status = API_TO_FRONTEND_STATUS[raw.status] || raw.status || "live";
+  return {
+    ...raw,
+    id: raw.id ?? raw.pk,
+    title: raw.title || raw.name || "",
+    price: Number(raw.price) || 0,
+    category,
+    location: raw.location || raw.region || raw.address || "",
+    region: raw.region || raw.location || "",
+    status,
+    views: Number(raw.views) || 0,
+    verified: Boolean(raw.verified ?? raw.is_verified),
+    photos,
+    imageUrl: photos[0] || raw.imageUrl || null,
+    postedAt: raw.postedAt || raw.created_at || raw.created || null,
+  };
+}
+
+export async function hydrateListingsFromApi() {
+  try {
+    const data = await listingsApi.list({ page_size: 100 });
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    if (!rawList.length) return { source: "seed", count: getListings().length };
+    const normalized = rawList.map(normalizeListingFromApi).filter(Boolean);
+    saveListings(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[listingsStore] hydrate failed:", err);
+    return { source: "error", count: getListings().length };
+  }
+}
+
+export { normalizeListingFromApi };
