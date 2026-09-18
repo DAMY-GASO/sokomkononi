@@ -1,19 +1,4 @@
-// ============================================================
-// shared.js
-// Helper functions na brand tokens za SokoMkononi.
-//
-// MWISHO WA MABADILIKO:
-//   - CATEGORIES array IMEONDOLEWA — sasa zinatoka
-//     ../../../config/categoriesStore.js
-//   - getCategory() inarudisha category object kutoka store
-//   - getCategoryIconByKey() inarudisha lucide-react component
-//   - getCategoryLabel() shortcut ya label moja kwa moja
-//   - getActiveCategories re-export kwa urahisi
-//   - calculateListingFee() inarudi error state kama category haina
-//     fee config (category mpya iliyoongezwa na Admin bila fee)
-//   - formatNumberInput() / cleanNumberInput() — comma helpers
-//   - formatPhoneDisplay() / formatCardDisplay() — display helpers
-// ============================================================
+
 
 import { getBoostPackage as getBoostPackageFromStore } from "../../../config/boostPackagesStore.js";
 import { getListingFeeConfig } from "../../../config/listingFeeStore.js";
@@ -25,20 +10,28 @@ import {
   getCategoryIcon,
 } from "../../../config/categoriesStore.js";
 
-// ---- Brand tokens (SokoMkononi) ----
+// ============================================================
+// BRAND TOKENS (SokoMkononi)
+// ============================================================
 export const COLORS = {
+  // Brand
   night: "#101A2E",
+  nightSoft: "#1B2740",
   sand: "#F5F3EC",
+  sandLine: "#E6E2D6",
   gold: "#E8A33D",
   green: "#2F6D4F",
   rust: "#C1502E",
-  nightSoft: "#1B2740",
-  sandLine: "#E6E2D6",
+
+  // Text — typography system
+  textPrimary: "#111827",
+  textSecondary: "#6B7280",
+  textMuted: "#9CA3AF",
 };
 
 export const FONTS = {
-  display: "'Fraunces', serif",
-  body: "'Manrope', sans-serif",
+  display: "'Inter', system-ui, -apple-system, sans-serif",
+  body: "'Inter', system-ui, -apple-system, sans-serif",
 };
 
 // ============================================================
@@ -82,7 +75,6 @@ export { getActiveCategories };
 
 /**
  * parsePrice(value) — toa non-digits na rudisha integer.
- * Inafanya kazi kwa "85,000,000" au "85000000".
  */
 export function parsePrice(value) {
   if (!value) return 0;
@@ -101,16 +93,6 @@ export function formatTZS(amount) {
 // INPUT FORMATTING HELPERS (comma auto-format)
 // ============================================================
 
-/**
- * formatNumberInput(value) — format namba na comma kwa input.
- *
- *   formatNumberInput("85000000")  -> "85,000,000"
- *   formatNumberInput("")          -> ""
- *   formatNumberInput("abc")       -> ""
- *   formatNumberInput(8500)        -> "8,500"
- *
- * Tumia kwenye `value` ya input ya pesa.
- */
 export function formatNumberInput(value) {
   if (value === "" || value === null || value === undefined) return "";
   const digits = String(value).replace(/[^0-9]/g, "");
@@ -118,23 +100,10 @@ export function formatNumberInput(value) {
   return Number(digits).toLocaleString("en-US");
 }
 
-/**
- * cleanNumberInput(value) — toa comma na rudisha digits tu.
- *
- *   cleanNumberInput("85,000,000") -> "85000000"
- *   cleanNumberInput("abc123")     -> "123"
- *
- * Tumia kwenye `onChange` ya input ya pesa.
- */
 export function cleanNumberInput(value) {
   return String(value ?? "").replace(/[^0-9]/g, "");
 }
 
-/**
- * formatPhoneDisplay(value) — format namba ya simu ya Tanzania.
- *
- *   formatPhoneDisplay("0712345678") -> "0712 345 678"
- */
 export function formatPhoneDisplay(value) {
   const digits = String(value).replace(/[^0-9]/g, "").slice(0, 10);
   if (!digits) return "";
@@ -143,11 +112,6 @@ export function formatPhoneDisplay(value) {
   return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
 }
 
-/**
- * formatCardDisplay(value) — format namba ya kadi katika vikundi vya 4.
- *
- *   formatCardDisplay("4111111111111111") -> "4111 1111 1111 1111"
- */
 export function formatCardDisplay(value) {
   const digits = String(value).replace(/[^0-9]/g, "").slice(0, 16);
   if (!digits) return "";
@@ -157,28 +121,10 @@ export function formatCardDisplay(value) {
 // ============================================================
 // calculateListingFee
 // ============================================================
-/**
- * calculateListingFee(categoryKey, priceInput)
- *
- * Inarudi:
- *   { price, rate, rawFee, fee, capped: "min" | "max" | null }
- *
- * Kama category haina fee config (category mpya iliyoongezwa na Admin
- * bila kuweka fee), inarudi:
- *   { price, rate: 0, rawFee: 0, fee: null, capped: null,
- *     error: "NO_FEE_CONFIG", message: "..." }
- *
- * UI LAZIMA kuangalia `feeInfo.error === "NO_FEE_CONFIG"` kabla ya
- * kuruhusu submit.
- *
- * Kumbuka: `priceInput` inaweza kuwa "85,000,000" au "85000000" —
- * parsePrice inatoa non-digits.
- */
 export function calculateListingFee(categoryKey, priceInput) {
   const config = getListingFeeConfig(categoryKey);
   const price = parsePrice(priceInput);
 
-  // Category haina fee config — Admin hajaongeza bado.
   if (!config) {
     return {
       price,
@@ -192,7 +138,6 @@ export function calculateListingFee(categoryKey, priceInput) {
     };
   }
 
-  // Price bado haijawekwa — rudisha fee 0 bila error.
   if (!price) {
     return { price, rate: config.rate, rawFee: 0, fee: 0, capped: null };
   }
@@ -209,7 +154,7 @@ export function calculateListingFee(categoryKey, priceInput) {
     capped = "max";
   }
 
-  fee = Math.round(fee / 500) * 500; // round to nearest 500 TZS
+  fee = Math.round(fee / 500) * 500;
 
   return { price, rate: config.rate, rawFee, fee, capped };
 }
@@ -316,7 +261,6 @@ export function buildListingFromSubmission({ categoryKey, base, extra, photoCoun
   if (extra?.aina) hoisted.type = extra.aina;
   if (extra?.hours) hoisted.hours = `${extra.hours} hrs`;
 
-  // Muda wa listing kuishi — kutoka platform policy (siku 60 default).
   const lifetimeDays = Number(getPlatformPolicy()?.listingLifetimeDays) || 60;
 
   return {
