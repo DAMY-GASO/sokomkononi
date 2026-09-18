@@ -1,16 +1,3 @@
-// ============================================================
-// advertisementFeeStore.js
-// CHANZO KIMOJA CHA UKWELI kwa Advertisement Fee — muuzaji analipia
-// "banner slot" inayozunguka (rotate) kwenye Dashboard (buyer na
-// seller side zote mbili), ikitangaza listing yake maalum, kwa muda
-// fulani (default: wiki 1 / siku 7).
-//
-// Kama stores nyingine — demo ya front-end pekee, localStorage +
-// custom event. Backend halisi ikiwepo, badilisha functions hizi
-// ziite API; useAdvertisementFeeConfig() na getAdvertisementFeeConfig()
-// hazitahitaji kubadilika.
-// ============================================================
-
 import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "sokomkononi_advertisement_fee_config_v1";
