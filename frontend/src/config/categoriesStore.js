@@ -1,14 +1,4 @@
-// ============================================================
-// categoriesStore.js
-// CHANZO KIMOJA CHA UKWELI kwa categories za SokoMkononi.
-//
-// MABADILIKO:
-//   - SEED_CATEGORIES imeondolewa — sasa iko kwenye
-//     seedCategories.js tofauti.
-//   - initializeCategories() imeongezwa — inaweka categories
-//     za awali MARA MOJA TU (kama bado hazipo).
-//   - Helpers za extra fields zimeongezwa.
-// ============================================================
+
 
 import { useEffect, useState } from "react";
 import {
@@ -280,4 +270,19 @@ export function useCategory(key) {
   const list = useCategories();
   if (!key) return null;
   return list.find((c) => c.key === key) || null;
+}
+
+import { categoriesApi } from "../api/categories.js";
+
+export async function hydrateCategoriesFromApi() {
+  try {
+    const data = await categoriesApi.list({ page_size: 100 });
+    const list = Array.isArray(data) ? data : data?.results || [];
+    if (!list.length) return { source: "seed", count: getCategories().length };
+    saveAll(list);
+    return { source: "api", count: list.length };
+  } catch (err) {
+    console.warn("[categoriesStore] hydrate failed:", err);
+    return { source: "error", count: getCategories().length };
+  }
 }
