@@ -27,7 +27,6 @@ function attachStoredAvatar(user) {
   return stored ? { ...user, avatarUrl: stored } : user;
 }
 
-// Django inaweza kutumia `role`, `is_staff`, `is_superuser`, au `role_key`
 function computeIsAdmin(user) {
   if (!user) return false;
   return (
@@ -146,17 +145,33 @@ export function AuthProvider({ children }) {
 
   // ============================================================
   // VERIFY OTP — inakamilisha usajili na kuingiza user
+  //
+  // Backend inahitaji verification_type="EMAIL" au "PHONE".
+  // Tunachukua moja kwa moja kutoka payload — kama ni phone
+  // (haina "@"), tunatuma "PHONE".
   // ============================================================
   const verifyOtp = useCallback(
-    async (identifierOrEmail, otpCode, verificationType = "EMAIL") => {
-      const payload =
-        typeof identifierOrEmail === "object"
-          ? identifierOrEmail
-          : {
-              identifier: identifierOrEmail,
-              otp_code: otpCode,
-              verification_type: verificationType,
-            };
+    async (identifierOrEmail, otpCode, verificationType) => {
+      let payload;
+
+      if (typeof identifierOrEmail === "object") {
+        payload = { ...identifierOrEmail };
+      } else {
+        payload = {
+          identifier: identifierOrEmail,
+          otp_code: otpCode,
+        };
+      }
+
+      // Auto-detect verification type if not provided
+      if (!payload.verification_type) {
+        if (verificationType) {
+          payload.verification_type = verificationType;
+        } else {
+          const id = payload.identifier || "";
+          payload.verification_type = id.includes("@") ? "EMAIL" : "PHONE";
+        }
+      }
 
       const data = await authApi.verifyOtp(payload);
       const me = data.user ?? (await authApi.me());
@@ -200,7 +215,73 @@ export function AuthProvider({ children }) {
     [user, setUser]
   );
 
-  // Avatar — mock hadi backend itatoa endpoint
+  // ============================================================
+  // CHANGE PASSWORD (logged-in)
+  // ============================================================
+  const changePassword = useCallback(
+    async ({ currentPassword, newPassword, confirmPassword }) => {
+      if (newPassword !== confirmPassword) {
+        throw new Error("Manenosiri hayafanani.");
+      }
+      return authApi.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+    },
+    []
+  );
+
+  // Alias for backward compatibility with AdminProfile.jsx
+  const updatePassword = useCallback(
+    async ({ currentPassword, newPassword, confirmPassword }) =>
+      changePassword({
+        currentPassword,
+        newPassword,
+        confirmPassword: confirmPassword || newPassword,
+      }),
+    [changePassword]
+  );
+
+  // ============================================================
+  // 3-STEP PASSWORD RESET (forgot / verify-otp / reset)
+  // ============================================================
+  const forgotPassword = useCallback(async (identifier) => {
+    return authApi.forgotPassword(identifier);
+  }, []);
+
+  const verifyPasswordResetOtp = useCallback(
+    async ({ identifier, otp_code, verification_type }) => {
+      let type = verification_type;
+      if (!type) {
+        type = identifier?.includes("@") ? "EMAIL" : "PHONE";
+      }
+      return authApi.verifyPasswordResetOtp({
+        identifier,
+        otp_code,
+        verification_type: type,
+      });
+    },
+    []
+  );
+
+  const resetPassword = useCallback(
+    async ({ reset_token, new_password, confirm_password }) => {
+      if (new_password !== confirm_password) {
+        throw new Error("Manenosiri hayafanani.");
+      }
+      return authApi.resetPassword({
+        reset_token,
+        new_password,
+        confirm_password,
+      });
+    },
+    []
+  );
+
+  // ============================================================
+  // AVATAR (mock — backend haitoa endpoint bado)
+  // ============================================================
   const updateAvatar = useCallback(
     async (file) => {
       if (!file) throw new Error("No file");
@@ -228,26 +309,10 @@ export function AuthProvider({ children }) {
     setUser({ ...user, avatarUrl: null });
   }, [user, setUser]);
 
-  const updatePassword = useCallback(
-    async ({ currentPassword, newPassword }) => {
-      if (!currentPassword || !newPassword)
-        throw new Error("Password fields required");
-      if (newPassword.length < 6) throw new Error("Password too short");
-      return { success: true };
-    },
-    []
-  );
-
   // ============================================================
-  // PASSWORD RESET (mock — endpoints hazipo bado)
+  // LEGACY ALIASES (kwa pages zilizotumia majina ya awali)
   // ============================================================
-  const resetPassword = useCallback(async (_email, _newPassword) => {
-    console.warn("[auth] resetPassword — haijaungwa kwenye API bado");
-    return { success: true, note: "Bado haijaungwa kwenye API" };
-  }, []);
-
   const sendOtp = useCallback(async (_email) => {
-    // Register yenyewe inatuma OTP — hapa ni wrapper pekee
     return { success: true, note: "OTP imetumwa na register" };
   }, []);
 
@@ -272,11 +337,15 @@ export function AuthProvider({ children }) {
     // Profile
     updateProfile,
     updatePassword,
+    changePassword,
     updateAvatar,
     removeAvatar,
 
-    // Misc
+    // Password reset (3-step)
+    forgotPassword,
+    verifyPasswordResetOtp,
     resetPassword,
+
     isAuthenticated: Boolean(user),
   };
 

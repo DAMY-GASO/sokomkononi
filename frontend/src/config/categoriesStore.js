@@ -1,5 +1,3 @@
-
-
 import { useEffect, useState } from "react";
 import {
   Home,
@@ -23,6 +21,7 @@ import {
   Factory,
   Bed,
 } from "lucide-react";
+import { categoriesApi } from "../api/categories.js";
 
 const STORAGE_KEY = "sokomkononi_categories_v2";
 const UPDATE_EVENT = "sokomkononi:categories-updated";
@@ -100,6 +99,27 @@ export function getCategory(key) {
   return getCategories().find((c) => c.key === key) || null;
 }
 
+/**
+ * getCategoryById(id) — backend uses integer id; frontend uses `key`
+ * (slug). This helper finds a category by its backend `id`.
+ */
+export function getCategoryById(id) {
+  if (id == null) return null;
+  return (
+    getCategories().find((c) => c.id === id || String(c.id) === String(id)) ||
+    null
+  );
+}
+
+/**
+ * getCategoryIdByKey(key) — reverse lookup: frontend key → backend id.
+ * Used when filtering listings by category.
+ */
+export function getCategoryIdByKey(key) {
+  const cat = getCategory(key);
+  return cat?.id ?? null;
+}
+
 export function getCategoryLabel(key, lang = "sw") {
   const cat = getCategory(key);
   if (!cat) return key;
@@ -127,38 +147,18 @@ export function getCategoryOptionLabel(option, lang = "sw") {
 // ============================================================
 // INITIALIZE — weka categories za awali MARA MOJA TU
 // ============================================================
-/**
- * initializeCategories(list) — weka categories za awali.
- *
- * MUHIMU: Kama categories zipo tayari (Admin ameongeza/kubadilisha),
- * function hii HAITAFANYA KITU. Inaheshimu mabadiliko ya Admin.
- *
- * Tumia mara moja kwenye App.jsx:
- *
- *   useEffect(() => {
- *     initializeCategories(SEED_CATEGORIES);
- *   }, []);
- */
 export function initializeCategories(list) {
   if (!Array.isArray(list) || list.length === 0) {
     return getCategories();
   }
-
-  // 🛑 Kama categories zipo tayari — usiguse (heshimu Admin)
   const current = getCategories();
   if (current.length > 0) {
     return current;
   }
-
-  // ✅ Weka seed mara ya kwanza
   saveAll(list);
   return list;
 }
 
-/**
- * resetCategories(list) — Admin pekee. Futa zote na weka upya.
- * Tofauti na initializeCategories, hii HAINA check ya "zipo tayari".
- */
 export function resetCategories(list) {
   if (!Array.isArray(list)) return getCategories();
   saveAll(list);
@@ -238,6 +238,68 @@ export function updateCategoryImage(key, imageUrl) {
 }
 
 // ============================================================
+// NORMALIZE — backend payload → frontend shape
+// ============================================================
+function normalizeCategoryFromApi(raw) {
+  if (!raw) return null;
+  const name = raw.name || "";
+  const slug = raw.slug || name.toLowerCase().replace(/\s+/g, "-");
+  return {
+    id: raw.id,
+    key: slug,
+    slug,
+    name,
+    label: { sw: name, en: name },
+    description: {
+      sw: raw.description || "",
+      en: raw.description || "",
+    },
+    iconKey: "Home",
+    imageUrl: null,
+    isPopular: raw.is_active !== false,
+    active: raw.is_active !== false,
+    ordering: raw.ordering ?? 0,
+    extra: [],
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+  };
+}
+
+// ============================================================
+// HYDRATE FROM API
+// ============================================================
+export async function hydrateCategoriesFromApi() {
+  try {
+    const data = await categoriesApi.list({ page_size: 100 });
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    if (!rawList.length) {
+      return { source: "seed", count: getCategories().length };
+    }
+
+    // Preserve `extra` field from seed if it exists for the same key
+    const existing = getCategories();
+    const normalized = rawList
+      .map((raw) => {
+        const cat = normalizeCategoryFromApi(raw);
+        if (!cat) return null;
+        const prior = existing.find((c) => c.key === cat.key);
+        if (prior?.extra) cat.extra = prior.extra;
+        if (prior?.iconKey) cat.iconKey = prior.iconKey;
+        if (prior?.imageUrl) cat.imageUrl = prior.imageUrl;
+        if (prior?.isPopular != null) cat.isPopular = prior.isPopular;
+        return cat;
+      })
+      .filter(Boolean);
+
+    saveAll(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[categoriesStore] hydrate failed:", err);
+    return { source: "error", count: getCategories().length };
+  }
+}
+
+// ============================================================
 // HOOKS
 // ============================================================
 export function useCategories() {
@@ -270,19 +332,4 @@ export function useCategory(key) {
   const list = useCategories();
   if (!key) return null;
   return list.find((c) => c.key === key) || null;
-}
-
-import { categoriesApi } from "../api/categories.js";
-
-export async function hydrateCategoriesFromApi() {
-  try {
-    const data = await categoriesApi.list({ page_size: 100 });
-    const list = Array.isArray(data) ? data : data?.results || [];
-    if (!list.length) return { source: "seed", count: getCategories().length };
-    saveAll(list);
-    return { source: "api", count: list.length };
-  } catch (err) {
-    console.warn("[categoriesStore] hydrate failed:", err);
-    return { source: "error", count: getCategories().length };
-  }
 }

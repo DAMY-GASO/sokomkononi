@@ -56,28 +56,32 @@ function FieldInput({ icon, type = "text", value, onChange, label }) {
   );
 }
 
+// Extract first human-readable error from DRF response
+function extractError(err, fallback) {
+  if (err?.data && typeof err.data === "object") {
+    if (err.data.detail) return err.data.detail;
+    const first = Object.values(err.data).flat().find((v) => typeof v === "string");
+    if (first) return first;
+  }
+  return err?.message || fallback;
+}
+
 export default function ForgotPasswordPage() {
-  // NOTE: assumes useAuth() exposes requestPasswordReset({ email, newPassword })
-  // — which validates the email, stashes the new password pending confirmation,
-  // and emails an OTP to confirm it — and confirmPasswordReset(email, otp),
-  // which finalizes the change. Adjust names if yours differ.
-  const { requestPasswordReset, confirmPasswordReset } = useAuth();
+  const { forgotPassword, verifyPasswordResetOtp, resetPassword } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState("form"); // "form" | "otp" | "success"
-  const [form, setForm] = useState({ email: "", newPassword: "", confirmPassword: "" });
+  // steps: "form" → "otp" → "newpass" → "success"
+  const [step, setStep] = useState("form");
+  const [identifier, setIdentifier] = useState("");
+  const [verificationType, setVerificationType] = useState("EMAIL");
   const [otp, setOtp] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-
-  function validateForm() {
-    if (!form.email.trim()) return t("forgot_error_email_required");
-    if (!form.newPassword || form.newPassword.length < 6) return t("forgot_error_password_short");
-    if (form.confirmPassword !== form.newPassword) return t("forgot_error_password_mismatch");
-    return "";
-  }
 
   function startResendCooldown() {
     setResendCooldown(30);
@@ -92,55 +96,98 @@ export default function ForgotPasswordPage() {
     }, 1000);
   }
 
-  async function handleSubmitNewPassword(e) {
+  // ============================================================
+  // STEP 1 — Request OTP
+  // ============================================================
+  async function handleRequestOtp(e) {
     e.preventDefault();
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
+    const trimmed = identifier.trim();
+    if (!trimmed) {
+      setError(t("forgot_error_email_required"));
       return;
     }
+    const detected = trimmed.includes("@") ? "EMAIL" : "PHONE";
+    setVerificationType(detected);
     setError("");
     setLoading(true);
     try {
-      // Nenosiri jipya linahifadhiwa kwa muda upande wa server, na taarifa
-      // (OTP) inatumwa kwenye email ili kuthibitisha kuwa ni mmiliki wa akaunti.
-      await requestPasswordReset({ email: form.email, newPassword: form.newPassword });
+      await forgotPassword(trimmed);
       setStep("otp");
       startResendCooldown();
     } catch (err) {
-      setError(err?.response?.data?.message || t("forgot_error_default"));
+      setError(extractError(err, t("forgot_error_default")));
     } finally {
       setLoading(false);
     }
   }
 
+  // ============================================================
+  // STEP 2 — Verify OTP → reset_token
+  // ============================================================
   async function handleVerifyOtp(e) {
     e.preventDefault();
-    if (!otp.trim() || otp.trim().length < 4) {
+    if (!otp.trim() || otp.trim().length < 6) {
       setError(t("forgot_error_otp_required"));
       return;
     }
     setError("");
     setLoading(true);
     try {
-      await confirmPasswordReset(form.email, otp.trim());
-      setStep("success");
+      const data = await verifyPasswordResetOtp({
+        identifier: identifier.trim(),
+        otp_code: otp.trim(),
+        verification_type: verificationType,
+      });
+      setResetToken(data.reset_token);
+      setStep("newpass");
     } catch (err) {
-      setError(err?.response?.data?.message || t("forgot_error_otp_invalid"));
+      setError(extractError(err, t("forgot_error_otp_invalid")));
     } finally {
       setLoading(false);
     }
   }
 
+  // ============================================================
+  // STEP 3 — Set new password
+  // ============================================================
+  async function handleResetPassword(e) {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 8) {
+      setError(t("forgot_error_password_short"));
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError(t("forgot_error_password_mismatch"));
+      return;
+    }
+    setError("");
+    setLoading(true);
+    try {
+      await resetPassword({
+        reset_token: resetToken,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+      setStep("success");
+    } catch (err) {
+      setError(extractError(err, t("forgot_error_default")));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ============================================================
+  // RESEND OTP
+  // ============================================================
   async function handleResend() {
     if (resendCooldown > 0) return;
     setError("");
     setLoading(true);
     try {
-      await requestPasswordReset({ email: form.email, newPassword: form.newPassword });
+      await forgotPassword(identifier.trim());
       startResendCooldown();
     } catch (err) {
-      setError(err?.response?.data?.message || t("forgot_error_default"));
+      setError(extractError(err, t("forgot_error_default")));
     } finally {
       setLoading(false);
     }
@@ -174,27 +221,13 @@ export default function ForgotPasswordPage() {
                 <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{t("forgot_heading")}</h1>
                 <p className="text-gray-500 text-sm mb-7 text-center">{t("forgot_subtext")}</p>
 
-                <form onSubmit={handleSubmitNewPassword} className="space-y-4">
+                <form onSubmit={handleRequestOtp} className="space-y-4">
                   <FieldInput
                     icon={icons.mail}
-                    type="email"
+                    type="text"
                     label={t("forgot_email_placeholder")}
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  />
-                  <FieldInput
-                    icon={icons.lock}
-                    type="password"
-                    label={t("forgot_new_password_placeholder")}
-                    value={form.newPassword}
-                    onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
-                  />
-                  <FieldInput
-                    icon={icons.lock}
-                    type="password"
-                    label={t("forgot_confirm_password_placeholder")}
-                    value={form.confirmPassword}
-                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
                   />
 
                   {error && <p className="text-[#C1502E] text-sm">{error}</p>}
@@ -223,7 +256,7 @@ export default function ForgotPasswordPage() {
 
                 <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{t("forgot_otp_heading")}</h1>
                 <p className="text-gray-500 text-sm mb-7 text-center">
-                  {t("forgot_otp_subtext")} <span className="font-semibold text-gray-800">{form.email}</span>
+                  {t("forgot_otp_subtext")} <span className="font-semibold text-gray-800">{identifier}</span>
                 </p>
 
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
@@ -265,6 +298,47 @@ export default function ForgotPasswordPage() {
                     </button>
                   </div>
                 </div>
+              </>
+            )}
+
+            {step === "newpass" && (
+              <>
+                <div className="w-12 h-12 rounded-full bg-[#E8A33D]/15 flex items-center justify-center mb-5 mx-auto">
+                  <span className="text-[#E8A33D]">{icons.lock}</span>
+                </div>
+
+                <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">
+                  {t("forgot_panel_heading")}
+                </h1>
+                <p className="text-gray-500 text-sm mb-7 text-center">
+                  {t("forgot_subtext")}
+                </p>
+
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <FieldInput
+                    icon={icons.lock}
+                    type="password"
+                    label={t("forgot_new_password_placeholder")}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                  <FieldInput
+                    icon={icons.lock}
+                    type="password"
+                    label={t("forgot_confirm_password_placeholder")}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+
+                  {error && <p className="text-[#C1502E] text-sm">{error}</p>}
+
+                  <button
+                    disabled={loading}
+                    className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
+                  >
+                    {loading ? t("forgot_verifying") : t("forgot_verify_submit")}
+                  </button>
+                </form>
               </>
             )}
 
