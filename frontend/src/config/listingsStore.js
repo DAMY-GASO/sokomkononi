@@ -345,3 +345,86 @@ export async function hydrateListingsFromApi() {
 }
 
 export { normalizeListingFromApi };
+
+import { listingsApi } from "../api/listings.js";
+
+// ============================================================
+// API-BACKED ACTIONS (optimistic + fallback)
+// ============================================================
+
+export async function fetchMyListingsFromApi() {
+  try {
+    const data = await listingsApi.mine({ page_size: 100 });
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    const normalized = rawList.map(normalizeListingFromApi).filter(Boolean);
+    saveListings(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[listingsStore] fetchMyListings failed:", err);
+    return { source: "error", count: getListings().length };
+  }
+}
+
+export async function createListingAsync(payload) {
+  const tempId = `temp_${Date.now()}`;
+  const optimistic = { ...payload, id: tempId, status: payload.status || "draft" };
+  addListing(optimistic);
+
+  try {
+    const created = await listingsApi.create(payload);
+    const current = getListings();
+    const next = current.map((l) =>
+      l.id === tempId ? normalizeListingFromApi(created) : l
+    );
+    saveListings(next);
+    return { ok: true, listing: normalizeListingFromApi(created) };
+  } catch (err) {
+    console.warn("[listingsStore] createListing API failed:", err);
+    return { ok: false, error: err, listing: optimistic };
+  }
+}
+
+export async function updateListingAsync(id, patch) {
+  updateListing(id, patch);
+  try {
+    await listingsApi.update(id, patch);
+    return { ok: true };
+  } catch (err) {
+    console.warn("[listingsStore] updateListing API failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function removeListingAsync(id) {
+  removeListing(id);
+  try {
+    await listingsApi.remove(id);
+    return { ok: true };
+  } catch (err) {
+    console.warn("[listingsStore] removeListing API failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function pauseListingAsync(id) {
+  return updateListingAsync(id, { status: "paused", pausedAt: new Date().toISOString() });
+}
+
+export async function unpauseListingAsync(id) {
+  return updateListingAsync(id, { status: "live", pausedAt: null });
+}
+
+export async function markSoldAsync(id) {
+  return updateListingAsync(id, { status: "sold", soldAt: new Date().toISOString() });
+}
+
+export async function payListingFeeAsync(id, payload) {
+  try {
+    const data = await listingsApi.payFee(id, payload);
+    updateListing(id, { status: "live", paidAt: new Date().toISOString() });
+    return { ok: true, data };
+  } catch (err) {
+    console.warn("[listingsStore] payFee API failed:", err);
+    return { ok: false, error: err };
+  }
+}
