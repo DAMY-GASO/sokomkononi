@@ -1,9 +1,3 @@
-// ============================================================
-// DashboardShell.jsx
-// Dashboard shell — seller + buyer.
-// Bilingual kamili + centered + PageLoader (mara moja tu).
-// ============================================================
-
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -38,14 +32,16 @@ import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../context/AuthContext.jsx";
 import {
   useListings,
-  addListing as addListingToStore,
-  removeListing as removeListingFromStore,
-  updateListing as updateListingInStore,
   checkListingExpiry,
   checkListingExpiringSoon,
-  pauseListing,
-  unpauseListing,
-  markAsSold,
+  fetchMyListingsFromApi,
+  createListingAsync,
+  removeListingAsync,
+  updateListingAsync,
+  pauseListingAsync,
+  unpauseListingAsync,
+  markSoldAsync,
+  payListingFeeAsync,
 } from "../../../config/listingsStore.js";
 import { useSentAnnouncements } from "../../../config/announcementsStore.js";
 import {
@@ -89,137 +85,45 @@ import {
   leaveWaitingList,
 } from "../../../config/waitingListStore.js";
 
-// ============================================================
-// PAGE LOADER — rahisi, inaonekana mara moja tu
-// ============================================================
 import PageLoader from "../../../components/PageLoader.jsx";
 
 // ============================================================
-// SELLER NAV — Bilingual kamili
+// SELLER NAV
 // ============================================================
 const SELLER_NAV = [
-  {
-    key: "overview",
-    label: { sw: "Muhtasari", en: "Overview" },
-    icon: LayoutGrid,
-  },
-  {
-    key: "post",
-    label: { sw: "Weka Mali Yako", en: "Post Property" },
-    icon: PlusCircle,
-  },
-  {
-    key: "listings",
-    label: { sw: "Mali Zangu", en: "My Listings" },
-    icon: ListChecks,
-  },
+  { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
+  { key: "post", label: { sw: "Weka Mali Yako", en: "Post Property" }, icon: PlusCircle },
+  { key: "listings", label: { sw: "Mali Zangu", en: "My Listings" }, icon: ListChecks },
   { key: "leads", label: { sw: "Maulizio", en: "Enquiries" }, icon: Inbox },
-  {
-    key: "saved",
-    label: { sw: "Zilizohifadhiwa", en: "Saved" },
-    icon: Heart,
-  },
+  { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
   { key: "boost", label: { sw: "Boost Sasa", en: "Boost Now" }, icon: Rocket },
-  {
-    key: "leading",
-    label: { sw: "Ada ya Kipaumbele", en: "Leading Fee" },
-    icon: TrendingUp,
-  },
-  {
-    key: "advertise",
-    label: { sw: "Tangaza Sasa", en: "Advertise Now" },
-    icon: Megaphone,
-  },
-  {
-    key: "deals",
-    label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" },
-    icon: MessagesSquare,
-  },
-  {
-    key: "messages",
-    label: { sw: "Ujumbe", en: "Messages" },
-    icon: MessageSquare,
-  },
-  {
-    key: "notifications",
-    label: { sw: "Taarifa", en: "Notifications" },
-    icon: Bell,
-  },
-  {
-    key: "transactions",
-    label: { sw: "Miamala Yangu", en: "My Transactions" },
-    icon: Receipt,
-  },
-  {
-    key: "bundles",
-    label: { sw: "Nunua Vifurushi", en: "Buy Bundles" },
-    icon: Package,
-  },
+  { key: "leading", label: { sw: "Ada ya Kipaumbele", en: "Leading Fee" }, icon: TrendingUp },
+  { key: "advertise", label: { sw: "Tangaza Sasa", en: "Advertise Now" }, icon: Megaphone },
+  { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
+  { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
+  { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
+  { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
+  { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
 ];
 
 // ============================================================
-// BUYER NAV — Bilingual kamili + searches + safety
+// BUYER NAV
 // ============================================================
 const BUYER_NAV = [
-  {
-    key: "overview",
-    label: { sw: "Muhtasari", en: "Overview" },
-    icon: LayoutGrid,
-  },
-  {
-    key: "browse",
-    label: { sw: "Tafuta Mali", en: "Browse Properties" },
-    icon: Search,
-  },
-  {
-    key: "saved",
-    label: { sw: "Zilizohifadhiwa", en: "Saved" },
-    icon: Heart,
-  },
-  {
-    key: "searches",
-    label: { sw: "Utafutaji Wangu", en: "My Searches" },
-    icon: Bell,
-  },
-  {
-    key: "deals",
-    label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" },
-    icon: MessagesSquare,
-  },
-  {
-    key: "messages",
-    label: { sw: "Ujumbe", en: "Messages" },
-    icon: MessageSquare,
-  },
-  {
-    key: "notifications",
-    label: { sw: "Taarifa", en: "Notifications" },
-    icon: Bell,
-  },
-  {
-    key: "waiting",
-    label: { sw: "Orodha ya Kusubiri", en: "Waiting List" },
-    icon: Clock3,
-  },
-  {
-    key: "transactions",
-    label: { sw: "Miamala Yangu", en: "My Transactions" },
-    icon: Receipt,
-  },
-  {
-    key: "bundles",
-    label: { sw: "Nunua Vifurushi", en: "Buy Bundles" },
-    icon: Package,
-  },
-  {
-    key: "safety",
-    label: { sw: "Usalama & Msaada", en: "Safety & Support" },
-    icon: Shield,
-  },
+  { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
+  { key: "browse", label: { sw: "Tafuta Mali", en: "Browse Properties" }, icon: Search },
+  { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
+  { key: "searches", label: { sw: "Utafutaji Wangu", en: "My Searches" }, icon: Bell },
+  { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
+  { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
+  { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
+  { key: "waiting", label: { sw: "Orodha ya Kusubiri", en: "Waiting List" }, icon: Clock3 },
+  { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
+  { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
+  { key: "safety", label: { sw: "Usalama & Msaada", en: "Safety & Support" }, icon: Shield },
 ];
 
 const URL_TO_STATE = {
-  // Seller
   "/dashboard": { side: "seller", key: "overview" },
   "/dashboard/seller": { side: "seller", key: "overview" },
   "/dashboard/overview": { side: "seller", key: "overview" },
@@ -236,7 +140,6 @@ const URL_TO_STATE = {
   "/dashboard/transactions": { side: "seller", key: "transactions" },
   "/dashboard/bundles": { side: "seller", key: "bundles" },
 
-  // Buyer
   "/dashboard/buyer": { side: "buyer", key: "overview" },
   "/dashboard/buyer/overview": { side: "buyer", key: "overview" },
   "/dashboard/buyer/browse": { side: "buyer", key: "browse" },
@@ -282,9 +185,6 @@ const STATE_TO_URL = {
   },
 };
 
-// ============================================================
-// ANNOUNCEMENT HELPERS — bilingual
-// ============================================================
 function getAnnouncementMessage(a, lang) {
   if (!a) return "";
   if (lang === "en" && a.messageEn) return a.messageEn;
@@ -303,14 +203,16 @@ export default function DashboardShell() {
   const { lang, setLang } = useLanguage();
   const { user, logout } = useAuth();
 
-  // ============================================================
-  // LOADER — inaonekana mara moja tu mtumiaji anapoingia dashboard
-  // ============================================================
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const id = setTimeout(() => setReady(true), 300);
     return () => clearTimeout(id);
+  }, []);
+
+  // Fetch listings kutoka API mara moja
+  useEffect(() => {
+    fetchMyListingsFromApi();
   }, []);
 
   const [side, setSide] = useState("seller");
@@ -340,9 +242,6 @@ export default function DashboardShell() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ============================================================
-  // SOMA URL NA KUFUNGUA TAB SAHIHI
-  // ============================================================
   useEffect(() => {
     const path = location.pathname;
     const match = URL_TO_STATE[path];
@@ -352,16 +251,10 @@ export default function DashboardShell() {
     }
   }, [location.pathname]);
 
-  // ============================================================
-  // HIFADHI "SIDE" YA SASA KWA STORE
-  // ============================================================
   useEffect(() => {
     setDashboardSide(side);
   }, [side]);
 
-  // ============================================================
-  // KUMBUSHO LA RESERVATION + LISTING EXPIRY + SAVED CHANGES
-  // ============================================================
   useEffect(() => {
     checkReservationReminders();
     checkListingExpiry();
@@ -376,9 +269,6 @@ export default function DashboardShell() {
     return () => clearInterval(interval);
   }, []);
 
-  // ============================================================
-  // TICKER
-  // ============================================================
   useEffect(() => {
     if (announcements.length === 0) return;
     const id = setInterval(() => {
@@ -387,9 +277,6 @@ export default function DashboardShell() {
     return () => clearInterval(id);
   }, [announcements.length]);
 
-  // ============================================================
-  // FUNGA USER MENU UKIBOFYA NJE
-  // ============================================================
   useEffect(() => {
     if (!userMenuOpen) return;
     const handleClickOutside = () => setUserMenuOpen(false);
@@ -400,15 +287,15 @@ export default function DashboardShell() {
   const accent = side === "seller" ? COLORS.gold : COLORS.green;
 
   // ============================================================
-  // LISTING HELPERS
+  // LISTING HELPERS — API-backed
   // ============================================================
-  const addListing = (listing) => addListingToStore(listing);
-  const removeListing = (id) => removeListingFromStore(id);
-  const updateListing = (id, patch) => updateListingInStore(id, patch);
+  const addListing = (listing) => createListingAsync(listing);
+  const removeListing = (id) => removeListingAsync(id);
+  const updateListing = (id, patch) => updateListingAsync(id, patch);
 
-  const handlePause = (id) => pauseListing(id);
-  const handleResume = (id) => unpauseListing(id);
-  const handleMarkSold = (id) => markAsSold(id);
+  const handlePause = (id) => pauseListingAsync(id);
+  const handleResume = (id) => unpauseListingAsync(id);
+  const handleMarkSold = (id) => markSoldAsync(id);
 
   // ============================================================
   // TRANSACTION HELPERS
@@ -427,11 +314,7 @@ export default function DashboardShell() {
     });
   };
 
-  const handleFinalPaymentConfirmed = (
-    deal,
-    dealSide,
-    { method, reference }
-  ) => {
+  const handleFinalPaymentConfirmed = (deal, dealSide, { method, reference }) => {
     const isSeller = dealSide === "seller";
     addTransaction({
       type: isSeller ? "sale" : "purchase",
@@ -475,8 +358,8 @@ export default function DashboardShell() {
     if (listingId) navigate(`/mali/${listingId}`);
   };
 
-  const markListingPaid = (id) => {
-    updateListing(id, { status: "live" });
+  const markListingPaid = async (id) => {
+    await payListingFeeAsync(id, { payment_reference: `manual_${Date.now()}` });
     const listing = listings.find((l) => l.id === id);
     if (listing) {
       notifyListingFeePaid({
@@ -607,9 +490,7 @@ export default function DashboardShell() {
     if (activeKey === "messages") {
       return (
         <MessagesPage
-          initialConversationId={
-            new URLSearchParams(location.search).get("c")
-          }
+          initialConversationId={new URLSearchParams(location.search).get("c")}
         />
       );
     }
@@ -631,7 +512,6 @@ export default function DashboardShell() {
         />
       );
     }
-    // FALLBACK
     return (
       <main className="flex-1 p-4 sm:p-6 text-center">
         <h1
@@ -669,9 +549,6 @@ export default function DashboardShell() {
     );
   };
 
-  // ============================================================
-  // USER AVATAR
-  // ============================================================
   const renderAvatar = (size = "w-8 h-8", textSize = "text-sm") => {
     if (user?.avatar) {
       return (
@@ -692,9 +569,6 @@ export default function DashboardShell() {
     );
   };
 
-  // ============================================================
-  // LOADER — kama bado haijawa tayari, onyesha loader
-  // ============================================================
   if (!ready) {
     return <PageLoader lang={lang} />;
   }
@@ -749,7 +623,6 @@ export default function DashboardShell() {
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          {/* Seller/Buyer Toggle */}
           <div
             style={{ background: COLORS.nightSoft }}
             className="hidden md:flex items-center rounded-full p-1"
@@ -778,7 +651,6 @@ export default function DashboardShell() {
             </button>
           </div>
 
-          {/* Language Switcher */}
           <div className="relative">
             <button
               onClick={() => setLangOpen((v) => !v)}
@@ -836,7 +708,6 @@ export default function DashboardShell() {
             )}
           </div>
 
-          {/* Home button */}
           <a
             href="/"
             className="text-white/80 hover:text-white p-1.5 transition-colors"
@@ -845,7 +716,6 @@ export default function DashboardShell() {
             <Home size={20} />
           </a>
 
-          {/* Notifications */}
           <button
             onClick={() => handleNavClick("notifications")}
             className="relative text-white/80 hover:text-white p-1.5 transition-colors"
@@ -860,7 +730,6 @@ export default function DashboardShell() {
             )}
           </button>
 
-          {/* USER AVATAR + MENU */}
           <div className="relative">
             <button
               onClick={(e) => {
@@ -955,7 +824,7 @@ export default function DashboardShell() {
         </button>
       </div>
 
-      {/* ANNOUNCEMENT TICKER — bilingual */}
+      {/* ANNOUNCEMENT TICKER */}
       <div
         style={{ background: COLORS.sandLine, color: COLORS.night }}
         className="w-full flex items-center gap-2 px-4 py-1.5 text-xs sm:text-sm"
