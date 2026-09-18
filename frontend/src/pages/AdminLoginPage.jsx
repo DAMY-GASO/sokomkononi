@@ -64,40 +64,54 @@ export default function AdminLoginPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+
     if (!form.email.trim() || !form.password) {
-      setError(t("admin_login_error_required") || "Tafadhali jaza sehemu zote.");
+      setError(
+        t("admin_login_error_required") || "Tafadhali jaza sehemu zote."
+      );
       return;
     }
+
     setError("");
     setLoading(true);
+
     try {
       await adminLogin(form);
       navigate("/admin/dashboard");
     } catch (err) {
-      setError(err?.response?.data?.message || err.message || t("admin_login_error_default") || "Barua pepe au nenosiri si sahihi.");
+      const firstFieldError =
+        err?.data && typeof err.data === "object" && !err.data.detail
+          ? Object.values(err.data).flat().find((v) => typeof v === "string")
+          : null;
+
+      setError(
+        err?.data?.detail ||
+        firstFieldError ||
+        err?.message ||
+        t("admin_login_error_default") ||
+        "Barua pepe au nenosiri si sahihi."
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  // ============================================
-  // MAANDISHI YA UPANDE WA KUSHOTO (LEFT PANEL)
-  // ============================================
   const leftHeading = t("admin_panel_heading") || "Dhibiti SokoMkononi";
-  const leftSubtext = t("admin_panel_subtext") || "Ingia kwenye paneli ya msimamizi ili kudhibiti mali, wateja na matangazo.";
+  const leftSubtext =
+    t("admin_panel_subtext") ||
+    "Ingia kwenye paneli ya msimamizi ili kudhibiti mali, wateja na matangazo.";
 
   const adminFeatures = [
     t("admin_feature1") || "Dhibiti mali zote",
     t("admin_feature2") || "Simamia wateja na wauzaji",
     t("admin_feature3") || "Thibitisha matangazo",
-    t("admin_feature4") || "Angalia taarifa za mauzo"
+    t("admin_feature4") || "Angalia taarifa za mauzo",
   ];
 
-  // ============================================
-  // MAANDISHI YA UPANDE WA KULIA (RIGHT PANEL - FORM)
-  // ============================================
   const formHeading = t("admin_login_heading") || "Ingia kama Msimamizi";
-  const formSubtext = t("admin_login_subtext") || "Ingiza barua pepe na nenosiri lako la msimamizi.";
+  const formSubtext =
+    t("admin_login_subtext") ||
+    "Ingiza barua pepe na nenosiri lako la msimamizi.";
 
   return (
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
@@ -116,8 +130,12 @@ export default function AdminLoginPage() {
             <div className="w-16 h-16 rounded-full bg-[#E8A33D]/20 flex items-center justify-center mx-auto mb-4">
               {icons.shield}
             </div>
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">{leftHeading}</h2>
-            <p className="text-white/60 text-sm mt-3 leading-relaxed">{leftSubtext}</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
+              {leftHeading}
+            </h2>
+            <p className="text-white/60 text-sm mt-3 leading-relaxed">
+              {leftSubtext}
+            </p>
 
             <ul className="mt-8 space-y-3 inline-flex flex-col items-start mx-auto">
               {adminFeatures.map((feature, i) => (
@@ -132,7 +150,9 @@ export default function AdminLoginPage() {
           </div>
 
           <div className="relative z-10 border-t border-white/10 pt-6 max-w-sm mx-auto text-center">
-            <p className="text-white/50 text-xs">🔒 {t("admin_secure_access") || "Mwamini Msimamizi tu ndiye anayepata mamlaka ya kuingia."}</p>
+            <p className="text-white/50 text-xs">
+              🔒 {t("admin_secure_access") || "Mwamini Msimamizi tu ndiye anayepata mamlaka ya kuingia."}
+            </p>
           </div>
 
           <SkylineDecoration />
@@ -141,8 +161,12 @@ export default function AdminLoginPage() {
         {/* ================= RIGHT PANEL - Admin Login Form ================= */}
         <div className="flex items-center justify-center px-5 sm:px-10 py-10 md:py-12 bg-white">
           <div className="w-full max-w-sm">
-            <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{formHeading}</h1>
-            <p className="text-gray-500 text-sm mb-7 text-center">{formSubtext}</p>
+            <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">
+              {formHeading}
+            </h1>
+            <p className="text-gray-500 text-sm mb-7 text-center">
+              {formSubtext}
+            </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -150,9 +174,12 @@ export default function AdminLoginPage() {
                   {t("admin_login_email") || "Barua pepe"}
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">{icons.mail}</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                    {icons.mail}
+                  </span>
                   <input
                     type="email"
+                    autoComplete="username"
                     className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
                     placeholder="admin@sokomkononi.co.tz"
                     value={form.email}
@@ -166,9 +193,12 @@ export default function AdminLoginPage() {
                   {t("admin_login_password") || "Nenosiri"}
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">{icons.lock}</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                    {icons.lock}
+                  </span>
                   <input
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
                     placeholder="••••••••"
                     value={form.password}
@@ -188,15 +218,21 @@ export default function AdminLoginPage() {
               {error && <p className="text-[#C1502E] text-sm">{error}</p>}
 
               <button
+                type="submit"
                 disabled={loading}
-                className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
+                className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? t("admin_login_submitting") || "Inaingia..." : t("admin_login_submit") || "Ingia kama Msimamizi"}
+                {loading
+                  ? t("admin_login_submitting") || "Inaingia..."
+                  : t("admin_login_submit") || "Ingia kama Msimamizi"}
               </button>
             </form>
 
             <p className="mt-6 text-sm text-gray-500 text-center">
-              <Link to="/login" className="text-[#2F6D4F] font-semibold hover:underline">
+              <Link
+                to="/login"
+                className="text-[#2F6D4F] font-semibold hover:underline"
+              >
                 {t("admin_back_to_user_login") || "← Rudi kwenye Ingia la Mtumiaji"}
               </Link>
             </p>
