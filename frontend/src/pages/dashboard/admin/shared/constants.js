@@ -1,19 +1,3 @@
-// ============================================================
-// constants.js
-// Shared constants + helpers kwa Admin dashboard.
-//
-// Hii ni chanzo kimoja cha ukweli kwa:
-//   - COLORS (brand tokens)
-//   - FONTS (brand fonts)
-//   - NAV (sidebar navigation)
-//   - ADMIN_NOTIFICATION_ICONS (icons za notifications)
-//   - timeAgo() (kwa notifications)
-//   - formatTZS() (kwa pesa)
-//   - getCategory() / getCategoryIcon() — re-export kutoka categoriesStore
-//
-// Sections zote zinatumia NAV hii.
-// ============================================================
-
 import {
   LayoutDashboard,
   Users,
@@ -52,19 +36,28 @@ export {
   getCategoryLabel,
 } from "../../../../config/categoriesStore.js";
 
+// ============================================================
+// BRAND TOKENS
+// ============================================================
 export const COLORS = {
+  // Brand
   night: "#101A2E",
+  nightSoft: "#1B2740",
   sand: "#F5F3EC",
+  sandLine: "#E6E2D6",
   gold: "#E8A33D",
   green: "#2F6D4F",
   rust: "#C1502E",
-  nightSoft: "#1B2740",
-  sandLine: "#E6E2D6",
+
+  // Text — typography system
+  textPrimary: "#111827",
+  textSecondary: "#6B7280",
+  textMuted: "#9CA3AF",
 };
 
 export const FONTS = {
-  display: "'Fraunces', serif",
-  body: "'Manrope', sans-serif",
+  display: "'Inter', system-ui, -apple-system, sans-serif",
+  body: "'Inter', system-ui, -apple-system, sans-serif",
 };
 
 // ============================================================
@@ -165,7 +158,8 @@ export function timeAgo(dateStr, lang = "sw") {
   const ms = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(ms / 60000);
   if (mins < 1) return lang === "sw" ? "Sasa hivi" : "Just now";
-  if (mins < 60) return lang === "sw" ? `Dakika ${mins} zilizopita` : `${mins} min ago`;
+  if (mins < 60)
+    return lang === "sw" ? `Dakika ${mins} zilizopita` : `${mins} min ago`;
   const hours = Math.floor(mins / 60);
   if (hours < 24)
     return lang === "sw"
