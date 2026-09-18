@@ -9,14 +9,12 @@ import ScrollToHash from "./components/ScrollToHash.jsx";
 // ============================================================
 import {
   initializeCategories,
-  getCategories,
+  hydrateCategoriesFromApi,
 } from "./config/categoriesStore.js";
 import { SEED_CATEGORIES } from "./config/seedCategories.js";
-import {
-  initializeBundles,
-  getBundles,
-} from "./config/bundlesStore.js";
+import { initializeBundles } from "./config/bundlesStore.js";
 import { SEED_BUNDLES } from "./config/bundlesStore.js";
+import { hydrateListingsFromApi } from "./config/listingsStore.js";
 
 // ============================================================
 // PUBLIC PAGES
@@ -43,7 +41,6 @@ import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 import PropertyDetailPage from "./pages/PropertyDetailPage.jsx";
 import AllCategoriesPage from "./pages/AllCategoriesPage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
-import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 import AllListingsPage from "./pages/AllListingsPage.jsx";
 import BrowseProperties from "./pages/dashboard/components/BrowseProperties.jsx";
 import Navbar from "./components/Navbar.jsx";
@@ -56,13 +53,12 @@ import BottomNav from "./components/BottomNav.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
 
 // ============================================================
-// BUNDLES (user-facing; admin bundles inaingizwa ndani ya
-// AdminDashboard.jsx yenyewe, si hapa)
+// BUNDLES
 // ============================================================
 import BundlesPage from "./pages/BundlesPage.jsx";
 
 // ============================================================
-// DASHBOARD (Seller + Buyer — moja inashughulikia zote mbili)
+// DASHBOARD
 // ============================================================
 import DashboardShell from "./pages/dashboard/components/DashboardShell.jsx";
 
@@ -72,18 +68,7 @@ import DashboardShell from "./pages/dashboard/components/DashboardShell.jsx";
 import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
 
 // ============================================================
-// BROWSE / TAFUTA — wrapper ndogo kwa sababu BrowseProperties
-// inatumia `lang` kama prop (kama DashboardShell.jsx inavyoifanya
-// tayari), na wrapper hii inatakiwa iwe ndani ya <LanguageProvider>
-// (App() yenyewe iko juu ya provider, hivyo haiwezi kutumia
-// useLanguage() moja kwa moja).
-//
-// MUHIMU: BrowseProperties.jsx inatumika mahali pawili — hapa
-// (public /tafuta, bila kingine chochote) na ndani ya
-// DashboardShell.jsx (/dashboard/buyer/browse, na sidebar/nav yake
-// yenyewe). Kwa hiyo Navbar/Footer/BottomNav vinaongezwa HAPA tu,
-// si ndani ya BrowseProperties.jsx yenyewe — la sivyo dashboard
-// ingeishia na nav mbili juu ya nyingine.
+// BROWSE / TAFUTA wrapper
 // ============================================================
 function BrowseRoute() {
   const { lang } = useLanguage();
@@ -99,29 +84,21 @@ function BrowseRoute() {
 
 function App() {
   // ============================================================
-  // INITIALIZE CATEGORIES + BUNDLES — mara moja tu
-  // ============================================================
-  // Inaweka categories 11 na bundles 20+ za awali KAMA bado
-  // hazipo. Kama Admin ameongeza/kubadilisha, haitagusa
-  // (inaheshimu mabadiliko yake).
-  //
-  // Backend halisi ikiwepo: ondoa hii, badala yake
-  // stores zitafetch kutoka API kwenye hooks.
+  // INITIALIZE — categories + bundles + hydrate kutoka API
   // ============================================================
   useEffect(() => {
-    // Categories
+    // 1) Seed mara moja
     initializeCategories(SEED_CATEGORIES);
-
-    // Bundles
     initializeBundles(SEED_BUNDLES);
 
-    // DEV PEKEE — ondoa comment kama unataka reset kila reload:
-    // if (import.meta.env.DEV) {
-    //   localStorage.removeItem("sokomkononi_categories_v2");
-    //   localStorage.removeItem("sokomkononi_bundles_v1");
-    //   initializeCategories(SEED_CATEGORIES);
-    //   initializeBundles(SEED_BUNDLES);
-    // }
+    // 2) Jaribu kupata data halisi kutoka API
+    async function hydrateFromApi() {
+      await Promise.allSettled([
+        hydrateCategoriesFromApi(),
+        hydrateListingsFromApi(),
+      ]);
+    }
+    hydrateFromApi();
   }, []);
 
   return (
@@ -130,48 +107,32 @@ function App() {
         <Router>
           <ScrollToHash />
           <Routes>
-            {/* ============================================================ */}
-            {/* PUBLIC ROUTES */}
-            {/* ============================================================ */}
+            {/* PUBLIC */}
             <Route path="/" element={<HomePage />} />
             <Route path="/kuhusu" element={<AboutPage />} />
             <Route path="/mawasiliano" element={<ContactPage />} />
             <Route path="/sheria" element={<TermsPage />} />
             <Route path="/faragha" element={<PrivacyPage />} />
-            <Route
-              path="/jinsi-ya-kununua"
-              element={<JinsiYaKununuaNaKuuza />}
-            />
+            <Route path="/jinsi-ya-kununua" element={<JinsiYaKununuaNaKuuza />} />
 
-            {/* ============================================================ */}
-            {/* AUTH ROUTES */}
-            {/* ============================================================ */}
+            {/* AUTH */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotpasswordPage />} />
             <Route path="/waitlist" element={<WaitlistPage />} />
 
-            {/* ============================================================ */}
-            {/* PROPERTY & SEARCH ROUTES */}
-            {/* ============================================================ */}
+            {/* PROPERTY & SEARCH */}
             <Route path="/mali/:id" element={<PropertyDetailPage />} />
             <Route path="/property/:id" element={<PropertyDetailPage />} />
-            {/* "/kategoria" (bila slug) = KATEGORIA ZOTE. */}
-            {/* "/kategoria/:slug" = mali za kategoria MOJA pekee. */}
             <Route path="/kategoria" element={<AllCategoriesPage />} />
             <Route path="/kategoria/:slug" element={<CategoryPage />} />
             <Route path="/tafuta" element={<BrowseRoute />} />
-            <Route path="/search" element={<SearchResultsPage />} />
             <Route path="/mali-zote" element={<AllListingsPage />} />
 
-            {/* ============================================================ */}
-            {/* BUNDLES — user anaweza kununua bundle hapa */}
-            {/* ============================================================ */}
+            {/* BUNDLES */}
             <Route path="/bundles" element={<BundlesPage />} />
 
-            {/* ============================================================ */}
-            {/* DASHBOARD ROUTES — SELLER SIDE */}
-            {/* ============================================================ */}
+            {/* DASHBOARD — SELLER */}
             <Route path="/dashboard" element={<DashboardShell />} />
             <Route path="/dashboard/seller" element={<DashboardShell />} />
             <Route path="/dashboard/overview" element={<DashboardShell />} />
@@ -188,9 +149,7 @@ function App() {
             <Route path="/dashboard/notifications" element={<DashboardShell />} />
             <Route path="/dashboard/transactions" element={<DashboardShell />} />
 
-            {/* ============================================================ */}
-            {/* DASHBOARD ROUTES — BUYER SIDE */}
-            {/* ============================================================ */}
+            {/* DASHBOARD — BUYER */}
             <Route path="/dashboard/buyer" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/overview" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/browse" element={<DashboardShell />} />
@@ -204,12 +163,8 @@ function App() {
             <Route path="/dashboard/buyer/transactions" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/safety" element={<DashboardShell />} />
 
-            {/* ============================================================ */}
-            {/* ADMIN ROUTES */}
-            {/* ============================================================ */}
+            {/* ADMIN */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
-
-            {/* Admin Dashboard — sections zote 13 + profile + bundles */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/overview" element={<AdminDashboard />} />
@@ -228,15 +183,11 @@ function App() {
             <Route path="/admin/staff" element={<AdminDashboard />} />
             <Route path="/admin/profile" element={<AdminDashboard />} />
 
-            {/* ============================================================ */}
-            {/* PROFILE ROUTES */}
-            {/* ============================================================ */}
+            {/* PROFILE */}
             <Route path="/wasifu" element={<ProfilePage />} />
             <Route path="/profile" element={<ProfilePage />} />
 
-            {/* ============================================================ */}
-            {/* FALLBACK — LAZIMA IWE YA MWISHO */}
-            {/* ============================================================ */}
+            {/* FALLBACK */}
             <Route path="*" element={<HomePage />} />
           </Routes>
         </Router>
