@@ -89,8 +89,19 @@ function FieldInput({ icon, type = "text", value, onChange, label, inputMode, re
   );
 }
 
+// Kuchukua field error kutoka DRF response
+function extractError(err, fallback) {
+  if (err?.data && typeof err.data === "object") {
+    // { detail: "..." } au { email: ["..."] }
+    if (err.data.detail) return err.data.detail;
+    const first = Object.values(err.data).flat().find((v) => typeof v === "string");
+    if (first) return first;
+  }
+  return err?.message || fallback;
+}
+
 export default function RegisterPage() {
-  const { sendOtp, verifyOtp, register } = useAuth();
+  const { verifyOtp, register } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -105,9 +116,6 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  // ============================================
-  // MAANDISHI YA UPANDE WA KUSHOTO (LEFT PANEL)
-  // ============================================
   function leftHeading() {
     if (intent === "buy") return t("register_panel_heading_buy");
     if (intent === "sell") return t("register_panel_heading_sell");
@@ -120,9 +128,6 @@ export default function RegisterPage() {
     return t("register_panel_subtext_default");
   }
 
-  // ============================================
-  // MAANDISHI YA UPANDE WA KULIA (RIGHT PANEL - FORM)
-  // ============================================
   function formHeading() {
     if (intent === "buy") return t("register_form_heading_buy");
     if (intent === "sell") return t("register_form_heading_sell");
@@ -145,7 +150,10 @@ export default function RegisterPage() {
     return "";
   }
 
-  async function handleSendOtp(e) {
+  // ============================================
+  // STEP 1: Register → API inatuma OTP
+  // ============================================
+  async function handleRegister(e) {
     e.preventDefault();
     const validationError = validateForm();
     if (validationError) {
@@ -155,16 +163,20 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      await sendOtp(form.email);
+      const { confirmPassword, ...payload } = form;
+      await register({ ...payload, intent: intent || null });
       setStep("otp");
       startResendCooldown();
     } catch (err) {
-      setError(err?.response?.data?.message || t("register_error_default"));
+      setError(extractError(err, t("register_error_default")));
     } finally {
       setLoading(false);
     }
   }
 
+  // ============================================
+  // STEP 2: Verify OTP → JWT + user
+  // ============================================
   async function handleVerifyOtp(e) {
     e.preventDefault();
     if (!otp.trim() || otp.trim().length < 4) {
@@ -175,11 +187,9 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await verifyOtp(form.email, otp.trim());
-      const { confirmPassword, ...payload } = form;
-      await register({ ...payload, intent: intent || null });
       navigate("/dashboard/post");
     } catch (err) {
-      setError(err?.response?.data?.message || t("register_error_otp_invalid"));
+      setError(extractError(err, t("register_error_otp_invalid")));
     } finally {
       setLoading(false);
     }
@@ -201,28 +211,20 @@ export default function RegisterPage() {
   async function handleResend() {
     if (resendCooldown > 0) return;
     setError("");
-    setLoading(true);
-    try {
-      await sendOtp(form.email);
-      startResendCooldown();
-    } catch (err) {
-      setError(err?.response?.data?.message || t("register_error_default"));
-    } finally {
-      setLoading(false);
-    }
+    // TODO: backend haitoi /auth/resend-otp/ bado
+    setError("Kama hukupokea OTP, tafadhali subiri kidogo au anza upya usajili.");
   }
 
   return (
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
-        {/* ================= LEFT PANEL - Branded ================= */}
+        {/* LEFT PANEL */}
         <div className="flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
             <span className="font-bold tracking-tight">SokoMkononi</span>
           </Link>
 
-          {/* Heading + Subtext pekee (stats na testimonial zimeondolewa) */}
           <div className="relative z-10 max-w-sm mx-auto text-center py-8 md:py-0">
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
               {leftHeading()}
@@ -232,13 +234,11 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          {/* Spacer ili skyline ibaki chini */}
           <div className="relative z-10" />
-
           <SkylineDecoration />
         </div>
 
-        {/* ================= RIGHT PANEL - Form ================= */}
+        {/* RIGHT PANEL */}
         <div className="flex items-center justify-center px-5 sm:px-10 py-10 md:py-12 bg-white">
           <div className="w-full max-w-sm animate-[fadeIn_0.4s_ease-out]">
             {step === "form" && (
@@ -246,7 +246,7 @@ export default function RegisterPage() {
                 <h1 className="text-2xl font-bold text-gray-800 mb-1 text-center">{formHeading()}</h1>
                 <p className="text-gray-500 text-sm mb-7 text-center">{formSubtext()}</p>
 
-                <form onSubmit={handleSendOtp} className="space-y-4">
+                <form onSubmit={handleRegister} className="space-y-4">
                   <FieldInput
                     icon={icons.user}
                     label={t("register_name_placeholder")}
