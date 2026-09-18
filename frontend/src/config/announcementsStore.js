@@ -1,14 +1,3 @@
-// ============================================================
-// announcementsStore.js
-// CHANZO KIMOJA CHA UKWELI kwa Matangazo ya Mfumo (System Settings >
-// Announcements upande wa Admin, na TICKER inayoonekana kwa
-// watumiaji kwenye DashboardShell).
-//
-// Kama stores nyingine — demo ya front-end pekee, localStorage +
-// custom event. Backend halisi ikiwepo, badilisha functions hizi
-// ziite API; useAnnouncements() haitahitaji kubadilika.
-// ============================================================
-
 import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "sokomkononi_announcements_v1";
@@ -106,11 +95,6 @@ export function removeAnnouncement(id) {
   return next;
 }
 
-/**
- * Hook ya React inayosoma matangazo na kujisasisha yenyewe — kwenye
- * AdminDashboard (System Settings) na DashboardShell (ticker ya
- * mtumiaji) papo hapo, bila reload.
- */
 export function useAnnouncements() {
   const [list, setList] = useState(() => getAnnouncements());
 
@@ -127,9 +111,6 @@ export function useAnnouncements() {
   return list;
 }
 
-/** Matangazo ambayo yametumwa (sent=true), tayari kuonekana kwa
- * watumiaji kwenye ticker — yaliyopangwa (scheduled, sent=false)
- * hayaonekani bado. */
 export function useSentAnnouncements() {
   const list = useAnnouncements();
   return list.filter((a) => a.sent);
