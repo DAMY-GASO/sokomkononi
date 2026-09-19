@@ -1,32 +1,70 @@
 // ============================================================
 // DealsSection.jsx
 // Deal Rooms & Dispute Resolution — Admin.
-// Bilingual + mobile-responsive.
-// Admin anaweza kufungua deal room yoyote na kuona kilichojiri.
+// Bilingual + mobile-responsive + Async actions na rollback.
 // ============================================================
 
 import React, { useState } from "react";
-import { MoreVertical, Eye, AlertTriangle } from "lucide-react";
+import { MoreVertical, Eye, AlertTriangle, Loader2 } from "lucide-react";
 import { COLORS, formatTZS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
 import DisputeReviewPanel from "../components/DealDispute/DisputeReviewPanel.jsx";
 import DealRoomViewer from "../components/DealDispute/DealRoomViewer.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
-import { useDeals, resolveDispute } from "../../../../config/dealsStore.js";
+// ⬇️ MABADILIKO: tumia resolveDisputeAsync
+import {
+  useDeals,
+  resolveDisputeAsync,
+} from "../../../../config/dealsStore.js";
 
 export default function DealsSection() {
   const { lang } = useLanguage();
   const deals = useDeals();
   const [expandedId, setExpandedId] = useState(null);
   const [disputeId, setDisputeId] = useState(null);
+  // ⬇️ MPYA: busy + error state
+  const [busy, setBusy] = useState({}); // { [dealId]: true }
+  const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const handleResolve = (id, payload) => {
-    resolveDispute(id, payload);
-    setDisputeId(null);
-    setExpandedId(null);
+  // ============================================================
+  // HANDLE RESOLVE — async + rollback
+  // ============================================================
+  const handleResolve = async (dealId, payload) => {
+    if (busy[dealId]) return;
+
+    setBusy((b) => ({ ...b, [dealId]: true }));
+    setError("");
+
+    // payload ina { action, adminNote }
+    // resolveDisputeAsync inahitaji { resolution, note }
+    const res = await resolveDisputeAsync(dealId, {
+      resolution: payload.action,
+      note: payload.adminNote || "",
+      // transactionId: unaweza kuongeza hapa kama unayo
+    });
+
+    setBusy((b) => {
+      const next = { ...b };
+      delete next[dealId];
+      return next;
+    });
+
+    if (res.ok) {
+      // Mafanikio — funga panel
+      setDisputeId(null);
+      setExpandedId(null);
+    } else {
+      setError(
+        res.error?.message ||
+          t(
+            "Imeshindwa kutatua mgogoro. Jaribu tena.",
+            "Failed to resolve dispute. Try again."
+          )
+      );
+    }
   };
 
   // ============================================================
@@ -36,6 +74,7 @@ export default function DealsSection() {
     const isDisputed = deal.status === "disputed";
     const isRoomOpen = expandedId === deal.id;
     const isDisputeOpen = disputeId === deal.id;
+    const isBusy = !!busy[deal.id];
 
     if (isDisputed) {
       return (
@@ -45,11 +84,12 @@ export default function DealsSection() {
               setExpandedId(isRoomOpen ? null : deal.id);
               setDisputeId(null);
             }}
+            disabled={isBusy}
             style={{
               borderColor: COLORS.sandLine,
               color: "var(--text-primary)",
             }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
               fullWidth ? "flex-1" : ""
             }`}
           >
@@ -61,11 +101,12 @@ export default function DealsSection() {
               setDisputeId(isDisputeOpen ? null : deal.id);
               setExpandedId(null);
             }}
+            disabled={isBusy}
             style={{
               background: COLORS.gold,
               color: COLORS.night,
             }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg hover:opacity-90 transition-opacity ${
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed ${
               fullWidth ? "flex-1" : ""
             }`}
           >
@@ -78,16 +119,16 @@ export default function DealsSection() {
       );
     }
 
-    // Deals nyingine — "Angalia Room" tu
     return (
       <div className={fullWidth ? "flex justify-end" : "flex justify-end"}>
         <button
           onClick={() => setExpandedId(isRoomOpen ? null : deal.id)}
+          disabled={isBusy}
           style={{
             borderColor: COLORS.sandLine,
             color: "var(--text-primary)",
           }}
-          className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors ${
+          className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
             fullWidth ? "w-full" : ""
           }`}
         >
@@ -113,8 +154,21 @@ export default function DealsSection() {
         )}
       />
 
+      {/* Error banner */}
+      {error && (
+        <div
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg mb-4"
+        >
+          {error}
+        </div>
+      )}
+
       {/* ============================================================
-          DESKTOP — TABLE (sm na juu)
+          DESKTOP — TABLE
           ============================================================ */}
       <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -226,7 +280,7 @@ export default function DealsSection() {
       </div>
 
       {/* ============================================================
-          MOBILE — CARD LIST (sm na chini)
+          MOBILE — CARD LIST
           ============================================================ */}
       <div className="sm:hidden flex flex-col gap-3">
         {deals.map((d) => {
@@ -239,7 +293,6 @@ export default function DealsSection() {
               className="bg-white rounded-xl border border-gray-100 overflow-hidden"
             >
               <div className="p-4">
-                {/* Title + Status */}
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-primary line-clamp-2">
@@ -262,7 +315,6 @@ export default function DealsSection() {
                   </div>
                 </div>
 
-                {/* Buyer + Seller */}
                 <div className="flex flex-col gap-0.5 text-xs text-secondary mb-2">
                   <span className="truncate">
                     {t("Mnunuzi", "Buyer")}:{" "}
@@ -278,7 +330,6 @@ export default function DealsSection() {
                   </span>
                 </div>
 
-                {/* Amount */}
                 <p
                   className="text-sm font-bold mb-3"
                   style={{ color: COLORS.rust }}
@@ -286,11 +337,9 @@ export default function DealsSection() {
                   {formatTZS(d.currentOffer ?? d.askingPrice)}
                 </p>
 
-                {/* Action Buttons */}
                 <ActionButtons deal={d} fullWidth />
               </div>
 
-              {/* Expanded — Deal Room Viewer */}
               {isExpanded && (
                 <div className="border-t border-gray-100">
                   <DealRoomViewer
@@ -301,7 +350,6 @@ export default function DealsSection() {
                 </div>
               )}
 
-              {/* Dispute Review Panel */}
               {isDisputed && isDisputeOpen && (
                 <div className="border-t border-gray-100">
                   <DisputeReviewPanel
