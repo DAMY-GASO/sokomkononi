@@ -203,3 +203,12 @@ a {
   color: var(--text-primary);
   font-weight: var(--weight-semibold);
 }
+
+.dark-surface h1,
+.dark-surface h2,
+.dark-surface h3,
+.dark-surface h4,
+.dark-surface h5,
+.dark-surface h6 {
+  color: #ffffff;
+}
