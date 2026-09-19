@@ -5,6 +5,8 @@ import {
   usePopularCategories,
   getCategoryIcon,
 } from "../config/categoriesStore.js";
+// ⬇️ MABADILIKO: Import useAuth + logoutAsync kutoka authStore
+import { useAuth, logoutAsync } from "../config/authStore.js";
 
 export default function Navbar({
   lang: langProp,
@@ -13,7 +15,8 @@ export default function Navbar({
   trustLinks = [],
 }) {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  // ⬇️ MABADILIKO: toa `user` pekee (logout ipo kama logoutAsync kutoka import)
+  const { user } = useAuth();
 
   // Soma kutoka context kama props hazijatolewa
   const { lang: langCtx, setLang: setLangCtx } = useLanguage();
@@ -71,8 +74,9 @@ export default function Navbar({
     }
   };
 
+  // ⬇️ MABADILIKO: tumia logoutAsync
   const handleLogout = async () => {
-    await logout();
+    await logoutAsync();
     navigate("/login");
   };
 
@@ -435,7 +439,6 @@ export default function Navbar({
                     >
                       {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                     </Link>
-                    {/* === IMEBADILISHWA: /dashboard/seller → /dashboard/post === */}
                     <Link
                       to="/dashboard/post"
                       onClick={() => setUserMenuOpen(false)}
