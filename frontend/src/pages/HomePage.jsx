@@ -610,11 +610,11 @@ export default function HomePage() {
                   : "A modern platform connecting property buyers and sellers in Tanzania with ease, transparency and trust."}
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3 mt-5 text-body-sm font-medium text-[#E8A33D]">
-                <span>🔎 {lang === "sw" ? "Tafuta" : "Search"}</span>
+                <span> {lang === "sw" ? "Tafuta" : "Search"}</span>
                 <span className="text-muted">|</span>
-                <span>🤝 {lang === "sw" ? "Ungana" : "Connect"}</span>
+                <span> {lang === "sw" ? "Ungana" : "Connect"}</span>
                 <span className="text-muted">|</span>
-                <span>💬 {lang === "sw" ? "Jadiliana" : "Negotiate"}</span>
+                <span> {lang === "sw" ? "Jadiliana" : "Negotiate"}</span>
               </div>
             </div>
           </Reveal>
