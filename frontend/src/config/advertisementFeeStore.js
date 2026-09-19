@@ -17,6 +17,9 @@ export const SEED_ADVERTISEMENT_FEE_CONFIG = {
   },
 };
 
+// ============================================================
+// STORAGE
+// ============================================================
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_ADVERTISEMENT_FEE_CONFIG;
   try {
@@ -36,9 +39,13 @@ function saveLocal(config) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
+// ============================================================
+// NORMALIZER
+// ============================================================
 function normalizeFromApi(raw) {
   if (!raw) return SEED_ADVERTISEMENT_FEE_CONFIG;
   return {
+    backendId: raw.id,
     price: Number(raw.price) || SEED_ADVERTISEMENT_FEE_CONFIG.price,
     days: Number(raw.days) || SEED_ADVERTISEMENT_FEE_CONFIG.days,
     label: raw.label || SEED_ADVERTISEMENT_FEE_CONFIG.label,
@@ -46,6 +53,9 @@ function normalizeFromApi(raw) {
   };
 }
 
+// ============================================================
+// READS
+// ============================================================
 export function getAdvertisementFeeConfig() {
   return readFromStorage();
 }
@@ -54,26 +64,82 @@ export function saveAdvertisementFeeConfig(config) {
   saveLocal(config);
 }
 
-export function updateAdvertisementFeePrice(price) {
-  const current = getAdvertisementFeeConfig();
-  const next = { ...current, price: Number(price) };
-  saveLocal(next);
-  api.patch("/advertisement-fees/", { price: next.price }).catch(() => {});
-  return next;
-}
-
+// ============================================================
+// HYDRATE
+// ============================================================
 export async function hydrateAdvertisementFeeFromApi() {
   try {
     const data = await api.get("/advertisement-fees/");
     const normalized = normalizeFromApi(data);
     saveLocal(normalized);
-    return normalized;
+    return { source: "api", config: normalized };
   } catch (err) {
     console.warn("[advertisementFeeStore] hydrate failed:", err);
-    return getAdvertisementFeeConfig();
+    return { source: "error", config: getAdvertisementFeeConfig() };
   }
 }
 
+// ============================================================
+// ASYNC MUTATIONS — with rollback
+// ============================================================
+export async function updateAdvertisementFeePriceAsync(price) {
+  const numericPrice = Number(price);
+  if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+    return { ok: false, error: new Error("Bei lazima iwe namba chanya") };
+  }
+
+  const previous = getAdvertisementFeeConfig();
+  const next = { ...previous, price: numericPrice };
+
+  saveLocal(next);
+
+  try {
+    await api.patch("/advertisement-fees/", { price: numericPrice });
+    return { ok: true, config: next };
+  } catch (err) {
+    saveLocal(previous); // Rollback
+    console.warn("[advertisementFeeStore] updatePrice failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function updateAdvertisementFeeAsync(patch) {
+  const previous = getAdvertisementFeeConfig();
+  const next = { ...previous, ...patch };
+  saveLocal(next);
+
+  const payload = {};
+  if (patch.price != null) payload.price = Number(patch.price);
+  if (patch.days != null) payload.days = Number(patch.days);
+  if (patch.label != null) payload.label = patch.label;
+  if (patch.desc != null) payload.desc = patch.desc;
+
+  try {
+    await api.patch("/advertisement-fees/", payload);
+    return { ok: true, config: next };
+  } catch (err) {
+    saveLocal(previous); // Rollback
+    console.warn("[advertisementFeeStore] update failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// LEGACY SYNC (deprecated)
+// ============================================================
+/** @deprecated Use updateAdvertisementFeePriceAsync */
+export function updateAdvertisementFeePrice(price) {
+  const current = getAdvertisementFeeConfig();
+  const next = { ...current, price: Number(price) };
+  saveLocal(next);
+  api.patch("/advertisement-fees/", { price: next.price })
+    .catch((err) => console.warn("[advertisementFeeStore] sync failed (silent):", err));
+  return next;
+}
+
+// ============================================================
+// HOOK
+// ============================================================
 export function useAdvertisementFeeConfig() {
   const [config, setConfig] = useState(() => getAdvertisementFeeConfig());
 
