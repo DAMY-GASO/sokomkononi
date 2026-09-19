@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
+import { adminLoginAsync } from "../stores/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 
 const icons = {
@@ -53,7 +53,8 @@ function SkylineDecoration() {
 }
 
 export default function AdminLoginPage() {
-  const { adminLogin } = useAuth();
+  // ⬇️ MABADILIKO: Ondoa useAuth() — tumia adminLoginAsync kutoka authStore
+  // const { adminLogin } = useAuth();  ❌ ONDOA
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -75,10 +76,15 @@ export default function AdminLoginPage() {
     setError("");
     setLoading(true);
 
-    try {
-      await adminLogin(form);
-      navigate("/admin/dashboard");
-    } catch (err) {
+    // ⬇️ MABADILIKO: adminLoginAsync inarudisha { ok, user, error }
+    const res = await adminLoginAsync({
+      identifier: form.email,
+      password: form.password,
+    });
+    setLoading(false);
+
+    if (!res.ok) {
+      const err = res.error;
       const firstFieldError =
         err?.data && typeof err.data === "object" && !err.data.detail
           ? Object.values(err.data).flat().find((v) => typeof v === "string")
@@ -86,14 +92,16 @@ export default function AdminLoginPage() {
 
       setError(
         err?.data?.detail ||
-        firstFieldError ||
-        err?.message ||
-        t("admin_login_error_default") ||
-        "Barua pepe au nenosiri si sahihi."
+          firstFieldError ||
+          err?.message ||
+          t("admin_login_error_default") ||
+          "Barua pepe au nenosiri si sahihi."
       );
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    // Mafanikio — tokens zimewekwa na user ni admin
+    navigate("/admin/dashboard");
   }
 
   const leftHeading = t("admin_panel_heading") || "Dhibiti SokoMkononi";
