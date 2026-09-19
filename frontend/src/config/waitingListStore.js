@@ -2,7 +2,7 @@
 // waitingListStore.js — API-backed via /api/waiting-list/
 // ============================================================
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
+import { waitingListApi } from "../api/waitingList.js";
 
 const STORAGE_KEY = "sokomkononi_waiting_list_v1";
 const UPDATE_EVENT = "sokomkononi:waiting-list-updated";
@@ -10,6 +10,9 @@ const RESPOND_WINDOW_HOURS = 24;
 
 export const SEED_WAITING_LIST = [];
 
+// ============================================================
+// STORAGE HELPERS
+// ============================================================
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_WAITING_LIST;
   try {
@@ -28,6 +31,9 @@ function saveAll(list) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
+// ============================================================
+// NORMALIZER — backend → frontend shape
+// ============================================================
 function normalizeEntryFromApi(raw) {
   if (!raw) return null;
   const listing = raw.listing || {};
@@ -46,13 +52,27 @@ function normalizeEntryFromApi(raw) {
   };
 }
 
+// ============================================================
+// SYNC READS
+// ============================================================
 export function getWaitingList() {
   return readFromStorage();
 }
 
+export function getWaitingListEntry(id) {
+  return getWaitingList().find((e) => e.id === id) || null;
+}
+
+export function getWaitingListForListing(listingId) {
+  return getWaitingList().filter((e) => e.listingId === listingId);
+}
+
+// ============================================================
+// HYDRATE FROM API
+// ============================================================
 export async function hydrateWaitingListFromApi() {
   try {
-    const data = await api.get("/waiting-list/mine/");
+    const data = await waitingListApi.mine();
     const rawList = Array.isArray(data) ? data : data?.results || [];
     const normalized = rawList.map(normalizeEntryFromApi).filter(Boolean);
     saveAll(normalized);
@@ -64,9 +84,93 @@ export async function hydrateWaitingListFromApi() {
 }
 
 // ============================================================
-// JOIN — accepts both ({ property, category, price, location })
-// and a plain listing id, and returns the local entry.
+// ASYNC ACTIONS (preferred — with proper error handling)
 // ============================================================
+
+/**
+ * Join waiting list via API. Returns { ok, entry, error }.
+ */
+export async function joinWaitingListAsync(listingId) {
+  if (!listingId) {
+    return { ok: false, error: new Error("listingId is required") };
+  }
+
+  try {
+    const raw = await waitingListApi.join(listingId);
+    const created = normalizeEntryFromApi(raw);
+    if (!created) {
+      return { ok: false, error: new Error("Invalid response from server") };
+    }
+
+    // Replace any existing entry for same listing, prepend new one
+    const current = getWaitingList();
+    const filtered = current.filter(
+      (e) => e.id !== created.id && e.listingId !== created.listingId
+    );
+    saveAll([created, ...filtered]);
+
+    return { ok: true, entry: created };
+  } catch (err) {
+    console.warn("[waitingListStore] join failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+/**
+ * Leave waiting list via API. Returns { ok, error }.
+ */
+export async function leaveWaitingListAsync(id) {
+  if (!id) {
+    return { ok: false, error: new Error("id is required") };
+  }
+
+  const previous = getWaitingList();
+  const entry = previous.find((e) => e.id === id);
+
+  // Optimistic: remove locally first
+  saveAll(previous.filter((e) => e.id !== id));
+
+  // If entry was local-only (never synced), we're done
+  if (!entry || typeof id !== "number") {
+    return { ok: true };
+  }
+
+  try {
+    await waitingListApi.leave(id);
+    return { ok: true };
+  } catch (err) {
+    // Rollback on failure
+    console.warn("[waitingListStore] leave failed, rolling back:", err);
+    saveAll(previous);
+    return { ok: false, error: err };
+  }
+}
+
+/**
+ * Fetch entries for a specific listing (admin/seller view).
+ */
+export async function fetchListingEntriesAsync(listingId) {
+  if (!listingId) return { ok: false, entries: [], error: new Error("listingId required") };
+  try {
+    const data = await waitingListApi.listingEntries(listingId);
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    const entries = rawList.map(normalizeEntryFromApi).filter(Boolean);
+    return { ok: true, entries };
+  } catch (err) {
+    console.warn("[waitingListStore] fetchListingEntries failed:", err);
+    return { ok: false, entries: [], error: err };
+  }
+}
+
+// ============================================================
+// LEGACY SYNC HELPERS (kept for backward compatibility)
+// These are fire-and-forget and only used by older UI code.
+// New code should use the async variants above.
+// ============================================================
+
+/**
+ * @deprecated Use joinWaitingListAsync instead.
+ */
 export function joinWaitingList(payload) {
   const listingId =
     typeof payload === "number"
@@ -85,11 +189,12 @@ export function joinWaitingList(payload) {
     joinedAt: new Date().toISOString(),
   };
 
-  const next = [localEntry, ...getWaitingList()];
-  saveAll(next);
+  saveAll([localEntry, ...getWaitingList()]);
 
+  // Fire-and-forget; replaces local entry on success
   if (listingId && typeof listingId === "number") {
-    api.post("/waiting-list/", { listing: listingId })
+    waitingListApi
+      .join(listingId)
       .then((raw) => {
         const created = normalizeEntryFromApi(raw);
         if (created) {
@@ -105,38 +210,34 @@ export function joinWaitingList(payload) {
   return localEntry;
 }
 
-export async function joinWaitingListAsync(listingId) {
-  const raw = await api.post("/waiting-list/", { listing: listingId });
-  const normalized = normalizeEntryFromApi(raw);
-  const next = [normalized, ...getWaitingList()];
-  saveAll(next);
-  return normalized;
-}
-
+/**
+ * @deprecated Use leaveWaitingListAsync instead.
+ */
 export function leaveWaitingList(id) {
   const next = getWaitingList().filter((e) => e.id !== id);
   saveAll(next);
   if (typeof id === "number") {
-    api.delete(`/waiting-list/${id}/`).catch(() => {});
+    waitingListApi.leave(id).catch(() => {});
   }
   return next;
 }
 
-export async function leaveWaitingListAsync(id) {
-  await api.delete(`/waiting-list/${id}/`);
-  const next = getWaitingList().filter((e) => e.id !== id);
-  saveAll(next);
-  return next;
-}
-
-export function releaseListingToWaitlist(propertyTitle) {
+/**
+ * @deprecated Backend handles release logic.
+ */
+export function releaseListingToWaitlist() {
   return getWaitingList();
 }
 
+// ============================================================
+// HOOKS
+// ============================================================
 export function useWaitingList() {
   const [entries, setEntries] = useState(() => getWaitingList());
+
   useEffect(() => {
     hydrateWaitingListFromApi();
+
     const sync = () => setEntries(getWaitingList());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -145,5 +246,16 @@ export function useWaitingList() {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, []);
+
   return entries;
+}
+
+export function useWaitingListForListing(listingId) {
+  const entries = useWaitingList();
+  if (!listingId) return [];
+  return entries.filter((e) => e.listingId === listingId);
+}
+
+export function useWaitingListCount() {
+  return useWaitingList().length;
 }
