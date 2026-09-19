@@ -1,27 +1,15 @@
+// ============================================================
+// categoriesStore.js
+// API-backed + graceful local fallback
+// ============================================================
 import { useEffect, useState } from "react";
 import {
-  Home,
-  Trees,
-  Car,
-  Briefcase,
-  Wrench,
-  Truck,
-  Bike,
-  Bus,
-  Sofa,
-  Tv,
-  PawPrint,
-  Refrigerator,
-  ShoppingBag,
-  Building2,
-  Package,
-  Ship,
-  Plane,
-  Store,
-  Factory,
-  Bed,
+  Home, Trees, Car, Briefcase, Wrench, Truck, Bike, Bus, Sofa,
+  Tv, PawPrint, Refrigerator, ShoppingBag, Building2, Package,
+  Ship, Plane, Store, Factory, Bed,
 } from "lucide-react";
 import { categoriesApi } from "../api/categories.js";
+import { api } from "../api/client.js";
 
 const STORAGE_KEY = "sokomkononi_categories_v2";
 const UPDATE_EVENT = "sokomkononi:categories-updated";
@@ -30,26 +18,9 @@ const UPDATE_EVENT = "sokomkononi:categories-updated";
 // AVAILABLE ICONS
 // ============================================================
 export const AVAILABLE_ICONS = {
-  Home,
-  Trees,
-  Car,
-  Briefcase,
-  Wrench,
-  Truck,
-  Bike,
-  Bus,
-  Sofa,
-  Tv,
-  PawPrint,
-  Refrigerator,
-  ShoppingBag,
-  Building2,
-  Package,
-  Ship,
-  Plane,
-  Store,
-  Factory,
-  Bed,
+  Home, Trees, Car, Briefcase, Wrench, Truck, Bike, Bus, Sofa, Tv,
+  PawPrint, Refrigerator, ShoppingBag, Building2, Package, Ship,
+  Plane, Store, Factory, Bed,
 };
 
 export function getCategoryIcon(iconKey) {
@@ -99,10 +70,6 @@ export function getCategory(key) {
   return getCategories().find((c) => c.key === key) || null;
 }
 
-/**
- * getCategoryById(id) — backend uses integer id; frontend uses `key`
- * (slug). This helper finds a category by its backend `id`.
- */
 export function getCategoryById(id) {
   if (id == null) return null;
   return (
@@ -111,10 +78,6 @@ export function getCategoryById(id) {
   );
 }
 
-/**
- * getCategoryIdByKey(key) — reverse lookup: frontend key → backend id.
- * Used when filtering listings by category.
- */
 export function getCategoryIdByKey(key) {
   const cat = getCategory(key);
   return cat?.id ?? null;
@@ -145,7 +108,7 @@ export function getCategoryOptionLabel(option, lang = "sw") {
 }
 
 // ============================================================
-// INITIALIZE — weka categories za awali MARA MOJA TU
+// INITIALIZE
 // ============================================================
 export function initializeCategories(list) {
   if (!Array.isArray(list) || list.length === 0) {
@@ -166,24 +129,157 @@ export function resetCategories(list) {
 }
 
 // ============================================================
-// MUTATIONS (Admin pekee anapaswa kuita hizi)
+// GRACEFUL API HELPER
+// Inajaribu API; kama 404 → local-only fallback.
 // ============================================================
-export function addCategory(category) {
-  const current = getCategories();
-  const exists = current.some((c) => c.key === category.key);
-  if (exists) {
-    throw new Error(`Category "${category.key}" already exists`);
+async function tryApi(apiCall, { onSuccess, onFail, optimistic, previous }) {
+  try {
+    const raw = await apiCall();
+    onSuccess(raw);
+    return { ok: true, data: raw };
+  } catch (err) {
+    if (err?.status === 404 || err?.status === 501) {
+      // Backend haipo bado — kaa local-only
+      console.warn("[categoriesStore] backend haipo — local-only:", err.status);
+      return { ok: true, warning: "local_only", data: optimistic };
+    }
+    // Error nyingine — rollback
+    onFail(err);
+    return { ok: false, error: err };
   }
-  const newCat = {
+}
+
+// ============================================================
+// ASYNC MUTATIONS — Categories
+// ============================================================
+export async function addCategoryAsync(category) {
+  if (!category?.key) {
+    return { ok: false, error: new Error("key inahitajika") };
+  }
+
+  const current = getCategories();
+  if (current.some((c) => c.key === category.key)) {
+    return { ok: false, error: new Error(`Category "${category.key}" ipo tayari`) };
+  }
+
+  const optimistic = {
     imageUrl: null,
     isPopular: false,
     active: true,
     extra: [],
     ...category,
   };
-  const next = [...current, newCat];
-  saveAll(next);
-  return next;
+  saveAll([...current, optimistic]);
+
+  return tryApi(
+    () => api.post("/categories/", category),
+    {
+      optimistic,
+      previous: current,
+      onSuccess: (raw) => {
+        const created = normalizeCategoryFromApi(raw);
+        if (created) {
+          saveAll([
+            ...current.filter((c) => c.key !== category.key),
+            { ...created, ...preserveExtras(optimistic, created) },
+          ]);
+        }
+      },
+      onFail: () => saveAll(current),
+    }
+  );
+}
+
+export async function updateCategoryAsync(key, patch) {
+  const current = getCategories();
+  const target = current.find((c) => c.key === key);
+  if (!target) {
+    return { ok: false, error: new Error("Category haipo") };
+  }
+
+  const optimistic = { ...target, ...patch };
+  saveAll(current.map((c) => (c.key === key ? optimistic : c)));
+
+  // Kama haina backend ID — local-only
+  if (!target.id) {
+    return { ok: true, warning: "local_only", category: optimistic };
+  }
+
+  return tryApi(
+    () => api.patch(`/categories/${target.id}/`, patch),
+    {
+      optimistic,
+      previous: current,
+      onSuccess: (raw) => {
+        const updated = normalizeCategoryFromApi(raw);
+        if (updated) {
+          saveAll(
+            current.map((c) =>
+              c.key === key
+                ? { ...updated, ...preserveExtras(optimistic, updated) }
+                : c
+            )
+          );
+        }
+      },
+      onFail: () => saveAll(current),
+    }
+  );
+}
+
+export async function removeCategoryAsync(key) {
+  const current = getCategories();
+  const target = current.find((c) => c.key === key);
+  if (!target) {
+    return { ok: false, error: new Error("Category haipo") };
+  }
+
+  saveAll(current.filter((c) => c.key !== key));
+
+  if (!target.id) return { ok: true, warning: "local_only" };
+
+  return tryApi(
+    () => api.delete(`/categories/${target.id}/`),
+    {
+      optimistic: null,
+      previous: current,
+      onSuccess: () => {},
+      onFail: () => saveAll(current),
+    }
+  );
+}
+
+export async function toggleCategoryActiveAsync(key) {
+  const target = getCategory(key);
+  if (!target) return { ok: false, error: new Error("Category haipo") };
+
+  return updateCategoryAsync(key, { active: target.active === false });
+}
+
+export async function toggleCategoryPopularAsync(key) {
+  const target = getCategory(key);
+  if (!target) return { ok: false, error: new Error("Category haipo") };
+
+  return updateCategoryAsync(key, { isPopular: !target.isPopular });
+}
+
+export async function updateCategoryImageAsync(key, imageUrl) {
+  return updateCategoryAsync(key, { imageUrl });
+}
+
+// ============================================================
+// LEGACY SYNC (deprecated)
+// ============================================================
+export function addCategory(category) {
+  const current = getCategories();
+  if (current.some((c) => c.key === category.key)) {
+    throw new Error(`Category "${category.key}" already exists`);
+  }
+  const newCat = {
+    imageUrl: null, isPopular: false, active: true, extra: [], ...category,
+  };
+  saveAll([...current, newCat]);
+  return [...current, newCat];
 }
 
 export function updateCategory(key, patch) {
@@ -226,24 +322,29 @@ export function removeCategory(key, listingsCount = 0) {
   return { success: true, categories: next };
 }
 
-// ============================================================
-// IMAGE HELPERS
-// ============================================================
-export function hasCategoryImage(category) {
-  return Boolean(category?.imageUrl && category.imageUrl.length > 0);
-}
-
 export function updateCategoryImage(key, imageUrl) {
   return updateCategory(key, { imageUrl });
 }
 
+export function hasCategoryImage(category) {
+  return Boolean(category?.imageUrl && category.imageUrl.length > 0);
+}
+
 // ============================================================
-// NORMALIZE — backend payload → frontend shape
+// NORMALIZER
 // ============================================================
+function toSlug(str) {
+  return String(str || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
 function normalizeCategoryFromApi(raw) {
   if (!raw) return null;
   const name = raw.name || "";
-  const slug = raw.slug || name.toLowerCase().replace(/\s+/g, "-");
+  const slug = raw.slug || toSlug(name);
   return {
     id: raw.id,
     key: slug,
@@ -265,8 +366,20 @@ function normalizeCategoryFromApi(raw) {
   };
 }
 
+// Hifadhi extras za seed (iconKey, imageUrl, extra) wakati API inarudisha data
+function preserveExtras(optimistic, fromApi) {
+  return {
+    extra: optimistic?.extra || fromApi?.extra || [],
+    iconKey: optimistic?.iconKey || fromApi?.iconKey || "Home",
+    imageUrl: optimistic?.imageUrl || fromApi?.imageUrl || null,
+    isPopular: optimistic?.isPopular ?? fromApi?.isPopular ?? false,
+    label: optimistic?.label || fromApi?.label,
+    description: optimistic?.description || fromApi?.description,
+  };
+}
+
 // ============================================================
-// HYDRATE FROM API
+// HYDRATE
 // ============================================================
 export async function hydrateCategoriesFromApi() {
   try {
@@ -276,17 +389,20 @@ export async function hydrateCategoriesFromApi() {
       return { source: "seed", count: getCategories().length };
     }
 
-    // Preserve `extra` field from seed if it exists for the same key
     const existing = getCategories();
     const normalized = rawList
       .map((raw) => {
         const cat = normalizeCategoryFromApi(raw);
         if (!cat) return null;
         const prior = existing.find((c) => c.key === cat.key);
-        if (prior?.extra) cat.extra = prior.extra;
-        if (prior?.iconKey) cat.iconKey = prior.iconKey;
-        if (prior?.imageUrl) cat.imageUrl = prior.imageUrl;
-        if (prior?.isPopular != null) cat.isPopular = prior.isPopular;
+        if (prior) {
+          cat.extra = prior.extra || [];
+          cat.iconKey = prior.iconKey || "Home";
+          cat.imageUrl = prior.imageUrl || null;
+          cat.isPopular = prior.isPopular ?? false;
+          cat.label = prior.label || cat.label;
+          cat.description = prior.description || cat.description;
+        }
         return cat;
       })
       .filter(Boolean);
@@ -304,8 +420,8 @@ export async function hydrateCategoriesFromApi() {
 // ============================================================
 export function useCategories() {
   const [list, setList] = useState(() => getCategories());
-
   useEffect(() => {
+    hydrateCategoriesFromApi();
     const sync = () => setList(getCategories());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -314,7 +430,6 @@ export function useCategories() {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, []);
-
   return list;
 }
 
