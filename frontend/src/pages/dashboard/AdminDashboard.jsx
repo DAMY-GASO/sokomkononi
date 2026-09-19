@@ -4,7 +4,8 @@
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext.jsx";
+// ⬇️ MABADILIKO 1: useAuth + logoutAsync kutoka authStore
+import { useAuth, logoutAsync } from "../../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import {
   useNotifications,
@@ -222,7 +223,8 @@ function LanguageSwitcher({ lang, setLang }) {
 // ADMIN DASHBOARD
 // ============================================================
 export default function AdminDashboard() {
-  const { user, isAdmin, logout } = useAuth();
+  // ⬇️ MABADILIKO 2: toa `user, isAdmin` pekee (logout ipo kama logoutAsync)
+  const { user, isAdmin } = useAuth();
   const { lang, setLang } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
@@ -295,8 +297,9 @@ export default function AdminDashboard() {
     return () => clearTimeout(id);
   }, [user, isAdmin, navigate]);
 
+  // ⬇️ MABADILIKO 3: tumia logoutAsync
   const handleLogout = async () => {
-    await logout();
+    await logoutAsync();
     navigate("/admin/login");
   };
 
@@ -400,7 +403,6 @@ export default function AdminDashboard() {
       style={{ background: COLORS.sand }}
       className="min-h-screen w-full overflow-x-hidden"
     >
-
       <header
         style={{ background: COLORS.night }}
         className="sticky top-0 z-50 w-full flex items-center justify-between px-4 sm:px-6 py-3"
