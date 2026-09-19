@@ -18,14 +18,19 @@ import { COLORS, timeAgo } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import {
   useLeads,
-  markLeadResponded,
-  removeLead,
+  // ⬇️ MABADILIKO: Tumia async variants badala ya sync
+  // markLeadResponded,  ❌ ONDOA
+  // removeLead,         ❌ ONDOA
+  markLeadRespondedAsync,
+  removeLeadAsync,
 } from "../../../config/leadsStore.js";
 
 export default function LeadsSection({ onNavigate }) {
   const { lang } = useLanguage();
   const leads = useLeads();
   const [filter, setFilter] = useState("all");
+  // ⬇️ MPYA: Busy state kuzuia double-click
+  const [busy, setBusy] = useState({}); // { [leadId]: "respond" | "remove" }
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -82,6 +87,54 @@ export default function LeadsSection({ onNavigate }) {
       },
     };
     return config[status] || config.new;
+  };
+
+  // ============================================================
+  // HANDLERS — async + rollback (via store)
+  // ============================================================
+  const handleRespond = async (leadId) => {
+    if (busy[leadId]) return;
+    setBusy((b) => ({ ...b, [leadId]: "respond" }));
+
+    const res = await markLeadRespondedAsync(leadId);
+
+    setBusy((b) => {
+      const next = { ...b };
+      delete next[leadId];
+      return next;
+    });
+
+    if (!res.ok) {
+      // TODO: badilisha na toast/notify yako
+      console.warn("[LeadsSection] respond failed:", res.error);
+      alert(
+        res.error?.message ||
+          t("Imeshindwa kuweka kama imejibiwa. Jaribu tena.", "Failed to mark as responded. Try again.")
+      );
+    }
+  };
+
+  const handleRemove = async (leadId) => {
+    if (busy[leadId]) return;
+    if (!window.confirm(t("Ondoa lead hii?", "Remove this lead?"))) return;
+
+    setBusy((b) => ({ ...b, [leadId]: "remove" }));
+
+    const res = await removeLeadAsync(leadId);
+
+    setBusy((b) => {
+      const next = { ...b };
+      delete next[leadId];
+      return next;
+    });
+
+    if (!res.ok) {
+      console.warn("[LeadsSection] remove failed:", res.error);
+      alert(
+        res.error?.message ||
+          t("Imeshindwa kuondoa lead. Jaribu tena.", "Failed to remove lead. Try again.")
+      );
+    }
   };
 
   return (
@@ -169,6 +222,8 @@ export default function LeadsSection({ onNavigate }) {
           <div className="flex flex-col gap-3">
             {filtered.map((lead) => {
               const status = getStatusBadge(lead.status);
+              const isBusy = !!busy[lead.id];
+              const currentAction = busy[lead.id];
               return (
                 <div
                   key={lead.id}
@@ -234,12 +289,15 @@ export default function LeadsSection({ onNavigate }) {
 
                     {lead.status === "new" && (
                       <button
-                        onClick={() => markLeadResponded(lead.id)}
+                        onClick={() => handleRespond(lead.id)}
+                        disabled={isBusy}
                         style={{ background: COLORS.green, color: "white" }}
-                        className="flex items-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                        className="flex items-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         <Check size={12} />
-                        {t("Nimejibu", "Mark Responded")}
+                        {currentAction === "respond"
+                          ? t("Inatuma...", "Sending...")
+                          : t("Nimejibu", "Mark Responded")}
                       </button>
                     )}
 
@@ -258,16 +316,9 @@ export default function LeadsSection({ onNavigate }) {
                     )}
 
                     <button
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            t("Ondoa lead hii?", "Remove this lead?")
-                          )
-                        ) {
-                          removeLead(lead.id);
-                        }
-                      }}
-                      className="ml-auto flex items-center gap-1 text-btn font-semibold px-2 py-2 rounded-lg text-muted hover:text-[#C1502E] transition-colors"
+                      onClick={() => handleRemove(lead.id)}
+                      disabled={isBusy}
+                      className="ml-auto flex items-center gap-1 text-btn font-semibold px-2 py-2 rounded-lg text-muted hover:text-[#C1502E] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <Trash2 size={12} />
                     </button>
