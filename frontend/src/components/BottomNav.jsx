@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
+// ⬇️ MABADILIKO: useAuth kutoka authStore (sio AuthContext)
+import { useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useDashboardSide } from "../config/dashboardSideStore.js";
 
@@ -20,7 +21,6 @@ const icons = {
       <path d="M12 5v14M5 12h14" />
     </svg>
   ),
-  // Kitufe cha kati kikiwa upande wa buyer — icon ya kutafuta
   search: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="7" />
@@ -32,7 +32,6 @@ const icons = {
       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
     </svg>
   ),
-  // Kitufe cha "Mali Zote" — kinachochukua nafasi ya profile
   listings: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="7" height="7" rx="1.5" />
@@ -54,13 +53,8 @@ export default function BottomNav() {
     return location.pathname.startsWith(path);
   };
 
-  // Upande wa sasa wa mtumiaji: "buyer" au "seller" (default).
-  // "side" hii hii ndiyo inayoongoza saved/messages tayari, kwa hiyo
-  // kitufe cha kati kinaifuata pia — hata kama tuko homepage, kwa
-  // sababu haihitaji route maalum, inafuata tu "mode" ya mwisho.
   const isBuyerSide = side === "buyer";
 
-  // Kitufe cha kati: "Uza Sasa" (+) upande wa seller, "Tafuta" (🔍) upande wa buyer.
   const actionLink = isBuyerSide
     ? "/tafuta"
     : user
@@ -71,9 +65,6 @@ export default function BottomNav() {
     ? (lang === "sw" ? "Tafuta" : "Search")
     : t("nav_sell");
 
-  // Saved & Messages - hufuata "side" ya sasa (buyer/seller) badala
-  // ya kuwa na URL moja iliyowekwa ngumu, ili mtumiaji abaki kwenye
-  // dashboard husika badala ya kuhamishiwa upande wa muuzaji kila wakati.
   const savedTarget = isBuyerSide
     ? "/dashboard/buyer/saved"
     : "/dashboard/saved";
@@ -84,9 +75,6 @@ export default function BottomNav() {
   const savedLink = user ? savedTarget : "/login";
   const messagesLink = user ? messagesTarget : "/login";
 
-  // Mali Zote - inaelekeza kwenye ukurasa wa AllListingsPage (grid ya
-  // listings zote, bila filters), tofauti na "/tafuta" ambayo ni
-  // BrowseProperties (search + filters). Hakuna login inayohitajika.
   const listingsLink = "/mali-zote";
 
   return (
