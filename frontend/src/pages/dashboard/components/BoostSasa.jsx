@@ -19,7 +19,7 @@ import { notifyBoostPurchased } from "../../../config/notificationsStore.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-import { useAuth } from "../../../context/AuthContext.jsx";
+import { useAuth } from "../../../config/authStore.js";
 import {
   checkCredit,
   consumeCredit,
