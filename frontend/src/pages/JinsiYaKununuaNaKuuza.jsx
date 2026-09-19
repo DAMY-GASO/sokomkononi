@@ -1,13 +1,3 @@
-// ============================================================
-// JinsiYaKununuaNaKuuza.jsx
-// Ukurasa wa umma (public) — "Jinsi ya Kununua" (section 1) na
-// "Jinsi ya Kuuza" (section 2) kwenye ukurasa mmoja.
-// Muundo/maelezo ni yale yale tuliyoweka kwenye BuyerOverview na
-// SellerOverview (dashboard guides), lakini hapa ni public page
-// yenye Navbar + Footer + BottomNav kama kurasa nyingine za umma.
-// Bilingual kamili + KILA KITU CENTERED.
-// ============================================================
-
 import React, { useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, Lock } from "lucide-react";
@@ -121,9 +111,10 @@ export default function JinsiYaKununuaNaKuuza() {
       <Navbar />
 
       {/* ============================================================ */}
-      {/* PAGE HEADER */}
+      {/* PAGE HEADER — "dark-surface" imeongezwa hapa ili h1 ya ndani
+          ibaki nyeupe (rejea index.css: .dark-surface h1..h6 { color: #fff }) */}
       {/* ============================================================ */}
-      <section className="bg-[#101A2E] text-white py-12 sm:py-16 px-4 text-center">
+      <section className="dark-surface bg-[#101A2E] text-white py-12 sm:py-16 px-4 text-center">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight">
           {t("Jinsi Inavyofanya Kazi", "How It Works")}
         </h1>
