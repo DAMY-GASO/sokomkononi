@@ -46,7 +46,7 @@ export default function AllCategoriesPage() {
       {/* ============================================================ */}
       {/* HEADER — CENTERED */}
       {/* ============================================================ */}
-      <section className="bg-[#101A2E] text-white py-12 sm:py-16 px-4 text-center">
+      <section className="dark-surface bg-[#101A2E] text-white py-12 sm:py-16 px-4 text-center">
         <div className="w-14 h-14 rounded-2xl bg-[#E8A33D]/20 flex items-center justify-center mx-auto mb-4">
           <LayoutGrid size={28} color={COLORS.gold} />
         </div>
