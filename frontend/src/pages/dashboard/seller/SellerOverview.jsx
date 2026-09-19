@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 import { COLORS } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-import { useAuth } from "../../../context/AuthContext.jsx";
+// ⬇️ MABADILIKO: useAuth kutoka authStore
+import { useAuth } from "../../../config/authStore.js";
 import { useListings } from "../../../config/listingsStore.js";
 import { useDeals } from "../../../config/dealsStore.js";
 import StatTile from "./StatTile.jsx";
