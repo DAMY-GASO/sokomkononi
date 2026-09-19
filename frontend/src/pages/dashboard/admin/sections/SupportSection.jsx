@@ -1,7 +1,7 @@
 // ============================================================
 // SupportSection.jsx
 // Admin — Customer Care (tickets, complaints).
-// Bilingual + mobile-responsive (imeboreshwa).
+// Bilingual + mobile-responsive + Async actions na rollback.
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -18,16 +18,18 @@ import {
   Headphones,
   Inbox,
   UserCheck,
+  Loader2,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
+// ⬇️ MABADILIKO: tumia async variants
 import {
   useTickets,
-  addTicketMessage,
-  updateTicketStatus,
-  updateTicketPriority,
-  removeTicket,
+  addTicketMessageAsync,
+  updateTicketStatusAsync,
+  updateTicketPriorityAsync,
+  removeTicketAsync,
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
@@ -46,12 +48,15 @@ const COLOR_MAP = {
 };
 
 // ============================================================
-// TICKET CARD — responsive
+// TICKET CARD — responsive + async
 // ============================================================
 function TicketCard({ ticket, lang }) {
   const [expanded, setExpanded] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [rejecting, setRejecting] = useState(false);
+  // ⬇️ MPYA: busy + error state
+  const [busy, setBusy] = useState({}); // { action: true }
+  const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -63,27 +68,109 @@ function TicketCard({ ticket, lang }) {
   const priColors = COLOR_MAP[priority?.color] || COLOR_MAP.gold;
   const statusColors = COLOR_MAP[status?.color] || COLOR_MAP.rust;
 
-  const handleSendReply = () => {
-    if (!replyText.trim()) return;
-    addTicketMessage(ticket.id, {
+  const isBusy = (key) => !!busy[key];
+
+  // ============================================================
+  // HANDLERS — async + rollback
+  // ============================================================
+  const handleSendReply = async () => {
+    if (!replyText.trim() || isBusy("reply")) return;
+
+    const message = replyText.trim();
+    setBusy((b) => ({ ...b, reply: true }));
+    setError("");
+
+    const res = await addTicketMessageAsync(ticket.id, {
       from: "admin",
       senderName: "Admin",
-      text: replyText.trim(),
+      text: message,
     });
-    setReplyText("");
+
+    setBusy((b) => {
+      const next = { ...b };
+      delete next.reply;
+      return next;
+    });
+
+    if (res.ok) {
+      setReplyText("");
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kutuma jibu.", "Failed to send reply.")
+      );
+    }
   };
 
-  const handleResolve = () => {
-    updateTicketStatus(ticket.id, "resolved");
+  const handleStatusChange = async (newStatus) => {
+    if (isBusy(`status-${newStatus}`)) return;
+
+    setBusy((b) => ({ ...b, [`status-${newStatus}`]: true }));
+    setError("");
+
+    const res = await updateTicketStatusAsync(ticket.id, newStatus);
+
+    setBusy((b) => {
+      const next = { ...b };
+      delete next[`status-${newStatus}`];
+      return next;
+    });
+
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kubadilisha hali.", "Failed to change status.")
+      );
+    }
   };
 
-  const handleClose = () => {
-    updateTicketStatus(ticket.id, "closed");
+  const handlePriorityChange = async (newPriority) => {
+    if (isBusy("priority")) return;
+
+    setBusy((b) => ({ ...b, priority: true }));
+    setError("");
+
+    const res = await updateTicketPriorityAsync(ticket.id, newPriority);
+
+    setBusy((b) => {
+      const next = { ...b };
+      delete next.priority;
+      return next;
+    });
+
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kubadilisha kipaumbele.", "Failed to change priority.")
+      );
+    }
   };
 
-  const handleReopen = () => {
-    updateTicketStatus(ticket.id, "open");
+  const handleRemove = async () => {
+    if (!window.confirm(t("Ondoa ticket hii?", "Remove this ticket?"))) return;
+    if (isBusy("remove")) return;
+
+    setBusy((b) => ({ ...b, remove: true }));
+    setError("");
+
+    const res = await removeTicketAsync(ticket.id);
+
+    setBusy((b) => {
+      const next = { ...b };
+      delete next.remove;
+      return next;
+    });
+
+    if (!res.ok) {
+      setError(
+        res.error?.message || t("Imeshindwa kuondoa.", "Failed to remove.")
+      );
+    }
   };
+
+  const handleResolve = () => handleStatusChange("resolved");
+  const handleClose = () => handleStatusChange("closed");
+  const handleReopen = () => handleStatusChange("open");
 
   return (
     <div
@@ -170,6 +257,19 @@ function TicketCard({ ticket, lang }) {
           style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
           className="border-t p-3 sm:p-4 flex flex-col gap-3 w-full max-w-full min-w-0 overflow-hidden"
         >
+          {/* Error banner */}
+          {error && (
+            <div
+              style={{
+                background: "rgba(193,80,46,0.1)",
+                color: COLORS.rust,
+              }}
+              className="text-xs font-semibold px-3 py-2 rounded-lg"
+            >
+              {error}
+            </div>
+          )}
+
           {/* Messages thread */}
           <div className="min-w-0 w-full">
             <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
@@ -252,31 +352,38 @@ function TicketCard({ ticket, lang }) {
                   onChange={(e) => setReplyText(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSendReply()}
                   placeholder={t("Andika jibu...", "Type a reply...")}
+                  disabled={isBusy("reply")}
                   style={{ borderColor: COLORS.sandLine }}
-                  className="flex-1 min-w-0 rounded-full border px-3 py-2 text-xs outline-none bg-white"
+                  className="flex-1 min-w-0 rounded-full border px-3 py-2 text-xs outline-none bg-white disabled:opacity-50"
                 />
                 <button
                   onClick={handleSendReply}
-                  disabled={!replyText.trim()}
+                  disabled={!replyText.trim() || isBusy("reply")}
                   style={{
-                    background: replyText.trim() ? COLORS.gold : COLORS.sandLine,
-                    color: replyText.trim() ? COLORS.night : "var(--text-muted)",
+                    background: replyText.trim() && !isBusy("reply") ? COLORS.gold : COLORS.sandLine,
+                    color: replyText.trim() && !isBusy("reply") ? COLORS.night : "var(--text-muted)",
                   }}
-                  className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                  className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:cursor-not-allowed"
                   aria-label={t("Tuma", "Send")}
                 >
-                  <Send size={14} />
+                  {isBusy("reply") ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Send size={14} />
+                  )}
                 </button>
               </div>
 
-              {/* Status actions — responsive */}
+              {/* Status actions */}
               <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
                 {ticket.status === "open" && (
                   <button
-                    onClick={() => updateTicketStatus(ticket.id, "in_progress")}
+                    onClick={() => handleStatusChange("in_progress")}
+                    disabled={isBusy("status-in_progress")}
                     style={{ background: COLORS.gold, color: COLORS.night }}
-                    className="text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
+                    {isBusy("status-in_progress") && <Loader2 size={12} className="animate-spin" />}
                     {t("Anza Kushughulikia", "Start Working")}
                   </button>
                 )}
@@ -284,28 +391,36 @@ function TicketCard({ ticket, lang }) {
                 {ticket.status !== "resolved" && (
                   <button
                     onClick={handleResolve}
+                    disabled={isBusy("status-resolved")}
                     style={{ background: COLORS.green, color: "white" }}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <CheckCircle size={12} />
+                    {isBusy("status-resolved") ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <CheckCircle size={12} />
+                    )}
                     {t("Tatua", "Resolve")}
                   </button>
                 )}
 
                 <button
                   onClick={handleClose}
+                  disabled={isBusy("status-closed")}
                   style={{ color: "var(--text-primary)" }}
-                  className="text-xs font-semibold px-3 py-2 rounded-lg border shrink-0"
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
+                  {isBusy("status-closed") && <Loader2 size={12} className="animate-spin" />}
                   {t("Funga", "Close")}
                 </button>
 
-                {/* Priority — full width kwenye simu */}
+                {/* Priority */}
                 <select
                   value={ticket.priority}
-                  onChange={(e) => updateTicketPriority(ticket.id, e.target.value)}
+                  onChange={(e) => handlePriorityChange(e.target.value)}
+                  disabled={isBusy("priority")}
                   style={{ borderColor: COLORS.sandLine }}
-                  className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white outline-none w-full sm:w-auto sm:ml-auto"
+                  className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white outline-none w-full sm:w-auto sm:ml-auto disabled:opacity-50"
                 >
                   {TICKET_PRIORITIES.map((p) => (
                     <option key={p.key} value={p.key}>
@@ -315,19 +430,16 @@ function TicketCard({ ticket, lang }) {
                 </select>
 
                 <button
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        t("Ondoa ticket hii?", "Remove this ticket?")
-                      )
-                    ) {
-                      removeTicket(ticket.id);
-                    }
-                  }}
-                  className="p-2 text-muted hover:text-[#C1502E] transition-colors shrink-0"
+                  onClick={handleRemove}
+                  disabled={isBusy("remove")}
+                  className="p-2 text-muted hover:text-[#C1502E] transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label={t("Ondoa", "Remove")}
                 >
-                  <Trash2 size={14} />
+                  {isBusy("remove") ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={14} />
+                  )}
                 </button>
               </div>
             </>
@@ -338,25 +450,24 @@ function TicketCard({ ticket, lang }) {
             <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
               <button
                 onClick={handleReopen}
+                disabled={isBusy("status-open")}
                 style={{ background: COLORS.gold, color: COLORS.night }}
-                className="text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
               >
+                {isBusy("status-open") && <Loader2 size={12} className="animate-spin" />}
                 {t("Fungua Tena", "Reopen")}
               </button>
               <button
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      t("Ondoa ticket hii?", "Remove this ticket?")
-                    )
-                  ) {
-                    removeTicket(ticket.id);
-                  }
-                }}
-                className="ml-auto p-2 text-muted hover:text-[#C1502E] transition-colors shrink-0"
+                onClick={handleRemove}
+                disabled={isBusy("remove")}
+                className="ml-auto p-2 text-muted hover:text-[#C1502E] transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label={t("Ondoa", "Remove")}
               >
-                <Trash2 size={14} />
+                {isBusy("remove") ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
               </button>
             </div>
           )}
@@ -367,7 +478,7 @@ function TicketCard({ ticket, lang }) {
 }
 
 // ============================================================
-// MAIN SECTION — export default
+// MAIN SECTION
 // ============================================================
 export default function SupportSection() {
   const { lang } = useLanguage();
@@ -420,7 +531,6 @@ export default function SupportSection() {
       );
     }
 
-    // Sort: urgent/high kwanza, kisha kwa tarehe
     const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
     result.sort((a, b) => {
       const aPrio = priorityOrder[a.priority] ?? 99;
@@ -442,7 +552,7 @@ export default function SupportSection() {
         )}
       />
 
-      {/* Summary Stats — responsive */}
+      {/* Summary Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5 w-full">
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -502,7 +612,7 @@ export default function SupportSection() {
         </div>
       </div>
 
-      {/* Status Tabs — CENTERED + scroll horizontal */}
+      {/* Status Tabs */}
       {tickets.length > 0 && (
         <div className="flex justify-center gap-2 mb-3 overflow-x-auto pb-2 w-full min-w-0">
           <button
@@ -542,7 +652,7 @@ export default function SupportSection() {
         </div>
       )}
 
-      {/* Category Filter + Search — responsive */}
+      {/* Category Filter + Search */}
       {tickets.length > 0 && (
         <div className="flex flex-col sm:flex-row gap-2 mb-4 w-full min-w-0">
           <select
