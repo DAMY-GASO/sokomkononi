@@ -4,7 +4,7 @@
 // ============================================================
 
 import { useEffect, useState, useCallback } from "react";
-import { authApi, setUnauthorizedHandler } from "../api/auth.js";
+import { authApi, setUnauthorizedHandler } from "../api/index.js";
 
 const STORAGE_KEY = "sokomkononi_current_user_v1";
 const UPDATE_EVENT = "sokomkononi:auth-updated";
