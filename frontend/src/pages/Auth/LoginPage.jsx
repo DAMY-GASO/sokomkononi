@@ -52,8 +52,6 @@ function SkylineDecoration() {
 }
 
 export default function LoginPage() {
-  // ⬇️ MABADILIKO: Ondoa useAuth() — tumia loginAsync kutoka authStore moja kwa moja
-  // const { login } = useAuth();  ❌ ONDOA
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,12 +73,10 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    // ⬇️ MABADILIKO: loginAsync inarudisha { ok, user, error } badala ya kutupa exception
     const res = await loginAsync(form);
     setLoading(false);
 
     if (!res.ok) {
-      // Kuchukua ujumbe wa kwanza wa error kutoka DRF field errors
       const err = res.error;
       const firstFieldError =
         err?.data && typeof err.data === "object" && !err.data.detail
@@ -97,18 +93,6 @@ export default function LoginPage() {
       return;
     }
 
-    // ============================================================
-    // RETURN-TO — baada ya login, mrudishe mtumiaji pale alipotoka
-    // (mfano: property aliyokuwa akiitazama) badala ya kumpeleka
-    // moja kwa moja dashboard. "state.from" inatumwa na ukurasa
-    // uliomrejesha hapa (mfano kitufe cha "Wasiliana na Muuzaji"),
-    // au "?redirect=" kwenye URL kama njia mbadala.
-    //
-    // Taarifa nyingine yoyote aliyokuja nayo (kwa mfano
-    // { openContactModal: true, listingId: "123" }) inaendelea
-    // kubebwa kwenda kwenye ukurasa unaofuata, ili huo ukurasa
-    // uweze kufungua modal husika bila mtumiaji kubonyeza tena.
-    // ============================================================
     const { from, ...restState } = location.state || {};
     const redirectTo = from || searchParams.get("redirect") || "/dashboard/post";
 
@@ -128,7 +112,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
         {/* ================= LEFT PANEL - Branded ================= */}
-        <div className="flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
+        <div className="dark-surface flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
             <span className="font-bold tracking-tight">SokoMkononi</span>
