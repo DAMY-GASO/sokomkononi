@@ -29,7 +29,8 @@ import {
 } from "lucide-react";
 import { COLORS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-import { useAuth } from "../../../context/AuthContext.jsx";
+// ⬇️ MABADILIKO 1: useAuth + logoutAsync kutoka authStore
+import { useAuth, logoutAsync } from "../../../config/authStore.js";
 import {
   useListings,
   checkListingExpiry,
@@ -206,7 +207,8 @@ export default function DashboardShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const { lang, setLang } = useLanguage();
-  const { user, logout } = useAuth();
+  // ⬇️ MABADILIKO 2: toa `user` pekee (logout ipo kama logoutAsync)
+  const { user } = useAuth();
 
   const [ready, setReady] = useState(false);
 
@@ -399,9 +401,10 @@ export default function DashboardShell() {
     setLangOpen(false);
   };
 
+  // ⬇️ MABADILIKO 3: tumia logoutAsync
   const handleLogout = async () => {
     setUserMenuOpen(false);
-    await logout();
+    await logoutAsync();
     navigate("/login");
   };
 
