@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext.jsx";
+import {
+  forgotPasswordAsync,
+  verifyPasswordResetOtpAsync,
+  resetPasswordAsync,
+} from "../../stores/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const icons = {
@@ -56,12 +60,19 @@ function FieldInput({ icon, type = "text", value, onChange, label }) {
   );
 }
 
+// Kuchukua field error kutoka DRF response
+function extractError(err, fallback) {
+  if (err?.data && typeof err.data === "object") {
+    if (err.data.detail) return err.data.detail;
+    const first = Object.values(err.data).flat().find((v) => typeof v === "string");
+    if (first) return first;
+  }
+  return err?.message || fallback;
+}
+
 export default function ForgotPasswordPage() {
-  // NOTE: assumes useAuth() exposes requestPasswordReset({ email, newPassword })
-  // — which validates the email, stashes the new password pending confirmation,
-  // and emails an OTP to confirm it — and confirmPasswordReset(email, otp),
-  // which finalizes the change. Adjust names if yours differ.
-  const { requestPasswordReset, confirmPasswordReset } = useAuth();
+  // ⬇️ MABADILIKO: Ondoa useAuth() — tumia 3 functions kutoka authStore
+  // const { requestPasswordReset, confirmPasswordReset } = useAuth();  ❌ ONDOA
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -71,6 +82,9 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  // ⬇️ Hifadhi reset_token kati ya hatua 2 na 3
+  const [resetToken, setResetToken] = useState(null);
 
   function validateForm() {
     if (!form.email.trim()) return t("forgot_error_email_required");
@@ -92,6 +106,9 @@ export default function ForgotPasswordPage() {
     }, 1000);
   }
 
+  // ============================================
+  // STEP 1: Tuma OTP (bila newPassword kwa backend)
+  // ============================================
   async function handleSubmitNewPassword(e) {
     e.preventDefault();
     const validationError = validateForm();
@@ -101,19 +118,24 @@ export default function ForgotPasswordPage() {
     }
     setError("");
     setLoading(true);
-    try {
-      // Nenosiri jipya linahifadhiwa kwa muda upande wa server, na taarifa
-      // (OTP) inatumwa kwenye email ili kuthibitisha kuwa ni mmiliki wa akaunti.
-      await requestPasswordReset({ email: form.email, newPassword: form.newPassword });
-      setStep("otp");
-      startResendCooldown();
-    } catch (err) {
-      setError(err?.response?.data?.message || t("forgot_error_default"));
-    } finally {
-      setLoading(false);
+
+    // ⬇️ MABADILIKO: forgotPasswordAsync inatuma OTP tu
+    // newPassword inabaki kwenye state ya page
+    const res = await forgotPasswordAsync(form.email);
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(extractError(res.error, t("forgot_error_default")));
+      return;
     }
+
+    setStep("otp");
+    startResendCooldown();
   }
 
+  // ============================================
+  // STEP 2 + 3: Thibitisha OTP → badilisha password
+  // ============================================
   async function handleVerifyOtp(e) {
     e.preventDefault();
     if (!otp.trim() || otp.trim().length < 4) {
@@ -122,28 +144,71 @@ export default function ForgotPasswordPage() {
     }
     setError("");
     setLoading(true);
-    try {
-      await confirmPasswordReset(form.email, otp.trim());
-      setStep("success");
-    } catch (err) {
-      setError(err?.response?.data?.message || t("forgot_error_otp_invalid"));
-    } finally {
+
+    // Hatua 2: Thibitisha OTP → pata reset_token
+    const verifyRes = await verifyPasswordResetOtpAsync({
+      identifier: form.email,
+      otpCode: otp.trim(),
+      verificationType: "EMAIL",
+    });
+
+    if (!verifyRes.ok) {
       setLoading(false);
+      setError(extractError(verifyRes.error, t("forgot_error_otp_invalid")));
+      return;
     }
+
+    // Chukua reset_token kutoka response
+    // (backend inarudisha `reset_token` kama ilivyoandikwa kwenye authApi)
+    const token =
+      verifyRes.data?.reset_token ||
+      verifyRes.data?.token ||
+      verifyRes.data?.data?.reset_token;
+
+    if (!token) {
+      setLoading(false);
+      setError(
+        t("forgot_error_token_missing") ||
+        "Imeshindwa kupata token ya kubadilisha nenosiri. Jaribu tena."
+      );
+      return;
+    }
+
+    // Hatua 3: Badilisha password kwa kutumia reset_token
+    const resetRes = await resetPasswordAsync({
+      resetToken: token,
+      newPassword: form.newPassword,
+      confirmPassword: form.confirmPassword,
+    });
+
+    setLoading(false);
+
+    if (!resetRes.ok) {
+      setError(extractError(resetRes.error, t("forgot_error_default")));
+      return;
+    }
+
+    // Mafanikio!
+    setStep("success");
   }
 
+  // ============================================
+  // RESEND OTP
+  // ============================================
   async function handleResend() {
     if (resendCooldown > 0) return;
     setError("");
     setLoading(true);
-    try {
-      await requestPasswordReset({ email: form.email, newPassword: form.newPassword });
-      startResendCooldown();
-    } catch (err) {
-      setError(err?.response?.data?.message || t("forgot_error_default"));
-    } finally {
-      setLoading(false);
+
+    // ⬇️ MABADILIKO: Tuma tena OTP
+    const res = await forgotPasswordAsync(form.email);
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(extractError(res.error, t("forgot_error_default")));
+      return;
     }
+    startResendCooldown();
   }
 
   return (
