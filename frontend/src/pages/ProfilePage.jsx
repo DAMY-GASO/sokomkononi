@@ -10,7 +10,7 @@ import {
   logoutAsync,
   updateProfileAsync,
   changePasswordAsync,
-} from "../stores/authStore.js";
+} from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
