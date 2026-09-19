@@ -1,7 +1,7 @@
 // ============================================================
 // RBACSection.jsx
 // Admin — Roles & Permissions (RBAC).
-// Bilingual + mobile-responsive (imeboreshwa).
+// Bilingual + mobile-responsive + Async actions na rollback.
 // ============================================================
 
 import React, { useState } from "react";
@@ -13,19 +13,21 @@ import {
   Save,
   Lock,
   UserCog,
+  Loader2,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
+// ⬇️ MABADILIKO: tumia async variants
 import {
   useRoles,
   useSubAdminsWithRoles,
-  addRole,
-  updateRole,
-  removeRole,
-  addSubAdmin,
-  updateSubAdmin,
-  removeSubAdmin,
+  addRoleAsync,
+  updateRoleAsync,
+  removeRoleAsync,
+  addSubAdminAsync,
+  updateSubAdminAsync,
+  removeSubAdminAsync,
   PERMISSIONS,
 } from "../../../../config/rolesStore.js";
 
@@ -38,9 +40,9 @@ const TABS = [
 ];
 
 // ============================================================
-// ROLE CARD — responsive
+// ROLE CARD
 // ============================================================
-function RoleCard({ role, lang, onEdit, onDelete }) {
+function RoleCard({ role, lang, onEdit, onDelete, isBusy }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const count = role.permissions.length;
 
@@ -76,7 +78,8 @@ function RoleCard({ role, lang, onEdit, onDelete }) {
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => onEdit(role)}
-            className="p-1.5 text-muted hover:text-[#E8A33D] transition-colors"
+            disabled={isBusy}
+            className="p-1.5 text-muted hover:text-[#E8A33D] transition-colors disabled:opacity-50"
             aria-label={t("Hariri", "Edit")}
           >
             <Pencil size={14} />
@@ -84,16 +87,20 @@ function RoleCard({ role, lang, onEdit, onDelete }) {
           {!role.isSystem && (
             <button
               onClick={() => onDelete(role)}
-              className="p-1.5 text-muted hover:text-[#C1502E] transition-colors"
+              disabled={isBusy}
+              className="p-1.5 text-muted hover:text-[#C1502E] transition-colors disabled:opacity-50"
               aria-label={t("Futa", "Delete")}
             >
-              <Trash2 size={14} />
+              {isBusy ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Trash2 size={14} />
+              )}
             </button>
           )}
         </div>
       </div>
 
-      {/* Permissions */}
       <div>
         <p className="text-[10px] font-semibold text-muted uppercase mb-1.5">
           {t(`Ruhusa (${count})`, `Permissions (${count})`)}
@@ -121,9 +128,9 @@ function RoleCard({ role, lang, onEdit, onDelete }) {
 }
 
 // ============================================================
-// ROLE FORM — responsive
+// ROLE FORM
 // ============================================================
-function RoleForm({ initial, lang, onSave, onCancel }) {
+function RoleForm({ initial, lang, onSave, onCancel, saving }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const [form, setForm] = useState({
@@ -162,7 +169,8 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
               setForm({ ...form, label: { ...form.label, sw: e.target.value } })
             }
             placeholder="Msimamizi wa Mali"
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            disabled={saving}
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0">
@@ -175,7 +183,8 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
               setForm({ ...form, label: { ...form.label, en: e.target.value } })
             }
             placeholder="Moderator"
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            disabled={saving}
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
           />
         </label>
       </div>
@@ -195,7 +204,8 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
               })
             }
             rows={2}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            disabled={saving}
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0">
@@ -211,12 +221,13 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
               })
             }
             rows={2}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            disabled={saving}
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none disabled:opacity-50"
           />
         </label>
       </div>
 
-      {/* Permissions — responsive grid */}
+      {/* Permissions */}
       <div className="min-w-0">
         <p className="text-[11px] font-semibold text-secondary mb-2">
           {t("Ruhusa", "Permissions")}
@@ -237,6 +248,7 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
                   type="checkbox"
                   checked={isChecked}
                   onChange={() => togglePermission(perm.key)}
+                  disabled={saving}
                   className="w-4 h-4 rounded text-[#2F6D4F] focus:ring-[#2F6D4F] shrink-0"
                 />
                 <span className="text-xs text-primary truncate">
@@ -248,24 +260,28 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
         </div>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={onCancel}
-          className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary"
+          disabled={saving}
+          className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary disabled:opacity-50"
         >
           {t("Ghairi", "Cancel")}
         </button>
         <button
           onClick={() => onSave(form)}
-          disabled={!canSave}
+          disabled={!canSave || saving}
           style={{
-            background: canSave ? COLORS.gold : COLORS.sandLine,
-            color: canSave ? COLORS.night : "var(--text-muted)",
+            background: canSave && !saving ? COLORS.gold : COLORS.sandLine,
+            color: canSave && !saving ? COLORS.night : "var(--text-muted)",
           }}
-          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
         >
-          <Save size={13} />
+          {saving ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Save size={13} />
+          )}
           {t("Hifadhi", "Save")}
         </button>
       </div>
@@ -274,9 +290,9 @@ function RoleForm({ initial, lang, onSave, onCancel }) {
 }
 
 // ============================================================
-// STAFF CARD — responsive
+// STAFF CARD
 // ============================================================
-function StaffCard({ staff, roles, lang, onEdit, onRemove }) {
+function StaffCard({ staff, roles, lang, onEdit, onRemove, isBusy }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const role = roles.find((r) => r.key === staff.roleKey);
 
@@ -316,9 +332,7 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove }) {
               }}
               className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
             >
-              {staff.active
-                ? t("Hai", "Active")
-                : t("Imezimwa", "Inactive")}
+              {staff.active ? t("Hai", "Active") : t("Imezimwa", "Inactive")}
             </span>
           </div>
           {staff.addedAt && (
@@ -331,17 +345,23 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove }) {
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => onEdit(staff)}
-            className="p-1.5 text-muted hover:text-[#E8A33D] transition-colors"
+            disabled={isBusy}
+            className="p-1.5 text-muted hover:text-[#E8A33D] transition-colors disabled:opacity-50"
             aria-label={t("Hariri", "Edit")}
           >
             <Pencil size={14} />
           </button>
           <button
             onClick={() => onRemove(staff)}
-            className="p-1.5 text-muted hover:text-[#C1502E] transition-colors"
+            disabled={isBusy}
+            className="p-1.5 text-muted hover:text-[#C1502E] transition-colors disabled:opacity-50"
             aria-label={t("Ondoa", "Remove")}
           >
-            <Trash2 size={14} />
+            {isBusy ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Trash2 size={14} />
+            )}
           </button>
         </div>
       </div>
@@ -350,15 +370,16 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove }) {
 }
 
 // ============================================================
-// STAFF FORM — responsive
+// STAFF FORM
 // ============================================================
-function StaffForm({ initial, roles, lang, onSave, onCancel }) {
+function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [form, setForm] = useState({
     name: initial?.name || "",
     email: initial?.email || "",
     roleKey: initial?.roleKey || roles[0]?.key || "",
     active: initial?.active ?? true,
+    userId: initial?.userId || null,
   });
 
   const canSave = form.name.trim() && form.email.trim() && form.roleKey;
@@ -377,7 +398,8 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Amina Rashid"
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            disabled={saving}
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0">
@@ -389,7 +411,8 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             placeholder="amina@sokomkononi.co.tz"
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            disabled={saving}
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
           />
         </label>
       </div>
@@ -401,7 +424,8 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
         <select
           value={form.roleKey}
           onChange={(e) => setForm({ ...form, roleKey: e.target.value })}
-          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+          disabled={saving}
+          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
         >
           {roles.map((role) => (
             <option key={role.key} value={role.key}>
@@ -416,6 +440,7 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
           type="checkbox"
           checked={form.active}
           onChange={(e) => setForm({ ...form, active: e.target.checked })}
+          disabled={saving}
           className="w-4 h-4 rounded text-[#E8A33D] shrink-0"
         />
         <span className="text-xs text-secondary">
@@ -426,20 +451,25 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
       <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={onCancel}
-          className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary"
+          disabled={saving}
+          className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary disabled:opacity-50"
         >
           {t("Ghairi", "Cancel")}
         </button>
         <button
           onClick={() => onSave(form)}
-          disabled={!canSave}
+          disabled={!canSave || saving}
           style={{
-            background: canSave ? COLORS.gold : COLORS.sandLine,
-            color: canSave ? COLORS.night : "var(--text-muted)",
+            background: canSave && !saving ? COLORS.gold : COLORS.sandLine,
+            color: canSave && !saving ? COLORS.night : "var(--text-muted)",
           }}
-          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
         >
-          <Save size={13} />
+          {saving ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Save size={13} />
+          )}
           {t("Hifadhi", "Save")}
         </button>
       </div>
@@ -448,7 +478,7 @@ function StaffForm({ initial, roles, lang, onSave, onCancel }) {
 }
 
 // ============================================================
-// MAIN SECTION — export default
+// MAIN SECTION
 // ============================================================
 export default function RBACSection() {
   const { lang } = useLanguage();
@@ -459,8 +489,178 @@ export default function RBACSection() {
   const [editingRole, setEditingRole] = useState(null);
   const [addingStaff, setAddingStaff] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
+  // ⬇️ MPYA: busy + error state
+  const [busy, setBusy] = useState({}); // { [key]: true }
+  const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ============================================================
+  // ROLE HANDLERS
+  // ============================================================
+  const handleAddRole = async (form) => {
+    if (busy.roleSave) return;
+
+    setBusy((b) => ({ ...b, roleSave: true }));
+    setError("");
+
+    const key = form.label.en
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
+
+    const res = await addRoleAsync({ ...form, key });
+    setBusy((b) => {
+      const next = { ...b };
+      delete next.roleSave;
+      return next;
+    });
+
+    if (res.ok) {
+      setAddingRole(false);
+    } else {
+      setError(
+        res.error?.message || t("Imeshindwa kuongeza role.", "Failed to add role.")
+      );
+    }
+  };
+
+  const handleUpdateRole = async (key, form) => {
+    if (busy.roleSave) return;
+
+    setBusy((b) => ({ ...b, roleSave: true }));
+    setError("");
+
+    const res = await updateRoleAsync(key, form);
+    setBusy((b) => {
+      const next = { ...b };
+      delete next.roleSave;
+      return next;
+    });
+
+    if (res.ok) {
+      setEditingRole(null);
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuhifadhi role.", "Failed to save role.")
+      );
+    }
+  };
+
+  const handleRemoveRole = async (role) => {
+    if (
+      !window.confirm(
+        t(`Futa role "${role.key}"?`, `Delete role "${role.key}"?`)
+      )
+    )
+      return;
+
+    if (busy[`role-${role.key}`]) return;
+
+    setBusy((b) => ({ ...b, [`role-${role.key}`]: true }));
+    setError("");
+
+    const res = await removeRoleAsync(role.key);
+    setBusy((b) => {
+      const next = { ...b };
+      delete next[`role-${role.key}`];
+      return next;
+    });
+
+    if (!res.ok) {
+      setError(
+        res.error?.message || t("Imeshindwa kufuta role.", "Failed to delete role.")
+      );
+    }
+  };
+
+  // ============================================================
+  // STAFF HANDLERS
+  // ============================================================
+  const handleAddStaff = async (form) => {
+    if (busy.staffSave) return;
+
+    if (!form.userId) {
+      setError(
+        t(
+          "userId inahitajika. Chagua mtumiaji aliye na akaunti.",
+          "userId required. Select a user with an existing account."
+        )
+      );
+      return;
+    }
+
+    setBusy((b) => ({ ...b, staffSave: true }));
+    setError("");
+
+    const res = await addSubAdminAsync({
+      name: form.name,
+      email: form.email,
+      roleKey: form.roleKey,
+      userId: form.userId,
+    });
+    setBusy((b) => {
+      const next = { ...b };
+      delete next.staffSave;
+      return next;
+    });
+
+    if (res.ok) {
+      setAddingStaff(false);
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuongeza mfanyakazi.", "Failed to add staff.")
+      );
+    }
+  };
+
+  const handleUpdateStaff = async (id, form) => {
+    if (busy.staffSave) return;
+
+    setBusy((b) => ({ ...b, staffSave: true }));
+    setError("");
+
+    const res = await updateSubAdminAsync(id, form);
+    setBusy((b) => {
+      const next = { ...b };
+      delete next.staffSave;
+      return next;
+    });
+
+    if (res.ok) {
+      setEditingStaff(null);
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuhifadhi mfanyakazi.", "Failed to save staff.")
+      );
+    }
+  };
+
+  const handleRemoveStaff = async (s) => {
+    if (!window.confirm(t(`Ondoa ${s.name}?`, `Remove ${s.name}?`))) return;
+
+    if (busy[`staff-${s.id}`]) return;
+
+    setBusy((b) => ({ ...b, [`staff-${s.id}`]: true }));
+    setError("");
+
+    const res = await removeSubAdminAsync(s.id);
+    setBusy((b) => {
+      const next = { ...b };
+      delete next[`staff-${s.id}`];
+      return next;
+    });
+
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuondoa mfanyakazi.", "Failed to remove staff.")
+      );
+    }
+  };
 
   return (
     <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
@@ -472,7 +672,20 @@ export default function RBACSection() {
         )}
       />
 
-      {/* Tabs — centered */}
+      {/* Error banner */}
+      {error && (
+        <div
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg mb-4"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Tabs */}
       <div className="flex justify-center gap-2 mb-5 overflow-x-auto pb-2 w-full min-w-0">
         {TABS.map(({ key, label, icon: Icon }) => {
           const isActive = activeTab === key;
@@ -501,35 +714,33 @@ export default function RBACSection() {
             onClick={() => {
               setAddingRole(true);
               setEditingRole(null);
+              setError("");
             }}
+            disabled={addingRole || !!editingRole}
             style={{ background: COLORS.gold, color: COLORS.night }}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus size={13} />
             {t("Role Mpya", "New Role")}
           </button>
 
-          {(addingRole || editingRole) && (
+          {addingRole && (
             <RoleForm
-              initial={editingRole || {}}
+              initial={{}}
               lang={lang}
-              onSave={(form) => {
-                if (editingRole) {
-                  updateRole(editingRole.key, form);
-                  setEditingRole(null);
-                } else {
-                  const key = form.label.en
-                    .toLowerCase()
-                    .replace(/\s+/g, "_")
-                    .replace(/[^a-z0-9_]/g, "");
-                  addRole({ ...form, key });
-                  setAddingRole(false);
-                }
-              }}
-              onCancel={() => {
-                setAddingRole(false);
-                setEditingRole(null);
-              }}
+              saving={!!busy.roleSave}
+              onSave={handleAddRole}
+              onCancel={() => setAddingRole(false)}
+            />
+          )}
+
+          {editingRole && (
+            <RoleForm
+              initial={editingRole}
+              lang={lang}
+              saving={!!busy.roleSave}
+              onSave={(form) => handleUpdateRole(editingRole.key, form)}
+              onCancel={() => setEditingRole(null)}
             />
           )}
 
@@ -538,23 +749,13 @@ export default function RBACSection() {
               key={role.key}
               role={role}
               lang={lang}
+              isBusy={!!busy[`role-${role.key}`]}
               onEdit={(r) => {
                 setEditingRole(r);
                 setAddingRole(false);
+                setError("");
               }}
-              onDelete={(r) => {
-                if (
-                  window.confirm(
-                    t(`Futa role "${r.key}"?`, `Delete role "${r.key}"?`)
-                  )
-                ) {
-                  try {
-                    removeRole(r.key);
-                  } catch (e) {
-                    alert(e.message);
-                  }
-                }
-              }}
+              onDelete={handleRemoveRole}
             />
           ))}
         </div>
@@ -567,32 +768,35 @@ export default function RBACSection() {
             onClick={() => {
               setAddingStaff(true);
               setEditingStaff(null);
+              setError("");
             }}
+            disabled={addingStaff || !!editingStaff}
             style={{ background: COLORS.gold, color: COLORS.night }}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus size={13} />
             {t("Mfanyakazi Mpya", "New Staff")}
           </button>
 
-          {(addingStaff || editingStaff) && (
+          {addingStaff && (
             <StaffForm
-              initial={editingStaff || {}}
+              initial={{}}
               roles={roles}
               lang={lang}
-              onSave={(form) => {
-                if (editingStaff) {
-                  updateSubAdmin(editingStaff.id, form);
-                  setEditingStaff(null);
-                } else {
-                  addSubAdmin(form);
-                  setAddingStaff(false);
-                }
-              }}
-              onCancel={() => {
-                setAddingStaff(false);
-                setEditingStaff(null);
-              }}
+              saving={!!busy.staffSave}
+              onSave={handleAddStaff}
+              onCancel={() => setAddingStaff(false)}
+            />
+          )}
+
+          {editingStaff && (
+            <StaffForm
+              initial={editingStaff}
+              roles={roles}
+              lang={lang}
+              saving={!!busy.staffSave}
+              onSave={(form) => handleUpdateStaff(editingStaff.id, form)}
+              onCancel={() => setEditingStaff(null)}
             />
           )}
 
@@ -619,19 +823,13 @@ export default function RBACSection() {
                 staff={member}
                 roles={roles}
                 lang={lang}
+                isBusy={!!busy[`staff-${member.id}`]}
                 onEdit={(s) => {
                   setEditingStaff(s);
                   setAddingStaff(false);
+                  setError("");
                 }}
-                onRemove={(s) => {
-                  if (
-                    window.confirm(
-                      t(`Ondoa ${s.name}?`, `Remove ${s.name}?`)
-                    )
-                  ) {
-                    removeSubAdmin(s.id);
-                  }
-                }}
+                onRemove={handleRemoveStaff}
               />
             ))
           )}
