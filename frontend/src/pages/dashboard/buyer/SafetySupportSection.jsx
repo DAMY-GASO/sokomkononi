@@ -427,11 +427,11 @@ export default function SafetySupportSection() {
               </span>
             </a>
             <a
-              href="tel:+255700000000"
+              href="tel:+255743895038"
               className="flex items-center justify-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <Phone size={16} className="text-muted" />
-              <span className="text-body-sm text-secondary">+255 700 000 000</span>
+              <span className="text-body-sm text-secondary">+255 743 895 038</span>
             </a>
           </div>
         </div>
