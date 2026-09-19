@@ -1,16 +1,17 @@
 // ============================================================
 // PlatformPolicyPanel.jsx
 // Platform Policy management — listing lifetime days, n.k.
-// Bilingual + mobile-responsive.
+// Bilingual + mobile-responsive + Async save na rollback.
 // ============================================================
 
 import React, { useState, useEffect } from "react";
-import { Clock, Save, Check, Info } from "lucide-react";
+import { Clock, Save, Check, Info, Loader2 } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
+// ⬇️ MABADILIKO: tumia async update
 import {
   usePlatformPolicy,
-  updatePlatformPolicy,
+  updatePlatformPolicyAsync,
 } from "../../../../../config/systemSettingsStore.js";
 
 export default function PlatformPolicyPanel() {
@@ -18,30 +19,55 @@ export default function PlatformPolicyPanel() {
   const [policy] = usePlatformPolicy();
   const [saved, setSaved] = useState(false);
   const [draft, setDraft] = useState(policy.listingLifetimeDays);
+  // ⬇️ MPYA: busy + error
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
   // ============================================================
-  // SYNC — kama policy inabadilika (kutoka tab nyingine au
-  // update nyingine), sasisha draft. Hii inaepusha "stale draft".
+  // SYNC — kama policy inabadilika, sasisha draft
   // ============================================================
   useEffect(() => {
     setDraft(policy.listingLifetimeDays);
   }, [policy.listingLifetimeDays]);
 
-  const save = () => {
+  // ============================================================
+  // HANDLER — async save
+  // ============================================================
+  const handleSave = async () => {
+    if (saving) return;
+
     const days = Math.max(1, Math.min(365, Number(draft) || 60));
-    updatePlatformPolicy({ listingLifetimeDays: days });
-    setDraft(days);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1800);
+
+    setSaving(true);
+    setError("");
+    setSaved(false);
+
+    const res = await updatePlatformPolicyAsync({
+      listingLifetimeDays: days,
+    });
+
+    setSaving(false);
+
+    if (res.ok) {
+      setDraft(days);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuhifadhi sera.", "Failed to save policy.")
+      );
+    }
   };
 
-  // ============================================================
-  // CHANGES CHECK — kama kuna tofauti kati ya draft na policy
-  // ============================================================
   const hasChanges = Number(draft) !== policy.listingLifetimeDays;
-  const canSave = hasChanges && Number(draft) >= 1 && Number(draft) <= 365;
-
-  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const canSave =
+    hasChanges &&
+    Number(draft) >= 1 &&
+    Number(draft) <= 365 &&
+    !saving;
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-4 min-w-0">
@@ -63,6 +89,19 @@ export default function PlatformPolicyPanel() {
         </div>
       </div>
 
+      {/* Error banner */}
+      {error && (
+        <div
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg"
+        >
+          {error}
+        </div>
+      )}
+
       {/* Field */}
       <label className="flex flex-col gap-1.5 min-w-0">
         <span className="text-xs font-medium text-secondary">
@@ -76,9 +115,10 @@ export default function PlatformPolicyPanel() {
             value={draft}
             onChange={(e) => setDraft(e.target.value.replace(/\D/g, ""))}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && canSave) save();
+              if (e.key === "Enter" && canSave) handleSave();
             }}
-            className="w-20 sm:w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] min-w-0"
+            disabled={saving}
+            className="w-20 sm:w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] min-w-0 disabled:opacity-50"
           />
           <span className="text-xs text-secondary shrink-0">
             {t("siku", "days")}
@@ -98,16 +138,22 @@ export default function PlatformPolicyPanel() {
       {/* Save row */}
       <div className="flex items-center gap-3 flex-wrap">
         <button
-          onClick={save}
+          onClick={handleSave}
           disabled={!canSave}
           style={{
             background: canSave ? COLORS.gold : COLORS.sandLine,
             color: canSave ? COLORS.night : "var(--text-muted)",
           }}
-          className="flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg px-4 py-2 w-full sm:w-auto transition-colors"
+          className="flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg px-4 py-2 w-full sm:w-auto transition-colors disabled:cursor-not-allowed"
         >
-          <Save size={13} />
-          {t("Hifadhi", "Save")}
+          {saving ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Save size={13} />
+          )}
+          {saving
+            ? t("Inahifadhi...", "Saving...")
+            : t("Hifadhi", "Save")}
         </button>
 
         {saved && (
