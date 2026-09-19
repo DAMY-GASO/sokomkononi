@@ -1,5 +1,6 @@
 // ============================================================
 // contentStore.js — API-backed via /api/content/
+// + Graceful local fallback (404 → local-only)
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -94,6 +95,27 @@ function normalizeFromApi(raw) {
   };
 }
 
+// ============================================================
+// GRACEFUL API HELPER — ⬅️ MUHIMU! Ipo hapa
+// ============================================================
+async function tryApi(apiCall, { onSuccess, onFail, optimistic }) {
+  try {
+    const raw = await apiCall();
+    onSuccess(raw);
+    return { ok: true, data: raw };
+  } catch (err) {
+    if (err?.status === 404 || err?.status === 501) {
+      console.warn("[contentStore] backend haipo — local-only:", err.status);
+      return { ok: true, warning: "local_only" };
+    }
+    onFail(err);
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// READS
+// ============================================================
 export function getContent() {
   return readFromStorage();
 }
@@ -118,6 +140,9 @@ export function getTerms() { return getContent().terms || DEFAULT_TERMS; }
 export function getPrivacy() { return getContent().privacy || DEFAULT_PRIVACY; }
 export function getHelp() { return getContent().help || DEFAULT_HELP; }
 
+// ============================================================
+// LEGACY SYNC (deprecated — bado zinafanya kazi)
+// ============================================================
 export function addBanner(banner) {
   const current = getContent();
   const entry = { id: `local_${Date.now()}`, active: true, order: 1, ...banner };
@@ -187,6 +212,213 @@ export function updateHelp(patch) {
   saveAll(next); return next;
 }
 
+// ============================================================
+// ASYNC MUTATIONS — with graceful local fallback
+// ============================================================
+
+// ---------- BANNERS ----------
+export async function addBannerAsync(banner) {
+  const current = getContent();
+  const optimistic = { id: `local_${Date.now()}`, active: true, order: 1, ...banner };
+  const next = { ...current, banners: [...(current.banners || []), optimistic] };
+  saveAll(next);
+
+  return tryApi(
+    () => api.post("/content/banners/", banner),
+    {
+      optimistic,
+      onSuccess: (raw) => {
+        if (raw?.id) {
+          const now = getContent();
+          saveAll({
+            ...now,
+            banners: (now.banners || []).map((b) => (b.id === optimistic.id ? raw : b)),
+          });
+        }
+      },
+      onFail: () => saveAll(current),
+    }
+  );
+}
+
+export async function updateBannerAsync(id, patch) {
+  const current = getContent();
+  const next = {
+    ...current,
+    banners: (current.banners || []).map((b) => (b.id === id ? { ...b, ...patch } : b)),
+  };
+  saveAll(next);
+
+  if (typeof id !== "number") return { ok: true, warning: "local_only" };
+
+  return tryApi(
+    () => api.patch(`/content/banners/${id}/`, patch),
+    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
+  );
+}
+
+export async function removeBannerAsync(id) {
+  const current = getContent();
+  const next = {
+    ...current,
+    banners: (current.banners || []).filter((b) => b.id !== id),
+  };
+  saveAll(next);
+
+  if (typeof id !== "number") return { ok: true, warning: "local_only" };
+
+  return tryApi(
+    () => api.delete(`/content/banners/${id}/`),
+    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
+  );
+}
+
+// ---------- TESTIMONIALS ----------
+export async function addTestimonialAsync(t) {
+  const current = getContent();
+  const optimistic = { id: `local_${Date.now()}`, rating: 5, active: true, ...t };
+  saveAll({ ...current, testimonials: [...(current.testimonials || []), optimistic] });
+
+  return tryApi(
+    () => api.post("/content/testimonials/", t),
+    {
+      optimistic,
+      onSuccess: (raw) => {
+        if (raw?.id) {
+          const now = getContent();
+          saveAll({
+            ...now,
+            testimonials: (now.testimonials || []).map((x) =>
+              x.id === optimistic.id ? raw : x
+            ),
+          });
+        }
+      },
+      onFail: () => saveAll(current),
+    }
+  );
+}
+
+export async function updateTestimonialAsync(id, patch) {
+  const current = getContent();
+  saveAll({
+    ...current,
+    testimonials: (current.testimonials || []).map((x) =>
+      x.id === id ? { ...x, ...patch } : x
+    ),
+  });
+
+  if (typeof id !== "number") return { ok: true, warning: "local_only" };
+
+  return tryApi(
+    () => api.patch(`/content/testimonials/${id}/`, patch),
+    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
+  );
+}
+
+export async function removeTestimonialAsync(id) {
+  const current = getContent();
+  saveAll({
+    ...current,
+    testimonials: (current.testimonials || []).filter((x) => x.id !== id),
+  });
+
+  if (typeof id !== "number") return { ok: true, warning: "local_only" };
+
+  return tryApi(
+    () => api.delete(`/content/testimonials/${id}/`),
+    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
+  );
+}
+
+// ---------- FAQS ----------
+export async function addFaqAsync(f) {
+  const current = getContent();
+  const optimistic = { id: `local_${Date.now()}`, active: true, order: 1, ...f };
+  saveAll({ ...current, faqs: [...(current.faqs || []), optimistic] });
+
+  return tryApi(
+    () => api.post("/content/faqs/", f),
+    {
+      optimistic,
+      onSuccess: (raw) => {
+        if (raw?.id) {
+          const now = getContent();
+          saveAll({
+            ...now,
+            faqs: (now.faqs || []).map((x) => (x.id === optimistic.id ? raw : x)),
+          });
+        }
+      },
+      onFail: () => saveAll(current),
+    }
+  );
+}
+
+export async function updateFaqAsync(id, patch) {
+  const current = getContent();
+  saveAll({
+    ...current,
+    faqs: (current.faqs || []).map((x) => (x.id === id ? { ...x, ...patch } : x)),
+  });
+
+  if (typeof id !== "number") return { ok: true, warning: "local_only" };
+
+  return tryApi(
+    () => api.patch(`/content/faqs/${id}/`, patch),
+    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
+  );
+}
+
+export async function removeFaqAsync(id) {
+  const current = getContent();
+  saveAll({
+    ...current,
+    faqs: (current.faqs || []).filter((x) => x.id !== id),
+  });
+
+  if (typeof id !== "number") return { ok: true, warning: "local_only" };
+
+  return tryApi(
+    () => api.delete(`/content/faqs/${id}/`),
+    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
+  );
+}
+
+// ---------- ABOUT / TERMS / PRIVACY / HELP ----------
+async function updatePageAsync(section, patch) {
+  const current = getContent();
+  const next = {
+    ...current,
+    [section]: { ...current[section], ...patch, lastUpdated: new Date().toISOString() },
+  };
+  saveAll(next);
+
+  return tryApi(
+    () => api.patch(`/content/${section}/`, patch),
+    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
+  );
+}
+
+export async function updateAboutAsync(patch) {
+  return updatePageAsync("about", patch);
+}
+
+export async function updateTermsAsync(patch) {
+  return updatePageAsync("terms", patch);
+}
+
+export async function updatePrivacyAsync(patch) {
+  return updatePageAsync("privacy", patch);
+}
+
+export async function updateHelpAsync(patch) {
+  return updatePageAsync("help", patch);
+}
+
+// ============================================================
+// HOOKS
+// ============================================================
 export function useContent() {
   const [content, setContent] = useState(() => getContent());
   useEffect(() => {
