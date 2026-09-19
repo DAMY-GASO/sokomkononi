@@ -1,7 +1,7 @@
 // ============================================================
 // VerificationSection.jsx
 // Admin — Verifications za seller, buyer, property, vehicle, business.
-// Bilingual + mobile-responsive (imeboreshwa).
+// Bilingual + mobile-responsive + Async actions na rollback.
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -20,15 +20,17 @@ import {
   ChevronUp,
   Search,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
+// ⬇️ MABADILIKO: tumia async variants
 import {
   useVerifications,
-  approveVerification,
-  rejectVerification,
-  removeVerification,
+  approveVerificationAsync,
+  rejectVerificationAsync,
+  removeVerificationAsync,
   VERIFICATION_TYPES,
   VERIFICATION_STATUSES,
 } from "../../../../config/verificationsStore.js";
@@ -78,37 +80,74 @@ function StatusBadge({ status, lang }) {
 }
 
 // ============================================================
-// VERIFICATION CARD — responsive
+// VERIFICATION CARD — responsive + async
 // ============================================================
 function VerificationCard({ request, lang }) {
   const [expanded, setExpanded] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  // ⬇️ MPYA: busy + error state
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   const TypeIcon = TYPE_ICONS[request.type] || ShieldCheck;
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (
-      window.confirm(
+      !window.confirm(
         t(
           `Idhinisha uthibitisho wa "${request.subject}"?`,
           `Approve verification for "${request.subject}"?`
         )
       )
-    ) {
-      approveVerification(request.id);
+    )
+      return;
+
+    setBusy(true);
+    setError("");
+    const res = await approveVerificationAsync(request.id);
+    setBusy(false);
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuidhinisha.", "Failed to approve.")
+      );
     }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!rejecting) {
       setRejecting(true);
       return;
     }
-    rejectVerification(request.id, rejectReason.trim());
-    setRejecting(false);
-    setRejectReason("");
+
+    setBusy(true);
+    setError("");
+    const res = await rejectVerificationAsync(request.id, rejectReason.trim());
+    setBusy(false);
+    if (res.ok) {
+      setRejecting(false);
+      setRejectReason("");
+    } else {
+      setError(
+        res.error?.message || t("Imeshindwa kukataa.", "Failed to reject.")
+      );
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!window.confirm(t("Ondoa ombi hili?", "Remove this request?"))) return;
+
+    setBusy(true);
+    setError("");
+    const res = await removeVerificationAsync(request.id);
+    setBusy(false);
+    if (!res.ok) {
+      setError(
+        res.error?.message || t("Imeshindwa kuondoa.", "Failed to remove.")
+      );
+    }
   };
 
   return (
@@ -171,6 +210,19 @@ function VerificationCard({ request, lang }) {
           style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
           className="border-t p-3 sm:p-4 flex flex-col gap-3 w-full max-w-full min-w-0 overflow-hidden"
         >
+          {/* Error banner */}
+          {error && (
+            <div
+              style={{
+                background: "rgba(193,80,46,0.1)",
+                color: COLORS.rust,
+              }}
+              className="text-xs font-semibold px-3 py-2 rounded-lg"
+            >
+              {error}
+            </div>
+          )}
+
           {/* Notes */}
           {request.notes && (
             <div className="min-w-0 w-full">
@@ -254,23 +306,33 @@ function VerificationCard({ request, lang }) {
             <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
               <button
                 onClick={handleApprove}
+                disabled={busy}
                 style={{ background: COLORS.green, color: "white" }}
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg hover:opacity-90 transition-opacity shrink-0"
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg hover:opacity-90 transition-opacity shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Check size={12} />
+                {busy ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <Check size={12} />
+                )}
                 {t("Idhinisha", "Approve")}
               </button>
 
               <button
                 onClick={handleReject}
+                disabled={busy}
                 style={{
                   background: rejecting ? COLORS.rust : "transparent",
                   color: rejecting ? "white" : COLORS.rust,
                   borderColor: "rgba(193,80,46,0.35)",
                 }}
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors shrink-0"
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <X size={12} />
+                {busy && rejecting ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <X size={12} />
+                )}
                 {rejecting
                   ? t("Thibitisha Kukataa", "Confirm Rejection")
                   : t("Kataa", "Reject")}
@@ -282,23 +344,17 @@ function VerificationCard({ request, lang }) {
                     setRejecting(false);
                     setRejectReason("");
                   }}
-                  className="text-xs font-semibold px-3 py-2 rounded-lg text-secondary hover:bg-gray-100 transition-colors shrink-0"
+                  disabled={busy}
+                  className="text-xs font-semibold px-3 py-2 rounded-lg text-secondary hover:bg-gray-100 transition-colors shrink-0 disabled:opacity-50"
                 >
                   {t("Ghairi", "Cancel")}
                 </button>
               )}
 
               <button
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      t("Ondoa ombi hili?", "Remove this request?")
-                    )
-                  ) {
-                    removeVerification(request.id);
-                  }
-                }}
-                className="ml-auto text-xs font-semibold px-2 py-2 rounded-lg text-muted hover:text-[#C1502E] transition-colors shrink-0"
+                onClick={handleRemove}
+                disabled={busy}
+                className="ml-auto text-xs font-semibold px-2 py-2 rounded-lg text-muted hover:text-[#C1502E] transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label={t("Ondoa", "Remove")}
               >
                 <Trash2 size={14} />
@@ -379,7 +435,7 @@ export default function VerificationSection() {
         )}
       />
 
-      {/* Summary Stats — responsive */}
+      {/* Summary Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5 w-full">
         {[
           { label: t("Zote", "Total"), value: counts.total, color: "var(--text-primary)" },
@@ -405,7 +461,7 @@ export default function VerificationSection() {
         ))}
       </div>
 
-      {/* Type Tabs — centered + scroll horizontal */}
+      {/* Type Tabs */}
       <div className="flex justify-center gap-2 mb-3 overflow-x-auto pb-2 w-full min-w-0">
         <button
           onClick={() => setTypeFilter("all")}
@@ -434,7 +490,7 @@ export default function VerificationSection() {
         ))}
       </div>
 
-      {/* Status Tabs — centered + scroll horizontal */}
+      {/* Status Tabs */}
       <div className="flex justify-center gap-2 mb-3 overflow-x-auto pb-2 w-full min-w-0">
         <button
           onClick={() => setStatusFilter("all")}
