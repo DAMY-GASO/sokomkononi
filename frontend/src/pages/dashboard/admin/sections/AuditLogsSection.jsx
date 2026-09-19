@@ -25,51 +25,13 @@ import {
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
-// ⬇️ MABADILIKO: tumia store moja kwa moja + api
+// ⬇️ MABADILIKO: tumia async variants kutoka store
 import {
   useAuditLogs,
-  getAuditLogs,
-  saveAuditLogs,
+  removeAuditLogAsync,
+  clearAuditLogsAsync,
   AUDIT_ACTIONS,
 } from "../../../../config/auditLogsStore.js";
-import { api } from "../../../../api/client.js";
-
-// ============================================================
-// ASYNC HELPERS — tunaunda hapa kwa sababu store haina (bado)
-// ============================================================
-async function removeAuditLogAsync(id) {
-  const previous = getAuditLogs();
-  const target = previous.find((l) => l.id === id);
-  if (!target) return { ok: false, error: new Error("Log haipo") };
-
-  // Optimistic
-  saveAuditLogs(previous.filter((l) => l.id !== id));
-
-  if (typeof id !== "number") return { ok: true };
-
-  try {
-    await api.delete(`/audit/${id}/`);
-    return { ok: true };
-  } catch (err) {
-    saveAuditLogs(previous); // Rollback
-    console.warn("[AuditLogsSection] remove failed:", err);
-    return { ok: false, error: err };
-  }
-}
-
-async function clearAuditLogsAsync() {
-  const previous = getAuditLogs();
-  saveAuditLogs([]);
-
-  try {
-    await api.post("/audit/clear/", {});
-    return { ok: true };
-  } catch (err) {
-    saveAuditLogs(previous); // Rollback
-    console.warn("[AuditLogsSection] clearAll failed:", err);
-    return { ok: false, error: err };
-  }
-}
 
 // ============================================================
 // ACTION ICONS
@@ -107,7 +69,7 @@ export default function AuditLogsSection() {
   const [query, setQuery] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
   // ⬇️ MPYA: busy + error
-  const [busy, setBusy] = useState({}); // { [id]: true, clearing: true }
+  const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -366,10 +328,7 @@ export default function AuditLogsSection() {
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span
-                      style={{
-                        background: colors.bg,
-                        color: colors.fg,
-                      }}
+                      style={{ background: colors.bg, color: colors.fg }}
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                     >
                       {getActionLabel(log.action)}
