@@ -216,10 +216,10 @@ export const SEED_CATEGORIES = [
   {
     key: "mashine",
     imageUrl: null,
-    label: { sw: "Mashine / Heavy Equipment", en: "Machinery / Heavy Equipment" },
+    label: { sw: "Mashine", en: "Machinery" },
     description: {
-      sw: "Mashine za ujenzi, kilimo, na viwanda",
-      en: "Construction, agricultural, and industrial machinery",
+      sw: "Mashine za kuchapa, na kudarizi",
+      en: "Printing, and embroiding machinery",
     },
     iconKey: "Wrench",
     isPopular: true,
@@ -228,6 +228,40 @@ export const SEED_CATEGORIES = [
       {
         key: "aina",
         label: { sw: "Aina ya Mashine", en: "Machine Type" },
+        type: "text",
+        placeholder: { sw: "mfano: Mashine ya kudarizi", en: "e.g. embroidery machine" },
+      },
+      {
+        key: "hours",
+        label: { sw: "Saa za Matumizi", en: "Usage Hours" },
+        type: "number",
+        placeholder: { sw: "mfano: 3200", en: "e.g. 3200" },
+      },
+      {
+        key: "hali",
+        label: { sw: "Hali", en: "Condition" },
+        type: "select",
+        options: CONDITION_OPTIONS,
+      },
+    ],
+  },
+  
+    // 6. VIFAA VIZITO
+  {
+    key: "mashine",
+    imageUrl: null,
+    label: { sw: "Vifaa vizito", en: "Heavy Equipment" },
+    description: {
+      sw: "Mashine za kilimo, na viwanda",
+      en: "Construction, agricultural, and industrial machinery",
+    },
+    iconKey: "Wrench",
+    isPopular: true,
+    active: true,
+    extra: [
+      {
+        key: "aina",
+        label: { sw: "Aina ya kifaa", en: "Heavy equipment Type" },
         type: "text",
         placeholder: { sw: "mfano: Excavator", en: "e.g. Excavator" },
       },
@@ -246,7 +280,8 @@ export const SEED_CATEGORIES = [
     ],
   },
 
-  // 6. PIKIPIKI
+
+  // 7. PIKIPIKI
   {
     key: "pikipiki",
     imageUrl: null,
@@ -261,7 +296,7 @@ export const SEED_CATEGORIES = [
     extra: [],
   },
 
-  // 7. MABASI
+  // 8. MABASI
   {
     key: "mabasi",
     imageUrl: null,
@@ -276,7 +311,7 @@ export const SEED_CATEGORIES = [
     extra: [],
   },
 
-  // 8. SAMANI
+  // 9. SAMANI
   {
     key: "samani",
     imageUrl: null,
@@ -291,7 +326,7 @@ export const SEED_CATEGORIES = [
     extra: [],
   },
 
-  // 9. VIFAA VYA ELEKTRONIKI
+  // 10. VIFAA VYA ELEKTRONIKI
   {
     key: "vifaa-vya-elektroniki",
     imageUrl: null,
@@ -306,7 +341,7 @@ export const SEED_CATEGORIES = [
     extra: [],
   },
 
-  // 10. MIFUGO
+  // 11. MIFUGO
   {
     key: "mifugo",
     imageUrl: null,
@@ -321,7 +356,7 @@ export const SEED_CATEGORIES = [
     extra: [],
   },
 
-  // 11. VIFAA VYA NYUMBANI
+  // 12. VIFAA VYA NYUMBANI
   {
     key: "vifaa-vya-nyumbani",
     imageUrl: null,
