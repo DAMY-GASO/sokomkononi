@@ -2,7 +2,7 @@
 // ContentSection.jsx
 // Admin — Content Management (banners, testimonials, FAQs, About,
 // Terms, Privacy, Help).
-// Bilingual + mobile-responsive (imeboreshwa zaidi).
+// Bilingual + mobile-responsive + Async actions na rollback.
 // ============================================================
 
 import React, { useState } from "react";
@@ -19,25 +19,27 @@ import {
   Pencil,
   Save,
   Check,
+  Loader2,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
+// ⬇️ MABADILIKO: tumia async variants
 import {
   useContent,
-  addBanner,
-  updateBanner,
-  removeBanner,
-  addTestimonial,
-  updateTestimonial,
-  removeTestimonial,
-  addFaq,
-  updateFaq,
-  removeFaq,
-  updateAbout,
-  updateTerms,
-  updatePrivacy,
-  updateHelp,
+  addBannerAsync,
+  updateBannerAsync,
+  removeBannerAsync,
+  addTestimonialAsync,
+  updateTestimonialAsync,
+  removeTestimonialAsync,
+  addFaqAsync,
+  updateFaqAsync,
+  removeFaqAsync,
+  updateAboutAsync,
+  updateTermsAsync,
+  updatePrivacyAsync,
+  updateHelpAsync,
 } from "../../../../config/contentStore.js";
 
 // ============================================================
@@ -54,9 +56,9 @@ const TABS = [
 ];
 
 // ============================================================
-// BILINGUAL FIELD — responsive
+// BILINGUAL FIELD
 // ============================================================
-function BilingualField({ label, value, onChange, multiline = false, rows = 3 }) {
+function BilingualField({ label, value, onChange, multiline = false, rows = 3, disabled = false }) {
   const swVal = value?.sw || "";
   const enVal = value?.en || "";
   const Input = multiline ? "textarea" : "input";
@@ -75,7 +77,8 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3 })
             value={swVal}
             onChange={(e) => onChange({ ...value, sw: e.target.value })}
             rows={multiline ? rows : undefined}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1"
+            disabled={disabled}
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1 disabled:opacity-50"
           />
         </div>
         <div className="min-w-0 w-full">
@@ -86,7 +89,8 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3 })
             value={enVal}
             onChange={(e) => onChange({ ...value, en: e.target.value })}
             rows={multiline ? rows : undefined}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1"
+            disabled={disabled}
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1 disabled:opacity-50"
           />
         </div>
       </div>
@@ -95,24 +99,30 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3 })
 }
 
 // ============================================================
-// FORM ACTIONS — reusable
+// FORM ACTIONS
 // ============================================================
-function FormActions({ onCancel, onSave, lang, saveLabel = null }) {
+function FormActions({ onCancel, onSave, lang, saving = false, saveLabel = null }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   return (
     <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
       <button
         onClick={onCancel}
-        className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary shrink-0"
+        disabled={saving}
+        className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary shrink-0 disabled:opacity-50"
       >
         {t("Ghairi", "Cancel")}
       </button>
       <button
         onClick={onSave}
+        disabled={saving}
         style={{ background: COLORS.gold, color: COLORS.night }}
-        className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+        className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        <Save size={13} />
+        {saving ? (
+          <Loader2 size={13} className="animate-spin" />
+        ) : (
+          <Save size={13} />
+        )}
         {saveLabel || t("Hifadhi", "Save")}
       </button>
     </div>
@@ -120,7 +130,7 @@ function FormActions({ onCancel, onSave, lang, saveLabel = null }) {
 }
 
 // ============================================================
-// BANNERS TAB — responsive
+// BANNERS TAB — async
 // ============================================================
 function BannersTab({ lang }) {
   const content = useContent();
@@ -128,6 +138,9 @@ function BannersTab({ lang }) {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [adding, setAdding] = useState(false);
+  // ⬇️ MPYA: busy + error
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -141,21 +154,35 @@ function BannersTab({ lang }) {
     });
     setAdding(true);
     setEditing(null);
+    setError("");
   };
 
   const handleEdit = (banner) => {
     setForm({ ...banner });
     setEditing(banner.id);
     setAdding(false);
+    setError("");
   };
 
-  const handleSave = () => {
-    if (adding) {
-      addBanner(form);
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+
+    const res = adding
+      ? await addBannerAsync(form)
+      : await updateBannerAsync(editing, form);
+
+    setSaving(false);
+
+    if (res.ok) {
       setAdding(false);
-    } else if (editing) {
-      updateBanner(editing, form);
       setEditing(null);
+      setForm({});
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuhifadhi banner.", "Failed to save banner.")
+      );
     }
   };
 
@@ -163,14 +190,42 @@ function BannersTab({ lang }) {
     setAdding(false);
     setEditing(null);
     setForm({});
+    setError("");
+  };
+
+  const handleRemove = async (id) => {
+    if (!window.confirm(t("Ondoa banner?", "Remove banner?"))) return;
+
+    setError("");
+    const res = await removeBannerAsync(id);
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuondoa banner.", "Failed to remove banner.")
+      );
+    }
   };
 
   return (
     <div className="flex flex-col gap-3 w-full min-w-0">
+      {/* Error banner */}
+      {error && (
+        <div
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg"
+        >
+          {error}
+        </div>
+      )}
+
       <button
         onClick={handleAdd}
+        disabled={adding || !!editing}
         style={{ background: COLORS.gold, color: COLORS.night }}
-        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
+        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Plus size={13} />
         {t("Banner Mpya", "New Banner")}
@@ -185,6 +240,7 @@ function BannersTab({ lang }) {
             label={t("Kichwa", "Title")}
             value={form.title || { sw: "", en: "" }}
             onChange={(v) => setForm({ ...form, title: v })}
+            disabled={saving}
           />
           <BilingualField
             label={t("Maelezo", "Subtitle")}
@@ -192,11 +248,13 @@ function BannersTab({ lang }) {
             onChange={(v) => setForm({ ...form, subtitle: v })}
             multiline
             rows={2}
+            disabled={saving}
           />
           <BilingualField
             label={t("Kitufe", "CTA Text")}
             value={form.ctaText || { sw: "", en: "" }}
             onChange={(v) => setForm({ ...form, ctaText: v })}
+            disabled={saving}
           />
           <label className="flex flex-col gap-1 w-full min-w-0">
             <span className="text-[11px] font-semibold text-secondary">
@@ -206,7 +264,8 @@ function BannersTab({ lang }) {
               value={form.ctaLink || ""}
               onChange={(e) => setForm({ ...form, ctaLink: e.target.value })}
               placeholder="/tafuta"
-              className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+              disabled={saving}
+              className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
             />
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
@@ -214,6 +273,7 @@ function BannersTab({ lang }) {
               type="checkbox"
               checked={form.active !== false}
               onChange={(e) => setForm({ ...form, active: e.target.checked })}
+              disabled={saving}
               className="w-4 h-4 rounded text-[#E8A33D] shrink-0"
             />
             <span className="text-xs text-secondary">
@@ -221,7 +281,12 @@ function BannersTab({ lang }) {
             </span>
           </label>
 
-          <FormActions onCancel={handleCancel} onSave={handleSave} lang={lang} />
+          <FormActions
+            onCancel={handleCancel}
+            onSave={handleSave}
+            lang={lang}
+            saving={saving}
+          />
         </div>
       )}
 
@@ -259,18 +324,16 @@ function BannersTab({ lang }) {
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => handleEdit(banner)}
-                className="p-1.5 text-muted hover:text-[#E8A33D]"
+                disabled={saving}
+                className="p-1.5 text-muted hover:text-[#E8A33D] disabled:opacity-50"
                 aria-label={t("Hariri", "Edit")}
               >
                 <Pencil size={14} />
               </button>
               <button
-                onClick={() => {
-                  if (window.confirm(t("Ondoa banner?", "Remove banner?"))) {
-                    removeBanner(banner.id);
-                  }
-                }}
-                className="p-1.5 text-muted hover:text-[#C1502E]"
+                onClick={() => handleRemove(banner.id)}
+                disabled={saving}
+                className="p-1.5 text-muted hover:text-[#C1502E] disabled:opacity-50"
                 aria-label={t("Ondoa", "Remove")}
               >
                 <Trash2 size={14} />
@@ -284,7 +347,7 @@ function BannersTab({ lang }) {
 }
 
 // ============================================================
-// TESTIMONIALS TAB — responsive
+// TESTIMONIALS TAB — async
 // ============================================================
 function TestimonialsTab({ lang }) {
   const content = useContent();
@@ -292,6 +355,8 @@ function TestimonialsTab({ lang }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -299,21 +364,35 @@ function TestimonialsTab({ lang }) {
     setForm({ name: "", quote: { sw: "", en: "" }, rating: 5, active: true });
     setAdding(true);
     setEditing(null);
+    setError("");
   };
 
   const handleEdit = (item) => {
     setForm({ ...item });
     setEditing(item.id);
     setAdding(false);
+    setError("");
   };
 
-  const handleSave = () => {
-    if (adding) {
-      addTestimonial(form);
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+
+    const res = adding
+      ? await addTestimonialAsync(form)
+      : await updateTestimonialAsync(editing, form);
+
+    setSaving(false);
+
+    if (res.ok) {
       setAdding(false);
-    } else if (editing) {
-      updateTestimonial(editing, form);
       setEditing(null);
+      setForm({});
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuhifadhi ushuhuda.", "Failed to save testimonial.")
+      );
     }
   };
 
@@ -321,14 +400,41 @@ function TestimonialsTab({ lang }) {
     setAdding(false);
     setEditing(null);
     setForm({});
+    setError("");
+  };
+
+  const handleRemove = async (id) => {
+    if (!window.confirm(t("Ondoa ushuhuda?", "Remove testimonial?"))) return;
+
+    setError("");
+    const res = await removeTestimonialAsync(id);
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuondoa ushuhuda.", "Failed to remove testimonial.")
+      );
+    }
   };
 
   return (
     <div className="flex flex-col gap-3 w-full min-w-0">
+      {error && (
+        <div
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg"
+        >
+          {error}
+        </div>
+      )}
+
       <button
         onClick={handleAdd}
+        disabled={adding || !!editing}
         style={{ background: COLORS.gold, color: COLORS.night }}
-        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
+        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Plus size={13} />
         {t("Ushuhuda Mpya", "New Testimonial")}
@@ -347,7 +453,8 @@ function TestimonialsTab({ lang }) {
               value={form.name || ""}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Mary, Dar es Salaam"
-              className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+              disabled={saving}
+              className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
             />
           </label>
           <BilingualField
@@ -356,8 +463,14 @@ function TestimonialsTab({ lang }) {
             onChange={(v) => setForm({ ...form, quote: v })}
             multiline
             rows={3}
+            disabled={saving}
           />
-          <FormActions onCancel={handleCancel} onSave={handleSave} lang={lang} />
+          <FormActions
+            onCancel={handleCancel}
+            onSave={handleSave}
+            lang={lang}
+            saving={saving}
+          />
         </div>
       )}
 
@@ -379,18 +492,16 @@ function TestimonialsTab({ lang }) {
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => handleEdit(item)}
-                className="p-1.5 text-muted hover:text-[#E8A33D]"
+                disabled={saving}
+                className="p-1.5 text-muted hover:text-[#E8A33D] disabled:opacity-50"
                 aria-label={t("Hariri", "Edit")}
               >
                 <Pencil size={14} />
               </button>
               <button
-                onClick={() => {
-                  if (window.confirm(t("Ondoa ushuhuda?", "Remove testimonial?"))) {
-                    removeTestimonial(item.id);
-                  }
-                }}
-                className="p-1.5 text-muted hover:text-[#C1502E]"
+                onClick={() => handleRemove(item.id)}
+                disabled={saving}
+                className="p-1.5 text-muted hover:text-[#C1502E] disabled:opacity-50"
                 aria-label={t("Ondoa", "Remove")}
               >
                 <Trash2 size={14} />
@@ -404,7 +515,7 @@ function TestimonialsTab({ lang }) {
 }
 
 // ============================================================
-// FAQS TAB — responsive
+// FAQS TAB — async
 // ============================================================
 function FaqsTab({ lang }) {
   const content = useContent();
@@ -412,6 +523,8 @@ function FaqsTab({ lang }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -419,21 +532,35 @@ function FaqsTab({ lang }) {
     setForm({ question: { sw: "", en: "" }, answer: { sw: "", en: "" }, active: true });
     setAdding(true);
     setEditing(null);
+    setError("");
   };
 
   const handleEdit = (faq) => {
     setForm({ ...faq });
     setEditing(faq.id);
     setAdding(false);
+    setError("");
   };
 
-  const handleSave = () => {
-    if (adding) {
-      addFaq(form);
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+
+    const res = adding
+      ? await addFaqAsync(form)
+      : await updateFaqAsync(editing, form);
+
+    setSaving(false);
+
+    if (res.ok) {
       setAdding(false);
-    } else if (editing) {
-      updateFaq(editing, form);
       setEditing(null);
+      setForm({});
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuhifadhi swali.", "Failed to save FAQ.")
+      );
     }
   };
 
@@ -441,14 +568,41 @@ function FaqsTab({ lang }) {
     setAdding(false);
     setEditing(null);
     setForm({});
+    setError("");
+  };
+
+  const handleRemove = async (id) => {
+    if (!window.confirm(t("Ondoa swali?", "Remove FAQ?"))) return;
+
+    setError("");
+    const res = await removeFaqAsync(id);
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuondoa swali.", "Failed to remove FAQ.")
+      );
+    }
   };
 
   return (
     <div className="flex flex-col gap-3 w-full min-w-0">
+      {error && (
+        <div
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg"
+        >
+          {error}
+        </div>
+      )}
+
       <button
         onClick={handleAdd}
+        disabled={adding || !!editing}
         style={{ background: COLORS.gold, color: COLORS.night }}
-        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
+        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Plus size={13} />
         {t("Swali Jipya", "New FAQ")}
@@ -463,6 +617,7 @@ function FaqsTab({ lang }) {
             label={t("Swali", "Question")}
             value={form.question || { sw: "", en: "" }}
             onChange={(v) => setForm({ ...form, question: v })}
+            disabled={saving}
           />
           <BilingualField
             label={t("Jibu", "Answer")}
@@ -470,8 +625,14 @@ function FaqsTab({ lang }) {
             onChange={(v) => setForm({ ...form, answer: v })}
             multiline
             rows={3}
+            disabled={saving}
           />
-          <FormActions onCancel={handleCancel} onSave={handleSave} lang={lang} />
+          <FormActions
+            onCancel={handleCancel}
+            onSave={handleSave}
+            lang={lang}
+            saving={saving}
+          />
         </div>
       )}
 
@@ -493,18 +654,16 @@ function FaqsTab({ lang }) {
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => handleEdit(faq)}
-                className="p-1.5 text-muted hover:text-[#E8A33D]"
+                disabled={saving}
+                className="p-1.5 text-muted hover:text-[#E8A33D] disabled:opacity-50"
                 aria-label={t("Hariri", "Edit")}
               >
                 <Pencil size={14} />
               </button>
               <button
-                onClick={() => {
-                  if (window.confirm(t("Ondoa swali?", "Remove FAQ?"))) {
-                    removeFaq(faq.id);
-                  }
-                }}
-                className="p-1.5 text-muted hover:text-[#C1502E]"
+                onClick={() => handleRemove(faq.id)}
+                disabled={saving}
+                className="p-1.5 text-muted hover:text-[#C1502E] disabled:opacity-50"
                 aria-label={t("Ondoa", "Remove")}
               >
                 <Trash2 size={14} />
@@ -518,23 +677,41 @@ function FaqsTab({ lang }) {
 }
 
 // ============================================================
-// SINGLE-PAGE EDITORS — responsive
+// SINGLE-PAGE EDITORS — async
 // ============================================================
 function SinglePageEditor({ section, lang }) {
   const content = useContent();
   const data = content[section] || {};
   const [form, setForm] = useState({ ...data });
   const [saved, setSaved] = useState(false);
+  // ⬇️ MPYA: saving + error
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const handleSave = () => {
-    if (section === "about") updateAbout(form);
-    else if (section === "terms") updateTerms(form);
-    else if (section === "privacy") updatePrivacy(form);
-    else if (section === "help") updateHelp(form);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1800);
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+    setSaved(false);
+
+    let res;
+    if (section === "about") res = await updateAboutAsync(form);
+    else if (section === "terms") res = await updateTermsAsync(form);
+    else if (section === "privacy") res = await updatePrivacyAsync(form);
+    else if (section === "help") res = await updateHelpAsync(form);
+
+    setSaving(false);
+
+    if (res?.ok) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
+    } else {
+      setError(
+        res?.error?.message ||
+          t("Imeshindwa kuhifadhi.", "Failed to save.")
+      );
+    }
   };
 
   return (
@@ -542,10 +719,24 @@ function SinglePageEditor({ section, lang }) {
       style={{ borderColor: COLORS.sandLine, background: "white" }}
       className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0 overflow-hidden"
     >
+      {/* Error banner */}
+      {error && (
+        <div
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg"
+        >
+          {error}
+        </div>
+      )}
+
       <BilingualField
         label={t("Kichwa", "Heading")}
         value={form.heading || { sw: "", en: "" }}
         onChange={(v) => setForm({ ...form, heading: v })}
+        disabled={saving}
       />
 
       {section === "about" && (
@@ -556,6 +747,7 @@ function SinglePageEditor({ section, lang }) {
             onChange={(v) => setForm({ ...form, subtext: v })}
             multiline
             rows={2}
+            disabled={saving}
           />
           <BilingualField
             label={t("Dhamira (Mission)", "Mission")}
@@ -563,6 +755,7 @@ function SinglePageEditor({ section, lang }) {
             onChange={(v) => setForm({ ...form, mission: v })}
             multiline
             rows={3}
+            disabled={saving}
           />
         </>
       )}
@@ -574,6 +767,7 @@ function SinglePageEditor({ section, lang }) {
           onChange={(v) => setForm({ ...form, content: v })}
           multiline
           rows={4}
+          disabled={saving}
         />
       )}
 
@@ -587,11 +781,16 @@ function SinglePageEditor({ section, lang }) {
       <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
         <button
           onClick={handleSave}
+          disabled={saving}
           style={{ background: COLORS.gold, color: COLORS.night }}
-          className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg shrink-0"
+          className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <Save size={13} />
-          {t("Hifadhi", "Save")}
+          {saving ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Save size={13} />
+          )}
+          {saving ? t("Inahifadhi...", "Saving...") : t("Hifadhi", "Save")}
         </button>
         {saved && (
           <span
@@ -608,7 +807,7 @@ function SinglePageEditor({ section, lang }) {
 }
 
 // ============================================================
-// MAIN SECTION — export default
+// MAIN SECTION
 // ============================================================
 export default function ContentSection() {
   const { lang } = useLanguage();
@@ -626,7 +825,6 @@ export default function ContentSection() {
         )}
       />
 
-      {/* Tabs — CENTERED + scroll horizontal kwenye simu */}
       <div className="flex justify-center gap-2 mb-5 overflow-x-auto pb-2 w-full min-w-0">
         {TABS.map(({ key, label, icon: Icon }) => {
           const isActive = activeTab === key;
@@ -648,7 +846,6 @@ export default function ContentSection() {
         })}
       </div>
 
-      {/* Content */}
       <div className="w-full min-w-0">
         {activeTab === "banners" && <BannersTab lang={lang} />}
         {activeTab === "testimonials" && <TestimonialsTab lang={lang} />}
