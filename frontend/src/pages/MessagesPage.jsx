@@ -20,16 +20,10 @@ import {
 import { COLORS, timeAgo } from "./dashboard/components/shared";
 import {
   useConversations,
-  // ⬇️ MABADILIKO: Tumia async variants
-  // sendMessage,           ❌ ONDOA
-  // markConversationRead,  ❌ ONDOA
   sendMessageAsync,
   markConversationReadAsync,
 } from "../config/messagesStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
-
-// ⬇️ MABADILIKO: Tumia authStore
-// import { useAuth } from "../context/AuthContext.jsx";  ❌ ONDOA
 import { useAuth } from "../config/authStore.js";
 
 // ============================================================
@@ -135,7 +129,6 @@ function ConversationListItem({
 // ============================================================
 function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
   const [text, setText] = useState("");
-  // ⬇️ MPYA: Sending state kuzuia double-send
   const [sending, setSending] = useState(false);
   const { name, avatar } = getCounterparty(convo, currentUserId);
 
@@ -144,7 +137,6 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
     if (!trimmed || sending) return;
 
     setSending(true);
-    // ⬇️ MABADILIKO: onSend inarudisha { ok, error }
     const res = await onSend(convo.id, trimmed);
     setSending(false);
 
@@ -241,7 +233,6 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
         ) : (
           convo.messages.map((m) => {
             const isMe = m.senderId === currentUserId;
-            // ⬇️ MPYA: onyesha pending state kwa messages zinazosafiri
             const isPending = m.pending;
             return (
               <div
