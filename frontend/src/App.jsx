@@ -148,6 +148,7 @@ function App() {
             <Route path="/dashboard/messages" element={<DashboardShell />} />
             <Route path="/dashboard/notifications" element={<DashboardShell />} />
             <Route path="/dashboard/transactions" element={<DashboardShell />} />
+            <Route path="/dashboard/activity" element={<DashboardShell />} />     
 
             {/* DASHBOARD — BUYER */}
             <Route path="/dashboard/buyer" element={<DashboardShell />} />
@@ -162,6 +163,7 @@ function App() {
             <Route path="/dashboard/buyer/waiting" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/transactions" element={<DashboardShell />} />
             <Route path="/dashboard/buyer/safety" element={<DashboardShell />} />
+            <Route path="/dashboard/buyer/activity" element={<DashboardShell />} />    
 
             {/* ADMIN */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
