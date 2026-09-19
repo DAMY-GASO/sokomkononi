@@ -36,13 +36,14 @@ function getListingLifetimeDays() {
 }
 
 function computeExpiresAt() {
-  return new Date(
-    Date.now() + getListingLifetimeDays() * 86400000
-  ).toISOString();
+  return new Date(Date.now() + getListingLifetimeDays() * 86400000).toISOString();
 }
 
 export const SEED_LISTINGS = [];
 
+// ============================================================
+// STORAGE
+// ============================================================
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_LISTINGS;
   try {
@@ -66,6 +67,9 @@ export function saveListings(listings) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
+// ============================================================
+// SYNC HELPERS (used by legacy code + optimistic updates)
+// ============================================================
 export function addListing(listing) {
   const withExpiry = listing.expiresAt
     ? listing
@@ -94,6 +98,7 @@ export function decideListing(id, status, reason = "") {
   if (status === "live" && listing && !listing.expiresAt) {
     patch.expiresAt = computeExpiresAt();
   }
+  if (status === "rejected" && reason) patch.rejectionReason = reason;
   return updateListing(id, patch);
 }
 
@@ -108,6 +113,10 @@ export function updateListingByTitle(title, patch) {
   return updateListing(listing.id, patch);
 }
 
+export function getListing(id) {
+  return getListings().find((l) => l.id === id) || null;
+}
+
 export function checkListingExpiry() {
   return getListings();
 }
@@ -117,10 +126,7 @@ export function checkListingExpiringSoon() {
 }
 
 export function pauseListing(id) {
-  return updateListing(id, {
-    status: "paused",
-    pausedAt: new Date().toISOString(),
-  });
+  return updateListing(id, { status: "paused", pausedAt: new Date().toISOString() });
 }
 
 export function unpauseListing(id) {
@@ -128,12 +134,12 @@ export function unpauseListing(id) {
 }
 
 export function markAsSold(id) {
-  return updateListing(id, {
-    status: "sold",
-    soldAt: new Date().toISOString(),
-  });
+  return updateListing(id, { status: "sold", soldAt: new Date().toISOString() });
 }
 
+// ============================================================
+// HOOKS
+// ============================================================
 export function useListings() {
   const [listings, setListings] = useState(() => getListings());
 
@@ -153,10 +159,7 @@ export function useListings() {
 export function usePublicListings() {
   const listings = useListings();
   return listings.filter(
-    (l) =>
-      l.status === "live" ||
-      l.status === "reserved" ||
-      l.status === "sold"
+    (l) => l.status === "live" || l.status === "reserved" || l.status === "sold"
   );
 }
 
@@ -165,6 +168,15 @@ export function useLiveListings() {
   return listings.filter((l) => l.status === "live");
 }
 
+export function useListing(id) {
+  const listings = useListings();
+  if (!id) return null;
+  return listings.find((l) => String(l.id) === String(id)) || null;
+}
+
+// ============================================================
+// STATUS MAP
+// ============================================================
 export const LISTING_STATUS_MAP = {
   live: "active",
   paused: "paused",
@@ -176,9 +188,6 @@ export const LISTING_STATUS_MAP = {
   rejected: "rejected",
 };
 
-// ============================================================
-// API NORMALIZATION
-// ============================================================
 const API_TO_FRONTEND_STATUS = {
   active: "live",
   AVAILABLE: "live",
@@ -196,6 +205,9 @@ const API_TO_FRONTEND_STATUS = {
   REJECTED: "rejected",
 };
 
+// ============================================================
+// NORMALIZER
+// ============================================================
 export function normalizeListingFromApi(raw) {
   if (!raw) return null;
 
@@ -277,22 +289,13 @@ export async function hydrateListingsFromApi() {
 }
 
 // ============================================================
-// FETCH MY LISTINGS (SELF-SUFFICIENT — no userId required)
-//
-// Steps:
-//   1. Get current user from /api/auth/me/
-//   2. Fetch /api/listings/?seller=<me.id>
-//
-// This means DashboardShell.jsx can call `fetchMyListingsFromApi()`
-// without arguments, exactly as it does today.
+// FETCH MY LISTINGS
 // ============================================================
 export async function fetchMyListingsFromApi() {
   try {
-    // 1. Resolve current user id from token
     const me = await authApi.me();
     if (!me?.id) return { source: "empty", count: 0 };
 
-    // 2. Fetch only this seller's listings
     const data = await listingsApi.mine(me.id, { page_size: 100 });
     const rawList = Array.isArray(data) ? data : data?.results || [];
 
@@ -311,12 +314,51 @@ export async function fetchMyListingsFromApi() {
 }
 
 // ============================================================
-// ASYNC ACTIONS — local optimistic + API
+// FETCH FEATURED / BY CATEGORY
+// ============================================================
+export async function fetchFeaturedFromApi(params = {}) {
+  try {
+    const data = await listingsApi.featured({ page_size: 20, ...params });
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    return { ok: true, listings: rawList.map(normalizeListingFromApi).filter(Boolean) };
+  } catch (err) {
+    console.warn("[listingsStore] fetchFeatured failed:", err);
+    return { ok: false, error: err, listings: [] };
+  }
+}
+
+export async function fetchByCategoryFromApi(categoryId, params = {}) {
+  try {
+    const data = await listingsApi.byCategory(categoryId, { page_size: 20, ...params });
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    return { ok: true, listings: rawList.map(normalizeListingFromApi).filter(Boolean) };
+  } catch (err) {
+    console.warn("[listingsStore] fetchByCategory failed:", err);
+    return { ok: false, error: err, listings: [] };
+  }
+}
+
+// ============================================================
+// FETCH PENDING (admin only)
+// ============================================================
+export async function fetchPendingListingsAsync() {
+  try {
+    const data = await listingsApi.pending();
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    const listings = rawList.map(normalizeListingFromApi).filter(Boolean);
+    return { ok: true, listings };
+  } catch (err) {
+    console.warn("[listingsStore] fetchPending failed:", err);
+    return { ok: false, error: err, listings: [] };
+  }
+}
+
+// ============================================================
+// ASYNC ACTIONS — with optimistic update + rollback
 // ============================================================
 
 /**
- * Create a listing. The backend derives seller from the JWT.
- * `payload.category_id` must be the integer category ID.
+ * Create listing. Backend derives seller from JWT.
  */
 export async function createListingAsync(payload) {
   const tempId = `temp_${Date.now()}`;
@@ -326,39 +368,43 @@ export async function createListingAsync(payload) {
     status: "pending_payment",
     postedAt: new Date().toISOString(),
   };
-  addListing(optimistic);
+  const previous = getListings();
+  saveListings([optimistic, ...previous]);
 
   try {
     const created = await listingsApi.create(payload);
     const normalized = normalizeListingFromApi(created);
-    const current = getListings();
-    const next = current.map((l) => (l.id === tempId ? normalized : l));
-    saveListings(next);
+    if (!normalized) throw new Error("Invalid response from server");
+    saveListings([normalized, ...getListings().filter((l) => l.id !== tempId)]);
     return { ok: true, listing: normalized };
   } catch (err) {
+    saveListings(previous); // Rollback
     console.warn("[listingsStore] createListing failed:", err);
-    removeListing(tempId);
     return { ok: false, error: err, listing: null };
   }
 }
 
 export async function updateListingAsync(id, patch) {
+  const previous = getListings();
   updateListing(id, patch);
   try {
     await listingsApi.update(id, patch);
     return { ok: true };
   } catch (err) {
+    saveListings(previous); // Rollback
     console.warn("[listingsStore] updateListing failed:", err);
     return { ok: false, error: err };
   }
 }
 
 export async function removeListingAsync(id) {
+  const previous = getListings();
   removeListing(id);
   try {
     await listingsApi.remove(id);
     return { ok: true };
   } catch (err) {
+    saveListings(previous); // Rollback
     console.warn("[listingsStore] removeListing failed:", err);
     return { ok: false, error: err };
   }
@@ -383,18 +429,180 @@ export async function markSoldAsync(id) {
 }
 
 /**
- * Pay the listing fee. Backend moves DRAFT → PENDING_APPROVAL.
+ * Pay listing fee. Backend moves DRAFT → PENDING_APPROVAL.
  */
 export async function payListingFeeAsync(id, payload) {
+  const previous = getListings();
+  updateListing(id, {
+    status: "in_review",
+    paidAt: new Date().toISOString(),
+  });
   try {
     const data = await listingsApi.payFee(id, payload);
-    updateListing(id, {
-      status: "in_review",
-      paidAt: new Date().toISOString(),
-    });
     return { ok: true, data };
   } catch (err) {
+    saveListings(previous); // Rollback
     console.warn("[listingsStore] payFee failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// ADMIN — Approve / Reject (uses listingsApi + moderationApi)
+// ============================================================
+export async function approveListingAsync(id) {
+  const previous = getListings();
+  updateListing(id, {
+    status: "live",
+    approvedAt: new Date().toISOString(),
+    rejectionReason: "",
+    expiresAt: computeExpiresAt(),
+  });
+  try {
+    const data = await listingsApi.approve(id);
+    // Refresh with server response if provided
+    if (data) {
+      const normalized = normalizeListingFromApi(data);
+      if (normalized) {
+        const current = getListings();
+        saveListings(current.map((l) => (l.id === id ? normalized : l)));
+      }
+    }
+    return { ok: true, data };
+  } catch (err) {
+    saveListings(previous); // Rollback
+    console.warn("[listingsStore] approve failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function rejectListingAsync(id, rejectionReason) {
+  const previous = getListings();
+  updateListing(id, {
+    status: "rejected",
+    rejectionReason: rejectionReason || "",
+    rejectedAt: new Date().toISOString(),
+  });
+  try {
+    const data = await listingsApi.reject(id, rejectionReason);
+    return { ok: true, data };
+  } catch (err) {
+    saveListings(previous); // Rollback
+    console.warn("[listingsStore] reject failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// IMAGE MANAGEMENT
+// ============================================================
+export async function fetchListingImagesAsync(listingId) {
+  try {
+    const data = await listingsApi.listImages(listingId);
+    const images = Array.isArray(data) ? data : data?.results || [];
+    return { ok: true, images };
+  } catch (err) {
+    console.warn("[listingsStore] fetchImages failed:", err);
+    return { ok: false, error: err, images: [] };
+  }
+}
+
+export async function uploadListingImageAsync(listingId, formData) {
+  try {
+    const data = await listingsApi.uploadImage(listingId, formData);
+    return { ok: true, image: data };
+  } catch (err) {
+    console.warn("[listingsStore] uploadImage failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function updateListingImageAsync(listingId, imageId, payload) {
+  try {
+    const data = await listingsApi.updateImage(listingId, imageId, payload);
+    return { ok: true, image: data };
+  } catch (err) {
+    console.warn("[listingsStore] updateImage failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function deleteListingImageAsync(listingId, imageId) {
+  try {
+    await listingsApi.deleteImage(listingId, imageId);
+    return { ok: true };
+  } catch (err) {
+    console.warn("[listingsStore] deleteImage failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// DETAIL FETCH
+// ============================================================
+export async function fetchListingDetailAsync(id) {
+  try {
+    const data = await listingsApi.detail(id);
+    const normalized = normalizeListingFromApi(data);
+    if (normalized) {
+      const current = getListings();
+      const exists = current.some((l) => l.id === id);
+      const next = exists
+        ? current.map((l) => (l.id === id ? normalized : l))
+        : [normalized, ...current];
+      saveListings(next);
+    }
+    return { ok: true, listing: normalized };
+  } catch (err) {
+    console.warn("[listingsStore] detail failed:", err);
+    return { ok: false, error: err, listing: null };
+  }
+}
+
+// ============================================================
+// CATEGORY-SPECIFIC DETAIL CREATORS (async wrappers)
+// ============================================================
+export async function createPropertyDetailsAsync(id, payload) {
+  try {
+    const data = await listingsApi.createPropertyDetails(id, payload);
+    return { ok: true, data };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export async function createLandDetailsAsync(id, payload) {
+  try {
+    const data = await listingsApi.createLandDetails(id, payload);
+    return { ok: true, data };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export async function createVehicleDetailsAsync(id, payload) {
+  try {
+    const data = await listingsApi.createVehicleDetails(id, payload);
+    return { ok: true, data };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export async function createBusinessDetailsAsync(id, payload) {
+  try {
+    const data = await listingsApi.createBusinessDetails(id, payload);
+    return { ok: true, data };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export async function createEquipmentDetailsAsync(id, payload) {
+  try {
+    const data = await listingsApi.createEquipmentDetails(id, payload);
+    return { ok: true, data };
+  } catch (err) {
     return { ok: false, error: err };
   }
 }
