@@ -4,7 +4,7 @@ import {
   forgotPasswordAsync,
   verifyPasswordResetOtpAsync,
   resetPasswordAsync,
-} from "../../stores/authStore.js";
+} from "../../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const icons = {
