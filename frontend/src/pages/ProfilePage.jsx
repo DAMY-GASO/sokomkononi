@@ -5,7 +5,12 @@
 
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
+import {
+  useAuth,
+  logoutAsync,
+  updateProfileAsync,
+  changePasswordAsync,
+} from "../stores/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
@@ -43,9 +48,6 @@ import {
   ShoppingBag,
 } from "lucide-react";
 
-// ============================================================
-// PAGE LOADER — rahisi, inaonekana mara moja tu
-// ============================================================
 import PageLoader from "../components/PageLoader.jsx";
 
 const COLORS = {
@@ -57,7 +59,6 @@ const COLORS = {
   sandLine: "#E6E2D6",
 };
 
-// Mikoa 31 ya Tanzania
 const REGIONS = [
   "Arusha", "Dar es Salaam", "Dodoma", "Geita", "Iringa", "Kagera", "Katavi",
   "Kigoma", "Kilimanjaro", "Lindi", "Manyara", "Mara", "Mbeya", "Morogoro",
@@ -67,9 +68,6 @@ const REGIONS = [
   "Mjini Magharibi",
 ];
 
-// ============================================================
-// TABS
-// ============================================================
 const TABS = [
   { id: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: User },
   { id: "edit", label: { sw: "Hariri Wasifu", en: "Edit Profile" }, icon: Pencil },
@@ -101,7 +99,7 @@ function StatCard({ icon: Icon, value, label, color }) {
 }
 
 // ============================================================
-// OVERVIEW TAB
+// OVERVIEW TAB — haina mabadiliko (inatumia props)
 // ============================================================
 function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
   const stats = user?.stats || {
@@ -210,8 +208,8 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
                 {lang === "sw" ? "Mwanachama Tangu" : "Member Since"}
               </p>
               <p className="text-sm text-primary">
-                {user.memberSince
-                  ? new Date(user.memberSince).toLocaleDateString(
+                {(user.memberSince || user.joinedAt)
+                  ? new Date(user.memberSince || user.joinedAt).toLocaleDateString(
                       lang === "sw" ? "sw-TZ" : "en-US",
                       { month: "long", year: "numeric" }
                     )
@@ -271,9 +269,9 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
 }
 
 // ============================================================
-// EDIT PROFILE TAB
+// EDIT PROFILE TAB — sasa inatumia updateProfileAsync (API HALISI)
 // ============================================================
-function EditProfileTab({ user, lang, onSave }) {
+function EditProfileTab({ user, lang }) {
   const initialBio =
     typeof user.bio === "object" ? user.bio?.[lang] || "" : user.bio || "";
   const initialLocation =
@@ -290,18 +288,39 @@ function EditProfileTab({ user, lang, onSave }) {
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
   const [avatar, setAvatar] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    onSave({
-      ...form,
+
+    // ⬇️ MABADILIKO: Badilisha setTimeout fake → updateProfileAsync halisi
+    const res = await updateProfileAsync({
+      name: form.name,
+      phone: form.phone,
       bio: { sw: form.bio, en: form.bio },
       location: { sw: form.location, en: form.location },
     });
+
     setSaving(false);
+
+    if (!res.ok) {
+      const err = res.error;
+      const firstFieldError =
+        err?.data && typeof err.data === "object" && !err.data.detail
+          ? Object.values(err.data).flat().find((v) => typeof v === "string")
+          : null;
+      setError(
+        err?.data?.detail ||
+          firstFieldError ||
+          err?.message ||
+          (lang === "sw" ? "Imeshindwa kuhifadhi" : "Failed to save")
+      );
+      return;
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -309,6 +328,7 @@ function EditProfileTab({ user, lang, onSave }) {
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     if (file) setAvatar(URL.createObjectURL(file));
+    // TODO: upload avatar kwa backend (baada ya endpoint kupatikana)
   };
 
   return (
@@ -321,11 +341,7 @@ function EditProfileTab({ user, lang, onSave }) {
           <div className="relative">
             <div className="w-20 h-20 rounded-full bg-[#E8A33D]/10 flex items-center justify-center text-[#E8A33D] font-bold text-3xl overflow-hidden">
               {avatar ? (
-                <img
-                  src={avatar}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+                <img src={avatar} alt="" className="w-full h-full object-cover" />
               ) : (
                 user.name?.charAt(0) || "U"
               )}
@@ -363,10 +379,7 @@ function EditProfileTab({ user, lang, onSave }) {
               {lang === "sw" ? "Jina Kamili" : "Full Name"}
             </label>
             <div className="relative">
-              <User
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-              />
+              <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type="text"
                 value={form.name}
@@ -381,17 +394,19 @@ function EditProfileTab({ user, lang, onSave }) {
               {lang === "sw" ? "Barua Pepe" : "Email"}
             </label>
             <div className="relative">
-              <Mail
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-              />
+              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type="email"
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
+                readOnly
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm bg-gray-50 text-secondary focus:outline-none cursor-not-allowed text-center"
               />
             </div>
+            <p className="text-body-sm text-muted mt-1 text-center">
+              {lang === "sw"
+                ? "Barua pepe haiwezi kubadilishwa"
+                : "Email cannot be changed"}
+            </p>
           </div>
 
           <div>
@@ -399,10 +414,7 @@ function EditProfileTab({ user, lang, onSave }) {
               {lang === "sw" ? "Namba ya Simu" : "Phone Number"}
             </label>
             <div className="relative">
-              <Phone
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-              />
+              <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type="tel"
                 value={form.phone}
@@ -417,16 +429,11 @@ function EditProfileTab({ user, lang, onSave }) {
               {lang === "sw" ? "Mahali" : "Location"}
             </label>
             <div className="relative">
-              <MapPin
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-              />
+              <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type="text"
                 value={form.location}
-                onChange={(e) =>
-                  setForm({ ...form, location: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
               />
             </div>
@@ -452,6 +459,12 @@ function EditProfileTab({ user, lang, onSave }) {
       </div>
 
       <div className="flex flex-col items-center gap-2">
+        {error && (
+          <p className="flex items-center gap-1.5 text-sm text-[#C1502E]">
+            <AlertTriangle size={14} />
+            {error}
+          </p>
+        )}
         {saved && (
           <span className="flex items-center gap-1.5 text-sm text-[#2F6D4F] font-medium">
             <Check size={16} />
@@ -464,12 +477,8 @@ function EditProfileTab({ user, lang, onSave }) {
           className="px-6 py-2.5 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
         >
           {saving
-            ? lang === "sw"
-              ? "Inahifadhi..."
-              : "Saving..."
-            : lang === "sw"
-              ? "Hifadhi Mabadiliko"
-              : "Save Changes"}
+            ? lang === "sw" ? "Inahifadhi..." : "Saving..."
+            : lang === "sw" ? "Hifadhi Mabadiliko" : "Save Changes"}
         </button>
       </div>
     </form>
@@ -477,7 +486,7 @@ function EditProfileTab({ user, lang, onSave }) {
 }
 
 // ============================================================
-// SECURITY TAB
+// SECURITY TAB — sasa inatumia changePasswordAsync (API HALISI)
 // ============================================================
 function SecurityTab({ lang }) {
   const [showCurrent, setShowCurrent] = useState(false);
@@ -505,15 +514,36 @@ function SecurityTab({ lang }) {
       return;
     }
     if (form.new !== form.confirm) {
-      setError(
-        lang === "sw" ? "Nenosiri hazifanani" : "Passwords don't match"
-      );
+      setError(lang === "sw" ? "Nenosiri hazifanani" : "Passwords don't match");
       return;
     }
 
     setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // ⬇️ MABADILIKO: Badilisha setTimeout fake → changePasswordAsync halisi
+    const res = await changePasswordAsync({
+      currentPassword: form.current,
+      newPassword: form.new,
+      confirmPassword: form.confirm,
+    });
+
     setSaving(false);
+
+    if (!res.ok) {
+      const err = res.error;
+      const firstFieldError =
+        err?.data && typeof err.data === "object" && !err.data.detail
+          ? Object.values(err.data).flat().find((v) => typeof v === "string")
+          : null;
+      setError(
+        err?.data?.detail ||
+          firstFieldError ||
+          err?.message ||
+          (lang === "sw" ? "Imeshindwa kubadilisha nenosiri" : "Failed to change password")
+      );
+      return;
+    }
+
     setSaved(true);
     setForm({ current: "", new: "", confirm: "" });
     setTimeout(() => setSaved(false), 3000);
@@ -521,10 +551,7 @@ function SecurityTab({ lang }) {
 
   return (
     <div className="space-y-6">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white rounded-xl border border-gray-100 p-5"
-      >
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-100 p-5">
         <h3 className="font-semibold text-primary mb-4 text-center">
           {lang === "sw" ? "Badilisha Nenosiri" : "Change Password"}
         </h3>
@@ -534,16 +561,11 @@ function SecurityTab({ lang }) {
               {lang === "sw" ? "Nenosiri la Sasa" : "Current Password"}
             </label>
             <div className="relative">
-              <Lock
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-              />
+              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type={showCurrent ? "text" : "password"}
                 value={form.current}
-                onChange={(e) =>
-                  setForm({ ...form, current: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, current: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
               />
               <button
@@ -562,10 +584,7 @@ function SecurityTab({ lang }) {
               {lang === "sw" ? "Nenosiri Jipya" : "New Password"}
             </label>
             <div className="relative">
-              <Lock
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-              />
+              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type={showNew ? "text" : "password"}
                 value={form.new}
@@ -585,21 +604,14 @@ function SecurityTab({ lang }) {
 
           <div>
             <label className="block text-body-sm font-semibold text-secondary mb-1.5 text-center">
-              {lang === "sw"
-                ? "Thibitisha Nenosiri Jipya"
-                : "Confirm New Password"}
+              {lang === "sw" ? "Thibitisha Nenosiri Jipya" : "Confirm New Password"}
             </label>
             <div className="relative">
-              <Lock
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-              />
+              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type={showConfirm ? "text" : "password"}
                 value={form.confirm}
-                onChange={(e) =>
-                  setForm({ ...form, confirm: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, confirm: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
               />
               <button
@@ -623,9 +635,7 @@ function SecurityTab({ lang }) {
           {saved && (
             <p className="text-sm text-[#2F6D4F] flex items-center justify-center gap-1.5">
               <Check size={16} />
-              {lang === "sw"
-                ? "Nenosiri limebadilishwa!"
-                : "Password changed!"}
+              {lang === "sw" ? "Nenosiri limebadilishwa!" : "Password changed!"}
             </p>
           )}
 
@@ -635,12 +645,8 @@ function SecurityTab({ lang }) {
             className="w-full px-6 py-2.5 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
           >
             {saving
-              ? lang === "sw"
-                ? "Inabadilisha..."
-                : "Changing..."
-              : lang === "sw"
-                ? "Badilisha Nenosiri"
-                : "Change Password"}
+              ? lang === "sw" ? "Inabadilisha..." : "Changing..."
+              : lang === "sw" ? "Badilisha Nenosiri" : "Change Password"}
           </button>
         </div>
       </form>
@@ -652,9 +658,7 @@ function SecurityTab({ lang }) {
           </div>
           <div>
             <h3 className="h-card">
-              {lang === "sw"
-                ? "Uthibitishaji wa Hatua Mbili"
-                : "Two-Factor Authentication"}
+              {lang === "sw" ? "Uthibitishaji wa Hatua Mbili" : "Two-Factor Authentication"}
             </h3>
             <p className="text-body-sm text-secondary mt-0.5">
               {lang === "sw"
@@ -680,8 +684,7 @@ function SecurityTab({ lang }) {
               </div>
               <div>
                 <p className="text-sm text-primary">
-                  Chrome •{" "}
-                  {lang === "sw" ? "Dar es Salaam" : "Dar es Salaam"}
+                  Chrome • {lang === "sw" ? "Dar es Salaam" : "Dar es Salaam"}
                 </p>
                 <p className="text-body-sm text-secondary">
                   {lang === "sw" ? "Kifaa cha sasa" : "Current device"}
@@ -724,7 +727,7 @@ function SecurityTab({ lang }) {
 }
 
 // ============================================================
-// NOTIFICATIONS TAB
+// NOTIFICATIONS TAB — local state pekee (hakuna backend bado)
 // ============================================================
 function NotificationsTab({ lang }) {
   const [settings, setSettings] = useState({
@@ -764,50 +767,26 @@ function NotificationsTab({ lang }) {
     {
       title: lang === "sw" ? "Barua Pepe" : "Email",
       items: [
-        {
-          key: "email_deals",
-          label: lang === "sw" ? "Deals na Mali" : "Deals and Properties",
-        },
+        { key: "email_deals", label: lang === "sw" ? "Deals na Mali" : "Deals and Properties" },
         { key: "email_messages", label: lang === "sw" ? "Ujumbe" : "Messages" },
-        {
-          key: "email_promotions",
-          label: lang === "sw" ? "Matangazo" : "Promotions",
-        },
-        {
-          key: "email_newsletter",
-          label: lang === "sw" ? "Newsletter" : "Newsletter",
-        },
+        { key: "email_promotions", label: lang === "sw" ? "Matangazo" : "Promotions" },
+        { key: "email_newsletter", label: lang === "sw" ? "Newsletter" : "Newsletter" },
       ],
     },
     {
       title: "SMS",
       items: [
-        {
-          key: "sms_deals",
-          label: lang === "sw" ? "Deals na Mali" : "Deals and Properties",
-        },
+        { key: "sms_deals", label: lang === "sw" ? "Deals na Mali" : "Deals and Properties" },
         { key: "sms_messages", label: lang === "sw" ? "Ujumbe" : "Messages" },
-        {
-          key: "sms_promotions",
-          label: lang === "sw" ? "Matangazo" : "Promotions",
-        },
+        { key: "sms_promotions", label: lang === "sw" ? "Matangazo" : "Promotions" },
       ],
     },
     {
       title: lang === "sw" ? "Taarifa za Ndani" : "Push Notifications",
       items: [
-        {
-          key: "push_deals",
-          label: lang === "sw" ? "Deals na Mali" : "Deals and Properties",
-        },
-        {
-          key: "push_messages",
-          label: lang === "sw" ? "Ujumbe" : "Messages",
-        },
-        {
-          key: "push_promotions",
-          label: lang === "sw" ? "Matangazo" : "Promotions",
-        },
+        { key: "push_deals", label: lang === "sw" ? "Deals na Mali" : "Deals and Properties" },
+        { key: "push_messages", label: lang === "sw" ? "Ujumbe" : "Messages" },
+        { key: "push_promotions", label: lang === "sw" ? "Matangazo" : "Promotions" },
       ],
     },
   ];
@@ -815,19 +794,13 @@ function NotificationsTab({ lang }) {
   return (
     <div className="space-y-5">
       {sections.map((section) => (
-        <div
-          key={section.title}
-          className="bg-white rounded-xl border border-gray-100 p-5"
-        >
+        <div key={section.title} className="bg-white rounded-xl border border-gray-100 p-5">
           <h3 className="font-semibold text-primary mb-4 text-center">
             {section.title}
           </h3>
           <div className="space-y-3">
             {section.items.map((item) => (
-              <div
-                key={item.key}
-                className="flex items-center justify-between"
-              >
+              <div key={item.key} className="flex items-center justify-between">
                 <span className="text-sm text-secondary">{item.label}</span>
                 <Toggle
                   checked={settings[item.key]}
@@ -838,12 +811,17 @@ function NotificationsTab({ lang }) {
           </div>
         </div>
       ))}
+      <p className="text-body-sm text-muted text-center">
+        {lang === "sw"
+          ? "Mapendeleo haya yanahifadhiwa kienyeji. Backend integration inakuja."
+          : "These preferences are stored locally. Backend integration coming soon."}
+      </p>
     </div>
   );
 }
 
 // ============================================================
-// PREFERENCES TAB
+// PREFERENCES TAB — sasa inasave language kwa updateProfileAsync
 // ============================================================
 function PreferencesTab({ lang, setLang }) {
   const [prefs, setPrefs] = useState({
@@ -857,6 +835,8 @@ function PreferencesTab({ lang, setLang }) {
   const handleLanguageChange = (value) => {
     setPrefs({ ...prefs, language: value });
     if (setLang) setLang(value);
+    // TODO: kama backend ina `preferred_language` field, ongeza:
+    // updateProfileAsync({ preferred_language: value });
   };
 
   return (
@@ -886,9 +866,7 @@ function PreferencesTab({ lang, setLang }) {
             </label>
             <select
               value={prefs.currency}
-              onChange={(e) =>
-                setPrefs({ ...prefs, currency: e.target.value })
-              }
+              onChange={(e) => setPrefs({ ...prefs, currency: e.target.value })}
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
             >
               <option value="TZS">TZS - Tanzania Shilling</option>
@@ -906,9 +884,7 @@ function PreferencesTab({ lang, setLang }) {
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors text-center"
             >
               {REGIONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
+                <option key={r} value={r}>{r}</option>
               ))}
             </select>
           </div>
@@ -932,9 +908,7 @@ function PreferencesTab({ lang, setLang }) {
               </p>
             </div>
             <button
-              onClick={() =>
-                setPrefs({ ...prefs, showPhone: !prefs.showPhone })
-              }
+              onClick={() => setPrefs({ ...prefs, showPhone: !prefs.showPhone })}
               className={`relative w-11 h-6 rounded-full transition-colors ${
                 prefs.showPhone ? "bg-[#E8A33D]" : "bg-gray-200"
               }`}
@@ -959,9 +933,7 @@ function PreferencesTab({ lang, setLang }) {
               </p>
             </div>
             <button
-              onClick={() =>
-                setPrefs({ ...prefs, showEmail: !prefs.showEmail })
-              }
+              onClick={() => setPrefs({ ...prefs, showEmail: !prefs.showEmail })}
               className={`relative w-11 h-6 rounded-full transition-colors ${
                 prefs.showEmail ? "bg-[#E8A33D]" : "bg-gray-200"
               }`}
@@ -983,13 +955,12 @@ function PreferencesTab({ lang, setLang }) {
 // MAIN COMPONENT
 // ============================================================
 export default function ProfilePage() {
-  const { user, logout, setUser } = useAuth();
+  // ⬇️ MABADILIKO: useAuth() kutoka authStore — haina logout/setUser
+  // const { user, logout, setUser } = useAuth();  ❌ ONDOA
+  const { user, isLoading } = useAuth();
   const { lang, setLang } = useLanguage();
   const navigate = useNavigate();
 
-  // ============================================================
-  // LOADER — inaonekana mara moja tu ukurasa unapofunguka
-  // ============================================================
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -999,20 +970,19 @@ export default function ProfilePage() {
 
   const [activeTab, setActiveTab] = useState("overview");
 
-  const [profileUser, setProfileUser] = useState({
-    ...(user || {}),
-    stats: {
-      listings: 0,
-      saved: 0,
-      deals: 0,
-      rating: 0,
-      reviews: 0,
-      inquiries: 0,
-      offersSent: 0,
-      viewings: 0,
-      purchases: 0,
-      ...(user?.stats || {}),
-    },
+  // ⬇️ MABADILIKO: Ondoa local profileUser — user kutoka authStore ndiyo source of truth
+  // Tunaweka stats kama local supplementary state tu
+  const [stats, setStats] = useState({
+    listings: 0,
+    saved: 0,
+    deals: 0,
+    rating: 0,
+    reviews: 0,
+    inquiries: 0,
+    offersSent: 0,
+    viewings: 0,
+    purchases: 0,
+    ...(user?.stats || {}),
   });
 
   const dashboardSide = useDashboardSide();
@@ -1028,31 +998,18 @@ export default function ProfilePage() {
   };
 
   const handleLogout = async () => {
-    await logout();
+    // ⬇️ MABADILIKO: logoutAsync badala ya logout
+    await logoutAsync();
     navigate("/login");
   };
 
-  const handleSaveProfile = (updatedData) => {
-    const updated = {
-      ...profileUser,
-      ...updatedData,
-      stats: {
-        ...profileUser.stats,
-        ...(updatedData.stats || {}),
-      },
-    };
-    setProfileUser(updated);
-    if (setUser) setUser(updated);
-  };
+  // ⬇️ MABADILIKO: Ondoa handleSaveProfile — EditProfileTab sasa inaita updateProfileAsync moja kwa moja
 
-  // ============================================================
-  // LOADER — kama bado haijawa tayari, onyesha loader
-  // ============================================================
-  if (!ready) {
+  if (!ready || isLoading) {
     return <PageLoader lang={lang} />;
   }
 
-  if (!profileUser || !user) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -1070,6 +1027,9 @@ export default function ProfilePage() {
     );
   }
 
+  // ⬇️ MABADILIKO: profileUser → user (moja kwa moja kutoka authStore)
+  const profileUser = { ...user, stats };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -1081,7 +1041,7 @@ export default function ProfilePage() {
               <div className="w-24 h-24 rounded-full bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-4xl">
                 {profileUser.name?.charAt(0) || "U"}
               </div>
-              {profileUser.verified && (
+              {profileUser.isVerified && (
                 <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#2F6D4F] flex items-center justify-center border-2 border-[#101A2E]">
                   <Check size={14} color="white" />
                 </div>
@@ -1096,7 +1056,7 @@ export default function ProfilePage() {
                 {profileUser.email || "—"}
               </p>
               <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
-                {profileUser.verified && (
+                {profileUser.isVerified && (
                   <span className="text-body-sm font-medium bg-[#2F6D4F]/20 text-[#2F6D4F] px-3 py-1 rounded-full flex items-center gap-1">
                     <Shield size={12} />
                     {lang === "sw" ? "Amethibitishwa" : "Verified"}
@@ -1176,11 +1136,8 @@ export default function ProfilePage() {
           />
         )}
         {activeTab === "edit" && (
-          <EditProfileTab
-            user={profileUser}
-            lang={lang}
-            onSave={handleSaveProfile}
-          />
+          // ⬇️ MABADILIKO: Ondoa onSave prop — tab inajisimamia yenyewe
+          <EditProfileTab user={profileUser} lang={lang} />
         )}
         {activeTab === "security" && <SecurityTab lang={lang} />}
         {activeTab === "notifications" && <NotificationsTab lang={lang} />}
