@@ -20,11 +20,17 @@ import {
 import { COLORS, timeAgo } from "./dashboard/components/shared";
 import {
   useConversations,
-  sendMessage,
-  markConversationRead,
+  // ⬇️ MABADILIKO: Tumia async variants
+  // sendMessage,           ❌ ONDOA
+  // markConversationRead,  ❌ ONDOA
+  sendMessageAsync,
+  markConversationReadAsync,
 } from "../config/messagesStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import { useAuth } from "../context/AuthContext.jsx";
+
+// ⬇️ MABADILIKO: Tumia authStore
+// import { useAuth } from "../context/AuthContext.jsx";  ❌ ONDOA
+import { useAuth } from "../config/authStore.js";
 
 // ============================================================
 // HELPER — tafsiri fupi
@@ -129,12 +135,29 @@ function ConversationListItem({
 // ============================================================
 function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
   const [text, setText] = useState("");
+  // ⬇️ MPYA: Sending state kuzuia double-send
+  const [sending, setSending] = useState(false);
   const { name, avatar } = getCounterparty(convo, currentUserId);
 
-  const handleSend = () => {
-    if (!text.trim()) return;
-    onSend(convo.id, text.trim());
-    setText("");
+  const handleSend = async () => {
+    const trimmed = text.trim();
+    if (!trimmed || sending) return;
+
+    setSending(true);
+    // ⬇️ MABADILIKO: onSend inarudisha { ok, error }
+    const res = await onSend(convo.id, trimmed);
+    setSending(false);
+
+    if (res?.ok) {
+      setText(""); // Safisha tu kama imefanikiwa
+    } else {
+      // TODO: badilisha na toast/notify yako
+      console.warn("[ChatView] send failed:", res?.error);
+      alert(
+        res?.error?.message ||
+          t(lang, "Imeshindwa kutuma ujumbe. Jaribu tena.", "Failed to send message. Try again.")
+      );
+    }
   };
 
   return (
@@ -218,6 +241,8 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
         ) : (
           convo.messages.map((m) => {
             const isMe = m.senderId === currentUserId;
+            // ⬇️ MPYA: onyesha pending state kwa messages zinazosafiri
+            const isPending = m.pending;
             return (
               <div
                 key={m.id}
@@ -228,6 +253,7 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
                     background: isMe ? COLORS.night : "white",
                     color: isMe ? COLORS.sand : "var(--text-primary)",
                     borderColor: COLORS.sandLine,
+                    opacity: isPending ? 0.6 : 1,
                   }}
                   className="border rounded-2xl px-4 py-2.5 max-w-[75%]"
                 >
@@ -243,12 +269,14 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
                     }}
                   >
                     <span className="text-[10px]">
-                      {new Date(m.at).toLocaleTimeString(
-                        lang === "sw" ? "sw-TZ" : "en-US",
-                        { hour: "2-digit", minute: "2-digit" }
-                      )}
+                      {isPending
+                        ? t(lang, "Inatuma...", "Sending...")
+                        : new Date(m.at).toLocaleTimeString(
+                            lang === "sw" ? "sw-TZ" : "en-US",
+                            { hour: "2-digit", minute: "2-digit" }
+                          )}
                     </span>
-                    {isMe &&
+                    {isMe && !isPending &&
                       (m.read ? <CheckCheck size={12} /> : <Check size={12} />)}
                   </div>
                 </div>
@@ -273,20 +301,21 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
           placeholder={t(lang, "Andika ujumbe...", "Type a message...")}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          onKeyDown={(e) => e.key === "Enter" && !sending && handleSend()}
+          disabled={sending}
           aria-label={t(lang, "Andika ujumbe", "Type a message")}
         />
         <button
           onClick={handleSend}
-          disabled={!text.trim()}
+          disabled={!text.trim() || sending}
           style={{
-            background: text.trim() ? COLORS.gold : COLORS.sandLine,
-            color: text.trim() ? "var(--text-primary)" : "var(--text-muted)",
+            background: text.trim() && !sending ? COLORS.gold : COLORS.sandLine,
+            color: text.trim() && !sending ? "var(--text-primary)" : "var(--text-muted)",
           }}
           className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 disabled:cursor-not-allowed"
           aria-label={t(lang, "Tuma", "Send")}
         >
-          <Send size={16} />
+          {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </button>
       </div>
     </div>
@@ -298,14 +327,16 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
 // ============================================================
 export default function MessagesPage({ initialConversationId = null }) {
   const { lang } = useLanguage();
+  // ⬇️ MABADILIKO: useAuth kutoka authStore
   const { user } = useAuth();
   const currentUserId = user?.id || null;
 
+  // ⬇️ BUG FIX: Pitisha currentUserId kama argument!
   const {
     conversations = [],
     isLoading = false,
     error = null,
-  } = useConversations() || {};
+  } = useConversations(currentUserId) || {};
 
   const [selectedId, setSelectedId] = useState(
     initialConversationId || null
@@ -328,9 +359,14 @@ export default function MessagesPage({ initialConversationId = null }) {
     }
   }, [initialConversationId]);
 
+  // ⬇️ MABADILIKO: markConversationReadAsync
   useEffect(() => {
     if (selectedId) {
-      markConversationRead(selectedId);
+      markConversationReadAsync(selectedId).then((res) => {
+        if (!res.ok) {
+          console.warn("[MessagesPage] markRead failed:", res.error);
+        }
+      });
     }
   }, [selectedId]);
 
@@ -350,9 +386,10 @@ export default function MessagesPage({ initialConversationId = null }) {
     setMobileShowChat(true);
   };
 
-  const handleSend = (id, text) => {
-    if (!currentUserId) return;
-    sendMessage(id, text, currentUserId);
+  // ⬇️ MABADILIKO: async handler inarudisha { ok, error }
+  const handleSend = async (id, text) => {
+    if (!currentUserId) return { ok: false, error: new Error("No user") };
+    return sendMessageAsync(id, text, currentUserId);
   };
 
   return (
