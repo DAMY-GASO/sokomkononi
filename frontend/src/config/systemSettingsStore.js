@@ -4,6 +4,9 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
+// ============================================================
+// CONSTANTS
+// ============================================================
 export const WEBHOOK_EVENTS = [
   { id: "Payment Success", label: { sw: "Malipo Yamefanikiwa", en: "Payment Success" } },
   { id: "Payment Failed", label: { sw: "Malipo Yameshindikana", en: "Payment Failed" } },
@@ -18,6 +21,9 @@ export const SEED_SUBADMINS = [];
 export const SEED_APP_STORE_LINKS = { play: "", appstore: "" };
 export const SEED_PLATFORM_POLICY = { listingLifetimeDays: 60 };
 
+// ============================================================
+// STORAGE FACTORY (imebaki — hooks zinaitumia)
+// ============================================================
 function makeSlice(storageKey, updateEvent, seed) {
   function read() {
     if (typeof window === "undefined") return seed;
@@ -57,107 +63,389 @@ function makeSlice(storageKey, updateEvent, seed) {
   return { read, save, useSlice };
 }
 
-const webhooksSlice = makeSlice("sokomkononi_webhooks_v1", "sokomkononi:webhooks-updated", SEED_WEBHOOKS);
+// ============================================================
+// 1. WEBHOOKS
+// ============================================================
+const webhooksSlice = makeSlice(
+  "sokomkononi_webhooks_v1",
+  "sokomkononi:webhooks-updated",
+  SEED_WEBHOOKS
+);
 
-export function getWebhooks() { return webhooksSlice.read(); }
-export function saveWebhooks(list) { webhooksSlice.save(list); }
-export function addWebhook(webhook) {
-  const next = [...getWebhooks(), webhook];
-  saveWebhooks(next);
-  api.post("/system-settings/webhooks/", {
-    event: webhook.event, url: webhook.url, active: webhook.active !== false,
-  }).catch(() => {});
-  return next;
+export function getWebhooks() {
+  return webhooksSlice.read();
 }
-export function removeWebhook(id) {
-  const next = getWebhooks().filter((w) => w.id !== id);
-  saveWebhooks(next);
-  if (typeof id === "number") api.delete(`/system-settings/webhooks/${id}/`).catch(() => {});
-  return next;
-}
-export function toggleWebhook(id) {
-  const next = getWebhooks().map((w) => (w.id === id ? { ...w, active: !w.active } : w));
-  saveWebhooks(next);
-  if (typeof id === "number") api.post(`/system-settings/webhooks/${id}/toggle/`, {}).catch(() => {});
-  return next;
-}
-export function useWebhooks() { return webhooksSlice.useSlice(hydrateWebhooksFromApi); }
 
-export async function hydrateWebhooksFromApi() {
+export function saveWebhooks(list) {
+  webhooksSlice.save(list);
+}
+
+export function getWebhook(id) {
+  return getWebhooks().find((w) => w.id === id) || null;
+}
+
+// ---------- ASYNC: addWebhookAsync ----------
+export async function addWebhookAsync(webhook) {
+  if (!webhook?.event || !webhook?.url) {
+    return { ok: false, error: new Error("event na url zinahitajika") };
+  }
+
+  const previous = getWebhooks();
+  const optimistic = {
+    id: `local_${Date.now()}`,
+    active: true,
+    ...webhook,
+  };
+  webhooksSlice.save([...previous, optimistic]);
+
   try {
-    const data = await api.get("/system-settings/webhooks/");
-    const list = Array.isArray(data) ? data : [];
-    saveWebhooks(list);
-    return { source: "api", count: list.length };
+    const raw = await api.post("/system-settings/webhooks/", {
+      event: webhook.event,
+      url: webhook.url,
+      active: webhook.active !== false,
+    });
+    // Backend inaweza kurudisha webhook kamili — tumia hiyo
+    if (raw && raw.id) {
+      const current = getWebhooks();
+      webhooksSlice.save(current.map((w) => (w.id === optimistic.id ? raw : w)));
+      return { ok: true, webhook: raw };
+    }
+    return { ok: true, webhook: optimistic };
   } catch (err) {
-    console.warn("[systemSettingsStore.webhooks] hydrate failed:", err);
-    return { source: "error" };
+    webhooksSlice.save(previous); // Rollback
+    console.warn("[systemSettings.webhooks] add failed:", err);
+    return { ok: false, error: err };
   }
 }
 
-const subAdminsSlice = makeSlice("sokomkononi_subadmins_v1", "sokomkononi:subadmins-updated", SEED_SUBADMINS);
-export function getSubAdmins() { return subAdminsSlice.read(); }
-export function saveSubAdmins(list) { subAdminsSlice.save(list); }
+// ---------- ASYNC: removeWebhookAsync ----------
+export async function removeWebhookAsync(id) {
+  const previous = getWebhooks();
+  webhooksSlice.save(previous.filter((w) => w.id !== id));
+
+  if (typeof id !== "number") return { ok: true };
+
+  try {
+    await api.delete(`/system-settings/webhooks/${id}/`);
+    return { ok: true };
+  } catch (err) {
+    webhooksSlice.save(previous); // Rollback
+    console.warn("[systemSettings.webhooks] remove failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ---------- ASYNC: toggleWebhookAsync ----------
+export async function toggleWebhookAsync(id) {
+  const previous = getWebhooks();
+  const target = previous.find((w) => w.id === id);
+  if (!target) return { ok: false, error: new Error("Webhook haipo") };
+
+  const newActive = !target.active;
+  webhooksSlice.save(previous.map((w) => (w.id === id ? { ...w, active: newActive } : w)));
+
+  if (typeof id !== "number") return { ok: true, active: newActive };
+
+  try {
+    await api.post(`/system-settings/webhooks/${id}/toggle/`, {});
+    return { ok: true, active: newActive };
+  } catch (err) {
+    webhooksSlice.save(previous); // Rollback
+    console.warn("[systemSettings.webhooks] toggle failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ---------- HYDRATE ----------
+export async function hydrateWebhooksFromApi() {
+  try {
+    const data = await api.get("/system-settings/webhooks/");
+    const list = Array.isArray(data) ? data : data?.results || [];
+    webhooksSlice.save(list);
+    return { source: "api", count: list.length };
+  } catch (err) {
+    console.warn("[systemSettingsStore.webhooks] hydrate failed:", err);
+    return { source: "error", count: getWebhooks().length };
+  }
+}
+
+// ---------- LEGACY SYNC (deprecated) ----------
+/** @deprecated Use addWebhookAsync */
+export function addWebhook(webhook) {
+  const next = [...getWebhooks(), webhook];
+  webhooksSlice.save(next);
+  api.post("/system-settings/webhooks/", {
+    event: webhook.event,
+    url: webhook.url,
+    active: webhook.active !== false,
+  }).catch((err) => console.warn("[systemSettings.webhooks] add silent fail:", err));
+  return next;
+}
+
+/** @deprecated Use removeWebhookAsync */
+export function removeWebhook(id) {
+  const next = getWebhooks().filter((w) => w.id !== id);
+  webhooksSlice.save(next);
+  if (typeof id === "number") {
+    api.delete(`/system-settings/webhooks/${id}/`)
+      .catch((err) => console.warn("[systemSettings.webhooks] remove silent fail:", err));
+  }
+  return next;
+}
+
+/** @deprecated Use toggleWebhookAsync */
+export function toggleWebhook(id) {
+  const next = getWebhooks().map((w) => (w.id === id ? { ...w, active: !w.active } : w));
+  webhooksSlice.save(next);
+  if (typeof id === "number") {
+    api.post(`/system-settings/webhooks/${id}/toggle/`, {})
+      .catch((err) => console.warn("[systemSettings.webhooks] toggle silent fail:", err));
+  }
+  return next;
+}
+
+// ---------- HOOK ----------
+export function useWebhooks() {
+  return webhooksSlice.useSlice(hydrateWebhooksFromApi);
+}
+
+// ============================================================
+// 2. SUB-ADMINS
+// ============================================================
+const subAdminsSlice = makeSlice(
+  "sokomkononi_subadmins_v1",
+  "sokomkononi:subadmins-updated",
+  SEED_SUBADMINS
+);
+
+export function getSubAdmins() {
+  return subAdminsSlice.read();
+}
+
+export function saveSubAdmins(list) {
+  subAdminsSlice.save(list);
+}
+
+export async function addSubAdminAsync(subAdmin) {
+  if (!subAdmin?.email) {
+    return { ok: false, error: new Error("email inahitajika") };
+  }
+
+  const previous = getSubAdmins();
+  const optimistic = { id: `local_${Date.now()}`, ...subAdmin };
+  subAdminsSlice.save([...previous, optimistic]);
+
+  // Kama backend ina endpoint tofauti (mfano /rbac/staff/), badilisha hapa
+  try {
+    const raw = await api.post("/system-settings/sub-admins/", subAdmin);
+    if (raw?.id) {
+      const current = getSubAdmins();
+      subAdminsSlice.save(current.map((s) => (s.id === optimistic.id ? raw : s)));
+      return { ok: true, subAdmin: raw };
+    }
+    return { ok: true, subAdmin: optimistic };
+  } catch (err) {
+    subAdminsSlice.save(previous); // Rollback
+    console.warn("[systemSettings.subAdmins] add failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function removeSubAdminAsync(id) {
+  const previous = getSubAdmins();
+  subAdminsSlice.save(previous.filter((s) => s.id !== id));
+
+  if (typeof id !== "number") return { ok: true };
+
+  try {
+    await api.delete(`/system-settings/sub-admins/${id}/`);
+    return { ok: true };
+  } catch (err) {
+    subAdminsSlice.save(previous); // Rollback
+    console.warn("[systemSettings.subAdmins] remove failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+/** @deprecated Use addSubAdminAsync */
 export function addSubAdmin(subAdmin) {
   const next = [...getSubAdmins(), subAdmin];
-  saveSubAdmins(next);
+  subAdminsSlice.save(next);
   return next;
 }
+
+/** @deprecated Use removeSubAdminAsync */
 export function removeSubAdmin(id) {
   const next = getSubAdmins().filter((s) => s.id !== id);
-  saveSubAdmins(next);
+  subAdminsSlice.save(next);
+  if (typeof id === "number") {
+    api.delete(`/system-settings/sub-admins/${id}/`)
+      .catch((err) => console.warn("[systemSettings.subAdmins] remove silent fail:", err));
+  }
   return next;
 }
-export function useSubAdmins() { return subAdminsSlice.useSlice(); }
 
-const appStoreLinksSlice = makeSlice("sokomkononi_app_store_links_v1", "sokomkononi:app-store-links-updated", SEED_APP_STORE_LINKS);
+export function useSubAdmins() {
+  return subAdminsSlice.useSlice();
+}
 
-export function getAppStoreLinks() { return appStoreLinksSlice.read(); }
+// ============================================================
+// 3. APP STORE LINKS
+// ============================================================
+const appStoreLinksSlice = makeSlice(
+  "sokomkononi_app_store_links_v1",
+  "sokomkononi:app-store-links-updated",
+  SEED_APP_STORE_LINKS
+);
+
+export function getAppStoreLinks() {
+  return appStoreLinksSlice.read();
+}
+
 export function saveAppStoreLinks(links) {
   appStoreLinksSlice.save(links);
-  api.post("/system-settings/app-store-links/", {
-    play: links.play || "", appstore: links.appstore || "",
-  }).catch(() => {});
 }
-export function useAppStoreLinks() { return appStoreLinksSlice.useSlice(hydrateAppStoreLinksFromApi); }
+
+export async function saveAppStoreLinksAsync(links) {
+  const previous = getAppStoreLinks();
+  const next = {
+    play: links.play || "",
+    appstore: links.appstore || "",
+  };
+
+  // Optimistic
+  appStoreLinksSlice.save(next);
+
+  try {
+    await api.post("/system-settings/app-store-links/", next);
+    return { ok: true, links: next };
+  } catch (err) {
+    appStoreLinksSlice.save(previous); // Rollback
+    console.warn("[systemSettings.appStoreLinks] save failed:", err);
+    return { ok: false, error: err };
+  }
+}
 
 export async function hydrateAppStoreLinksFromApi() {
   try {
     const data = await api.get("/system-settings/app-store-links/");
     if (data && typeof data === "object") {
-      saveAppStoreLinks({ play: data.play || "", appstore: data.appstore || "" });
+      appStoreLinksSlice.save({
+        play: data.play || "",
+        appstore: data.appstore || "",
+      });
     }
+    return { source: "api" };
   } catch (err) {
     console.warn("[systemSettingsStore.appStoreLinks] hydrate failed:", err);
+    return { source: "error" };
   }
 }
 
-const platformPolicySlice = makeSlice("sokomkononi_platform_policy_v1", "sokomkononi:platform-policy-updated", SEED_PLATFORM_POLICY);
+export function useAppStoreLinks() {
+  return appStoreLinksSlice.useSlice(hydrateAppStoreLinksFromApi);
+}
 
-export function getPlatformPolicy() { return platformPolicySlice.read(); }
+// ============================================================
+// 4. PLATFORM POLICY
+// ============================================================
+const platformPolicySlice = makeSlice(
+  "sokomkononi_platform_policy_v1",
+  "sokomkononi:platform-policy-updated",
+  SEED_PLATFORM_POLICY
+);
+
+export function getPlatformPolicy() {
+  return platformPolicySlice.read();
+}
+
 export function savePlatformPolicy(policy) {
   platformPolicySlice.save(policy);
-  api.post("/system-settings/platform-policy/", {
-    listing_lifetime_days: policy.listingLifetimeDays,
-  }).catch(() => {});
 }
+
+export async function savePlatformPolicyAsync(policy) {
+  const previous = getPlatformPolicy();
+  const next = { ...previous, ...policy };
+
+  // Optimistic
+  platformPolicySlice.save(next);
+
+  try {
+    await api.post("/system-settings/platform-policy/", {
+      listing_lifetime_days: next.listingLifetimeDays,
+    });
+    return { ok: true, policy: next };
+  } catch (err) {
+    platformPolicySlice.save(previous); // Rollback
+    console.warn("[systemSettings.platformPolicy] save failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function updatePlatformPolicyAsync(patch) {
+  const previous = getPlatformPolicy();
+  const next = { ...previous, ...patch };
+  platformPolicySlice.save(next);
+
+  const payload = {};
+  if (patch.listingLifetimeDays != null) {
+    payload.listing_lifetime_days = Number(patch.listingLifetimeDays);
+  }
+
+  try {
+    await api.post("/system-settings/platform-policy/", payload);
+    return { ok: true, policy: next };
+  } catch (err) {
+    platformPolicySlice.save(previous); // Rollback
+    console.warn("[systemSettings.platformPolicy] update failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+/** @deprecated Use savePlatformPolicyAsync or updatePlatformPolicyAsync */
 export function updatePlatformPolicy(patch) {
   const current = getPlatformPolicy();
   const next = { ...current, ...patch };
   savePlatformPolicy(next);
   return next;
 }
-export function usePlatformPolicy() { return platformPolicySlice.useSlice(hydratePlatformPolicyFromApi); }
 
 export async function hydratePlatformPolicyFromApi() {
   try {
     const data = await api.get("/system-settings/platform-policy/");
     if (data && typeof data === "object") {
-      savePlatformPolicy({
+      platformPolicySlice.save({
         listingLifetimeDays: data.listing_lifetime_days ?? 60,
       });
     }
+    return { source: "api" };
   } catch (err) {
     console.warn("[systemSettingsStore.platformPolicy] hydrate failed:", err);
+    return { source: "error" };
   }
+}
+
+export function usePlatformPolicy() {
+  return platformPolicySlice.useSlice(hydratePlatformPolicyFromApi);
+}
+
+// ============================================================
+// 5. BULK — load settings zote kwa wakati mmoja
+// ============================================================
+export async function hydrateAllSystemSettings() {
+  const [webhooks, appStore, policy] = await Promise.all([
+    hydrateWebhooksFromApi(),
+    hydrateAppStoreLinksFromApi(),
+    hydratePlatformPolicyFromApi(),
+  ]);
+
+  return {
+    webhooks,
+    appStore,
+    policy,
+    allOk:
+      webhooks.source === "api" &&
+      appStore.source === "api" &&
+      policy.source === "api",
+  };
 }
