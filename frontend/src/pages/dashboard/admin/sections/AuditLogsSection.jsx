@@ -1,7 +1,7 @@
 // ============================================================
 // AuditLogsSection.jsx
 // Admin — Audit Logs (nani, lini, nini).
-// Bilingual + mobile-responsive (imeboreshwa).
+// Bilingual + mobile-responsive + Async actions na rollback.
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -20,16 +20,56 @@ import {
   Tag,
   Megaphone,
   UserCog,
+  Loader2,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
+// ⬇️ MABADILIKO: tumia store moja kwa moja + api
 import {
   useAuditLogs,
-  removeAuditLog,
-  clearAuditLogs,
+  getAuditLogs,
+  saveAuditLogs,
   AUDIT_ACTIONS,
 } from "../../../../config/auditLogsStore.js";
+import { api } from "../../../../api/client.js";
+
+// ============================================================
+// ASYNC HELPERS — tunaunda hapa kwa sababu store haina (bado)
+// ============================================================
+async function removeAuditLogAsync(id) {
+  const previous = getAuditLogs();
+  const target = previous.find((l) => l.id === id);
+  if (!target) return { ok: false, error: new Error("Log haipo") };
+
+  // Optimistic
+  saveAuditLogs(previous.filter((l) => l.id !== id));
+
+  if (typeof id !== "number") return { ok: true };
+
+  try {
+    await api.delete(`/audit/${id}/`);
+    return { ok: true };
+  } catch (err) {
+    saveAuditLogs(previous); // Rollback
+    console.warn("[AuditLogsSection] remove failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+async function clearAuditLogsAsync() {
+  const previous = getAuditLogs();
+  saveAuditLogs([]);
+
+  try {
+    await api.post("/audit/clear/", {});
+    return { ok: true };
+  } catch (err) {
+    saveAuditLogs(previous); // Rollback
+    console.warn("[AuditLogsSection] clearAll failed:", err);
+    return { ok: false, error: err };
+  }
+}
 
 // ============================================================
 // ACTION ICONS
@@ -52,9 +92,6 @@ const ACTION_ICONS = {
   "subadmin.removed": UserCog,
 };
 
-// ============================================================
-// ACTION COLORS
-// ============================================================
 const ACTION_COLORS = {
   green: { bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
   rust: { bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
@@ -62,17 +99,19 @@ const ACTION_COLORS = {
 };
 
 // ============================================================
-// MAIN SECTION — export default
+// MAIN SECTION
 // ============================================================
 export default function AuditLogsSection() {
   const { lang } = useLanguage();
   const logs = useAuditLogs();
   const [query, setQuery] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
+  // ⬇️ MPYA: busy + error
+  const [busy, setBusy] = useState({}); // { [id]: true, clearing: true }
+  const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // Action counts
   const actionCounts = useMemo(() => {
     const counts = { all: logs.length };
     AUDIT_ACTIONS.forEach((a) => {
@@ -81,7 +120,6 @@ export default function AuditLogsSection() {
     return counts;
   }, [logs]);
 
-  // Filtered
   const filtered = useMemo(() => {
     let result = [...logs];
 
@@ -105,16 +143,60 @@ export default function AuditLogsSection() {
     return result;
   }, [logs, actionFilter, query, lang]);
 
-  const handleClearAll = () => {
+  // ============================================================
+  // HANDLERS — async
+  // ============================================================
+  const handleClearAll = async () => {
     if (
-      window.confirm(
+      !window.confirm(
         t(
           "Futa logs zote? Hatua hii haiwezi kurudishwa.",
           "Delete all logs? This cannot be undone."
         )
       )
-    ) {
-      clearAuditLogs();
+    )
+      return;
+
+    if (busy.clearing) return;
+
+    setBusy((b) => ({ ...b, clearing: true }));
+    setError("");
+
+    const res = await clearAuditLogsAsync();
+
+    setBusy((b) => {
+      const next = { ...b };
+      delete next.clearing;
+      return next;
+    });
+
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kufuta logs.", "Failed to clear logs.")
+      );
+    }
+  };
+
+  const handleRemove = async (id) => {
+    if (busy[id]) return;
+
+    setBusy((b) => ({ ...b, [id]: true }));
+    setError("");
+
+    const res = await removeAuditLogAsync(id);
+
+    setBusy((b) => {
+      const next = { ...b };
+      delete next[id];
+      return next;
+    });
+
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuondoa log.", "Failed to remove log.")
+      );
     }
   };
 
@@ -138,7 +220,20 @@ export default function AuditLogsSection() {
         )}
       />
 
-      {/* Summary — responsive */}
+      {/* Error banner */}
+      {error && (
+        <div
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg mb-4"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Summary */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="rounded-xl border p-3 sm:p-4 mb-5 flex items-start gap-3 flex-wrap w-full min-w-0"
@@ -163,16 +258,21 @@ export default function AuditLogsSection() {
         {logs.length > 0 && (
           <button
             onClick={handleClearAll}
+            disabled={busy.clearing}
             style={{ color: COLORS.rust }}
-            className="flex items-center gap-1 text-xs font-semibold shrink-0 hover:underline"
+            className="flex items-center gap-1 text-xs font-semibold shrink-0 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Trash2 size={12} />
+            {busy.clearing ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <Trash2 size={12} />
+            )}
             {t("Futa Zote", "Clear All")}
           </button>
         )}
       </div>
 
-      {/* Action filter — CENTERED + scroll horizontal */}
+      {/* Action filter */}
       {logs.length > 0 && (
         <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
           <button
@@ -191,10 +291,8 @@ export default function AuditLogsSection() {
               key={action.key}
               onClick={() => setActionFilter(action.key)}
               style={{
-                background:
-                  actionFilter === action.key ? COLORS.night : "white",
-                color:
-                  actionFilter === action.key ? COLORS.sand : "var(--text-primary)",
+                background: actionFilter === action.key ? COLORS.night : "white",
+                color: actionFilter === action.key ? COLORS.sand : "var(--text-primary)",
                 borderColor: COLORS.sandLine,
               }}
               className="text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
@@ -250,6 +348,8 @@ export default function AuditLogsSection() {
           {filtered.map((log) => {
             const ActionIcon = ACTION_ICONS[log.action] || FileText;
             const colors = getActionColor(log.action);
+            const isBusy = !!busy[log.id];
+
             return (
               <div
                 key={log.id}
@@ -297,11 +397,16 @@ export default function AuditLogsSection() {
                 </div>
 
                 <button
-                  onClick={() => removeAuditLog(log.id)}
-                  className="p-1.5 text-muted hover:text-[#C1502E] transition-colors shrink-0"
+                  onClick={() => handleRemove(log.id)}
+                  disabled={isBusy}
+                  className="p-1.5 text-muted hover:text-[#C1502E] transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label={t("Ondoa", "Remove")}
                 >
-                  <Trash2 size={14} />
+                  {isBusy ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={14} />
+                  )}
                 </button>
               </div>
             );
