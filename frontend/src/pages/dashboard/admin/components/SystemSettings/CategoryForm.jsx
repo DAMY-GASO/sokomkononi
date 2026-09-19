@@ -1,11 +1,11 @@
 // ============================================================
 // CategoryForm.jsx
 // Form ya kuunda/kuhariri category — picha + fields + flags.
-// Bilingual + mobile-responsive + image upload.
+// Bilingual + mobile-responsive + image upload + saving state.
 // ============================================================
 
 import React, { useState, useRef } from "react";
-import { X, ImagePlus } from "lucide-react";
+import { X, ImagePlus, Loader2 } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 import { AVAILABLE_ICONS } from "../../../../../config/categoriesStore.js";
@@ -15,6 +15,8 @@ export default function CategoryForm({
   isEditing = false,
   onSave,
   onCancel,
+  saving = false,
+  error = "",
 }) {
   const { lang } = useLanguage();
   const [form, setForm] = useState({
@@ -30,21 +32,19 @@ export default function CategoryForm({
   });
   const fileInputRef = useRef(null);
 
-  const canSave = form.key.trim() && form.labelSw.trim() && form.labelEn.trim();
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const canSave =
+    form.key.trim() && form.labelSw.trim() && form.labelEn.trim() && !saving;
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      alert(lang === "sw" ? "Tafadhali chagua picha." : "Please choose an image.");
+      alert(t("Tafadhali chagua picha.", "Please choose an image."));
       return;
     }
     if (file.size > 1024 * 1024) {
-      alert(
-        lang === "sw"
-          ? "Picha ni kubwa sana (max 1MB)."
-          : "Image is too large (max 1MB)."
-      );
+      alert(t("Picha ni kubwa sana (max 1MB).", "Image is too large (max 1MB)."));
       return;
     }
     const reader = new FileReader();
@@ -90,18 +90,30 @@ export default function CategoryForm({
       style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
       className="border-t rounded-b-lg p-3 sm:p-4 flex flex-col gap-3"
     >
+      {/* Error banner */}
+      {error && (
+        <div
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg"
+        >
+          {error}
+        </div>
+      )}
+
       {/* PHOTO UPLOAD */}
       <div>
         <span className="text-[11px] font-semibold text-secondary block mb-2">
-          {lang === "sw"
-            ? "Picha ya Kuwakilisha Category"
-            : "Representative Photo"}
+          {t("Picha ya Kuwakilisha Category", "Representative Photo")}
         </span>
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
           onChange={handleFileChange}
+          disabled={saving}
           className="hidden"
         />
         {form.imageUrl ? (
@@ -116,19 +128,21 @@ export default function CategoryForm({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-[11px] font-semibold px-3 py-1.5 rounded-lg border"
+                disabled={saving}
+                className="text-[11px] font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
                 style={{ borderColor: COLORS.sandLine, color: "var(--text-primary)" }}
               >
-                {lang === "sw" ? "Badilisha" : "Change"}
+                {t("Badilisha", "Change")}
               </button>
               <button
                 type="button"
                 onClick={handleRemoveImage}
-                className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg border"
+                disabled={saving}
+                className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
                 style={{ borderColor: COLORS.sandLine, color: COLORS.rust }}
               >
                 <X size={12} />
-                {lang === "sw" ? "Ondoa" : "Remove"}
+                {t("Ondoa", "Remove")}
               </button>
             </div>
           </div>
@@ -136,98 +150,93 @@ export default function CategoryForm({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
+            disabled={saving}
             style={{ borderColor: COLORS.sandLine, color: "var(--text-secondary)" }}
-            className="w-full rounded-xl border-2 border-dashed py-4 sm:py-5 flex flex-col items-center gap-1.5 hover:bg-white/50 transition-colors"
+            className="w-full rounded-xl border-2 border-dashed py-4 sm:py-5 flex flex-col items-center gap-1.5 hover:bg-white/50 transition-colors disabled:opacity-50"
           >
             <ImagePlus size={22} color="rgba(16,26,46,0.35)" />
             <span className="text-xs font-medium text-center px-2">
-              {lang === "sw"
-                ? "Bofya kupakia picha (max 1MB)"
-                : "Click to upload photo (max 1MB)"}
+              {t("Bofya kupakia picha (max 1MB)", "Click to upload photo (max 1MB)")}
             </span>
           </button>
         )}
         <p className="text-[10px] text-muted mt-1">
-          {lang === "sw"
-            ? "Kama hutaweka picha, icon itatumika kama fallback."
-            : "If no photo, icon will be used as fallback."}
+          {t(
+            "Kama hutaweka picha, icon itatumika kama fallback.",
+            "If no photo, icon will be used as fallback."
+          )}
         </p>
       </div>
 
       {/* FIELDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-secondary">
-            Key (slug)
-          </span>
+          <span className="text-[11px] font-semibold text-secondary">Key (slug)</span>
           <input
             value={form.key}
             onChange={(e) => setForm({ ...form, key: e.target.value })}
             placeholder="mfano: pikipiki"
-            disabled={isEditing}
+            disabled={isEditing || saving}
             className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:bg-gray-100 disabled:text-secondary"
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-secondary">
-            {lang === "sw" ? "Icon (fallback)" : "Icon (fallback)"}
-          </span>
+          <span className="text-[11px] font-semibold text-secondary">Icon (fallback)</span>
           <select
             value={form.iconKey}
             onChange={(e) => setForm({ ...form, iconKey: e.target.value })}
-            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none"
+            disabled={saving}
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:opacity-50"
           >
             {Object.keys(AVAILABLE_ICONS).map((k) => (
-              <option key={k} value={k}>
-                {k}
-              </option>
+              <option key={k} value={k}>{k}</option>
             ))}
           </select>
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-[11px] font-semibold text-secondary">
-            {lang === "sw" ? "Jina (Kiswahili)" : "Label (Swahili)"}
+            {t("Jina (Kiswahili)", "Label (Swahili)")}
           </span>
           <input
             value={form.labelSw}
             onChange={(e) => setForm({ ...form, labelSw: e.target.value })}
             placeholder="mfano: Pikipiki"
-            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none"
+            disabled={saving}
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-[11px] font-semibold text-secondary">
-            {lang === "sw" ? "Jina (Kiingereza)" : "Label (English)"}
+            {t("Jina (Kiingereza)", "Label (English)")}
           </span>
           <input
             value={form.labelEn}
             onChange={(e) => setForm({ ...form, labelEn: e.target.value })}
             placeholder="e.g. Motorcycles"
-            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none"
+            disabled={saving}
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 sm:col-span-2">
           <span className="text-[11px] font-semibold text-secondary">
-            {lang === "sw"
-              ? "Maelezo (Kiswahili) — hiari"
-              : "Description (Swahili) — optional"}
+            {t("Maelezo (Kiswahili) — hiari", "Description (Swahili) — optional")}
           </span>
           <input
             value={form.descSw}
             onChange={(e) => setForm({ ...form, descSw: e.target.value })}
-            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none"
+            disabled={saving}
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 sm:col-span-2">
           <span className="text-[11px] font-semibold text-secondary">
-            {lang === "sw"
-              ? "Maelezo (Kiingereza) — hiari"
-              : "Description (English) — optional"}
+            {t("Maelezo (Kiingereza) — hiari", "Description (English) — optional")}
           </span>
           <input
             value={form.descEn}
             onChange={(e) => setForm({ ...form, descEn: e.target.value })}
-            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none"
+            disabled={saving}
+            className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:opacity-50"
           />
         </label>
       </div>
@@ -239,12 +248,11 @@ export default function CategoryForm({
             type="checkbox"
             checked={form.isPopular}
             onChange={(e) => setForm({ ...form, isPopular: e.target.checked })}
+            disabled={saving}
             className="shrink-0"
           />
           <span>
-            {lang === "sw"
-              ? "Inaonekana HomePage + Navbar"
-              : "Show on HomePage + Navbar"}
+            {t("Inaonekana HomePage + Navbar", "Show on HomePage + Navbar")}
           </span>
         </label>
         <label className="flex items-center gap-1.5 cursor-pointer">
@@ -252,12 +260,11 @@ export default function CategoryForm({
             type="checkbox"
             checked={form.active}
             onChange={(e) => setForm({ ...form, active: e.target.checked })}
+            disabled={saving}
             className="shrink-0"
           />
           <span>
-            {lang === "sw"
-              ? "Hai (inapatikana kwa wauzaji)"
-              : "Active (available to sellers)"}
+            {t("Hai (inapatikana kwa wauzaji)", "Active (available to sellers)")}
           </span>
         </label>
       </div>
@@ -284,10 +291,11 @@ export default function CategoryForm({
         <button
           type="button"
           onClick={onCancel}
+          disabled={saving}
           style={{ borderColor: COLORS.sandLine }}
-          className="text-xs font-semibold px-3 py-2 rounded-lg border text-secondary hover:bg-white transition-colors shrink-0"
+          className="text-xs font-semibold px-3 py-2 rounded-lg border text-secondary hover:bg-white transition-colors shrink-0 disabled:opacity-50"
         >
-          {lang === "sw" ? "Ghairi" : "Cancel"}
+          {t("Ghairi", "Cancel")}
         </button>
         <button
           type="submit"
@@ -296,15 +304,12 @@ export default function CategoryForm({
             background: canSave ? COLORS.night : COLORS.sandLine,
             color: canSave ? COLORS.sand : "var(--text-muted)",
           }}
-          className="flex-1 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
         >
+          {saving && <Loader2 size={13} className="animate-spin" />}
           {isEditing
-            ? lang === "sw"
-              ? "Hifadhi Mabadiliko"
-              : "Save Changes"
-            : lang === "sw"
-              ? "Ongeza Category"
-              : "Add Category"}
+            ? t("Hifadhi Mabadiliko", "Save Changes")
+            : t("Ongeza Category", "Add Category")}
         </button>
       </div>
     </form>
