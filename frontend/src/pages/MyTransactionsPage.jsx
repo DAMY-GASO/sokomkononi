@@ -1,3 +1,8 @@
+// ============================================================
+// MyTransactionsPage.jsx
+// Miamala Yangu — API-backed success fee + CSV download.
+// ============================================================
+
 import React, { useState } from "react";
 import {
   Receipt,
@@ -21,8 +26,9 @@ import {
   formatTZS,
   timeAgo,
 } from "./dashboard/components/shared";
-import { useTransactions } from "../config/transactionsStore.js";
+import { useTransactions, addTransaction } from "../config/transactionsStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { api } from "../api/client.js";
 
 // ============================================================
 // TRANSACTION TYPES — bilingual kamili
@@ -76,6 +82,12 @@ const getTransactionTypes = (lang) => ({
     color: COLORS.gold,
     bg: "rgba(232,163,61,0.12)",
   },
+  success_fee: {
+    label: lang === "sw" ? "Ada ya Mafanikio" : "Success Fee",
+    icon: Wallet,
+    color: COLORS.green,
+    bg: "rgba(47,109,79,0.12)",
+  },
 });
 
 const getStatus = (lang) => ({
@@ -111,8 +123,7 @@ const getStatus = (lang) => ({
 const SUCCESS_FEE_TZS = 5000;
 
 // ============================================================
-// CSV HELPERS — inajizalisha moja kwa moja kutoka kwenye
-// miamala inayoonekana kwa sasa (baada ya filter/search)
+// CSV HELPERS
 // ============================================================
 function buildTransactionsCSV(transactions, lang) {
   const types = getTransactionTypes(lang);
@@ -134,15 +145,7 @@ function buildTransactionsCSV(transactions, lang) {
     const dateStr = new Date(t.at).toLocaleDateString(
       lang === "sw" ? "sw-TZ" : "en-GB"
     );
-    return [
-      t.ref,
-      typeLabel,
-      t.title,
-      t.amount,
-      t.method,
-      statusLabel,
-      dateStr,
-    ]
+    return [t.ref, typeLabel, t.title, t.amount, t.method, statusLabel, dateStr]
       .map(escapeCell)
       .join(",");
   });
@@ -151,7 +154,6 @@ function buildTransactionsCSV(transactions, lang) {
 }
 
 function downloadCSV(csvContent, filename) {
-  // \uFEFF (BOM) ili Excel isome herufi vizuri
   const blob = new Blob(["\uFEFF" + csvContent], {
     type: "text/csv;charset=utf-8;",
   });
@@ -166,7 +168,7 @@ function downloadCSV(csvContent, filename) {
 }
 
 // ============================================================
-// TRANSACTION ITEM — kadi zimeachwa kushoto (data nyingi)
+// TRANSACTION ITEM
 // ============================================================
 function TransactionItem({ txn, lang }) {
   const type =
@@ -239,6 +241,8 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFeeModal, setShowFeeModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  // ⬇️ MPYA: Error state kwa modal
+  const [feeError, setFeeError] = useState("");
 
   const filters = [
     { key: "all", label: lang === "sw" ? "Zote" : "All" },
@@ -279,20 +283,86 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
 
   const handleDownloadClick = () => {
     if (filtered.length === 0) return;
+    setFeeError(""); // Safisha error ya awali
     setShowFeeModal(true);
   };
 
-  const handleConfirmPayment = () => {
+  // ============================================================
+  // PAY SUCCESS FEE — API HALISI
+  // ============================================================
+  const handleConfirmPayment = async () => {
     setIsProcessing(true);
-    // Demo ya frontend pekee — hapa ndipo backend halisi
-    // itaunganishwa (mfano M-Pesa push) kabla ya kuruhusu download.
-    setTimeout(() => {
+    setFeeError("");
+
+    try {
+      // 1) Unda ombi la malipo kwa backend
+      //    Backend inapaswa kurudisha { id, payment_reference, status }
+      const feeRes = await api.post("/finance/success-fee/", {
+        purpose: "transactions_csv",
+        amount: SUCCESS_FEE_TZS,
+        currency: "TZS",
+      });
+
+      // 2) Kama backend inahitaji hatua ya pili (M-Pesa push, confirmation)
+      //    Unaweza kuongeza hapa. Kwa sasa tunachukulia feeRes ina
+      //    payment_reference ya kuthibitisha malipo.
+      const paymentReference =
+        feeRes?.payment_reference || feeRes?.reference || feeRes?.ref || null;
+
+      if (!paymentReference) {
+        throw new Error(
+          lang === "sw"
+            ? "Backend haikurudisha kumbukumbu ya malipo."
+            : "Backend did not return a payment reference."
+        );
+      }
+
+      // 3) Rekodi transaction kwenye store (local + backend)
+      addTransaction({
+        type: "success_fee",
+        title:
+          lang === "sw"
+            ? "Ada ya Kupakua Miamala (CSV)"
+            : "Transactions CSV Download Fee",
+        property: lang === "sw" ? "Miamala Yangu" : "My Transactions",
+        amount: SUCCESS_FEE_TZS,
+        status: "completed",
+        method: "M-Pesa",
+        ref: paymentReference,
+        paymentReference,
+      });
+
+      // 4) Pakua CSV baada ya malipo kuthibitishwa
       const csv = buildTransactionsCSV(filtered, lang);
       const filename = `miamala_${new Date().toISOString().slice(0, 10)}.csv`;
       downloadCSV(csv, filename);
-      setIsProcessing(false);
+
+      // 5) Funga modal
       setShowFeeModal(false);
-    }, 1200);
+    } catch (err) {
+      // Kuchukua ujumbe kutoka DRF au fallback
+      const msg =
+        err?.data?.detail ||
+        err?.data?.message ||
+        (err?.data && typeof err.data === "object"
+          ? Object.values(err.data).flat().find((v) => typeof v === "string")
+          : null) ||
+        err?.message ||
+        (lang === "sw"
+          ? "Malipo yameshindikana. Jaribu tena."
+          : "Payment failed. Try again.");
+
+      setFeeError(msg);
+      console.warn("[MyTransactionsPage] success fee failed:", err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    if (isProcessing) return; // Zuia kufunga wakati wa malipo
+    setShowFeeModal(false);
+    setFeeError("");
   };
 
   return (
@@ -303,11 +373,8 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
       }}
       className="w-full p-4 sm:p-6"
     >
-
       <div className="max-w-4xl mx-auto">
-        {/* ============================================================ */}
         {/* HEADER — CENTERED */}
-        {/* ============================================================ */}
         <div className="mb-5 text-center">
           <h1
             style={{ color: "var(--text-primary)" }}
@@ -325,9 +392,7 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
           </p>
         </div>
 
-        {/* ============================================================ */}
-        {/* SUMMARY CARDS — CENTERED */}
-        {/* ============================================================ */}
+        {/* SUMMARY CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
           <div
             style={{ background: "white", borderColor: COLORS.sandLine }}
@@ -372,9 +437,7 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
           </div>
         </div>
 
-        {/* ============================================================ */}
-        {/* SEARCH + DOWNLOAD — CENTERED */}
-        {/* ============================================================ */}
+        {/* SEARCH + DOWNLOAD */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4 max-w-2xl mx-auto">
           <div className="relative flex-1">
             <Search
@@ -413,9 +476,7 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
           </button>
         </div>
 
-        {/* ============================================================ */}
-        {/* FILTER TABS — CENTERED */}
-        {/* ============================================================ */}
+        {/* FILTER TABS */}
         <div className="flex justify-center gap-2 mb-5 overflow-x-auto pb-1">
           {filters.map((f) => (
             <button
@@ -433,9 +494,7 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
           ))}
         </div>
 
-        {/* ============================================================ */}
-        {/* EMPTY STATE — CENTERED */}
-        {/* ============================================================ */}
+        {/* EMPTY STATE */}
         {filtered.length === 0 ? (
           <div
             style={{ borderColor: COLORS.sandLine }}
@@ -462,9 +521,6 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
             </p>
           </div>
         ) : (
-          /* ============================================================ */
-          /* LIST — kadi zimeachwa kushoto kwa data nyingi */
-          /* ============================================================ */
           <div className="flex flex-col gap-3">
             {filtered.map((t) => (
               <TransactionItem key={t.id} txn={t} lang={lang} />
@@ -473,18 +529,17 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
         )}
       </div>
 
-      {/* ============================================================ */}
-      {/* SUCCESS FEE MODAL — inaonekana kila mara mtumiaji anapotaka */}
-      {/* kupakua CSV; malipo yakithibitika, download inaanza yenyewe */}
-      {/* ============================================================ */}
+      {/* SUCCESS FEE MODAL — API-backed */}
       {showFeeModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "var(--text-secondary)" }}
+          style={{ background: "rgba(16,26,46,0.6)" }}
+          onClick={handleCloseModal}
         >
           <div
             style={{ background: "white" }}
             className="w-full max-w-sm rounded-2xl p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
           >
             <div
               style={{ background: "rgba(47,109,79,0.12)" }}
@@ -518,10 +573,27 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
               >
                 {lang === "sw" ? "Kiasi cha Kulipa" : "Amount to Pay"}
               </p>
-              <p style={{ color: "var(--text-primary)" }} className="text-xl font-bold">
+              <p
+                style={{ color: "var(--text-primary)" }}
+                className="text-xl font-bold"
+              >
                 {formatTZS(SUCCESS_FEE_TZS)}
               </p>
             </div>
+
+            {/* ERROR */}
+            {feeError && (
+              <div
+                style={{
+                  background: "rgba(193,80,46,0.1)",
+                  color: COLORS.rust,
+                }}
+                className="rounded-lg px-3 py-2 mb-4 text-xs text-center"
+              >
+                {feeError}
+              </div>
+            )}
+
             <div className="flex flex-col gap-2">
               <button
                 onClick={handleConfirmPayment}
@@ -544,7 +616,7 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
                 )}
               </button>
               <button
-                onClick={() => setShowFeeModal(false)}
+                onClick={handleCloseModal}
                 disabled={isProcessing}
                 style={{ color: "var(--text-primary)" }}
                 className="w-full py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60"
