@@ -16,6 +16,9 @@ export const ANNOUNCEMENT_TYPES = [
 
 export const SEED_ANNOUNCEMENTS = [];
 
+// ============================================================
+// STORAGE
+// ============================================================
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_ANNOUNCEMENTS;
   try {
@@ -35,6 +38,9 @@ function saveAll(list) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
+// ============================================================
+// NORMALIZER
+// ============================================================
 function normalizeFromApi(raw) {
   if (!raw) return null;
   const typeMap = {
@@ -54,6 +60,16 @@ function normalizeFromApi(raw) {
   };
 }
 
+const TYPE_TO_API = {
+  fee_change: "FEE_CHANGE",
+  new_category: "NEW_CATEGORY",
+  maintenance: "MAINTENANCE",
+  promotion: "PROMOTION",
+};
+
+// ============================================================
+// READS
+// ============================================================
 export function getAnnouncements() {
   return readFromStorage();
 }
@@ -62,6 +78,9 @@ export function saveAnnouncements(list) {
   saveAll(list);
 }
 
+// ============================================================
+// HYDRATE
+// ============================================================
 export async function hydrateAnnouncementsFromApi() {
   try {
     const data = await api.get("/announcements/?page_size=100");
@@ -75,40 +94,114 @@ export async function hydrateAnnouncementsFromApi() {
   }
 }
 
-export function addAnnouncement(announcement) {
-  const typeMap = {
-    fee_change: "FEE_CHANGE", new_category: "NEW_CATEGORY",
-    maintenance: "MAINTENANCE", promotion: "PROMOTION",
-  };
+// ============================================================
+// ASYNC ACTIONS — with rollback
+// ============================================================
+export async function addAnnouncementAsync(announcement) {
+  if (!announcement?.title?.trim() || !announcement?.message?.trim()) {
+    return { ok: false, error: new Error("title na message zinahitajika") };
+  }
+
   const payload = {
-    typeId: typeMap[announcement.typeId] || "MAINTENANCE",
+    type: TYPE_TO_API[announcement.typeId] || "MAINTENANCE",
+    title: announcement.title,
+    title_en: announcement.titleEn || "",
+    message: announcement.message,
+    message_en: announcement.messageEn || "",
+    scheduled_for: announcement.scheduledFor || null,
+    sent: announcement.sent !== false,
+  };
+
+  const previous = getAnnouncements();
+  const optimistic = {
+    id: `local_${Date.now()}`,
+    typeId: announcement.typeId,
     title: announcement.title,
     titleEn: announcement.titleEn || "",
     message: announcement.message,
     messageEn: announcement.messageEn || "",
-    scheduledFor: announcement.scheduledFor || null,
+    scheduledFor: announcement.scheduledFor || "",
+    sent: announcement.sent !== false,
+    createdAt: new Date().toISOString(),
+  };
+  saveAll([optimistic, ...previous]);
+
+  try {
+    const raw = await api.post("/announcements/", payload);
+    const created = normalizeFromApi(raw);
+    if (created) {
+      saveAll([created, ...getAnnouncements().filter((a) => a.id !== optimistic.id)]);
+      return { ok: true, announcement: created };
+    }
+    return { ok: true, announcement: optimistic };
+  } catch (err) {
+    saveAll(previous); // Rollback
+    console.warn("[announcementsStore] add failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function removeAnnouncementAsync(id) {
+  const previous = getAnnouncements();
+  const target = previous.find((a) => a.id === id);
+  if (!target) return { ok: false, error: new Error("Announcement haipo") };
+
+  // Optimistic
+  saveAll(previous.filter((a) => a.id !== id));
+
+  if (typeof id !== "number") return { ok: true };
+
+  try {
+    await api.delete(`/announcements/${id}/`);
+    return { ok: true };
+  } catch (err) {
+    saveAll(previous); // Rollback
+    console.warn("[announcementsStore] remove failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// LEGACY SYNC (deprecated)
+// ============================================================
+/** @deprecated Use addAnnouncementAsync */
+export function addAnnouncement(announcement) {
+  const payload = {
+    type: TYPE_TO_API[announcement.typeId] || "MAINTENANCE",
+    title: announcement.title,
+    title_en: announcement.titleEn || "",
+    message: announcement.message,
+    message_en: announcement.messageEn || "",
+    scheduled_for: announcement.scheduledFor || null,
     sent: announcement.sent !== false,
   };
   const entry = { id: `local_${Date.now()}`, ...announcement };
   saveAll([entry, ...getAnnouncements()]);
-
-  api.post("/announcements/", payload).then((raw) => {
-    const created = normalizeFromApi(raw);
-    saveAll([created, ...getAnnouncements().filter((a) => a.id !== entry.id)]);
-  }).catch(() => {});
-
+  api.post("/announcements/", payload)
+    .then((raw) => {
+      const created = normalizeFromApi(raw);
+      if (created) {
+        saveAll([created, ...getAnnouncements().filter((a) => a.id !== entry.id)]);
+      }
+    })
+    .catch((err) => console.warn("[announcementsStore] add silent fail:", err));
   return entry;
 }
 
+/** @deprecated Use removeAnnouncementAsync */
 export function removeAnnouncement(id) {
   const next = getAnnouncements().filter((a) => a.id !== id);
   saveAll(next);
   if (typeof id === "number") {
-    api.delete(`/announcements/${id}/`).catch(() => {});
+    api.delete(`/announcements/${id}/`)
+      .catch((err) => console.warn("[announcementsStore] remove silent fail:", err));
   }
   return next;
 }
 
+// ============================================================
+// HOOKS
+// ============================================================
 export function useAnnouncements() {
   const [list, setList] = useState(() => getAnnouncements());
   useEffect(() => {
