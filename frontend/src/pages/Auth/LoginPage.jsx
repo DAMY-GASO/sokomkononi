@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext.jsx";
+import { loginAsync } from "../../stores/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const icons = {
@@ -52,7 +52,8 @@ function SkylineDecoration() {
 }
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  // ⬇️ MABADILIKO: Ondoa useAuth() — tumia loginAsync kutoka authStore moja kwa moja
+  // const { login } = useAuth();  ❌ ONDOA
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
@@ -74,30 +75,13 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    try {
-      await login(form);
+    // ⬇️ MABADILIKO: loginAsync inarudisha { ok, user, error } badala ya kutupa exception
+    const res = await loginAsync(form);
+    setLoading(false);
 
-      // ============================================================
-      // RETURN-TO — baada ya login, mrudishe mtumiaji pale alipotoka
-      // (mfano: property aliyokuwa akiitazama) badala ya kumpeleka
-      // moja kwa moja dashboard. "state.from" inatumwa na ukurasa
-      // uliomrejesha hapa (mfano kitufe cha "Wasiliana na Muuzaji"),
-      // au "?redirect=" kwenye URL kama njia mbadala.
-      //
-      // Taarifa nyingine yoyote aliyokuja nayo (kwa mfano
-      // { openContactModal: true, listingId: "123" }) inaendelea
-      // kubebwa kwenda kwenye ukurasa unaofuata, ili huo ukurasa
-      // uweze kufungua modal husika bila mtumiaji kubonyeza tena.
-      // ============================================================
-      const { from, ...restState } = location.state || {};
-      const redirectTo = from || searchParams.get("redirect") || "/dashboard/post";
-
-      navigate(redirectTo, {
-        replace: true,
-        state: Object.keys(restState).length > 0 ? restState : undefined,
-      });
-    } catch (err) {
-      // ApiError ina .data.detail (DRF), .data (field errors), .message
+    if (!res.ok) {
+      // Kuchukua ujumbe wa kwanza wa error kutoka DRF field errors
+      const err = res.error;
       const firstFieldError =
         err?.data && typeof err.data === "object" && !err.data.detail
           ? Object.values(err.data).flat().find((v) => typeof v === "string")
@@ -105,14 +89,33 @@ export default function LoginPage() {
 
       setError(
         err?.data?.detail ||
-        firstFieldError ||
-        err?.message ||
-        t("login_error_default") ||
-        "Barua pepe/nenosiri si sahihi."
+          firstFieldError ||
+          err?.message ||
+          t("login_error_default") ||
+          "Barua pepe/nenosiri si sahihi."
       );
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    // ============================================================
+    // RETURN-TO — baada ya login, mrudishe mtumiaji pale alipotoka
+    // (mfano: property aliyokuwa akiitazama) badala ya kumpeleka
+    // moja kwa moja dashboard. "state.from" inatumwa na ukurasa
+    // uliomrejesha hapa (mfano kitufe cha "Wasiliana na Muuzaji"),
+    // au "?redirect=" kwenye URL kama njia mbadala.
+    //
+    // Taarifa nyingine yoyote aliyokuja nayo (kwa mfano
+    // { openContactModal: true, listingId: "123" }) inaendelea
+    // kubebwa kwenda kwenye ukurasa unaofuata, ili huo ukurasa
+    // uweze kufungua modal husika bila mtumiaji kubonyeza tena.
+    // ============================================================
+    const { from, ...restState } = location.state || {};
+    const redirectTo = from || searchParams.get("redirect") || "/dashboard/post";
+
+    navigate(redirectTo, {
+      replace: true,
+      state: Object.keys(restState).length > 0 ? restState : undefined,
+    });
   }
 
   const trustPoints = [
