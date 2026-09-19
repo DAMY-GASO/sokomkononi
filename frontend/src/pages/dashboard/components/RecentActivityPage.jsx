@@ -1,15 +1,3 @@
-// ============================================================
-// RecentActivityPage.jsx
-// Ukurasa kamili wa "Shughuli Zote" — historia nzima ya matukio
-// ya mtumiaji (muuzaji au mnunuzi), bila kikomo cha 5 kama
-// RecentActivity.jsx (widget ya dashboard).
-//
-// Inafikiwa kupitia "Ona Zote →" kwenye RecentActivity.jsx.
-//
-// MAHALI: weka faili hii kwenye
-//   src/pages/dashboard/components/RecentActivityPage.jsx
-// ============================================================
-
 import React, { useMemo, useState } from "react";
 import { History, Inbox } from "lucide-react";
 import { COLORS, timeAgo } from "./shared";
@@ -78,7 +66,7 @@ export default function RecentActivityPage({ side = "seller", onNavigate }) {
       {/* ============================================================ */}
       {/* FILTER TABS */}
       {/* ============================================================ */}
-      <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
+      <div className="flex flex-wrap items-center justify-center gap-2 mb-5">
         {filterTabs.map((f) => {
           const isActive = typeFilter === f.key;
           return (
