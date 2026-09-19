@@ -1,10 +1,16 @@
 // ============================================================
 // AdminProfile.jsx — SECTION ndani ya AdminDashboard
 // Inaonyeshwa kama `case "profile"` kwenye renderSection().
-// Backend bado haipo; inatumia AuthContext (mock localStorage).
+// Inatumia authStore moja kwa moja.
 // ============================================================
 import React, { useState, useRef, useEffect } from "react";
-import { useAuth } from "../../../../context/AuthContext.jsx";
+import {
+  useAuth,
+  updateProfileAsync,
+  updatePasswordAsync,
+  updateAvatarAsync,
+  removeAvatarAsync,
+} from "../../../../config/authStore.js";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { Camera, Trash2, Save, Lock, User, Mail, Phone } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
@@ -43,7 +49,7 @@ function Avatar({ user, size = "lg" }) {
 // ADMIN PROFILE SECTION
 // ============================================================
 export default function AdminProfile() {
-  const { user, updateProfile, updatePassword, updateAvatar, removeAvatar } = useAuth();
+  const { user } = useAuth();
   const { lang } = useLanguage();
 
   const fileInputRef = useRef(null);
@@ -84,27 +90,28 @@ export default function AdminProfile() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingAvatar(true);
-    try {
-      await updateAvatar(file);
+    const res = await updateAvatarAsync(file);
+    setUploadingAvatar(false);
+    if (res.ok) {
       showToast("success", lang === "sw" ? "Picha imehifadhiwa!" : "Photo saved!");
-    } catch (err) {
-      showToast("error", err.message || (lang === "sw" ? "Imeshindikana" : "Failed"));
-    } finally {
-      setUploadingAvatar(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    } else {
+      showToast(
+        "error",
+        res.error?.message || (lang === "sw" ? "Imeshindikana" : "Failed")
+      );
     }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleAvatarRemove = async () => {
     if (!window.confirm(lang === "sw" ? "Ondoa picha?" : "Remove photo?")) return;
     setUploadingAvatar(true);
-    try {
-      await removeAvatar();
+    const res = await removeAvatarAsync();
+    setUploadingAvatar(false);
+    if (res.ok) {
       showToast("success", lang === "sw" ? "Picha imeondolewa" : "Photo removed");
-    } catch (err) {
-      showToast("error", err.message || "Failed");
-    } finally {
-      setUploadingAvatar(false);
+    } else {
+      showToast("error", res.error?.message || "Failed");
     }
   };
 
@@ -118,17 +125,16 @@ export default function AdminProfile() {
       return;
     }
     setSavingProfile(true);
-    try {
-      await updateProfile({
-        name: profileForm.name.trim(),
-        email: profileForm.email.trim(),
-        phone: profileForm.phone.trim(),
-      });
+    const res = await updateProfileAsync({
+      name: profileForm.name.trim(),
+      email: profileForm.email.trim(),
+      phone: profileForm.phone.trim(),
+    });
+    setSavingProfile(false);
+    if (res.ok) {
       showToast("success", lang === "sw" ? "Taarifa zimehifadhiwa!" : "Profile saved!");
-    } catch (err) {
-      showToast("error", err.message || "Failed");
-    } finally {
-      setSavingProfile(false);
+    } else {
+      showToast("error", res.error?.message || "Failed");
     }
   };
 
@@ -150,17 +156,16 @@ export default function AdminProfile() {
       return;
     }
     setSavingPassword(true);
-    try {
-      await updatePassword({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
-      });
+    const res = await updatePasswordAsync({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    });
+    setSavingPassword(false);
+    if (res.ok) {
       setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
       showToast("success", lang === "sw" ? "Nenosiri limebadilishwa!" : "Password changed!");
-    } catch (err) {
-      showToast("error", err.message || "Failed");
-    } finally {
-      setSavingPassword(false);
+    } else {
+      showToast("error", res.error?.message || "Failed");
     }
   };
 
@@ -168,9 +173,6 @@ export default function AdminProfile() {
 
   return (
     <div>
-      {/* ============================================================
-          SECTION HEADER — centered (kama sections nyingine)
-          ============================================================ */}
       <SectionHeader
         title={t("Wasifu wa Admin", "Admin Profile")}
         subtitle={t(
@@ -179,7 +181,6 @@ export default function AdminProfile() {
         )}
       />
 
-      {/* Toast */}
       {toast && (
         <div
           className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${
