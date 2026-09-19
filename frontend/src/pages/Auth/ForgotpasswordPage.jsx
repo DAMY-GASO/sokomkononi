@@ -60,7 +60,6 @@ function FieldInput({ icon, type = "text", value, onChange, label }) {
   );
 }
 
-// Kuchukua field error kutoka DRF response
 function extractError(err, fallback) {
   if (err?.data && typeof err.data === "object") {
     if (err.data.detail) return err.data.detail;
@@ -71,19 +70,16 @@ function extractError(err, fallback) {
 }
 
 export default function ForgotPasswordPage() {
-  // ⬇️ MABADILIKO: Ondoa useAuth() — tumia 3 functions kutoka authStore
-  // const { requestPasswordReset, confirmPasswordReset } = useAuth();  ❌ ONDOA
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState("form"); // "form" | "otp" | "success"
+  const [step, setStep] = useState("form");
   const [form, setForm] = useState({ email: "", newPassword: "", confirmPassword: "" });
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  // ⬇️ Hifadhi reset_token kati ya hatua 2 na 3
   const [resetToken, setResetToken] = useState(null);
 
   function validateForm() {
@@ -106,9 +102,6 @@ export default function ForgotPasswordPage() {
     }, 1000);
   }
 
-  // ============================================
-  // STEP 1: Tuma OTP (bila newPassword kwa backend)
-  // ============================================
   async function handleSubmitNewPassword(e) {
     e.preventDefault();
     const validationError = validateForm();
@@ -119,8 +112,6 @@ export default function ForgotPasswordPage() {
     setError("");
     setLoading(true);
 
-    // ⬇️ MABADILIKO: forgotPasswordAsync inatuma OTP tu
-    // newPassword inabaki kwenye state ya page
     const res = await forgotPasswordAsync(form.email);
     setLoading(false);
 
@@ -133,9 +124,6 @@ export default function ForgotPasswordPage() {
     startResendCooldown();
   }
 
-  // ============================================
-  // STEP 2 + 3: Thibitisha OTP → badilisha password
-  // ============================================
   async function handleVerifyOtp(e) {
     e.preventDefault();
     if (!otp.trim() || otp.trim().length < 4) {
@@ -145,7 +133,6 @@ export default function ForgotPasswordPage() {
     setError("");
     setLoading(true);
 
-    // Hatua 2: Thibitisha OTP → pata reset_token
     const verifyRes = await verifyPasswordResetOtpAsync({
       identifier: form.email,
       otpCode: otp.trim(),
@@ -158,8 +145,6 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    // Chukua reset_token kutoka response
-    // (backend inarudisha `reset_token` kama ilivyoandikwa kwenye authApi)
     const token =
       verifyRes.data?.reset_token ||
       verifyRes.data?.token ||
@@ -174,7 +159,6 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    // Hatua 3: Badilisha password kwa kutumia reset_token
     const resetRes = await resetPasswordAsync({
       resetToken: token,
       newPassword: form.newPassword,
@@ -188,19 +172,14 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    // Mafanikio!
     setStep("success");
   }
 
-  // ============================================
-  // RESEND OTP
-  // ============================================
   async function handleResend() {
     if (resendCooldown > 0) return;
     setError("");
     setLoading(true);
 
-    // ⬇️ MABADILIKO: Tuma tena OTP
     const res = await forgotPasswordAsync(form.email);
     setLoading(false);
 
@@ -215,7 +194,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
         {/* ================= TOP/LEFT — Branded panel ================= */}
-        <div className="flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
+        <div className="dark-surface flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
             <span className="font-bold tracking-tight">SokoMkononi</span>
