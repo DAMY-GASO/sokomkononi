@@ -2,7 +2,7 @@
 // PromotionsSection.jsx
 // Admin — Promotions Dashboard (boosted, featured, leading,
 // advertised, campaigns).
-// Bilingual + mobile-responsive (imeboreshwa zaidi).
+// Bilingual + mobile-responsive + Async campaign actions.
 // ============================================================
 
 import React, { useState } from "react";
@@ -17,16 +17,18 @@ import {
   Save,
   Calendar,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../shared/constants.js";
 import { getCategory, getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
+// ⬇️ MABADILIKO: tumia async variants kwa campaigns
 import {
   usePromotions,
-  addCampaign,
-  updateCampaign,
-  removeCampaign,
+  addCampaignAsync,
+  updateCampaignAsync,
+  removeCampaignAsync,
 } from "../../../../config/promotionsStore.js";
 
 // ============================================================
@@ -54,7 +56,7 @@ const PROMO_TYPES = {
 };
 
 // ============================================================
-// PROMOTION CARD — responsive
+// PROMOTION CARD
 // ============================================================
 function PromotionCard({ listing, lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -138,9 +140,9 @@ function PromotionCard({ listing, lang }) {
 }
 
 // ============================================================
-// CAMPAIGN CARD — responsive
+// CAMPAIGN CARD
 // ============================================================
-function CampaignCard({ campaign, lang, onEdit }) {
+function CampaignCard({ campaign, lang, onEdit, onRemove, isBusy }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const now = Date.now();
   const start = new Date(campaign.startDate).getTime();
@@ -216,21 +218,23 @@ function CampaignCard({ campaign, lang, onEdit }) {
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => onEdit(campaign)}
-            className="p-1.5 text-muted hover:text-[#E8A33D] transition-colors"
+            disabled={isBusy}
+            className="p-1.5 text-muted hover:text-[#E8A33D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={t("Hariri", "Edit")}
           >
             <Pencil size={14} />
           </button>
           <button
-            onClick={() => {
-              if (window.confirm(t("Ondoa kampeni?", "Remove campaign?"))) {
-                removeCampaign(campaign.id);
-              }
-            }}
-            className="p-1.5 text-muted hover:text-[#C1502E] transition-colors"
+            onClick={() => onRemove(campaign)}
+            disabled={isBusy}
+            className="p-1.5 text-muted hover:text-[#C1502E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={t("Ondoa", "Remove")}
           >
-            <Trash2 size={14} />
+            {isBusy ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Trash2 size={14} />
+            )}
           </button>
         </div>
       </div>
@@ -239,9 +243,9 @@ function CampaignCard({ campaign, lang, onEdit }) {
 }
 
 // ============================================================
-// CAMPAIGN FORM — responsive
+// CAMPAIGN FORM
 // ============================================================
-function CampaignForm({ initial, onSave, onCancel, lang }) {
+function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [form, setForm] = useState({
     name: { sw: "", en: "" },
@@ -269,7 +273,8 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             onChange={(e) =>
               setForm({ ...form, name: { ...form.name, sw: e.target.value } })
             }
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            disabled={saving}
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
@@ -281,7 +286,8 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             onChange={(e) =>
               setForm({ ...form, name: { ...form.name, en: e.target.value } })
             }
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            disabled={saving}
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
           />
         </label>
       </div>
@@ -301,7 +307,8 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
               })
             }
             rows={2}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            disabled={saving}
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
@@ -317,7 +324,8 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
               })
             }
             rows={2}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none"
+            disabled={saving}
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none disabled:opacity-50"
           />
         </label>
       </div>
@@ -339,7 +347,8 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
                 discountPercent: Number(e.target.value) || 0,
               })
             }
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            disabled={saving}
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
@@ -350,7 +359,8 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             type="date"
             value={form.startDate?.slice(0, 10) || ""}
             onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            disabled={saving}
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
@@ -361,7 +371,8 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
             type="date"
             value={form.endDate?.slice(0, 10) || ""}
             onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D]"
+            disabled={saving}
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
           />
         </label>
       </div>
@@ -372,6 +383,7 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
           type="checkbox"
           checked={form.active !== false}
           onChange={(e) => setForm({ ...form, active: e.target.checked })}
+          disabled={saving}
           className="w-4 h-4 rounded text-[#E8A33D] shrink-0"
         />
         <span className="text-xs text-secondary">
@@ -383,16 +395,22 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
       <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
         <button
           onClick={onCancel}
-          className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary shrink-0"
+          disabled={saving}
+          className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary shrink-0 disabled:opacity-50"
         >
           {t("Ghairi", "Cancel")}
         </button>
         <button
           onClick={() => onSave(form)}
+          disabled={saving}
           style={{ background: COLORS.gold, color: COLORS.night }}
-          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+          className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <Save size={13} />
+          {saving ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Save size={13} />
+          )}
           {t("Hifadhi", "Save")}
         </button>
       </div>
@@ -401,7 +419,7 @@ function CampaignForm({ initial, onSave, onCancel, lang }) {
 }
 
 // ============================================================
-// MAIN SECTION — export default
+// MAIN SECTION
 // ============================================================
 export default function PromotionsSection() {
   const { lang } = useLanguage();
@@ -409,8 +427,88 @@ export default function PromotionsSection() {
   const [activeTab, setActiveTab] = useState("boosted");
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [addingCampaign, setAddingCampaign] = useState(false);
+  // ⬇️ MPYA: busy + error
+  const [busy, setBusy] = useState({});
+  const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ============================================================
+  // HANDLERS — async + rollback
+  // ============================================================
+  const handleAddCampaign = async (form) => {
+    if (busy.campaignSave) return;
+
+    setBusy((b) => ({ ...b, campaignSave: true }));
+    setError("");
+
+    const res = await addCampaignAsync(form);
+    setBusy((b) => {
+      const next = { ...b };
+      delete next.campaignSave;
+      return next;
+    });
+
+    if (res.ok) {
+      setAddingCampaign(false);
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuongeza kampeni.", "Failed to add campaign.")
+      );
+    }
+  };
+
+  const handleUpdateCampaign = async (id, form) => {
+    if (busy.campaignSave) return;
+
+    setBusy((b) => ({ ...b, campaignSave: true }));
+    setError("");
+
+    const res = await updateCampaignAsync(id, form);
+    setBusy((b) => {
+      const next = { ...b };
+      delete next.campaignSave;
+      return next;
+    });
+
+    if (res.ok) {
+      setEditingCampaign(null);
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuhifadhi kampeni.", "Failed to save campaign.")
+      );
+    }
+  };
+
+  const handleRemoveCampaign = async (campaign) => {
+    if (
+      !window.confirm(
+        t("Ondoa kampeni?", "Remove campaign?")
+      )
+    )
+      return;
+
+    if (busy[`campaign-${campaign.id}`]) return;
+
+    setBusy((b) => ({ ...b, [`campaign-${campaign.id}`]: true }));
+    setError("");
+
+    const res = await removeCampaignAsync(campaign.id);
+    setBusy((b) => {
+      const next = { ...b };
+      delete next[`campaign-${campaign.id}`];
+      return next;
+    });
+
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuondoa kampeni.", "Failed to remove campaign.")
+      );
+    }
+  };
 
   const TABS = [
     {
@@ -504,31 +602,33 @@ export default function PromotionsSection() {
             onClick={() => {
               setAddingCampaign(true);
               setEditingCampaign(null);
+              setError("");
             }}
+            disabled={addingCampaign || !!editingCampaign}
             style={{ background: COLORS.gold, color: COLORS.night }}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus size={13} />
             {t("Kampeni Mpya", "New Campaign")}
           </button>
 
-          {(addingCampaign || editingCampaign) && (
+          {addingCampaign && (
             <CampaignForm
-              initial={editingCampaign || {}}
+              initial={{}}
               lang={lang}
-              onSave={(form) => {
-                if (editingCampaign) {
-                  updateCampaign(editingCampaign.id, form);
-                  setEditingCampaign(null);
-                } else {
-                  addCampaign(form);
-                  setAddingCampaign(false);
-                }
-              }}
-              onCancel={() => {
-                setAddingCampaign(false);
-                setEditingCampaign(null);
-              }}
+              saving={!!busy.campaignSave}
+              onSave={handleAddCampaign}
+              onCancel={() => setAddingCampaign(false)}
+            />
+          )}
+
+          {editingCampaign && (
+            <CampaignForm
+              initial={editingCampaign}
+              lang={lang}
+              saving={!!busy.campaignSave}
+              onSave={(form) => handleUpdateCampaign(editingCampaign.id, form)}
+              onCancel={() => setEditingCampaign(null)}
             />
           )}
 
@@ -547,10 +647,13 @@ export default function PromotionsSection() {
                 key={campaign.id}
                 campaign={campaign}
                 lang={lang}
+                isBusy={!!busy[`campaign-${campaign.id}`]}
                 onEdit={(c) => {
                   setEditingCampaign(c);
                   setAddingCampaign(false);
+                  setError("");
                 }}
+                onRemove={handleRemoveCampaign}
               />
             ))
           )}
@@ -569,7 +672,20 @@ export default function PromotionsSection() {
         )}
       />
 
-      {/* Primary Stats — responsive */}
+      {/* Error banner */}
+      {error && (
+        <div
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+          }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg mb-4"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-5 w-full">
         <StatBox
           label={t("Boosted", "Boosted")}
@@ -597,7 +713,7 @@ export default function PromotionsSection() {
         />
       </div>
 
-      {/* Revenue Breakdown — responsive */}
+      {/* Revenue Breakdown */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="rounded-xl border p-3 sm:p-4 mb-5 w-full min-w-0 overflow-hidden"
@@ -624,7 +740,7 @@ export default function PromotionsSection() {
         </div>
       </div>
 
-      {/* Tabs — CENTERED + scroll horizontal kwenye simu */}
+      {/* Tabs */}
       <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
         {TABS.map(({ key, label, icon: Icon, count }) => {
           const isActive = activeTab === key;
@@ -664,7 +780,7 @@ export default function PromotionsSection() {
 }
 
 // ============================================================
-// HELPER COMPONENTS — responsive
+// HELPERS
 // ============================================================
 function StatBox({ label, value, icon: Icon, color }) {
   return (
