@@ -27,6 +27,9 @@ export const AUDIT_ACTIONS = [
 
 export const SEED_AUDIT_LOGS = [];
 
+// ============================================================
+// STORAGE
+// ============================================================
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_AUDIT_LOGS;
   try {
@@ -58,10 +61,20 @@ function normalizeFromApi(raw) {
   };
 }
 
+// ============================================================
+// READS
+// ============================================================
 export function getAuditLogs() {
   return readFromStorage();
 }
 
+export function saveAuditLogs(list) {
+  saveAll(list);
+}
+
+// ============================================================
+// HYDRATE
+// ============================================================
 export async function hydrateAuditLogsFromApi() {
   try {
     const data = await api.get("/audit/?page_size=200");
@@ -75,8 +88,49 @@ export async function hydrateAuditLogsFromApi() {
   }
 }
 
+// ============================================================
+// ASYNC ACTIONS — with rollback
+// ============================================================
+export async function removeAuditLogAsync(id) {
+  const previous = getAuditLogs();
+  const target = previous.find((l) => l.id === id);
+  if (!target) return { ok: false, error: new Error("Log haipo") };
+
+  // Optimistic
+  saveAll(previous.filter((l) => l.id !== id));
+
+  if (typeof id !== "number") return { ok: true };
+
+  try {
+    await api.delete(`/audit/${id}/`);
+    return { ok: true };
+  } catch (err) {
+    saveAll(previous); // Rollback
+    console.warn("[auditLogsStore] remove failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function clearAuditLogsAsync() {
+  const previous = getAuditLogs();
+  saveAll([]);
+
+  try {
+    await api.post("/audit/clear/", {});
+    return { ok: true };
+  } catch (err) {
+    saveAll(previous); // Rollback
+    console.warn("[auditLogsStore] clearAll failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// LEGACY SYNC (deprecated)
+// ============================================================
 export function addAuditLog() {}
 
+/** @deprecated Use removeAuditLogAsync */
 export function removeAuditLog(id) {
   const next = getAuditLogs().filter((l) => l.id !== id);
   saveAll(next);
@@ -86,12 +140,16 @@ export function removeAuditLog(id) {
   return next;
 }
 
+/** @deprecated Use clearAuditLogsAsync */
 export function clearAuditLogs() {
   saveAll([]);
   api.post("/audit/clear/", {}).catch(() => {});
   return [];
 }
 
+// ============================================================
+// HOOKS
+// ============================================================
 export function useAuditLogs() {
   const [logs, setLogs] = useState(() => getAuditLogs());
   useEffect(() => {
