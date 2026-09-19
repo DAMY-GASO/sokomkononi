@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import { useAuth } from "../context/AuthContext.jsx";
+import { useAuth } from "../config/authStore.js";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
