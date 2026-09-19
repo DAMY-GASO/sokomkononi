@@ -85,7 +85,7 @@ export default function Footer({ selectedLang: propLang }) {
               </li>
               <li>
                 <Link to="/#kategoria" className="text-white/50 hover:text-white text-sm transition-colors">
-                  {selectedLang === "sw" ? "Kategoria za Bidhaa" : "Product Categories"}
+                  {selectedLang === "sw" ? "Kategoria za Mali" : "Property Categories"}
                 </Link>
               </li>
               <li>
