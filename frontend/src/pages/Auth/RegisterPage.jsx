@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { registerAsync, verifyOtpAsync } from "../../stores/authStore.js";
+import { registerAsync, verifyOtpAsync } from "../../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const icons = {
