@@ -92,7 +92,6 @@ function FieldInput({ icon, type = "text", value, onChange, label, inputMode, re
 // Kuchukua field error kutoka DRF response
 function extractError(err, fallback) {
   if (err?.data && typeof err.data === "object") {
-    // { detail: "..." } au { email: ["..."] }
     if (err.data.detail) return err.data.detail;
     const first = Object.values(err.data).flat().find((v) => typeof v === "string");
     if (first) return first;
@@ -101,8 +100,6 @@ function extractError(err, fallback) {
 }
 
 export default function RegisterPage() {
-  // ⬇️ MABADILIKO: Ondoa useAuth() — tumia registerAsync/verifyOtpAsync kutoka authStore
-  // const { verifyOtp, register } = useAuth();  ❌ ONDOA
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -151,9 +148,6 @@ export default function RegisterPage() {
     return "";
   }
 
-  // ============================================
-  // STEP 1: Register → API inatuma OTP
-  // ============================================
   async function handleRegister(e) {
     e.preventDefault();
     const validationError = validateForm();
@@ -164,7 +158,6 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
 
-    // ⬇️ MABADILIKO: registerAsync inarudisha { ok, data, error }
     const { confirmPassword, ...payload } = form;
     const res = await registerAsync({ ...payload, intent: intent || null });
     setLoading(false);
@@ -174,14 +167,10 @@ export default function RegisterPage() {
       return;
     }
 
-    // Mafanikio → nenda kwenye hatua ya OTP
     setStep("otp");
     startResendCooldown();
   }
 
-  // ============================================
-  // STEP 2: Verify OTP → JWT + user
-  // ============================================
   async function handleVerifyOtp(e) {
     e.preventDefault();
     if (!otp.trim() || otp.trim().length < 4) {
@@ -191,7 +180,6 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
 
-    // ⬇️ MABADILIKO: verifyOtpAsync inarudisha { ok, user, error }
     const res = await verifyOtpAsync({
       identifier: form.email,
       otpCode: otp.trim(),
@@ -204,7 +192,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // Mafanikio → tokens zimewekwa na authStore, nenda dashboard
     navigate("/dashboard/post");
   }
 
@@ -224,7 +211,6 @@ export default function RegisterPage() {
   async function handleResend() {
     if (resendCooldown > 0) return;
     setError("");
-    // TODO: backend haitoi /auth/resend-otp/ bado
     setError("Kama hukupokea OTP, tafadhali subiri kidogo au anza upya usajili.");
   }
 
@@ -232,7 +218,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
         {/* LEFT PANEL */}
-        <div className="flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
+        <div className="dark-surface flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
             <span className="font-bold tracking-tight">SokoMkononi</span>
