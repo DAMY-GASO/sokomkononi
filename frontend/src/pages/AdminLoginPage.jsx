@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { adminLoginAsync } from "../../config/authStore.js";
+import { adminLoginAsync } from "../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const icons = {
