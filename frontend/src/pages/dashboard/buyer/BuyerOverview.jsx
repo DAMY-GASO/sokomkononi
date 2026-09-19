@@ -26,7 +26,8 @@ import {
 } from "lucide-react";
 import { COLORS, formatTZS } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-import { useAuth } from "../../../context/AuthContext.jsx";
+// ⬇️ MABADILIKO: useAuth kutoka authStore
+import { useAuth } from "../../../config/authStore.js";
 import { usePublicListings } from "../../../config/listingsStore.js";
 import { useSavedIds } from "../../../config/savedStore.js";
 import { useRecentlyViewedIds } from "../../../config/recentlyViewedStore.js";
