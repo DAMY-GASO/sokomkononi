@@ -2,6 +2,8 @@
 // RevenueSection.jsx
 // Mapato & Fedha — fees zote 5 + Categories Bila Fee Config.
 // Bilingual + imeboreshwa kwa muonekano wazi.
+// Async kwa fees 3 (reservation, leading, advertisement).
+// Sync kwa boost + listing fee (bila async variant bado).
 // ============================================================
 
 import React, { useState } from "react";
@@ -21,10 +23,12 @@ import SectionHeader from "../shared/SectionHeader.jsx";
 import EditableAmount from "../components/Revenue/EditableAmount.jsx";
 import EditablePercent from "../components/Revenue/EditablePercent.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
+// ⬇️ MABADILIKO: async kwa fees 3
 import {
   useReservationRates,
-  updateReservationRate,
+  updateReservationRateAsync,
 } from "../../../../config/feePolicy.js";
+// ⚠️ Boost + Listing Fee — bado sync (bila async variant)
 import {
   useBoostPackages,
   updateBoostPackagePrice,
@@ -35,13 +39,14 @@ import {
   addFeeConfig,
   hasFeeConfig,
 } from "../../../../config/listingFeeStore.js";
+// ⬇️ MABADILIKO: async kwa leading + advertisement
 import {
   useLeadingFeeConfig,
-  updateLeadingFeePrice,
+  updateLeadingFeePriceAsync,
 } from "../../../../config/leadingFeeStore.js";
 import {
   useAdvertisementFeeConfig,
-  updateAdvertisementFeePrice,
+  updateAdvertisementFeePriceAsync,
 } from "../../../../config/advertisementFeeStore.js";
 import {
   useActiveCategories,
@@ -101,6 +106,7 @@ export default function RevenueSection() {
   const activeCategories = useActiveCategories();
   const [saved, setSaved] = useState(false);
   const [flash, setFlash] = useState(null);
+  const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -114,6 +120,9 @@ export default function RevenueSection() {
     setTimeout(() => setSaved(false), 1500);
   };
 
+  // ============================================================
+  // LISTING FEE — sync (bila async variant bado)
+  // ============================================================
   const updateListingFeeRate = (key, rate) => {
     updateListingFeeConfig(key, { rate });
     flashSaved();
@@ -126,21 +135,61 @@ export default function RevenueSection() {
     updateListingFeeConfig(key, { max });
     flashSaved();
   };
-  const updateReservationFee = (id, fee) => {
-    updateReservationRate(id, fee);
-    flashSaved();
+
+  // ============================================================
+  // RESERVATION — ASYNC
+  // ============================================================
+  const updateReservationFee = async (id, fee) => {
+    setError("");
+    const res = await updateReservationRateAsync(id, fee);
+    if (res.ok) {
+      flashSaved();
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuhifadhi ada ya reservation.", "Failed to save reservation fee.")
+      );
+    }
   };
+
+  // ============================================================
+  // BOOST — sync (bila async variant bado)
+  // ============================================================
   const updateBoostPrice = (key, price) => {
     updateBoostPackagePrice(key, price);
     flashSaved();
   };
-  const updateLeadingPrice = (price) => {
-    updateLeadingFeePrice(price);
-    flashSaved();
+
+  // ============================================================
+  // LEADING — ASYNC
+  // ============================================================
+  const updateLeadingPrice = async (price) => {
+    setError("");
+    const res = await updateLeadingFeePriceAsync(price);
+    if (res.ok) {
+      flashSaved();
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuhifadhi ada ya leading.", "Failed to save leading fee.")
+      );
+    }
   };
-  const updateAdvertisementPrice = (price) => {
-    updateAdvertisementFeePrice(price);
-    flashSaved();
+
+  // ============================================================
+  // ADVERTISEMENT — ASYNC
+  // ============================================================
+  const updateAdvertisementPrice = async (price) => {
+    setError("");
+    const res = await updateAdvertisementFeePriceAsync(price);
+    if (res.ok) {
+      flashSaved();
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuhifadhi ada ya matangazo.", "Failed to save advertisement fee.")
+      );
+    }
   };
 
   const missingFeeCategories = activeCategories.filter(
@@ -171,7 +220,8 @@ export default function RevenueSection() {
         )}
       />
 
-      {(saved || flash) && (
+      {/* Saved / Flash / Error notifications */}
+      {(saved || flash || error) && (
         <div className="flex flex-wrap gap-2 mb-4">
           {saved && (
             <div
@@ -193,6 +243,17 @@ export default function RevenueSection() {
               className="text-xs font-semibold px-3 py-2 rounded-lg"
             >
               {flash.msg}
+            </div>
+          )}
+          {error && (
+            <div
+              style={{
+                background: `${COLORS.rust}15`,
+                color: COLORS.rust,
+              }}
+              className="text-xs font-semibold px-3 py-2 rounded-lg"
+            >
+              {error}
             </div>
           )}
         </div>
@@ -286,7 +347,7 @@ export default function RevenueSection() {
         )}
 
         {/* ============================================================
-            1. LISTING FEE
+            1. LISTING FEE — SYNC
             ============================================================ */}
         <RevenueCard accentColor={COLORS.gold}>
           <div className="flex items-center gap-3 mb-1">
@@ -363,7 +424,7 @@ export default function RevenueSection() {
         </RevenueCard>
 
         {/* ============================================================
-            2. RESERVATION FEE
+            2. RESERVATION FEE — ASYNC
             ============================================================ */}
         <RevenueCard accentColor={COLORS.green}>
           <div className="flex items-center gap-3 mb-1">
@@ -409,7 +470,7 @@ export default function RevenueSection() {
         </RevenueCard>
 
         {/* ============================================================
-            3. BOOST PACKAGES
+            3. BOOST PACKAGES — SYNC
             ============================================================ */}
         <RevenueCard accentColor={COLORS.rust}>
           <div className="flex items-center gap-3 mb-1">
@@ -458,7 +519,7 @@ export default function RevenueSection() {
         </RevenueCard>
 
         {/* ============================================================
-            4 + 5. LEADING FEE na ADVERTISEMENT FEE
+            4 + 5. LEADING FEE na ADVERTISEMENT FEE — ASYNC
             ============================================================ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* 4. Leading Fee */}
@@ -515,7 +576,7 @@ export default function RevenueSection() {
         </div>
 
         {/* ============================================================
-            INFO NOTE — mwisho wa section
+            INFO NOTE
             ============================================================ */}
         <div
           className="rounded-xl border px-4 py-3 flex items-start gap-2.5"
@@ -527,8 +588,8 @@ export default function RevenueSection() {
           <Info size={16} color={COLORS.gold} className="shrink-0 mt-0.5" />
           <p className="text-xs text-secondary leading-relaxed">
             {t(
-              "Mabadiliko yote yanahifadhiwa papo hapo. Hakuna haja ya kubofya kitufe cha 'Hifadhi'.",
-              "All changes are saved instantly. No need to click a 'Save' button."
+              "Mabadiliko yote yanahifadhiwa papo hapo. Reservation, Leading, na Advertisement zina-pigi API. Boost na Listing Fee bado ni local-only.",
+              "All changes are saved instantly. Reservation, Leading, and Advertisement call the API. Boost and Listing Fee are still local-only."
             )}
           </p>
         </div>
