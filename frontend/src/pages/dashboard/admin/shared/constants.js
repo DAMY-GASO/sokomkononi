@@ -37,28 +37,11 @@ export {
 } from "../../../../config/categoriesStore.js";
 
 // ============================================================
-// BRAND TOKENS
+// BRAND TOKENS — chanzo kimoja: shared.js (dashboard/components)
+// COLORS na FONTS haziandikwi tena hapa; zinatoka moja kwa moja
+// kwenye chanzo halisi ili zisitofautiane kamwe.
 // ============================================================
-export const COLORS = {
-  // Brand
-  night: "#101A2E",
-  nightSoft: "#1B2740",
-  sand: "#F5F3EC",
-  sandLine: "#E6E2D6",
-  gold: "#E8A33D",
-  green: "#2F6D4F",
-  rust: "#C1502E",
-
-  // Text — typography system
-  textPrimary: "#111827",
-  textSecondary: "#6B7280",
-  textMuted: "#9CA3AF",
-};
-
-export const FONTS = {
-  display: "'Inter', system-ui, -apple-system, sans-serif",
-  body: "'Inter', system-ui, -apple-system, sans-serif",
-};
+export { COLORS, FONTS } from "../../../dashboard/components/shared.js";
 
 // ============================================================
 // NAV — sidebar navigation (sections zote 14)
