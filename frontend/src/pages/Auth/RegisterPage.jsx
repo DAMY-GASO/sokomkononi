@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext.jsx";
+import { registerAsync, verifyOtpAsync } from "../../stores/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const icons = {
@@ -101,7 +101,8 @@ function extractError(err, fallback) {
 }
 
 export default function RegisterPage() {
-  const { verifyOtp, register } = useAuth();
+  // ⬇️ MABADILIKO: Ondoa useAuth() — tumia registerAsync/verifyOtpAsync kutoka authStore
+  // const { verifyOtp, register } = useAuth();  ❌ ONDOA
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -162,16 +163,20 @@ export default function RegisterPage() {
     }
     setError("");
     setLoading(true);
-    try {
-      const { confirmPassword, ...payload } = form;
-      await register({ ...payload, intent: intent || null });
-      setStep("otp");
-      startResendCooldown();
-    } catch (err) {
-      setError(extractError(err, t("register_error_default")));
-    } finally {
-      setLoading(false);
+
+    // ⬇️ MABADILIKO: registerAsync inarudisha { ok, data, error }
+    const { confirmPassword, ...payload } = form;
+    const res = await registerAsync({ ...payload, intent: intent || null });
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(extractError(res.error, t("register_error_default")));
+      return;
     }
+
+    // Mafanikio → nenda kwenye hatua ya OTP
+    setStep("otp");
+    startResendCooldown();
   }
 
   // ============================================
@@ -185,14 +190,22 @@ export default function RegisterPage() {
     }
     setError("");
     setLoading(true);
-    try {
-      await verifyOtp(form.email, otp.trim());
-      navigate("/dashboard/post");
-    } catch (err) {
-      setError(extractError(err, t("register_error_otp_invalid")));
-    } finally {
-      setLoading(false);
+
+    // ⬇️ MABADILIKO: verifyOtpAsync inarudisha { ok, user, error }
+    const res = await verifyOtpAsync({
+      identifier: form.email,
+      otpCode: otp.trim(),
+      verificationType: "EMAIL",
+    });
+    setLoading(false);
+
+    if (!res.ok) {
+      setError(extractError(res.error, t("register_error_otp_invalid")));
+      return;
     }
+
+    // Mafanikio → tokens zimewekwa na authStore, nenda dashboard
+    navigate("/dashboard/post");
   }
 
   function startResendCooldown() {
