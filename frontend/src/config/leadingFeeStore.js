@@ -39,6 +39,7 @@ function saveLocal(config) {
 function normalizeFromApi(raw) {
   if (!raw) return SEED_LEADING_FEE_CONFIG;
   return {
+    backendId: raw.id,
     price: Number(raw.price) || SEED_LEADING_FEE_CONFIG.price,
     days: Number(raw.days) || SEED_LEADING_FEE_CONFIG.days,
     label: raw.label || SEED_LEADING_FEE_CONFIG.label,
@@ -54,29 +55,67 @@ export function saveLeadingFeeConfig(config) {
   saveLocal(config);
 }
 
-export function updateLeadingFeePrice(price) {
-  const current = getLeadingFeeConfig();
-  const next = { ...current, price: Number(price) };
-  saveLocal(next);
-  api.patch("/leading-fees/", { price: next.price }).catch(() => {});
-  return next;
-}
-
 export async function hydrateLeadingFeeFromApi() {
   try {
     const data = await api.get("/leading-fees/");
     const normalized = normalizeFromApi(data);
     saveLocal(normalized);
-    return normalized;
+    return { source: "api", config: normalized };
   } catch (err) {
     console.warn("[leadingFeeStore] hydrate failed:", err);
-    return getLeadingFeeConfig();
+    return { source: "error", config: getLeadingFeeConfig() };
   }
+}
+
+export async function updateLeadingFeePriceAsync(price) {
+  const numericPrice = Number(price);
+  if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+    return { ok: false, error: new Error("Bei lazima iwe namba chanya") };
+  }
+  const previous = getLeadingFeeConfig();
+  const next = { ...previous, price: numericPrice };
+  saveLocal(next);
+  try {
+    await api.patch("/leading-fees/", { price: numericPrice });
+    return { ok: true, config: next };
+  } catch (err) {
+    saveLocal(previous);
+    console.warn("[leadingFeeStore] updatePrice failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function updateLeadingFeeAsync(patch) {
+  const previous = getLeadingFeeConfig();
+  const next = { ...previous, ...patch };
+  saveLocal(next);
+  const payload = {};
+  if (patch.price != null) payload.price = Number(patch.price);
+  if (patch.days != null) payload.days = Number(patch.days);
+  if (patch.label != null) payload.label = patch.label;
+  if (patch.desc != null) payload.desc = patch.desc;
+  try {
+    await api.patch("/leading-fees/", payload);
+    return { ok: true, config: next };
+  } catch (err) {
+    saveLocal(previous);
+    console.warn("[leadingFeeStore] update failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+/** @deprecated Use updateLeadingFeePriceAsync */
+export function updateLeadingFeePrice(price) {
+  const current = getLeadingFeeConfig();
+  const next = { ...current, price: Number(price) };
+  saveLocal(next);
+  api.patch("/leading-fees/", { price: next.price })
+    .catch((err) => console.warn("[leadingFeeStore] sync failed (silent):", err));
+  return next;
 }
 
 export function useLeadingFeeConfig() {
   const [config, setConfig] = useState(() => getLeadingFeeConfig());
-
   useEffect(() => {
     hydrateLeadingFeeFromApi();
     const sync = () => setConfig(getLeadingFeeConfig());
@@ -87,6 +126,5 @@ export function useLeadingFeeConfig() {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, []);
-
   return config;
 }
