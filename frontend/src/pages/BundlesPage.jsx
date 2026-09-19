@@ -29,7 +29,7 @@ import {
   useUserCredits,
   addBundleCredits,
 } from "../config/userCreditsStore.js";
-import { useAuth } from "../context/AuthContext.jsx";
+import { useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 
 // Icon resolver
