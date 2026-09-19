@@ -474,8 +474,10 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
       <Navbar lang={lang} setLang={setLang} categories={categories} />
 
-      {/* HERO */}
-      <section className="bg-[#101A2E] text-white py-12 sm:py-16 px-4 overflow-hidden">
+      {/* HERO — "dark-surface" imeongezwa hapa ili h1/h2/h3 za ndani
+          zibaki nyeupe kiotomatiki, bila kutegemea rangi ya inherited
+          pekee (rejea index.css: .dark-surface h1..h6 { color: #fff }) */}
+      <section className="dark-surface bg-[#101A2E] text-white py-12 sm:py-16 px-4 overflow-hidden">
         <div className="max-w-4xl mx-auto text-center">
           {/* Big Headline */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight">
