@@ -1,153 +1,155 @@
 // ============================================================
-// leadingFeeStore.js — API-backed via /api/leading-fees/
+// listingFeeStore.js
+// Backend source: /api/listings/fee-rules/ (read-only for
+// non-admin). Backend stores `percentage` (e.g. 2.50 for 2.5%).
+// Frontend uses `rate` (e.g. 0.025). Conversion handled here.
 // ============================================================
+
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
+import { api } from "../api/client.js";
 
-const STORAGE_KEY = "sokomkononi_leading_fee_config_v1";
-const UPDATE_EVENT = "sokomkononi:leading-fee-config-updated";
+const STORAGE_KEY = "sokomkononi_listing_fee_config_v1";
+const UPDATE_EVENT = "sokomkononi:listing-fee-config-updated";
 
-export const SEED_LEADING_FEE_CONFIG = {
-  price: 10000,
-  days: 7,
-  label: { sw: "Ada ya Kipaumbele", en: "Leading Fee" },
-  desc: {
-    sw: "Bidhaa yako inapanda juu ya matokeo ya utafutaji kwa siku 7",
-    en: "Your listing appears at the top of search results for 7 days",
-  },
-};
+export const SEED_LISTING_FEE_CONFIG = [
+  { key: "nyumba", rate: 0.010, min: 20000, max: 300000 },
+  { key: "viwanja", rate: 0.008, min: 15000, max: 250000 },
+  { key: "magari", rate: 0.015, min: 10000, max: 150000 },
+  { key: "biashara", rate: 0.012, min: 20000, max: 200000 },
+  { key: "mashine", rate: 0.010, min: 15000, max: 180000 },
+];
 
 // ============================================================
 // STORAGE
 // ============================================================
 function readFromStorage() {
-  if (typeof window === "undefined") return SEED_LEADING_FEE_CONFIG;
+  if (typeof window === "undefined") return SEED_LISTING_FEE_CONFIG;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_LEADING_FEE_CONFIG;
+    if (!raw) return SEED_LISTING_FEE_CONFIG;
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed.price !== "number") return SEED_LEADING_FEE_CONFIG;
-    return { ...SEED_LEADING_FEE_CONFIG, ...parsed };
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return SEED_LISTING_FEE_CONFIG;
+    }
+    return parsed;
   } catch {
-    return SEED_LEADING_FEE_CONFIG;
+    return SEED_LISTING_FEE_CONFIG;
   }
 }
 
-function saveLocal(config) {
+export function saveListingFeeConfigs(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(UPDATE_EVENT));
-}
-
-// ============================================================
-// NORMALIZER
-// ============================================================
-function normalizeFromApi(raw) {
-  if (!raw) return SEED_LEADING_FEE_CONFIG;
-  return {
-    backendId: raw.id,  // ⬅️ hifadhi kwa PATCH
-    price: Number(raw.price) || SEED_LEADING_FEE_CONFIG.price,
-    days: Number(raw.days) || SEED_LEADING_FEE_CONFIG.days,
-    label: raw.label || SEED_LEADING_FEE_CONFIG.label,
-    desc: raw.desc || SEED_LEADING_FEE_CONFIG.desc,
-  };
 }
 
 // ============================================================
 // READS
 // ============================================================
-export function getLeadingFeeConfig() {
+export function getListingFeeConfigs() {
   return readFromStorage();
 }
 
-export function saveLeadingFeeConfig(config) {
-  saveLocal(config);
+/**
+ * getListingFeeConfig(categoryKey)
+ * Rudisha config ya category moja kwa key yake (mfano "nyumba").
+ * Build inatafuta hii — MUHIMU.
+ */
+export function getListingFeeConfig(categoryKey) {
+  if (!categoryKey) return null;
+  return getListingFeeConfigs().find((c) => c.key === categoryKey) || null;
+}
+
+export function hasFeeConfig(categoryKey) {
+  return getListingFeeConfigs().some((c) => c.key === categoryKey);
 }
 
 // ============================================================
-// HYDRATE
+// MUTATIONS (admin/local)
 // ============================================================
-export async function hydrateLeadingFeeFromApi() {
-  try {
-    const data = await api.get("/leading-fees/");
-    const normalized = normalizeFromApi(data);
-    saveLocal(normalized);
-    return { source: "api", config: normalized };
-  } catch (err) {
-    console.warn("[leadingFeeStore] hydrate failed:", err);
-    return { source: "error", config: getLeadingFeeConfig() };
-  }
-}
-
-// ============================================================
-// ASYNC MUTATIONS — with rollback
-// ============================================================
-export async function updateLeadingFeePriceAsync(price) {
-  const numericPrice = Number(price);
-  if (!Number.isFinite(numericPrice) || numericPrice < 0) {
-    return { ok: false, error: new Error("Bei lazima iwe namba chanya") };
-  }
-
-  const previous = getLeadingFeeConfig();
-  const next = { ...previous, price: numericPrice };
-
-  // Optimistic
-  saveLocal(next);
-
-  try {
-    // Backend inaweza kuwa singleton — tumia PATCH bila id
-    await api.patch("/leading-fees/", { price: numericPrice });
-    return { ok: true, config: next };
-  } catch (err) {
-    saveLocal(previous); // Rollback
-    console.warn("[leadingFeeStore] updatePrice failed:", err);
-    return { ok: false, error: err };
-  }
-}
-
-export async function updateLeadingFeeAsync(patch) {
-  const previous = getLeadingFeeConfig();
-  const next = { ...previous, ...patch };
-  saveLocal(next);
-
-  const payload = {};
-  if (patch.price != null) payload.price = Number(patch.price);
-  if (patch.days != null) payload.days = Number(patch.days);
-  if (patch.label != null) payload.label = patch.label;
-  if (patch.desc != null) payload.desc = patch.desc;
-
-  try {
-    await api.patch("/leading-fees/", payload);
-    return { ok: true, config: next };
-  } catch (err) {
-    saveLocal(previous); // Rollback
-    console.warn("[leadingFeeStore] update failed:", err);
-    return { ok: false, error: err };
-  }
-}
-
-// ============================================================
-// LEGACY SYNC (deprecated)
-// ============================================================
-/** @deprecated Use updateLeadingFeePriceAsync */
-export function updateLeadingFeePrice(price) {
-  const current = getLeadingFeeConfig();
-  const next = { ...current, price: Number(price) };
-  saveLocal(next);
-  api.patch("/leading-fees/", { price: next.price })
-    .catch((err) => console.warn("[leadingFeeStore] sync failed (silent):", err));
+export function updateListingFeeConfig(categoryKey, patch) {
+  const current = getListingFeeConfigs();
+  const next = current.map((c) =>
+    c.key === categoryKey ? { ...c, ...patch } : c
+  );
+  saveListingFeeConfigs(next);
   return next;
+}
+
+export function addFeeConfig(categoryKey, _label) {
+  const current = getListingFeeConfigs();
+  if (current.some((c) => c.key === categoryKey)) {
+    throw new Error(`Fee config ya "${categoryKey}" ipo tayari.`);
+  }
+  const next = [
+    ...current,
+    { key: categoryKey, rate: 0.01, min: 10000, max: 100000 },
+  ];
+  saveListingFeeConfigs(next);
+  return next;
+}
+
+export function removeFeeConfig(categoryKey) {
+  const next = getListingFeeConfigs().filter((c) => c.key !== categoryKey);
+  saveListingFeeConfigs(next);
+  return next;
+}
+
+// ============================================================
+// API NORMALIZER
+// Backend `name` field ni category key/slug.
+// ============================================================
+function toSlug(str) {
+  return String(str || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
+function normalizeFeeRuleFromApi(raw) {
+  if (!raw) return null;
+  const pct = Number(raw.percentage) || 0;
+  return {
+    id: raw.id,
+    key: toSlug(raw.name),
+    rate: pct / 100,
+    min: Number(raw.min_price) || 0,
+    max: raw.max_price != null ? Number(raw.max_price) : 999999999,
+    isActive: raw.is_active !== false,
+    priority: raw.priority ?? 0,
+  };
+}
+
+// ============================================================
+// HYDRATE FROM API
+// ============================================================
+export async function hydrateListingFeeConfigsFromApi() {
+  try {
+    const data = await api.get("/listings/fee-rules/?page_size=100");
+    const rawList = Array.isArray(data) ? data : data?.results || [];
+    if (!rawList.length) {
+      return { source: "seed", count: getListingFeeConfigs().length };
+    }
+    const normalized = rawList.map(normalizeFeeRuleFromApi).filter(Boolean);
+    saveListingFeeConfigs(normalized);
+    return { source: "api", count: normalized.length };
+  } catch (err) {
+    console.warn("[listingFeeStore] hydrate failed:", err);
+    return { source: "error", count: getListingFeeConfigs().length };
+  }
 }
 
 // ============================================================
 // HOOK
 // ============================================================
-export function useLeadingFeeConfig() {
-  const [config, setConfig] = useState(() => getLeadingFeeConfig());
+export function useListingFeeConfigs() {
+  const [configs, setConfigs] = useState(() => getListingFeeConfigs());
 
   useEffect(() => {
-    hydrateLeadingFeeFromApi();
-    const sync = () => setConfig(getLeadingFeeConfig());
+    hydrateListingFeeConfigsFromApi();
+
+    const sync = () => setConfigs(getListingFeeConfigs());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
     return () => {
@@ -156,5 +158,5 @@ export function useLeadingFeeConfig() {
     };
   }, []);
 
-  return config;
+  return configs;
 }
