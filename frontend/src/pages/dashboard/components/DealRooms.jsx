@@ -1,3 +1,8 @@
+// ============================================================
+// DealRooms.jsx — Vyumba vya Majadiliano
+// API-backed kwa transactions, na local fallback kama backend haipo.
+// ============================================================
+
 import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -35,6 +40,19 @@ import { notifyPaymentProofSubmitted } from "../../../config/notificationsStore.
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 
+// ⬇️ MPYA: Transaction lifecycle (API + fallback)
+import {
+  createTransactionAsync,
+  createReservationAsync,
+  payReservationAsync,
+  startInspectionAsync,
+  submitDecisionAsync,
+  uploadFinalPaymentAsync,
+  confirmPaymentAsync,
+  cancelTransactionAsync,
+  TX_STATUS,
+} from "../../../config/transactionLifecycleStore.js";
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -53,6 +71,45 @@ function formatMoneyInput(value) {
 
 function cleanMoneyInput(value) {
   return String(value).replace(/[^0-9]/g, "");
+}
+
+// ============================================================
+// TX → DEAL STATUS MAPPER
+// ============================================================
+function txStatusToDealStatus(txStatus) {
+  const map = {
+    [TX_STATUS.PENDING]: "accepted",
+    [TX_STATUS.RESERVED]: "reserved",
+    [TX_STATUS.RESERVED_PAID]: "reserved",
+    [TX_STATUS.INSPECTING]: "reserved",
+    [TX_STATUS.DECIDED_ACCEPT]: "awaiting_final_payment",
+    [TX_STATUS.DECIDED_REJECT]: "disputed",
+    [TX_STATUS.AWAITING_CONFIRMATION]: "payment_proof_submitted",
+    [TX_STATUS.COMPLETED]: "completed",
+    [TX_STATUS.CANCELLED]: "cancelled",
+    [TX_STATUS.DISPUTED]: "disputed",
+    [TX_STATUS.EXPIRED]: "cancelled",
+  };
+  return map[txStatus] || "negotiating";
+}
+
+// ============================================================
+// API FALLBACK HELPER
+// Returns { ok, data, offline } — offline: true kama API haipo (404/501)
+// ============================================================
+async function callApiOrFallback(apiCall) {
+  try {
+    const res = await apiCall();
+    return { ...res, offline: false };
+  } catch (err) {
+    const status = err?.status;
+    if (status === 404 || status === 501) {
+      console.warn("[DealRooms] backend haipo — local fallback:", status);
+      return { ok: false, error: err, offline: true };
+    }
+    // Error nyingine
+    return { ok: false, error: err, offline: false };
+  }
 }
 
 const getDealStatus = (lang) => ({
@@ -133,7 +190,7 @@ function formatHours(hours, lang) {
 }
 
 // ============================================================
-// INSPECTION PANEL — centered
+// INSPECTION PANEL
 // ============================================================
 function InspectionPanel({ deal, onResolve, lang }) {
   const [step, setStep] = useState("choose");
@@ -223,9 +280,7 @@ function InspectionPanel({ deal, onResolve, lang }) {
           <div className="flex flex-col items-center text-center gap-2">
             <div className="flex items-center gap-2">
               <SearchCheck size={14} color={COLORS.night} />
-              <p
-                className="text-primary text-body-sm font-semibold"
-              >
+              <p className="text-primary text-body-sm font-semibold">
                 {lang === "sw"
                   ? "Kipindi cha Ukaguzi — chagua hatua inayofuata"
                   : "Inspection Period — choose next step"}
@@ -260,9 +315,7 @@ function InspectionPanel({ deal, onResolve, lang }) {
                   >
                     {opt.label}
                   </p>
-                  <p
-                    className="text-secondary text-body-sm mt-0.5"
-                  >
+                  <p className="text-secondary text-body-sm mt-0.5">
                     {opt.desc}
                   </p>
                 </div>
@@ -276,9 +329,7 @@ function InspectionPanel({ deal, onResolve, lang }) {
         <>
           <div className="flex flex-col items-center text-center gap-2">
             <pendingOption.icon size={14} color={pendingOption.tone.fg} />
-            <p
-              className="text-primary text-body-sm font-semibold"
-            >
+            <p className="text-primary text-body-sm font-semibold">
               {pendingOption.label}
             </p>
           </div>
@@ -305,19 +356,14 @@ function InspectionPanel({ deal, onResolve, lang }) {
           />
 
           {pendingKey === "NOT_AS_DESCRIBED" && !note.trim() && (
-            <p
-              style={{ color: COLORS.rust }}
-              className="text-body-sm text-center"
-            >
+            <p style={{ color: COLORS.rust }} className="text-body-sm text-center">
               {lang === "sw"
                 ? "Tafadhali eleza tofauti kabla ya kuendelea, ili timu ya SokoMkononi iweze kusaidia."
                 : "Please describe the discrepancies before continuing so our team can assist."}
             </p>
           )}
 
-          <p
-            className="text-muted text-body-sm text-center"
-          >
+          <p className="text-muted text-body-sm text-center">
             {lang === "sw"
               ? `Reservation Fee uliyolipa (${formatTZS(
                   deal.reservationFee || 0
@@ -360,7 +406,7 @@ function InspectionPanel({ deal, onResolve, lang }) {
 }
 
 // ============================================================
-// PAYMENT PROOF PANEL — centered
+// PAYMENT PROOF PANEL
 // ============================================================
 function PaymentProofPanel({ deal, onSubmit, lang }) {
   const [preview, setPreview] = useState(null);
@@ -381,18 +427,19 @@ function PaymentProofPanel({ deal, onSubmit, lang }) {
 
   const canSubmit = !!preview && reference.trim().length > 0 && !submitting;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      onSubmit({
+    try {
+      await onSubmit({
         fileName,
         dataUrl: preview,
         reference: reference.trim(),
         method,
       });
-    }, 700);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -411,9 +458,7 @@ function PaymentProofPanel({ deal, onSubmit, lang }) {
                 deal.currentOffer
               )}`}
         </p>
-        <p
-          className="text-secondary text-body-sm max-w-md mx-auto"
-        >
+        <p className="text-secondary text-body-sm max-w-md mx-auto">
           {lang === "sw"
             ? `Lipa ${formatTZS(
                 deal.currentOffer
@@ -443,9 +488,7 @@ function PaymentProofPanel({ deal, onSubmit, lang }) {
             className="w-14 h-14 rounded-lg object-cover shrink-0"
           />
           <div className="flex-1 min-w-0">
-            <p
-              className="text-primary text-body-sm font-medium truncate"
-            >
+            <p className="text-primary text-body-sm font-medium truncate">
               {fileName}
             </p>
             <button
@@ -527,7 +570,7 @@ function PaymentProofPanel({ deal, onSubmit, lang }) {
 }
 
 // ============================================================
-// PAYMENT PROOF REVIEW — centered
+// PAYMENT PROOF REVIEW
 // ============================================================
 function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
   const [rejecting, setRejecting] = useState(false);
@@ -535,18 +578,24 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
   const [busy, setBusy] = useState(false);
   const proof = deal.paymentProof;
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setBusy(true);
-    setTimeout(() => {
+    try {
+      await onConfirm();
+    } finally {
       setBusy(false);
-      onConfirm();
-    }, 600);
+    }
   };
 
-  const handleReject = () => {
-    onReject(reason.trim());
-    setRejecting(false);
-    setReason("");
+  const handleReject = async () => {
+    setBusy(true);
+    try {
+      await onReject(reason.trim());
+      setRejecting(false);
+      setReason("");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -592,8 +641,9 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setRejecting(true)}
+            disabled={busy}
             style={{ borderColor: "rgba(193,80,46,0.35)", color: COLORS.rust }}
-            className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border"
+            className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border disabled:opacity-50"
           >
             <ThumbsDown size={13} />{" "}
             {lang === "sw" ? "Bado Sijapokea" : "Not Received Yet"}
@@ -635,15 +685,17 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setRejecting(false)}
+              disabled={busy}
               style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-              className="text-body-sm font-semibold px-3 py-2 rounded-lg border"
+              className="text-body-sm font-semibold px-3 py-2 rounded-lg border disabled:opacity-50"
             >
               {lang === "sw" ? "Ghairi" : "Cancel"}
             </button>
             <button
               onClick={handleReject}
+              disabled={busy}
               style={{ background: COLORS.rust, color: "white" }}
-              className="flex-1 text-body-sm font-semibold px-3 py-2 rounded-lg"
+              className="flex-1 text-body-sm font-semibold px-3 py-2 rounded-lg disabled:opacity-60"
             >
               {lang === "sw"
                 ? "Tuma — Muulize Mnunuzi Apakie Tena"
@@ -657,7 +709,7 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
 }
 
 // ============================================================
-// DEAL LIST ITEM — imeachwa kushoto
+// DEAL LIST ITEM
 // ============================================================
 function DealListItem({ deal, active, onSelect, lang }) {
   const category = getCategory(deal.category);
@@ -682,20 +734,14 @@ function DealListItem({ deal, active, onSelect, lang }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <p
-            className="text-primary text-sm font-semibold truncate"
-          >
+          <p className="text-primary text-sm font-semibold truncate">
             {deal.counterpartyName}
           </p>
-          <span
-            className="text-muted text-body-sm shrink-0"
-          >
-            {timeAgo(lastMessage.at, lang)}
+          <span className="text-muted text-body-sm shrink-0">
+            {lastMessage ? timeAgo(lastMessage.at, lang) : ""}
           </span>
         </div>
-        <p
-          className="text-secondary text-body-sm truncate mb-1.5"
-        >
+        <p className="text-secondary text-body-sm truncate mb-1.5">
           {deal.listingTitle}
         </p>
         <span
@@ -710,7 +756,7 @@ function DealListItem({ deal, active, onSelect, lang }) {
 }
 
 // ============================================================
-// OFFER BUBBLE — imeachwa
+// OFFER BUBBLE
 // ============================================================
 function OfferBubble({ amount, mine, lang }) {
   return (
@@ -741,7 +787,7 @@ function OfferBubble({ amount, mine, lang }) {
 }
 
 // ============================================================
-// RESERVATION PANEL — centered
+// RESERVATION PANEL
 // ============================================================
 function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
   const [step, setStep] = useState("choose");
@@ -759,13 +805,14 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
     (Number(customHours) >= CUSTOM_MIN_HOURS &&
       Number(customHours) <= CUSTOM_MAX_HOURS);
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (!validCustom) return;
     setPaying(true);
-    setTimeout(() => {
+    try {
+      await onConfirm({ hours, fee, method });
+    } finally {
       setPaying(false);
-      onConfirm({ hours, fee, method });
-    }, 900);
+    }
   };
 
   return (
@@ -777,9 +824,7 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
         <>
           <div className="flex flex-col items-center text-center gap-2">
             <Clock3 size={14} color={COLORS.night} />
-            <p
-              className="text-primary text-body-sm font-semibold"
-            >
+            <p className="text-primary text-body-sm font-semibold">
               {lang === "sw"
                 ? "Chagua muda wa Reservation"
                 : "Choose Reservation Duration"}
@@ -795,20 +840,14 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
                   borderColor:
                     selected === opt.hours ? COLORS.green : COLORS.sandLine,
                   background:
-                    selected === opt.hours
-                      ? "rgba(47,109,79,0.08)"
-                      : "white",
+                    selected === opt.hours ? "rgba(47,109,79,0.08)" : "white",
                 }}
                 className="rounded-xl border px-2 py-2.5 text-center"
               >
-                <p
-                  className="text-primary text-sm font-bold"
-                >
+                <p className="text-primary text-sm font-bold">
                   {opt.label?.[lang] || opt.label?.sw}
                 </p>
-                <p
-                  className="text-secondary text-body-sm mb-1"
-                >
+                <p className="text-secondary text-body-sm mb-1">
                   {opt.sub?.[lang] || opt.sub?.sw}
                 </p>
                 <p
@@ -831,9 +870,7 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
             }}
             className="rounded-xl border px-3 py-2.5 flex flex-col items-center text-center gap-1"
           >
-            <span
-              className="text-primary text-body-sm font-semibold"
-            >
+            <span className="text-primary text-body-sm font-semibold">
               {lang === "sw"
                 ? "Muda Mwingine (Custom)"
                 : "Other Duration (Custom)"}
@@ -854,26 +891,19 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
                   style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
                   className="w-16 rounded-md border px-2 py-1 text-body-sm outline-none text-center"
                 />
-                <span
-                  className="text-secondary text-body-sm"
-                >
+                <span className="text-secondary text-body-sm">
                   {lang === "sw" ? "saa" : "hrs"}
                 </span>
               </span>
             ) : (
-              <span
-                className="text-muted text-body-sm"
-              >
+              <span className="text-muted text-body-sm">
                 {lang === "sw" ? "weka saa mwenyewe" : "enter hours"}
               </span>
             )}
           </button>
 
           {selected === "custom" && !validCustom && (
-            <p
-              style={{ color: COLORS.rust }}
-              className="text-body-sm text-center"
-            >
+            <p style={{ color: COLORS.rust }} className="text-body-sm text-center">
               {lang === "sw"
                 ? `Weka saa kati ya ${CUSTOM_MIN_HOURS} na ${CUSTOM_MAX_HOURS}.`
                 : `Enter hours between ${CUSTOM_MIN_HOURS} and ${CUSTOM_MAX_HOURS}.`}
@@ -881,9 +911,7 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
           )}
 
           {selected === "custom" && validCustom && (
-            <p
-              className="text-secondary text-body-sm text-center"
-            >
+            <p className="text-secondary text-body-sm text-center">
               {formatHours(Number(customHours), lang)} →{" "}
               {lang === "sw" ? "Reservation Fee:" : "Reservation Fee:"}{" "}
               <span style={{ color: COLORS.green }} className="font-semibold">
@@ -921,9 +949,7 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
         <>
           <div className="flex flex-col items-center text-center gap-2">
             <CreditCard size={14} color={COLORS.night} />
-            <p
-              className="text-primary text-body-sm font-semibold"
-            >
+            <p className="text-primary text-body-sm font-semibold">
               {lang === "sw" ? "Lipa Reservation Fee" : "Pay Reservation Fee"}
             </p>
           </div>
@@ -932,22 +958,16 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
             style={{ background: COLORS.sand, borderColor: COLORS.sandLine }}
             className="rounded-xl border p-3 flex flex-col items-center text-center gap-1"
           >
-            <p
-              className="text-secondary text-body-sm"
-            >
+            <p className="text-secondary text-body-sm">
               {deal.listingTitle} · {formatHours(hours, lang)}
             </p>
-            <p
-              className="text-primary text-base font-bold"
-            >
+            <p className="text-primary text-base font-bold">
               {formatTZS(fee)}
             </p>
             <ShieldCheck size={20} color={COLORS.green} />
           </div>
 
-          <p
-            className="text-secondary text-body-sm text-center"
-          >
+          <p className="text-secondary text-body-sm text-center">
             {lang === "sw" ? "Chagua njia ya malipo" : "Choose payment method"}
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -991,9 +1011,7 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
                   : `Confirm Payment — ${formatTZS(fee)}`}
             </button>
           </div>
-          <p
-            className="text-muted text-body-sm text-center"
-          >
+          <p className="text-muted text-body-sm text-center">
             {lang === "sw"
               ? "Kwa demo hii, malipo yanathibitishwa papo hapo. Kwenye uzalishaji itaunganishwa na gateway halisi ya M-Pesa/Mixx by Yas/Airtel Money."
               : "In this demo, payments are confirmed instantly. In production this will connect to a real M-Pesa/Mixx by Yas/Airtel Money gateway."}
@@ -1072,13 +1090,9 @@ function DealDetail({
           {CategoryIcon && <CategoryIcon size={15} color={COLORS.gold} />}
         </div>
         <div className="flex-1 min-w-0">
-          <p
-            className="text-primary text-sm font-semibold truncate"
-          >
+          <p className="text-primary text-sm font-semibold truncate">
             {deal.counterpartyName}{" "}
-            <span
-              className="text-muted font-normal"
-            >
+            <span className="text-muted font-normal">
               · {counterpartyLabel}
             </span>
           </p>
@@ -1090,9 +1104,7 @@ function DealDetail({
               <MapPin size={10} /> {deal.listingTitle}
             </Link>
           ) : (
-            <p
-              className="text-secondary text-body-sm truncate flex items-center gap-1"
-            >
+            <p className="text-secondary text-body-sm truncate flex items-center gap-1">
               <MapPin size={10} /> {deal.listingTitle}
             </p>
           )}
@@ -1301,10 +1313,7 @@ function DealDetail({
                 )} paid · ${deal.reservationMethod} · Buyer is in Inspection Period.`}
           </span>
           {deal.reservationExpiresAt && (
-            <span
-              style={{ color: COLORS.rust }}
-              className="font-semibold"
-            >
+            <span style={{ color: COLORS.rust }} className="font-semibold">
               {lang === "sw" ? "Inaisha" : "Ends"}:{" "}
               {new Date(deal.reservationExpiresAt).toLocaleString(
                 lang === "sw" ? "sw-TZ" : "en-US"
@@ -1432,9 +1441,7 @@ function DealDetail({
           className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t"
         >
           <Ban size={16} color={COLORS.night} />
-          <span
-            className="text-primary text-body-sm font-medium max-w-md"
-          >
+          <span className="text-primary text-body-sm font-medium max-w-md">
             {lang === "sw"
               ? "Deal hii imeghairiwa. Reservation Fee haitarejeshwa."
               : "This deal has been cancelled. Reservation Fee is non-refundable."}
@@ -1475,7 +1482,7 @@ function DealDetail({
 }
 
 // ============================================================
-// DEAL ROOMS — main component
+// DEAL ROOMS — main component (API + local fallback)
 // ============================================================
 export default function DealRooms({
   side = "seller",
@@ -1489,9 +1496,11 @@ export default function DealRooms({
   const [mobileShowDetail, setMobileShowDetail] = useState(
     Boolean(initialDealId)
   );
+  // ⬇️ Track transactionId per deal (kwa API)
+  const [transactionIds, setTransactionIds] = useState({}); // { [dealId]: txId }
+  // ⬇️ Track offline mode (backend haipo)
+  const [offlineMode, setOfflineMode] = useState(false);
 
-  // Ikiwa initialDealId inabadilika (mfano: mtumiaji anakuja kutoka
-  // ukurasa wa mali nyingine), fungua deal room hiyo moja kwa moja.
   useEffect(() => {
     if (initialDealId) {
       setSelectedId(initialDealId);
@@ -1500,7 +1509,6 @@ export default function DealRooms({
   }, [initialDealId]);
 
   const selectedDeal = deals.find((d) => d.id === selectedId) || deals[0];
-
   const updateDeal = (id, patch) => updateDealInStore(id, patch);
 
   const handleSelect = (id) => {
@@ -1508,8 +1516,42 @@ export default function DealRooms({
     setMobileShowDetail(true);
   };
 
+  // ============================================================
+  // ENSURE TRANSACTION — unda au rejesha txId
+  // Inatuma API; kama 404, inaendelea local.
+  // ============================================================
+  const ensureTransactionId = async (deal) => {
+    let txId = transactionIds[deal.id] || deal.transactionId;
+    if (txId) return txId;
+
+    const res = await callApiOrFallback(() =>
+      createTransactionAsync(deal.dealRoomId || deal.id)
+    );
+
+    if (res.offline) {
+      // Backend haipo — kaa local
+      setOfflineMode(true);
+      return null;
+    }
+
+    if (!res.ok) {
+      console.warn("[DealRooms] createTransaction failed:", res.error);
+      return null;
+    }
+
+    txId = res.transaction?.id;
+    if (txId) {
+      setTransactionIds((prev) => ({ ...prev, [deal.id]: txId }));
+    }
+    return txId;
+  };
+
+  // ============================================================
+  // SEND MESSAGE — local (deal store)
+  // ============================================================
   const handleSendMessage = (id, text) => {
     const deal = deals.find((d) => d.id === id);
+    if (!deal) return;
     updateDeal(id, {
       messages: [
         ...deal.messages,
@@ -1523,8 +1565,12 @@ export default function DealRooms({
     });
   };
 
+  // ============================================================
+  // SEND OFFER — local (deal store)
+  // ============================================================
   const handleSendOffer = (id, amount) => {
     const deal = deals.find((d) => d.id === id);
+    if (!deal) return;
     updateDeal(id, {
       currentOffer: amount,
       offerFrom: "me",
@@ -1542,176 +1588,12 @@ export default function DealRooms({
     });
   };
 
-  const handleReserveConfirm = (id, { hours, fee, method }) => {
-    const deal = deals.find((d) => d.id === id);
-    const expiresAt = new Date(
-      Date.now() + hours * 60 * 60 * 1000
-    ).toISOString();
-    const note =
-      lang === "sw"
-        ? `Reservation Deposit ya ${formatTZS(fee)} imelipwa (${method}) — muda: ${formatHours(
-            hours,
-            lang
-          )}. Inaisha ${new Date(expiresAt).toLocaleString("sw-TZ")}.`
-        : `Reservation Deposit of ${formatTZS(fee)} paid (${method}) — duration: ${formatHours(
-            hours,
-            lang
-          )}. Ends ${new Date(expiresAt).toLocaleString("en-US")}.`;
-
-    updateDeal(id, {
-      status: "reserved",
-      reservationHours: hours,
-      reservationFee: fee,
-      reservationMethod: method,
-      reservationExpiresAt: expiresAt,
-      messages: [
-        ...deal.messages,
-        {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          text: note,
-          at: new Date().toISOString(),
-        },
-      ],
-    });
-
-    onReservationPaid?.(deal, { hours, fee, method, expiresAt });
-  };
-
-  const handleInspectionResolve = (id, outcome, note) => {
-    const deal = deals.find((d) => d.id === id);
-    const baseNote =
-      {
-        READY_FOR_FINAL_PAYMENT:
-          lang === "sw"
-            ? "Mnunuzi ameridhika na ukaguzi — tayari kwa malipo ya mwisho."
-            : "Buyer is satisfied with the inspection — ready for final payment.",
-        REQUEST_NEGOTIATION:
-          lang === "sw"
-            ? "Mnunuzi ameomba negotiation nyingine baada ya ukaguzi."
-            : "Buyer requested another negotiation after inspection.",
-        NOT_AS_DESCRIBED:
-          lang === "sw"
-            ? "Mnunuzi ameripoti: bidhaa/mali sio kama ilivyoelezwa."
-            : "Buyer reported: the property is not as described.",
-        CANCEL:
-          lang === "sw"
-            ? "Mnunuzi ameghairi deal baada ya ukaguzi."
-            : "Buyer cancelled the deal after inspection.",
-      }[outcome] || "";
-
-    const fullNote = note
-      ? `${baseNote} ${lang === "sw" ? "Sababu" : "Reason"}: ${note}`
-      : baseNote;
-    const newMessages = [
-      ...deal.messages,
-      {
-        id: `m_${Date.now()}`,
-        sender: "me",
-        text: fullNote,
-        at: new Date().toISOString(),
-      },
-    ];
-
-    if (outcome === "READY_FOR_FINAL_PAYMENT") {
-      updateDeal(id, {
-        status: "awaiting_final_payment",
-        messages: newMessages,
-      });
-    } else if (outcome === "NOT_AS_DESCRIBED") {
-      updateDeal(id, {
-        status: "disputed",
-        disputeNote: note,
-        messages: newMessages,
-      });
-    } else if (outcome === "REQUEST_NEGOTIATION") {
-      updateDeal(id, { status: "negotiating", messages: newMessages });
-    } else if (outcome === "CANCEL") {
-      updateDeal(id, {
-        status: "cancelled",
-        cancelNote: note,
-        messages: newMessages,
-      });
-    }
-  };
-
-  const handleProofSubmit = (id, proof) => {
-    const deal = deals.find((d) => d.id === id);
-    const note =
-      lang === "sw"
-        ? `Uthibitisho wa malipo umetumwa (${proof.method}, Ref: ${proof.reference}).`
-        : `Payment proof submitted (${proof.method}, Ref: ${proof.reference}).`;
-    updateDeal(id, {
-      status: "payment_proof_submitted",
-      paymentProof: { ...proof, submittedAt: new Date().toISOString() },
-      messages: [
-        ...deal.messages,
-        {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          text: note,
-          at: new Date().toISOString(),
-        },
-      ],
-    });
-
-    notifyPaymentProofSubmitted({
-      dealId: id,
-      listingTitle: deal.listingTitle,
-      amount: deal.currentOffer,
-    });
-  };
-
-  const handleProofConfirm = (id) => {
-    const deal = deals.find((d) => d.id === id);
-    const note =
-      lang === "sw"
-        ? "Muuzaji amethibitisha: Nimepokea Malipo. Muamala umekamilika."
-        : "Seller confirmed: Payment received. Transaction completed.";
-    updateDeal(id, {
-      status: "completed",
-      messages: [
-        ...deal.messages,
-        {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          text: note,
-          at: new Date().toISOString(),
-        },
-      ],
-    });
-    onFinalPaymentConfirmed?.(deal, side, {
-      method: deal.paymentProof?.method,
-      reference: deal.paymentProof?.reference,
-    });
-  };
-
-  const handleProofReject = (id, reason) => {
-    const deal = deals.find((d) => d.id === id);
-    const note = reason
-      ? lang === "sw"
-        ? `Muuzaji bado hajapokea malipo. Sababu: ${reason}. Tafadhali pakia uthibitisho tena.`
-        : `Seller has not received payment yet. Reason: ${reason}. Please re-upload proof.`
-      : lang === "sw"
-        ? "Muuzaji bado hajapokea malipo. Tafadhali pakia uthibitisho tena."
-        : "Seller has not received payment yet. Please re-upload proof.";
-    updateDeal(id, {
-      status: "awaiting_final_payment",
-      paymentProof: null,
-      messages: [
-        ...deal.messages,
-        {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          text: note,
-          at: new Date().toISOString(),
-        },
-      ],
-    });
-  };
-
+  // ============================================================
+  // RESPOND (accept/decline) — local (deal store)
+  // ============================================================
   const handleRespond = (id, newStatus) => {
     const deal = deals.find((d) => d.id === id);
+    if (!deal) return;
     const note =
       newStatus === "accepted"
         ? lang === "sw"
@@ -1734,6 +1616,340 @@ export default function DealRooms({
     });
   };
 
+  // ============================================================
+  // RESERVE CONFIRM — API + fallback
+  // ============================================================
+  const handleReserveConfirm = async (id, { hours, fee, method }) => {
+    const deal = deals.find((d) => d.id === id);
+    if (!deal) return;
+
+    // 1. Unda transaction
+    const txId = await ensureTransactionId(deal);
+
+    // 2. Reservation + Pay (kama API ipo)
+    if (txId && !offlineMode) {
+      const reserveRes = await callApiOrFallback(() =>
+        createReservationAsync(txId, hours)
+      );
+      if (!reserveRes.offline && !reserveRes.ok) {
+        alert(
+          reserveRes.error?.message ||
+            (lang === "sw"
+              ? "Imeshindwa kuweka reservation."
+              : "Failed to create reservation.")
+        );
+        return;
+      }
+
+      const payRes = await callApiOrFallback(() =>
+        payReservationAsync(txId, method)
+      );
+      if (!payRes.offline && !payRes.ok) {
+        alert(
+          payRes.error?.message ||
+            (lang === "sw"
+              ? "Imeshindwa kulipa reservation."
+              : "Failed to pay reservation.")
+        );
+        return;
+      }
+    }
+
+    // 3. Sasisha deal local
+    const expiresAt = new Date(
+      Date.now() + hours * 60 * 60 * 1000
+    ).toISOString();
+    const note =
+      lang === "sw"
+        ? `Reservation Deposit ya ${formatTZS(fee)} imelipwa (${method}) — muda: ${formatHours(
+            hours,
+            lang
+          )}. Inaisha ${new Date(expiresAt).toLocaleString("sw-TZ")}.`
+        : `Reservation Deposit of ${formatTZS(fee)} paid (${method}) — duration: ${formatHours(
+            hours,
+            lang
+          )}. Ends ${new Date(expiresAt).toLocaleString("en-US")}.`;
+
+    updateDeal(id, {
+      status: "reserved",
+      transactionId: txId || deal.transactionId || null,
+      reservationHours: hours,
+      reservationFee: fee,
+      reservationMethod: method,
+      reservationExpiresAt: expiresAt,
+      messages: [
+        ...deal.messages,
+        {
+          id: `m_${Date.now()}`,
+          sender: "me",
+          text: note,
+          at: new Date().toISOString(),
+        },
+      ],
+    });
+
+    onReservationPaid?.(deal, { hours, fee, method, expiresAt });
+  };
+
+  // ============================================================
+  // INSPECTION RESOLVE — API + fallback
+  // ============================================================
+  const handleInspectionResolve = async (id, outcome, note) => {
+    const deal = deals.find((d) => d.id === id);
+    if (!deal) return;
+    const txId = transactionIds[id] || deal.transactionId;
+
+    // REQUEST_NEGOTIATION → local (bila API)
+    if (outcome === "REQUEST_NEGOTIATION") {
+      const baseNote =
+        lang === "sw"
+          ? "Mnunuzi ameomba negotiation nyingine baada ya ukaguzi."
+          : "Buyer requested another negotiation after inspection.";
+      updateDeal(id, {
+        status: "negotiating",
+        messages: [
+          ...deal.messages,
+          {
+            id: `m_${Date.now()}`,
+            sender: "me",
+            text: baseNote,
+            at: new Date().toISOString(),
+          },
+        ],
+      });
+      return;
+    }
+
+    // Actions zingine zinahitaji API (kama ipo)
+    if (txId && !offlineMode) {
+      let apiRes;
+      if (outcome === "READY_FOR_FINAL_PAYMENT") {
+        apiRes = await callApiOrFallback(() =>
+          submitDecisionAsync(txId, {
+            buyerDecision: "ACCEPT",
+            buyerDecisionNote: note || "",
+          })
+        );
+      } else if (outcome === "NOT_AS_DESCRIBED") {
+        apiRes = await callApiOrFallback(() =>
+          submitDecisionAsync(txId, {
+            buyerDecision: "REJECT",
+            buyerDecisionNote: note || "",
+          })
+        );
+      } else if (outcome === "CANCEL") {
+        apiRes = await callApiOrFallback(() =>
+          cancelTransactionAsync(txId, note || "")
+        );
+      }
+
+      // Kama API imefanya kazi lakini kuna error ya kweli
+      if (apiRes && !apiRes.offline && !apiRes.ok) {
+        alert(
+          apiRes.error?.message ||
+            (lang === "sw" ? "Imeshindwa kusasisha." : "Failed to update.")
+        );
+        return;
+      }
+    }
+
+    // Sasisha deal local (kwa UI)
+    const baseNote =
+      {
+        READY_FOR_FINAL_PAYMENT:
+          lang === "sw"
+            ? "Mnunuzi ameridhika na ukaguzi — tayari kwa malipo ya mwisho."
+            : "Buyer is satisfied with the inspection — ready for final payment.",
+        NOT_AS_DESCRIBED:
+          lang === "sw"
+            ? "Mnunuzi ameripoti: bidhaa/mali sio kama ilivyoelezwa."
+            : "Buyer reported: the property is not as described.",
+        CANCEL:
+          lang === "sw"
+            ? "Mnunuzi ameghairi deal baada ya ukaguzi."
+            : "Buyer cancelled the deal after inspection.",
+      }[outcome] || "";
+
+    const fullNote = note
+      ? `${baseNote} ${lang === "sw" ? "Sababu" : "Reason"}: ${note}`
+      : baseNote;
+
+    const newMessages = [
+      ...deal.messages,
+      {
+        id: `m_${Date.now()}`,
+        sender: "me",
+        text: fullNote,
+        at: new Date().toISOString(),
+      },
+    ];
+
+    if (outcome === "READY_FOR_FINAL_PAYMENT") {
+      updateDeal(id, {
+        status: "awaiting_final_payment",
+        messages: newMessages,
+      });
+    } else if (outcome === "NOT_AS_DESCRIBED") {
+      updateDeal(id, {
+        status: "disputed",
+        disputeNote: note,
+        messages: newMessages,
+      });
+    } else if (outcome === "CANCEL") {
+      updateDeal(id, {
+        status: "cancelled",
+        cancelNote: note,
+        messages: newMessages,
+      });
+    }
+  };
+
+  // ============================================================
+  // PROOF SUBMIT — API + fallback
+  // ============================================================
+  const handleProofSubmit = async (id, proof) => {
+    const deal = deals.find((d) => d.id === id);
+    if (!deal) return;
+    const txId = transactionIds[id] || deal.transactionId;
+
+    if (txId && !offlineMode) {
+      const apiRes = await callApiOrFallback(() =>
+        uploadFinalPaymentAsync(txId, {
+          finalPaymentProof: proof.dataUrl,
+          finalPaymentReference: proof.reference,
+        })
+      );
+      if (!apiRes.offline && !apiRes.ok) {
+        alert(
+          apiRes.error?.message ||
+            (lang === "sw"
+              ? "Imeshindwa kutuma uthibitisho."
+              : "Failed to submit proof.")
+        );
+        return;
+      }
+    }
+
+    const note =
+      lang === "sw"
+        ? `Uthibitisho wa malipo umetumwa (${proof.method}, Ref: ${proof.reference}).`
+        : `Payment proof submitted (${proof.method}, Ref: ${proof.reference}).`;
+
+    updateDeal(id, {
+      status: "payment_proof_submitted",
+      paymentProof: { ...proof, submittedAt: new Date().toISOString() },
+      messages: [
+        ...deal.messages,
+        {
+          id: `m_${Date.now()}`,
+          sender: "me",
+          text: note,
+          at: new Date().toISOString(),
+        },
+      ],
+    });
+
+    notifyPaymentProofSubmitted({
+      dealId: id,
+      listingTitle: deal.listingTitle,
+      amount: deal.currentOffer,
+    });
+  };
+
+  // ============================================================
+  // PROOF CONFIRM — API + fallback
+  // ============================================================
+  const handleProofConfirm = async (id) => {
+    const deal = deals.find((d) => d.id === id);
+    if (!deal) return;
+    const txId = transactionIds[id] || deal.transactionId;
+
+    if (txId && !offlineMode) {
+      const apiRes = await callApiOrFallback(() =>
+        confirmPaymentAsync(txId, "")
+      );
+      if (!apiRes.offline && !apiRes.ok) {
+        alert(
+          apiRes.error?.message ||
+            (lang === "sw"
+              ? "Imeshindwa kuthibitisha malipo."
+              : "Failed to confirm payment.")
+        );
+        return;
+      }
+    }
+
+    const note =
+      lang === "sw"
+        ? "Muuzaji amethibitisha: Nimepokea Malipo. Muamala umekamilika."
+        : "Seller confirmed: Payment received. Transaction completed.";
+
+    updateDeal(id, {
+      status: "completed",
+      messages: [
+        ...deal.messages,
+        {
+          id: `m_${Date.now()}`,
+          sender: "me",
+          text: note,
+          at: new Date().toISOString(),
+        },
+      ],
+    });
+
+    onFinalPaymentConfirmed?.(deal, side, {
+      method: deal.paymentProof?.method,
+      reference: deal.paymentProof?.reference,
+    });
+  };
+
+  // ============================================================
+  // PROOF REJECT — API + fallback
+  // ============================================================
+  const handleProofReject = async (id, reason) => {
+    const deal = deals.find((d) => d.id === id);
+    if (!deal) return;
+    const txId = transactionIds[id] || deal.transactionId;
+
+    if (txId && !offlineMode) {
+      const apiRes = await callApiOrFallback(() =>
+        submitDecisionAsync(txId, {
+          buyerDecision: "REJECT",
+          buyerDecisionNote: reason || "",
+        })
+      );
+      if (!apiRes.offline && !apiRes.ok) {
+        alert(
+          apiRes.error?.message ||
+            (lang === "sw" ? "Imeshindwa kutuma." : "Failed to send.")
+        );
+        return;
+      }
+    }
+
+    const note = reason
+      ? lang === "sw"
+        ? `Muuzaji bado hajapokea malipo. Sababu: ${reason}. Tafadhali pakia uthibitisho tena.`
+        : `Seller has not received payment yet. Reason: ${reason}. Please re-upload proof.`
+      : lang === "sw"
+        ? "Muuzaji bado hajapokea malipo. Tafadhali pakia uthibitisho tena."
+        : "Seller has not received payment yet. Please re-upload proof.";
+
+    updateDeal(id, {
+      status: "awaiting_final_payment",
+      paymentProof: null,
+      messages: [
+        ...deal.messages,
+        {
+          id: `m_${Date.now()}`,
+          sender: "me",
+          text: note,
+          at: new Date().toISOString(),
+        },
+      ],
+    });
+  };
+
   return (
     <div
       style={{
@@ -1744,14 +1960,10 @@ export default function DealRooms({
     >
       {/* Header — centered */}
       <div className="p-4 sm:p-6 pb-0 text-center">
-        <h1
-          className="h-title"
-        >
+        <h1 className="h-title">
           {lang === "sw" ? "Vyumba vya Majadiliano" : "Deal Rooms"}
         </h1>
-        <p
-          className="text-secondary text-sm mt-2 max-w-xl mx-auto"
-        >
+        <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
           {side === "seller"
             ? lang === "sw"
               ? "Negotiate moja kwa moja na wanunuzi wenye nia ya mali yako."
@@ -1760,6 +1972,16 @@ export default function DealRooms({
               ? "Negotiate moja kwa moja na wauzaji wa mali unazovutiwa nazo."
               : "Negotiate directly with sellers of properties you're interested in."}
         </p>
+        {offlineMode && (
+          <p
+            style={{ color: COLORS.rust }}
+            className="text-body-sm mt-2 max-w-xl mx-auto"
+          >
+            {lang === "sw"
+              ? "⚠️ Backend haipo — mabadiliko yanahifadhiwa local pekee."
+              : "⚠️ Backend unavailable — changes saved locally only."}
+          </p>
+        )}
       </div>
 
       <div className="flex" style={{ height: "560px" }}>
