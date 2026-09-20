@@ -192,7 +192,7 @@ function App() {
           <Route path="/admin/system" element={<AdminDashboard />} />
           <Route path="/admin/staff" element={<AdminDashboard />} />
           <Route path="/admin/profile" element={<AdminDashboard />} />
-
+          <Route path="/admin/trash" element={<AdminDashboard />} />
           {/* PROFILE */}
           <Route path="/wasifu" element={<ProfilePage />} />
           <Route path="/profile" element={<ProfilePage />} />
