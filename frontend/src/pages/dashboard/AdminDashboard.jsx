@@ -4,7 +4,6 @@
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-// ⬇️ MABADILIKO 1: useAuth + logoutAsync kutoka authStore
 import { useAuth, logoutAsync } from "../../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import {
@@ -53,6 +52,9 @@ import SystemSettingsSection from "./admin/sections/SystemSettingsSection.jsx";
 import RBACSection from "./admin/sections/RBACSection.jsx";
 import AdminProfile from "./admin/sections/AdminProfile.jsx";
 
+// Trash
+import TrashSection from "./admin/sections/TrashSection.jsx";
+
 // Bundles
 import AdminBundles from "../AdminBundles.jsx";
 
@@ -83,6 +85,7 @@ const URL_TO_STATE = {
   "/admin/staff": "staff",
   "/admin/profile": "profile",
   "/admin/bundles": "bundles",
+  "/admin/trash": "trash",
 };
 
 const STATE_TO_URL = {
@@ -101,6 +104,7 @@ const STATE_TO_URL = {
   staff: "/admin/staff",
   profile: "/admin/profile",
   bundles: "/admin/bundles",
+  trash: "/admin/trash",
 };
 
 // ============================================================
@@ -223,7 +227,6 @@ function LanguageSwitcher({ lang, setLang }) {
 // ADMIN DASHBOARD
 // ============================================================
 export default function AdminDashboard() {
-  // ⬇️ MABADILIKO 2: toa `user, isAdmin` pekee (logout ipo kama logoutAsync)
   const { user, isAdmin } = useAuth();
   const { lang, setLang } = useLanguage();
   const navigate = useNavigate();
@@ -250,7 +253,7 @@ export default function AdminDashboard() {
   }, [location.pathname]);
 
   // ============================================================
-  // STAFF PERMISSIONS — nani anaweza kuona nini
+  // STAFF PERMISSIONS
   // ============================================================
   const staffRole = useMemo(() => {
     if (isAdmin && !user?.roleKey) {
@@ -292,12 +295,10 @@ export default function AdminDashboard() {
       navigate("/dashboard");
       return;
     }
-    // Onyesha loader kwa muda mfupi tu (300ms)
     const id = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(id);
   }, [user, isAdmin, navigate]);
 
-  // ⬇️ MABADILIKO 3: tumia logoutAsync
   const handleLogout = async () => {
     await logoutAsync();
     navigate("/admin/login");
@@ -311,9 +312,6 @@ export default function AdminDashboard() {
     setSidebarOpen(false);
   };
 
-  // ============================================================
-  // LOADER — PageLoader badala ya spinner ya kizamani
-  // ============================================================
   if (loading) {
     return <PageLoader lang={lang} />;
   }
@@ -379,6 +377,8 @@ export default function AdminDashboard() {
         return <SystemSettingsSection />;
       case "staff":
         return <RBACSection />;
+      case "trash":
+        return <TrashSection />;
       case "bundles":
         return <AdminBundles />;
       case "profile":
