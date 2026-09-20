@@ -263,6 +263,9 @@ export default function AdminDashboard() {
   }, [isAdmin, user?.roleKey]);
 
   const canAccess = (sectionKey) => {
+    // ✅ Super Admin anaona kila kitu — bila kuangalia permissions
+    if (staffRole?.key === "super_admin") return true;
+
     if (sectionKey === "profile" || sectionKey === "system") return true;
     if (sectionKey === "overview") return true;
     if (!staffRole) return false;
@@ -271,6 +274,7 @@ export default function AdminDashboard() {
 
   const visibleNav = useMemo(() => {
     return NAV.filter((item) => canAccess(item.key));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffRole]);
 
   const openNotification = (n) => {
