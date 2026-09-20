@@ -1,6 +1,7 @@
 // ============================================================
 // AdminDashboard.jsx — SHELL PEKEE + Routes + Permissions
 // + PageLoader (mara moja tu)
+// + Secret admin path
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -20,6 +21,9 @@ import {
   Lock,
 } from "lucide-react";
 
+// ⬇️ Secret admin path
+import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "../../config/adminPath.js";
+
 import {
   COLORS,
   NAV,
@@ -28,7 +32,7 @@ import {
 } from "./admin/shared/constants.js";
 
 // ============================================================
-// PAGE LOADER — rahisi, brand colors
+// PAGE LOADER
 // ============================================================
 import PageLoader from "../../components/PageLoader.jsx";
 
@@ -66,45 +70,45 @@ import { useOpenTicketsCount } from "../../config/ticketsStore.js";
 import { useRoles, getRole } from "../../config/rolesStore.js";
 
 // ============================================================
-// URL ↔ STATE MAPPING
+// URL ↔ STATE MAPPING (dynamic na ADMIN_PATH)
 // ============================================================
 const URL_TO_STATE = {
-  "/admin": "overview",
-  "/admin/overview": "overview",
-  "/admin/users": "users",
-  "/admin/moderation": "moderation",
-  "/admin/verification": "verification",
-  "/admin/deals": "deals",
-  "/admin/revenue": "revenue",
-  "/admin/promotions": "promotions",
-  "/admin/reports": "reports",
-  "/admin/support": "support",
-  "/admin/content": "content",
-  "/admin/audit": "audit",
-  "/admin/system": "system",
-  "/admin/staff": "staff",
-  "/admin/profile": "profile",
-  "/admin/bundles": "bundles",
-  "/admin/trash": "trash",
+  [ADMIN_PATH]: "overview",
+  [`${ADMIN_PATH}/overview`]: "overview",
+  [`${ADMIN_PATH}/users`]: "users",
+  [`${ADMIN_PATH}/moderation`]: "moderation",
+  [`${ADMIN_PATH}/verification`]: "verification",
+  [`${ADMIN_PATH}/deals`]: "deals",
+  [`${ADMIN_PATH}/revenue`]: "revenue",
+  [`${ADMIN_PATH}/promotions`]: "promotions",
+  [`${ADMIN_PATH}/reports`]: "reports",
+  [`${ADMIN_PATH}/support`]: "support",
+  [`${ADMIN_PATH}/content`]: "content",
+  [`${ADMIN_PATH}/audit`]: "audit",
+  [`${ADMIN_PATH}/system`]: "system",
+  [`${ADMIN_PATH}/staff`]: "staff",
+  [`${ADMIN_PATH}/profile`]: "profile",
+  [`${ADMIN_PATH}/bundles`]: "bundles",
+  [`${ADMIN_PATH}/trash`]: "trash",
 };
 
 const STATE_TO_URL = {
-  overview: "/admin/overview",
-  users: "/admin/users",
-  moderation: "/admin/moderation",
-  verification: "/admin/verification",
-  deals: "/admin/deals",
-  revenue: "/admin/revenue",
-  promotions: "/admin/promotions",
-  reports: "/admin/reports",
-  support: "/admin/support",
-  content: "/admin/content",
-  audit: "/admin/audit",
-  system: "/admin/system",
-  staff: "/admin/staff",
-  profile: "/admin/profile",
-  bundles: "/admin/bundles",
-  trash: "/admin/trash",
+  overview: `${ADMIN_PATH}/overview`,
+  users: `${ADMIN_PATH}/users`,
+  moderation: `${ADMIN_PATH}/moderation`,
+  verification: `${ADMIN_PATH}/verification`,
+  deals: `${ADMIN_PATH}/deals`,
+  revenue: `${ADMIN_PATH}/revenue`,
+  promotions: `${ADMIN_PATH}/promotions`,
+  reports: `${ADMIN_PATH}/reports`,
+  support: `${ADMIN_PATH}/support`,
+  content: `${ADMIN_PATH}/content`,
+  audit: `${ADMIN_PATH}/audit`,
+  system: `${ADMIN_PATH}/system`,
+  staff: `${ADMIN_PATH}/staff`,
+  profile: `${ADMIN_PATH}/profile`,
+  bundles: `${ADMIN_PATH}/bundles`,
+  trash: `${ADMIN_PATH}/trash`,
 };
 
 // ============================================================
@@ -237,11 +241,8 @@ export default function AdminDashboard() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
-  // Badges
   const pendingVerificationsCount = usePendingVerificationsCount();
   const openTicketsCount = useOpenTicketsCount();
-
-  // Permissions
   const roles = useRoles();
 
   // ============================================================
@@ -256,12 +257,8 @@ export default function AdminDashboard() {
   // STAFF PERMISSIONS
   // ============================================================
   const staffRole = useMemo(() => {
-    if (isAdmin && !user?.roleKey) {
-      return getRole("super_admin");
-    }
-    if (user?.roleKey) {
-      return getRole(user.roleKey);
-    }
+    if (isAdmin && !user?.roleKey) return getRole("super_admin");
+    if (user?.roleKey) return getRole(user.roleKey);
     return getRole("super_admin");
   }, [isAdmin, user?.roleKey]);
 
@@ -284,11 +281,11 @@ export default function AdminDashboard() {
   };
 
   // ============================================================
-  // AUTH CHECK + LOADER
+  // AUTH CHECK + LOADER — tumia ADMIN_LOGIN_PATH
   // ============================================================
   useEffect(() => {
     if (!user) {
-      navigate("/admin/login");
+      navigate(ADMIN_LOGIN_PATH);
       return;
     }
     if (!isAdmin) {
@@ -301,7 +298,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     await logoutAsync();
-    navigate("/admin/login");
+    navigate(ADMIN_LOGIN_PATH);
   };
 
   const handleNavClick = (key) => {
