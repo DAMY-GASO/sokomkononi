@@ -78,7 +78,7 @@ function normalizeUserFromApi(raw) {
     phone: raw.phone || "",
     username: raw.username || "",
 
-    // Roles — keep both camelCase and snake_case for compat
+    // Roles
     isStaff: !!(raw.is_staff || raw.isStaff),
     isSuperuser: !!(raw.is_superuser || raw.isSuperuser),
     is_seller: !!(raw.is_seller || raw.account_type === "BUSINESS"),
@@ -92,7 +92,7 @@ function normalizeUserFromApi(raw) {
     isVerified: !!(raw.is_verified ?? raw.isVerified),
     emailVerified: !!(raw.email_verified ?? raw.emailVerified),
     phoneVerified: !!(raw.phone_verified ?? raw.phoneVerified),
-    verified: !!(raw.is_verified ?? raw.verified), // alias kwa legacy
+    verified: !!(raw.is_verified ?? raw.verified),
 
     // Status
     isActive: raw.is_active !== false,
@@ -102,12 +102,12 @@ function normalizeUserFromApi(raw) {
     avatarUrl: raw.avatar || raw.avatar_url || raw.avatarUrl || null,
     bio: raw.bio || "",
     region: raw.region || "",
-    location: raw.location || raw.region || "", // alias kwa legacy
+    location: raw.location || raw.region || "",
     district: raw.district || "",
 
     // Meta
     joinedAt: raw.date_joined || raw.created_at || null,
-    memberSince: raw.date_joined || raw.created_at || null, // alias kwa legacy
+    memberSince: raw.date_joined || raw.created_at || null,
     lastLogin: raw.last_login || null,
     updatedAt: raw.updated_at || null,
   };
@@ -184,9 +184,6 @@ export async function loginAsync({ identifier, password }) {
   }
 }
 
-/**
- * Admin login — inahakikisha ni admin, vinginevyo inatupa tokens zote.
- */
 export async function adminLoginAsync({ identifier, password }) {
   if (!identifier || !password) {
     return { ok: false, error: new Error("identifier na password zinahitajika") };
@@ -239,7 +236,6 @@ export async function registerAsync(payload) {
 }
 
 export async function verifyOtpAsync({ identifier, otpCode, verificationType }) {
-  // Support legacy positional calls too
   if (typeof identifier === "string" && typeof otpCode === "string" && !verificationType) {
     verificationType = identifier.includes("@") ? "EMAIL" : "PHONE";
   }
@@ -248,7 +244,6 @@ export async function verifyOtpAsync({ identifier, otpCode, verificationType }) 
     return { ok: false, error: new Error("identifier na otpCode zinahitajika") };
   }
 
-  // Auto-detect type
   const type = verificationType || (identifier.includes("@") ? "EMAIL" : "PHONE");
 
   try {
@@ -320,7 +315,6 @@ export async function refreshProfileAsync() {
   }
 }
 
-/** Alias — jina kutoka AuthContext */
 export async function refreshUserAsync() {
   return refreshProfileAsync();
 }
@@ -349,7 +343,6 @@ export async function changePasswordAsync({ currentPassword, newPassword, confir
   }
 }
 
-/** Alias — jina kutoka AuthContext */
 export async function updatePasswordAsync(args) {
   return changePasswordAsync({
     currentPassword: args.currentPassword,
@@ -416,7 +409,7 @@ export async function resetPasswordAsync({ resetToken, newPassword, confirmPassw
 }
 
 // ============================================================
-// AVATAR (mock — hadi backend endpoint ipatikane)
+// AVATAR
 // ============================================================
 export async function updateAvatarAsync(file) {
   const user = getCurrentUser();
@@ -457,11 +450,23 @@ export async function removeAvatarAsync() {
 }
 
 // ============================================================
-// ACCOUNT DELETION
+// ACCOUNT DELETION — ⚠️ NA GUARD YA ADMIN
 // ============================================================
 export async function deleteAccountAsync(reason = "") {
   const previous = getCurrentUser();
-  if (!previous) return { ok: false, error: new Error("Hakuna mtumiaji aliyeingia") };
+  if (!previous) {
+    return { ok: false, error: new Error("Hakuna mtumiaji aliyeingia") };
+  }
+
+  // 🛡️ GUARD: Zuia admin kufuta akaunti
+  if (computeIsAdmin(previous)) {
+    return {
+      ok: false,
+      error: new Error(
+        "Akaunti za Admin haziwezi kufutwa kupitia UI. Wasiliana na Super Admin mwingine."
+      ),
+    };
+  }
 
   try {
     await authApi.deleteAccount(reason);
@@ -510,10 +515,10 @@ export function useAuth() {
   return {
     user,
     isLoading,
-    loading: isLoading, // alias kwa backward compat na AuthContext
+    loading: isLoading,
     isAuthenticated: !!user?.id,
     isAdmin: computeIsAdmin(user),
-    setUser: saveUser, // ⚠️ BAD PRACTICE — kwa legacy pages tu
+    setUser: saveUser,
   };
 }
 
