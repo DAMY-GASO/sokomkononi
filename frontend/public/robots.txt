@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /smk-control-9x7k/
+Disallow: /dashboard/
+Disallow: /api/
+Allow: /
+
+Sitemap: https://www.sokomkononi.co.tz/sitemap.xml
