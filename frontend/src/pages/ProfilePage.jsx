@@ -3,6 +3,7 @@
 // Wasifu — bilingual kamili + PageLoader.
 // + Delete Account (API)
 // + 2FA Enable/Disable (mock — tayari kwa backend)
+// + Guard: Admin hawezi kujifuta
 // ============================================================
 
 import React, { useState, useEffect } from "react";
@@ -77,7 +78,7 @@ function StatCard({ icon: Icon, value, label, color }) {
 }
 
 // ============================================================
-// 2FA MODAL — Setup + Disable
+// 2FA MODAL
 // ============================================================
 function TwoFactorModal({ mode, onClose, onEnable, onDisable, lang }) {
   const [step, setStep] = useState(mode === "enable" ? "intro" : "disable");
@@ -397,7 +398,7 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
 }
 
 // ============================================================
-// OVERVIEW TAB — hakuna mabadiliko
+// OVERVIEW TAB
 // ============================================================
 function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
   const stats = user?.stats || {
@@ -541,7 +542,7 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
 }
 
 // ============================================================
-// EDIT PROFILE TAB — hakuna mabadiliko
+// EDIT PROFILE TAB
 // ============================================================
 function EditProfileTab({ user, lang }) {
   const initialBio = typeof user.bio === "object" ? user.bio?.[lang] || "" : user.bio || "";
@@ -738,7 +739,7 @@ function EditProfileTab({ user, lang }) {
 }
 
 // ============================================================
-// SECURITY TAB — sasa ina 2FA + Delete Account
+// SECURITY TAB — 2FA + Delete Account + Guard ya Admin
 // ============================================================
 function SecurityTab({ lang, user }) {
   const navigate = useNavigate();
@@ -752,7 +753,7 @@ function SecurityTab({ lang, user }) {
 
   // ⬇️ 2FA state (mock — kwa sasa)
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
-  const [show2FAModal, setShow2FAModal] = useState(null); // "enable" | "disable" | null
+  const [show2FAModal, setShow2FAModal] = useState(null);
 
   // ⬇️ Delete Account state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -804,23 +805,20 @@ function SecurityTab({ lang, user }) {
   };
 
   // ============================================================
-  // 2FA HANDLERS — mock (kwa sasa)
+  // 2FA HANDLERS — mock
   // ============================================================
   const handleEnable2FA = () => {
     setTwoFAEnabled(true);
-    // Badilisha modal kuwa "done" — inaonyesha backup codes
     setShow2FAModal("done");
-    // TODO: Ita `authApi.enable2FA()` baada ya backend
   };
 
   const handleDisable2FA = () => {
     setTwoFAEnabled(false);
     setShow2FAModal(null);
-    // TODO: Ita `authApi.disable2FA({ password })` baada ya backend
   };
 
   // ============================================================
-  // DELETE ACCOUNT HANDLER — API halisi
+  // DELETE ACCOUNT HANDLER
   // ============================================================
   const handleDeleteAccount = async (reason) => {
     setDeleting(true);
@@ -1020,34 +1018,65 @@ function SecurityTab({ lang, user }) {
         </div>
       </div>
 
-      {/* DANGER ZONE */}
-      <div className="bg-white rounded-xl border border-[#C1502E]/30 p-5">
-        <h3 className="font-semibold text-[#C1502E] mb-4 flex items-center justify-center gap-2 text-center">
-          <AlertTriangle size={18} />
-          {lang === "sw" ? "Eneo la Hatari" : "Danger Zone"}
-        </h3>
-        <div className="space-y-3">
-          <div className="flex flex-col items-center text-center gap-3">
-            <div>
-              <p className="text-sm font-medium text-primary">
-                {lang === "sw" ? "Futa Akaunti" : "Delete Account"}
-              </p>
-              <p className="text-body-sm text-secondary mt-0.5">
-                {lang === "sw"
-                  ? "Hii itafuta akaunti yako na taarifa zote kabisa"
-                  : "This will permanently delete your account and all data"}
-              </p>
+      {/* DANGER ZONE — au Admin Account info */}
+      {(() => {
+        // 🛡️ GUARD: Admin hawezi kufuta akaunti
+        const isUserAdmin =
+          user?.role === "Admin" ||
+          user?.role === "admin" ||
+          user?.isStaff === true ||
+          user?.is_staff === true ||
+          user?.isSuperuser === true ||
+          user?.is_superuser === true;
+
+        if (isUserAdmin) {
+          return (
+            <div className="bg-white rounded-xl border border-[#E8A33D]/30 p-5">
+              <h3 className="font-semibold text-[#E8A33D] mb-4 flex items-center justify-center gap-2 text-center">
+                <Shield size={18} />
+                {lang === "sw" ? "Akaunti ya Admin" : "Admin Account"}
+              </h3>
+              <div className="text-center">
+                <p className="text-sm text-secondary leading-relaxed max-w-md mx-auto">
+                  {lang === "sw"
+                    ? "Akaunti za Admin haziwezi kufutwa kupitia UI. Wasiliana na Super Admin mwingine ili kufuta akaunti yako."
+                    : "Admin accounts cannot be deleted via UI. Contact another Super Admin to delete your account."}
+                </p>
+              </div>
             </div>
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="px-4 py-2 border border-[#C1502E] text-[#C1502E] rounded-lg text-sm font-medium hover:bg-[#C1502E]/5 transition-colors flex items-center gap-1.5"
-            >
-              <Trash2 size={14} />
-              {lang === "sw" ? "Futa Akaunti" : "Delete Account"}
-            </button>
+          );
+        }
+
+        return (
+          <div className="bg-white rounded-xl border border-[#C1502E]/30 p-5">
+            <h3 className="font-semibold text-[#C1502E] mb-4 flex items-center justify-center gap-2 text-center">
+              <AlertTriangle size={18} />
+              {lang === "sw" ? "Eneo la Hatari" : "Danger Zone"}
+            </h3>
+            <div className="space-y-3">
+              <div className="flex flex-col items-center text-center gap-3">
+                <div>
+                  <p className="text-sm font-medium text-primary">
+                    {lang === "sw" ? "Futa Akaunti" : "Delete Account"}
+                  </p>
+                  <p className="text-body-sm text-secondary mt-0.5">
+                    {lang === "sw"
+                      ? "Hii itafuta akaunti yako na taarifa zote kabisa"
+                      : "This will permanently delete your account and all data"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="px-4 py-2 border border-[#C1502E] text-[#C1502E] rounded-lg text-sm font-medium hover:bg-[#C1502E]/5 transition-colors flex items-center gap-1.5"
+                >
+                  <Trash2 size={14} />
+                  {lang === "sw" ? "Futa Akaunti" : "Delete Account"}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* MODALS */}
       {show2FAModal && show2FAModal !== "done" && (
@@ -1082,7 +1111,7 @@ function SecurityTab({ lang, user }) {
 }
 
 // ============================================================
-// NOTIFICATIONS TAB — hakuna mabadiliko
+// NOTIFICATIONS TAB
 // ============================================================
 function NotificationsTab({ lang }) {
   const [settings, setSettings] = useState({
@@ -1157,7 +1186,7 @@ function NotificationsTab({ lang }) {
 }
 
 // ============================================================
-// PREFERENCES TAB — hakuna mabadiliko
+// PREFERENCES TAB
 // ============================================================
 function PreferencesTab({ lang, setLang }) {
   const [prefs, setPrefs] = useState({
