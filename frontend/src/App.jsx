@@ -9,6 +9,11 @@ import ScrollToHash from "./components/ScrollToHash.jsx";
 import { installUnauthorizedHandler } from "./config/authStore.js";
 
 // ============================================================
+// ADMIN PATH — secret prefix
+// ============================================================
+import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
+
+// ============================================================
 // INITIALIZE — categories + bundles za awali
 // ============================================================
 import {
@@ -92,15 +97,14 @@ function App() {
   // + install 401 handler
   // ============================================================
   useEffect(() => {
-    // 0) Install 401 handler kutoka authStore
-    //    (inasafisha user state kama session inaisha)
+    // 0) Install 401 handler
     installUnauthorizedHandler();
 
     // 1) Seed mara moja
     initializeCategories(SEED_CATEGORIES);
     initializeBundles(SEED_BUNDLES);
 
-    // 2) Jaribu kupata data halisi kutoka API
+    // 2) Hydrate kutoka API
     async function hydrateFromApi() {
       await Promise.allSettled([
         hydrateCategoriesFromApi(),
@@ -115,7 +119,9 @@ function App() {
       <Router>
         <ScrollToHash />
         <Routes>
+          {/* ============================================================ */}
           {/* PUBLIC */}
+          {/* ============================================================ */}
           <Route path="/" element={<HomePage />} />
           <Route path="/kuhusu" element={<AboutPage />} />
           <Route path="/mawasiliano" element={<ContactPage />} />
@@ -123,13 +129,17 @@ function App() {
           <Route path="/faragha" element={<PrivacyPage />} />
           <Route path="/jinsi-ya-kununua" element={<JinsiYaKununuaNaKuuza />} />
 
-          {/* AUTH */}
+          {/* ============================================================ */}
+          {/* AUTH (user) */}
+          {/* ============================================================ */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotpasswordPage />} />
           <Route path="/waitlist" element={<WaitlistPage />} />
 
+          {/* ============================================================ */}
           {/* PROPERTY & SEARCH */}
+          {/* ============================================================ */}
           <Route path="/mali/:id" element={<PropertyDetailPage />} />
           <Route path="/property/:id" element={<PropertyDetailPage />} />
           <Route path="/kategoria" element={<AllCategoriesPage />} />
@@ -137,10 +147,14 @@ function App() {
           <Route path="/tafuta" element={<BrowseRoute />} />
           <Route path="/mali-zote" element={<AllListingsPage />} />
 
+          {/* ============================================================ */}
           {/* BUNDLES */}
+          {/* ============================================================ */}
           <Route path="/bundles" element={<BundlesPage />} />
 
+          {/* ============================================================ */}
           {/* DASHBOARD — SELLER */}
+          {/* ============================================================ */}
           <Route path="/dashboard" element={<DashboardShell />} />
           <Route path="/dashboard/seller" element={<DashboardShell />} />
           <Route path="/dashboard/overview" element={<DashboardShell />} />
@@ -158,7 +172,9 @@ function App() {
           <Route path="/dashboard/transactions" element={<DashboardShell />} />
           <Route path="/dashboard/activity" element={<DashboardShell />} />
 
+          {/* ============================================================ */}
           {/* DASHBOARD — BUYER */}
+          {/* ============================================================ */}
           <Route path="/dashboard/buyer" element={<DashboardShell />} />
           <Route path="/dashboard/buyer/overview" element={<DashboardShell />} />
           <Route path="/dashboard/buyer/browse" element={<DashboardShell />} />
@@ -173,31 +189,44 @@ function App() {
           <Route path="/dashboard/buyer/safety" element={<DashboardShell />} />
           <Route path="/dashboard/buyer/activity" element={<DashboardShell />} />
 
-          {/* ADMIN */}
-          <Route path="/admin/login" element={<AdminLoginPage />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/overview" element={<AdminDashboard />} />
-          <Route path="/admin/users" element={<AdminDashboard />} />
-          <Route path="/admin/moderation" element={<AdminDashboard />} />
-          <Route path="/admin/verification" element={<AdminDashboard />} />
-          <Route path="/admin/deals" element={<AdminDashboard />} />
-          <Route path="/admin/revenue" element={<AdminDashboard />} />
-          <Route path="/admin/bundles" element={<AdminDashboard />} />
-          <Route path="/admin/promotions" element={<AdminDashboard />} />
-          <Route path="/admin/reports" element={<AdminDashboard />} />
-          <Route path="/admin/support" element={<AdminDashboard />} />
-          <Route path="/admin/content" element={<AdminDashboard />} />
-          <Route path="/admin/audit" element={<AdminDashboard />} />
-          <Route path="/admin/system" element={<AdminDashboard />} />
-          <Route path="/admin/staff" element={<AdminDashboard />} />
-          <Route path="/admin/profile" element={<AdminDashboard />} />
-          <Route path="/admin/trash" element={<AdminDashboard />} />
+          {/* ============================================================ */}
+          {/* ADMIN — SECRET PATHS */}
+          {/* ============================================================ */}
+          <Route path={ADMIN_LOGIN_PATH} element={<AdminLoginPage />} />
+          <Route path={ADMIN_PATH} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/dashboard`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/overview`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/users`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/moderation`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/verification`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/deals`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/revenue`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/bundles`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/promotions`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/reports`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/support`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/content`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/audit`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/system`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/staff`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/profile`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/trash`} element={<AdminDashboard />} />
+
+          {/* ============================================================ */}
+          {/* LEGACY /admin/* — RUDISHA HOMEPAGE (usifichue admin haipo) */}
+          {/* ============================================================ */}
+          <Route path="/admin/*" element={<HomePage />} />
+          <Route path="/admin" element={<HomePage />} />
+
+          {/* ============================================================ */}
           {/* PROFILE */}
+          {/* ============================================================ */}
           <Route path="/wasifu" element={<ProfilePage />} />
           <Route path="/profile" element={<ProfilePage />} />
 
+          {/* ============================================================ */}
           {/* FALLBACK */}
+          {/* ============================================================ */}
           <Route path="*" element={<HomePage />} />
         </Routes>
       </Router>
