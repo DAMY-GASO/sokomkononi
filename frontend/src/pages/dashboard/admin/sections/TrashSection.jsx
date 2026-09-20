@@ -428,7 +428,7 @@ export default function TrashSection() {
   return (
     <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
       <SectionHeader
-        title={t("Trash / Recycle Bin", "Trash / Recycle Bin")}
+        title={t("Sanduku la Taka", "Recycle Bin")}
         subtitle={t(
           "Items zilizofutwa. Unaweza kuzirudisha au kuzifuta kabisa.",
           "Deleted items. You can restore or permanently delete them."
