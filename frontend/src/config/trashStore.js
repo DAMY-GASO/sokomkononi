@@ -1,25 +1,44 @@
 // ============================================================
 // trashStore.js — API-backed via /api/trash/
 //
-// BACKEND HALI YA SASA (kulingana na trashApi.js):
-//   GET /api/trash/overview/         → muhtasari wa trash
+// BACKEND HALI YA SASA:
+//   GET /api/trash/overview/         → muhtasari wa trash ✅
 //
-// ENDPOINTS ZINAZOKOSEKANA (TODO):
-//   GET    /api/trash/{type}/        → list items by type
-//   POST   /api/trash/{type}/{id}/restore/  → restore
-//   DELETE /api/trash/{type}/{id}/   → permanent delete
-//   POST   /api/trash/empty/         → empty all
+// ENDPOINTS ZINAZOTARAJIWA (TODO — Developer A):
+//   GET    /api/trash/{type}/                 → list items by type
+//   POST   /api/trash/{type}/{id}/restore/    → restore
+//   DELETE /api/trash/{type}/{id}/            → permanent delete
+//   POST   /api/trash/empty/                  → empty all
+//   POST   /api/trash/{type}/empty/           → empty by type
 //
-// Store hii inafanya kazi na `overview` pekee. Ukiongeza
-// endpoints, ongeza functions za restore/delete hapa chini.
+// Store ina graceful fallback — kama endpoint haipo (404),
+// actions zinakuwa local-only bila error.
 // ============================================================
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { trashApi } from "../api/trash.js";
+import { api } from "../api/client.js";
 
-const STORAGE_KEY = "sokomkononi_trash_overview_v1";
+const OVERVIEW_KEY = "sokomkononi_trash_overview_v1";
+const ITEMS_KEY = "sokomkononi_trash_items_v1";
 const UPDATE_EVENT = "sokomkononi:trash-updated";
 
+// ============================================================
+// TRASH TYPES — config
+// ============================================================
+export const TRASH_TYPES = [
+  { key: "listings",      label: { sw: "Mali (Listings)", en: "Listings" },      iconKey: "Home",       color: "#E8A33D" },
+  { key: "users",         label: { sw: "Watumiaji", en: "Users" },                iconKey: "Users",      color: "#2563EB" },
+  { key: "verifications", label: { sw: "Uthibitisho", en: "Verifications" },      iconKey: "ShieldCheck", color: "#2F6D4F" },
+  { key: "tickets",       label: { sw: "Tiketi", en: "Tickets" },                iconKey: "Headphones", color: "#C1502E" },
+  { key: "banners",       label: { sw: "Banner", en: "Banners" },                iconKey: "Image",      color: "#D97706" },
+  { key: "announcements", label: { sw: "Matangazo", en: "Announcements" },       iconKey: "Megaphone",  color: "#7C3AED" },
+  { key: "deals",         label: { sw: "Deals", en: "Deals" },                   iconKey: "Handshake",  color: "#059669" },
+];
+
+// ============================================================
+// SEED
+// ============================================================
 export const SEED_OVERVIEW = {
   listings: 0,
   users: 0,
@@ -32,13 +51,15 @@ export const SEED_OVERVIEW = {
   lastUpdated: null,
 };
 
+export const SEED_ITEMS = {}; // { [type]: [] }
+
 // ============================================================
-// STORAGE
+// STORAGE — Overview
 // ============================================================
-function readFromStorage() {
+function readOverview() {
   if (typeof window === "undefined") return SEED_OVERVIEW;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(OVERVIEW_KEY);
     if (!raw) return SEED_OVERVIEW;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return SEED_OVERVIEW;
@@ -48,21 +69,42 @@ function readFromStorage() {
   }
 }
 
-function saveAll(overview) {
+function saveOverview(overview) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(overview));
+  window.localStorage.setItem(OVERVIEW_KEY, JSON.stringify(overview));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
 // ============================================================
-// NORMALIZER
+// STORAGE — Items cache
 // ============================================================
-function normalizeFromApi(raw) {
+function readItems() {
+  if (typeof window === "undefined") return SEED_ITEMS;
+  try {
+    const raw = window.localStorage.getItem(ITEMS_KEY);
+    if (!raw) return SEED_ITEMS;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return SEED_ITEMS;
+    return parsed;
+  } catch {
+    return SEED_ITEMS;
+  }
+}
+
+function saveItems(items) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(ITEMS_KEY, JSON.stringify(items));
+  window.dispatchEvent(new Event(UPDATE_EVENT));
+}
+
+// ============================================================
+// NORMALIZERS
+// ============================================================
+function normalizeOverviewFromApi(raw) {
   if (!raw || typeof raw !== "object") return SEED_OVERVIEW;
 
-  // Backend inaweza kurudisha muundo tofauti. Tunajaribu kawaida:
-  //   { listings: N, users: N, ... }  au  { counts: { listings: N, ... } }
-  const source = raw.counts && typeof raw.counts === "object" ? raw.counts : raw;
+  const source =
+    raw.counts && typeof raw.counts === "object" ? raw.counts : raw;
 
   const normalized = {
     listings: Number(source.listings) || 0,
@@ -75,7 +117,6 @@ function normalizeFromApi(raw) {
     lastUpdated: new Date().toISOString(),
   };
 
-  // Total: hesabu kama backend haitoi
   normalized.total =
     Number(source.total) ||
     normalized.listings +
@@ -89,89 +130,258 @@ function normalizeFromApi(raw) {
   return normalized;
 }
 
-// ============================================================
-// READS
-// ============================================================
-export function getTrashOverview() {
-  return readFromStorage();
-}
-
-export function getTrashTotal() {
-  return readFromStorage().total;
-}
-
-export function hasTrashItems() {
-  return readFromStorage().total > 0;
-}
-
-export function getTrashBreakdown() {
-  const o = readFromStorage();
-  return [
-    { key: "listings", label: { sw: "Listing", en: "Listings" }, count: o.listings },
-    { key: "users", label: { sw: "Watumiaji", en: "Users" }, count: o.users },
-    { key: "verifications", label: { sw: "Uthibitisho", en: "Verifications" }, count: o.verifications },
-    { key: "tickets", label: { sw: "Tiketi", en: "Tickets" }, count: o.tickets },
-    { key: "banners", label: { sw: "Banner", en: "Banners" }, count: o.banners },
-    { key: "announcements", label: { sw: "Matangazo", en: "Announcements" }, count: o.announcements },
-    { key: "deals", label: { sw: "Deals", en: "Deals" }, count: o.deals },
-  ].filter((item) => item.count > 0);
+function normalizeItemFromApi(raw) {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    type: raw.type,
+    name: raw.name || raw.title || raw.subject || `#${raw.id}`,
+    subtitle: raw.subtitle || raw.description || "",
+    deletedAt: raw.deleted_at || raw.created_at,
+    deletedBy: raw.deleted_by || raw.deleted_by_name || "—",
+    details: raw.details || "",
+    thumbnail: raw.thumbnail || raw.image_url || null,
+  };
 }
 
 // ============================================================
-// HYDRATE
+// GRACEFUL API HELPER
 // ============================================================
-export async function hydrateTrashOverviewFromApi() {
+async function tryApi(apiCall, { onSuccess, onFail } = {}) {
   try {
-    const data = await trashApi.overview();
-    const normalized = normalizeFromApi(data);
-    saveAll(normalized);
-    return { source: "api", overview: normalized };
+    const raw = await apiCall();
+    onSuccess?.(raw);
+    return { ok: true, data: raw };
   } catch (err) {
-    console.warn("[trashStore] hydrate failed:", err);
-    return { source: "error", overview: getTrashOverview() };
+    if (err?.status === 404 || err?.status === 501) {
+      console.warn("[trashStore] backend haipo — local-only:", err.status);
+      return { ok: true, warning: "local_only" };
+    }
+    onFail?.(err);
+    return { ok: false, error: err };
   }
 }
 
 // ============================================================
-// TODO — ENDPOINTS ZINAZOKOSEKANA
-// Fungua hizi backend ikiwa, kisha jaza hapa chini:
+// READS — Overview
 // ============================================================
-//
-// export async function fetchTrashItemsAsync(type) {
-//   // TODO: GET /api/trash/{type}/
-//   try {
-//     const data = await api.get(`/trash/${type}/`);
-//     const list = Array.isArray(data) ? data : data?.results || [];
-//     return { ok: true, items: list };
-//   } catch (err) {
-//     return { ok: false, error: err, items: [] };
-//   }
-// }
-//
-// export async function restoreTrashItemAsync(type, id) {
-//   // TODO: POST /api/trash/{type}/{id}/restore/
-//   const res = await api.post(`/trash/${type}/${id}/restore/`, {});
-//   // Refresh overview
-//   await hydrateTrashOverviewFromApi();
-//   return { ok: true, data: res };
-// }
-//
-// export async function permanentDeleteTrashItemAsync(type, id) {
-//   // TODO: DELETE /api/trash/{type}/{id}/
-//   await api.delete(`/trash/${type}/${id}/`);
-//   await hydrateTrashOverviewFromApi();
-//   return { ok: true };
-// }
-//
-// export async function emptyTrashAsync() {
-//   // TODO: POST /api/trash/empty/
-//   await api.post("/trash/empty/", { confirm: true });
-//   saveAll(SEED_OVERVIEW);
-//   return { ok: true };
-// }
+export function getTrashOverview() {
+  return readOverview();
+}
+
+export function getTrashTotal() {
+  return readOverview().total;
+}
+
+export function hasTrashItems() {
+  return readOverview().total > 0;
+}
+
+export function getTrashCountByType(type) {
+  const overview = readOverview();
+  return Number(overview[type]) || 0;
+}
+
+export function getTrashBreakdown() {
+  const o = readOverview();
+  return TRASH_TYPES.map((t) => ({
+    key: t.key,
+    label: t.label,
+    iconKey: t.iconKey,
+    color: t.color,
+    count: Number(o[t.key]) || 0,
+  }));
+}
 
 // ============================================================
-// HOOKS
+// READS — Items
+// ============================================================
+export function getTrashItemsByType(type) {
+  const all = readItems();
+  return Array.isArray(all[type]) ? all[type] : [];
+}
+
+export function getTrashItem(type, id) {
+  return getTrashItemsByType(type).find((i) => i.id === id) || null;
+}
+
+function setTrashItemsByType(type, list) {
+  const all = readItems();
+  saveItems({ ...all, [type]: list });
+}
+
+// ============================================================
+// HYDRATE — Overview
+// ============================================================
+export async function hydrateTrashOverviewFromApi() {
+  try {
+    const data = await trashApi.overview();
+    const normalized = normalizeOverviewFromApi(data);
+    saveOverview(normalized);
+    return { ok: true, source: "api", overview: normalized };
+  } catch (err) {
+    console.warn("[trashStore] hydrate overview failed:", err);
+    return { ok: false, source: "error", overview: getTrashOverview() };
+  }
+}
+
+// ============================================================
+// FETCH — Items by type
+// ============================================================
+export async function fetchTrashItemsAsync(type) {
+  if (!type) return { ok: false, error: new Error("type inahitajika") };
+
+  try {
+    const data = await api.get(`/trash/${type}/`);
+    const list = Array.isArray(data) ? data : data?.results || [];
+    const normalized = list.map(normalizeItemFromApi).filter(Boolean);
+    setTrashItemsByType(type, normalized);
+    return { ok: true, items: normalized };
+  } catch (err) {
+    if (err?.status === 404 || err?.status === 501) {
+      // Backend haipo — rudisha local
+      const local = getTrashItemsByType(type);
+      return { ok: true, items: local, warning: "local_only" };
+    }
+    console.warn("[trashStore] fetch items failed:", err);
+    return { ok: false, error: err, items: [] };
+  }
+}
+
+// ============================================================
+// RESTORE — item
+// ============================================================
+export async function restoreTrashItemAsync(type, id) {
+  if (!type || id == null) {
+    return { ok: false, error: new Error("type na id zinahitajika") };
+  }
+
+  const previousItems = getTrashItemsByType(type);
+  const previousOverview = getTrashOverview();
+  const target = previousItems.find((i) => i.id === id);
+  if (!target) return { ok: false, error: new Error("Item haipo") };
+
+  // Optimistic — ondoa kutoka list
+  setTrashItemsByType(type, previousItems.filter((i) => i.id !== id));
+
+  // Optimistic — punguza count
+  const newOverview = {
+    ...previousOverview,
+    [type]: Math.max(0, (Number(previousOverview[type]) || 0) - 1),
+    total: Math.max(0, (Number(previousOverview.total) || 0) - 1),
+    lastUpdated: new Date().toISOString(),
+  };
+  saveOverview(newOverview);
+
+  return tryApi(
+    () => api.post(`/trash/${type}/${id}/restore/`, {}),
+    {
+      onFail: () => {
+        // Rollback
+        setTrashItemsByType(type, previousItems);
+        saveOverview(previousOverview);
+      },
+    }
+  );
+}
+
+// ============================================================
+// PERMANENT DELETE — item
+// ============================================================
+export async function permanentDeleteTrashItemAsync(type, id) {
+  if (!type || id == null) {
+    return { ok: false, error: new Error("type na id zinahitajika") };
+  }
+
+  const previousItems = getTrashItemsByType(type);
+  const previousOverview = getTrashOverview();
+  const target = previousItems.find((i) => i.id === id);
+  if (!target) return { ok: false, error: new Error("Item haipo") };
+
+  // Optimistic — ondoa kutoka list
+  setTrashItemsByType(type, previousItems.filter((i) => i.id !== id));
+
+  // Optimistic — punguza count
+  const newOverview = {
+    ...previousOverview,
+    [type]: Math.max(0, (Number(previousOverview[type]) || 0) - 1),
+    total: Math.max(0, (Number(previousOverview.total) || 0) - 1),
+    lastUpdated: new Date().toISOString(),
+  };
+  saveOverview(newOverview);
+
+  return tryApi(
+    () => api.delete(`/trash/${type}/${id}/`),
+    {
+      onFail: () => {
+        setTrashItemsByType(type, previousItems);
+        saveOverview(previousOverview);
+      },
+    }
+  );
+}
+
+// ============================================================
+// EMPTY — by type
+// ============================================================
+export async function emptyTrashByTypeAsync(type) {
+  if (!type) return { ok: false, error: new Error("type inahitajika") };
+
+  const previousItems = getTrashItemsByType(type);
+  const previousOverview = getTrashOverview();
+
+  // Optimistic
+  setTrashItemsByType(type, []);
+  const newOverview = {
+    ...previousOverview,
+    [type]: 0,
+    total: Math.max(
+      0,
+      (Number(previousOverview.total) || 0) -
+        (Number(previousOverview[type]) || 0)
+    ),
+    lastUpdated: new Date().toISOString(),
+  };
+  saveOverview(newOverview);
+
+  return tryApi(
+    () => api.post(`/trash/${type}/empty/`, { confirm: true }),
+    {
+      onFail: () => {
+        setTrashItemsByType(type, previousItems);
+        saveOverview(previousOverview);
+      },
+    }
+  );
+}
+
+// ============================================================
+// EMPTY — all
+// ============================================================
+export async function emptyTrashAsync() {
+  const previousItems = readItems();
+  const previousOverview = getTrashOverview();
+
+  // Optimistic
+  saveItems({});
+  saveOverview({
+    ...SEED_OVERVIEW,
+    lastUpdated: new Date().toISOString(),
+  });
+
+  return tryApi(
+    () => api.post("/trash/empty/", { confirm: true }),
+    {
+      onFail: () => {
+        saveItems(previousItems);
+        saveOverview(previousOverview);
+      },
+    }
+  );
+}
+
+// ============================================================
+// HOOKS — Overview
 // ============================================================
 export function useTrashOverview() {
   const [overview, setOverview] = useState(() => getTrashOverview());
@@ -197,20 +407,47 @@ export function useTrashTotal() {
 
 export function useTrashBreakdown() {
   const overview = useTrashOverview();
-  return useMemo(() => {
-    return [
-      { key: "listings", label: { sw: "Listing", en: "Listings" }, count: overview.listings },
-      { key: "users", label: { sw: "Watumiaji", en: "Users" }, count: overview.users },
-      { key: "verifications", label: { sw: "Uthibitisho", en: "Verifications" }, count: overview.verifications },
-      { key: "tickets", label: { sw: "Tiketi", en: "Tickets" }, count: overview.tickets },
-      { key: "banners", label: { sw: "Banner", en: "Banners" }, count: overview.banners },
-      { key: "announcements", label: { sw: "Matangazo", en: "Announcements" }, count: overview.announcements },
-      { key: "deals", label: { sw: "Deals", en: "Deals" }, count: overview.deals },
-    ].filter((item) => item.count > 0);
-  }, [overview]);
+  return TRASH_TYPES.map((t) => ({
+    key: t.key,
+    label: t.label,
+    iconKey: t.iconKey,
+    color: t.color,
+    count: Number(overview[t.key]) || 0,
+  }));
 }
 
 export function useHasTrash() {
   const overview = useTrashOverview();
   return overview.total > 0;
+}
+
+// ============================================================
+// HOOKS — Items
+// ============================================================
+export function useTrashItems(type) {
+  const [items, setItems] = useState(() =>
+    type ? getTrashItemsByType(type) : []
+  );
+
+  useEffect(() => {
+    if (!type) {
+      setItems([]);
+      return;
+    }
+
+    // Fetch from API (with fallback)
+    fetchTrashItemsAsync(type).then((res) => {
+      if (res.ok) setItems(res.items);
+    });
+
+    const sync = () => setItems(getTrashItemsByType(type));
+    window.addEventListener("storage", sync);
+    window.addEventListener(UPDATE_EVENT, sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(UPDATE_EVENT, sync);
+    };
+  }, [type]);
+
+  return items;
 }
