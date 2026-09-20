@@ -24,6 +24,7 @@ export const PERMISSIONS = [
   { key: "system", label: { sw: "Mipangilio", en: "Settings" } },
   { key: "staff", label: { sw: "Wafanyakazi", en: "Staff" } },
   { key: "bundles", label: { sw: "Vifurushi vya Huduma", en: "Service Bundles" } },
+  { key: "trash", label: { sw: "Trash", en: "Trash" } }, // ✅ ONGEZWA
 ];
 
 export const DEFAULT_ROLES = [];
