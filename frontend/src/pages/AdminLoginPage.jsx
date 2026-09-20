@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { adminLoginAsync } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { ADMIN_PATH } from "../config/adminPath";
 
 const icons = {
   mail: (
@@ -98,7 +99,7 @@ export default function AdminLoginPage() {
     }
 
     // Mafanikio — tokens zimewekwa na user ni admin
-    navigate("/admin/dashboard");
+    navigate(`${ADMIN_PATH}/dashboard`);
   }
 
   const leftHeading = t("admin_panel_heading") || "Dhibiti SokoMkononi";
