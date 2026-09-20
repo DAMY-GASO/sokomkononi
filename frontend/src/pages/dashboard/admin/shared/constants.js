@@ -23,6 +23,7 @@ import {
   BookOpen,
   Megaphone,
   Calendar,
+  Trash2,
   Package,
 } from "lucide-react";
 import { NOTIFICATION_EVENTS } from "../../../../config/notificationsStore.js";
@@ -112,6 +113,9 @@ export const NAV = [
     label: { sw: "Kumbukumbu za Matendo", en: "Audit Logs" },
     icon: History,
   },
+  
+  { key: "trash", label: { sw: "Trash", en: "Trash" }, icon: Trash2 },
+  
   {
     key: "system",
     label: { sw: "Mipangilio ya Mfumo", en: "System Settings" },
