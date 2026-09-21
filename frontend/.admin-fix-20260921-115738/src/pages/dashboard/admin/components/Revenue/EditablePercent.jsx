@@ -1,17 +1,18 @@
 // ============================================================
 // EditablePercent.jsx
 // Asilimia inayoweza kuhaririwa — kwa Revenue section.
-// FIXED: onSave is awaited; shows spinner; keeps input on error.
+// Kipenseli kinaonekana wazi — msimamizi anaweza kuliona haraka.
+// Responsive: inafanya kazi kwenye grid-cols-3 ya simu.
 // ============================================================
+
 import React, { useState } from "react";
-import { Save, Pencil, X, Loader2 } from "lucide-react";
+import { Save, Pencil, X } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 
 export default function EditablePercent({ value, onSave }) {
   const safeValue = value ?? 0;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState((safeValue * 100).toString());
-  const [saving, setSaving] = useState(false);
 
   const startEditing = () => {
     setDraft((safeValue * 100).toString());
@@ -19,32 +20,22 @@ export default function EditablePercent({ value, onSave }) {
   };
 
   const handleChange = (e) => {
+    // Ruhusu digits na decimal moja tu
     const raw = e.target.value.replace(/[^0-9.]/g, "");
     const parts = raw.split(".");
     const cleaned =
-      parts.length > 1 ? `${parts[0]}.${parts.slice(1).join("")}` : parts[0];
+      parts.length > 1
+        ? `${parts[0]}.${parts.slice(1).join("")}`
+        : parts[0];
     setDraft(cleaned);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const num = Number(draft);
-    if (isNaN(num) || num < 0) {
-      setEditing(false);
-      return;
+    if (!isNaN(num) && num >= 0) {
+      onSave(num / 100);
     }
-    setSaving(true);
-    try {
-      const res = await onSave(num / 100);
-      if (res && typeof res === "object" && res.ok === false) {
-        setSaving(false);
-        return;
-      }
-      setEditing(false);
-    } catch (err) {
-      console.warn("[EditablePercent] save failed:", err);
-    } finally {
-      setSaving(false);
-    }
+    setEditing(false);
   };
 
   const handleCancel = () => {
@@ -52,6 +43,9 @@ export default function EditablePercent({ value, onSave }) {
     setEditing(false);
   };
 
+  // ============================================================
+  // EDITING MODE — input + % + save/cancel buttons
+  // ============================================================
   if (editing) {
     return (
       <div className="flex items-center gap-1.5 w-full min-w-0">
@@ -61,11 +55,10 @@ export default function EditablePercent({ value, onSave }) {
           value={draft}
           onChange={handleChange}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !saving) handleSave();
+            if (e.key === "Enter") handleSave();
             if (e.key === "Escape") handleCancel();
           }}
-          disabled={saving}
-          className="flex-1 min-w-0 text-sm font-semibold border-2 rounded-lg px-2.5 py-1.5 outline-none transition-colors disabled:opacity-50"
+          className="flex-1 min-w-0 text-sm font-semibold border-2 rounded-lg px-2.5 py-1.5 outline-none transition-colors"
           style={{
             borderColor: COLORS.gold,
             background: `${COLORS.gold}08`,
@@ -81,18 +74,16 @@ export default function EditablePercent({ value, onSave }) {
         </span>
         <button
           onClick={handleSave}
-          disabled={saving}
           style={{ background: COLORS.green, color: "white" }}
-          className="shrink-0 p-1.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="shrink-0 p-1.5 rounded-lg hover:opacity-90 transition-opacity"
           aria-label="Save"
         >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          <Save size={14} />
         </button>
         <button
           onClick={handleCancel}
-          disabled={saving}
           style={{ background: COLORS.sandLine, color: "var(--text-primary)" }}
-          className="shrink-0 p-1.5 rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50"
+          className="shrink-0 p-1.5 rounded-lg hover:opacity-80 transition-opacity"
           aria-label="Cancel"
         >
           <X size={14} />
@@ -101,11 +92,17 @@ export default function EditablePercent({ value, onSave }) {
     );
   }
 
+  // ============================================================
+  // DISPLAY MODE — asilimia + kipenseli kinachoonekana
+  // ============================================================
   return (
     <button
       onClick={startEditing}
       className="group flex items-center justify-between gap-2 w-full min-w-0 text-left rounded-lg border-2 px-2.5 py-1.5 transition-all hover:shadow-sm"
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{
+        borderColor: COLORS.sandLine,
+        background: "white",
+      }}
       title="Bofya kuhariri / Click to edit"
     >
       <span
@@ -116,7 +113,10 @@ export default function EditablePercent({ value, onSave }) {
       </span>
       <span
         className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
-        style={{ background: `${COLORS.gold}15`, color: COLORS.gold }}
+        style={{
+          background: `${COLORS.gold}15`,
+          color: COLORS.gold,
+        }}
       >
         <Pencil size={13} />
       </span>

@@ -1,6 +1,5 @@
 // ============================================================
 // systemSettingsStore.js — API-backed via /api/system-settings/
-// FIXED: useSubAdmins() now hydrates from API on mount.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -23,7 +22,7 @@ export const SEED_APP_STORE_LINKS = { play: "", appstore: "" };
 export const SEED_PLATFORM_POLICY = { listingLifetimeDays: 60 };
 
 // ============================================================
-// STORAGE FACTORY
+// STORAGE FACTORY (imebaki — hooks zinaitumia)
 // ============================================================
 function makeSlice(storageKey, updateEvent, seed) {
   function read() {
@@ -85,6 +84,7 @@ export function getWebhook(id) {
   return getWebhooks().find((w) => w.id === id) || null;
 }
 
+// ---------- ASYNC: addWebhookAsync ----------
 export async function addWebhookAsync(webhook) {
   if (!webhook?.event || !webhook?.url) {
     return { ok: false, error: new Error("event na url zinahitajika") };
@@ -104,6 +104,7 @@ export async function addWebhookAsync(webhook) {
       url: webhook.url,
       active: webhook.active !== false,
     });
+    // Backend inaweza kurudisha webhook kamili — tumia hiyo
     if (raw && raw.id) {
       const current = getWebhooks();
       webhooksSlice.save(current.map((w) => (w.id === optimistic.id ? raw : w)));
@@ -111,12 +112,13 @@ export async function addWebhookAsync(webhook) {
     }
     return { ok: true, webhook: optimistic };
   } catch (err) {
-    webhooksSlice.save(previous);
+    webhooksSlice.save(previous); // Rollback
     console.warn("[systemSettings.webhooks] add failed:", err);
     return { ok: false, error: err };
   }
 }
 
+// ---------- ASYNC: removeWebhookAsync ----------
 export async function removeWebhookAsync(id) {
   const previous = getWebhooks();
   webhooksSlice.save(previous.filter((w) => w.id !== id));
@@ -127,12 +129,13 @@ export async function removeWebhookAsync(id) {
     await api.delete(`/system-settings/webhooks/${id}/`);
     return { ok: true };
   } catch (err) {
-    webhooksSlice.save(previous);
+    webhooksSlice.save(previous); // Rollback
     console.warn("[systemSettings.webhooks] remove failed:", err);
     return { ok: false, error: err };
   }
 }
 
+// ---------- ASYNC: toggleWebhookAsync ----------
 export async function toggleWebhookAsync(id) {
   const previous = getWebhooks();
   const target = previous.find((w) => w.id === id);
@@ -147,12 +150,13 @@ export async function toggleWebhookAsync(id) {
     await api.post(`/system-settings/webhooks/${id}/toggle/`, {});
     return { ok: true, active: newActive };
   } catch (err) {
-    webhooksSlice.save(previous);
+    webhooksSlice.save(previous); // Rollback
     console.warn("[systemSettings.webhooks] toggle failed:", err);
     return { ok: false, error: err };
   }
 }
 
+// ---------- HYDRATE ----------
 export async function hydrateWebhooksFromApi() {
   try {
     const data = await api.get("/system-settings/webhooks/");
@@ -165,17 +169,16 @@ export async function hydrateWebhooksFromApi() {
   }
 }
 
+// ---------- LEGACY SYNC (deprecated) ----------
 /** @deprecated Use addWebhookAsync */
 export function addWebhook(webhook) {
   const next = [...getWebhooks(), webhook];
   webhooksSlice.save(next);
-  api
-    .post("/system-settings/webhooks/", {
-      event: webhook.event,
-      url: webhook.url,
-      active: webhook.active !== false,
-    })
-    .catch((err) => console.warn("[systemSettings.webhooks] add silent fail:", err));
+  api.post("/system-settings/webhooks/", {
+    event: webhook.event,
+    url: webhook.url,
+    active: webhook.active !== false,
+  }).catch((err) => console.warn("[systemSettings.webhooks] add silent fail:", err));
   return next;
 }
 
@@ -184,8 +187,7 @@ export function removeWebhook(id) {
   const next = getWebhooks().filter((w) => w.id !== id);
   webhooksSlice.save(next);
   if (typeof id === "number") {
-    api
-      .delete(`/system-settings/webhooks/${id}/`)
+    api.delete(`/system-settings/webhooks/${id}/`)
       .catch((err) => console.warn("[systemSettings.webhooks] remove silent fail:", err));
   }
   return next;
@@ -196,13 +198,13 @@ export function toggleWebhook(id) {
   const next = getWebhooks().map((w) => (w.id === id ? { ...w, active: !w.active } : w));
   webhooksSlice.save(next);
   if (typeof id === "number") {
-    api
-      .post(`/system-settings/webhooks/${id}/toggle/`, {})
+    api.post(`/system-settings/webhooks/${id}/toggle/`, {})
       .catch((err) => console.warn("[systemSettings.webhooks] toggle silent fail:", err));
   }
   return next;
 }
 
+// ---------- HOOK ----------
 export function useWebhooks() {
   return webhooksSlice.useSlice(hydrateWebhooksFromApi);
 }
@@ -233,6 +235,7 @@ export async function addSubAdminAsync(subAdmin) {
   const optimistic = { id: `local_${Date.now()}`, ...subAdmin };
   subAdminsSlice.save([...previous, optimistic]);
 
+  // Kama backend ina endpoint tofauti (mfano /rbac/staff/), badilisha hapa
   try {
     const raw = await api.post("/system-settings/sub-admins/", subAdmin);
     if (raw?.id) {
@@ -242,7 +245,7 @@ export async function addSubAdminAsync(subAdmin) {
     }
     return { ok: true, subAdmin: optimistic };
   } catch (err) {
-    subAdminsSlice.save(previous);
+    subAdminsSlice.save(previous); // Rollback
     console.warn("[systemSettings.subAdmins] add failed:", err);
     return { ok: false, error: err };
   }
@@ -258,22 +261,9 @@ export async function removeSubAdminAsync(id) {
     await api.delete(`/system-settings/sub-admins/${id}/`);
     return { ok: true };
   } catch (err) {
-    subAdminsSlice.save(previous);
+    subAdminsSlice.save(previous); // Rollback
     console.warn("[systemSettings.subAdmins] remove failed:", err);
     return { ok: false, error: err };
-  }
-}
-
-// ⬇️ FIX: hydrate sub-admins from API on mount
-export async function hydrateSubAdminsFromApi() {
-  try {
-    const data = await api.get("/system-settings/sub-admins/");
-    const list = Array.isArray(data) ? data : data?.results || [];
-    subAdminsSlice.save(list);
-    return { source: "api", count: list.length };
-  } catch (err) {
-    console.warn("[systemSettings.subAdmins] hydrate failed:", err);
-    return { source: "error", count: getSubAdmins().length };
   }
 }
 
@@ -289,15 +279,14 @@ export function removeSubAdmin(id) {
   const next = getSubAdmins().filter((s) => s.id !== id);
   subAdminsSlice.save(next);
   if (typeof id === "number") {
-    api
-      .delete(`/system-settings/sub-admins/${id}/`)
+    api.delete(`/system-settings/sub-admins/${id}/`)
       .catch((err) => console.warn("[systemSettings.subAdmins] remove silent fail:", err));
   }
   return next;
 }
 
 export function useSubAdmins() {
-  return subAdminsSlice.useSlice(hydrateSubAdminsFromApi);
+  return subAdminsSlice.useSlice();
 }
 
 // ============================================================
@@ -324,13 +313,14 @@ export async function saveAppStoreLinksAsync(links) {
     appstore: links.appstore || "",
   };
 
+  // Optimistic
   appStoreLinksSlice.save(next);
 
   try {
     await api.post("/system-settings/app-store-links/", next);
     return { ok: true, links: next };
   } catch (err) {
-    appStoreLinksSlice.save(previous);
+    appStoreLinksSlice.save(previous); // Rollback
     console.warn("[systemSettings.appStoreLinks] save failed:", err);
     return { ok: false, error: err };
   }
@@ -377,6 +367,7 @@ export async function savePlatformPolicyAsync(policy) {
   const previous = getPlatformPolicy();
   const next = { ...previous, ...policy };
 
+  // Optimistic
   platformPolicySlice.save(next);
 
   try {
@@ -385,7 +376,7 @@ export async function savePlatformPolicyAsync(policy) {
     });
     return { ok: true, policy: next };
   } catch (err) {
-    platformPolicySlice.save(previous);
+    platformPolicySlice.save(previous); // Rollback
     console.warn("[systemSettings.platformPolicy] save failed:", err);
     return { ok: false, error: err };
   }
@@ -405,7 +396,7 @@ export async function updatePlatformPolicyAsync(patch) {
     await api.post("/system-settings/platform-policy/", payload);
     return { ok: true, policy: next };
   } catch (err) {
-    platformPolicySlice.save(previous);
+    platformPolicySlice.save(previous); // Rollback
     console.warn("[systemSettings.platformPolicy] update failed:", err);
     return { ok: false, error: err };
   }
@@ -442,18 +433,16 @@ export function usePlatformPolicy() {
 // 5. BULK — load settings zote kwa wakati mmoja
 // ============================================================
 export async function hydrateAllSystemSettings() {
-  const [webhooks, appStore, policy, subAdmins] = await Promise.all([
+  const [webhooks, appStore, policy] = await Promise.all([
     hydrateWebhooksFromApi(),
     hydrateAppStoreLinksFromApi(),
     hydratePlatformPolicyFromApi(),
-    hydrateSubAdminsFromApi(),
   ]);
 
   return {
     webhooks,
     appStore,
     policy,
-    subAdmins,
     allOk:
       webhooks.source === "api" &&
       appStore.source === "api" &&

@@ -1,42 +1,74 @@
 // ============================================================
 // boostPackagesStore.js
 // CHANZO KIMOJA CHA UKWELI kwa bei za Boost Packages.
-// Read: /api/boosting/packages/ (public)
-// Update: PATCH /api/boosting/packages/{id}/  (admin)
+//
+// BACKEND: /api/boosting/packages/ (public GET)
+//          /api/boosting/ (seller CRUD)
+//          /api/boosting/{id}/pay/ (mark paid)
+//          /api/boosting/{id}/activate/ (activate)
+//          /api/boosting/{id}/cancel/ (cancel)
 // ============================================================
+
 import { useEffect, useState } from "react";
 import { boostingApi } from "../api/boosting.js";
-import { boostPackagesApi } from "../api/boostPackages.js";
 
 const STORAGE_KEY = "sokomkononi_boost_packages_v1";
 const UPDATE_EVENT = "sokomkononi:boost-packages-updated";
 
+// ============================================================
+// SEED_BOOST_PACKAGES — fallback kama API haipatikani
+// ============================================================
 export const SEED_BOOST_PACKAGES = [
   {
     key: "basic",
     label: { sw: "Basic Boost", en: "Basic Boost" },
-    days: 3, price: 5000,
+    days: 3,
+    price: 5000,
     benefits: {
-      sw: ["Inapanda juu ya matokeo ya utafutaji", "Badge ya 'Boosted' kwenye tangazo"],
-      en: ["Appears above search results", "'Boosted' badge on the listing"],
+      sw: [
+        "Inapanda juu ya matokeo ya utafutaji",
+        "Badge ya 'Boosted' kwenye tangazo",
+      ],
+      en: [
+        "Appears above search results",
+        "'Boosted' badge on the listing",
+      ],
     },
   },
   {
     key: "featured",
     label: { sw: "Featured Boost", en: "Featured Boost" },
-    days: 7, price: 12000,
+    days: 7,
+    price: 12000,
     benefits: {
-      sw: ["Kila kitu cha Basic Boost", "Inaonekana kwenye sehemu ya 'Featured' ukurasa wa mwanzo", "Kipaumbele kwenye matokeo ya category yako"],
-      en: ["Everything in Basic Boost", "Appears in the 'Featured' section of the homepage", "Priority in your category's search results"],
+      sw: [
+        "Kila kitu cha Basic Boost",
+        "Inaonekana kwenye sehemu ya 'Featured' ukurasa wa mwanzo",
+        "Kipaumbele kwenye matokeo ya category yako",
+      ],
+      en: [
+        "Everything in Basic Boost",
+        "Appears in the 'Featured' section of the homepage",
+        "Priority in your category's search results",
+      ],
     },
   },
   {
     key: "premium",
     label: { sw: "Premium Boost", en: "Premium Boost" },
-    days: 14, price: 20000,
+    days: 14,
+    price: 20000,
     benefits: {
-      sw: ["Kila kitu cha Featured Boost", "Inaonekana kwenye 'Featured' kwa muda mrefu zaidi", "Ripoti ya views/inquiries ya kina baada ya kila wiki"],
-      en: ["Everything in Featured Boost", "Appears in 'Featured' for longer", "Detailed views/inquiries report every week"],
+      sw: [
+        "Kila kitu cha Featured Boost",
+        "Inaonekana kwenye 'Featured' kwa muda mrefu zaidi",
+        "Ripoti ya views/inquiries ya kina baada ya kila wiki",
+      ],
+      en: [
+        "Everything in Featured Boost",
+        "Appears in 'Featured' for longer",
+        "Detailed views/inquiries report every week",
+      ],
     },
   },
 ];
@@ -54,7 +86,9 @@ function readFromStorage() {
   }
 }
 
-export function getBoostPackages() { return readFromStorage(); }
+export function getBoostPackages() {
+  return readFromStorage();
+}
 
 export function saveBoostPackages(list) {
   if (typeof window === "undefined") return;
@@ -66,11 +100,24 @@ export function getBoostPackage(key) {
   return getBoostPackages().find((p) => p.key === key);
 }
 
+export function updateBoostPackagePrice(key, price) {
+  const current = getBoostPackages();
+  const next = current.map((p) =>
+    p.key === key ? { ...p, price: Number(price) } : p
+  );
+  saveBoostPackages(next);
+  return next;
+}
+
+// ============================================================
+// API → local shape normalizer
+// ============================================================
 function normalizePackageFromApi(raw) {
   if (!raw) return null;
-  const slug = (raw.code || raw.name || "")
-    .toString().toLowerCase()
-    .replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+  const slug = (raw.name || "")
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
   const days = Math.round((raw.duration_hours || 0) / 24) || 1;
   return {
     id: raw.id,
@@ -84,11 +131,16 @@ function normalizePackageFromApi(raw) {
   };
 }
 
+// ============================================================
+// HYDRATE FROM API
+// ============================================================
 export async function hydrateBoostPackagesFromApi() {
   try {
     const data = await boostingApi.packages({ page_size: 100 });
     const rawList = Array.isArray(data) ? data : data?.results || [];
-    if (!rawList.length) return { source: "seed", count: getBoostPackages().length };
+    if (!rawList.length) {
+      return { source: "seed", count: getBoostPackages().length };
+    }
     const normalized = rawList.map(normalizePackageFromApi).filter(Boolean);
     saveBoostPackages(normalized);
     return { source: "api", count: normalized.length };
@@ -99,49 +151,13 @@ export async function hydrateBoostPackagesFromApi() {
 }
 
 // ============================================================
-// ASYNC UPDATE — admin price editor
-// ============================================================
-export async function updateBoostPackagePriceAsync(key, price) {
-  const numericPrice = Number(price);
-  if (!Number.isFinite(numericPrice) || numericPrice < 0) {
-    return { ok: false, error: new Error("Price must be a positive number") };
-  }
-
-  const previous = getBoostPackages();
-  const target = previous.find((p) => p.key === key);
-  if (!target) return { ok: false, error: new Error(`Package "${key}" not found`) };
-
-  const next = previous.map((p) => (p.key === key ? { ...p, price: numericPrice } : p));
-  saveBoostPackages(next);
-
-  // Local-only package (no backend id yet)
-  if (typeof target.id !== "number") {
-    return { ok: true, warning: "local_only", packages: next };
-  }
-
-  try {
-    await boostPackagesApi.update(target.id, { price: numericPrice });
-    return { ok: true, packages: next };
-  } catch (err) {
-    saveBoostPackages(previous);
-    console.warn("[boostPackagesStore] updatePrice failed:", err);
-    return { ok: false, error: err };
-  }
-}
-
-/** @deprecated Use updateBoostPackagePriceAsync */
-export function updateBoostPackagePrice(key, price) {
-  const current = getBoostPackages();
-  const next = current.map((p) => (p.key === key ? { ...p, price: Number(price) } : p));
-  saveBoostPackages(next);
-  return next;
-}
-
-// ============================================================
 // ASYNC ACTIONS — backend-backed
 // ============================================================
-export async function createBoostAsync({ listingId, packageId }) {
-  const boost = await boostingApi.create({ listing: listingId, package: packageId });
+export async function createBoostAsync({ listingId, packageId, context }) {
+  const boost = await boostingApi.create({
+    listing: listingId,
+    package: packageId,
+  });
   window.dispatchEvent(new Event(UPDATE_EVENT));
   return boost;
 }
@@ -179,8 +195,11 @@ export async function fetchMyBoostsAsync() {
 // ============================================================
 export function useBoostPackages() {
   const [packages, setPackages] = useState(() => getBoostPackages());
+
   useEffect(() => {
+    // Hydrate once on mount
     hydrateBoostPackagesFromApi();
+
     const sync = () => setPackages(getBoostPackages());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -189,5 +208,6 @@ export function useBoostPackages() {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, []);
+
   return packages;
 }

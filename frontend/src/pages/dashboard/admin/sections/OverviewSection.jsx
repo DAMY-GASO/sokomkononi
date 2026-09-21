@@ -1,11 +1,9 @@
 // ============================================================
 // OverviewSection.jsx
 // Muhtasari wa mfumo — stats + live transactions.
-// Bilingual (Kiswahili + English).
-// Mobile-responsive.
+// FIXED: platform-wide revenue via /finance/dashboard/ (admin).
 // ============================================================
-
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import {
   Users,
   Home,
@@ -28,16 +26,14 @@ import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useUsers } from "../../../../config/usersStore.js";
-import { useListings } from "../../../../config/listingsStore.js";
-import { useDeals } from "../../../../config/dealsStore.js";
 import {
-  useTransactions,
-  useMyTransactionsAggregate,
-} from "../../../../config/transactionsStore.js";
+  useListings,
+  fetchPendingListingsAsync,
+} from "../../../../config/listingsStore.js";
+import { useDeals } from "../../../../config/dealsStore.js";
+import { useTransactions } from "../../../../config/transactionsStore.js";
+import { financeApi } from "../../../../api/finance.js";
 
-// Fee types zinazohesabika kama "Mapato ya SokoMkononi" (platform revenue),
-// kulingana na useMyTransactionsAggregate() kwenye transactionsStore.js —
-// tunatumia ufafanuzi uleule hapa kwa graph ili takwimu zilingane.
 const PLATFORM_FEE_TYPES = [
   "listing_fee",
   "reservation",
@@ -45,8 +41,6 @@ const PLATFORM_FEE_TYPES = [
   "leading",
   "advertisement",
 ];
-
-// Siku ngapi nyuma tuite mtumiaji "new registration".
 const NEW_REGISTRATION_WINDOW_DAYS = 7;
 
 export default function OverviewSection({ onNavigate }) {
@@ -55,32 +49,51 @@ export default function OverviewSection({ onNavigate }) {
   const listings = useListings();
   const deals = useDeals();
   const transactions = useTransactions();
-  const aggregate = useMyTransactionsAggregate();
+
+  const [platformRevenue, setPlatformRevenue] = useState(null);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // ── Fetch admin dashboard revenue ────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    financeApi
+      .dashboard("all")
+      .then((data) => {
+        if (cancelled) return;
+        const rev =
+          data?.total_revenue ??
+          data?.revenue?.total ??
+          data?.totalRevenue ??
+          null;
+        if (rev != null) setPlatformRevenue(Number(rev) || 0);
+      })
+      .catch(() => {
+        /* fallback to local sum below */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ── Fetch pending listings count ─────────────────────────────
+  useEffect(() => {
+    fetchPendingListingsAsync().then((res) => {
+      if (res.ok) setPendingCount((res.listings || []).length);
+    });
+  }, []);
 
   const totalUsers = users.length;
-
-  // Active = si "suspended". Watumiaji wasio na status ya wazi
-  // wanahesabiwa kama active (default salama).
   const activeBuyers = useMemo(
     () =>
-      users.filter(
-        (u) => u.role === "Buyer" && u.status !== "suspended"
-      ).length,
+      users.filter((u) => u.role === "Buyer" && u.status !== "suspended").length,
     [users]
   );
   const activeSellers = useMemo(
     () =>
-      users.filter(
-        (u) => u.role === "Seller" && u.status !== "suspended"
-      ).length,
+      users.filter((u) => u.role === "Seller" && u.status !== "suspended").length,
     [users]
   );
 
-  // New registrations — kwa kutumia u.joined. Field hii inaonekana
-  // UserManagementSection.jsx kama tarehe ya kujiunga, lakini format
-  // yake halisi (ISO au maandishi tayari) haijulikani kwa hakika, hivyo
-  // tunajaribu ku-parse kwa uangalifu (isNaN check) ili isivunje UI
-  // kama format si Date-parseable.
   const newRegistrations = useMemo(() => {
     const cutoff = Date.now() - NEW_REGISTRATION_WINDOW_DAYS * 86400000;
     return users.filter((u) => {
@@ -90,9 +103,19 @@ export default function OverviewSection({ onNavigate }) {
   }, [users]);
 
   const totalListings = listings.length;
-  const pendingListings = listings.filter((l) => l.status === "in_review").length;
 
-  const totalRevenue = aggregate.revenue;
+  const localRevenue = useMemo(
+    () =>
+      transactions
+        .filter(
+          (t) =>
+            t.status === "completed" && PLATFORM_FEE_TYPES.includes(t.type)
+        )
+        .reduce((s, t) => s + (t.amount || 0), 0),
+    [transactions]
+  );
+  const totalRevenue =
+    platformRevenue != null ? platformRevenue : localRevenue;
 
   const pendingPayments = useMemo(
     () => transactions.filter((t) => t.status === "pending").length,
@@ -126,10 +149,6 @@ export default function OverviewSection({ onNavigate }) {
   const formatTZS = (amount) =>
     "TZS " + Math.round(amount || 0).toLocaleString("en-US");
 
-  // ============================================================
-  // GRAPH — mapato ya siku 7 zilizopita (fee types tu, sio
-  // mauzo ya seller, ili kulingana na "Mapato ya SokoMkononi").
-  // ============================================================
   const revenueByDay = useMemo(() => {
     const days = [];
     for (let i = NEW_REGISTRATION_WINDOW_DAYS - 1; i >= 0; i--) {
@@ -145,17 +164,13 @@ export default function OverviewSection({ onNavigate }) {
       });
     }
     const byKey = Object.fromEntries(days.map((d) => [d.key, d]));
-
     transactions.forEach((t) => {
-      if (t.status !== "completed" || !PLATFORM_FEE_TYPES.includes(t.type)) {
-        return;
-      }
+      if (t.status !== "completed" || !PLATFORM_FEE_TYPES.includes(t.type)) return;
       const tDate = new Date(t.at);
       if (Number.isNaN(tDate.getTime())) return;
       const key = tDate.toISOString().slice(0, 10);
       if (byKey[key]) byKey[key].total += t.amount || 0;
     });
-
     return days;
   }, [transactions, lang]);
 
@@ -166,7 +181,6 @@ export default function OverviewSection({ onNavigate }) {
       id: "users",
       label: lang === "sw" ? "Watumiaji Wote" : "Total Users",
       value: totalUsers.toLocaleString(),
-      change: "",
       icon: Users,
       color: COLORS.gold,
     },
@@ -174,7 +188,6 @@ export default function OverviewSection({ onNavigate }) {
       id: "activeBuyers",
       label: lang === "sw" ? "Wanunuzi Hai" : "Active Buyers",
       value: activeBuyers.toLocaleString(),
-      change: "",
       icon: UserCheck,
       color: COLORS.green,
     },
@@ -182,7 +195,6 @@ export default function OverviewSection({ onNavigate }) {
       id: "activeSellers",
       label: lang === "sw" ? "Wauzaji Hai" : "Active Sellers",
       value: activeSellers.toLocaleString(),
-      change: "",
       icon: Store,
       color: "#2563EB",
     },
@@ -190,15 +202,13 @@ export default function OverviewSection({ onNavigate }) {
       id: "listings",
       label: lang === "sw" ? "Mali Zote" : "Total Listings",
       value: totalListings.toLocaleString(),
-      change: "",
       icon: Home,
       color: COLORS.green,
     },
     {
       id: "pendingListings",
       label: lang === "sw" ? "Mali Zinazosubiri" : "Pending Listings",
-      value: pendingListings.toLocaleString(),
-      change: "",
+      value: pendingCount.toLocaleString(),
       icon: ClipboardList,
       color: "#D97706",
     },
@@ -206,7 +216,6 @@ export default function OverviewSection({ onNavigate }) {
       id: "activeDeals",
       label: lang === "sw" ? "Deals Hai" : "Active Deals",
       value: activeDeals.length.toLocaleString(),
-      change: "",
       icon: ShoppingBag,
       color: "#2563EB",
     },
@@ -214,7 +223,6 @@ export default function OverviewSection({ onNavigate }) {
       id: "completedDeals",
       label: lang === "sw" ? "Deals Zilizokamilika" : "Completed Deals",
       value: completedDeals.toLocaleString(),
-      change: "",
       icon: CheckCircle2,
       color: COLORS.green,
     },
@@ -222,7 +230,6 @@ export default function OverviewSection({ onNavigate }) {
       id: "revenue",
       label: lang === "sw" ? "Mapato ya SokoMkononi" : "SokoMkononi Revenue",
       value: formatTZS(totalRevenue),
-      change: "",
       icon: Wallet,
       color: COLORS.rust,
     },
@@ -230,7 +237,6 @@ export default function OverviewSection({ onNavigate }) {
       id: "pendingPayments",
       label: lang === "sw" ? "Malipo Yanayosubiri" : "Pending Payments",
       value: pendingPayments.toLocaleString(),
-      change: "",
       icon: CreditCard,
       color: "#D97706",
     },
@@ -238,7 +244,6 @@ export default function OverviewSection({ onNavigate }) {
       id: "disputes",
       label: lang === "sw" ? "Migogoro" : "Disputes",
       value: disputes.toLocaleString(),
-      change: "",
       icon: AlertTriangle,
       color: "#DC2626",
     },
@@ -249,7 +254,6 @@ export default function OverviewSection({ onNavigate }) {
           ? `Usajili Mpya (Siku ${NEW_REGISTRATION_WINDOW_DAYS})`
           : `New Registrations (${NEW_REGISTRATION_WINDOW_DAYS}d)`,
       value: newRegistrations.toLocaleString(),
-      change: "",
       icon: UserPlus,
       color: COLORS.gold,
     },
@@ -258,7 +262,9 @@ export default function OverviewSection({ onNavigate }) {
   return (
     <>
       <SectionHeader
-        title={lang === "sw" ? "Muhtasari & Uchanganuzi" : "Overview & Analytics"}
+        title={
+          lang === "sw" ? "Muhtasari & Uchanganuzi" : "Overview & Analytics"
+        }
         subtitle={
           lang === "sw"
             ? "Muhtasari wa mfumo mzima wa SokoMkononi"
@@ -266,14 +272,12 @@ export default function OverviewSection({ onNavigate }) {
         }
       />
 
-      {/* STATS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {stats.map((stat) => (
           <StatCard key={stat.id} {...stat} />
         ))}
       </div>
 
-      {/* REVENUE GRAPH — siku 7 zilizopita */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
         <h3 className="font-semibold text-primary flex items-center gap-2 text-sm sm:text-base mb-4">
           <TrendingUp size={16} color={COLORS.gold} className="shrink-0" />
@@ -281,7 +285,6 @@ export default function OverviewSection({ onNavigate }) {
             ? "Mapato ya SokoMkononi — Siku 7 Zilizopita"
             : "SokoMkononi Revenue — Last 7 Days"}
         </h3>
-
         <div className="flex items-end gap-2 sm:gap-3 h-36 sm:h-44">
           {revenueByDay.map((d) => {
             const heightPct = Math.max((d.total / maxDayRevenue) * 100, 2);
@@ -307,7 +310,6 @@ export default function OverviewSection({ onNavigate }) {
         </div>
       </div>
 
-      {/* LIVE TRANSACTIONS IN PROGRESS */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
         <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
           <h3 className="font-semibold text-primary flex items-center gap-2 text-sm sm:text-base">
@@ -325,7 +327,6 @@ export default function OverviewSection({ onNavigate }) {
             <ArrowRight size={12} />
           </button>
         </div>
-
         {activeDeals.length === 0 ? (
           <p className="text-sm text-muted text-center py-6">
             {lang === "sw"
@@ -340,9 +341,7 @@ export default function OverviewSection({ onNavigate }) {
                 className="border rounded-lg px-3 py-3"
                 style={{ borderColor: COLORS.sandLine }}
               >
-                {/* ===== MOBILE LAYOUT (sm:hidden) ===== */}
                 <div className="sm:hidden">
-                  {/* Title + Status */}
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <p className="text-sm font-semibold text-primary min-w-0 flex-1 line-clamp-2">
                       {d.listingTitle}
@@ -351,11 +350,9 @@ export default function OverviewSection({ onNavigate }) {
                       <StatusBadge status={d.status} lang={lang} />
                     </div>
                   </div>
-                  {/* Buyer ↔ Seller */}
                   <p className="text-xs text-secondary truncate mb-2">
                     {d.buyerName} ← → {d.sellerName}
                   </p>
-                  {/* Price */}
                   <p
                     className="text-sm font-bold"
                     style={{ color: COLORS.rust }}
@@ -363,8 +360,6 @@ export default function OverviewSection({ onNavigate }) {
                     {formatTZS(d.currentOffer ?? d.askingPrice)}
                   </p>
                 </div>
-
-                {/* ===== DESKTOP LAYOUT (hidden sm:flex) ===== */}
                 <div className="hidden sm:flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-primary truncate">

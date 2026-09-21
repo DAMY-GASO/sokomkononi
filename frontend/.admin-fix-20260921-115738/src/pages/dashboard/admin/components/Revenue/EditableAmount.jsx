@@ -1,12 +1,15 @@
 // ============================================================
 // EditableAmount.jsx
 // Kiasi kinachoweza kuhaririwa — kwa Revenue section.
-// FIXED: onSave is awaited; shows spinner; keeps input on error.
+// Kipenseli kinaonekana wazi — msimamizi anaweza kuliona haraka.
+// Comma inajiweka automatically mtumiaji anapoandika.
 // ============================================================
+
 import React, { useState } from "react";
-import { Save, Pencil, X, Loader2 } from "lucide-react";
+import { Save, Pencil, X } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 
+// Format namba na comma: 8500000 -> "8,500,000"
 function formatWithCommas(value) {
   if (value === "" || value === null || value === undefined) return "";
   const digits = String(value).replace(/[^0-9]/g, "");
@@ -14,6 +17,7 @@ function formatWithCommas(value) {
   return Number(digits).toLocaleString("en-US");
 }
 
+// Toa comma na kurudi namba: "8,500,000" -> 8500000
 function parseNumber(value) {
   const digits = String(value).replace(/[^0-9]/g, "");
   return digits ? parseInt(digits, 10) : 0;
@@ -22,7 +26,6 @@ function parseNumber(value) {
 export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
-  const [saving, setSaving] = useState(false);
 
   const safeValue = value ?? 0;
 
@@ -36,21 +39,10 @@ export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
     setDraft(raw ? Number(raw).toLocaleString("en-US") : "");
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const num = parseNumber(draft);
-    setSaving(true);
-    try {
-      const res = await onSave(num);
-      if (res && typeof res === "object" && res.ok === false) {
-        setSaving(false);
-        return;
-      }
-      setEditing(false);
-    } catch (err) {
-      console.warn("[EditableAmount] save failed:", err);
-    } finally {
-      setSaving(false);
-    }
+    onSave(num);
+    setEditing(false);
   };
 
   const handleCancel = () => {
@@ -58,6 +50,9 @@ export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
     setEditing(false);
   };
 
+  // ============================================================
+  // EDITING MODE — input + save/cancel buttons
+  // ============================================================
   if (editing) {
     return (
       <div className="flex items-center gap-1.5 w-full min-w-0">
@@ -67,11 +62,10 @@ export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
           value={draft}
           onChange={handleChange}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !saving) handleSave();
+            if (e.key === "Enter") handleSave();
             if (e.key === "Escape") handleCancel();
           }}
-          disabled={saving}
-          className="flex-1 min-w-0 text-sm font-semibold border-2 rounded-lg px-2.5 py-1.5 outline-none transition-colors disabled:opacity-50"
+          className="flex-1 min-w-0 text-sm font-semibold border-2 rounded-lg px-2.5 py-1.5 outline-none transition-colors"
           style={{
             borderColor: COLORS.gold,
             background: `${COLORS.gold}08`,
@@ -81,18 +75,16 @@ export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
         />
         <button
           onClick={handleSave}
-          disabled={saving}
           style={{ background: COLORS.green, color: "white" }}
-          className="shrink-0 p-1.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="shrink-0 p-1.5 rounded-lg hover:opacity-90 transition-opacity"
           aria-label="Save"
         >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          <Save size={14} />
         </button>
         <button
           onClick={handleCancel}
-          disabled={saving}
           style={{ background: COLORS.sandLine, color: "var(--text-primary)" }}
-          className="shrink-0 p-1.5 rounded-lg hover:opacity-80 transition-opacity disabled:opacity-50"
+          className="shrink-0 p-1.5 rounded-lg hover:opacity-80 transition-opacity"
           aria-label="Cancel"
         >
           <X size={14} />
@@ -101,11 +93,17 @@ export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
     );
   }
 
+  // ============================================================
+  // DISPLAY MODE — kiasi + kipenseli kinachoonekana
+  // ============================================================
   return (
     <button
       onClick={startEditing}
       className="group flex items-center justify-between gap-2 w-full min-w-0 text-left rounded-lg border-2 px-2.5 py-1.5 transition-all hover:shadow-sm"
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{
+        borderColor: COLORS.sandLine,
+        background: "white",
+      }}
       title="Bofya kuhariri / Click to edit"
     >
       <span
@@ -117,7 +115,10 @@ export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
       </span>
       <span
         className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
-        style={{ background: `${COLORS.gold}15`, color: COLORS.gold }}
+        style={{
+          background: `${COLORS.gold}15`,
+          color: COLORS.gold,
+        }}
       >
         <Pencil size={13} />
       </span>

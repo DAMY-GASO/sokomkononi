@@ -1,22 +1,12 @@
 // ============================================================
 // AdminBundles.jsx
 // Admin anaweza kuongeza/kubadilisha/kufuta bundles.
-// FIXED: uses async CRUD (API-backed) — no more local-only writes.
+// Bilingual + mobile-responsive + ASYNC CRUD (API-backed).
 // ============================================================
 import React, { useState } from "react";
 import {
-  Plus,
-  Pencil,
-  Trash2,
-  Check,
-  X,
-  Package,
-  Eye,
-  EyeOff,
-  Search,
-  Loader2,
+  Plus, Pencil, Trash2, Check, X, Package, Eye, EyeOff, Search, Loader2,
 } from "lucide-react";
-
 import { COLORS, formatTZS } from "./dashboard/components/shared";
 import {
   useBundles,
@@ -84,20 +74,15 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
     e.preventDefault();
 
     const missing = [];
-    if (!form.code?.trim() && !form.id?.trim())
-      missing.push(t("Kitambulisho (ID)", "Identifier (ID)"));
+    if (!form.code?.trim() && !form.id?.trim()) missing.push(t("Kitambulisho (ID)", "Identifier (ID)"));
     if (!form.name?.sw?.trim()) missing.push(t("Jina (SW)", "Name (SW)"));
     if (!form.name?.en?.trim()) missing.push(t("Jina (EN)", "Name (EN)"));
-    if (!form.description?.sw?.trim())
-      missing.push(t("Maelezo (SW)", "Description (SW)"));
-    if (!form.description?.en?.trim())
-      missing.push(t("Maelezo (EN)", "Description (EN)"));
+    if (!form.description?.sw?.trim()) missing.push(t("Maelezo (SW)", "Description (SW)"));
+    if (!form.description?.en?.trim()) missing.push(t("Maelezo (EN)", "Description (EN)"));
     if (!form.price) missing.push(t("Bei (TZS)", "Price (TZS)"));
 
     if (missing.length > 0) {
-      setLocalError(
-        t("Jaza sehemu hizi: ", "Fill in these fields: ") + missing.join(", ")
-      );
+      setLocalError(t("Jaza sehemu hizi: ", "Fill in these fields: ") + missing.join(", "));
       return;
     }
 
@@ -105,8 +90,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
     onSave(form);
   };
 
-  const updateField = (key, value) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const updateField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const displayError = localError || error;
 
@@ -118,17 +102,10 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
       >
         <div className="flex items-center justify-between mb-4 sticky top-0 bg-white pb-2 border-b border-gray-100">
           <h3 className="font-bold text-primary text-sm sm:text-base">
-            {bundle
-              ? t("Hariri Kifurushi", "Edit Bundle")
-              : t("Ongeza Kifurushi", "Add Bundle")}
+            {bundle ? t("Hariri Kifurushi", "Edit Bundle") : t("Ongeza Kifurushi", "Add Bundle")}
           </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="p-1 text-muted hover:text-secondary disabled:opacity-50"
-            aria-label={t("Funga", "Close")}
-          >
+          <button type="button" onClick={onClose} disabled={saving}
+            className="p-1 text-muted hover:text-secondary disabled:opacity-50" aria-label={t("Funga", "Close")}>
             <X size={20} />
           </button>
         </div>
@@ -136,8 +113,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
         <div className="space-y-3">
           <div>
             <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
-              {t("Kitambulisho (ID)", "Identifier (ID)")}{" "}
-              <span className="text-[#C1502E]">*</span>
+              {t("Kitambulisho (ID)", "Identifier (ID)")} <span className="text-[#C1502E]">*</span>
             </label>
             <input
               value={form.code || form.id || ""}
@@ -159,9 +135,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
             >
               {Object.entries(TYPE_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {pickLang(label, lang)}
-                </option>
+                <option key={key} value={key}>{pickLang(label, lang)}</option>
               ))}
             </select>
           </div>
@@ -169,154 +143,100 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
-                {t("Jina (SW)", "Name (SW)")}{" "}
-                <span className="text-[#C1502E]">*</span>
+                {t("Jina (SW)", "Name (SW)")} <span className="text-[#C1502E]">*</span>
               </label>
-              <input
-                value={form.name?.sw || ""}
-                onChange={(e) =>
-                  updateField("name", { ...form.name, sw: e.target.value })
-                }
+              <input value={form.name?.sw || ""}
+                onChange={(e) => updateField("name", { ...form.name, sw: e.target.value })}
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
-              />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
-                {t("Jina (EN)", "Name (EN)")}{" "}
-                <span className="text-[#C1502E]">*</span>
+                {t("Jina (EN)", "Name (EN)")} <span className="text-[#C1502E]">*</span>
               </label>
-              <input
-                value={form.name?.en || ""}
-                onChange={(e) =>
-                  updateField("name", { ...form.name, en: e.target.value })
-                }
+              <input value={form.name?.en || ""}
+                onChange={(e) => updateField("name", { ...form.name, en: e.target.value })}
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
-              />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
-                {t("Maelezo (SW)", "Description (SW)")}{" "}
-                <span className="text-[#C1502E]">*</span>
+                {t("Maelezo (SW)", "Description (SW)")} <span className="text-[#C1502E]">*</span>
               </label>
-              <textarea
-                value={form.description?.sw || ""}
-                onChange={(e) =>
-                  updateField("description", {
-                    ...form.description,
-                    sw: e.target.value,
-                  })
-                }
-                rows={2}
-                disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none disabled:opacity-50"
-              />
+              <textarea value={form.description?.sw || ""}
+                onChange={(e) => updateField("description", { ...form.description, sw: e.target.value })}
+                rows={2} disabled={saving}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
-                {t("Maelezo (EN)", "Description (EN)")}{" "}
-                <span className="text-[#C1502E]">*</span>
+                {t("Maelezo (EN)", "Description (EN)")} <span className="text-[#C1502E]">*</span>
               </label>
-              <textarea
-                value={form.description?.en || ""}
-                onChange={(e) =>
-                  updateField("description", {
-                    ...form.description,
-                    en: e.target.value,
-                  })
-                }
-                rows={2}
-                disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none disabled:opacity-50"
-              />
+              <textarea value={form.description?.en || ""}
+                onChange={(e) => updateField("description", { ...form.description, en: e.target.value })}
+                rows={2} disabled={saving}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none disabled:opacity-50" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
-                {t("Bei (TZS)", "Price (TZS)")}{" "}
-                <span className="text-[#C1502E]">*</span>
+                {t("Bei (TZS)", "Price (TZS)")} <span className="text-[#C1502E]">*</span>
               </label>
-              <input
-                type="number"
-                value={form.price}
+              <input type="number" value={form.price}
                 onChange={(e) => updateField("price", Number(e.target.value))}
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
-              />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
                 {t("Salio", "Credits")}
               </label>
-              <input
-                type="number"
+              <input type="number"
                 value={initialCredits[form.type] ?? 1}
-                onChange={(e) =>
-                  updateField("credits", {
-                    [form.type]: Number(e.target.value),
-                  })
-                }
+                onChange={(e) => updateField("credits", { [form.type]: Number(e.target.value) })}
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
-              />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
                 {t("Muda (siku)", "Validity (days)")}
               </label>
-              <input
-                type="number"
-                value={form.validityDays}
-                onChange={(e) =>
-                  updateField("validityDays", Number(e.target.value))
-                }
+              <input type="number" value={form.validityDays}
+                onChange={(e) => updateField("validityDays", Number(e.target.value))}
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
-              />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50" />
             </div>
             <div>
               <label className="block text-[11px] sm:text-xs font-semibold text-secondary mb-1">
                 {t("Punguzo (%)", "Discount (%)")}
               </label>
-              <input
-                type="number"
-                value={form.discountPercent}
-                onChange={(e) =>
-                  updateField("discountPercent", Number(e.target.value))
-                }
+              <input type="number" value={form.discountPercent}
+                onChange={(e) => updateField("discountPercent", Number(e.target.value))}
                 disabled={saving}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
-              />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:opacity-50" />
             </div>
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.featured}
+            <input type="checkbox" checked={form.featured}
               onChange={(e) => updateField("featured", e.target.checked)}
               disabled={saving}
-              className="w-4 h-4 rounded text-[#E8A33D] disabled:opacity-50"
-            />
+              className="w-4 h-4 rounded text-[#E8A33D] disabled:opacity-50" />
             <span className="text-xs sm:text-sm text-secondary">
               {t("Onyesha kama Maarufu", "Mark as Featured")}
             </span>
           </label>
 
           <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.active !== false}
+            <input type="checkbox" checked={form.active !== false}
               onChange={(e) => updateField("active", e.target.checked)}
               disabled={saving}
-              className="w-4 h-4 rounded text-[#E8A33D] disabled:opacity-50"
-            />
+              className="w-4 h-4 rounded text-[#E8A33D] disabled:opacity-50" />
             <span className="text-xs sm:text-sm text-secondary">
               {t("Hai (active)", "Active")}
             </span>
@@ -329,19 +249,12 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
           )}
 
           <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 pt-3 sticky bottom-0 bg-white pb-1">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="flex-1 py-2.5 rounded-lg border border-gray-200 text-secondary text-xs sm:text-sm font-medium disabled:opacity-50"
-            >
+            <button type="button" onClick={onClose} disabled={saving}
+              className="flex-1 py-2.5 rounded-lg border border-gray-200 text-secondary text-xs sm:text-sm font-medium disabled:opacity-50">
               {t("Ghairi", "Cancel")}
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#E8A33D] text-[#101A2E] text-xs sm:text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
-            >
+            <button type="submit" disabled={saving}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#E8A33D] text-[#101A2E] text-xs sm:text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed">
               {saving ? <Loader2 size={13} className="animate-spin" /> : null}
               {t("Hifadhi", "Save")}
             </button>
@@ -399,22 +312,19 @@ export default function AdminBundles() {
     const res = await toggleBundleActiveAsync(id);
 
     setBusy((b) => {
-      const n = { ...b };
-      delete n[`toggle-${id}`];
-      return n;
+      const n = { ...b }; delete n[`toggle-${id}`]; return n;
     });
 
     if (!res.ok) {
-      setError(
-        res.error?.message ||
-          t("Imeshindwa kubadilisha hali.", "Failed to toggle status.")
-      );
+      setError(res.error?.message || t("Imeshindwa kubadilisha hali.", "Failed to toggle status."));
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm(t("Futa kifurushi hiki?", "Delete this bundle?")))
-      return;
+    if (
+      !window.confirm(t("Futa kifurushi hiki?", "Delete this bundle?"))
+    ) return;
+
     if (busy[`delete-${id}`]) return;
     setBusy((b) => ({ ...b, [`delete-${id}`]: true }));
     setError("");
@@ -422,16 +332,11 @@ export default function AdminBundles() {
     const res = await removeBundleAsync(id);
 
     setBusy((b) => {
-      const n = { ...b };
-      delete n[`delete-${id}`];
-      return n;
+      const n = { ...b }; delete n[`delete-${id}`]; return n;
     });
 
     if (!res.ok) {
-      setError(
-        res.error?.message ||
-          t("Imeshindwa kufuta kifurushi.", "Failed to delete bundle.")
-      );
+      setError(res.error?.message || t("Imeshindwa kufuta kifurushi.", "Failed to delete bundle."));
     }
   };
 
@@ -461,10 +366,8 @@ export default function AdminBundles() {
             {t("Vifurushi vya Huduma", "Service Bundles")}
           </h1>
           <p className="text-xs sm:text-sm text-secondary max-w-xl px-2">
-            {t(
-              "Dhibiti vifurushi vya huduma vinavyouzwa kwa watumiaji.",
-              "Manage bundles sold to users."
-            )}
+            {t("Dhibiti vifurushi vya huduma vinavyouzwa kwa watumiaji.",
+               "Manage bundles sold to users.")}
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full max-w-2xl mt-2">
@@ -477,29 +380,17 @@ export default function AdminBundles() {
               <p className="text-[10px] text-secondary">{t("Hai", "Active")}</p>
             </div>
             <div className="bg-white rounded-lg border border-gray-100 p-2.5 text-center">
-              <p className="text-lg font-bold text-secondary">
-                {stats.inactive}
-              </p>
-              <p className="text-[10px] text-secondary">
-                {t("Imesimamishwa", "Inactive")}
-              </p>
+              <p className="text-lg font-bold text-secondary">{stats.inactive}</p>
+              <p className="text-[10px] text-secondary">{t("Imesimamishwa", "Inactive")}</p>
             </div>
             <div className="bg-white rounded-lg border border-gray-100 p-2.5 text-center">
-              <p className="text-lg font-bold text-[#E8A33D]">
-                {stats.featured}
-              </p>
-              <p className="text-[10px] text-secondary">
-                {t("Maarufu", "Featured")}
-              </p>
+              <p className="text-lg font-bold text-[#E8A33D]">{stats.featured}</p>
+              <p className="text-[10px] text-secondary">{t("Maarufu", "Featured")}</p>
             </div>
           </div>
 
           <button
-            onClick={() => {
-              setEditing(null);
-              setShowForm(true);
-              setError("");
-            }}
+            onClick={() => { setEditing(null); setShowForm(true); setError(""); }}
             disabled={saving}
             className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#E8A33D] text-[#101A2E] mt-2 disabled:opacity-50"
           >
@@ -516,10 +407,7 @@ export default function AdminBundles() {
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
           <div className="relative flex-1">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-            />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input
               type="text"
               value={searchQuery}
@@ -530,10 +418,7 @@ export default function AdminBundles() {
           </div>
           <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0">
             {["all", ...Object.keys(TYPE_LABELS)].map((key) => {
-              const label =
-                key === "all"
-                  ? t("Zote", "All")
-                  : pickLang(TYPE_LABELS[key], lang);
+              const label = key === "all" ? t("Zote", "All") : pickLang(TYPE_LABELS[key], lang);
               return (
                 <button
                   key={key}
@@ -553,10 +438,7 @@ export default function AdminBundles() {
 
         {filtered.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-200 p-8 sm:p-12 text-center bg-white">
-            <Package
-              size={40}
-              className="mx-auto text-muted mb-3 sm:w-12 sm:h-12"
-            />
+            <Package size={40} className="mx-auto text-muted mb-3 sm:w-12 sm:h-12" />
             <p className="text-xs sm:text-sm text-secondary">
               {t("Hakuna vifurushi.", "No bundles found.")}
             </p>
@@ -567,10 +449,7 @@ export default function AdminBundles() {
               const isToggling = !!busy[`toggle-${b.id}`];
               const isDeleting = !!busy[`delete-${b.id}`];
               return (
-                <div
-                  key={b.id}
-                  className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 flex flex-col gap-2"
-                >
+                <div key={b.id} className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-xs sm:text-sm text-primary truncate">
@@ -580,16 +459,10 @@ export default function AdminBundles() {
                         {pickLang(TYPE_LABELS[b.type], lang) || b.type}
                       </p>
                     </div>
-                    <span
-                      className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                        b.active
-                          ? "bg-[#2F6D4F]/10 text-[#2F6D4F]"
-                          : "bg-gray-100 text-secondary"
-                      }`}
-                    >
-                      {b.active
-                        ? t("Hai", "Active")
-                        : t("Imesimamishwa", "Inactive")}
+                    <span className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                      b.active ? "bg-[#2F6D4F]/10 text-[#2F6D4F]" : "bg-gray-100 text-secondary"
+                    }`}>
+                      {b.active ? t("Hai", "Active") : t("Imesimamishwa", "Inactive")}
                     </span>
                   </div>
 
@@ -601,40 +474,25 @@ export default function AdminBundles() {
                     {t("Salio", "Credits")}:{" "}
                     {typeof b.credits === "object"
                       ? Object.entries(b.credits)
-                          .map(
-                            ([k, v]) =>
-                              `${pickLang(CREDIT_LABELS[k], lang) || k}: ${v}`
-                          )
+                          .map(([k, v]) => `${pickLang(CREDIT_LABELS[k], lang) || k}: ${v}`)
                           .join(", ")
                       : b.credits}
                   </p>
 
                   <div className="flex items-center gap-3 text-[10px] sm:text-xs text-secondary flex-wrap">
                     {b.validityDays && (
-                      <span>
-                        {t(
-                          `Siku ${b.validityDays}`,
-                          `${b.validityDays} days`
-                        )}
-                      </span>
+                      <span>{t(`Siku ${b.validityDays}`, `${b.validityDays} days`)}</span>
                     )}
                     {b.discountPercent > 0 && (
                       <span className="text-[#2F6D4F] font-semibold">
-                        {t(
-                          `Okoa ${b.discountPercent}%`,
-                          `Save ${b.discountPercent}%`
-                        )}
+                        {t(`Okoa ${b.discountPercent}%`, `Save ${b.discountPercent}%`)}
                       </span>
                     )}
                   </div>
 
                   <div className="flex items-center gap-1.5 mt-2">
                     <button
-                      onClick={() => {
-                        setEditing(b);
-                        setShowForm(true);
-                        setError("");
-                      }}
+                      onClick={() => { setEditing(b); setShowForm(true); setError(""); }}
                       disabled={saving || isToggling || isDeleting}
                       className="flex-1 flex items-center justify-center gap-1 text-[11px] sm:text-xs font-semibold py-2 rounded-lg border border-gray-200 text-secondary hover:bg-gray-50 transition-colors disabled:opacity-50"
                     >
@@ -645,24 +503,11 @@ export default function AdminBundles() {
                       onClick={() => handleToggle(b.id)}
                       disabled={isToggling || isDeleting}
                       className="p-2 text-muted hover:text-[#2F6D4F] rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                      title={
-                        b.active
-                          ? t("Simamisha", "Deactivate")
-                          : t("Washa", "Activate")
-                      }
-                      aria-label={
-                        b.active
-                          ? t("Simamisha", "Deactivate")
-                          : t("Washa", "Activate")
-                      }
+                      title={b.active ? t("Simamisha", "Deactivate") : t("Washa", "Activate")}
+                      aria-label={b.active ? t("Simamisha", "Deactivate") : t("Washa", "Activate")}
                     >
-                      {isToggling ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : b.active ? (
-                        <EyeOff size={14} />
-                      ) : (
-                        <Eye size={14} />
-                      )}
+                      {isToggling ? <Loader2 size={14} className="animate-spin" />
+                        : b.active ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                     <button
                       onClick={() => handleDelete(b.id)}
@@ -670,11 +515,7 @@ export default function AdminBundles() {
                       className="p-2 text-muted hover:text-[#C1502E] rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                       aria-label={t("Futa", "Delete")}
                     >
-                      {isDeleting ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <Trash2 size={14} />
-                      )}
+                      {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                     </button>
                   </div>
                 </div>
