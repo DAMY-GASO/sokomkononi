@@ -1,130 +1,86 @@
 // ============================================================
-// leadingFeeStore.js — API-backed via /api/leading-fees/
+// leadingFeeStore.js — API-only via /api/leading-fees/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const STORAGE_KEY = "sokomkononi_leading_fee_config_v1";
-const UPDATE_EVENT = "sokomkononi:leading-fee-config-updated";
+const KEY = "sokomkononi_leading_fee_config_v1";
+const EV = "sokomkononi:leading-fee-config-updated";
 
-export const SEED_LEADING_FEE_CONFIG = {
-  price: 10000,
-  days: 7,
+const FALLBACK = {
+  price: 0,
+  days: 0,
   label: { sw: "Ada ya Kipaumbele", en: "Leading Fee" },
-  desc: {
-    sw: "Bidhaa yako inapanda juu ya matokeo ya utafutaji kwa siku 7",
-    en: "Your listing appears at the top of search results for 7 days",
-  },
+  desc: { sw: "", en: "" },
 };
 
-function readFromStorage() {
-  if (typeof window === "undefined") return SEED_LEADING_FEE_CONFIG;
+function read() {
+  if (typeof window === "undefined") return FALLBACK;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_LEADING_FEE_CONFIG;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed.price !== "number") return SEED_LEADING_FEE_CONFIG;
-    return { ...SEED_LEADING_FEE_CONFIG, ...parsed };
-  } catch {
-    return SEED_LEADING_FEE_CONFIG;
-  }
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return FALLBACK;
+    const p = JSON.parse(raw);
+    if (!p || typeof p !== "object") return FALLBACK;
+    return { ...FALLBACK, ...p };
+  } catch { return FALLBACK; }
 }
-
-function saveLocal(config) {
+function write(cfg) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(KEY, JSON.stringify(cfg));
+  window.dispatchEvent(new Event(EV));
 }
 
-function normalizeFromApi(raw) {
-  if (!raw) return SEED_LEADING_FEE_CONFIG;
+function norm(raw) {
+  if (!raw) return null;
   return {
     backendId: raw.id,
-    price: Number(raw.price) || SEED_LEADING_FEE_CONFIG.price,
-    days: Number(raw.days) || SEED_LEADING_FEE_CONFIG.days,
-    label: raw.label || SEED_LEADING_FEE_CONFIG.label,
-    desc: raw.desc || SEED_LEADING_FEE_CONFIG.desc,
+    price: Number(raw.price) || 0,
+    days: Number(raw.days) || 0,
+    label: raw.label || FALLBACK.label,
+    desc: raw.desc || FALLBACK.desc,
   };
 }
 
-export function getLeadingFeeConfig() {
-  return readFromStorage();
-}
-
-export function saveLeadingFeeConfig(config) {
-  saveLocal(config);
-}
+export function getLeadingFeeConfig() { return read(); }
 
 export async function hydrateLeadingFeeFromApi() {
   try {
-    const data = await api.get("/leading-fees/");
-    const normalized = normalizeFromApi(data);
-    saveLocal(normalized);
-    return { source: "api", config: normalized };
-  } catch (err) {
-    console.warn("[leadingFeeStore] hydrate failed:", err);
-    return { source: "error", config: getLeadingFeeConfig() };
-  }
+    const d = await api.get("/leading-fees/?page_size=100");
+    const row = Array.isArray(d) ? d[0] : (d?.results?.[0] ?? d);
+    const normalized = norm(row);
+    if (normalized) write(normalized);
+    return { ok: true, config: normalized };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function updateLeadingFeePriceAsync(price) {
-  const numericPrice = Number(price);
-  if (!Number.isFinite(numericPrice) || numericPrice < 0) {
-    return { ok: false, error: new Error("Bei lazima iwe namba chanya") };
+  const num = Number(price);
+  if (!Number.isFinite(num) || num < 0) {
+    return { ok: false, error: new Error("price must be a positive number") };
   }
-  const previous = getLeadingFeeConfig();
-  const next = { ...previous, price: numericPrice };
-  saveLocal(next);
+  const cur = getLeadingFeeConfig();
+  if (!cur.backendId) {
+    return { ok: false, error: new Error("No backend id — hydrate first") };
+  }
   try {
-    await api.patch("/leading-fees/", { price: numericPrice });
-    return { ok: true, config: next };
-  } catch (err) {
-    saveLocal(previous);
-    console.warn("[leadingFeeStore] updatePrice failed:", err);
-    return { ok: false, error: err };
-  }
-}
-
-export async function updateLeadingFeeAsync(patch) {
-  const previous = getLeadingFeeConfig();
-  const next = { ...previous, ...patch };
-  saveLocal(next);
-  const payload = {};
-  if (patch.price != null) payload.price = Number(patch.price);
-  if (patch.days != null) payload.days = Number(patch.days);
-  if (patch.label != null) payload.label = patch.label;
-  if (patch.desc != null) payload.desc = patch.desc;
-  try {
-    await api.patch("/leading-fees/", payload);
-    return { ok: true, config: next };
-  } catch (err) {
-    saveLocal(previous);
-    console.warn("[leadingFeeStore] update failed:", err);
-    return { ok: false, error: err };
-  }
-}
-
-/** @deprecated Use updateLeadingFeePriceAsync */
-export function updateLeadingFeePrice(price) {
-  const current = getLeadingFeeConfig();
-  const next = { ...current, price: Number(price) };
-  saveLocal(next);
-  api.patch("/leading-fees/", { price: next.price })
-    .catch((err) => console.warn("[leadingFeeStore] sync failed (silent):", err));
-  return next;
+    const raw = await api.patch(`/leading-fees/${cur.backendId}/`, { price: num });
+    const updated = norm(raw) || { ...cur, price: num };
+    write(updated);
+    return { ok: true, config: updated };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export function useLeadingFeeConfig() {
-  const [config, setConfig] = useState(() => getLeadingFeeConfig());
+  const [cfg, setCfg] = useState(() => read());
   useEffect(() => {
     hydrateLeadingFeeFromApi();
-    const sync = () => setConfig(getLeadingFeeConfig());
+    const sync = () => setCfg(read());
     window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener(EV, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener(EV, sync);
     };
   }, []);
-  return config;
+  return cfg;
 }

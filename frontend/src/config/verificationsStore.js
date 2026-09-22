@@ -1,56 +1,43 @@
 // ============================================================
-// verificationsStore.js — API-backed via /api/verifications/
+// verificationsStore.js — API-only via /api/verifications/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const STORAGE_KEY = "sokomkononi_verifications_v1";
-const UPDATE_EVENT = "sokomkononi:verifications-updated";
+const KEY = "sokomkononi_verifications_v1";
+const EV = "sokomkononi:verifications-updated";
 
 export const VERIFICATION_TYPES = [
-  { key: "seller", label: { sw: "Wauzaji", en: "Sellers" }, iconKey: "Users" },
-  { key: "buyer", label: { sw: "Wanunuzi", en: "Buyers" }, iconKey: "UserCheck" },
-  { key: "property", label: { sw: "Mali", en: "Properties" }, iconKey: "Home" },
-  { key: "vehicle", label: { sw: "Magari", en: "Vehicles" }, iconKey: "Car" },
-  { key: "business", label: { sw: "Biashara", en: "Businesses" }, iconKey: "Briefcase" },
+  { key: "seller", label: { sw: "Wauzaji", en: "Sellers" } },
+  { key: "buyer", label: { sw: "Wanunuzi", en: "Buyers" } },
+  { key: "property", label: { sw: "Mali", en: "Properties" } },
+  { key: "vehicle", label: { sw: "Magari", en: "Vehicles" } },
+  { key: "business", label: { sw: "Biashara", en: "Businesses" } },
 ];
-
 export const VERIFICATION_STATUSES = [
   { key: "pending", label: { sw: "Zinasubiri", en: "Pending" } },
   { key: "approved", label: { sw: "Zimeidhinishwa", en: "Approved" } },
   { key: "rejected", label: { sw: "Zimekataliwa", en: "Rejected" } },
 ];
 
-const API_TO_KEY = {
-  SELLER: "seller", BUYER: "buyer", PROPERTY: "property",
-  VEHICLE: "vehicle", BUSINESS: "business",
-};
-const KEY_TO_API = {
-  seller: "SELLER", buyer: "BUYER", property: "PROPERTY",
-  vehicle: "VEHICLE", business: "BUSINESS",
-};
+const API_TO_KEY = { SELLER: "seller", BUYER: "buyer", PROPERTY: "property", VEHICLE: "vehicle", BUSINESS: "business" };
+const KEY_TO_API = { seller: "SELLER", buyer: "BUYER", property: "PROPERTY", vehicle: "VEHICLE", business: "BUSINESS" };
 
-export const SEED_VERIFICATIONS = [];
-
-function readFromStorage() {
-  if (typeof window === "undefined") return SEED_VERIFICATIONS;
+function read() {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_VERIFICATIONS;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : SEED_VERIFICATIONS;
-  } catch {
-    return SEED_VERIFICATIONS;
-  }
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return [];
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
 }
-
-function saveAll(list) {
+function write(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event(EV));
 }
-
-function normalizeFromApi(raw) {
+function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
@@ -70,234 +57,71 @@ function normalizeFromApi(raw) {
   };
 }
 
-export function getVerifications() {
-  return readFromStorage();
-}
-
-export function getVerification(id) {
-  return getVerifications().find((v) => v.id === id) || null;
-}
+export function getVerifications() { return read(); }
+export function getVerification(id) { return read().find((v) => v.id === id) || null; }
 
 export async function hydrateVerificationsFromApi() {
   try {
-    const data = await api.get("/verifications/?page_size=100");
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map(normalizeFromApi).filter(Boolean);
-    saveAll(normalized);
-    return { source: "api", count: normalized.length };
-  } catch (err) {
-    console.warn("[verificationsStore] hydrate failed:", err);
-    return { source: "error", count: getVerifications().length };
-  }
+    const d = await api.get("/verifications/?page_size=200");
+    const list = Array.isArray(d) ? d : d?.results || [];
+    write(list.map(norm).filter(Boolean));
+    return { ok: true, count: list.length };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-export async function addVerificationAsync({
-  type, userId, userName, userEmail, subject, subjectId, documents = [], notes = "",
-}) {
-  if (!type || !subject) {
-    return { ok: false, error: new Error("type na subject zinahitajika") };
-  }
-
-  const payload = {
-    type: KEY_TO_API[type] || type,
-    subject,
-    subject_id: subjectId,
-    notes,
-  };
-
-  const previous = getVerifications();
-  const optimistic = {
-    id: `local_${Date.now()}`,
-    type, userId, userName, userEmail, subject, subjectId,
-    documents, notes, status: "pending",
-    submittedAt: new Date().toISOString(),
-  };
-  saveAll([optimistic, ...previous]);
-
+export async function addVerificationAsync({ type, subject, subjectId, notes = "" }) {
+  if (!type || !subject) return { ok: false, error: new Error("type + subject required") };
   try {
-    const raw = await api.post("/verifications/", payload);
-    const created = normalizeFromApi(raw);
-    if (created) {
-      saveAll([created, ...getVerifications().filter((v) => v.id !== optimistic.id)]);
-      return { ok: true, verification: created };
-    }
-    return { ok: true, verification: optimistic };
-  } catch (err) {
-    saveAll(previous); // Rollback
-    console.warn("[verificationsStore] add failed:", err);
-    return { ok: false, error: err };
-  }
+    const raw = await api.post("/verifications/", {
+      type: KEY_TO_API[type] || type,
+      subject,
+      subject_id: subjectId,
+      notes,
+    });
+    const created = norm(raw);
+    write([created, ...read()]);
+    return { ok: true, verification: created };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function approveVerificationAsync(id) {
-  const previous = getVerifications();
-  const target = previous.find((v) => v.id === id);
-  if (!target) return { ok: false, error: new Error("Verification haipo") };
-
-  saveAll(previous.map((v) =>
-    v.id === id
-      ? { ...v, status: "approved", reviewedAt: new Date().toISOString() }
-      : v
-  ));
-
-  if (typeof id !== "number") return { ok: true };
-
   try {
-    await api.post(`/verifications/${id}/approve/`, {});
+    const raw = await api.post(`/verifications/${id}/approve/`, {});
+    const updated = norm(raw) || { ...getVerification(id), status: "approved", reviewedAt: new Date().toISOString() };
+    write(read().map((v) => (v.id === id ? updated : v)));
     return { ok: true };
-  } catch (err) {
-    saveAll(previous); // Rollback
-    console.warn("[verificationsStore] approve failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function rejectVerificationAsync(id, reason = "") {
-  const previous = getVerifications();
-  const target = previous.find((v) => v.id === id);
-  if (!target) return { ok: false, error: new Error("Verification haipo") };
-
-  saveAll(previous.map((v) =>
-    v.id === id
-      ? {
-          ...v,
-          status: "rejected",
-          rejectionReason: reason,
-          reviewedAt: new Date().toISOString(),
-        }
-      : v
-  ));
-
-  if (typeof id !== "number") return { ok: true };
-
   try {
-    await api.post(`/verifications/${id}/reject/`, { rejection_reason: reason });
+    const raw = await api.post(`/verifications/${id}/reject/`, { rejection_reason: reason });
+    const updated = norm(raw) || { ...getVerification(id), status: "rejected", rejectionReason: reason, reviewedAt: new Date().toISOString() };
+    write(read().map((v) => (v.id === id ? updated : v)));
     return { ok: true };
-  } catch (err) {
-    saveAll(previous); // Rollback
-    console.warn("[verificationsStore] reject failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function removeVerificationAsync(id) {
-  const previous = getVerifications();
-  saveAll(previous.filter((v) => v.id !== id));
-
-  if (typeof id !== "number") return { ok: true };
-
   try {
     await api.delete(`/verifications/${id}/`);
+    write(read().filter((v) => v.id !== id));
     return { ok: true };
-  } catch (err) {
-    saveAll(previous); // Rollback
-    console.warn("[verificationsStore] remove failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ---------- LEGACY SYNC ----------
-/** @deprecated Use addVerificationAsync */
-export function addVerification(payload) {
-  const apiPayload = {
-    type: KEY_TO_API[payload.type] || payload.type,
-    subject: payload.subject,
-    subject_id: payload.subjectId,
-    notes: payload.notes,
-  };
-  const entry = {
-    id: `local_${Date.now()}`,
-    ...payload,
-    status: "pending",
-    submittedAt: new Date().toISOString(),
-  };
-  saveAll([entry, ...getVerifications()]);
-
-  api.post("/verifications/", apiPayload)
-    .then((raw) => {
-      const created = normalizeFromApi(raw);
-      if (created) {
-        saveAll([created, ...getVerifications().filter((v) => v.id !== entry.id)]);
-      }
-    })
-    .catch((err) => console.warn("[verificationsStore] add silent fail:", err));
-
-  return entry;
-}
-
-/** @deprecated Use approveVerificationAsync */
-export function approveVerification(id) {
-  const next = getVerifications().map((v) =>
-    v.id === id ? { ...v, status: "approved", reviewedAt: new Date().toISOString() } : v
-  );
-  saveAll(next);
-  if (typeof id === "number") {
-    api.post(`/verifications/${id}/approve/`, {})
-      .catch((err) => console.warn("[verificationsStore] approve silent fail:", err));
-  }
-  return next;
-}
-
-/** @deprecated Use rejectVerificationAsync */
-export function rejectVerification(id, reason = "") {
-  const next = getVerifications().map((v) =>
-    v.id === id
-      ? { ...v, status: "rejected", rejectionReason: reason, reviewedAt: new Date().toISOString() }
-      : v
-  );
-  saveAll(next);
-  if (typeof id === "number") {
-    api.post(`/verifications/${id}/reject/`, { rejection_reason: reason })
-      .catch((err) => console.warn("[verificationsStore] reject silent fail:", err));
-  }
-  return next;
-}
-
-/** @deprecated Use removeVerificationAsync */
-export function removeVerification(id) {
-  const next = getVerifications().filter((v) => v.id !== id);
-  saveAll(next);
-  if (typeof id === "number") {
-    api.delete(`/verifications/${id}/`)
-      .catch((err) => console.warn("[verificationsStore] remove silent fail:", err));
-  }
-  return next;
-}
-
-// ---------- HOOKS ----------
 export function useVerifications() {
-  const [requests, setRequests] = useState(() => getVerifications());
+  const [list, setList] = useState(() => read());
   useEffect(() => {
     hydrateVerificationsFromApi();
-    const sync = () => setRequests(getVerifications());
+    const sync = () => setList(read());
     window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener(EV, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener(EV, sync);
     };
   }, []);
-  return requests;
+  return list;
 }
-
-export function useVerificationsByType(type) {
-  const requests = useVerifications();
-  if (!type || type === "all") return requests;
-  return requests.filter((v) => v.type === type);
-}
-
-export function useVerificationsByStatus(status) {
-  const requests = useVerifications();
-  if (!status || status === "all") return requests;
-  return requests.filter((v) => v.status === status);
-}
-
-export function useVerification(id) {
-  const list = useVerifications();
-  if (!id) return null;
-  return list.find((v) => v.id === id) || null;
-}
-
-export function usePendingVerificationsCount() {
-  return useVerifications().filter((v) => v.status === "pending").length;
-}
+export function usePendingVerificationsCount() { return useVerifications().filter((v) => v.status === "pending").length; }

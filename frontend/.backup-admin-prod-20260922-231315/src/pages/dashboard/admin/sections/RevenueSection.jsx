@@ -99,17 +99,7 @@ export default function RevenueSection() {
     setBusy((b) => ({ ...b, [key]: true }));
     setError("");
     try {
-      const res = await fn();
-      if (res && res.ok === false) {
-        setError(
-          res.error?.message ||
-            t("Imeshindwa kuhifadhi.", "Failed to save.")
-        );
-      }
-      return res;
-    } catch (e) {
-      setError(e?.message || t("Hitilafu isiyojulikana.", "Unexpected error."));
-      return { ok: false, error: e };
+      return await fn();
     } finally {
       setBusy((b) => { const n = { ...b }; delete n[key]; return n; });
     }

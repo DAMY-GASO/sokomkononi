@@ -1,55 +1,42 @@
 // ============================================================
-// announcementsStore.js — API-backed via /api/announcements/
+// announcementsStore.js — API-only via /api/announcements/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const STORAGE_KEY = "sokomkononi_announcements_v1";
-const UPDATE_EVENT = "sokomkononi:announcements-updated";
+const KEY = "sokomkononi_announcements_v1";
+const EV = "sokomkononi:announcements-updated";
 
 export const ANNOUNCEMENT_TYPES = [
-  { id: "fee_change", label: { sw: "Mabadiliko ya Ada", en: "Fee Change" } },
-  { id: "new_category", label: { sw: "Category Mpya", en: "New Category" } },
-  { id: "maintenance", label: { sw: "Matengenezo ya Mfumo", en: "System Maintenance" } },
-  { id: "promotion", label: { sw: "Kampeni/Promotion", en: "Campaign/Promotion" } },
+  { id: "fee_change", api: "FEE_CHANGE", label: { sw: "Mabadiliko ya Ada", en: "Fee Change" } },
+  { id: "new_category", api: "NEW_CATEGORY", label: { sw: "Category Mpya", en: "New Category" } },
+  { id: "maintenance", api: "MAINTENANCE", label: { sw: "Matengenezo ya Mfumo", en: "System Maintenance" } },
+  { id: "promotion", api: "PROMOTION", label: { sw: "Kampeni/Promotion", en: "Campaign/Promotion" } },
 ];
 
-export const SEED_ANNOUNCEMENTS = [];
-
-// ============================================================
-// STORAGE
-// ============================================================
-function readFromStorage() {
-  if (typeof window === "undefined") return SEED_ANNOUNCEMENTS;
+function read() {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_ANNOUNCEMENTS;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_ANNOUNCEMENTS;
-    return parsed;
-  } catch {
-    return SEED_ANNOUNCEMENTS;
-  }
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return [];
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
 }
-
-function saveAll(list) {
+function write(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event(EV));
 }
 
-// ============================================================
-// NORMALIZER
-// ============================================================
-function normalizeFromApi(raw) {
+const API_TO_KEY = { FEE_CHANGE: "fee_change", NEW_CATEGORY: "new_category", MAINTENANCE: "maintenance", PROMOTION: "promotion" };
+const KEY_TO_API = { fee_change: "FEE_CHANGE", new_category: "NEW_CATEGORY", maintenance: "MAINTENANCE", promotion: "PROMOTION" };
+
+function norm(raw) {
   if (!raw) return null;
-  const typeMap = {
-    FEE_CHANGE: "fee_change", NEW_CATEGORY: "new_category",
-    MAINTENANCE: "maintenance", PROMOTION: "promotion",
-  };
   return {
     id: raw.id,
-    typeId: typeMap[raw.type] || raw.typeId || raw.type,
+    typeId: API_TO_KEY[raw.type] || raw.type,
     title: raw.title,
     titleEn: raw.title_en,
     message: raw.message,
@@ -60,163 +47,57 @@ function normalizeFromApi(raw) {
   };
 }
 
-const TYPE_TO_API = {
-  fee_change: "FEE_CHANGE",
-  new_category: "NEW_CATEGORY",
-  maintenance: "MAINTENANCE",
-  promotion: "PROMOTION",
-};
+export function getAnnouncements() { return read(); }
 
-// ============================================================
-// READS
-// ============================================================
-export function getAnnouncements() {
-  return readFromStorage();
-}
-
-export function saveAnnouncements(list) {
-  saveAll(list);
-}
-
-// ============================================================
-// HYDRATE
-// ============================================================
 export async function hydrateAnnouncementsFromApi() {
   try {
-    const data = await api.get("/announcements/?page_size=100");
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map(normalizeFromApi).filter(Boolean);
-    saveAll(normalized);
-    return { source: "api", count: normalized.length };
-  } catch (err) {
-    console.warn("[announcementsStore] hydrate failed:", err);
-    return { source: "error", count: getAnnouncements().length };
-  }
+    const d = await api.get("/announcements/?page_size=100");
+    const list = Array.isArray(d) ? d : d?.results || [];
+    write(list.map(norm).filter(Boolean));
+    return { ok: true, count: list.length };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// ASYNC ACTIONS — with rollback
-// ============================================================
-export async function addAnnouncementAsync(announcement) {
-  if (!announcement?.title?.trim() || !announcement?.message?.trim()) {
-    return { ok: false, error: new Error("title na message zinahitajika") };
+export async function addAnnouncementAsync(form) {
+  if (!form?.title?.trim() || !form?.message?.trim()) {
+    return { ok: false, error: new Error("title + message required") };
   }
-
-  const payload = {
-    type: TYPE_TO_API[announcement.typeId] || "MAINTENANCE",
-    title: announcement.title,
-    title_en: announcement.titleEn || "",
-    message: announcement.message,
-    message_en: announcement.messageEn || "",
-    scheduled_for: announcement.scheduledFor || null,
-    sent: announcement.sent !== false,
-  };
-
-  const previous = getAnnouncements();
-  const optimistic = {
-    id: `local_${Date.now()}`,
-    typeId: announcement.typeId,
-    title: announcement.title,
-    titleEn: announcement.titleEn || "",
-    message: announcement.message,
-    messageEn: announcement.messageEn || "",
-    scheduledFor: announcement.scheduledFor || "",
-    sent: announcement.sent !== false,
-    createdAt: new Date().toISOString(),
-  };
-  saveAll([optimistic, ...previous]);
-
   try {
-    const raw = await api.post("/announcements/", payload);
-    const created = normalizeFromApi(raw);
-    if (created) {
-      saveAll([created, ...getAnnouncements().filter((a) => a.id !== optimistic.id)]);
-      return { ok: true, announcement: created };
-    }
-    return { ok: true, announcement: optimistic };
-  } catch (err) {
-    saveAll(previous); // Rollback
-    console.warn("[announcementsStore] add failed:", err);
-    return { ok: false, error: err };
-  }
+    const raw = await api.post("/announcements/", {
+      type: KEY_TO_API[form.typeId] || "MAINTENANCE",
+      title: form.title,
+      title_en: form.titleEn || "",
+      message: form.message,
+      message_en: form.messageEn || "",
+      scheduled_for: form.scheduledFor || null,
+      sent: form.sent !== false,
+    });
+    const created = norm(raw);
+    write([created, ...read()]);
+    return { ok: true, announcement: created };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function removeAnnouncementAsync(id) {
-  const previous = getAnnouncements();
-  const target = previous.find((a) => a.id === id);
-  if (!target) return { ok: false, error: new Error("Announcement haipo") };
-
-  // Optimistic
-  saveAll(previous.filter((a) => a.id !== id));
-
-  if (typeof id !== "number") return { ok: true };
-
   try {
     await api.delete(`/announcements/${id}/`);
+    write(read().filter((a) => a.id !== id));
     return { ok: true };
-  } catch (err) {
-    saveAll(previous); // Rollback
-    console.warn("[announcementsStore] remove failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// LEGACY SYNC (deprecated)
-// ============================================================
-/** @deprecated Use addAnnouncementAsync */
-export function addAnnouncement(announcement) {
-  const payload = {
-    type: TYPE_TO_API[announcement.typeId] || "MAINTENANCE",
-    title: announcement.title,
-    title_en: announcement.titleEn || "",
-    message: announcement.message,
-    message_en: announcement.messageEn || "",
-    scheduled_for: announcement.scheduledFor || null,
-    sent: announcement.sent !== false,
-  };
-  const entry = { id: `local_${Date.now()}`, ...announcement };
-  saveAll([entry, ...getAnnouncements()]);
-  api.post("/announcements/", payload)
-    .then((raw) => {
-      const created = normalizeFromApi(raw);
-      if (created) {
-        saveAll([created, ...getAnnouncements().filter((a) => a.id !== entry.id)]);
-      }
-    })
-    .catch((err) => console.warn("[announcementsStore] add silent fail:", err));
-  return entry;
-}
-
-/** @deprecated Use removeAnnouncementAsync */
-export function removeAnnouncement(id) {
-  const next = getAnnouncements().filter((a) => a.id !== id);
-  saveAll(next);
-  if (typeof id === "number") {
-    api.delete(`/announcements/${id}/`)
-      .catch((err) => console.warn("[announcementsStore] remove silent fail:", err));
-  }
-  return next;
-}
-
-// ============================================================
-// HOOKS
-// ============================================================
 export function useAnnouncements() {
-  const [list, setList] = useState(() => getAnnouncements());
+  const [list, setList] = useState(() => read());
   useEffect(() => {
     hydrateAnnouncementsFromApi();
-    const sync = () => setList(getAnnouncements());
+    const sync = () => setList(read());
     window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener(EV, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener(EV, sync);
     };
   }, []);
   return list;
 }
-
-export function useSentAnnouncements() {
-  return useAnnouncements().filter((a) => a.sent);
-}
+export function useSentAnnouncements() { return useAnnouncements().filter((a) => a.sent); }

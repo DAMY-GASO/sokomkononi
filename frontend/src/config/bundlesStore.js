@@ -1,41 +1,32 @@
 // ============================================================
-// bundlesStore.js — API-backed via /api/bundles/
-// Admin CRUD + user purchase. Graceful local fallback.
+// bundlesStore.js — API-only via /api/bundles/
 // ============================================================
 import { useEffect, useState } from "react";
 import { bundlesApi } from "../api/bundles.js";
 
-const STORAGE_KEY = "sokomkononi_bundles_v1";
-const UPDATE_EVENT = "sokomkononi:bundles-updated";
+const KEY = "sokomkononi_bundles_v1";
+const EV = "sokomkononi:bundles-updated";
 
-export const SEED_BUNDLES = [];
-
-// ---------- STORAGE ----------
-function readFromStorage() {
-  if (typeof window === "undefined") return SEED_BUNDLES;
+function read() {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_BUNDLES;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : SEED_BUNDLES;
-  } catch {
-    return SEED_BUNDLES;
-  }
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return [];
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
 }
-
-function saveAll(list) {
+function write(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event(EV));
 }
 
-// ---------- NORMALIZER ----------
 const TYPE_FROM_API = {
   LISTING: "listing", LEADING: "leading", BOOST: "boost",
   RESERVATION: "reservation", ADS: "ads", PREMIUM: "premium", PACKAGE: "package",
 };
-
-function normalizeFromApi(raw) {
+function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
@@ -54,20 +45,16 @@ function normalizeFromApi(raw) {
     featured: !!raw.featured,
   };
 }
-
-function toApiPayload(form) {
-  const creditsObj =
-    form.credits && typeof form.credits === "object"
-      ? form.credits
-      : { [form.type || "listing"]: Number(form.credits) || 1 };
-
+function toApi(form) {
+  const credits = form.credits && typeof form.credits === "object"
+    ? form.credits
+    : { [form.type || "listing"]: Number(form.credits) || 1 };
   return {
-    code: form.code || form.id,
+    code: form.code,
     type: (form.type || "PACKAGE").toUpperCase(),
-    name: form.name,
-    description: form.description,
+    name: form.name, description: form.description,
     price: Number(form.price) || 0,
-    credits: creditsObj,
+    credits,
     validity_days: Number(form.validityDays) || 90,
     services: form.services || [],
     discount_percent: Number(form.discountPercent) || 0,
@@ -78,208 +65,89 @@ function toApiPayload(form) {
   };
 }
 
-// ---------- READS ----------
-export function getBundles() { return readFromStorage(); }
-export function getActiveBundles() { return getBundles().filter((b) => b.active !== false); }
-export function getBundle(id) { return getBundles().find((b) => b.id === id) || null; }
-export function getBundlesByType(type) {
-  return getActiveBundles().filter((b) => b.type === type);
-}
+export function getBundles() { return read(); }
+export function getActiveBundles() { return read().filter((b) => b.active !== false); }
+export function getBundle(id) { return read().find((b) => b.id === id) || null; }
+export function getBundlesByType(type) { return getActiveBundles().filter((b) => b.type === type); }
 
-export function initializeBundles(list) {
-  if (!Array.isArray(list) || list.length === 0) return getBundles();
-  const current = getBundles();
-  if (current.length > 0) return current;
-  saveAll(list);
-  return list;
-}
+export function initializeBundles() { /* API-only */ }
+export function resetBundles(list) { write(Array.isArray(list) ? list : []); }
 
-export function resetBundles(list = SEED_BUNDLES) { saveAll(list); return list; }
-
-// ---------- HYDRATE ----------
 export async function hydrateBundlesFromApi() {
   try {
-    const data = await bundlesApi.list({ page_size: 100 });
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map(normalizeFromApi).filter(Boolean);
-    saveAll(normalized);
-    return { source: "api", count: normalized.length };
-  } catch (err) {
-    console.warn("[bundlesStore] hydrate failed:", err);
-    return { source: "error", count: getBundles().length };
-  }
+    const d = await bundlesApi.list({ page_size: 200 });
+    const list = Array.isArray(d) ? d : d?.results || [];
+    const normalized = list.map(norm).filter(Boolean);
+    write(normalized);
+    return { ok: true, count: normalized.length };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ---------- ASYNC CRUD (Admin) ----------
 export async function createBundleAsync(form) {
-  const code = (form?.code || form?.id || "").trim();
-  if (!code) return { ok: false, error: new Error("Bundle code/ID is required") };
+  if (!form?.code?.trim()) return { ok: false, error: new Error("Bundle code/ID required") };
   if (!form?.name?.sw?.trim() || !form?.name?.en?.trim()) {
-    return { ok: false, error: new Error("Bilingual name (SW + EN) is required") };
+    return { ok: false, error: new Error("Bilingual name (SW+EN) required") };
   }
-
-  const previous = getBundles();
-  const optimistic = {
-    id: code,
-    code,
-    type: form.type || "listing",
-    name: form.name,
-    description: form.description || { sw: "", en: "" },
-    price: Number(form.price) || 0,
-    credits: form.credits || {},
-    validityDays: Number(form.validityDays) || 90,
-    services: form.services || [],
-    discountPercent: Number(form.discountPercent) || 0,
-    icon: form.icon || "Package",
-    color: form.color || "night",
-    active: form.active !== false,
-    featured: !!form.featured,
-  };
-  saveAll([...previous, optimistic]);
-
   try {
-    const raw = await bundlesApi.create(toApiPayload(form));
-    const created = normalizeFromApi(raw);
-    if (created) {
-      const current = getBundles();
-      saveAll(current.map((b) => (b.id === code ? created : b)));
-      return { ok: true, bundle: created };
-    }
-    return { ok: true, bundle: optimistic };
-  } catch (err) {
-    saveAll(previous);
-    console.warn("[bundlesStore] createBundle failed:", err);
-    return { ok: false, error: err };
-  }
+    const raw = await bundlesApi.create(toApi(form));
+    const created = norm(raw);
+    write([created, ...read()]);
+    return { ok: true, bundle: created };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function updateBundleAsync(id, patch) {
-  const previous = getBundles();
-  const target = previous.find((b) => b.id === id);
+  const target = getBundle(id);
   if (!target) return { ok: false, error: new Error("Bundle not found") };
-
-  const optimistic = { ...target, ...patch };
-  saveAll(previous.map((b) => (b.id === id ? optimistic : b)));
-
-  // Local-only (no backend id yet)
-  if (typeof id !== "number") {
-    return { ok: true, warning: "local_only", bundle: optimistic };
-  }
-
+  if (typeof id !== "number") return { ok: false, error: new Error("Bundle has no backend id") };
   try {
-    const raw = await bundlesApi.update(id, toApiPayload(optimistic));
-    const updated = normalizeFromApi(raw);
-    if (updated) {
-      const current = getBundles();
-      saveAll(current.map((b) => (b.id === id ? updated : b)));
-      return { ok: true, bundle: updated };
-    }
-    return { ok: true, bundle: optimistic };
-  } catch (err) {
-    saveAll(previous);
-    console.warn("[bundlesStore] updateBundle failed:", err);
-    return { ok: false, error: err };
-  }
+    const raw = await bundlesApi.update(id, toApi({ ...target, ...patch }));
+    const updated = norm(raw);
+    write(read().map((b) => (b.id === id ? updated : b)));
+    return { ok: true, bundle: updated };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function removeBundleAsync(id) {
-  const previous = getBundles();
-  saveAll(previous.filter((b) => b.id !== id));
-
-  if (typeof id !== "number") return { ok: true, warning: "local_only" };
-
   try {
     await bundlesApi.remove(id);
+    write(read().filter((b) => b.id !== id));
     return { ok: true };
-  } catch (err) {
-    saveAll(previous);
-    console.warn("[bundlesStore] removeBundle failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function toggleBundleActiveAsync(id) {
-  const previous = getBundles();
-  const target = previous.find((b) => b.id === id);
+  const target = getBundle(id);
   if (!target) return { ok: false, error: new Error("Bundle not found") };
-
-  const nextActive = !target.active;
-  saveAll(previous.map((b) => (b.id === id ? { ...b, active: nextActive } : b)));
-
-  if (typeof id !== "number") return { ok: true, active: nextActive };
-
+  if (typeof id !== "number") return { ok: false, error: new Error("Bundle has no backend id") };
   try {
-    await bundlesApi.toggleActive(id);
-    return { ok: true, active: nextActive };
-  } catch (err) {
-    saveAll(previous);
-    console.warn("[bundlesStore] toggleBundleActive failed:", err);
-    return { ok: false, error: err };
-  }
+    const raw = await bundlesApi.toggleActive(id);
+    const updated = norm(raw) || { ...target, active: !target.active };
+    write(read().map((b) => (b.id === id ? updated : b)));
+    return { ok: true, active: updated.active };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ---------- PURCHASE (user) ----------
-export async function purchaseBundleAsync(bundleId, payment_reference = "") {
-  return bundlesApi.purchase(bundleId, payment_reference);
+export async function purchaseBundleAsync(id, ref = "") {
+  try {
+    const raw = await bundlesApi.purchase(id, ref);
+    return { ok: true, purchase: raw };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ---------- LEGACY SYNC (deprecated) ----------
-/** @deprecated Use createBundleAsync */
-export function addBundle(bundle) {
-  if (!bundle?.id) return getBundles();
-  const current = getBundles();
-  const next = [...current, bundle];
-  saveAll(next);
-  bundlesApi.create(toApiPayload(bundle)).catch(() => {});
-  return next;
-}
-
-/** @deprecated Use updateBundleAsync */
-export function updateBundle(id, patch) {
-  const next = getBundles().map((b) => (b.id === id ? { ...b, ...patch } : b));
-  saveAll(next);
-  if (typeof id === "number") bundlesApi.update(id, patch).catch(() => {});
-  return next;
-}
-
-/** @deprecated Use toggleBundleActiveAsync */
-export function toggleBundleActive(id) {
-  const next = getBundles().map((b) =>
-    b.id === id ? { ...b, active: !b.active } : b
-  );
-  saveAll(next);
-  if (typeof id === "number") bundlesApi.toggleActive(id).catch(() => {});
-  return next;
-}
-
-/** @deprecated Use removeBundleAsync */
-export function removeBundle(id) {
-  const next = getBundles().filter((b) => b.id !== id);
-  saveAll(next);
-  if (typeof id === "number") bundlesApi.remove(id).catch(() => {});
-  return next;
-}
-
-// ---------- HOOKS ----------
 export function useBundles() {
-  const [list, setList] = useState(() => getBundles());
+  const [list, setList] = useState(() => read());
   useEffect(() => {
     hydrateBundlesFromApi();
-    const sync = () => setList(getBundles());
+    const sync = () => setList(read());
     window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener(EV, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener(EV, sync);
     };
   }, []);
   return list;
 }
-
-export function useActiveBundles() {
-  return useBundles().filter((b) => b.active !== false);
-}
-
-export function useBundlesByType(type) {
-  return useBundles().filter((b) => b.active !== false && b.type === type);
-}
+export function useActiveBundles() { return useBundles().filter((b) => b.active !== false); }
+export function useBundlesByType(type) { return useBundles().filter((b) => b.active !== false && b.type === type); }

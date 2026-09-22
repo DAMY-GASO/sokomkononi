@@ -1,6 +1,5 @@
 // ============================================================
-// categoriesStore.js
-// API-backed + graceful local fallback
+// categoriesStore.js — API-only via /api/categories/
 // ============================================================
 import { useEffect, useState } from "react";
 import {
@@ -11,337 +10,62 @@ import {
 import { categoriesApi } from "../api/categories.js";
 import { api } from "../api/client.js";
 
-const STORAGE_KEY = "sokomkononi_categories_v2";
-const UPDATE_EVENT = "sokomkononi:categories-updated";
+const KEY = "sokomkononi_categories_v2";
+const EV = "sokomkononi:categories-updated";
 
-// ============================================================
-// AVAILABLE ICONS
-// ============================================================
 export const AVAILABLE_ICONS = {
   Home, Trees, Car, Briefcase, Wrench, Truck, Bike, Bus, Sofa, Tv,
   PawPrint, Refrigerator, ShoppingBag, Building2, Package, Ship,
   Plane, Store, Factory, Bed,
 };
+export function getCategoryIcon(iconKey) { return AVAILABLE_ICONS[iconKey] || Home; }
 
-export function getCategoryIcon(iconKey) {
-  return AVAILABLE_ICONS[iconKey] || Home;
-}
-
-// ============================================================
-// STORAGE
-// ============================================================
-function readFromStorage() {
+function read() {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
 }
-
-function saveAll(list) {
+function write(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event(EV));
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
-export function getCategories() {
-  return readFromStorage();
-}
-
-export function getActiveCategories() {
-  return getCategories().filter((c) => c.active !== false);
-}
-
-export function getPopularCategories() {
-  return getCategories().filter(
-    (c) => c.active !== false && c.isPopular === true
-  );
-}
-
-export function getCategory(key) {
-  if (!key) return null;
-  return getCategories().find((c) => c.key === key) || null;
-}
-
+// ── Reads ─────────────────────────────────────────────────
+export function getCategories() { return read(); }
+export function getActiveCategories() { return read().filter((c) => c.active !== false); }
+export function getPopularCategories() { return read().filter((c) => c.active !== false && c.isPopular === true); }
+export function getCategory(key) { return key ? read().find((c) => c.key === key) || null : null; }
 export function getCategoryById(id) {
   if (id == null) return null;
-  return (
-    getCategories().find((c) => c.id === id || String(c.id) === String(id)) ||
-    null
-  );
+  return read().find((c) => c.id === id || String(c.id) === String(id)) || null;
 }
-
-export function getCategoryIdByKey(key) {
-  const cat = getCategory(key);
-  return cat?.id ?? null;
-}
-
+export function getCategoryIdByKey(key) { return getCategory(key)?.id ?? null; }
 export function getCategoryLabel(key, lang = "sw") {
   const cat = getCategory(key);
-  if (!cat) return key;
-  return cat.label?.[lang] || cat.label?.sw || key;
+  return cat ? cat.label?.[lang] || cat.label?.sw || key : key;
 }
-
 export function getCategoryExtra(key) {
   const cat = getCategory(key);
-  if (!cat || !Array.isArray(cat.extra)) return [];
-  return cat.extra;
+  return cat && Array.isArray(cat.extra) ? cat.extra : [];
 }
+export function getCategoryFieldLabel(f, lang = "sw") { return f?.label?.[lang] || f?.label?.sw || f?.key || ""; }
+export function getCategoryFieldPlaceholder(f, lang = "sw") { return f?.placeholder?.[lang] || f?.placeholder?.sw || ""; }
+export function getCategoryOptionLabel(o, lang = "sw") { return o?.label?.[lang] || o?.label?.sw || o?.value || ""; }
 
-export function getCategoryFieldLabel(field, lang = "sw") {
-  return field?.label?.[lang] || field?.label?.sw || field?.key || "";
-}
+export function initializeCategories() { /* no-op: data comes from API */ }
+export function resetCategories(list) { write(Array.isArray(list) ? list : []); }
 
-export function getCategoryFieldPlaceholder(field, lang = "sw") {
-  return field?.placeholder?.[lang] || field?.placeholder?.sw || "";
-}
-
-export function getCategoryOptionLabel(option, lang = "sw") {
-  return option?.label?.[lang] || option?.label?.sw || option?.value || "";
-}
-
-// ============================================================
-// INITIALIZE
-// ============================================================
-export function initializeCategories(list) {
-  if (!Array.isArray(list) || list.length === 0) {
-    return getCategories();
-  }
-  const current = getCategories();
-  if (current.length > 0) {
-    return current;
-  }
-  saveAll(list);
-  return list;
-}
-
-export function resetCategories(list) {
-  if (!Array.isArray(list)) return getCategories();
-  saveAll(list);
-  return list;
-}
-
-// ============================================================
-// GRACEFUL API HELPER
-// Inajaribu API; kama 404 → local-only fallback.
-// ============================================================
-async function tryApi(apiCall, { onSuccess, onFail, optimistic, previous }) {
-  try {
-    const raw = await apiCall();
-    onSuccess(raw);
-    return { ok: true, data: raw };
-  } catch (err) {
-    if (err?.status === 404 || err?.status === 501) {
-      // Backend haipo bado — kaa local-only
-      console.warn("[categoriesStore] backend haipo — local-only:", err.status);
-      return { ok: true, warning: "local_only", data: optimistic };
-    }
-    // Error nyingine — rollback
-    onFail(err);
-    return { ok: false, error: err };
-  }
-}
-
-// ============================================================
-// ASYNC MUTATIONS — Categories
-// ============================================================
-export async function addCategoryAsync(category) {
-  if (!category?.key) {
-    return { ok: false, error: new Error("key inahitajika") };
-  }
-
-  const current = getCategories();
-  if (current.some((c) => c.key === category.key)) {
-    return { ok: false, error: new Error(`Category "${category.key}" ipo tayari`) };
-  }
-
-  const optimistic = {
-    imageUrl: null,
-    isPopular: false,
-    active: true,
-    extra: [],
-    ...category,
-  };
-  saveAll([...current, optimistic]);
-
-  return tryApi(
-    () => api.post("/categories/", category),
-    {
-      optimistic,
-      previous: current,
-      onSuccess: (raw) => {
-        const created = normalizeCategoryFromApi(raw);
-        if (created) {
-          saveAll([
-            ...current.filter((c) => c.key !== category.key),
-            { ...created, ...preserveExtras(optimistic, created) },
-          ]);
-        }
-      },
-      onFail: () => saveAll(current),
-    }
-  );
-}
-
-export async function updateCategoryAsync(key, patch) {
-  const current = getCategories();
-  const target = current.find((c) => c.key === key);
-  if (!target) {
-    return { ok: false, error: new Error("Category haipo") };
-  }
-
-  const optimistic = { ...target, ...patch };
-  saveAll(current.map((c) => (c.key === key ? optimistic : c)));
-
-  // Kama haina backend ID — local-only
-  if (!target.id) {
-    return { ok: true, warning: "local_only", category: optimistic };
-  }
-
-  return tryApi(
-    () => api.patch(`/categories/${target.id}/`, patch),
-    {
-      optimistic,
-      previous: current,
-      onSuccess: (raw) => {
-        const updated = normalizeCategoryFromApi(raw);
-        if (updated) {
-          saveAll(
-            current.map((c) =>
-              c.key === key
-                ? { ...updated, ...preserveExtras(optimistic, updated) }
-                : c
-            )
-          );
-        }
-      },
-      onFail: () => saveAll(current),
-    }
-  );
-}
-
-export async function removeCategoryAsync(key) {
-  const current = getCategories();
-  const target = current.find((c) => c.key === key);
-  if (!target) {
-    return { ok: false, error: new Error("Category haipo") };
-  }
-
-  saveAll(current.filter((c) => c.key !== key));
-
-  if (!target.id) return { ok: true, warning: "local_only" };
-
-  return tryApi(
-    () => api.delete(`/categories/${target.id}/`),
-    {
-      optimistic: null,
-      previous: current,
-      onSuccess: () => {},
-      onFail: () => saveAll(current),
-    }
-  );
-}
-
-export async function toggleCategoryActiveAsync(key) {
-  const target = getCategory(key);
-  if (!target) return { ok: false, error: new Error("Category haipo") };
-
-  return updateCategoryAsync(key, { active: target.active === false });
-}
-
-export async function toggleCategoryPopularAsync(key) {
-  const target = getCategory(key);
-  if (!target) return { ok: false, error: new Error("Category haipo") };
-
-  return updateCategoryAsync(key, { isPopular: !target.isPopular });
-}
-
-export async function updateCategoryImageAsync(key, imageUrl) {
-  return updateCategoryAsync(key, { imageUrl });
-}
-
-// ============================================================
-// LEGACY SYNC (deprecated)
-// ============================================================
-export function addCategory(category) {
-  const current = getCategories();
-  if (current.some((c) => c.key === category.key)) {
-    throw new Error(`Category "${category.key}" already exists`);
-  }
-  const newCat = {
-    imageUrl: null, isPopular: false, active: true, extra: [], ...category,
-  };
-  saveAll([...current, newCat]);
-  return [...current, newCat];
-}
-
-export function updateCategory(key, patch) {
-  const current = getCategories();
-  const next = current.map((c) => (c.key === key ? { ...c, ...patch } : c));
-  saveAll(next);
-  return next;
-}
-
-export function toggleCategoryActive(key) {
-  const current = getCategories();
-  const next = current.map((c) =>
-    c.key === key ? { ...c, active: c.active === false ? true : false } : c
-  );
-  saveAll(next);
-  return next;
-}
-
-export function toggleCategoryPopular(key) {
-  const current = getCategories();
-  const next = current.map((c) =>
-    c.key === key ? { ...c, isPopular: !c.isPopular } : c
-  );
-  saveAll(next);
-  return next;
-}
-
-export function removeCategory(key, listingsCount = 0) {
-  if (listingsCount > 0) {
-    return {
-      success: false,
-      error: "HAS_LISTINGS",
-      listingsCount,
-      message: `Kuna listings ${listingsCount} zenye category hii. Ondoa/kwamisha listings hizo kwanza.`,
-    };
-  }
-  const current = getCategories();
-  const next = current.filter((c) => c.key !== key);
-  saveAll(next);
-  return { success: true, categories: next };
-}
-
-export function updateCategoryImage(key, imageUrl) {
-  return updateCategory(key, { imageUrl });
-}
-
-export function hasCategoryImage(category) {
-  return Boolean(category?.imageUrl && category.imageUrl.length > 0);
-}
-
-// ============================================================
-// NORMALIZER
-// ============================================================
+// ── Normalizer ────────────────────────────────────────────
 function toSlug(str) {
-  return String(str || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
+  return String(str || "").trim().toLowerCase()
+    .replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 }
-
-function normalizeCategoryFromApi(raw) {
+function norm(raw) {
   if (!raw) return null;
   const name = raw.name || "";
   const slug = raw.slug || toSlug(name);
@@ -351,100 +75,135 @@ function normalizeCategoryFromApi(raw) {
     slug,
     name,
     label: { sw: name, en: name },
-    description: {
-      sw: raw.description || "",
-      en: raw.description || "",
-    },
-    iconKey: "Home",
-    imageUrl: null,
-    isPopular: raw.is_active !== false,
+    description: { sw: raw.description || "", en: raw.description || "" },
+    iconKey: raw.icon_key || "Home",
+    imageUrl: raw.image_url || null,
+    isPopular: raw.is_popular ?? true,
     active: raw.is_active !== false,
     ordering: raw.ordering ?? 0,
-    extra: [],
+    extra: Array.isArray(raw.extra) ? raw.extra : [],
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
   };
 }
 
-// Hifadhi extras za seed (iconKey, imageUrl, extra) wakati API inarudisha data
-function preserveExtras(optimistic, fromApi) {
+// ── Hydrate ───────────────────────────────────────────────
+export async function hydrateCategoriesFromApi() {
+  try {
+    const data = await categoriesApi.list({ page_size: 200 });
+    const list = Array.isArray(data) ? data : data?.results || [];
+    const normalized = list.map(norm).filter(Boolean);
+    // Preserve iconKey/imageUrl/extra from existing cache if backend doesn't return them
+    const existing = read();
+    const merged = normalized.map((c) => {
+      const prior = existing.find((p) => p.key === c.key);
+      if (!prior) return c;
+      return {
+        ...c,
+        iconKey: c.iconKey && c.iconKey !== "Home" ? c.iconKey : prior.iconKey || "Home",
+        imageUrl: c.imageUrl || prior.imageUrl || null,
+        extra: c.extra.length ? c.extra : prior.extra || [],
+      };
+    });
+    write(merged);
+    return { ok: true, count: merged.length };
+  } catch (err) { return { ok: false, error: err }; }
+}
+
+// ── Mutations ─────────────────────────────────────────────
+function toApiBody(form) {
   return {
-    extra: optimistic?.extra || fromApi?.extra || [],
-    iconKey: optimistic?.iconKey || fromApi?.iconKey || "Home",
-    imageUrl: optimistic?.imageUrl || fromApi?.imageUrl || null,
-    isPopular: optimistic?.isPopular ?? fromApi?.isPopular ?? false,
-    label: optimistic?.label || fromApi?.label,
-    description: optimistic?.description || fromApi?.description,
+    name: form.name || form.label?.en || form.label?.sw || form.key,
+    description: form.description?.en || form.description?.sw || "",
+    icon_key: form.iconKey || "Home",
+    image_url: form.imageUrl || null,
+    is_popular: form.isPopular !== false,
+    is_active: form.active !== false,
+    ordering: form.ordering ?? 0,
+    extra: form.extra || [],
   };
 }
 
-// ============================================================
-// HYDRATE
-// ============================================================
-export async function hydrateCategoriesFromApi() {
+export async function addCategoryAsync(form) {
+  const body = toApiBody(form);
   try {
-    const data = await categoriesApi.list({ page_size: 100 });
-    const rawList = Array.isArray(data) ? data : data?.results || [];
-    if (!rawList.length) {
-      return { source: "seed", count: getCategories().length };
-    }
-
-    const existing = getCategories();
-    const normalized = rawList
-      .map((raw) => {
-        const cat = normalizeCategoryFromApi(raw);
-        if (!cat) return null;
-        const prior = existing.find((c) => c.key === cat.key);
-        if (prior) {
-          cat.extra = prior.extra || [];
-          cat.iconKey = prior.iconKey || "Home";
-          cat.imageUrl = prior.imageUrl || null;
-          cat.isPopular = prior.isPopular ?? false;
-          cat.label = prior.label || cat.label;
-          cat.description = prior.description || cat.description;
-        }
-        return cat;
-      })
-      .filter(Boolean);
-
-    saveAll(normalized);
-    return { source: "api", count: normalized.length };
-  } catch (err) {
-    console.warn("[categoriesStore] hydrate failed:", err);
-    return { source: "error", count: getCategories().length };
-  }
+    const raw = await api.post("/categories/", body);
+    const created = norm(raw);
+    const prior = form.iconKey ? { ...created, iconKey: form.iconKey } : created;
+    write([...read(), prior]);
+    return { ok: true, category: prior };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// HOOKS
-// ============================================================
+export async function updateCategoryAsync(key, patch) {
+  const target = getCategory(key);
+  if (!target) return { ok: false, error: new Error("Category not found") };
+  if (typeof target.id !== "number") {
+    return { ok: false, error: new Error("Category has no backend id") };
+  }
+  const body = {};
+  if (patch.name != null || patch.label != null) body.name = patch.name || patch.label?.en || patch.label?.sw;
+  if (patch.description != null) body.description = patch.description?.en || patch.description?.sw || "";
+  if (patch.iconKey != null) body.icon_key = patch.iconKey;
+  if (patch.imageUrl != null) body.image_url = patch.imageUrl;
+  if (patch.isPopular != null) body.is_popular = patch.isPopular;
+  if (patch.active != null) body.is_active = patch.active;
+  if (patch.extra != null) body.extra = patch.extra;
+  if (!Object.keys(body).length) return { ok: true, category: target };
+  try {
+    const raw = await api.patch(`/categories/${target.id}/`, body);
+    const updated = norm(raw);
+    // Preserve local extras
+    const merged = { ...updated, iconKey: updated.iconKey || target.iconKey, imageUrl: updated.imageUrl || target.imageUrl, extra: updated.extra.length ? updated.extra : target.extra };
+    write(read().map((c) => (c.key === key ? merged : c)));
+    return { ok: true, category: merged };
+  } catch (err) { return { ok: false, error: err }; }
+}
+
+export async function toggleCategoryActiveAsync(key) {
+  const target = getCategory(key);
+  if (!target) return { ok: false, error: new Error("Category not found") };
+  return updateCategoryAsync(key, { active: target.active === false });
+}
+
+export async function toggleCategoryPopularAsync(key) {
+  const target = getCategory(key);
+  if (!target) return { ok: false, error: new Error("Category not found") };
+  return updateCategoryAsync(key, { isPopular: !target.isPopular });
+}
+
+export async function updateCategoryImageAsync(key, imageUrl) {
+  return updateCategoryAsync(key, { imageUrl });
+}
+
+export async function removeCategoryAsync(key) {
+  const target = getCategory(key);
+  if (!target) return { ok: false, error: new Error("Category not found") };
+  try {
+    await api.delete(`/categories/${target.id}/`);
+    write(read().filter((c) => c.key !== key));
+    return { ok: true };
+  } catch (err) { return { ok: false, error: err }; }
+}
+
+// ── Hooks ─────────────────────────────────────────────────
 export function useCategories() {
-  const [list, setList] = useState(() => getCategories());
+  const [list, setList] = useState(() => read());
   useEffect(() => {
     hydrateCategoriesFromApi();
-    const sync = () => setList(getCategories());
+    const sync = () => setList(read());
     window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener(EV, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener(EV, sync);
     };
   }, []);
   return list;
 }
-
-export function useActiveCategories() {
-  const list = useCategories();
-  return list.filter((c) => c.active !== false);
-}
-
-export function usePopularCategories() {
-  const list = useCategories();
-  return list.filter((c) => c.active !== false && c.isPopular === true);
-}
-
+export function useActiveCategories() { return useCategories().filter((c) => c.active !== false); }
+export function usePopularCategories() { return useCategories().filter((c) => c.active !== false && c.isPopular === true); }
 export function useCategory(key) {
   const list = useCategories();
-  if (!key) return null;
-  return list.find((c) => c.key === key) || null;
+  return key ? list.find((c) => c.key === key) || null : null;
 }

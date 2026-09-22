@@ -1,201 +1,46 @@
 // ============================================================
-// listingFeeStore.js
-// Backend source: /api/listings/fee-rules/
-// Backend stores `percentage` (e.g. 2.50 = 2.5%). Frontend uses
-// `rate` (0.025). Conversion handled here.
+// listingFeeStore.js — API-only via /api/listings/fee-rules/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import { listingFeeRulesApi } from "../api/listingFeeRules.js";
 
-const STORAGE_KEY = "sokomkononi_listing_fee_config_v1";
-const UPDATE_EVENT = "sokomkononi:listing-fee-config-updated";
+const KEY = "sokomkononi_listing_fee_config_v1";
+const EV = "sokomkononi:listing-fee-config-updated";
 
-export const SEED_LISTING_FEE_CONFIG = [
-  { key: "nyumba", rate: 0.010, min: 20000, max: 300000 },
-  { key: "viwanja", rate: 0.008, min: 15000, max: 250000 },
-  { key: "magari", rate: 0.015, min: 10000, max: 150000 },
-  { key: "biashara", rate: 0.012, min: 20000, max: 200000 },
-  { key: "mashine", rate: 0.010, min: 15000, max: 180000 },
-];
-
-// ============================================================
-// STORAGE
-// ============================================================
-function readFromStorage() {
-  if (typeof window === "undefined") return SEED_LISTING_FEE_CONFIG;
+function read() {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_LISTING_FEE_CONFIG;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return SEED_LISTING_FEE_CONFIG;
-    return parsed;
-  } catch {
-    return SEED_LISTING_FEE_CONFIG;
-  }
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return [];
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
 }
-
-export function saveListingFeeConfigs(list) {
+function write(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event(EV));
 }
 
-// ============================================================
-// READS
-// ============================================================
-export function getListingFeeConfigs() { return readFromStorage(); }
+export function getListingFeeConfigs() { return read(); }
+export function getListingFeeConfig(key) { return key ? read().find((c) => c.key === key) || null : null; }
+export function hasFeeConfig(key) { return read().some((c) => c.key === key); }
 
-export function getListingFeeConfig(categoryKey) {
-  if (!categoryKey) return null;
-  return getListingFeeConfigs().find((c) => c.key === categoryKey) || null;
-}
-
-export function hasFeeConfig(categoryKey) {
-  return getListingFeeConfigs().some((c) => c.key === categoryKey);
-}
-
-// ============================================================
-// SYNC MUTATIONS (deprecated — use async)
-// ============================================================
-/** @deprecated Use updateListingFeeConfigAsync */
-export function updateListingFeeConfig(categoryKey, patch) {
-  const current = getListingFeeConfigs();
-  const target = current.find((c) => c.key === categoryKey);
-  const next = current.map((c) => (c.key === categoryKey ? { ...c, ...patch } : c));
-  saveListingFeeConfigs(next);
-  if (target?.id) {
-    const apiPatch = {};
-    if (patch.rate != null) apiPatch.percentage = patch.rate * 100;
-    if (patch.min != null) apiPatch.min_price = patch.min;
-    if (patch.max != null) apiPatch.max_price = patch.max;
-    listingFeeRulesApi.update(target.id, apiPatch).catch(() => {});
-  }
-  return next;
-}
-
-/** @deprecated Use addFeeConfigAsync */
-export function addFeeConfig(categoryKey, _label) {
-  const current = getListingFeeConfigs();
-  if (current.some((c) => c.key === categoryKey)) {
-    throw new Error(`Fee config for "${categoryKey}" already exists.`);
-  }
-  const next = [...current, { key: categoryKey, rate: 0.01, min: 10000, max: 100000 }];
-  saveListingFeeConfigs(next);
-  listingFeeRulesApi.create({
-    name: categoryKey, percentage: 1.0, min_price: 10000, max_price: 100000,
-  }).catch(() => {});
-  return next;
-}
-
-/** @deprecated Use removeFeeConfigAsync */
-export function removeFeeConfig(categoryKey) {
-  const current = getListingFeeConfigs();
-  const target = current.find((c) => c.key === categoryKey);
-  const next = current.filter((c) => c.key !== categoryKey);
-  saveListingFeeConfigs(next);
-  if (target?.id) listingFeeRulesApi.remove(target.id).catch(() => {});
-  return next;
-}
-
-// ============================================================
-// ASYNC MUTATIONS
-// ============================================================
-export async function updateListingFeeConfigAsync(categoryKey, patch) {
-  const previous = getListingFeeConfigs();
-  const target = previous.find((c) => c.key === categoryKey);
-  if (!target) return { ok: false, error: new Error("Fee config not found") };
-
-  const optimistic = { ...target, ...patch };
-  saveListingFeeConfigs(previous.map((c) => (c.key === categoryKey ? optimistic : c)));
-
-  if (typeof target.id !== "number") {
-    return { ok: true, warning: "local_only", config: optimistic };
-  }
-
-  const apiPatch = {};
-  if (patch.rate != null) apiPatch.percentage = patch.rate * 100;
-  if (patch.min != null) apiPatch.min_price = patch.min;
-  if (patch.max != null) apiPatch.max_price = patch.max;
-
-  try {
-    await listingFeeRulesApi.update(target.id, apiPatch);
-    return { ok: true, config: optimistic };
-  } catch (err) {
-    saveListingFeeConfigs(previous);
-    console.warn("[listingFeeStore] updateListingFeeConfig failed:", err);
-    return { ok: false, error: err };
-  }
-}
-
-export async function addFeeConfigAsync(categoryKey) {
-  if (!categoryKey) return { ok: false, error: new Error("Category key required") };
-  const previous = getListingFeeConfigs();
-  if (previous.some((c) => c.key === categoryKey)) {
-    return { ok: false, error: new Error(`Fee config for "${categoryKey}" already exists`) };
-  }
-
-  const optimistic = { key: categoryKey, rate: 0.01, min: 10000, max: 100000 };
-  saveListingFeeConfigs([...previous, optimistic]);
-
-  try {
-    const raw = await listingFeeRulesApi.create({
-      name: categoryKey, percentage: 1.0, min_price: 10000, max_price: 100000,
-    });
-    if (raw?.id) {
-      const normalized = {
-        id: raw.id,
-        key: categoryKey,
-        rate: (Number(raw.percentage) || 1) / 100,
-        min: Number(raw.min_price) || 10000,
-        max: Number(raw.max_price) || 100000,
-      };
-      const current = getListingFeeConfigs();
-      saveListingFeeConfigs(current.map((c) => (c.key === categoryKey ? normalized : c)));
-      return { ok: true, config: normalized };
-    }
-    return { ok: true, config: optimistic };
-  } catch (err) {
-    saveListingFeeConfigs(previous);
-    console.warn("[listingFeeStore] addFeeConfig failed:", err);
-    return { ok: false, error: err };
-  }
-}
-
-export async function removeFeeConfigAsync(categoryKey) {
-  const previous = getListingFeeConfigs();
-  const target = previous.find((c) => c.key === categoryKey);
-  if (!target) return { ok: false, error: new Error("Fee config not found") };
-
-  saveListingFeeConfigs(previous.filter((c) => c.key !== categoryKey));
-
-  if (typeof target.id !== "number") return { ok: true, warning: "local_only" };
-
-  try {
-    await listingFeeRulesApi.remove(target.id);
-    return { ok: true };
-  } catch (err) {
-    saveListingFeeConfigs(previous);
-    console.warn("[listingFeeStore] removeFeeConfig failed:", err);
-    return { ok: false, error: err };
-  }
-}
-
-// ============================================================
-// API NORMALIZER
-// ============================================================
 function toSlug(str) {
   return String(str || "").trim().toLowerCase()
     .replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 }
 
-function normalizeFeeRuleFromApi(raw) {
+function norm(raw) {
   if (!raw) return null;
   const pct = Number(raw.percentage) || 0;
   return {
     id: raw.id,
     key: toSlug(raw.name),
+    name: raw.name,
     rate: pct / 100,
+    percentage: pct,
     min: Number(raw.min_price) || 0,
     max: raw.max_price != null ? Number(raw.max_price) : 999999999,
     isActive: raw.is_active !== false,
@@ -203,39 +48,70 @@ function normalizeFeeRuleFromApi(raw) {
   };
 }
 
-// ============================================================
-// HYDRATE
-// ============================================================
 export async function hydrateListingFeeConfigsFromApi() {
   try {
-    const data = await api.get("/listings/fee-rules/?page_size=100");
-    const rawList = Array.isArray(data) ? data : data?.results || [];
-    if (!rawList.length) {
-      return { source: "seed", count: getListingFeeConfigs().length };
-    }
-    const normalized = rawList.map(normalizeFeeRuleFromApi).filter(Boolean);
-    saveListingFeeConfigs(normalized);
-    return { source: "api", count: normalized.length };
-  } catch (err) {
-    console.warn("[listingFeeStore] hydrate failed:", err);
-    return { source: "error", count: getListingFeeConfigs().length };
-  }
+    const data = await api.get("/listings/fee-rules/?page_size=200");
+    const list = Array.isArray(data) ? data : data?.results || [];
+    const normalized = list.map(norm).filter(Boolean);
+    write(normalized);
+    return { ok: true, count: normalized.length };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// HOOK
-// ============================================================
+export async function updateListingFeeConfigAsync(key, patch) {
+  const target = getListingFeeConfig(key);
+  if (!target) return { ok: false, error: new Error("Fee config not found") };
+  if (typeof target.id !== "number") {
+    return { ok: false, error: new Error("Fee config has no backend id — hydrate first") };
+  }
+  const apiPatch = {};
+  if (patch.rate != null) apiPatch.percentage = patch.rate * 100;
+  if (patch.min != null) apiPatch.min_price = patch.min;
+  if (patch.max != null) apiPatch.max_price = patch.max;
+  if (!Object.keys(apiPatch).length) return { ok: true, config: target };
+  try {
+    const raw = await listingFeeRulesApi.update(target.id, apiPatch);
+    const updated = norm(raw) || { ...target, ...patch };
+    write(read().map((c) => (c.key === key ? updated : c)));
+    return { ok: true, config: updated };
+  } catch (err) { return { ok: false, error: err }; }
+}
+
+export async function addFeeConfigAsync({ name, percentage = 1.0, min_price = 10000, max_price = 100000, priority = 0 }) {
+  if (!name) return { ok: false, error: new Error("name required") };
+  const key = toSlug(name);
+  if (hasFeeConfig(key)) return { ok: false, error: new Error(`Fee config for "${key}" already exists`) };
+  try {
+    const raw = await listingFeeRulesApi.create({
+      name, percentage, min_price, max_price, priority, is_active: true,
+    });
+    const created = norm(raw);
+    write([created, ...read()]);
+    return { ok: true, config: created };
+  } catch (err) { return { ok: false, error: err }; }
+}
+
+export async function removeFeeConfigAsync(key) {
+  const target = getListingFeeConfig(key);
+  if (!target) return { ok: false, error: new Error("Fee config not found") };
+  try {
+    await listingFeeRulesApi.remove(target.id);
+    write(read().filter((c) => c.key !== key));
+    return { ok: true };
+  } catch (err) { return { ok: false, error: err }; }
+}
+
 export function useListingFeeConfigs() {
-  const [configs, setConfigs] = useState(() => getListingFeeConfigs());
+  const [list, setList] = useState(() => read());
   useEffect(() => {
     hydrateListingFeeConfigsFromApi();
-    const sync = () => setConfigs(getListingFeeConfigs());
+    const sync = () => setList(read());
     window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener(EV, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener(EV, sync);
     };
   }, []);
-  return configs;
+  return list;
 }

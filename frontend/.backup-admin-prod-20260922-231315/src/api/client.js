@@ -1,11 +1,12 @@
 // ============================================================
-// client.js — API Client (production)
-// Precise public-endpoint detection. Admin mutations always
-// carry the Authorization header. No local fallbacks.
+// client.js — API Client
+// FIXED: precise public-endpoint detection. POST/PATCH/DELETE
+// on /categories, /content, /announcements, /listings/admin/*
+// now correctly attach the Authorization header.
 // ============================================================
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-if (!BASE_URL) throw new Error("[api] VITE_API_BASE_URL is required");
+if (!BASE_URL) console.warn("[api] VITE_API_BASE_URL haipo");
 
 const ACCESS_KEY = "sokomkononi_access";
 const REFRESH_KEY = "sokomkononi_refresh";
@@ -14,6 +15,10 @@ let accessToken = localStorage.getItem(ACCESS_KEY);
 let refreshToken = localStorage.getItem(REFRESH_KEY);
 let onUnauthorized = null;
 
+// ============================================================
+// PUBLIC ENDPOINTS
+// ============================================================
+// Fully public POSTs (no token on any method)
 const PUBLIC_POST_PREFIX = [
   "/auth/login/",
   "/auth/register/",
@@ -25,6 +30,7 @@ const PUBLIC_POST_PREFIX = [
   "/contact/",
 ];
 
+// Public GETs (regex). Must NOT match /listings/admin/* or /listings/fee-rules/*
 const PUBLIC_GET_PATTERNS = [
   /^\/listings\/?(\?.*)?$/,
   /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/?(\?.*)?$/,
@@ -48,10 +54,15 @@ const PUBLIC_GET_PATTERNS = [
 
 function isPublicEndpoint(path, method) {
   const m = (method || "GET").toUpperCase();
-  if (m === "GET") return PUBLIC_GET_PATTERNS.some((re) => re.test(path));
+  if (m === "GET") {
+    return PUBLIC_GET_PATTERNS.some((re) => re.test(path));
+  }
   return PUBLIC_POST_PREFIX.some((p) => path.startsWith(p));
 }
 
+// ============================================================
+// TOKEN MANAGEMENT
+// ============================================================
 export function setTokens({ access, refresh } = {}) {
   if (access !== undefined) {
     accessToken = access;
@@ -69,10 +80,7 @@ export function setUnauthorizedHandler(fn) { onUnauthorized = fn; }
 
 export class ApiError extends Error {
   constructor(status, data) {
-    const msg =
-      (data && (data.detail || data.message || data.error)) ||
-      (typeof data === "string" ? data : "") ||
-      `API error ${status}`;
+    const msg = (data && (data.detail || data.message || data.error)) || `API error ${status}`;
     super(msg);
     this.name = "ApiError";
     this.status = status;
@@ -80,6 +88,9 @@ export class ApiError extends Error {
   }
 }
 
+// ============================================================
+// TOKEN REFRESH
+// ============================================================
 let refreshPromise = null;
 async function refreshAccessToken() {
   if (!refreshToken) throw new ApiError(401, { detail: "No refresh token" });
@@ -101,6 +112,9 @@ async function refreshAccessToken() {
   return refreshPromise;
 }
 
+// ============================================================
+// REQUEST
+// ============================================================
 async function request(path, {
   method = "GET", body, headers = {}, retry = true, isFormData = false,
 } = {}) {
@@ -138,6 +152,9 @@ async function request(path, {
   return data;
 }
 
+// ============================================================
+// API EXPORT
+// ============================================================
 export const api = {
   get:    (path, opts) => request(path, { ...opts, method: "GET" }),
   post:   (path, body, opts) => request(path, { ...opts, method: "POST",   body }),

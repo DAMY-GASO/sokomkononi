@@ -25,9 +25,9 @@ import {
   addRoleAsync,
   updateRoleAsync,
   removeRoleAsync,
-  addStaffAsync,
-  updateStaffAsync,
-  removeStaffAsync,
+  addSubAdminAsync,
+  updateSubAdminAsync,
+  removeSubAdminAsync,
   PERMISSIONS,
 } from "../../../../config/rolesStore.js";
 
@@ -594,16 +594,11 @@ export default function RBACSection() {
     setBusy((b) => ({ ...b, staffSave: true }));
     setError("");
 
-    const role = roles.find((r) => r.key === form.roleKey);
-    const roleId = role?.id;
-    if (typeof roleId !== "number") {
-      setError(t("Role haina backend id. Hydrate kwanza.", "Role has no backend id. Hydrate first."));
-      return;
-    }
-    const res = await addStaffAsync({
+    const res = await addSubAdminAsync({
+      name: form.name,
+      email: form.email,
+      roleKey: form.roleKey,
       userId: form.userId,
-      roleId,
-      active: form.active !== false,
     });
     setBusy((b) => {
       const next = { ...b };
@@ -627,11 +622,7 @@ export default function RBACSection() {
     setBusy((b) => ({ ...b, staffSave: true }));
     setError("");
 
-    const role = roles.find((r) => r.key === form.roleKey);
-    const res = await updateStaffAsync(id, {
-      roleId: role?.id,
-      active: form.active,
-    });
+    const res = await updateSubAdminAsync(id, form);
     setBusy((b) => {
       const next = { ...b };
       delete next.staffSave;
@@ -656,7 +647,7 @@ export default function RBACSection() {
     setBusy((b) => ({ ...b, [`staff-${s.id}`]: true }));
     setError("");
 
-    const res = await removeStaffAsync(s.id);
+    const res = await removeSubAdminAsync(s.id);
     setBusy((b) => {
       const next = { ...b };
       delete next[`staff-${s.id}`];

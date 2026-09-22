@@ -1,443 +1,242 @@
 // ============================================================
-// contentStore.js — API-backed via /api/content/
-// + Graceful local fallback (404 → local-only)
+// contentStore.js — API-only via /api/content/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const STORAGE_KEY = "sokomkononi_content_v1";
-const UPDATE_EVENT = "sokomkononi:content-updated";
+const KEY = "sokomkononi_content_v1";
+const EV = "sokomkononi:content-updated";
 
-export const DEFAULT_BANNERS = [];
-export const DEFAULT_TESTIMONIALS = [];
-export const DEFAULT_FAQS = [];
-
-export const DEFAULT_ABOUT = {
-  heading: { sw: "Kuhusu SokoMkononi", en: "About SokoMkononi" },
-  subtext: { sw: "", en: "" },
-  mission: { sw: "", en: "" },
-  values: [],
-};
-export const DEFAULT_TERMS = { heading: { sw: "", en: "" }, content: { sw: "", en: "" } };
-export const DEFAULT_PRIVACY = { heading: { sw: "", en: "" }, content: { sw: "", en: "" } };
-export const DEFAULT_HELP = { heading: { sw: "", en: "" }, content: { sw: "", en: "" } };
-
-export const SEED_CONTENT = {
-  banners: DEFAULT_BANNERS,
-  testimonials: DEFAULT_TESTIMONIALS,
-  faqs: DEFAULT_FAQS,
-  about: DEFAULT_ABOUT,
-  terms: DEFAULT_TERMS,
-  privacy: DEFAULT_PRIVACY,
-  help: DEFAULT_HELP,
+const EMPTY = {
+  banners: [],
+  testimonials: [],
+  faqs: [],
+  about: { heading: { sw: "", en: "" }, subtext: { sw: "", en: "" }, mission: { sw: "", en: "" }, values: [] },
+  terms: { heading: { sw: "", en: "" }, content: { sw: "", en: "" } },
+  privacy: { heading: { sw: "", en: "" }, content: { sw: "", en: "" } },
+  help: { heading: { sw: "", en: "" }, content: { sw: "", en: "" } },
 };
 
-function readFromStorage() {
-  if (typeof window === "undefined") return SEED_CONTENT;
+function read() {
+  if (typeof window === "undefined") return EMPTY;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_CONTENT;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return SEED_CONTENT;
-    return { ...SEED_CONTENT, ...parsed };
-  } catch {
-    return SEED_CONTENT;
-  }
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return EMPTY;
+    const p = JSON.parse(raw);
+    return p && typeof p === "object" ? { ...EMPTY, ...p } : EMPTY;
+  } catch { return EMPTY; }
 }
-
-function saveAll(content) {
+function write(c) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(content));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(KEY, JSON.stringify(c));
+  window.dispatchEvent(new Event(EV));
 }
 
-function normalizeFromApi(raw) {
-  if (!raw || typeof raw !== "object") return SEED_CONTENT;
-  const buildKeyBlock = (block) => {
-    if (!block) return null;
-    return {
-      heading: block.heading || { sw: "", en: "" },
-      content: block.content || { sw: "", en: "" },
-      extra: block.extra || {},
-      lastUpdated: block.updated_at,
-    };
-  };
+function normBanner(b) {
   return {
-    banners: (raw.banners || []).map((b) => ({
-      id: b.id,
-      title: b.title || { sw: "", en: "" },
-      subtitle: b.subtitle || { sw: "", en: "" },
-      ctaText: b.ctaText || { sw: "", en: "" },
-      ctaLink: b.cta_link || "",
-      imageUrl: b.image_url || null,
-      active: !!b.active,
-      order: b.order ?? 1,
-    })),
-    testimonials: (raw.testimonials || []).map((t) => ({
-      id: t.id,
-      name: t.name,
-      quote: t.quote || { sw: "", en: "" },
-      avatarUrl: t.avatar_url || null,
-      rating: t.rating || 5,
-      active: !!t.active,
-    })),
-    faqs: (raw.faqs || []).map((f) => ({
-      id: f.id,
-      question: f.question || { sw: "", en: "" },
-      answer: f.answer || { sw: "", en: "" },
-      active: !!f.active,
-      order: f.order ?? 1,
-    })),
-    about: buildKeyBlock(raw.about) || DEFAULT_ABOUT,
-    terms: buildKeyBlock(raw.terms) || DEFAULT_TERMS,
-    privacy: buildKeyBlock(raw.privacy) || DEFAULT_PRIVACY,
-    help: buildKeyBlock(raw.help) || DEFAULT_HELP,
+    id: b.id,
+    title: b.title || { sw: "", en: "" },
+    subtitle: b.subtitle || { sw: "", en: "" },
+    ctaText: b.cta_text || b.ctaText || { sw: "", en: "" },
+    ctaLink: b.cta_link || b.ctaLink || "",
+    imageUrl: b.image_url || b.imageUrl || null,
+    active: b.active !== false,
+    order: b.ordering ?? b.order ?? 1,
+  };
+}
+function normTestimonial(t) {
+  return {
+    id: t.id,
+    name: t.name || "",
+    quote: t.quote || { sw: "", en: "" },
+    avatarUrl: t.avatar_url || t.avatarUrl || null,
+    rating: t.rating || 5,
+    active: t.active !== false,
+  };
+}
+function normFaq(f) {
+  return {
+    id: f.id,
+    question: f.question || { sw: "", en: "" },
+    answer: f.answer || { sw: "", en: "" },
+    active: f.active !== false,
+    order: f.ordering ?? f.order ?? 1,
+  };
+}
+function normPage(b, fallback) {
+  if (!b) return fallback;
+  return {
+    heading: b.heading || fallback.heading,
+    content: b.content || fallback.content,
+    subtext: b.subtext || fallback.subtext,
+    mission: b.mission || fallback.mission,
+    values: b.values || fallback.values || [],
+    lastUpdated: b.updated_at || b.lastUpdated,
+  };
+}
+function normFull(raw) {
+  return {
+    banners: (raw.banners || []).map(normBanner),
+    testimonials: (raw.testimonials || []).map(normTestimonial),
+    faqs: (raw.faqs || []).map(normFaq),
+    about: normPage(raw.about, EMPTY.about),
+    terms: normPage(raw.terms, EMPTY.terms),
+    privacy: normPage(raw.privacy, EMPTY.privacy),
+    help: normPage(raw.help, EMPTY.help),
   };
 }
 
-// ============================================================
-// GRACEFUL API HELPER — ⬅️ MUHIMU! Ipo hapa
-// ============================================================
-async function tryApi(apiCall, { onSuccess, onFail, optimistic }) {
-  try {
-    const raw = await apiCall();
-    onSuccess(raw);
-    return { ok: true, data: raw };
-  } catch (err) {
-    if (err?.status === 404 || err?.status === 501) {
-      console.warn("[contentStore] backend haipo — local-only:", err.status);
-      return { ok: true, warning: "local_only" };
-    }
-    onFail(err);
-    return { ok: false, error: err };
-  }
-}
-
-// ============================================================
-// READS
-// ============================================================
-export function getContent() {
-  return readFromStorage();
-}
+export function getContent() { return read(); }
+export function getBanners() { return read().banners || []; }
+export function getTestimonials() { return read().testimonials || []; }
+export function getFaqs() { return read().faqs || []; }
+export function getAbout() { return read().about || EMPTY.about; }
+export function getTerms() { return read().terms || EMPTY.terms; }
+export function getPrivacy() { return read().privacy || EMPTY.privacy; }
+export function getHelp() { return read().help || EMPTY.help; }
 
 export async function hydrateContentFromApi() {
   try {
     const data = await api.get("/content/");
-    const normalized = normalizeFromApi(data);
-    saveAll(normalized);
-    return { source: "api" };
-  } catch (err) {
-    console.warn("[contentStore] hydrate failed:", err);
-    return { source: "error" };
-  }
+    write(normFull(data || {}));
+    return { ok: true };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-export function getBanners() { return getContent().banners || []; }
-export function getTestimonials() { return getContent().testimonials || []; }
-export function getFaqs() { return getContent().faqs || []; }
-export function getAbout() { return getContent().about || DEFAULT_ABOUT; }
-export function getTerms() { return getContent().terms || DEFAULT_TERMS; }
-export function getPrivacy() { return getContent().privacy || DEFAULT_PRIVACY; }
-export function getHelp() { return getContent().help || DEFAULT_HELP; }
-
-// ============================================================
-// LEGACY SYNC (deprecated — bado zinafanya kazi)
-// ============================================================
-export function addBanner(banner) {
-  const current = getContent();
-  const entry = { id: `local_${Date.now()}`, active: true, order: 1, ...banner };
-  saveAll({ ...current, banners: [...(current.banners || []), entry] });
-  return entry;
+// ── Banners ───────────────────────────────────────────────
+export async function addBannerAsync(form) {
+  try {
+    const raw = await api.post("/content/banners/", {
+      title: form.title, subtitle: form.subtitle,
+      cta_text: form.ctaText, cta_link: form.ctaLink,
+      image_url: form.imageUrl, active: form.active !== false,
+      ordering: form.order ?? 1,
+    });
+    const created = normBanner(raw);
+    write({ ...read(), banners: [...read().banners, created] });
+    return { ok: true, banner: created };
+  } catch (err) { return { ok: false, error: err }; }
 }
-export function updateBanner(id, patch) {
-  const current = getContent();
-  const next = { ...current, banners: (current.banners || []).map((b) => b.id === id ? { ...b, ...patch } : b) };
-  saveAll(next); return next;
-}
-export function removeBanner(id) {
-  const current = getContent();
-  const next = { ...current, banners: (current.banners || []).filter((b) => b.id !== id) };
-  saveAll(next); return next;
-}
-export function addTestimonial(t) {
-  const current = getContent();
-  const entry = { id: `local_${Date.now()}`, rating: 5, active: true, ...t };
-  saveAll({ ...current, testimonials: [...(current.testimonials || []), entry] });
-  return entry;
-}
-export function updateTestimonial(id, patch) {
-  const current = getContent();
-  const next = { ...current, testimonials: (current.testimonials || []).map((x) => x.id === id ? { ...x, ...patch } : x) };
-  saveAll(next); return next;
-}
-export function removeTestimonial(id) {
-  const current = getContent();
-  const next = { ...current, testimonials: (current.testimonials || []).filter((x) => x.id !== id) };
-  saveAll(next); return next;
-}
-export function addFaq(f) {
-  const current = getContent();
-  const entry = { id: `local_${Date.now()}`, active: true, order: 1, ...f };
-  saveAll({ ...current, faqs: [...(current.faqs || []), entry] });
-  return entry;
-}
-export function updateFaq(id, patch) {
-  const current = getContent();
-  const next = { ...current, faqs: (current.faqs || []).map((x) => x.id === id ? { ...x, ...patch } : x) };
-  saveAll(next); return next;
-}
-export function removeFaq(id) {
-  const current = getContent();
-  const next = { ...current, faqs: (current.faqs || []).filter((x) => x.id !== id) };
-  saveAll(next); return next;
-}
-export function updateAbout(patch) {
-  const current = getContent();
-  const next = { ...current, about: { ...current.about, ...patch, lastUpdated: new Date().toISOString() } };
-  saveAll(next); return next;
-}
-export function updateTerms(patch) {
-  const current = getContent();
-  const next = { ...current, terms: { ...current.terms, ...patch, lastUpdated: new Date().toISOString() } };
-  saveAll(next); return next;
-}
-export function updatePrivacy(patch) {
-  const current = getContent();
-  const next = { ...current, privacy: { ...current.privacy, ...patch, lastUpdated: new Date().toISOString() } };
-  saveAll(next); return next;
-}
-export function updateHelp(patch) {
-  const current = getContent();
-  const next = { ...current, help: { ...current.help, ...patch, lastUpdated: new Date().toISOString() } };
-  saveAll(next); return next;
-}
-
-// ============================================================
-// ASYNC MUTATIONS — with graceful local fallback
-// ============================================================
-
-// ---------- BANNERS ----------
-export async function addBannerAsync(banner) {
-  const current = getContent();
-  const optimistic = { id: `local_${Date.now()}`, active: true, order: 1, ...banner };
-  const next = { ...current, banners: [...(current.banners || []), optimistic] };
-  saveAll(next);
-
-  return tryApi(
-    () => api.post("/content/banners/", banner),
-    {
-      optimistic,
-      onSuccess: (raw) => {
-        if (raw?.id) {
-          const now = getContent();
-          saveAll({
-            ...now,
-            banners: (now.banners || []).map((b) => (b.id === optimistic.id ? raw : b)),
-          });
-        }
-      },
-      onFail: () => saveAll(current),
-    }
-  );
-}
-
 export async function updateBannerAsync(id, patch) {
-  const current = getContent();
-  const next = {
-    ...current,
-    banners: (current.banners || []).map((b) => (b.id === id ? { ...b, ...patch } : b)),
-  };
-  saveAll(next);
-
-  if (typeof id !== "number") return { ok: true, warning: "local_only" };
-
-  return tryApi(
-    () => api.patch(`/content/banners/${id}/`, patch),
-    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
-  );
+  try {
+    const raw = await api.patch(`/content/banners/${id}/`, {
+      ...(patch.title != null ? { title: patch.title } : {}),
+      ...(patch.subtitle != null ? { subtitle: patch.subtitle } : {}),
+      ...(patch.ctaText != null ? { cta_text: patch.ctaText } : {}),
+      ...(patch.ctaLink != null ? { cta_link: patch.ctaLink } : {}),
+      ...(patch.imageUrl != null ? { image_url: patch.imageUrl } : {}),
+      ...(patch.active != null ? { active: patch.active } : {}),
+    });
+    const updated = normBanner(raw);
+    write({ ...read(), banners: read().banners.map((b) => (b.id === id ? updated : b)) });
+    return { ok: true, banner: updated };
+  } catch (err) { return { ok: false, error: err }; }
 }
-
 export async function removeBannerAsync(id) {
-  const current = getContent();
-  const next = {
-    ...current,
-    banners: (current.banners || []).filter((b) => b.id !== id),
-  };
-  saveAll(next);
-
-  if (typeof id !== "number") return { ok: true, warning: "local_only" };
-
-  return tryApi(
-    () => api.delete(`/content/banners/${id}/`),
-    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
-  );
+  try {
+    await api.delete(`/content/banners/${id}/`);
+    write({ ...read(), banners: read().banners.filter((b) => b.id !== id) });
+    return { ok: true };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ---------- TESTIMONIALS ----------
-export async function addTestimonialAsync(t) {
-  const current = getContent();
-  const optimistic = { id: `local_${Date.now()}`, rating: 5, active: true, ...t };
-  saveAll({ ...current, testimonials: [...(current.testimonials || []), optimistic] });
-
-  return tryApi(
-    () => api.post("/content/testimonials/", t),
-    {
-      optimistic,
-      onSuccess: (raw) => {
-        if (raw?.id) {
-          const now = getContent();
-          saveAll({
-            ...now,
-            testimonials: (now.testimonials || []).map((x) =>
-              x.id === optimistic.id ? raw : x
-            ),
-          });
-        }
-      },
-      onFail: () => saveAll(current),
-    }
-  );
+// ── Testimonials ──────────────────────────────────────────
+export async function addTestimonialAsync(form) {
+  try {
+    const raw = await api.post("/content/testimonials/", {
+      name: form.name, quote: form.quote, rating: form.rating ?? 5, active: form.active !== false,
+    });
+    const created = normTestimonial(raw);
+    write({ ...read(), testimonials: [...read().testimonials, created] });
+    return { ok: true, testimonial: created };
+  } catch (err) { return { ok: false, error: err }; }
 }
-
 export async function updateTestimonialAsync(id, patch) {
-  const current = getContent();
-  saveAll({
-    ...current,
-    testimonials: (current.testimonials || []).map((x) =>
-      x.id === id ? { ...x, ...patch } : x
-    ),
-  });
-
-  if (typeof id !== "number") return { ok: true, warning: "local_only" };
-
-  return tryApi(
-    () => api.patch(`/content/testimonials/${id}/`, patch),
-    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
-  );
+  try {
+    const raw = await api.patch(`/content/testimonials/${id}/`, patch);
+    const updated = normTestimonial(raw);
+    write({ ...read(), testimonials: read().testimonials.map((t) => (t.id === id ? updated : t)) });
+    return { ok: true, testimonial: updated };
+  } catch (err) { return { ok: false, error: err }; }
 }
-
 export async function removeTestimonialAsync(id) {
-  const current = getContent();
-  saveAll({
-    ...current,
-    testimonials: (current.testimonials || []).filter((x) => x.id !== id),
-  });
-
-  if (typeof id !== "number") return { ok: true, warning: "local_only" };
-
-  return tryApi(
-    () => api.delete(`/content/testimonials/${id}/`),
-    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
-  );
+  try {
+    await api.delete(`/content/testimonials/${id}/`);
+    write({ ...read(), testimonials: read().testimonials.filter((t) => t.id !== id) });
+    return { ok: true };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ---------- FAQS ----------
-export async function addFaqAsync(f) {
-  const current = getContent();
-  const optimistic = { id: `local_${Date.now()}`, active: true, order: 1, ...f };
-  saveAll({ ...current, faqs: [...(current.faqs || []), optimistic] });
-
-  return tryApi(
-    () => api.post("/content/faqs/", f),
-    {
-      optimistic,
-      onSuccess: (raw) => {
-        if (raw?.id) {
-          const now = getContent();
-          saveAll({
-            ...now,
-            faqs: (now.faqs || []).map((x) => (x.id === optimistic.id ? raw : x)),
-          });
-        }
-      },
-      onFail: () => saveAll(current),
-    }
-  );
+// ── FAQs ──────────────────────────────────────────────────
+export async function addFaqAsync(form) {
+  try {
+    const raw = await api.post("/content/faqs/", {
+      question: form.question, answer: form.answer, active: form.active !== false,
+    });
+    const created = normFaq(raw);
+    write({ ...read(), faqs: [...read().faqs, created] });
+    return { ok: true, faq: created };
+  } catch (err) { return { ok: false, error: err }; }
 }
-
 export async function updateFaqAsync(id, patch) {
-  const current = getContent();
-  saveAll({
-    ...current,
-    faqs: (current.faqs || []).map((x) => (x.id === id ? { ...x, ...patch } : x)),
-  });
-
-  if (typeof id !== "number") return { ok: true, warning: "local_only" };
-
-  return tryApi(
-    () => api.patch(`/content/faqs/${id}/`, patch),
-    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
-  );
+  try {
+    const raw = await api.patch(`/content/faqs/${id}/`, patch);
+    const updated = normFaq(raw);
+    write({ ...read(), faqs: read().faqs.map((f) => (f.id === id ? updated : f)) });
+    return { ok: true, faq: updated };
+  } catch (err) { return { ok: false, error: err }; }
 }
-
 export async function removeFaqAsync(id) {
-  const current = getContent();
-  saveAll({
-    ...current,
-    faqs: (current.faqs || []).filter((x) => x.id !== id),
-  });
-
-  if (typeof id !== "number") return { ok: true, warning: "local_only" };
-
-  return tryApi(
-    () => api.delete(`/content/faqs/${id}/`),
-    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
-  );
+  try {
+    await api.delete(`/content/faqs/${id}/`);
+    write({ ...read(), faqs: read().faqs.filter((f) => f.id !== id) });
+    return { ok: true };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ---------- ABOUT / TERMS / PRIVACY / HELP ----------
+// ── Page editors ──────────────────────────────────────────
 async function updatePageAsync(section, patch) {
-  const current = getContent();
-  const next = {
-    ...current,
-    [section]: { ...current[section], ...patch, lastUpdated: new Date().toISOString() },
-  };
-  saveAll(next);
-
-  return tryApi(
-    () => api.patch(`/content/${section}/`, patch),
-    { optimistic: null, onSuccess: () => {}, onFail: () => saveAll(current) }
-  );
+  try {
+    const raw = await api.patch(`/content/${section}/`, patch);
+    const updated = normPage(raw, read()[section]);
+    write({ ...read(), [section]: updated });
+    return { ok: true, section: updated };
+  } catch (err) { return { ok: false, error: err }; }
 }
+export async function updateAboutAsync(p) { return updatePageAsync("about", p); }
+export async function updateTermsAsync(p) { return updatePageAsync("terms", p); }
+export async function updatePrivacyAsync(p) { return updatePageAsync("privacy", p); }
+export async function updateHelpAsync(p) { return updatePageAsync("help", p); }
 
-export async function updateAboutAsync(patch) {
-  return updatePageAsync("about", patch);
-}
-
-export async function updateTermsAsync(patch) {
-  return updatePageAsync("terms", patch);
-}
-
-export async function updatePrivacyAsync(patch) {
-  return updatePageAsync("privacy", patch);
-}
-
-export async function updateHelpAsync(patch) {
-  return updatePageAsync("help", patch);
-}
-
-// ============================================================
-// HOOKS
-// ============================================================
+// ── Hooks ─────────────────────────────────────────────────
 export function useContent() {
-  const [content, setContent] = useState(() => getContent());
+  const [c, setC] = useState(() => read());
   useEffect(() => {
     hydrateContentFromApi();
-    const sync = () => setContent(getContent());
+    const sync = () => setC(read());
     window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener(EV, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener(EV, sync);
     };
   }, []);
-  return content;
+  return c;
 }
-
 export function useBanners() { return useContent().banners || []; }
 export function useTestimonials() { return useContent().testimonials || []; }
 export function useFaqs() { return useContent().faqs || []; }
-export function useAbout() { return useContent().about || DEFAULT_ABOUT; }
-export function useTerms() { return useContent().terms || DEFAULT_TERMS; }
-export function usePrivacy() { return useContent().privacy || DEFAULT_PRIVACY; }
-export function useHelp() { return useContent().help || DEFAULT_HELP; }
+export function useAbout() { return useContent().about || EMPTY.about; }
+export function useTerms() { return useContent().terms || EMPTY.terms; }
+export function usePrivacy() { return useContent().privacy || EMPTY.privacy; }
+export function useHelp() { return useContent().help || EMPTY.help; }
+
+// Legacy shims
+export const DEFAULT_BANNERS = [];
+export const DEFAULT_TESTIMONIALS = [];
+export const DEFAULT_FAQS = [];
+export const DEFAULT_ABOUT = EMPTY.about;
+export const DEFAULT_TERMS = EMPTY.terms;
+export const DEFAULT_PRIVACY = EMPTY.privacy;
+export const DEFAULT_HELP = EMPTY.help;
+export const SEED_CONTENT = EMPTY;

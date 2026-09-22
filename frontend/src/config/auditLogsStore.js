@@ -1,11 +1,11 @@
 // ============================================================
-// auditLogsStore.js — API-backed via /api/audit/
+// auditLogsStore.js — API-only via /api/audit/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const STORAGE_KEY = "sokomkononi_audit_logs_v1";
-const UPDATE_EVENT = "sokomkononi:audit-logs-updated";
+const KEY = "sokomkononi_audit_logs_v1";
+const EV = "sokomkononi:audit-logs-updated";
 
 export const AUDIT_ACTIONS = [
   { key: "listing.approved", label: { sw: "Idhinisha Mali", en: "Approve Listing" }, color: "green" },
@@ -20,35 +20,23 @@ export const AUDIT_ACTIONS = [
   { key: "category.updated", label: { sw: "Badilisha Kategoria", en: "Update Category" }, color: "gold" },
   { key: "category.deleted", label: { sw: "Futa Kategoria", en: "Delete Category" }, color: "rust" },
   { key: "announcement.sent", label: { sw: "Tuma Tangazo", en: "Send Announcement" }, color: "gold" },
-  { key: "refund.issued", label: { sw: "Toa Refund", en: "Issue Refund" }, color: "rust" },
-  { key: "subadmin.added", label: { sw: "Ongeza Sub-Admin", en: "Add Sub-Admin" }, color: "green" },
-  { key: "subadmin.removed", label: { sw: "Ondoa Sub-Admin", en: "Remove Sub-Admin" }, color: "rust" },
 ];
 
-export const SEED_AUDIT_LOGS = [];
-
-// ============================================================
-// STORAGE
-// ============================================================
-function readFromStorage() {
-  if (typeof window === "undefined") return SEED_AUDIT_LOGS;
+function read() {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_AUDIT_LOGS;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : SEED_AUDIT_LOGS;
-  } catch {
-    return SEED_AUDIT_LOGS;
-  }
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return [];
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
 }
-
-function saveAll(list) {
+function write(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 500)));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(KEY, JSON.stringify(list.slice(0, 500)));
+  window.dispatchEvent(new Event(EV));
 }
-
-function normalizeFromApi(raw) {
+function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
@@ -61,110 +49,45 @@ function normalizeFromApi(raw) {
   };
 }
 
-// ============================================================
-// READS
-// ============================================================
-export function getAuditLogs() {
-  return readFromStorage();
-}
+export function getAuditLogs() { return read(); }
 
-export function saveAuditLogs(list) {
-  saveAll(list);
-}
-
-// ============================================================
-// HYDRATE
-// ============================================================
 export async function hydrateAuditLogsFromApi() {
   try {
-    const data = await api.get("/audit/?page_size=200");
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map(normalizeFromApi).filter(Boolean);
-    saveAll(normalized);
-    return { source: "api", count: normalized.length };
-  } catch (err) {
-    console.warn("[auditLogsStore] hydrate failed:", err);
-    return { source: "error", count: getAuditLogs().length };
-  }
+    const d = await api.get("/audit/?page_size=200");
+    const list = Array.isArray(d) ? d : d?.results || [];
+    write(list.map(norm).filter(Boolean));
+    return { ok: true, count: list.length };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// ASYNC ACTIONS — with rollback
-// ============================================================
 export async function removeAuditLogAsync(id) {
-  const previous = getAuditLogs();
-  const target = previous.find((l) => l.id === id);
-  if (!target) return { ok: false, error: new Error("Log haipo") };
-
-  // Optimistic
-  saveAll(previous.filter((l) => l.id !== id));
-
-  if (typeof id !== "number") return { ok: true };
-
   try {
     await api.delete(`/audit/${id}/`);
+    write(read().filter((l) => l.id !== id));
     return { ok: true };
-  } catch (err) {
-    saveAll(previous); // Rollback
-    console.warn("[auditLogsStore] remove failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function clearAuditLogsAsync() {
-  const previous = getAuditLogs();
-  saveAll([]);
-
   try {
     await api.post("/audit/clear/", {});
+    write([]);
     return { ok: true };
-  } catch (err) {
-    saveAll(previous); // Rollback
-    console.warn("[auditLogsStore] clearAll failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// LEGACY SYNC (deprecated)
-// ============================================================
-export function addAuditLog() {}
-
-/** @deprecated Use removeAuditLogAsync */
-export function removeAuditLog(id) {
-  const next = getAuditLogs().filter((l) => l.id !== id);
-  saveAll(next);
-  if (typeof id === "number") {
-    api.delete(`/audit/${id}/`).catch(() => {});
-  }
-  return next;
-}
-
-/** @deprecated Use clearAuditLogsAsync */
-export function clearAuditLogs() {
-  saveAll([]);
-  api.post("/audit/clear/", {}).catch(() => {});
-  return [];
-}
-
-// ============================================================
-// HOOKS
-// ============================================================
 export function useAuditLogs() {
-  const [logs, setLogs] = useState(() => getAuditLogs());
+  const [logs, setLogs] = useState(() => read());
   useEffect(() => {
     hydrateAuditLogsFromApi();
-    const sync = () => setLogs(getAuditLogs());
+    const sync = () => setLogs(read());
     window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener(EV, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener(EV, sync);
     };
   }, []);
   return logs;
 }
-
-export function useAuditLogsCount() {
-  return useAuditLogs().length;
-}
+export function useAuditLogsCount() { return useAuditLogs().length; }
