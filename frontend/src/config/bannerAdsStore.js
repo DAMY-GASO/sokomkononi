@@ -1,40 +1,36 @@
 // ============================================================
-// bannerAdsStore.js — API-backed via /api/banners/
+// bannerAdsStore.js — API-only via /api/banners/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const STORAGE_KEY = "sokomkononi_banner_ads_v1";
-const UPDATE_EVENT = "sokomkononi:banner-ads-updated";
+const KEY = "sokomkononi_banner_ads_v1";
+const EV = "sokomkononi:banner-ads-updated";
 
-export const SEED_BANNER_ADS = [];
-
-function readFromStorage() {
-  if (typeof window === "undefined") return SEED_BANNER_ADS;
+function read() {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_BANNER_ADS;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : SEED_BANNER_ADS;
-  } catch {
-    return SEED_BANNER_ADS;
-  }
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return [];
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
 }
-
-function writeToStorage(list) {
+function write(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event(EV));
 }
-
-export function isBannerActive(banner) {
-  return Boolean(banner.expiresAt && new Date(banner.expiresAt).getTime() > Date.now());
+export function isBannerActive(b) {
+  return Boolean(b.expiresAt && new Date(b.expiresAt).getTime() > Date.now());
 }
-
-export function getBannerAds() { return readFromStorage(); }
-export function getActiveBannerAds() { return getBannerAds().filter(isBannerActive); }
-
-function normalizeFromApi(raw) {
+export function getBannerAds() { return read(); }
+export function getActiveBannerAds() { return read().filter(isBannerActive); }
+export function bannerDaysRemaining(b) {
+  if (!isBannerActive(b)) return 0;
+  return Math.max(1, Math.ceil((new Date(b.expiresAt).getTime() - Date.now()) / 86400000));
+}
+function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
@@ -52,85 +48,62 @@ function normalizeFromApi(raw) {
 
 export async function hydrateBannerAdsFromApi() {
   try {
-    const data = await api.get("/banners/");
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map(normalizeFromApi).filter(Boolean);
-    writeToStorage(normalized);
-    return { source: "api", count: normalized.length };
-  } catch (err) {
-    console.warn("[bannerAdsStore] hydrate failed:", err);
-    return { source: "error", count: getBannerAds().length };
-  }
+    const d = await api.get("/banners/?page_size=200");
+    const list = Array.isArray(d) ? d : d?.results || [];
+    write(list.map(norm).filter(Boolean));
+    return { ok: true, count: list.length };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function createBannerAdAsync(listingId, payment_reference = "") {
-  const raw = await api.post("/banners/", {
-    listing: listingId, payment_reference,
-  });
-  const banner = normalizeFromApi(raw);
-  writeToStorage([banner, ...getBannerAds()]);
-  return banner;
+  try {
+    const raw = await api.post("/banners/", { listing: listingId, payment_reference });
+    const b = norm(raw);
+    write([b, ...getBannerAds()]);
+    return { ok: true, banner: b };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-export function addBannerAd(listing, days) {
-  const banner = {
-    id: `local_${Date.now()}`,
-    listingId: listing.id,
-    listingTitle: listing.title,
-    category: listing.category,
-    location: listing.location,
-    price: listing.price,
-    sellerName: listing.seller_name,
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + (days || 7) * 86400000).toISOString(),
-    active: true,
-  };
-  writeToStorage([banner, ...getBannerAds()]);
-  if (listing.id) createBannerAdAsync(listing.id).catch(() => {});
-  return banner;
-}
-
-export function removeBannerAd(id) {
-  const next = getBannerAds().filter((b) => b.id !== id);
-  writeToStorage(next);
-  if (typeof id === "number") api.delete(`/banners/${id}/`).catch(() => {});
-  return next;
-}
-
-export function bannerDaysRemaining(banner) {
-  if (!isBannerActive(banner)) return 0;
-  const ms = new Date(banner.expiresAt).getTime() - Date.now();
-  return Math.max(1, Math.ceil(ms / 86400000));
+export async function removeBannerAdAsync(id) {
+  try {
+    await api.delete(`/banners/${id}/`);
+    write(getBannerAds().filter((b) => b.id !== id));
+    return { ok: true };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export function useBannerAds() {
-  const [banners, setBanners] = useState(() => getBannerAds());
+  const [list, setList] = useState(() => read());
   useEffect(() => {
     hydrateBannerAdsFromApi();
-    const sync = () => setBanners(getBannerAds());
+    const sync = () => setList(read());
     window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener(EV, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener(EV, sync);
     };
   }, []);
-  return banners;
+  return list;
+}
+export function useActiveBannerAds() {
+  const [list, setList] = useState(() => getActiveBannerAds());
+  useEffect(() => {
+    hydrateBannerAdsFromApi();
+    const sync = () => setList(getActiveBannerAds());
+    window.addEventListener("storage", sync);
+    window.addEventListener(EV, sync);
+    const t = setInterval(sync, 60000);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(EV, sync);
+      clearInterval(t);
+    };
+  }, []);
+  return list;
 }
 
-export function useActiveBannerAds() {
-  const [banners, setBanners] = useState(() => getActiveBannerAds());
-  useEffect(() => {
-    hydrateBannerAdsFromApi();
-    const sync = () => setBanners(getActiveBannerAds());
-    window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
-    const expiryCheck = setInterval(sync, 60000);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
-      clearInterval(expiryCheck);
-    };
-  }, []);
-  return banners;
-}
+// LEGACY
+export const SEED_BANNER_ADS = [];
+export function addBannerAd() { return null; }
+export function removeBannerAd() {}

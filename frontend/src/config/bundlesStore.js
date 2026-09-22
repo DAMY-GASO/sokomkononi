@@ -151,3 +151,8 @@ export function useBundles() {
 }
 export function useActiveBundles() { return useBundles().filter((b) => b.active !== false); }
 export function useBundlesByType(type) { return useBundles().filter((b) => b.active !== false && b.type === type); }
+
+// ══════════════════════════════════════════════════════════════
+// LEGACY EXPORTS (backward compat — API is source of truth)
+// ══════════════════════════════════════════════════════════════
+export const SEED_BUNDLES = [];

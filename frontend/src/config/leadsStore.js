@@ -1,35 +1,27 @@
 // ============================================================
-// leadsStore.js — API-backed via /api/leads/
+// leadsStore.js — API-only via /api/leads/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const STORAGE_KEY = "sokomkononi_leads_v1";
-const UPDATE_EVENT = "sokomkononi:leads-updated";
+const KEY = "sokomkononi_leads_v1";
+const EV = "sokomkononi:leads-updated";
 
-export const SEED_LEADS = [];
-
-// ---------- STORAGE ----------
-function readFromStorage() {
-  if (typeof window === "undefined") return SEED_LEADS;
+function read() {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_LEADS;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : SEED_LEADS;
-  } catch {
-    return SEED_LEADS;
-  }
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return [];
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
 }
-
-function saveAll(list) {
+function write(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event(EV));
 }
-
-// ---------- NORMALIZER ----------
-function normalizeFromApi(raw) {
+function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
@@ -48,170 +40,68 @@ function normalizeFromApi(raw) {
   };
 }
 
-// ---------- READS ----------
-export function getLeads() {
-  return readFromStorage();
-}
+export function getLeads() { return read(); }
+export function getLead(id) { return read().find((l) => l.id === id) || null; }
+export function getLeadsForListing(listingId) { return read().filter((l) => l.listingId === listingId); }
 
-export function getLead(id) {
-  return getLeads().find((l) => l.id === id) || null;
-}
-
-export function getLeadsForListing(listingId) {
-  return getLeads().filter((l) => l.listingId === listingId);
-}
-
-// ---------- HYDRATE ----------
 export async function hydrateLeadsFromApi() {
   try {
-    const data = await api.get("/leads/?page_size=100");
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map(normalizeFromApi).filter(Boolean);
-    saveAll(normalized);
-    return { source: "api", count: normalized.length };
-  } catch (err) {
-    console.warn("[leadsStore] hydrate failed:", err);
-    return { source: "error", count: getLeads().length };
-  }
+    const d = await api.get("/leads/?page_size=200");
+    const list = Array.isArray(d) ? d : d?.results || [];
+    const normalized = list.map(norm).filter(Boolean);
+    write(normalized);
+    return { ok: true, count: normalized.length };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// ASYNC ACTIONS (preferred)
-// ============================================================
 export async function markLeadRespondedAsync(id) {
-  const previous = getLeads();
-  const lead = previous.find((l) => l.id === id);
-  if (!lead) return { ok: false, error: new Error("Lead not found") };
-
-  // Optimistic
-  saveAll(previous.map((l) =>
-    l.id === id ? { ...l, status: "responded", respondedAt: new Date().toISOString() } : l
-  ));
-
-  if (typeof id !== "number") return { ok: true }; // local-only
-
   try {
-    await api.post(`/leads/${id}/respond/`, {});
+    const raw = await api.post(`/leads/${id}/respond/`, {});
+    const updated = norm(raw) || { ...getLead(id), status: "responded", respondedAt: new Date().toISOString() };
+    write(read().map((l) => (l.id === id ? updated : l)));
     return { ok: true };
-  } catch (err) {
-    saveAll(previous); // Rollback
-    console.warn("[leadsStore] respond failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function markLeadConvertedAsync(id) {
-  const previous = getLeads();
-  const lead = previous.find((l) => l.id === id);
-  if (!lead) return { ok: false, error: new Error("Lead not found") };
-
-  saveAll(previous.map((l) =>
-    l.id === id ? { ...l, status: "converted", convertedAt: new Date().toISOString() } : l
-  ));
-
-  if (typeof id !== "number") return { ok: true };
-
   try {
-    await api.post(`/leads/${id}/convert/`, {});
+    const raw = await api.post(`/leads/${id}/convert/`, {});
+    const updated = norm(raw) || { ...getLead(id), status: "converted", convertedAt: new Date().toISOString() };
+    write(read().map((l) => (l.id === id ? updated : l)));
     return { ok: true };
-  } catch (err) {
-    saveAll(previous);
-    console.warn("[leadsStore] convert failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function removeLeadAsync(id) {
-  const previous = getLeads();
-  saveAll(previous.filter((l) => l.id !== id));
-
-  if (typeof id !== "number") return { ok: true };
-
   try {
     await api.delete(`/leads/${id}/`);
+    write(read().filter((l) => l.id !== id));
     return { ok: true };
-  } catch (err) {
-    saveAll(previous);
-    console.warn("[leadsStore] remove failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// LEGACY SYNC (deprecated — kept for backward compat)
-// ============================================================
-/** @deprecated Use markLeadRespondedAsync */
-export function markLeadResponded(id) {
-  const next = getLeads().map((l) =>
-    l.id === id ? { ...l, status: "responded", respondedAt: new Date().toISOString() } : l
-  );
-  saveAll(next);
-  if (typeof id === "number") {
-    api.post(`/leads/${id}/respond/`, {}).catch((err) => {
-      console.warn("[leadsStore] respond failed (silent):", err);
-    });
-  }
-  return next;
-}
+export function addLead() { /* no-op */ }
 
-/** @deprecated Use markLeadConvertedAsync */
-export function markLeadConverted(id) {
-  const next = getLeads().map((l) =>
-    l.id === id ? { ...l, status: "converted", convertedAt: new Date().toISOString() } : l
-  );
-  saveAll(next);
-  if (typeof id === "number") {
-    api.post(`/leads/${id}/convert/`, {}).catch((err) => {
-      console.warn("[leadsStore] convert failed (silent):", err);
-    });
-  }
-  return next;
-}
-
-/** @deprecated Use removeLeadAsync */
-export function removeLead(id) {
-  const next = getLeads().filter((l) => l.id !== id);
-  saveAll(next);
-  if (typeof id === "number") {
-    api.delete(`/leads/${id}/`).catch((err) => {
-      console.warn("[leadsStore] remove failed (silent):", err);
-    });
-  }
-  return next;
-}
-
-export function addLead() {
-  // No-op — backend creates leads automatically from buyer actions
-}
-
-// ============================================================
-// HOOKS
-// ============================================================
 export function useLeads() {
-  const [leads, setLeads] = useState(() => getLeads());
+  const [list, setList] = useState(() => read());
   useEffect(() => {
     hydrateLeadsFromApi();
-    const sync = () => setLeads(getLeads());
+    const sync = () => setList(read());
     window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener(EV, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener(EV, sync);
     };
   }, []);
-  return leads;
+  return list;
 }
-
-export function useNewLeads() {
-  return useLeads().filter((l) => l.status === "new");
-}
-
+export function useNewLeads() { return useLeads().filter((l) => l.status === "new"); }
+export function useNewLeadsCount() { return useLeads().filter((l) => l.status === "new").length; }
 export function useLeadsForListing(listingId) {
-  const leads = useLeads();
-  if (!listingId) return [];
-  return leads.filter((l) => l.listingId === listingId);
+  const list = useLeads();
+  return listingId ? list.filter((l) => l.listingId === listingId) : [];
 }
 
-export function useNewLeadsCount() {
-  return useLeads().filter((l) => l.status === "new").length;
-}
+// LEGACY
+export const SEED_LEADS = [];

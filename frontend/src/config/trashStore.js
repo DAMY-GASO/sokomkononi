@@ -192,3 +192,9 @@ export function useTrashItems(type) {
   }, [type]);
   return items;
 }
+
+// LEGACY
+export const SEED_OVERVIEW = { listings: 0, users: 0, verifications: 0, tickets: 0, banners: 0, announcements: 0, deals: 0, total: 0, lastUpdated: null };
+export const SEED_ITEMS = {};
+export function useTrashTotal() { return useTrashOverview().total; }
+export function useTrashBreakdown() { return getTrashBreakdown(); }

@@ -155,3 +155,12 @@ export function useTickets() {
   return list;
 }
 export function useOpenTicketsCount() { return useTickets().filter((t) => t.status === "open" || t.status === "in_progress").length; }
+
+// LEGACY
+export const SEED_TICKETS = [];
+export function addTicket() { return null; }
+export function addTicketMessage() {}
+export function updateTicketStatus() {}
+export function updateTicketPriority() {}
+export function assignTicket() {}
+export function removeTicket() {}

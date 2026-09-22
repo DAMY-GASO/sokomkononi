@@ -88,3 +88,7 @@ export function useBoostPackages() {
   }, []);
   return list;
 }
+
+// LEGACY
+export const SEED_BOOST_PACKAGES = [];
+export function saveBoostPackages() {}

@@ -115,3 +115,10 @@ export function useListingFeeConfigs() {
   }, []);
   return list;
 }
+
+// LEGACY
+export const SEED_LISTING_FEE_CONFIG = [];
+export function saveListingFeeConfigs() {}
+export function updateListingFeeConfig() {}
+export function addFeeConfig() {}
+export function removeFeeConfig() {}

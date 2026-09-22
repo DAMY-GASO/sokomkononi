@@ -1,33 +1,27 @@
 // ============================================================
-// searchesStore.js — API-backed via /api/searches/
+// searchesStore.js — API-only via /api/searches/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const STORAGE_KEY = "sokomkononi_searches_v1";
-const UPDATE_EVENT = "sokomkononi:searches-updated";
+const KEY = "sokomkononi_searches_v1";
+const EV = "sokomkononi:searches-updated";
 
-export const SEED_SEARCHES = [];
-
-function readFromStorage() {
-  if (typeof window === "undefined") return SEED_SEARCHES;
+function read() {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_SEARCHES;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : SEED_SEARCHES;
-  } catch {
-    return SEED_SEARCHES;
-  }
+    const raw = window.localStorage.getItem(KEY);
+    if (!raw) return [];
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
 }
-
-function saveAll(list) {
+function write(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  window.dispatchEvent(new Event(UPDATE_EVENT));
+  window.localStorage.setItem(KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event(EV));
 }
-
-function normalizeFromApi(raw) {
+function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
@@ -44,74 +38,46 @@ function normalizeFromApi(raw) {
   };
 }
 
-export function getSearches() {
-  return readFromStorage();
-}
+export function getSearches() { return read(); }
 
 export async function hydrateSearchesFromApi() {
   try {
-    const data = await api.get("/searches/?page_size=100");
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map(normalizeFromApi).filter(Boolean);
-    saveAll(normalized);
-    return { source: "api", count: normalized.length };
-  } catch (err) {
-    console.warn("[searchesStore] hydrate failed:", err);
-    return { source: "error", count: getSearches().length };
-  }
+    const d = await api.get("/searches/?page_size=100");
+    const list = Array.isArray(d) ? d : d?.results || [];
+    const normalized = list.map(norm).filter(Boolean);
+    write(normalized);
+    return { ok: true, count: normalized.length };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-export function addSearch(search) {
-  const payload = {
-    name: search.name || "Search",
-    query: search.query || "",
-    category_slug: search.category || "",
-    region: search.region || "",
-    min_price: search.minPrice ?? null,
-    max_price: search.maxPrice ?? null,
-    verified_only: search.verifiedOnly ?? false,
-  };
-
-  api.post("/searches/", payload).then((raw) => {
-    const created = normalizeFromApi(raw);
-    const current = getSearches();
-    saveAll([created, ...current]);
-  }).catch(() => {});
-
-  const entry = {
-    id: `local_${Date.now()}`,
-    name: payload.name,
-    query: payload.query,
-    category: search.category || null,
-    minPrice: search.minPrice ?? null,
-    maxPrice: search.maxPrice ?? null,
-    region: search.region || null,
-    verifiedOnly: payload.verified_only,
-    createdAt: new Date().toISOString(),
-    lastChecked: new Date().toISOString(),
-    matchCount: 0,
-  };
-  saveAll([entry, ...getSearches()]);
-  return entry;
+export async function addSearchAsync(search) {
+  try {
+    const raw = await api.post("/searches/", {
+      name: search.name || "Search",
+      query: search.query || "",
+      category_slug: search.category || "",
+      region: search.region || "",
+      min_price: search.minPrice ?? null,
+      max_price: search.maxPrice ?? null,
+      verified_only: search.verifiedOnly ?? false,
+    });
+    const created = norm(raw);
+    write([created, ...read()]);
+    return { ok: true, search: created };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-export function updateSearch(id, patch) {
-  const next = getSearches().map((s) => (s.id === id ? { ...s, ...patch } : s));
-  saveAll(next);
-  if (typeof id === "number") {
-    api.patch(`/searches/${id}/`, patch).catch(() => {});
-  }
-  return next;
+export function addSearch(search) { addSearchAsync(search); }
+
+export async function removeSearchAsync(id) {
+  try {
+    await api.delete(`/searches/${id}/`);
+    write(read().filter((s) => s.id !== id));
+    return { ok: true };
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-export function removeSearch(id) {
-  const next = getSearches().filter((s) => s.id !== id);
-  saveAll(next);
-  if (typeof id === "number") {
-    api.delete(`/searches/${id}/`).catch(() => {});
-  }
-  return next;
-}
+export function removeSearch(id) { removeSearchAsync(id); }
 
 export function countMatches(search, listings) {
   if (!search || !Array.isArray(listings)) return 0;
@@ -131,23 +97,23 @@ export function countMatches(search, listings) {
   }).length;
 }
 
-export function checkNewListingMatches() {}
-
 export function useSearches() {
-  const [searches, setSearches] = useState(() => getSearches());
+  const [list, setList] = useState(() => read());
   useEffect(() => {
     hydrateSearchesFromApi();
-    const sync = () => setSearches(getSearches());
+    const sync = () => setList(read());
     window.addEventListener("storage", sync);
-    window.addEventListener(UPDATE_EVENT, sync);
+    window.addEventListener(EV, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener(UPDATE_EVENT, sync);
+      window.removeEventListener(EV, sync);
     };
   }, []);
-  return searches;
+  return list;
 }
+export function useSearchesCount() { return useSearches().length; }
 
-export function useSearchesCount() {
-  return useSearches().length;
-}
+// LEGACY
+export const SEED_SEARCHES = [];
+export function updateSearch() {}
+export function checkNewListingMatches() {}

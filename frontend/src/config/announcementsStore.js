@@ -101,3 +101,9 @@ export function useAnnouncements() {
   return list;
 }
 export function useSentAnnouncements() { return useAnnouncements().filter((a) => a.sent); }
+
+// LEGACY
+export const SEED_ANNOUNCEMENTS = [];
+export function saveAnnouncements() {}
+export function addAnnouncement() { return null; }
+export function removeAnnouncement() {}

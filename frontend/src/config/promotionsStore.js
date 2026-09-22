@@ -153,3 +153,9 @@ export function useActiveCampaigns() {
     return true;
   });
 }
+
+// LEGACY
+export const SEED_CAMPAIGNS = [];
+export function addCampaign() { return null; }
+export function updateCampaign() {}
+export function removeCampaign() {}

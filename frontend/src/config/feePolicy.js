@@ -95,3 +95,8 @@ export function calcReservationFee(hours) {
   const extra = Math.ceil((hours - last.hours) / 24);
   return Number(last.fee) + extra * perDay;
 }
+
+// LEGACY
+export const DEFAULT_RESERVATION_RATES = [];
+export function saveReservationRates() {}
+export function updateReservationRate() {}

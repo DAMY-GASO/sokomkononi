@@ -207,3 +207,12 @@ export function useCategory(key) {
   const list = useCategories();
   return key ? list.find((c) => c.key === key) || null : null;
 }
+
+// LEGACY
+export function hasCategoryImage(c) { return Boolean(c?.imageUrl); }
+export function updateCategoryImage() {}
+export function addCategory() { return []; }
+export function updateCategory() {}
+export function toggleCategoryActive() {}
+export function toggleCategoryPopular() {}
+export function removeCategory() { return { success: false }; }

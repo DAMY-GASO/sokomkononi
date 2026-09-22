@@ -113,3 +113,9 @@ export function useUser(id) {
   const list = useUsers();
   return id ? list.find((u) => u.id === id) || null : null;
 }
+
+// LEGACY
+export const SEED_USERS = [];
+export function saveUsers() {}
+export function toggleUserStatus() {}
+export function updateUser() {}

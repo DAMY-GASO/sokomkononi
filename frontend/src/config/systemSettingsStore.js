@@ -212,3 +212,17 @@ export async function hydrateAllSystemSettings() {
 export function savePlatformPolicy() {}
 export const SEED_APP_STORE_LINKS = { play: "", appstore: "" };
 export const SEED_PLATFORM_POLICY = { listingLifetimeDays: 60 };
+
+// LEGACY
+export const SEED_WEBHOOKS = [];
+export const SEED_SUBADMINS = [];
+export function saveWebhooks() {}
+export function saveSubAdmins() {}
+export function saveAppStoreLinks() {}
+export function addWebhook() {}
+export function removeWebhook() {}
+export function toggleWebhook() {}
+export function addSubAdmin() {}
+export function removeSubAdmin() {}
+export function updatePlatformPolicy() {}
+export function getWebhook() { return null; }

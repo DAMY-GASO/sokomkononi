@@ -91,3 +91,10 @@ export function useAuditLogs() {
   return logs;
 }
 export function useAuditLogsCount() { return useAuditLogs().length; }
+
+// LEGACY
+export const SEED_AUDIT_LOGS = [];
+export function saveAuditLogs() {}
+export function removeAuditLog() {}
+export function clearAuditLogs() {}
+export function addAuditLog() {}

@@ -22,7 +22,6 @@ import {
 } from "./config/categoriesStore.js";
 import { SEED_CATEGORIES } from "./config/seedCategories.js";
 import { initializeBundles } from "./config/bundlesStore.js";
-import { SEED_BUNDLES } from "./config/bundlesStore.js";
 import { hydrateListingsFromApi } from "./config/listingsStore.js";
 
 // ============================================================
@@ -101,8 +100,8 @@ function App() {
     installUnauthorizedHandler();
 
     // 1) Seed mara moja
-    initializeCategories(SEED_CATEGORIES);
-    initializeBundles(SEED_BUNDLES);
+    initializeCategories();
+    initializeBundles();
 
     // 2) Hydrate kutoka API
     async function hydrateFromApi() {

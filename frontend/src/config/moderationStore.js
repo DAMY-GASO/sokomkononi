@@ -131,3 +131,17 @@ export function useModerationDecisions() {
   return d;
 }
 export function usePendingModerationCount() { return useModerationQueue().length; }
+
+// LEGACY
+export const SEED_QUEUE = [];
+export const SEED_DECISIONS = [];
+export function useModerationStats() {
+  const d = useModerationDecisions();
+  const q = useModerationQueue();
+  return {
+    totalDecisions: d.length,
+    approved: d.filter((x) => x.action === "approved").length,
+    rejected: d.filter((x) => x.action === "rejected").length,
+    todayApproved: 0, todayRejected: 0, queueSize: q.length,
+  };
+}
