@@ -1,9 +1,21 @@
 // ============================================================
-// PaymentGateway.jsx (production)
-// - Collects phone / card details + optional payment_reference
-// - Calls props.onSubmit({ method, phone, reference }) → parent
-//   does the real backend call (e.g. /listings/{id}/fee/pay/).
-// - Shows real backend success or error. NO setTimeout simulation.
+// PaymentGateway.jsx — ⚠️ TEMP SIMULATION MODE ⚠️
+//
+// The real payment provider (M-Pesa / Mixx by Yas / Airtel Money /
+// card) is NOT yet connected. To keep the rest of the flow working
+// end-to-end (boost, leading, advertise, listing fee), this gateway
+// auto-succeeds after a short delay and hands back a
+// `SIMULATED-<timestamp>` reference to the parent.
+//
+// The parent still calls the real backend endpoints
+// (e.g. POST /listings/{id}/fee/pay/, POST /boosting/{id}/pay/),
+// so all non-payment data stays consistent in the DB.
+//
+// TODO: REMOVE WHEN READY
+//   - Delete the `setTimeout` block in `handlePay`
+//   - Set `PROVIDER_WIRED_UP = true`
+//   - The submit path already awaits `onSubmit(...)` so no other
+//     changes are needed — the parent will do the real call.
 // ============================================================
 import React, { useState } from "react";
 import {
@@ -14,9 +26,15 @@ import {
   ShieldCheck,
   Loader2,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 import { COLORS, PAYMENT_METHODS, formatTZS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
+
+// ── Flip to true once the backend + provider are integrated ──
+const PROVIDER_WIRED_UP = false;
+
+const SIMULATION_DELAY_MS = 1500;
 
 const inputStyle = {
   background: COLORS.sand,
@@ -83,19 +101,16 @@ export default function PaymentGateway({
   title,
   description,
   /**
-   * onSubmit({ method, phone, card, reference }) → Promise<{ok, error?, data?}>
-   * Parent MUST call the real backend endpoint here.
+   * onSubmit({ method, methodLabel, phone, card, reference }) →
+   *   Promise<{ ok, error?, data? }>
+   * Parent MUST call the real backend "pay" endpoint here.
+   * In simulation mode we just pass a fake reference; the parent
+   * still hits the backend so the DB stays in sync.
    */
   onSubmit,
   onSuccess,
   onCancel,
-  /**
-   * Set true if the parent cannot process payment inline and needs
-   * to redirect (e.g. hosted checkout). Then onSubmit returns
-   * { ok: true, redirectUrl } and the gateway navigates.
-   */
-  allowRedirect = true,
-  /** Optional: require the user to paste a telco reference before submit */
+  /** Optional: force the user to paste a telco reference */
   requireReference = false,
   referenceLabel,
 }) {
@@ -104,25 +119,38 @@ export default function PaymentGateway({
   const [phone, setPhone] = useState("");
   const [card, setCard] = useState({ number: "", expiry: "", cvv: "" });
   const [reference, setReference] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState("select"); // select | processing | done
   const [error, setError] = useState("");
-  const [done, setDone] = useState(false);
+  const [finalReference, setFinalReference] = useState(null);
 
   const method = PAYMENT_METHODS.find((m) => m.key === methodKey);
 
-  const phoneOk = method?.type === "mobile" && phone.replace(/\D/g, "").length >= 9;
+  const phoneOk =
+    method?.type === "mobile" && phone.replace(/\D/g, "").length >= 9;
   const cardOk =
     method?.type === "card" &&
     card.number.replace(/\D/g, "").length >= 12 &&
     card.expiry.length >= 4 &&
     card.cvv.length >= 3;
   const refOk = !requireReference || reference.trim().length > 0;
-  const canPay = Boolean(method) && (phoneOk || cardOk) && refOk && !busy;
+  const canPay =
+    Boolean(method) && (phoneOk || cardOk) && refOk && stage === "select";
 
   const handlePay = async () => {
     if (!canPay || !onSubmit) return;
-    setBusy(true);
+    setStage("processing");
     setError("");
+
+    // ── TEMP SIMULATION ─────────────────────────────────────
+    // Wait a beat so the UX feels like a real provider round-trip,
+    // then fabricate a reference the parent can pass to the backend.
+    if (!PROVIDER_WIRED_UP) {
+      await new Promise((r) => setTimeout(r, SIMULATION_DELAY_MS));
+    }
+    // ────────────────────────────────────────────────────────
+
+    const simulatedRef = `SIMULATED-${Date.now()}`;
+    const referenceToSend = reference.trim() || simulatedRef;
 
     try {
       const res = await onSubmit({
@@ -130,7 +158,8 @@ export default function PaymentGateway({
         methodLabel: method.label,
         phone: method.type === "mobile" ? phone.replace(/\s/g, "") : null,
         card: method.type === "card" ? card : null,
-        reference: reference.trim() || null,
+        reference: referenceToSend,
+        simulated: !PROVIDER_WIRED_UP,
       });
 
       if (!res || res.ok === false) {
@@ -138,18 +167,20 @@ export default function PaymentGateway({
           res?.error?.message ||
             res?.error?.data?.detail ||
             (lang === "sw"
-              ? "Malipo yameshindikana. Jaribu tena."
-              : "Payment failed. Please try again.")
+              ? "Hatua inayofuata imeshindikana. Jaribu tena."
+              : "Next step failed. Please try again.")
         );
+        setStage("select");
         return;
       }
 
-      if (res.redirectUrl && allowRedirect) {
+      if (res.redirectUrl) {
         window.location.href = res.redirectUrl;
         return;
       }
 
-      setDone(true);
+      setFinalReference(referenceToSend);
+      setStage("done");
       onSuccess?.(res.data);
     } catch (err) {
       setError(
@@ -157,12 +188,46 @@ export default function PaymentGateway({
           err?.message ||
           (lang === "sw" ? "Hitilafu ya mtandao." : "Network error.")
       );
-    } finally {
-      setBusy(false);
+      setStage("select");
     }
   };
 
-  if (done) {
+  // ── PROCESSING ───────────────────────────────────────────
+  if (stage === "processing") {
+    return (
+      <div
+        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        className="rounded-2xl border p-8 text-center"
+      >
+        <Loader2
+          size={30}
+          className="animate-spin mx-auto mb-4"
+          color={COLORS.gold}
+        />
+        <p className="text-primary text-sm font-semibold mb-1.5">
+          {method?.type === "mobile"
+            ? lang === "sw"
+              ? "Inasubiri uthibitisho..."
+              : "Waiting for confirmation..."
+            : lang === "sw"
+              ? "Inachakata malipo..."
+              : "Processing payment..."}
+        </p>
+        <p className="text-secondary text-body-sm">
+          {method?.type === "mobile"
+            ? lang === "sw"
+              ? `Angalia simu yako (${phone}) na ukamilishe ombi la ${method.label}.`
+              : `Check your phone (${phone}) and complete the ${method.label} request.`
+            : lang === "sw"
+              ? "Tafadhali subiri, tunathibitisha malipo yako."
+              : "Please wait, we're confirming your payment."}
+        </p>
+      </div>
+    );
+  }
+
+  // ── SUCCESS ──────────────────────────────────────────────
+  if (stage === "done") {
     return (
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -175,16 +240,22 @@ export default function PaymentGateway({
           <Check color="white" size={22} />
         </div>
         <p className="text-primary text-sm font-semibold mb-1">
-          {lang === "sw" ? "Malipo Yamefanikiwa" : "Payment Successful"}
+          {lang === "sw" ? "Imekamilika" : "Completed"}
         </p>
-        <p className="text-secondary text-body-sm mb-5">
+        <p className="text-secondary text-body-sm mb-3">
           {formatTZS(amount)}{" "}
           {lang === "sw" ? "kupitia" : "via"} {method?.label}
         </p>
+        {finalReference && (
+          <p className="text-[11px] text-muted font-mono mb-5">
+            {lang === "sw" ? "Kumbukumbu" : "Reference"}: {finalReference}
+          </p>
+        )}
       </div>
     );
   }
 
+  // ── SELECT ───────────────────────────────────────────────
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -194,8 +265,7 @@ export default function PaymentGateway({
         <button
           type="button"
           onClick={onCancel}
-          disabled={busy}
-          className="text-primary flex items-center gap-1 text-body-sm font-medium opacity-70 disabled:opacity-40"
+          className="text-primary flex items-center gap-1 text-body-sm font-medium opacity-70"
         >
           <ChevronLeft size={14} />{" "}
           {lang === "sw" ? "Rudi Nyuma" : "Back"}
@@ -215,6 +285,25 @@ export default function PaymentGateway({
         </p>
       )}
 
+      {/* ⚠️ SIMULATION NOTICE */}
+      {!PROVIDER_WIRED_UP && (
+        <div
+          style={{
+            background: "rgba(232,163,61,0.12)",
+            color: "#8A5A16",
+            borderColor: "rgba(232,163,61,0.35)",
+          }}
+          className="flex items-start gap-2 text-body-sm rounded-lg border px-3 py-2.5 mb-4"
+        >
+          <Info size={14} className="shrink-0 mt-0.5" />
+          <span>
+            {lang === "sw"
+              ? "Malipo yanafanyika kwa hali ya majaribio (simulation). Ukibofya 'Lipa', mfumo utakamilisha hatua inayofuata papo hapo. Malipo halisi hayatozwi bado."
+              : "Payments are in simulation mode. Clicking 'Pay' will complete the next step instantly. No real money is charged yet."}
+          </span>
+        </div>
+      )}
+
       <p className="text-primary text-body-sm font-semibold mb-2 text-center">
         {lang === "sw" ? "Chagua Njia ya Malipo" : "Choose Payment Method"}
       </p>
@@ -226,7 +315,6 @@ export default function PaymentGateway({
             method={m}
             selected={m.key === methodKey}
             onSelect={setMethodKey}
-            disabled={busy}
           />
         ))}
       </div>
@@ -240,8 +328,7 @@ export default function PaymentGateway({
             style={inputStyle}
             type="text"
             inputMode="tel"
-            disabled={busy}
-            className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center disabled:opacity-50"
+            className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
             placeholder={
               lang === "sw" ? "mfano: 0712 345 678" : "e.g. 0712 345 678"
             }
@@ -261,8 +348,7 @@ export default function PaymentGateway({
               style={inputStyle}
               type="text"
               inputMode="numeric"
-              disabled={busy}
-              className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center tracking-wider disabled:opacity-50"
+              className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center tracking-wider"
               placeholder="0000 0000 0000 0000"
               value={card.number}
               onChange={(e) =>
@@ -279,23 +365,26 @@ export default function PaymentGateway({
                 style={inputStyle}
                 type="text"
                 inputMode="numeric"
-                disabled={busy}
-                className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center disabled:opacity-50"
+                className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
                 placeholder="MM/YY"
                 value={card.expiry}
                 onChange={(e) =>
-                  setCard({ ...card, expiry: formatExpiryInput(e.target.value) })
+                  setCard({
+                    ...card,
+                    expiry: formatExpiryInput(e.target.value),
+                  })
                 }
               />
             </label>
             <label className="flex flex-col gap-1.5 text-center">
-              <span className="text-primary text-body-sm font-medium">CVV</span>
+              <span className="text-primary text-body-sm font-medium">
+                CVV
+              </span>
               <input
                 style={inputStyle}
                 type="text"
                 inputMode="numeric"
-                disabled={busy}
-                className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center disabled:opacity-50"
+                className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
                 placeholder="123"
                 value={card.cvv}
                 onChange={(e) =>
@@ -315,15 +404,14 @@ export default function PaymentGateway({
           <span className="text-primary text-body-sm font-medium">
             {referenceLabel ||
               (lang === "sw"
-                ? "Namba ya muamala / Reference"
-                : "Transaction / Reference")}
+                ? "Namba ya muamala (hiari — itatengenezwa kwa simulation)"
+                : "Transaction number (optional — will be simulated)")}
           </span>
           <input
             style={inputStyle}
             type="text"
-            disabled={busy}
-            className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center font-mono disabled:opacity-50"
-            placeholder="e.g. QGH7X92K1"
+            className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center font-mono"
+            placeholder="SIMULATED"
             value={reference}
             onChange={(e) => setReference(e.target.value)}
           />
@@ -350,22 +438,17 @@ export default function PaymentGateway({
         }}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm mb-3 disabled:cursor-not-allowed"
       >
-        {busy ? (
-          <>
-            <Loader2 size={16} className="animate-spin" />
-            {lang === "sw" ? "Inatuma..." : "Submitting..."}
-          </>
-        ) : (
-          lang === "sw" ? `Lipa ${formatTZS(amount)}` : `Pay ${formatTZS(amount)}`
-        )}
+        {lang === "sw"
+          ? `Lipa ${formatTZS(amount)}`
+          : `Pay ${formatTZS(amount)}`}
       </button>
 
       <p className="text-muted flex items-start justify-center gap-1.5 text-body-sm leading-snug text-center">
         <ShieldCheck size={13} className="shrink-0 mt-0.5" />
         <span>
           {lang === "sw"
-            ? "Malipo yanafanyika kwa njia salama ya backend. Uthibitisho unatoka kwa payment provider halisi."
-            : "Payments are processed securely by the backend. Confirmation comes from the real payment provider."}
+            ? "Hii ni simulation. Uunganishaji halisi wa M-Pesa/Mixx by Yas/Airtel Money utawekwa baadaye."
+            : "This is a simulation. Real M-Pesa/Mixx by Yas/Airtel Money integration will be added later."}
         </span>
       </p>
     </div>
