@@ -224,31 +224,17 @@ export function saveSubAdmins(list) {
   subAdminsSlice.save(list);
 }
 
-export async function addSubAdminAsync({ userId, roleId, active = true, name, email }) {
-  // Backend StaffAssignment requires: { user: <int>, role: <int>, active: <bool> }
-  if (!userId || !roleId) {
-    return {
-      ok: false,
-      error: new Error(
-        "userId na roleId (namba) zinahitajika. Tumia RBACSection kuchagua mtumiaji na role."
-      ),
-    };
+export async function addSubAdminAsync(subAdmin) {
+  if (!subAdmin?.email) {
+    return { ok: false, error: new Error("email inahitajika") };
   }
 
   const previous = getSubAdmins();
-  const optimistic = {
-    id: `local_${Date.now()}`,
-    userId, roleId, name, email, active,
-    addedAt: new Date().toISOString(),
-  };
+  const optimistic = { id: `local_${Date.now()}`, ...subAdmin };
   subAdminsSlice.save([...previous, optimistic]);
 
   try {
-    const raw = await api.post("/system-settings/sub-admins/", {
-      user: userId,
-      role: roleId,
-      active,
-    });
+    const raw = await api.post("/system-settings/sub-admins/", subAdmin);
     if (raw?.id) {
       const current = getSubAdmins();
       subAdminsSlice.save(current.map((s) => (s.id === optimistic.id ? raw : s)));

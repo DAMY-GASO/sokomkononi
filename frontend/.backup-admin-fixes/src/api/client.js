@@ -1,11 +1,10 @@
 // ============================================================
 // client.js — API Client
-// FIXED: precise public-endpoint detection. POST/PATCH/DELETE
-// on /categories, /content, /announcements, /listings/admin/*
-// now correctly attach the Authorization header.
+// + Public endpoints hazitumii token (fix ya "User not found")
 // ============================================================
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 if (!BASE_URL) console.warn("[api] VITE_API_BASE_URL haipo");
 
 const ACCESS_KEY = "sokomkononi_access";
@@ -16,10 +15,9 @@ let refreshToken = localStorage.getItem(REFRESH_KEY);
 let onUnauthorized = null;
 
 // ============================================================
-// PUBLIC ENDPOINTS
+// PUBLIC ENDPOINTS — hazihitaji token
 // ============================================================
-// Fully public POSTs (no token on any method)
-const PUBLIC_POST_PREFIX = [
+const PUBLIC_ENDPOINTS = [
   "/auth/login/",
   "/auth/register/",
   "/auth/verify-otp/",
@@ -28,36 +26,18 @@ const PUBLIC_POST_PREFIX = [
   "/auth/password/reset/",
   "/auth/token/refresh/",
   "/contact/",
-];
-
-// Public GETs (regex). Must NOT match /listings/admin/* or /listings/fee-rules/*
-const PUBLIC_GET_PATTERNS = [
-  /^\/listings\/?(\?.*)?$/,
-  /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/?(\?.*)?$/,
-  /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/images\/?(\?.*)?$/,
-  /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/images\/([^/]+)\/?(\?.*)?$/,
-  /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/(property-details|land-details|vehicle-details|business-details|equipment-details)\/detail\/?(\?.*)?$/,
-  /^\/categories\/?(\?.*)?$/,
-  /^\/categories\/[^/]+\/?(\?.*)?$/,
-  /^\/content\/?(\?.*)?$/,
-  /^\/content\/(about|terms|privacy|help)\/?(\?.*)?$/,
-  /^\/announcements\/?(\?.*)?$/,
-  /^\/boosting\/packages\/?(\?.*)?$/,
-  /^\/boosting\/packages\/([^/]+)\/?(\?.*)?$/,
-  /^\/bundles\/?(\?.*)?$/,
-  /^\/bundles\/([^/]+)\/?(\?.*)?$/,
-  /^\/banners\/?(\?.*)?$/,
-  /^\/reservation-rates\/?(\?.*)?$/,
-  /^\/leading-fees\/?(\?.*)?$/,
-  /^\/advertisement-fees\/?(\?.*)?$/,
+  "/categories/",           // public read
+  "/listings/",             // public read (GET pekee — tuta-check method)
+  "/content/",              // public read
+  "/announcements/",        // public read
 ];
 
 function isPublicEndpoint(path, method) {
-  const m = (method || "GET").toUpperCase();
-  if (m === "GET") {
-    return PUBLIC_GET_PATTERNS.some((re) => re.test(path));
-  }
-  return PUBLIC_POST_PREFIX.some((p) => path.startsWith(p));
+  // POST/PUT/PATCH/DELETE kwa listings zinahitaji auth
+  // GET ni public
+  if (path.startsWith("/listings/") && method !== "GET") return false;
+
+  return PUBLIC_ENDPOINTS.some((endpoint) => path.startsWith(endpoint));
 }
 
 // ============================================================
@@ -73,6 +53,7 @@ export function setTokens({ access, refresh } = {}) {
     refresh ? localStorage.setItem(REFRESH_KEY, refresh) : localStorage.removeItem(REFRESH_KEY);
   }
 }
+
 export function getAccessToken() { return accessToken; }
 export function getRefreshToken() { return refreshToken; }
 export function clearTokens() { setTokens({ access: null, refresh: null }); }
@@ -92,9 +73,11 @@ export class ApiError extends Error {
 // TOKEN REFRESH
 // ============================================================
 let refreshPromise = null;
+
 async function refreshAccessToken() {
   if (!refreshToken) throw new ApiError(401, { detail: "No refresh token" });
   if (refreshPromise) return refreshPromise;
+
   refreshPromise = (async () => {
     const res = await fetch(`${BASE_URL}/auth/token/refresh/`, {
       method: "POST",
@@ -108,7 +91,10 @@ async function refreshAccessToken() {
     const data = await res.json();
     setTokens({ access: data.access, ...(data.refresh ? { refresh: data.refresh } : {}) });
     return data.access;
-  })().finally(() => { refreshPromise = null; });
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
   return refreshPromise;
 }
 
@@ -116,12 +102,18 @@ async function refreshAccessToken() {
 // REQUEST
 // ============================================================
 async function request(path, {
-  method = "GET", body, headers = {}, retry = true, isFormData = false,
+  method = "GET",
+  body,
+  headers = {},
+  retry = true,
+  isFormData = false,
 } = {}) {
+
   const isPublic = isPublicEndpoint(path, method);
 
   const finalHeaders = {
     ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
+    // ⬇️ FIX: Usiongeze token kwa public endpoints
     ...(!isPublic && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     ...headers,
   };
@@ -132,6 +124,7 @@ async function request(path, {
     body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
 
+  // 401 handling — only kama endpoint HAIKUWA public
   if (res.status === 401 && !isPublic && retry && refreshToken) {
     try {
       await refreshAccessToken();
@@ -142,6 +135,7 @@ async function request(path, {
     }
   }
 
+  // Parse response
   const ct = res.headers.get("content-type") || "";
   let data;
   if (res.status === 204) data = null;
@@ -156,10 +150,10 @@ async function request(path, {
 // API EXPORT
 // ============================================================
 export const api = {
-  get:    (path, opts) => request(path, { ...opts, method: "GET" }),
-  post:   (path, body, opts) => request(path, { ...opts, method: "POST",   body }),
-  patch:  (path, body, opts) => request(path, { ...opts, method: "PATCH",  body }),
-  put:    (path, body, opts) => request(path, { ...opts, method: "PUT",    body }),
+  get: (path, opts) => request(path, { ...opts, method: "GET" }),
+  post: (path, body, opts) => request(path, { ...opts, method: "POST", body }),
+  patch: (path, body, opts) => request(path, { ...opts, method: "PATCH", body }),
+  put: (path, body, opts) => request(path, { ...opts, method: "PUT", body }),
   delete: (path, opts) => request(path, { ...opts, method: "DELETE" }),
   upload: (path, formData, opts) =>
     request(path, { ...opts, method: "POST", body: formData, isFormData: true }),

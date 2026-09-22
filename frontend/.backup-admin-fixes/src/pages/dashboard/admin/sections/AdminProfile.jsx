@@ -125,9 +125,9 @@ export default function AdminProfile() {
       return;
     }
     setSavingProfile(true);
-    // email ni readOnly kwenye PatchedProfile — hatuipeleki
     const res = await updateProfileAsync({
       name: profileForm.name.trim(),
+      email: profileForm.email.trim(),
       phone: profileForm.phone.trim(),
     });
     setSavingProfile(false);

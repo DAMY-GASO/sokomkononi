@@ -127,8 +127,8 @@ export async function addRoleAsync(role) {
   saveAll(STORAGE_KEY, UPDATE_EVENT, [...current, optimistic]);
   try {
     const raw = await api.post("/rbac/roles/", {
-      key: role.key,
-      permissions: role.permissions,
+      key: role.key, label: role.label,
+      description: role.description, permissions: role.permissions,
     });
     const created = normalizeRoleFromApi(raw);
     if (created) {
@@ -158,6 +158,8 @@ export async function updateRoleAsync(key, patch) {
   }
   try {
     await api.patch(`/rbac/roles/${role.id}/`, {
+      label: optimistic.label,
+      description: optimistic.description,
       permissions: optimistic.permissions,
     });
     return { ok: true, role: optimistic };
@@ -187,39 +189,21 @@ export async function removeRoleAsync(key) {
   }
 }
 
-export async function addSubAdminAsync({ name, email, roleId, roleKey, userId }) {
-  if (!userId) {
-    return { ok: false, error: new Error("userId (numeric) inahitajika") };
+export async function addSubAdminAsync({ name, email, roleKey, userId }) {
+  if (!userId || !roleKey) {
+    return { ok: false, error: new Error("userId na roleKey zinahitajika") };
   }
-  // Resolve roleId: prefer numeric roleId, else look up by roleKey
-  let resolvedRoleId = roleId;
-  if (!resolvedRoleId && roleKey) {
-    const role = getRole(roleKey);
-    resolvedRoleId = role?.id;
-  }
-  if (!resolvedRoleId || typeof resolvedRoleId !== "number") {
-    return {
-      ok: false,
-      error: new Error(
-        "roleId (numeric) inahitajika. Backend inatumia role FK, sio roleKey."
-      ),
-    };
-  }
-
   const previous = getSubAdmins();
   const optimistic = {
     id: `local_${Date.now()}`,
-    userId, name, email, roleKey, roleId: resolvedRoleId,
+    userId, name, email, roleKey,
     addedAt: new Date().toISOString(),
     active: true,
   };
   saveAll(SUBADMINS_KEY, SUBADMINS_EVENT, [...previous, optimistic]);
-
   try {
     const raw = await api.post("/rbac/staff/", {
-      user: userId,
-      role: resolvedRoleId,
-      active: true,
+      user_id: userId, role_key: roleKey, active: true,
     });
     const created = normalizeStaffFromApi(raw);
     if (created) {
@@ -237,30 +221,16 @@ export async function addSubAdminAsync({ name, email, roleId, roleKey, userId })
 
 export async function updateSubAdminAsync(id, patch) {
   const previous = getSubAdmins();
-  const target = previous.find((s) => s.id === id);
-  if (!target) return { ok: false, error: new Error("Sub-admin hayupo") };
-
-  // Resolve role: prefer numeric roleId, else lookup roleKey
-  let resolvedRoleId = patch.roleId;
-  if (!resolvedRoleId && patch.roleKey) {
-    const role = getRole(patch.roleKey);
-    resolvedRoleId = role?.id;
+  if (!previous.find((s) => s.id === id)) {
+    return { ok: false, error: new Error("Sub-admin hayupo") };
   }
-
-  const optimistic = { ...target, ...patch };
-  if (resolvedRoleId) optimistic.roleId = resolvedRoleId;
-  saveAll(SUBADMINS_KEY, SUBADMINS_EVENT, previous.map((s) => (s.id === id ? optimistic : s)));
-
+  saveAll(SUBADMINS_KEY, SUBADMINS_EVENT, previous.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   if (typeof id !== "number") return { ok: true };
-
-  const body = {};
-  if (resolvedRoleId != null) body.role = resolvedRoleId;
-  if (patch.active != null) body.active = patch.active;
-
-  if (!Object.keys(body).length) return { ok: true };
-
   try {
-    await api.patch(`/rbac/staff/${id}/`, body);
+    await api.patch(`/rbac/staff/${id}/`, {
+      ...(patch.roleKey != null ? { role_key: patch.roleKey } : {}),
+      ...(patch.active != null ? { active: patch.active } : {}),
+    });
     return { ok: true };
   } catch (err) {
     saveAll(SUBADMINS_KEY, SUBADMINS_EVENT, previous);

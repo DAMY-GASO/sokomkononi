@@ -74,7 +74,6 @@ import { useRoles, getRole } from "../../config/rolesStore.js";
 // ============================================================
 const URL_TO_STATE = {
   [ADMIN_PATH]: "overview",
-  [`${ADMIN_PATH}/dashboard`]: "overview",
   [`${ADMIN_PATH}/overview`]: "overview",
   [`${ADMIN_PATH}/users`]: "users",
   [`${ADMIN_PATH}/moderation`]: "moderation",

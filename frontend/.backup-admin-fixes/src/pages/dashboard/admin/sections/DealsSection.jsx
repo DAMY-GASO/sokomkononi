@@ -17,9 +17,6 @@ import {
   useDeals,
   resolveDisputeAsync,
 } from "../../../../config/dealsStore.js";
-import {
-  getTransactionByDealRoom,
-} from "../../../../config/transactionLifecycleStore.js";
 
 export default function DealsSection() {
   const { lang } = useLanguage();
@@ -41,23 +38,12 @@ export default function DealsSection() {
     setBusy((b) => ({ ...b, [dealId]: true }));
     setError("");
 
-    // Tafuta transaction ya deal hii ili tuweze kuitumia kwa resolve-dispute
-    const tx = getTransactionByDealRoom(dealId);
-    if (!tx?.id) {
-      setBusy((b) => { const n = { ...b }; delete n[dealId]; return n; });
-      setError(
-        t(
-          "Transaction haijatengenezwa bado kwa deal hii. Mwambie mnunuzi/muuzaji aanzishe transaction kwanza.",
-          "No transaction exists for this deal yet. Ask buyer/seller to start a transaction first."
-        )
-      );
-      return;
-    }
-
+    // payload ina { action, adminNote }
+    // resolveDisputeAsync inahitaji { resolution, note }
     const res = await resolveDisputeAsync(dealId, {
       resolution: payload.action,
       note: payload.adminNote || "",
-      transactionId: tx.id,
+      // transactionId: unaweza kuongeza hapa kama unayo
     });
 
     setBusy((b) => {

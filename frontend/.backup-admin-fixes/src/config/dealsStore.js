@@ -257,39 +257,17 @@ export async function cancelDealAsync(dealId, reason = "") {
  *
  * Kama transaction haijatengenezwa bado, function inarudisha error.
  */
-export async function resolveDisputeAsync(
-  dealId,
-  { resolution, note = "", transactionId = null }
-) {
+export async function resolveDisputeAsync(dealId, { resolution, note = "", transactionId = null }) {
   if (!resolution) {
     return { ok: false, error: new Error("resolution inahitajika") };
   }
 
+  // Kama hukupewa transactionId, jaribu kuipata kutoka local transactions
+  let txId = transactionId;
+
   const previous = getDeals();
   const deal = previous.find((d) => d.id === dealId);
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
-
-  // Kama hukupewa transactionId, tafuta kutoka local transactionLifecycleStore
-  let txId = transactionId;
-  if (!txId) {
-    try {
-      const { getTransactionByDealRoom } = await import("./transactionLifecycleStore.js");
-      const tx = getTransactionByDealRoom(dealId) ||
-                 getTransactionByDealRoom(deal.dealRoomId);
-      txId = tx?.id ?? null;
-    } catch (e) {
-      /* ignore */
-    }
-  }
-
-  if (!txId) {
-    return {
-      ok: false,
-      error: new Error(
-        "Transaction haijatengenezwa bado kwa deal hii. Mwambie buyer/muuzaji aanzishe transaction kwanza."
-      ),
-    };
-  }
 
   // Optimistic — sasisha local deal
   saveDeals(previous.map((d) =>
@@ -302,6 +280,15 @@ export async function resolveDisputeAsync(
         }
       : d
   ));
+
+  if (!txId) {
+    console.warn("[dealsStore] resolveDispute: hakuna transactionId — local only");
+    return {
+      ok: true,
+      warning: "no_transaction_id",
+      message: "Imesasishwa local pekee. Tafadhali toa transactionId ili ku-sync backend.",
+    };
+  }
 
   try {
     await transactionsApi.resolveDispute(txId, { resolution, note });

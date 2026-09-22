@@ -178,14 +178,14 @@ export function useListing(id) {
 // STATUS MAP
 // ============================================================
 export const LISTING_STATUS_MAP = {
-  live: "AVAILABLE",
-  paused: "ARCHIVED",
-  reserved: "RESERVED",
-  sold: "SOLD",
-  expired: "ARCHIVED",
-  in_review: "PENDING_APPROVAL",
-  pending_payment: "DRAFT",
-  rejected: "REJECTED",
+  live: "active",
+  paused: "paused",
+  reserved: "reserved",
+  sold: "sold",
+  expired: "expired",
+  in_review: "pending_review",
+  pending_payment: "draft",
+  rejected: "rejected",
 };
 
 const API_TO_FRONTEND_STATUS = {
@@ -411,21 +411,19 @@ export async function removeListingAsync(id) {
 }
 
 export async function pauseListingAsync(id) {
-  // Backend enum: DRAFT | PENDING_APPROVAL | AVAILABLE | RESERVED | SOLD | REJECTED | ARCHIVED
-  // No "PAUSED" — use ARCHIVED (closest semantics: hidden from buyers).
   return updateListingAsync(id, {
-    status: "ARCHIVED",
+    status: "paused",
     pausedAt: new Date().toISOString(),
   });
 }
 
 export async function unpauseListingAsync(id) {
-  return updateListingAsync(id, { status: "AVAILABLE", pausedAt: null });
+  return updateListingAsync(id, { status: "live", pausedAt: null });
 }
 
 export async function markSoldAsync(id) {
   return updateListingAsync(id, {
-    status: "SOLD",
+    status: "sold",
     soldAt: new Date().toISOString(),
   });
 }

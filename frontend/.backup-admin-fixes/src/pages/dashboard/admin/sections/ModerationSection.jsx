@@ -35,15 +35,7 @@ export default function ModerationSection() {
     setLoadingPending(true);
     fetchPendingListingsAsync().then((res) => {
       if (cancelled) return;
-      if (res.ok) {
-        setPendingListings(res.listings || []);
-      } else {
-        console.warn("[ModerationSection] fetch failed:", res.error);
-        setError(
-          res.error?.message ||
-            t("Imeshindwa kupakia pending listings.", "Failed to load pending listings.")
-        );
-      }
+      if (res.ok) setPendingListings(res.listings || []);
       setLoadingPending(false);
     });
     return () => {
