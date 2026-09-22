@@ -135,37 +135,7 @@ export default function PostPropertyForm({
         location: base.location.trim(),
       });
 
-      // ⚠️ Backend contract note: POST /listings/ returns ListingWrite
-      // which has NO `id`. We must resolve the new listing id by fetching
-      // our own newest listings and matching by title.
-      let listingId =
-        created?.id ?? created?.pk ?? created?.listing_id ?? created?.listingId;
-
-      if (!listingId) {
-        try {
-          const me = await api.get("/auth/me/");
-          const mine = await api.get(
-            `/listings/?seller=${me.id}&ordering=-created_at&page_size=10`
-          );
-          const list = Array.isArray(mine) ? mine : mine?.results || [];
-          const match = list.find((l) => l.title === base.title.trim());
-          listingId = match?.id;
-        } catch (lookupErr) {
-          console.warn("[PostPropertyForm] id lookup failed:", lookupErr);
-        }
-      }
-
-      if (!listingId) {
-        throw new Error(
-          t(
-            "Backend haikurudisha listing id na hatukuweza kuipata. Wasiliana na support.",
-            "Backend did not return a listing id and we couldn't resolve it. Contact support."
-          )
-        );
-      }
-
-      // Ensure downstream calls have the id
-      created.id = listingId;
+      const listingId = created.id;
 
       // 2. Upload images sequentially (multipart)
       for (const p of photos) {

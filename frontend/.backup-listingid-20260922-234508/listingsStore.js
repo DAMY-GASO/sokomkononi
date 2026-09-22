@@ -373,33 +373,8 @@ export async function createListingAsync(payload) {
 
   try {
     const created = await listingsApi.create(payload);
-
-    // ⚠️ Backend contract: POST /listings/ returns ListingWrite (no `id`).
-    // Resolve the real id by fetching the user's newest listings.
-    let resolved = created;
-    const hasId =
-      created && (created.id ?? created.pk ?? created.listing_id ?? created.listingId);
-    if (!hasId) {
-      try {
-        const me = await authApi.me();
-        const mine = await listingsApi.mine(me.id, {
-          ordering: "-created_at",
-          page_size: 10,
-        });
-        const list = Array.isArray(mine) ? mine : mine?.results || [];
-        const match = list.find((l) => l.title === payload.title);
-        if (match?.id) {
-          resolved = { ...created, ...match, id: match.id };
-        }
-      } catch (lookupErr) {
-        console.warn("[listingsStore] id lookup failed:", lookupErr);
-      }
-    }
-
-    const normalized = normalizeListingFromApi(resolved);
-    if (!normalized || !normalized.id) {
-      throw new Error("Backend haikurudisha listing id (createListingAsync)");
-    }
+    const normalized = normalizeListingFromApi(created);
+    if (!normalized) throw new Error("Invalid response from server");
     saveListings([normalized, ...getListings().filter((l) => l.id !== tempId)]);
     return { ok: true, listing: normalized };
   } catch (err) {
