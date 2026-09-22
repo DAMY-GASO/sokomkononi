@@ -156,7 +156,7 @@ export function useTickets() {
 }
 export function useOpenTicketsCount() { return useTickets().filter((t) => t.status === "open" || t.status === "in_progress").length; }
 
-// LEGACY
+// LEGACY (compat shims)
 export const SEED_TICKETS = [];
 export function addTicket() { return null; }
 export function addTicketMessage() {}

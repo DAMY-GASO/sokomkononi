@@ -113,7 +113,7 @@ export function useSearches() {
 }
 export function useSearchesCount() { return useSearches().length; }
 
-// LEGACY
+// LEGACY (compat shims)
 export const SEED_SEARCHES = [];
 export function updateSearch() {}
 export function checkNewListingMatches() {}

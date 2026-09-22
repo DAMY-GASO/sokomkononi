@@ -92,6 +92,6 @@ export function useWaitingList() {
 export function useWaitingListForListing(id) { return id ? useWaitingList().filter((e) => e.listingId === id) : []; }
 export function useWaitingListCount() { return useWaitingList().length; }
 
-// LEGACY
+// LEGACY (compat shims)
 export const SEED_WAITING_LIST = [];
 export function releaseListingToWaitlist() { return []; }

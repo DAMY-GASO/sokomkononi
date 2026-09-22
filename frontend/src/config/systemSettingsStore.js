@@ -213,7 +213,7 @@ export function savePlatformPolicy() {}
 export const SEED_APP_STORE_LINKS = { play: "", appstore: "" };
 export const SEED_PLATFORM_POLICY = { listingLifetimeDays: 60 };
 
-// LEGACY
+// LEGACY (compat shims)
 export const SEED_WEBHOOKS = [];
 export const SEED_SUBADMINS = [];
 export function saveWebhooks() {}

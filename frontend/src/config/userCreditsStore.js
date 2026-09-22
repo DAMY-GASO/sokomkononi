@@ -104,5 +104,5 @@ export function useUserCredits(userId) {
   return c;
 }
 
-// LEGACY
+// LEGACY (compat shims)
 export function removeExpiredCredits() {}

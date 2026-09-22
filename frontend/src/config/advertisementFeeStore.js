@@ -85,8 +85,8 @@ export function useAdvertisementFeeConfig() {
   return cfg;
 }
 
-// LEGACY
-export const SEED_ADVERTISEMENT_FEE_CONFIG = { price: 0, days: 0, label: { sw: "", en: "" }, desc: { sw: "", en: "" } };
+// LEGACY (compat shims)
+export const SEED_ADVERTISEMENT_FEE_CONFIG = { price: 0, days: 0, label: { sw: '', en: '' }, desc: { sw: '', en: '' } };
 export function saveAdvertisementFeeConfig() {}
 export function updateAdvertisementFeePrice() {}
-export function updateAdvertisementFeeAsync() { return Promise.resolve({ ok: false }); }
+export async function updateAdvertisementFeeAsync() { return { ok: false }; }

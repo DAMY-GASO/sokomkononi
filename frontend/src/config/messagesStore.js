@@ -134,7 +134,7 @@ export function useUnreadMessagesCount() {
   return read().reduce((sum, c) => sum + (c.unreadCount || 0), 0);
 }
 
-// LEGACY
-export function sendMessage() { return getConversations(); }
-export function markConversationRead() { return getConversations(); }
-export function receiveMessage() { return getConversations(); }
+// LEGACY (compat shims)
+export function sendMessage() { return []; }
+export function markConversationRead() { return []; }
+export function receiveMessage() { return []; }

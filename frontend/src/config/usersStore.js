@@ -114,7 +114,7 @@ export function useUser(id) {
   return id ? list.find((u) => u.id === id) || null : null;
 }
 
-// LEGACY
+// LEGACY (compat shims)
 export const SEED_USERS = [];
 export function saveUsers() {}
 export function toggleUserStatus() {}

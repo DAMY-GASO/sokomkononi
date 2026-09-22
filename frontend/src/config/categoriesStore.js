@@ -208,8 +208,8 @@ export function useCategory(key) {
   return key ? list.find((c) => c.key === key) || null : null;
 }
 
-// LEGACY
-export function hasCategoryImage(c) { return Boolean(c?.imageUrl); }
+// LEGACY (compat shims)
+export function hasCategoryImage() { return false; }
 export function updateCategoryImage() {}
 export function addCategory() { return []; }
 export function updateCategory() {}

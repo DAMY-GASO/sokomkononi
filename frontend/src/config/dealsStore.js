@@ -390,10 +390,3 @@ export function useDeal(id) {
   if (!id) return null;
   return deals.find((d) => d.id === id) || null;
 }
-
-// LEGACY
-export const SEED_DEALS = [];
-export function saveDeals() {}
-export function updateDeal() {}
-export function getOrCreateDeal() { return null; }
-export function resolveDispute() {}

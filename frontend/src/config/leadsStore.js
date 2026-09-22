@@ -103,5 +103,5 @@ export function useLeadsForListing(listingId) {
   return listingId ? list.filter((l) => l.listingId === listingId) : [];
 }
 
-// LEGACY
+// LEGACY (compat shims)
 export const SEED_LEADS = [];

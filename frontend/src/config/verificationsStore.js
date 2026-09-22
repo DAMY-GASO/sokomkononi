@@ -126,7 +126,7 @@ export function useVerifications() {
 }
 export function usePendingVerificationsCount() { return useVerifications().filter((v) => v.status === "pending").length; }
 
-// LEGACY
+// LEGACY (compat shims)
 export const SEED_VERIFICATIONS = [];
 export function addVerification() { return null; }
 export function approveVerification() {}

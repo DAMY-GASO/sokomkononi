@@ -126,6 +126,3 @@ export function useMyTransactionsAggregate() {
     .reduce((sum, t) => sum + (t.amount || 0), 0);
   return { revenue, spent, earned, totalCount: list.length };
 }
-// LEGACY
-export const SEED_TRANSACTIONS = [];
-export function saveTransactions() {}

@@ -123,7 +123,7 @@ export function useSavedSnapshots() {
   return snaps;
 }
 
-// LEGACY
+// LEGACY (compat shims)
 export function saveSnapshot() {}
 export function removeSnapshot() {}
 export function saveSavedIds() {}

@@ -20,7 +20,6 @@ import {
   initializeCategories,
   hydrateCategoriesFromApi,
 } from "./config/categoriesStore.js";
-import { SEED_CATEGORIES } from "./config/seedCategories.js";
 import { initializeBundles } from "./config/bundlesStore.js";
 import { hydrateListingsFromApi } from "./config/listingsStore.js";
 

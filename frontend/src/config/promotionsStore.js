@@ -154,7 +154,7 @@ export function useActiveCampaigns() {
   });
 }
 
-// LEGACY
+// LEGACY (compat shims)
 export const SEED_CAMPAIGNS = [];
 export function addCampaign() { return null; }
 export function updateCampaign() {}

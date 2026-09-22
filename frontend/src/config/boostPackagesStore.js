@@ -89,6 +89,6 @@ export function useBoostPackages() {
   return list;
 }
 
-// LEGACY
+// LEGACY (compat shims)
 export const SEED_BOOST_PACKAGES = [];
 export function saveBoostPackages() {}
