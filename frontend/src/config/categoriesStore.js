@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { categoriesApi } from "../api/categories.js";
 import { api } from "../api/client.js";
-import { SEED_CATEGORIES } from "./seedCategories.js";
 
 const STORAGE_KEY = "sokomkononi_categories_v2";
 const UPDATE_EVENT = "sokomkononi:categories-updated";
