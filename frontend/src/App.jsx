@@ -1,218 +1,235 @@
+import React, { useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
+import ScrollToHash from "./components/ScrollToHash.jsx";
+
 // ============================================================
-// categoriesStore.js — API-only via /api/categories/
+// AUTH — install 401 handler kutoka authStore
 // ============================================================
-import { useEffect, useState } from "react";
+import { installUnauthorizedHandler } from "./config/authStore.js";
+
+// ============================================================
+// ADMIN PATH — secret prefix
+// ============================================================
+import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
+
+// ============================================================
+// INITIALIZE — categories + bundles za awali
+// ============================================================
 import {
-  Home, Trees, Car, Briefcase, Wrench, Truck, Bike, Bus, Sofa,
-  Tv, PawPrint, Refrigerator, ShoppingBag, Building2, Package,
-  Ship, Plane, Store, Factory, Bed,
-} from "lucide-react";
-import { categoriesApi } from "../api/categories.js";
-import { api } from "../api/client.js";
+  initializeCategories,
+  hydrateCategoriesFromApi,
+} from "./config/categoriesStore.js";
+import { initializeBundles } from "./config/bundlesStore.js";
+import { hydrateListingsFromApi } from "./config/listingsStore.js";
 
-const KEY = "sokomkononi_categories_v2";
-const EV = "sokomkononi:categories-updated";
+// ============================================================
+// PUBLIC PAGES
+// ============================================================
+import HomePage from "./pages/HomePage.jsx";
+import AboutPage from "./pages/AboutPage.jsx";
+import ContactPage from "./pages/ContactPage.jsx";
+import TermsPage from "./pages/TermsPage.jsx";
+import PrivacyPage from "./pages/PrivacyPage.jsx";
+import JinsiYaKununuaNaKuuza from "./pages/JinsiYaKununuaNaKuuza.jsx";
 
-export const AVAILABLE_ICONS = {
-  Home, Trees, Car, Briefcase, Wrench, Truck, Bike, Bus, Sofa, Tv,
-  PawPrint, Refrigerator, ShoppingBag, Building2, Package, Ship,
-  Plane, Store, Factory, Bed,
-};
-export function getCategoryIcon(iconKey) { return AVAILABLE_ICONS[iconKey] || Home; }
+// ============================================================
+// AUTH PAGES
+// ============================================================
+import LoginPage from "./pages/Auth/LoginPage.jsx";
+import RegisterPage from "./pages/Auth/RegisterPage.jsx";
+import WaitlistPage from "./pages/Auth/WaitlistPage.jsx";
+import ForgotpasswordPage from "./pages/Auth/ForgotpasswordPage.jsx";
+import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 
-function read() {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return [];
-    const p = JSON.parse(raw);
-    return Array.isArray(p) ? p : [];
-  } catch { return []; }
-}
-function write(list) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify(list));
-  window.dispatchEvent(new Event(EV));
-}
+// ============================================================
+// PROPERTY & SEARCH
+// ============================================================
+import PropertyDetailPage from "./pages/PropertyDetailPage.jsx";
+import AllCategoriesPage from "./pages/AllCategoriesPage.jsx";
+import CategoryPage from "./pages/CategoryPage.jsx";
+import AllListingsPage from "./pages/AllListingsPage.jsx";
+import BrowseProperties from "./pages/dashboard/components/BrowseProperties.jsx";
+import Navbar from "./components/Navbar.jsx";
+import Footer from "./components/Footer.jsx";
+import BottomNav from "./components/BottomNav.jsx";
 
-// ── Reads ─────────────────────────────────────────────────
-export function getCategories() { return read(); }
-export function getActiveCategories() { return read().filter((c) => c.active !== false); }
-export function getPopularCategories() { return read().filter((c) => c.active !== false && c.isPopular === true); }
-export function getCategory(key) { return key ? read().find((c) => c.key === key) || null : null; }
-export function getCategoryById(id) {
-  if (id == null) return null;
-  return read().find((c) => c.id === id || String(c.id) === String(id)) || null;
-}
-export function getCategoryIdByKey(key) { return getCategory(key)?.id ?? null; }
-export function getCategoryLabel(key, lang = "sw") {
-  const cat = getCategory(key);
-  return cat ? cat.label?.[lang] || cat.label?.sw || key : key;
-}
-export function getCategoryExtra(key) {
-  const cat = getCategory(key);
-  return cat && Array.isArray(cat.extra) ? cat.extra : [];
-}
-export function getCategoryFieldLabel(f, lang = "sw") { return f?.label?.[lang] || f?.label?.sw || f?.key || ""; }
-export function getCategoryFieldPlaceholder(f, lang = "sw") { return f?.placeholder?.[lang] || f?.placeholder?.sw || ""; }
-export function getCategoryOptionLabel(o, lang = "sw") { return o?.label?.[lang] || o?.label?.sw || o?.value || ""; }
+// ============================================================
+// PROFILE
+// ============================================================
+import ProfilePage from "./pages/ProfilePage.jsx";
 
-export function initializeCategories() { /* no-op: data comes from API */ }
-export function resetCategories(list) { write(Array.isArray(list) ? list : []); }
+// ============================================================
+// BUNDLES
+// ============================================================
+import BundlesPage from "./pages/BundlesPage.jsx";
 
-// ── Normalizer ────────────────────────────────────────────
-function toSlug(str) {
-  return String(str || "").trim().toLowerCase()
-    .replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-}
-function norm(raw) {
-  if (!raw) return null;
-  const name = raw.name || "";
-  const slug = raw.slug || toSlug(name);
-  return {
-    id: raw.id,
-    key: slug,
-    slug,
-    name,
-    label: { sw: name, en: name },
-    description: { sw: raw.description || "", en: raw.description || "" },
-    iconKey: raw.icon_key || "Home",
-    imageUrl: raw.image_url || null,
-    isPopular: raw.is_popular ?? true,
-    active: raw.is_active !== false,
-    ordering: raw.ordering ?? 0,
-    extra: Array.isArray(raw.extra) ? raw.extra : [],
-    createdAt: raw.created_at,
-    updatedAt: raw.updated_at,
-  };
+// ============================================================
+// DASHBOARD
+// ============================================================
+import DashboardShell from "./pages/dashboard/components/DashboardShell.jsx";
+
+// ============================================================
+// ADMIN DASHBOARD
+// ============================================================
+import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
+
+// ============================================================
+// BROWSE / TAFUTA wrapper
+// ============================================================
+function BrowseRoute() {
+  const { lang } = useLanguage();
+  return (
+    <>
+      <Navbar />
+      <BrowseProperties lang={lang} />
+      <Footer />
+      <BottomNav />
+    </>
+  );
 }
 
-// ── Hydrate ───────────────────────────────────────────────
-export async function hydrateCategoriesFromApi() {
-  try {
-    const data = await categoriesApi.list({ page_size: 200 });
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map(norm).filter(Boolean);
-    // Preserve iconKey/imageUrl/extra from existing cache if backend doesn't return them
-    const existing = read();
-    const merged = normalized.map((c) => {
-      const prior = existing.find((p) => p.key === c.key);
-      if (!prior) return c;
-      return {
-        ...c,
-        iconKey: c.iconKey && c.iconKey !== "Home" ? c.iconKey : prior.iconKey || "Home",
-        imageUrl: c.imageUrl || prior.imageUrl || null,
-        extra: c.extra.length ? c.extra : prior.extra || [],
-      };
-    });
-    write(merged);
-    return { ok: true, count: merged.length };
-  } catch (err) { return { ok: false, error: err }; }
-}
-
-// ── Mutations ─────────────────────────────────────────────
-function toApiBody(form) {
-  return {
-    name: form.name || form.label?.en || form.label?.sw || form.key,
-    description: form.description?.en || form.description?.sw || "",
-    icon_key: form.iconKey || "Home",
-    image_url: form.imageUrl || null,
-    is_popular: form.isPopular !== false,
-    is_active: form.active !== false,
-    ordering: form.ordering ?? 0,
-    extra: form.extra || [],
-  };
-}
-
-export async function addCategoryAsync(form) {
-  const body = toApiBody(form);
-  try {
-    const raw = await api.post("/categories/", body);
-    const created = norm(raw);
-    const prior = form.iconKey ? { ...created, iconKey: form.iconKey } : created;
-    write([...read(), prior]);
-    return { ok: true, category: prior };
-  } catch (err) { return { ok: false, error: err }; }
-}
-
-export async function updateCategoryAsync(key, patch) {
-  const target = getCategory(key);
-  if (!target) return { ok: false, error: new Error("Category not found") };
-  if (typeof target.id !== "number") {
-    return { ok: false, error: new Error("Category has no backend id") };
-  }
-  const body = {};
-  if (patch.name != null || patch.label != null) body.name = patch.name || patch.label?.en || patch.label?.sw;
-  if (patch.description != null) body.description = patch.description?.en || patch.description?.sw || "";
-  if (patch.iconKey != null) body.icon_key = patch.iconKey;
-  if (patch.imageUrl != null) body.image_url = patch.imageUrl;
-  if (patch.isPopular != null) body.is_popular = patch.isPopular;
-  if (patch.active != null) body.is_active = patch.active;
-  if (patch.extra != null) body.extra = patch.extra;
-  if (!Object.keys(body).length) return { ok: true, category: target };
-  try {
-    const raw = await api.patch(`/categories/${target.id}/`, body);
-    const updated = norm(raw);
-    // Preserve local extras
-    const merged = { ...updated, iconKey: updated.iconKey || target.iconKey, imageUrl: updated.imageUrl || target.imageUrl, extra: updated.extra.length ? updated.extra : target.extra };
-    write(read().map((c) => (c.key === key ? merged : c)));
-    return { ok: true, category: merged };
-  } catch (err) { return { ok: false, error: err }; }
-}
-
-export async function toggleCategoryActiveAsync(key) {
-  const target = getCategory(key);
-  if (!target) return { ok: false, error: new Error("Category not found") };
-  return updateCategoryAsync(key, { active: target.active === false });
-}
-
-export async function toggleCategoryPopularAsync(key) {
-  const target = getCategory(key);
-  if (!target) return { ok: false, error: new Error("Category not found") };
-  return updateCategoryAsync(key, { isPopular: !target.isPopular });
-}
-
-export async function updateCategoryImageAsync(key, imageUrl) {
-  return updateCategoryAsync(key, { imageUrl });
-}
-
-export async function removeCategoryAsync(key) {
-  const target = getCategory(key);
-  if (!target) return { ok: false, error: new Error("Category not found") };
-  try {
-    await api.delete(`/categories/${target.id}/`);
-    write(read().filter((c) => c.key !== key));
-    return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
-}
-
-// ── Hooks ─────────────────────────────────────────────────
-export function useCategories() {
-  const [list, setList] = useState(() => read());
+function App() {
+  // ============================================================
+  // INITIALIZE — categories + bundles + hydrate kutoka API
+  // + install 401 handler
+  // ============================================================
   useEffect(() => {
-    hydrateCategoriesFromApi();
-    const sync = () => setList(read());
-    window.addEventListener("storage", sync);
-    window.addEventListener(EV, sync);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener(EV, sync);
-    };
+    // 0) Install 401 handler
+    installUnauthorizedHandler();
+
+    // 1) Seed mara moja
+    initializeCategories();
+    initializeBundles();
+
+    // 2) Hydrate kutoka API
+    async function hydrateFromApi() {
+      await Promise.allSettled([
+        hydrateCategoriesFromApi(),
+        hydrateListingsFromApi(),
+      ]);
+    }
+    hydrateFromApi();
   }, []);
-  return list;
-}
-export function useActiveCategories() { return useCategories().filter((c) => c.active !== false); }
-export function usePopularCategories() { return useCategories().filter((c) => c.active !== false && c.isPopular === true); }
-export function useCategory(key) {
-  const list = useCategories();
-  return key ? list.find((c) => c.key === key) || null : null;
+
+  return (
+    <LanguageProvider>
+      <Router>
+        <ScrollToHash />
+        <Routes>
+          {/* ============================================================ */}
+          {/* PUBLIC */}
+          {/* ============================================================ */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/kuhusu" element={<AboutPage />} />
+          <Route path="/mawasiliano" element={<ContactPage />} />
+          <Route path="/sheria" element={<TermsPage />} />
+          <Route path="/faragha" element={<PrivacyPage />} />
+          <Route path="/jinsi-ya-kununua" element={<JinsiYaKununuaNaKuuza />} />
+
+          {/* ============================================================ */}
+          {/* AUTH (user) */}
+          {/* ============================================================ */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotpasswordPage />} />
+          <Route path="/waitlist" element={<WaitlistPage />} />
+
+          {/* ============================================================ */}
+          {/* PROPERTY & SEARCH */}
+          {/* ============================================================ */}
+          <Route path="/mali/:id" element={<PropertyDetailPage />} />
+          <Route path="/property/:id" element={<PropertyDetailPage />} />
+          <Route path="/kategoria" element={<AllCategoriesPage />} />
+          <Route path="/kategoria/:slug" element={<CategoryPage />} />
+          <Route path="/tafuta" element={<BrowseRoute />} />
+          <Route path="/mali-zote" element={<AllListingsPage />} />
+
+          {/* ============================================================ */}
+          {/* BUNDLES */}
+          {/* ============================================================ */}
+          <Route path="/bundles" element={<BundlesPage />} />
+
+          {/* ============================================================ */}
+          {/* DASHBOARD — SELLER */}
+          {/* ============================================================ */}
+          <Route path="/dashboard" element={<DashboardShell />} />
+          <Route path="/dashboard/seller" element={<DashboardShell />} />
+          <Route path="/dashboard/overview" element={<DashboardShell />} />
+          <Route path="/dashboard/post" element={<DashboardShell />} />
+          <Route path="/dashboard/listings" element={<DashboardShell />} />
+          <Route path="/dashboard/leads" element={<DashboardShell />} />
+          <Route path="/dashboard/saved" element={<DashboardShell />} />
+          <Route path="/dashboard/boost" element={<DashboardShell />} />
+          <Route path="/dashboard/leading" element={<DashboardShell />} />
+          <Route path="/dashboard/advertise" element={<DashboardShell />} />
+          <Route path="/dashboard/bundles" element={<DashboardShell />} />
+          <Route path="/dashboard/deals" element={<DashboardShell />} />
+          <Route path="/dashboard/messages" element={<DashboardShell />} />
+          <Route path="/dashboard/notifications" element={<DashboardShell />} />
+          <Route path="/dashboard/transactions" element={<DashboardShell />} />
+          <Route path="/dashboard/activity" element={<DashboardShell />} />
+
+          {/* ============================================================ */}
+          {/* DASHBOARD — BUYER */}
+          {/* ============================================================ */}
+          <Route path="/dashboard/buyer" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/overview" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/browse" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/saved" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/searches" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/bundles" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/deals" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/messages" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/notifications" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/waiting" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/transactions" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/safety" element={<DashboardShell />} />
+          <Route path="/dashboard/buyer/activity" element={<DashboardShell />} />
+
+          {/* ============================================================ */}
+          {/* ADMIN — SECRET PATHS */}
+          {/* ============================================================ */}
+          <Route path={ADMIN_LOGIN_PATH} element={<AdminLoginPage />} />
+          <Route path={ADMIN_PATH} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/dashboard`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/overview`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/users`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/moderation`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/verification`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/deals`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/revenue`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/bundles`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/promotions`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/reports`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/support`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/content`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/audit`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/system`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/staff`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/profile`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/trash`} element={<AdminDashboard />} />
+
+          {/* ============================================================ */}
+          {/* LEGACY /admin/* — RUDISHA HOMEPAGE (usifichue admin haipo) */}
+          {/* ============================================================ */}
+          <Route path="/admin/*" element={<HomePage />} />
+          <Route path="/admin" element={<HomePage />} />
+
+          {/* ============================================================ */}
+          {/* PROFILE */}
+          {/* ============================================================ */}
+          <Route path="/wasifu" element={<ProfilePage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+
+          {/* ============================================================ */}
+          {/* FALLBACK */}
+          {/* ============================================================ */}
+          <Route path="*" element={<HomePage />} />
+        </Routes>
+      </Router>
+    </LanguageProvider>
+  );
 }
 
-// LEGACY (compat shims)
-export function hasCategoryImage() { return false; }
-export function updateCategoryImage() {}
-export function addCategory() { return []; }
-export function updateCategory() {}
-export function toggleCategoryActive() {}
-export function toggleCategoryPopular() {}
-export function removeCategory() { return { success: false }; }
+export default App;
