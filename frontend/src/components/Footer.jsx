@@ -160,7 +160,7 @@ export default function Footer({ selectedLang: propLang }) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0-.828.672-1.5 1.5-1.5h16.5c.828 0 1.5.672 1.5 1.5v10.5c0 .828-.672 1.5-1.5 1.5H3.75c-.828 0-1.5-.672-1.5-1.5V6.75z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75l9.75 6.75 9.75-6.75" />
                 </svg>
-                <a href="mailto:info@sokomkononi.co.tz" className="hover:text-white transition-colors">
+                <a href="mailto:support@sokomkononi.co.tz" className="hover:text-white transition-colors">
                   support@sokomkononi.co.tz
                 </a>
               </li>
