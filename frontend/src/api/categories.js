@@ -9,4 +9,5 @@ function toQuery(params = {}) {
 export const categoriesApi = {
   list: (params = {}) => api.get(`/categories/${toQuery(params)}`),
   detail: (idOrSlug) => api.get(`/categories/${idOrSlug}/`),
+  uploadImage: (formData) => api.upload("/categories/upload-image/", formData),
 };
