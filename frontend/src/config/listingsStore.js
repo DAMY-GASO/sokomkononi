@@ -1,29 +1,68 @@
-// ============================================================
-// listingsStore.js
-// Backend: /api/listings/
-// Local cache (localStorage) + API hydration.
-//
-// STATUS VOCABULARY (frontend) -> DB:
-//   live              -> active / AVAILABLE
-//   paused            -> paused
-//   reserved          -> reserved / RESERVED
-//   sold              -> sold / SOLD
-//   expired           -> expired
-//   in_review         -> pending_review / PENDING_APPROVAL
-//   pending_payment   -> draft / DRAFT
-//   rejected          -> rejected / REJECTED
-// ============================================================
+
 
 import { useEffect, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
 import { listingsApi } from "../api/listings.js";
 import { authApi } from "../api/auth.js";
 
-const STORAGE_KEY = "sokomkononi_listings_v1";
+const PUBLIC_KEY = "sokomkononi_listings_public_v1";
+const MINE_KEY = "sokomkononi_listings_mine_v1";
+const LEGACY_KEY = "sokomkononi_listings_v1"; // ya zamani — inafutwa
 const UPDATE_EVENT = "sokomkononi:listings-updated";
 
 export const LISTING_LIFETIME_DAYS_FALLBACK = 60;
 
+// ============================================================
+// STATUS MAPS
+// ============================================================
+export const LISTING_STATUS_MAP = {
+  live: "AVAILABLE",
+  paused: "ARCHIVED",
+  reserved: "RESERVED",
+  sold: "SOLD",
+  expired: "ARCHIVED",
+  in_review: "PENDING_APPROVAL",
+  pending_payment: "DRAFT",
+  rejected: "REJECTED",
+};
+
+const API_TO_FRONTEND_STATUS = {
+  // frontend vocab (identity) — ili status iliyokwisha kuwa frontend isipotee
+  live: "live",
+  paused: "paused",
+  reserved: "reserved",
+  sold: "sold",
+  expired: "expired",
+  in_review: "in_review",
+  pending_payment: "pending_payment",
+  rejected: "rejected",
+  // backend vocab
+  active: "live",
+  AVAILABLE: "live",
+  RESERVED: "reserved",
+  SOLD: "sold",
+  pending_review: "in_review",
+  PENDING_APPROVAL: "in_review",
+  draft: "pending_payment",
+  DRAFT: "pending_payment",
+  REJECTED: "rejected",
+  ARCHIVED: "paused",
+  archived: "paused",
+};
+
+function toApiPatch(patch) {
+  if (!patch || !patch.status) return patch;
+  return { ...patch, status: LISTING_STATUS_MAP[patch.status] || patch.status };
+}
+
+function toFrontendPatch(patch) {
+  if (!patch || !patch.status) return patch;
+  return { ...patch, status: API_TO_FRONTEND_STATUS[patch.status] || patch.status };
+}
+
+// ============================================================
+// EXPIRY
+// ============================================================
 function getListingLifetimeDays() {
   try {
     const policy = getPlatformPolicy();
@@ -42,58 +81,120 @@ function computeExpiresAt() {
 export const SEED_LISTINGS = [];
 
 // ============================================================
-// STORAGE
+// LOW-LEVEL STORAGE (mbili: public + mine)
 // ============================================================
-function readFromStorage() {
+function readKey(key) {
   if (typeof window === "undefined") return SEED_LISTINGS;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(key);
     if (!raw) return SEED_LISTINGS;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return SEED_LISTINGS;
-    return parsed;
+    return Array.isArray(parsed) ? parsed : SEED_LISTINGS;
   } catch {
     return SEED_LISTINGS;
   }
 }
 
-export function getListings() {
-  return readFromStorage();
-}
-
-export function saveListings(listings) {
+function emit() {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(listings));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
+function writeKey(key, list, silent = false) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(list));
+  } catch (err) {
+    console.warn("[listingsStore] storage write failed:", err);
+  }
+  if (!silent) emit();
+}
+
+// Futa key ya zamani (mchanganyiko wa data za aina zote)
+if (typeof window !== "undefined") {
+  try {
+    window.localStorage.removeItem(LEGACY_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function snapshot() {
+  return { pub: readKey(PUBLIC_KEY), mine: readKey(MINE_KEY) };
+}
+
+function restore(snap) {
+  writeKey(PUBLIC_KEY, snap.pub, true);
+  writeKey(MINE_KEY, snap.mine, true);
+  emit();
+}
+
+function mutateBoth(fn) {
+  writeKey(PUBLIC_KEY, fn(readKey(PUBLIC_KEY)), true);
+  writeKey(MINE_KEY, fn(readKey(MINE_KEY)), true);
+  emit();
+}
+
 // ============================================================
-// SYNC HELPERS (used by legacy code + optimistic updates)
+// PUBLIC API YA STORAGE
+// ============================================================
+export function getPublicListings() {
+  return readKey(PUBLIC_KEY);
+}
+
+export function getMyListings() {
+  return readKey(MINE_KEY);
+}
+
+export function savePublicListings(listings) {
+  writeKey(PUBLIC_KEY, listings);
+}
+
+export function saveMyListings(listings) {
+  writeKey(MINE_KEY, listings);
+}
+
+/**
+ * Legacy: orodha iliyounganishwa (mine inashinda public kwa id ileile).
+ */
+export function getListings() {
+  const map = new Map();
+  readKey(PUBLIC_KEY).forEach((l) => map.set(String(l.id), l));
+  readKey(MINE_KEY).forEach((l) => map.set(String(l.id), l));
+  return Array.from(map.values());
+}
+
+/**
+ * Legacy: inaandika kwenye cache ya MINE. Tumia savePublicListings /
+ * saveMyListings moja kwa moja kwa code mpya.
+ */
+export function saveListings(listings) {
+  saveMyListings(listings);
+}
+
+// ============================================================
+// SYNC HELPERS (optimistic updates)
 // ============================================================
 export function addListing(listing) {
   const withExpiry = listing.expiresAt
     ? listing
     : { ...listing, expiresAt: computeExpiresAt() };
-  const next = [withExpiry, ...getListings()];
-  saveListings(next);
-  return next;
+  saveMyListings([withExpiry, ...readKey(MINE_KEY)]);
+  return getListings();
 }
 
 export function removeListing(id) {
-  const next = getListings().filter((l) => l.id !== id);
-  saveListings(next);
-  return next;
+  mutateBoth((list) => list.filter((l) => l.id !== id));
+  return getListings();
 }
 
 export function updateListing(id, patch) {
-  const current = getListings();
-  const next = current.map((l) => (l.id === id ? { ...l, ...patch } : l));
-  saveListings(next);
-  return next;
+  mutateBoth((list) => list.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+  return getListings();
 }
 
 export function decideListing(id, status, reason = "") {
-  const listing = getListings().find((l) => l.id === id);
+  const listing = getListing(id);
   const patch = { status };
   if (status === "live" && listing && !listing.expiresAt) {
     patch.expiresAt = computeExpiresAt();
@@ -140,75 +241,101 @@ export function markAsSold(id) {
 // ============================================================
 // HOOKS
 // ============================================================
-export function useListings() {
-  const [listings, setListings] = useState(() => getListings());
+function useStoreValue(getter) {
+  const [value, setValue] = useState(() => getter());
 
   useEffect(() => {
-    const sync = () => setListings(getListings());
+    const sync = () => setValue(getter());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
     return () => {
       window.removeEventListener("storage", sync);
       window.removeEventListener(UPDATE_EVENT, sync);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return listings;
+  return value;
 }
 
+/** Legacy: public + mine zimeunganishwa. */
+export function useListings() {
+  return useStoreValue(getListings);
+}
+
+/** Za seller mwenyewe (zote status: draft, in_review, rejected, live...). */
+export function useMyListings() {
+  return useStoreValue(getMyListings);
+}
+
+/** Za public tu (Home / Browse). Hazichanganyiki na za seller. */
 export function usePublicListings() {
-  const listings = useListings();
+  const listings = useStoreValue(getPublicListings);
   return listings.filter(
     (l) => l.status === "live" || l.status === "reserved" || l.status === "sold"
   );
 }
 
 export function useLiveListings() {
-  const listings = useListings();
+  const listings = useStoreValue(getPublicListings);
   return listings.filter((l) => l.status === "live");
 }
 
 export function useListing(id) {
-  const listings = useListings();
+  const listings = useStoreValue(getListings);
   if (!id) return null;
   return listings.find((l) => String(l.id) === String(id)) || null;
 }
 
-// ============================================================
-// STATUS MAP
-// ============================================================
-export const LISTING_STATUS_MAP = {
-  live: "AVAILABLE",
-  paused: "ARCHIVED",
-  reserved: "RESERVED",
-  sold: "SOLD",
-  expired: "ARCHIVED",
-  in_review: "PENDING_APPROVAL",
-  pending_payment: "DRAFT",
-  rejected: "REJECTED",
-};
+/**
+ * Weka kwenye dashboard ya seller. Inafanya:
+ *  - fetch mara moja ukifungua
+ *  - fetch tena tab inapokuwa visible
+ *  - polling (default dakika 1) ikiwa kuna listing ya "in_review"
+ */
+export function useMyListingsSync({ pollMs = 60000 } = {}) {
+  useEffect(() => {
+    const refresh = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      fetchMyListingsFromApi();
+    };
 
-const API_TO_FRONTEND_STATUS = {
-  active: "live",
-  AVAILABLE: "live",
-  paused: "paused",
-  reserved: "reserved",
-  RESERVED: "reserved",
-  sold: "sold",
-  SOLD: "sold",
-  expired: "expired",
-  pending_review: "in_review",
-  PENDING_APPROVAL: "in_review",
-  draft: "pending_payment",
-  DRAFT: "pending_payment",
-  rejected: "rejected",
-  REJECTED: "rejected",
-};
+    refresh();
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    const timer = setInterval(() => {
+      const hasPending = readKey(MINE_KEY).some((l) => l.status === "in_review");
+      if (hasPending) refresh();
+    }, pollMs);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(timer);
+    };
+  }, [pollMs]);
+}
+
+/** Weka kwenye Home / Browse ili public list iwe fresh. */
+export function useHydratePublicListings() {
+  useEffect(() => {
+    hydrateListingsFromApi();
+  }, []);
+}
 
 // ============================================================
 // NORMALIZER
 // ============================================================
-export function normalizeListingFromApi(raw) {
+/**
+ * @param raw            response ya API
+ * @param fallbackStatus status ya kutumia ikiwa response haina status
+ *                       inayoeleweka (mfano ListingWrite). Default: "in_review"
+ *                       — kamwe si "live" kimya kimya.
+ */
+export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   if (!raw) return null;
 
   let photos = [];
@@ -229,7 +356,7 @@ export function normalizeListingFromApi(raw) {
     (typeof categoryObj === "string" ? categoryObj : null) ||
     null;
 
-  const status = API_TO_FRONTEND_STATUS[raw.status] || raw.status || "live";
+  const status = API_TO_FRONTEND_STATUS[raw.status] || fallbackStatus;
 
   const sellerName =
     raw.seller_name ||
@@ -261,35 +388,35 @@ export function normalizeListingFromApi(raw) {
     postedAt: raw.created_at || raw.postedAt || new Date().toISOString(),
     expiresAt: raw.expires_at || raw.expiresAt || null,
     listingFee: Number(raw.listing_fee) || 0,
-    rejectionReason: raw.rejection_reason || "",
+    rejectionReason: raw.rejection_reason || raw.rejectionReason || "",
     approvedAt: raw.approved_at || null,
     rejectedAt: raw.rejected_at || null,
   };
 }
 
+function extractList(data) {
+  return Array.isArray(data) ? data : data?.results || [];
+}
+
 // ============================================================
-// HYDRATE PUBLIC LISTINGS
+// HYDRATE PUBLIC LISTINGS  ->  PUBLIC cache tu
 // ============================================================
 export async function hydrateListingsFromApi() {
   try {
     const data = await listingsApi.list({ page_size: 100 });
-    const rawList = Array.isArray(data) ? data : data?.results || [];
+    const normalized = extractList(data).map((r) => normalizeListingFromApi(r)).filter(Boolean);
 
-    if (!rawList.length) {
-      return { source: "empty", count: getListings().length };
-    }
-
-    const normalized = rawList.map(normalizeListingFromApi).filter(Boolean);
-    saveListings(normalized);
-    return { source: "api", count: normalized.length };
+    // Hata ikiwa tupu: andika tupu ili zilizofutwa/kuisha zisiendelee kuonekana.
+    savePublicListings(normalized);
+    return { source: normalized.length ? "api" : "empty", count: normalized.length };
   } catch (err) {
     console.warn("[listingsStore] hydrate failed:", err);
-    return { source: "error", count: getListings().length };
+    return { source: "error", count: getPublicListings().length };
   }
 }
 
 // ============================================================
-// FETCH MY LISTINGS
+// FETCH MY LISTINGS  ->  MINE cache tu
 // ============================================================
 export async function fetchMyListingsFromApi() {
   try {
@@ -297,30 +424,28 @@ export async function fetchMyListingsFromApi() {
     if (!me?.id) return { source: "empty", count: 0 };
 
     const data = await listingsApi.mine(me.id, { page_size: 100 });
-    const rawList = Array.isArray(data) ? data : data?.results || [];
+    const normalized = extractList(data).map((r) => normalizeListingFromApi(r)).filter(Boolean);
 
-    if (!rawList.length) {
-      saveListings([]);
-      return { source: "empty", count: 0 };
-    }
-
-    const normalized = rawList.map(normalizeListingFromApi).filter(Boolean);
-    saveListings(normalized);
-    return { source: "api", count: normalized.length };
+    // Usifute optimistic entries zinazoendelea kuundwa (temp_...)
+    const temps = readKey(MINE_KEY).filter((l) => String(l.id).startsWith("temp_"));
+    saveMyListings([...temps, ...normalized]);
+    return { source: normalized.length ? "api" : "empty", count: normalized.length };
   } catch (err) {
     console.warn("[listingsStore] fetchMyListings failed:", err);
-    return { source: "error", count: getListings().length };
+    return { source: "error", count: getMyListings().length };
   }
 }
 
 // ============================================================
-// FETCH FEATURED / BY CATEGORY
+// FETCH FEATURED / BY CATEGORY (haziandiki cache)
 // ============================================================
 export async function fetchFeaturedFromApi(params = {}) {
   try {
     const data = await listingsApi.featured({ page_size: 20, ...params });
-    const rawList = Array.isArray(data) ? data : data?.results || [];
-    return { ok: true, listings: rawList.map(normalizeListingFromApi).filter(Boolean) };
+    return {
+      ok: true,
+      listings: extractList(data).map((r) => normalizeListingFromApi(r)).filter(Boolean),
+    };
   } catch (err) {
     console.warn("[listingsStore] fetchFeatured failed:", err);
     return { ok: false, error: err, listings: [] };
@@ -330,8 +455,10 @@ export async function fetchFeaturedFromApi(params = {}) {
 export async function fetchByCategoryFromApi(categoryId, params = {}) {
   try {
     const data = await listingsApi.byCategory(categoryId, { page_size: 20, ...params });
-    const rawList = Array.isArray(data) ? data : data?.results || [];
-    return { ok: true, listings: rawList.map(normalizeListingFromApi).filter(Boolean) };
+    return {
+      ok: true,
+      listings: extractList(data).map((r) => normalizeListingFromApi(r)).filter(Boolean),
+    };
   } catch (err) {
     console.warn("[listingsStore] fetchByCategory failed:", err);
     return { ok: false, error: err, listings: [] };
@@ -339,13 +466,14 @@ export async function fetchByCategoryFromApi(categoryId, params = {}) {
 }
 
 // ============================================================
-// FETCH PENDING (admin only)
+// ADMIN FETCH (haziandiki cache yoyote — admin ana state yake)
 // ============================================================
 export async function fetchPendingListingsAsync() {
   try {
     const data = await listingsApi.pending();
-    const rawList = Array.isArray(data) ? data : data?.results || [];
-    const listings = rawList.map(normalizeListingFromApi).filter(Boolean);
+    const listings = extractList(data)
+      .map((r) => normalizeListingFromApi(r, "in_review"))
+      .filter(Boolean);
     return { ok: true, listings };
   } catch (err) {
     console.warn("[listingsStore] fetchPending failed:", err);
@@ -353,8 +481,26 @@ export async function fetchPendingListingsAsync() {
   }
 }
 
+/**
+ * Admin: leta listings kwa status moja (frontend vocab: "live", "rejected"...).
+ * ⚠️ Inadhania listingsApi.list inakubali `status` kama query param.
+ */
+export async function fetchListingsByStatusAsync(frontendStatus, params = {}) {
+  try {
+    const apiStatus = LISTING_STATUS_MAP[frontendStatus] || frontendStatus;
+    const data = await listingsApi.list({ status: apiStatus, page_size: 100, ...params });
+    const listings = extractList(data)
+      .map((r) => normalizeListingFromApi(r, frontendStatus))
+      .filter(Boolean);
+    return { ok: true, listings };
+  } catch (err) {
+    console.warn("[listingsStore] fetchByStatus failed:", err);
+    return { ok: false, error: err, listings: [] };
+  }
+}
+
 // ============================================================
-// ASYNC ACTIONS — with optimistic update + rollback
+// ASYNC ACTIONS — optimistic update + rollback
 // ============================================================
 
 /**
@@ -368,14 +514,14 @@ export async function createListingAsync(payload) {
     status: "pending_payment",
     postedAt: new Date().toISOString(),
   };
-  const previous = getListings();
-  saveListings([optimistic, ...previous]);
+  const snap = snapshot();
+  saveMyListings([optimistic, ...snap.mine]);
 
   try {
     const created = await listingsApi.create(payload);
 
     // ⚠️ Backend contract: POST /listings/ returns ListingWrite (no `id`).
-    // Resolve the real id by fetching the user's newest listings.
+    // Tafuta id halisi kupitia listing mpya za user.
     let resolved = created;
     const hasId =
       created && (created.id ?? created.pk ?? created.listing_id ?? created.listingId);
@@ -386,8 +532,12 @@ export async function createListingAsync(payload) {
           ordering: "-created_at",
           page_size: 10,
         });
-        const list = Array.isArray(mine) ? mine : mine?.results || [];
-        const match = list.find((l) => l.title === payload.title);
+        const list = extractList(mine);
+        const knownIds = new Set(snap.mine.map((l) => String(l.id)));
+        // Ya kwanza ni mpya zaidi (ordering -created_at); ruka zilizokuwepo tayari.
+        const match = list.find(
+          (l) => l.title === payload.title && !knownIds.has(String(l.id))
+        );
         if (match?.id) {
           resolved = { ...created, ...match, id: match.id };
         }
@@ -396,61 +546,65 @@ export async function createListingAsync(payload) {
       }
     }
 
-    const normalized = normalizeListingFromApi(resolved);
+    // Response ya create haina status ya kuaminika -> DRAFT (pending_payment)
+    const normalized = normalizeListingFromApi(resolved, "pending_payment");
     if (!normalized || !normalized.id) {
       throw new Error("Backend haikurudisha listing id (createListingAsync)");
     }
-    saveListings([normalized, ...getListings().filter((l) => l.id !== tempId)]);
+    saveMyListings([normalized, ...readKey(MINE_KEY).filter((l) => l.id !== tempId)]);
     return { ok: true, listing: normalized };
   } catch (err) {
-    saveListings(previous); // Rollback
+    restore(snap);
     console.warn("[listingsStore] createListing failed:", err);
     return { ok: false, error: err, listing: null };
   }
 }
 
+/**
+ * `patch` inaweza kuwa frontend vocab ("live") au backend ("AVAILABLE").
+ * Local inapata frontend vocab; API inapata backend vocab.
+ */
 export async function updateListingAsync(id, patch) {
-  const previous = getListings();
-  updateListing(id, patch);
+  const snap = snapshot();
+  updateListing(id, toFrontendPatch(patch));
   try {
-    await listingsApi.update(id, patch);
+    await listingsApi.update(id, toApiPatch(patch));
     return { ok: true };
   } catch (err) {
-    saveListings(previous); // Rollback
+    restore(snap);
     console.warn("[listingsStore] updateListing failed:", err);
     return { ok: false, error: err };
   }
 }
 
 export async function removeListingAsync(id) {
-  const previous = getListings();
+  const snap = snapshot();
   removeListing(id);
   try {
     await listingsApi.remove(id);
     return { ok: true };
   } catch (err) {
-    saveListings(previous); // Rollback
+    restore(snap);
     console.warn("[listingsStore] removeListing failed:", err);
     return { ok: false, error: err };
   }
 }
 
 export async function pauseListingAsync(id) {
-  // Backend enum: DRAFT | PENDING_APPROVAL | AVAILABLE | RESERVED | SOLD | REJECTED | ARCHIVED
-  // No "PAUSED" — use ARCHIVED (closest semantics: hidden from buyers).
+  // frontend "paused" -> backend ARCHIVED (kupitia toApiPatch)
   return updateListingAsync(id, {
-    status: "ARCHIVED",
+    status: "paused",
     pausedAt: new Date().toISOString(),
   });
 }
 
 export async function unpauseListingAsync(id) {
-  return updateListingAsync(id, { status: "AVAILABLE", pausedAt: null });
+  return updateListingAsync(id, { status: "live", pausedAt: null });
 }
 
 export async function markSoldAsync(id) {
   return updateListingAsync(id, {
-    status: "SOLD",
+    status: "sold",
     soldAt: new Date().toISOString(),
   });
 }
@@ -459,7 +613,7 @@ export async function markSoldAsync(id) {
  * Pay listing fee. Backend moves DRAFT → PENDING_APPROVAL.
  */
 export async function payListingFeeAsync(id, payload) {
-  const previous = getListings();
+  const snap = snapshot();
   updateListing(id, {
     status: "in_review",
     paidAt: new Date().toISOString(),
@@ -468,17 +622,25 @@ export async function payListingFeeAsync(id, payload) {
     const data = await listingsApi.payFee(id, payload);
     return { ok: true, data };
   } catch (err) {
-    saveListings(previous); // Rollback
+    restore(snap);
     console.warn("[listingsStore] payFee failed:", err);
     return { ok: false, error: err };
   }
 }
 
 // ============================================================
-// ADMIN — Approve / Reject (uses listingsApi + moderationApi)
+// ADMIN — Approve / Reject
 // ============================================================
+function applyServerListing(id, data, fallbackStatus) {
+  // Tumia response ya server tu ikiwa ni listing kamili (ina id + title),
+  // ili response ya sehemu isifute data.
+  if (!data || !data.id || !data.title) return;
+  const normalized = normalizeListingFromApi(data, fallbackStatus);
+  if (normalized) mutateBoth((list) => list.map((l) => (l.id === id ? normalized : l)));
+}
+
 export async function approveListingAsync(id) {
-  const previous = getListings();
+  const snap = snapshot();
   updateListing(id, {
     status: "live",
     approvedAt: new Date().toISOString(),
@@ -487,24 +649,17 @@ export async function approveListingAsync(id) {
   });
   try {
     const data = await listingsApi.approve(id);
-    // Refresh with server response if provided
-    if (data) {
-      const normalized = normalizeListingFromApi(data);
-      if (normalized) {
-        const current = getListings();
-        saveListings(current.map((l) => (l.id === id ? normalized : l)));
-      }
-    }
+    applyServerListing(id, data, "live");
     return { ok: true, data };
   } catch (err) {
-    saveListings(previous); // Rollback
+    restore(snap);
     console.warn("[listingsStore] approve failed:", err);
     return { ok: false, error: err };
   }
 }
 
 export async function rejectListingAsync(id, rejectionReason) {
-  const previous = getListings();
+  const snap = snapshot();
   updateListing(id, {
     status: "rejected",
     rejectionReason: rejectionReason || "",
@@ -512,9 +667,10 @@ export async function rejectListingAsync(id, rejectionReason) {
   });
   try {
     const data = await listingsApi.reject(id, rejectionReason);
+    applyServerListing(id, data, "rejected");
     return { ok: true, data };
   } catch (err) {
-    saveListings(previous); // Rollback
+    restore(snap);
     console.warn("[listingsStore] reject failed:", err);
     return { ok: false, error: err };
   }
@@ -526,8 +682,7 @@ export async function rejectListingAsync(id, rejectionReason) {
 export async function fetchListingImagesAsync(listingId) {
   try {
     const data = await listingsApi.listImages(listingId);
-    const images = Array.isArray(data) ? data : data?.results || [];
-    return { ok: true, images };
+    return { ok: true, images: extractList(data) };
   } catch (err) {
     console.warn("[listingsStore] fetchImages failed:", err);
     return { ok: false, error: err, images: [] };
@@ -572,12 +727,19 @@ export async function fetchListingDetailAsync(id) {
     const data = await listingsApi.detail(id);
     const normalized = normalizeListingFromApi(data);
     if (normalized) {
-      const current = getListings();
-      const exists = current.some((l) => l.id === id);
-      const next = exists
-        ? current.map((l) => (l.id === id ? normalized : l))
-        : [normalized, ...current];
-      saveListings(next);
+      // Sasisha popote ilipo; ikiwa haipo popote, ongeza kwenye PUBLIC
+      // tu ikiwa ni ya public (live/reserved/sold).
+      const inPub = readKey(PUBLIC_KEY).some((l) => l.id === id);
+      const inMine = readKey(MINE_KEY).some((l) => l.id === id);
+      if (inPub) {
+        savePublicListings(readKey(PUBLIC_KEY).map((l) => (l.id === id ? normalized : l)));
+      }
+      if (inMine) {
+        saveMyListings(readKey(MINE_KEY).map((l) => (l.id === id ? normalized : l)));
+      }
+      if (!inPub && !inMine && ["live", "reserved", "sold"].includes(normalized.status)) {
+        savePublicListings([normalized, ...readKey(PUBLIC_KEY)]);
+      }
     }
     return { ok: true, listing: normalized };
   } catch (err) {
