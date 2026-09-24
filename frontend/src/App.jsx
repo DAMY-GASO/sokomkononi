@@ -32,7 +32,7 @@ import ContactPage from "./pages/ContactPage.jsx";
 import TermsPage from "./pages/TermsPage.jsx";
 import PrivacyPage from "./pages/PrivacyPage.jsx";
 import JinsiYaKununuaNaKuuza from "./pages/JinsiYaKununuaNaKuuza.jsx";
-import InviteFriends from "./pages/InviteFriends.jsx";
+import InviteFriendsPage from "./pages/InviteFriendsPage.jsx";
 
 // ============================================================
 // AUTH PAGES
