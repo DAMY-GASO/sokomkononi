@@ -9,6 +9,7 @@ import { X, ImagePlus, Loader2 } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 import { AVAILABLE_ICONS } from "../../../../../config/categoriesStore.js";
+import { categoriesApi } from "../../../../../api/categories.js";
 
 export default function CategoryForm({
   initial = {},
@@ -26,10 +27,13 @@ export default function CategoryForm({
     descSw: initial.description?.sw || "",
     descEn: initial.description?.en || "",
     iconKey: initial.iconKey || "Home",
-    imageUrl: initial.imageUrl || null,
+    imageUrl: initial.imageUrl || null,     // URL halisi iliyopo tayari (editing)
+    imagePreview: initial.imageUrl || null, // kwa <img src> tu (base64 au URL)
+    imageFile: null,                        // faili mpya, bado haijapakiwa
     isPopular: initial.isPopular ?? true,
     active: initial.active ?? true,
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -48,18 +52,43 @@ export default function CategoryForm({
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setForm((f) => ({ ...f, imageUrl: reader.result }));
+    reader.onload = () =>
+      setForm((f) => ({ ...f, imagePreview: reader.result, imageFile: file }));
     reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = () => {
-    setForm((f) => ({ ...f, imageUrl: null }));
+    setForm((f) => ({ ...f, imageUrl: null, imagePreview: null, imageFile: null }));
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!canSave) return;
+    if (!canSave || uploadingImage) return;
+
+    let finalImageUrl = form.imageUrl;
+
+    // Ikiwa mtumiaji amechagua faili mpya, ipakie kwanza ili tupate URL halisi
+    if (form.imageFile) {
+      setUploadingImage(true);
+      try {
+        const fd = new FormData();
+        fd.append("image", form.imageFile);
+        const res = await categoriesApi.uploadImage(fd);
+        finalImageUrl = res?.image_url || res?.url || null;
+      } catch (err) {
+        console.warn("[CategoryForm] image upload failed:", err);
+        alert(
+          t(
+            "Imeshindwa kupakia picha. Jaribu tena.",
+            "Failed to upload image. Try again."
+          )
+        );
+        setUploadingImage(false);
+        return;
+      }
+      setUploadingImage(false);
+    }
 
     const slugified = isEditing
       ? form.key
@@ -77,7 +106,7 @@ export default function CategoryForm({
         en: form.descEn.trim() || form.labelEn.trim(),
       },
       iconKey: form.iconKey,
-      imageUrl: form.imageUrl,
+      imageUrl: finalImageUrl,
       isPopular: form.isPopular,
       active: form.active,
       extra: initial.extra || [],
@@ -113,13 +142,13 @@ export default function CategoryForm({
           type="file"
           accept="image/*"
           onChange={handleFileChange}
-          disabled={saving}
+          disabled={saving || uploadingImage}
           className="hidden"
         />
-        {form.imageUrl ? (
+        {form.imagePreview ? (
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <img
-              src={form.imageUrl}
+              src={form.imagePreview}
               alt="Category preview"
               className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border shrink-0"
               style={{ borderColor: COLORS.sandLine }}
@@ -128,7 +157,7 @@ export default function CategoryForm({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={saving}
+                disabled={saving || uploadingImage}
                 className="text-[11px] font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
                 style={{ borderColor: COLORS.sandLine, color: "var(--text-primary)" }}
               >
@@ -137,7 +166,7 @@ export default function CategoryForm({
               <button
                 type="button"
                 onClick={handleRemoveImage}
-                disabled={saving}
+                disabled={saving || uploadingImage}
                 className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
                 style={{ borderColor: COLORS.sandLine, color: COLORS.rust }}
               >
@@ -150,7 +179,7 @@ export default function CategoryForm({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={saving}
+            disabled={saving || uploadingImage}
             style={{ borderColor: COLORS.sandLine, color: "var(--text-secondary)" }}
             className="w-full rounded-xl border-2 border-dashed py-4 sm:py-5 flex flex-col items-center gap-1.5 hover:bg-white/50 transition-colors disabled:opacity-50"
           >
@@ -291,7 +320,7 @@ export default function CategoryForm({
         <button
           type="button"
           onClick={onCancel}
-          disabled={saving}
+          disabled={saving || uploadingImage}
           style={{ borderColor: COLORS.sandLine }}
           className="text-xs font-semibold px-3 py-2 rounded-lg border text-secondary hover:bg-white transition-colors shrink-0 disabled:opacity-50"
         >
@@ -299,17 +328,19 @@ export default function CategoryForm({
         </button>
         <button
           type="submit"
-          disabled={!canSave}
+          disabled={!canSave || uploadingImage}
           style={{
-            background: canSave ? COLORS.night : COLORS.sandLine,
-            color: canSave ? COLORS.sand : "var(--text-muted)",
+            background: canSave && !uploadingImage ? COLORS.night : COLORS.sandLine,
+            color: canSave && !uploadingImage ? COLORS.sand : "var(--text-muted)",
           }}
           className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
         >
-          {saving && <Loader2 size={13} className="animate-spin" />}
-          {isEditing
-            ? t("Hifadhi Mabadiliko", "Save Changes")
-            : t("Ongeza Category", "Add Category")}
+          {(saving || uploadingImage) && <Loader2 size={13} className="animate-spin" />}
+          {uploadingImage
+            ? t("Inapakia picha...", "Uploading photo...")
+            : isEditing
+              ? t("Hifadhi Mabadiliko", "Save Changes")
+              : t("Ongeza Category", "Add Category")}
         </button>
       </div>
     </form>
