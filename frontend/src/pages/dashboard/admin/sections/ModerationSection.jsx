@@ -1,13 +1,5 @@
 // ============================================================
 // ModerationSection.jsx
-// Uidhinishaji wa mali & matangazo — approve/reject listings.
-//
-// v2:
-//  - State ya admin (`items`) ndiyo chanzo pekee. Haitegemei tena
-//    localStorage ya public (useListings imeondolewa).
-//  - Kila kichujio kinafetch kutoka API (pending / live / rejected / zote).
-//  - Baada ya Approve/Reject, listing inabadilika kwenye UI mara moja
-//    na kuhamia kwenye kichujio sahihi.
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import { CheckCircle, XCircle, MoreVertical, Loader2 } from "lucide-react";
@@ -16,30 +8,19 @@ import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
-  fetchPendingListingsAsync,
-  fetchListingsByStatusAsync,
-  approveListingAsync,
-  rejectListingAsync,
-} from "../../../../config/listingsStore.js";
-
-// Kichujio -> statuses zinazohitajika kutoka API
-const FILTER_SOURCES = {
-  in_review: ["in_review"],
-  live: ["live"],
-  rejected: ["rejected"],
-  zote: ["in_review", "live", "rejected"],
-};
-
-function fetchByStatus(status) {
-  return status === "in_review"
-    ? fetchPendingListingsAsync()
-    : fetchListingsByStatusAsync(status);
-}
+  useModerationQueue,
+  hydrateModerationQueueFromApi,
+  approveListingFromQueueAsync,
+  rejectListingFromQueueAsync,
+} from "../../../../config/moderationStore.js";
+import { fetchListingsByStatusAsync } from "../../../../config/listingsStore.js";
 
 export default function ModerationSection() {
   const { lang } = useLanguage();
-  // items: { [id]: listing } — chanzo pekee cha data kwenye admin UI
-  const [items, setItems] = useState({});
+  // Component inahydrate yenyewe (ili kupata loading/error state)
+  const queue = useModerationQueue({ hydrate: false });
+  // history: { [id]: listing } za live/rejected
+  const [history, setHistory] = useState({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("in_review");
   const [busy, setBusy] = useState({});
@@ -49,24 +30,27 @@ export default function ModerationSection() {
   const formatTZS = (amount) =>
     "TZS " + Math.round(amount || 0).toLocaleString("en-US");
 
-  const patchItem = (id, patch) =>
-    setItems((prev) => (prev[id] ? { ...prev, [id]: { ...prev[id], ...patch } } : prev));
-
   // ── Fetch kwa kila kichujio ─────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError("");
 
-    const sources = FILTER_SOURCES[statusFilter] || [];
-    Promise.all(sources.map(fetchByStatus)).then((results) => {
+    const wantPending = statusFilter === "in_review" || statusFilter === "zote";
+    const wantLive = statusFilter === "live" || statusFilter === "zote";
+    const wantRejected = statusFilter === "rejected" || statusFilter === "zote";
+
+    const tasks = [];
+    if (wantPending) tasks.push(hydrateModerationQueueFromApi());
+    if (wantLive) tasks.push(fetchListingsByStatusAsync("live"));
+    if (wantRejected) tasks.push(fetchListingsByStatusAsync("rejected"));
+
+    Promise.all(tasks).then((results) => {
       if (cancelled) return;
 
-      const okResults = results.filter((r) => r.ok);
-      const fetched = okResults.flatMap((r) => r.listings || []);
-
+      const fetched = results.flatMap((r) => r.listings || []);
       if (fetched.length) {
-        setItems((prev) => {
+        setHistory((prev) => {
           const next = { ...prev };
           fetched.forEach((l) => {
             next[l.id] = { ...prev[l.id], ...l };
@@ -75,12 +59,11 @@ export default function ModerationSection() {
         });
       }
 
-      if (okResults.length === 0) {
-        const firstErr = results.find((r) => !r.ok)?.error;
-        console.warn("[ModerationSection] fetch failed:", firstErr);
+      if (results.length && results.every((r) => !r.ok)) {
+        const err = results[0]?.error;
+        console.warn("[ModerationSection] fetch failed:", err);
         setError(
-          firstErr?.message ||
-            t("Imeshindwa kupakia listings.", "Failed to load listings.")
+          err?.message || t("Imeshindwa kupakia listings.", "Failed to load listings.")
         );
       }
       setLoading(false);
@@ -94,40 +77,51 @@ export default function ModerationSection() {
 
   // ── Chuja + panga (mpya juu) ────────────────────────────────
   const filtered = useMemo(() => {
-    const all = Object.values(items);
-    const list =
-      statusFilter === "zote" ? all : all.filter((l) => l.status === statusFilter);
-    return list.sort(
+    const pending = queue.map((l) => ({ ...l, status: "in_review" }));
+    const hist = Object.values(history);
+
+    let list;
+    if (statusFilter === "in_review") {
+      list = pending;
+    } else if (statusFilter === "zote") {
+      const map = new Map();
+      hist.forEach((l) => map.set(String(l.id), l));
+      pending.forEach((l) => map.set(String(l.id), l)); // pending inashinda
+      list = Array.from(map.values());
+    } else {
+      list = hist.filter((l) => l.status === statusFilter);
+    }
+
+    return [...list].sort(
       (a, b) => new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime()
     );
-  }, [items, statusFilter]);
+  }, [queue, history, statusFilter]);
 
   const filters = [
-    { key: "in_review", label: { sw: "Zinasubiri", en: "Pending" } },
+    { key: "in_review", label: { sw: "Zinasubiri", en: "Pending" }, count: queue.length },
     { key: "live", label: { sw: "Zimeidhinishwa", en: "Approved" } },
     { key: "rejected", label: { sw: "Zimekataliwa", en: "Rejected" } },
     { key: "zote", label: { sw: "Zote", en: "All" } },
   ];
 
-  const clearBusy = (listingId) =>
+  const clearBusy = (id) =>
     setBusy((b) => {
       const n = { ...b };
-      delete n[listingId];
+      delete n[id];
       return n;
     });
+
+  const addToHistory = (listing) =>
+    setHistory((prev) => ({ ...prev, [listing.id]: listing }));
 
   const handleApprove = async (listingId) => {
     if (busy[listingId]) return;
     setBusy((b) => ({ ...b, [listingId]: "approve" }));
     setError("");
-    const res = await approveListingAsync(listingId);
+    const res = await approveListingFromQueueAsync(listingId);
     clearBusy(listingId);
     if (res.ok) {
-      patchItem(listingId, {
-        status: "live",
-        approvedAt: new Date().toISOString(),
-        rejectionReason: "",
-      });
+      addToHistory(res.listing); // queue inajisasisha yenyewe
     } else {
       setError(
         res.error?.message ||
@@ -139,20 +133,21 @@ export default function ModerationSection() {
   const handleReject = async (listingId) => {
     if (busy[listingId]) return;
     const reason = window.prompt(
-      t("Sababu ya kukataa (hiari):", "Reason for rejection (optional):")
+      t("Sababu ya kukataa (inahitajika):", "Reason for rejection (required):")
     );
     if (reason === null) return;
-    const cleanReason = reason.trim();
+    if (!reason.trim()) {
+      setError(
+        t("Sababu ya kukataa inahitajika.", "A rejection reason is required.")
+      );
+      return;
+    }
     setBusy((b) => ({ ...b, [listingId]: "reject" }));
     setError("");
-    const res = await rejectListingAsync(listingId, cleanReason);
+    const res = await rejectListingFromQueueAsync(listingId, reason);
     clearBusy(listingId);
     if (res.ok) {
-      patchItem(listingId, {
-        status: "rejected",
-        rejectionReason: cleanReason,
-        rejectedAt: new Date().toISOString(),
-      });
+      addToHistory(res.listing);
     } else {
       setError(
         res.error?.message ||
@@ -244,6 +239,7 @@ export default function ModerationSection() {
             className="text-xs font-semibold px-3.5 py-1.5 rounded-full border whitespace-nowrap shrink-0"
           >
             {f.label[lang]}
+            {f.count > 0 ? ` (${f.count})` : ""}
           </button>
         ))}
       </div>
