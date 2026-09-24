@@ -10,23 +10,110 @@ import {
 } from "lucide-react";
 import { categoriesApi } from "../api/categories.js";
 import { api } from "../api/client.js";
-import { SEED_CATEGORIES } from "./seedCategories.js";
 
 const STORAGE_KEY = "sokomkononi_categories_v2";
 const UPDATE_EVENT = "sokomkononi:categories-updated";
 
 // ============================================================
-// SEED LABEL LOOKUP — backend haitumi bilingual (name moja tu),
-// kwa hiyo tunatumia seedCategories.js kama "chanzo cha ukweli"
-// cha label/description za sw+en kwa categories zinazojulikana.
-// Category mpya kabisa (isiyo kwenye seed) itaendelea kutumia
-// jina moja kutoka backend mpaka backend yenyewe iwe bilingual.
+// BILINGUAL TRANSLATIONS — imewekwa hapa moja kwa moja (si file
+// tofauti) kwa sababu backend haitumi bilingual (name moja tu).
+// Hii ndiyo "chanzo cha ukweli" cha label/description za sw+en
+// kwa categories 11 za awali. Category mpya kabisa (isiyo hapa
+// chini) itaendelea kutumia jina moja kutoka backend mpaka
+// backend yenyewe iwe na field za bilingual.
 // ============================================================
+const CATEGORY_TRANSLATIONS = {
+  nyumba: {
+    label: { sw: "Nyumba & Majengo", en: "Houses & Buildings" },
+    description: {
+      sw: "Pata nyumba, apartments, na majengo yote Tanzania",
+      en: "Find houses, apartments, and buildings across Tanzania",
+    },
+  },
+  viwanja: {
+    label: { sw: "Viwanja & Mashamba", en: "Plots & Land" },
+    description: {
+      sw: "Viwanja vya makazi, kilimo, na biashara",
+      en: "Residential, agricultural, and commercial plots",
+    },
+  },
+  magari: {
+    label: { sw: "Magari", en: "Cars" },
+    description: {
+      sw: "Magari mapya na yaliyotumika Tanzania",
+      en: "New and used cars in Tanzania",
+    },
+  },
+  biashara: {
+    label: { sw: "Biashara Zinazouzwa", en: "Businesses for Sale" },
+    description: {
+      sw: "Biashara zinazouzwa - maduka, migahawa, n.k.",
+      en: "Businesses for sale - shops, restaurants, etc.",
+    },
+  },
+  mashine: {
+    label: { sw: "Mashine", en: "Machinery" },
+    description: {
+      sw: "Mashine za kuchapa, na kudarizi",
+      en: "Printing, and embroiding machinery",
+    },
+  },
+  "vifaa-vizito": {
+    label: { sw: "Vifaa vizito", en: "Heavy Equipment" },
+    description: {
+      sw: "Mashine za kilimo, na viwanda",
+      en: "Construction, agricultural, and industrial machinery",
+    },
+  },
+  pikipiki: {
+    label: { sw: "Pikipiki", en: "Motorcycles" },
+    description: {
+      sw: "Pikipiki za aina zote Tanzania",
+      en: "All types of motorcycles in Tanzania",
+    },
+  },
+  mabasi: {
+    label: { sw: "Mabasi", en: "Buses" },
+    description: {
+      sw: "Mabasi ya abiria na mizigo",
+      en: "Passenger and cargo buses",
+    },
+  },
+  samani: {
+    label: { sw: "Samani", en: "Furniture" },
+    description: {
+      sw: "Samani za nyumbani na ofisi",
+      en: "Home and office furniture",
+    },
+  },
+  "vifaa-vya-elektroniki": {
+    label: { sw: "Vifaa vya Elektroniki", en: "Electronics" },
+    description: {
+      sw: "Simu, kompyuta, TV na vifaa vingine vya elektroniki",
+      en: "Phones, computers, TVs and other electronics",
+    },
+  },
+  mifugo: {
+    label: { sw: "Mifugo", en: "Livestock" },
+    description: {
+      sw: "Ng'ombe, mbuzi, kuku na mifugo mingine",
+      en: "Cows, goats, chickens and other livestock",
+    },
+  },
+  "vifaa-vya-nyumbani": {
+    label: { sw: "Vifaa vya Nyumbani", en: "Home Appliances" },
+    description: {
+      sw: "Friji, jiko, mashine za kufulia na vifaa vingine",
+      en: "Fridges, stoves, washing machines and other appliances",
+    },
+  },
+};
+
 const SEED_LABEL_BY_KEY = Object.fromEntries(
-  SEED_CATEGORIES.map((c) => [c.key, c.label])
+  Object.entries(CATEGORY_TRANSLATIONS).map(([key, v]) => [key, v.label])
 );
 const SEED_DESCRIPTION_BY_KEY = Object.fromEntries(
-  SEED_CATEGORIES.map((c) => [c.key, c.description])
+  Object.entries(CATEGORY_TRANSLATIONS).map(([key, v]) => [key, v.description])
 );
 
 // ============================================================
