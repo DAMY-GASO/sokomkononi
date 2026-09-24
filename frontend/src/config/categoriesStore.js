@@ -15,12 +15,46 @@ const STORAGE_KEY = "sokomkononi_categories_v2";
 const UPDATE_EVENT = "sokomkononi:categories-updated";
 
 // ============================================================
-// BILINGUAL TRANSLATIONS — imewekwa hapa moja kwa moja (si file
-// tofauti) kwa sababu backend haitumi bilingual (name moja tu).
-// Hii ndiyo "chanzo cha ukweli" cha label/description za sw+en
-// kwa categories 11 za awali. Category mpya kabisa (isiyo hapa
-// chini) itaendelea kutumia jina moja kutoka backend mpaka
-// backend yenyewe iwe na field za bilingual.
+// OPTIONS ZENYE BILINGUAL — reusable kwenye extra[] fields
+// ============================================================
+const TITLE_STATUS_OPTIONS = [
+  { value: "Hati Miliki", label: { sw: "Hati Miliki", en: "Freehold Title" } },
+  { value: "Hati ya Kimila", label: { sw: "Hati ya Kimila", en: "Customary Title" } },
+  { value: "Inasubiri Hati", label: { sw: "Inasubiri Hati", en: "Title Pending" } },
+  { value: "Hakuna Hati", label: { sw: "Hakuna Hati", en: "No Title" } },
+];
+const LAND_USE_OPTIONS = [
+  { value: "Makazi", label: { sw: "Makazi", en: "Residential" } },
+  { value: "Makazi na Biashara", label: { sw: "Makazi na Biashara", en: "Residential and Commercial" } },
+  { value: "Kilimo", label: { sw: "Kilimo", en: "Agricultural" } },
+  { value: "Biashara", label: { sw: "Biashara", en: "Commercial" } },
+  { value: "Viwanda", label: { sw: "Viwanda", en: "Industrial" } },
+];
+const TRANSMISSION_OPTIONS = [
+  { value: "Automatic", label: { sw: "Automatic", en: "Automatic" } },
+  { value: "Manual", label: { sw: "Manual", en: "Manual" } },
+];
+const FUEL_OPTIONS = [
+  { value: "Petrol", label: { sw: "Petrol", en: "Petrol" } },
+  { value: "Diesel", label: { sw: "Diesel", en: "Diesel" } },
+  { value: "Hybrid", label: { sw: "Hybrid", en: "Hybrid" } },
+  { value: "Umeme (EV)", label: { sw: "Umeme (EV)", en: "Electric (EV)" } },
+];
+const CONDITION_OPTIONS = [
+  { value: "Mpya", label: { sw: "Mpya", en: "New" } },
+  { value: "Nzuri Sana", label: { sw: "Nzuri Sana", en: "Excellent" } },
+  { value: "Nzuri", label: { sw: "Nzuri", en: "Good" } },
+  { value: "Inahitaji Matengenezo", label: { sw: "Inahitaji Matengenezo", en: "Needs Repair" } },
+];
+
+// ============================================================
+// BILINGUAL TRANSLATIONS + DEFAULTS — imewekwa hapa moja kwa moja
+// (si file tofauti) kwa sababu backend haitumi bilingual (name
+// moja tu) wala haihifadhi icon/extra-filter-fields. Hii ndiyo
+// "chanzo cha ukweli" cha label/description/iconKey/extra kwa
+// categories 11 za awali. Category mpya kabisa (isiyo hapa chini)
+// itaendelea kutumia jina moja + icon ya default mpaka backend
+// yenyewe iongezewe field hizi.
 // ============================================================
 const CATEGORY_TRANSLATIONS = {
   nyumba: {
@@ -29,6 +63,13 @@ const CATEGORY_TRANSLATIONS = {
       sw: "Pata nyumba, apartments, na majengo yote Tanzania",
       en: "Find houses, apartments, and buildings across Tanzania",
     },
+    iconKey: "Home",
+    extra: [
+      { key: "vyumba", label: { sw: "Vyumba vya kulala", en: "Bedrooms" }, type: "number", placeholder: { sw: "mfano: 3", en: "e.g. 3" } },
+      { key: "bafu", label: { sw: "Bafu", en: "Bathrooms" }, type: "number", placeholder: { sw: "mfano: 2", en: "e.g. 2" } },
+      { key: "ukubwa", label: { sw: "Ukubwa (sqm)", en: "Size (sqm)" }, type: "text", placeholder: { sw: "mfano: 250 sqm", en: "e.g. 250 sqm" } },
+      { key: "title", label: { sw: "Hati (Title Status)", en: "Title Status" }, type: "select", options: TITLE_STATUS_OPTIONS },
+    ],
   },
   viwanja: {
     label: { sw: "Viwanja & Mashamba", en: "Plots & Land" },
@@ -36,6 +77,12 @@ const CATEGORY_TRANSLATIONS = {
       sw: "Viwanja vya makazi, kilimo, na biashara",
       en: "Residential, agricultural, and commercial plots",
     },
+    iconKey: "Trees",
+    extra: [
+      { key: "ukubwa", label: { sw: "Ukubwa wa Eneo", en: "Plot Size" }, type: "text", placeholder: { sw: "mfano: nusu ekari", en: "e.g. half acre" } },
+      { key: "title", label: { sw: "Hati / Title Status", en: "Title Status" }, type: "select", options: TITLE_STATUS_OPTIONS },
+      { key: "matumizi", label: { sw: "Matumizi ya Ardhi", en: "Land Use" }, type: "select", options: LAND_USE_OPTIONS },
+    ],
   },
   magari: {
     label: { sw: "Magari", en: "Cars" },
@@ -43,6 +90,13 @@ const CATEGORY_TRANSLATIONS = {
       sw: "Magari mapya na yaliyotumika Tanzania",
       en: "New and used cars in Tanzania",
     },
+    iconKey: "Car",
+    extra: [
+      { key: "make_model", label: { sw: "Make / Model / Mwaka", en: "Make / Model / Year" }, type: "text", placeholder: { sw: "mfano: Toyota Harrier 2016", en: "e.g. Toyota Harrier 2016" } },
+      { key: "mileage", label: { sw: "Mileage (km)", en: "Mileage (km)" }, type: "number", placeholder: { sw: "mfano: 85000", en: "e.g. 85000" } },
+      { key: "transmission", label: { sw: "Transmission", en: "Transmission" }, type: "select", options: TRANSMISSION_OPTIONS },
+      { key: "mafuta", label: { sw: "Aina ya Mafuta", en: "Fuel Type" }, type: "select", options: FUEL_OPTIONS },
+    ],
   },
   biashara: {
     label: { sw: "Biashara Zinazouzwa", en: "Businesses for Sale" },
@@ -50,6 +104,12 @@ const CATEGORY_TRANSLATIONS = {
       sw: "Biashara zinazouzwa - maduka, migahawa, n.k.",
       en: "Businesses for sale - shops, restaurants, etc.",
     },
+    iconKey: "Briefcase",
+    extra: [
+      { key: "aina", label: { sw: "Aina ya Biashara", en: "Business Type" }, type: "text", placeholder: { sw: "mfano: Duka la vifaa vya ujenzi", en: "e.g. Hardware store" } },
+      { key: "mapato", label: { sw: "Mapato ya Wastani (kwa mwezi)", en: "Average Monthly Revenue" }, type: "text", placeholder: { sw: "TZS ...", en: "TZS ..." } },
+      { key: "muda", label: { sw: "Muda Biashara Ikiwepo", en: "Business Age" }, type: "text", placeholder: { sw: "mfano: miaka 4", en: "e.g. 4 years" } },
+    ],
   },
   mashine: {
     label: { sw: "Mashine", en: "Machinery" },
@@ -57,6 +117,12 @@ const CATEGORY_TRANSLATIONS = {
       sw: "Mashine za kuchapa, na kudarizi",
       en: "Printing, and embroiding machinery",
     },
+    iconKey: "Wrench",
+    extra: [
+      { key: "aina", label: { sw: "Aina ya Mashine", en: "Machine Type" }, type: "text", placeholder: { sw: "mfano: Mashine ya kudarizi", en: "e.g. embroidery machine" } },
+      { key: "hours", label: { sw: "Saa za Matumizi", en: "Usage Hours" }, type: "number", placeholder: { sw: "mfano: 3200", en: "e.g. 3200" } },
+      { key: "hali", label: { sw: "Hali", en: "Condition" }, type: "select", options: CONDITION_OPTIONS },
+    ],
   },
   "vifaa-vizito": {
     label: { sw: "Vifaa vizito", en: "Heavy Equipment" },
@@ -64,27 +130,30 @@ const CATEGORY_TRANSLATIONS = {
       sw: "Mashine za kilimo, na viwanda",
       en: "Construction, agricultural, and industrial machinery",
     },
+    iconKey: "Wrench",
+    extra: [
+      { key: "aina", label: { sw: "Aina ya kifaa", en: "Heavy equipment Type" }, type: "text", placeholder: { sw: "mfano: Excavator", en: "e.g. Excavator" } },
+      { key: "hours", label: { sw: "Saa za Matumizi", en: "Usage Hours" }, type: "number", placeholder: { sw: "mfano: 3200", en: "e.g. 3200" } },
+      { key: "hali", label: { sw: "Hali", en: "Condition" }, type: "select", options: CONDITION_OPTIONS },
+    ],
   },
   pikipiki: {
     label: { sw: "Pikipiki", en: "Motorcycles" },
-    description: {
-      sw: "Pikipiki za aina zote Tanzania",
-      en: "All types of motorcycles in Tanzania",
-    },
+    description: { sw: "Pikipiki za aina zote Tanzania", en: "All types of motorcycles in Tanzania" },
+    iconKey: "Bike",
+    extra: [],
   },
   mabasi: {
     label: { sw: "Mabasi", en: "Buses" },
-    description: {
-      sw: "Mabasi ya abiria na mizigo",
-      en: "Passenger and cargo buses",
-    },
+    description: { sw: "Mabasi ya abiria na mizigo", en: "Passenger and cargo buses" },
+    iconKey: "Bus",
+    extra: [],
   },
   samani: {
     label: { sw: "Samani", en: "Furniture" },
-    description: {
-      sw: "Samani za nyumbani na ofisi",
-      en: "Home and office furniture",
-    },
+    description: { sw: "Samani za nyumbani na ofisi", en: "Home and office furniture" },
+    iconKey: "Sofa",
+    extra: [],
   },
   "vifaa-vya-elektroniki": {
     label: { sw: "Vifaa vya Elektroniki", en: "Electronics" },
@@ -92,13 +161,14 @@ const CATEGORY_TRANSLATIONS = {
       sw: "Simu, kompyuta, TV na vifaa vingine vya elektroniki",
       en: "Phones, computers, TVs and other electronics",
     },
+    iconKey: "Tv",
+    extra: [],
   },
   mifugo: {
     label: { sw: "Mifugo", en: "Livestock" },
-    description: {
-      sw: "Ng'ombe, mbuzi, kuku na mifugo mingine",
-      en: "Cows, goats, chickens and other livestock",
-    },
+    description: { sw: "Ng'ombe, mbuzi, kuku na mifugo mingine", en: "Cows, goats, chickens and other livestock" },
+    iconKey: "PawPrint",
+    extra: [],
   },
   "vifaa-vya-nyumbani": {
     label: { sw: "Vifaa vya Nyumbani", en: "Home Appliances" },
@@ -106,6 +176,8 @@ const CATEGORY_TRANSLATIONS = {
       sw: "Friji, jiko, mashine za kufulia na vifaa vingine",
       en: "Fridges, stoves, washing machines and other appliances",
     },
+    iconKey: "Refrigerator",
+    extra: [],
   },
 };
 
@@ -114,6 +186,12 @@ const SEED_LABEL_BY_KEY = Object.fromEntries(
 );
 const SEED_DESCRIPTION_BY_KEY = Object.fromEntries(
   Object.entries(CATEGORY_TRANSLATIONS).map(([key, v]) => [key, v.description])
+);
+const SEED_ICON_BY_KEY = Object.fromEntries(
+  Object.entries(CATEGORY_TRANSLATIONS).map(([key, v]) => [key, v.iconKey])
+);
+const SEED_EXTRA_BY_KEY = Object.fromEntries(
+  Object.entries(CATEGORY_TRANSLATIONS).map(([key, v]) => [key, v.extra])
 );
 
 // ============================================================
@@ -502,12 +580,12 @@ function normalizeCategoryFromApi(raw) {
       sw: raw.description || "",
       en: raw.description || "",
     },
-    iconKey: "Home",
-    imageUrl: null,
-    isPopular: raw.is_active !== false,
+    iconKey: raw.icon_key || SEED_ICON_BY_KEY[seedKey] || "Home",
+    imageUrl: raw.image_url || null,
+    isPopular: !!raw.is_popular,
     active: raw.is_active !== false,
     ordering: raw.ordering ?? 0,
-    extra: [],
+    extra: SEED_EXTRA_BY_KEY[seedKey] || [],
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
   };
@@ -536,23 +614,7 @@ export async function hydrateCategoriesFromApi() {
       return { source: "seed", count: getCategories().length };
     }
 
-    const existing = getCategories();
-    const normalized = rawList
-      .map((raw) => {
-        const cat = normalizeCategoryFromApi(raw);
-        if (!cat) return null;
-        const prior = existing.find((c) => c.key === cat.key);
-        if (prior) {
-          cat.extra = prior.extra || [];
-          cat.iconKey = prior.iconKey || "Home";
-          cat.imageUrl = prior.imageUrl || null;
-          cat.isPopular = prior.isPopular ?? false;
-          cat.label = prior.label || cat.label;
-          cat.description = prior.description || cat.description;
-        }
-        return cat;
-      })
-      .filter(Boolean);
+    const normalized = rawList.map(normalizeCategoryFromApi).filter(Boolean);
 
     saveAll(normalized);
     return { source: "api", count: normalized.length };
