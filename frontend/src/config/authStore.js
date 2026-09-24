@@ -541,3 +541,29 @@ export function useHasRole(role) {
   if (Array.isArray(role)) return role.includes(user.role);
   return user.role === role;
 }
+
+// ============================================================
+// SOCIAL AUTH (Google / Apple)
+// ============================================================
+export async function socialLoginAsync({ provider, idToken, code }) {
+  if (!provider || !idToken) {
+    return { ok: false, error: new Error("provider na idToken zinahitajika") };
+  }
+
+  try {
+    const { api } = await import("../api/client.js");
+    const data = await api.post("/auth/social/", {
+      provider,          // "google" | "apple"
+      id_token: idToken,
+      code: code || null,
+    });
+    const me = data?.user ?? (await authApi.me());
+    const user = normalizeUserFromApi(me);
+    saveUser(user);
+    return { ok: true, user };
+  } catch (err) {
+    saveUser(null);
+    console.warn("[authStore] socialLogin failed:", err);
+    return { ok: false, error: err };
+  }
+}
