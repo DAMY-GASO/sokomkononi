@@ -246,6 +246,14 @@ export default function AdminDashboard() {
   const openTicketsCount = useOpenTicketsCount();
   const roles = useRoles();
 
+  // Safety: if backend rejected our session and authStore cleared user,
+  // kick to admin login instead of showing a broken dashboard shell.
+  useEffect(() => {
+    if (!user && !location.pathname.endsWith("/enter")) {
+      navigate(ADMIN_LOGIN_PATH, { replace: true });
+    }
+  }, [user, location.pathname, navigate]);
+
   // ============================================================
   // ACTIVE SECTION — kutoka URL
   // ============================================================

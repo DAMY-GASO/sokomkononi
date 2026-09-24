@@ -183,7 +183,16 @@ export default function RevenueSection() {
 
   const handleAddFeeConfig = (cat) =>
     withBusy(`add-fee-${cat.key}`, async () => {
-      const res = await addFeeConfigAsync(cat.key);
+      // Backend expects { name, percentage, min_price, max_price, priority }
+      const nameForApi =
+        cat?.label?.en || cat?.label?.sw || cat?.key || "New Category";
+      const res = await addFeeConfigAsync({
+        name: nameForApi,
+        percentage: 1.0,
+        min_price: 10000,
+        max_price: 100000,
+        priority: 0,
+      });
       if (res.ok) {
         showFlash(
           t(

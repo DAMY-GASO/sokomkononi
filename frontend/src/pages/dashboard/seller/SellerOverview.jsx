@@ -52,7 +52,7 @@ export default function SellerOverview({ onNavigate }) {
     );
 
     const activeDeals = deals.filter((d) =>
-      ["negotiating", "offer_sent", "accepted"].includes(d.status)
+      ["open", "negotiating", "agreed"].includes(d.status)
     ).length;
     const pendingReservations = deals.filter(
       (d) => d.status === "reserved"

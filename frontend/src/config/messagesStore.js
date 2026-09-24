@@ -135,3 +135,23 @@ export function useUnreadMessagesCount() {
 export function sendMessage() { return []; }
 export function markConversationRead() { return []; }
 export function receiveMessage() { return []; }
+
+// ============================================================
+// CONVERSATION CREATION
+// Backend: POST /api/messaging/conversations/  { listing, initial_message? }
+// ============================================================
+export async function createConversationAsync({ listingId, initialMessage = "" }) {
+  if (!listingId) {
+    return { ok: false, error: new Error("listingId is required") };
+  }
+  try {
+    const raw = await api.post("/messaging/conversations/", {
+      listing: listingId,
+      initial_message: initialMessage,
+    });
+    const data = Array.isArray(raw) ? raw[0] : raw;
+    return { ok: true, conversation: data };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}

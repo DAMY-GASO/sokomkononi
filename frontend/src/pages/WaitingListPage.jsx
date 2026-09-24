@@ -25,7 +25,7 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 // STATUS — bilingual
 // ============================================================
 const getWaitingStatus = (lang) => ({
-  pending: {
+  waiting: {
     label: lang === "sw" ? "Kwenye Foleni" : "In Queue",
     color: "#8A5A16",
     bg: "rgba(232,163,61,0.16)",
@@ -40,13 +40,16 @@ const getWaitingStatus = (lang) => ({
     bg: "rgba(47,109,79,0.14)",
     icon: BellRing,
   },
-  expired: {
-    label:
-      lang === "sw"
-        ? "Muda wa Kuchukua Nafasi Umeisha"
-        : "Slot Claim Window Expired",
+  cancelled: {
+    label: lang === "sw" ? "Umeondoka" : "Cancelled",
     color: COLORS.night,
     bg: "rgba(16,26,46,0.08)",
+    icon: XCircle,
+  },
+  fulfilled: {
+    label: lang === "sw" ? "Imekamilika" : "Fulfilled",
+    color: COLORS.green,
+    bg: "rgba(47,109,79,0.16)",
     icon: XCircle,
   },
 });
@@ -58,7 +61,7 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
   const category = getCategory(entry.category);
   const Icon = category?.icon;
   const status =
-    getWaitingStatus(lang)[entry.status] || getWaitingStatus(lang).pending;
+    getWaitingStatus(lang)[entry.status] || getWaitingStatus(lang).waiting;
   const StatusIcon = status.icon;
 
   return (
@@ -105,7 +108,7 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
           >
             {formatTZS(entry.price)}
           </span>
-          {entry.status === "pending" && entry.position && (
+          {entry.status === "waiting" && entry.position && (
             <span style={{ color: "var(--text-secondary)" }}>
               • {lang === "sw" ? "Nafasi yako" : "Your position"}:{" "}
               <strong>#{entry.position}</strong>{" "}
@@ -159,7 +162,7 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
           </div>
         )}
 
-        {(entry.status === "pending" || entry.status === "notified") && (
+        {(entry.status === "waiting" || entry.status === "notified") && (
           <button
             onClick={() => onLeave(entry.id)}
             style={{ color: COLORS.rust }}
@@ -197,9 +200,10 @@ export default function WaitingListPage({
 
   const filters = [
     { key: "all", label: lang === "sw" ? "Zote" : "All" },
-    { key: "pending", label: lang === "sw" ? "Kwenye Foleni" : "In Queue" },
+    { key: "waiting", label: lang === "sw" ? "Kwenye Foleni" : "In Queue" },
     { key: "notified", label: lang === "sw" ? "Umetaarifiwa" : "Notified" },
-    { key: "expired", label: lang === "sw" ? "Imeisha Muda" : "Expired" },
+    { key: "fulfilled", label: lang === "sw" ? "Imekamilika" : "Fulfilled" },
+    { key: "cancelled", label: lang === "sw" ? "Umeondoka" : "Cancelled" },
   ];
 
   const filtered = entries.filter(

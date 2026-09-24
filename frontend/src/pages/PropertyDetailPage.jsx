@@ -493,7 +493,7 @@ export default function PropertyDetailPage() {
         ? waitingListEntries.some(
             (e) =>
               e.property === property.title &&
-              (e.status === "pending" || e.status === "notified")
+              (e.status === "waiting" || e.status === "notified")
           )
         : false,
     [waitingListEntries, property]
@@ -514,12 +514,7 @@ export default function PropertyDetailPage() {
     }
 
     if (autoJoinWaitlist && !alreadyOnWaitlist) {
-      joinWaitingList({
-        property: property.title,
-        category: property.category,
-        price: property.price,
-        location: property.location,
-      });
+      joinWaitingList(property.id);
     }
 
     if (openContactModal || autoJoinWaitlist) {
@@ -546,12 +541,7 @@ export default function PropertyDetailPage() {
       });
       return;
     }
-    joinWaitingList({
-      property: property.title,
-      category: property.category,
-      price: property.price,
-      location: property.location,
-    });
+    joinWaitingList(property.id);
   };
 
   const handleSave = () => toggleSaved(property.id, property);
@@ -582,18 +572,46 @@ export default function PropertyDetailPage() {
     setShowContactModal(true);
   };
 
-  const handleStartDealRoom = () => {
-    const deal = getOrCreateDeal({
+  const handleStartDealRoom = async () => {
+    setShowContactModal(false);
+    const res = await getOrCreateDealAsync({
       listingId: property.id,
-      listingTitle: property.title,
-      category: property.category,
-      askingPrice: property.price,
-      location: property.location,
+      currentUserId: user?.id,
       sellerName: property.seller_name || t(lang, "Muuzaji", "Seller"),
       buyerName: user?.name || user?.fullName || "",
     });
+    if (res.ok && res.deal?.id) {
+      navigate(`/dashboard/buyer/deals?deal=${res.deal.id}`);
+    } else {
+      alert(
+        res.error?.message ||
+          t(lang, "Imeshindwa kuanzisha deal.", "Failed to start deal.")
+      );
+    }
+  };
+
+  const handleStartConversation = async () => {
     setShowContactModal(false);
-    navigate(`/dashboard/buyer/deals?deal=${deal.id}`);
+    const res = await createConversationAsync({
+      listingId: property.id,
+      initialMessage: t(
+        lang,
+        "Habari, nina nia ya mali hii.",
+        "Hello, I'm interested in this property."
+      ),
+    });
+    if (res.ok && res.conversation?.id) {
+      navigate(`/dashboard/buyer/messages?c=${res.conversation.id}`);
+    } else {
+      alert(
+        res.error?.message ||
+          t(
+            lang,
+            "Imeshindwa kuanzisha ujumbe.",
+            "Failed to start conversation."
+          )
+      );
+    }
   };
 
   const categoryLabel =
@@ -884,13 +902,31 @@ export default function PropertyDetailPage() {
                 <MessageSquare size={20} className="text-[#E8A33D]" />
                 <div>
                   <p className="text-sm font-medium text-primary">
-                    {t(lang, "Tuma Ujumbe", "Send Message")}
+                    {t(lang, "Anzisha Deal Room", "Start a Deal Room")}
                   </p>
                   <p className="text-body-sm text-secondary">
                     {t(
                       lang,
-                      "Anzisha mazungumzo kwenye Deal Room",
-                      "Start a conversation in the Deal Room"
+                      "Mazungumzo ya kina ya ununuzi",
+                      "Full purchase negotiation"
+                    )}
+                  </p>
+                </div>
+              </button>
+              <button
+                onClick={handleStartConversation}
+                className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left"
+              >
+                <MessageSquare size={20} className="text-[#2F6D4F]" />
+                <div>
+                  <p className="text-sm font-medium text-primary">
+                    {t(lang, "Tuma Ujumbe wa Haraka", "Send a Quick Message")}
+                  </p>
+                  <p className="text-body-sm text-secondary">
+                    {t(
+                      lang,
+                      "Uliza swali bila kuanzisha deal",
+                      "Ask a question without a deal"
                     )}
                   </p>
                 </div>

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { COLORS } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-import { pushNotification } from "../../../config/notificationsStore.js";
+import { api } from "../../../api/client.js";
 
 const FAQ_ITEMS = [
   {
@@ -75,26 +75,32 @@ export default function SafetySupportSection() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const handleReportSubmit = () => {
+  const handleReportSubmit = async () => {
     if (!reportDetails.trim()) return;
 
-    pushNotification({
-      audience: "admin",
-      type: "fraud_flag",
-      title: {
-        sw: `Ripoti mpya ya ${reportType === "listing" ? "tangazo" : "mtumiaji"}`,
-        en: `New report for ${reportType === "listing" ? "listing" : "user"}`,
-      },
-      body: reportDetails.trim(),
-      target: "moderation",
-    });
-
-    setReportSent(true);
-    setReportDetails("");
-    setTimeout(() => {
-      setReportSent(false);
-      setShowReportForm(false);
-    }, 3000);
+    try {
+      await api.post("/tickets/", {
+        subject:
+          reportType === "listing"
+            ? t("Ripoti ya tangazo", "Listing report")
+            : t("Ripoti ya mtumiaji", "User report"),
+        description: reportDetails.trim(),
+        category: "DISPUTE",
+        priority: "HIGH",
+      });
+      setReportSent(true);
+      setReportDetails("");
+      setTimeout(() => {
+        setReportSent(false);
+        setShowReportForm(false);
+      }, 3000);
+    } catch (err) {
+      alert(
+        err?.data?.detail ||
+          err?.message ||
+          t("Imeshindwa kutuma ripoti.", "Failed to submit report.")
+      );
+    }
   };
 
   return (
