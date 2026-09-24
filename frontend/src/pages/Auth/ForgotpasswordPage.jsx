@@ -25,6 +25,20 @@ const icons = {
       <path d="M20 6 9 17l-5-5" />
     </svg>
   ),
+  eye: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
+  eyeOff: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.9 5.2A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1" />
+      <path d="M6.6 6.6A17.4 17.4 0 0 0 2 12s3.5 7 10 7c1.9 0 3.6-.6 5-1.4" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      <path d="m3 3 18 18" />
+    </svg>
+  ),
 };
 
 function SkylineDecoration() {
@@ -44,17 +58,41 @@ function SkylineDecoration() {
 }
 
 function FieldInput({ icon, type = "text", value, onChange, label }) {
+  const { lang } = useLanguage();
+  const [show, setShow] = useState(false);
+  const isPassword = type === "password";
+  const inputType = isPassword && show ? "text" : type;
+
+  const toggleLabel =
+    lang === "sw"
+      ? show ? "Ficha nenosiri" : "Onyesha nenosiri"
+      : show ? "Hide password" : "Show password";
+
   return (
     <div>
       <label className="block text-body-sm font-semibold text-secondary mb-1.5">{label}</label>
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">{icon}</span>
         <input
-          type={type}
-          className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+          type={inputType}
+          className={`w-full border border-gray-300 rounded-lg pl-10 ${
+            isPassword ? "pr-11" : "pr-3"
+          } py-2.5 focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors`}
           value={value}
           onChange={onChange}
         />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShow((s) => !s)}
+            aria-label={toggleLabel}
+            title={toggleLabel}
+            aria-pressed={show}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-muted hover:text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E8A33D]/40 transition-colors"
+          >
+            {show ? icons.eyeOff : icons.eye}
+          </button>
+        )}
       </div>
     </div>
   );
