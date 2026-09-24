@@ -253,7 +253,7 @@ export default function ForgotPasswordPage() {
           <div className="w-full max-w-sm animate-[fadeIn_0.4s_ease-out]">
             {step === "form" && (
               <>
-                <h1 className="h-title mb-1 text-center">{t("forgot_heading")}</h1>
+                
                 <p className="text-secondary text-body-sm mb-7 text-center">{t("forgot_subtext")}</p>
 
                 <form onSubmit={handleSubmitNewPassword} className="space-y-4">
