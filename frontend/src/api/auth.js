@@ -8,6 +8,14 @@ export const authApi = {
     return data;
   },
 
+  // ----- Social login (Google / Apple) -----
+  // payload: { provider: "google" | "apple", id_token, code?, user? }
+  socialLogin: async (payload) => {
+    const data = await api.post("/auth/social/", payload);
+    if (data?.access) setTokens({ access: data.access, refresh: data.refresh });
+    return data;
+  },
+
   register: (payload) => api.post("/auth/register/", payload),
 
   verifyOtp: async ({ identifier, otp_code, verification_type = "EMAIL" }) => {
