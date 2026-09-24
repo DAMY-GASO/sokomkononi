@@ -1,7 +1,13 @@
 // ============================================================
 // ModerationSection.jsx
 // Uidhinishaji wa mali & matangazo — approve/reject listings.
-// FIXED: fetches pending listings from API on mount.
+//
+// v2:
+//  - State ya admin (`items`) ndiyo chanzo pekee. Haitegemei tena
+//    localStorage ya public (useListings imeondolewa).
+//  - Kila kichujio kinafetch kutoka API (pending / live / rejected / zote).
+//  - Baada ya Approve/Reject, listing inabadilika kwenye UI mara moja
+//    na kuhamia kwenye kichujio sahihi.
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import { CheckCircle, XCircle, MoreVertical, Loader2 } from "lucide-react";
@@ -10,17 +16,31 @@ import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
-  useListings,
   fetchPendingListingsAsync,
+  fetchListingsByStatusAsync,
   approveListingAsync,
   rejectListingAsync,
 } from "../../../../config/listingsStore.js";
 
+// Kichujio -> statuses zinazohitajika kutoka API
+const FILTER_SOURCES = {
+  in_review: ["in_review"],
+  live: ["live"],
+  rejected: ["rejected"],
+  zote: ["in_review", "live", "rejected"],
+};
+
+function fetchByStatus(status) {
+  return status === "in_review"
+    ? fetchPendingListingsAsync()
+    : fetchListingsByStatusAsync(status);
+}
+
 export default function ModerationSection() {
   const { lang } = useLanguage();
-  const storeListings = useListings();
-  const [pendingListings, setPendingListings] = useState([]);
-  const [loadingPending, setLoadingPending] = useState(true);
+  // items: { [id]: listing } — chanzo pekee cha data kwenye admin UI
+  const [items, setItems] = useState({});
+  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("in_review");
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
@@ -29,39 +49,58 @@ export default function ModerationSection() {
   const formatTZS = (amount) =>
     "TZS " + Math.round(amount || 0).toLocaleString("en-US");
 
-  // ── Fetch pending listings from API ─────────────────────────
+  const patchItem = (id, patch) =>
+    setItems((prev) => (prev[id] ? { ...prev, [id]: { ...prev[id], ...patch } } : prev));
+
+  // ── Fetch kwa kila kichujio ─────────────────────────────────
   useEffect(() => {
     let cancelled = false;
-    setLoadingPending(true);
-    fetchPendingListingsAsync().then((res) => {
+    setLoading(true);
+    setError("");
+
+    const sources = FILTER_SOURCES[statusFilter] || [];
+    Promise.all(sources.map(fetchByStatus)).then((results) => {
       if (cancelled) return;
-      if (res.ok) {
-        setPendingListings(res.listings || []);
-      } else {
-        console.warn("[ModerationSection] fetch failed:", res.error);
+
+      const okResults = results.filter((r) => r.ok);
+      const fetched = okResults.flatMap((r) => r.listings || []);
+
+      if (fetched.length) {
+        setItems((prev) => {
+          const next = { ...prev };
+          fetched.forEach((l) => {
+            next[l.id] = { ...prev[l.id], ...l };
+          });
+          return next;
+        });
+      }
+
+      if (okResults.length === 0) {
+        const firstErr = results.find((r) => !r.ok)?.error;
+        console.warn("[ModerationSection] fetch failed:", firstErr);
         setError(
-          res.error?.message ||
-            t("Imeshindwa kupakia pending listings.", "Failed to load pending listings.")
+          firstErr?.message ||
+            t("Imeshindwa kupakia listings.", "Failed to load listings.")
         );
       }
-      setLoadingPending(false);
+      setLoading(false);
     });
+
     return () => {
       cancelled = true;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
 
-  // ── Merge store + fetched (deduped by id) ───────────────────
-  const allListings = useMemo(() => {
-    const map = new Map();
-    [...storeListings, ...pendingListings].forEach((l) => map.set(l.id, l));
-    return Array.from(map.values());
-  }, [storeListings, pendingListings]);
-
+  // ── Chuja + panga (mpya juu) ────────────────────────────────
   const filtered = useMemo(() => {
-    if (statusFilter === "zote") return allListings;
-    return allListings.filter((l) => l.status === statusFilter);
-  }, [allListings, statusFilter]);
+    const all = Object.values(items);
+    const list =
+      statusFilter === "zote" ? all : all.filter((l) => l.status === statusFilter);
+    return list.sort(
+      (a, b) => new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime()
+    );
+  }, [items, statusFilter]);
 
   const filters = [
     { key: "in_review", label: { sw: "Zinasubiri", en: "Pending" } },
@@ -70,17 +109,26 @@ export default function ModerationSection() {
     { key: "zote", label: { sw: "Zote", en: "All" } },
   ];
 
-  const handleApprove = async (listingId) => {
-    if (busy[listingId]) return;
-    setBusy((b) => ({ ...b, [listingId]: "approve" }));
-    setError("");
-    const res = await approveListingAsync(listingId);
+  const clearBusy = (listingId) =>
     setBusy((b) => {
       const n = { ...b };
       delete n[listingId];
       return n;
     });
-    if (!res.ok) {
+
+  const handleApprove = async (listingId) => {
+    if (busy[listingId]) return;
+    setBusy((b) => ({ ...b, [listingId]: "approve" }));
+    setError("");
+    const res = await approveListingAsync(listingId);
+    clearBusy(listingId);
+    if (res.ok) {
+      patchItem(listingId, {
+        status: "live",
+        approvedAt: new Date().toISOString(),
+        rejectionReason: "",
+      });
+    } else {
       setError(
         res.error?.message ||
           t("Imeshindwa kuidhinisha listing.", "Failed to approve listing.")
@@ -94,15 +142,18 @@ export default function ModerationSection() {
       t("Sababu ya kukataa (hiari):", "Reason for rejection (optional):")
     );
     if (reason === null) return;
+    const cleanReason = reason.trim();
     setBusy((b) => ({ ...b, [listingId]: "reject" }));
     setError("");
-    const res = await rejectListingAsync(listingId, reason.trim());
-    setBusy((b) => {
-      const n = { ...b };
-      delete n[listingId];
-      return n;
-    });
-    if (!res.ok) {
+    const res = await rejectListingAsync(listingId, cleanReason);
+    clearBusy(listingId);
+    if (res.ok) {
+      patchItem(listingId, {
+        status: "rejected",
+        rejectionReason: cleanReason,
+        rejectedAt: new Date().toISOString(),
+      });
+    } else {
       setError(
         res.error?.message ||
           t("Imeshindwa kukataa listing.", "Failed to reject listing.")
@@ -110,7 +161,8 @@ export default function ModerationSection() {
     }
   };
 
-  const ActionButtons = ({ listing, fullWidth = false }) => {
+  // Function ya kawaida (si component) — inazuia remount kila render
+  const renderActions = (listing, fullWidth = false) => {
     const isBusy = !!busy[listing.id];
     const currentAction = busy[listing.id];
     if (listing.status === "in_review") {
@@ -150,13 +202,15 @@ export default function ModerationSection() {
       );
     }
     return (
-      <div className={fullWidth ? "flex justify-end" : "flex justify-end"}>
+      <div className="flex justify-end">
         <button className="text-muted hover:text-secondary p-1">
           <MoreVertical size={16} />
         </button>
       </div>
     );
   };
+
+  const emptyText = t("Hakuna mali katika kundi hili", "No listings in this group");
 
   return (
     <>
@@ -194,14 +248,14 @@ export default function ModerationSection() {
         ))}
       </div>
 
-      {loadingPending && (
+      {loading && (
         <div className="flex items-center justify-center py-8 text-muted text-sm gap-2">
           <Loader2 size={16} className="animate-spin" />
           {t("Inapakia...", "Loading...")}
         </div>
       )}
 
-      {!loadingPending && (
+      {!loading && (
         <>
           {/* DESKTOP — TABLE */}
           <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -234,6 +288,14 @@ export default function ModerationSection() {
                     <tr key={l.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-5 py-3 text-sm font-medium text-primary">
                         {l.title}
+                        {l.status === "rejected" && l.rejectionReason && (
+                          <p
+                            className="text-xs font-normal mt-0.5"
+                            style={{ color: COLORS.rust }}
+                          >
+                            {l.rejectionReason}
+                          </p>
+                        )}
                       </td>
                       <td className="px-5 py-3 text-sm text-secondary">{l.category}</td>
                       <td className="px-5 py-3 text-sm text-secondary">
@@ -248,9 +310,7 @@ export default function ModerationSection() {
                       <td className="px-5 py-3">
                         <StatusBadge status={l.status} lang={lang} />
                       </td>
-                      <td className="px-5 py-3 text-right">
-                        <ActionButtons listing={l} />
-                      </td>
+                      <td className="px-5 py-3 text-right">{renderActions(l)}</td>
                     </tr>
                   ))}
                   {filtered.length === 0 && (
@@ -259,10 +319,7 @@ export default function ModerationSection() {
                         colSpan={6}
                         className="px-5 py-8 text-center text-sm text-muted"
                       >
-                        {t(
-                          "Hakuna mali katika kundi hili",
-                          "No listings in this group"
-                        )}
+                        {emptyText}
                       </td>
                     </tr>
                   )}
@@ -286,6 +343,14 @@ export default function ModerationSection() {
                     <p className="text-xs text-secondary mt-0.5 truncate">
                       {l.category}
                     </p>
+                    {l.status === "rejected" && l.rejectionReason && (
+                      <p
+                        className="text-xs mt-1 line-clamp-2"
+                        style={{ color: COLORS.rust }}
+                      >
+                        {l.rejectionReason}
+                      </p>
+                    )}
                   </div>
                   <StatusBadge status={l.status} lang={lang} />
                 </div>
@@ -303,15 +368,12 @@ export default function ModerationSection() {
                     {formatTZS(l.price)}
                   </span>
                 </div>
-                <ActionButtons listing={l} fullWidth />
+                {renderActions(l, true)}
               </div>
             ))}
             {filtered.length === 0 && (
               <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-sm text-muted">
-                {t(
-                  "Hakuna mali katika kundi hili",
-                  "No listings in this group"
-                )}
+                {emptyText}
               </div>
             )}
           </div>
