@@ -477,7 +477,7 @@ export default function PropertyDetailPage() {
 
   const allListings = useListings();
   const property = useMemo(
-    () => allListings.find((l) => l.id === id),
+    () => allListings.find((l) => String(l.id) === String(id)),
     [allListings, id]
   );
 
