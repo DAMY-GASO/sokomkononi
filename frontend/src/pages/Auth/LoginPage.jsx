@@ -1,6 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { loginAsync } from "../../config/authStore.js";
+import {
+  isGoogleEnabled,
+  isAppleEnabled,
+  renderGoogleButton,
+  getAppleIdentity,
+  isSocialCancel,
+  socialLoginAsync,
+} from "../../config/socialAuth.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const icons = {
@@ -33,6 +41,11 @@ const icons = {
       <path d="M1 1l22 22" />
     </svg>
   ),
+  apple: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701" />
+    </svg>
+  ),
 };
 
 function SkylineDecoration() {
@@ -51,8 +64,17 @@ function SkylineDecoration() {
   );
 }
 
+function getErrorMessage(err, fallback) {
+  const firstFieldError =
+    err?.data && typeof err.data === "object" && !err.data.detail
+      ? Object.values(err.data).flat().find((v) => typeof v === "string")
+      : null;
+  return err?.data?.detail || firstFieldError || err?.message || fallback;
+}
+
 export default function LoginPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const tx = (sw, en) => (lang === "sw" ? sw : en);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -61,6 +83,22 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [socialLoading, setSocialLoading] = useState(""); // "" | "google" | "apple"
+
+  const googleRef = useRef(null);
+  const socialHandlerRef = useRef(null);
+
+  const showSocial = isGoogleEnabled || isAppleEnabled;
+
+  function finishLogin() {
+    const { from, ...restState } = location.state || {};
+    const redirectTo = from || searchParams.get("redirect") || "/dashboard/post";
+
+    navigate(redirectTo, {
+      replace: true,
+      state: Object.keys(restState).length > 0 ? restState : undefined,
+    });
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -77,30 +115,73 @@ export default function LoginPage() {
     setLoading(false);
 
     if (!res.ok) {
-      const err = res.error;
-      const firstFieldError =
-        err?.data && typeof err.data === "object" && !err.data.detail
-          ? Object.values(err.data).flat().find((v) => typeof v === "string")
-          : null;
-
       setError(
-        err?.data?.detail ||
-          firstFieldError ||
-          err?.message ||
-          t("login_error_default") ||
-          "Barua pepe/nenosiri si sahihi."
+        getErrorMessage(
+          res.error,
+          t("login_error_default") || "Barua pepe/nenosiri si sahihi."
+        )
       );
       return;
     }
 
-    const { from, ...restState } = location.state || {};
-    const redirectTo = from || searchParams.get("redirect") || "/dashboard/post";
-
-    navigate(redirectTo, {
-      replace: true,
-      state: Object.keys(restState).length > 0 ? restState : undefined,
-    });
+    finishLogin();
   }
+
+  // Inatuma ID token kwa backend, kisha inaingia kama login ya kawaida
+  async function handleSocialLogin(provider, identity) {
+    setError("");
+    setSocialLoading(provider);
+    const res = await socialLoginAsync({
+      provider, // "google" | "apple"
+      idToken: identity.idToken,
+      code: identity.code || null,
+      user: identity.user || null, // Apple: jina/barua (mara ya kwanza tu)
+    });
+    setSocialLoading("");
+
+    if (!res.ok) {
+      setError(
+        getErrorMessage(
+          res.error,
+          tx("Imeshindwa kuingia. Jaribu tena.", "Sign-in failed. Please try again.")
+        )
+      );
+      return;
+    }
+    finishLogin();
+  }
+  socialHandlerRef.current = handleSocialLogin;
+
+  async function handleApple() {
+    if (socialLoading) return;
+    setError("");
+    setSocialLoading("apple");
+    let identity;
+    try {
+      identity = await getAppleIdentity();
+    } catch (err) {
+      setSocialLoading("");
+      if (!isSocialCancel(err)) {
+        setError(
+          err?.message ||
+            tx("Imeshindwa kuingia na Apple.", "Could not sign in with Apple.")
+        );
+      }
+      return;
+    }
+    await handleSocialLogin("apple", identity);
+  }
+
+  // Google: chora button rasmi ya Google
+  useEffect(() => {
+    if (!isGoogleEnabled || !googleRef.current) return;
+    renderGoogleButton(googleRef.current, {
+      locale: lang === "sw" ? "sw" : "en",
+      onCredential: (idToken) => socialHandlerRef.current("google", { idToken }),
+      onError: (err) => setError(err?.message || tx("Google imeshindwa.", "Google sign-in failed.")),
+    }).catch((err) => setError(err?.message || ""));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   const trustPoints = [
     t("login_trust1"),
@@ -211,12 +292,49 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !!socialLoading}
                 className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-btn transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? t("login_submitting") : t("login_submit")}
               </button>
             </form>
+
+            {/* ============ Social sign-in ============ */}
+            {showSocial && (
+              <>
+                <div className="flex items-center gap-3 my-6">
+                  <span className="flex-1 h-px bg-gray-200" />
+                  <span className="text-xs text-muted uppercase tracking-wide">
+                    {tx("au endelea na", "or continue with")}
+                  </span>
+                  <span className="flex-1 h-px bg-gray-200" />
+                </div>
+
+                <div
+                  className={`space-y-3 transition-opacity ${
+                    socialLoading ? "opacity-60 pointer-events-none" : ""
+                  }`}
+                >
+                  {isGoogleEnabled && (
+                    <div ref={googleRef} className="flex justify-center min-h-[40px]" />
+                  )}
+
+                  {isAppleEnabled && (
+                    <button
+                      type="button"
+                      onClick={handleApple}
+                      disabled={!!socialLoading}
+                      className="w-full h-10 inline-flex items-center justify-center gap-2 rounded bg-black hover:bg-gray-900 text-white text-sm font-medium transition-colors disabled:opacity-60"
+                    >
+                      {icons.apple}
+                      {socialLoading === "apple"
+                        ? tx("Inaingia...", "Signing in...")
+                        : tx("Endelea na Apple", "Continue with Apple")}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
 
             <p className="mt-6 text-body-sm text-secondary text-center">
               {t("login_no_account")}{" "}
