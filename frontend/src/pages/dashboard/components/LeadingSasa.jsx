@@ -112,7 +112,7 @@ export default function LeadingSasa({
     setError("");
     try {
       // Backend expects a POST to /listings/{id}/leading/ (no reference needed per spec).
-      await api.post(`/listings/${selectedListing.id}/leading/`, { payment_reference: reference || "manual" });
+      await api.post(`/listings/${selectedListing.id}/leading/`, { payment_reference: reference || `LEAD-${Date.now()}` });
       onLead(selectedListing.id, { leadingExpiresAt: new Date(Date.now() + (leadingFee.days || 7) * 86400000).toISOString() });
       setDone({ listing: selectedListing });
     } catch (err) {

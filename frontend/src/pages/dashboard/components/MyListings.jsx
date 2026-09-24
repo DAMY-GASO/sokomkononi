@@ -37,6 +37,7 @@ import {
   bannerDaysRemaining,
 } from "../../../config/bannerAdsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
+import { api } from "../../../api/client.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import PaymentGateway from "./PaymentGateway";
 
@@ -267,6 +268,16 @@ function ListingCard({
                 `Kuchapisha "${listing.title}"`,
                 `Publishing "${listing.title}"`
               )}
+              onSubmit={async ({ reference }) => {
+                try {
+                  await api.post(`/listings/${listing.id}/fee/pay/`, {
+                    payment_reference: reference,
+                  });
+                  return { ok: true };
+                } catch (err) {
+                  return { ok: false, error: err };
+                }
+              }}
               onCancel={onCancelPay}
               onSuccess={onPaySuccess}
             />

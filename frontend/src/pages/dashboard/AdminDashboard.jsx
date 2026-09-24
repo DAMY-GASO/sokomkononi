@@ -238,7 +238,7 @@ export default function AdminDashboard() {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { notifications, unreadCount, markRead } = useNotifications("admin");
+  const { notifications, unreadCount, markRead } = useNotifications("user");
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
@@ -264,13 +264,27 @@ export default function AdminDashboard() {
   }, [isAdmin, user?.roleKey]);
 
   const canAccess = (sectionKey) => {
-    // ✅ Super Admin anaona kila kitu — bila kuangalia permissions
+    // Super users (is_staff / is_superuser) always have full access
+    if (
+      user?.isSuperuser ||
+      user?.isStaff ||
+      user?.is_superuser ||
+      user?.is_staff
+    ) {
+      return true;
+    }
+    // Role-based super admin also has full access
     if (staffRole?.key === "super_admin") return true;
-
-    if (sectionKey === "profile" || sectionKey === "system") return true;
-    if (sectionKey === "overview") return true;
+    // Everyone with a valid session can see these
+    if (
+      sectionKey === "profile" ||
+      sectionKey === "system" ||
+      sectionKey === "overview"
+    ) {
+      return true;
+    }
     if (!staffRole) return false;
-    return staffRole.permissions?.includes(sectionKey);
+    return (staffRole.permissions || []).includes(sectionKey);
   };
 
   const visibleNav = useMemo(() => {

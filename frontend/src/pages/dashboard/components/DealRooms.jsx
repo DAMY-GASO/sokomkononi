@@ -39,6 +39,7 @@ import {
 import { notifyPaymentProofSubmitted } from "../../../config/notificationsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { useAuth } from "../../../config/authStore.js";
 
 // ⬇️ MPYA: Transaction lifecycle (API + fallback)
 import {
@@ -1490,7 +1491,8 @@ export default function DealRooms({
   onReservationPaid,
   onFinalPaymentConfirmed,
 }) {
-  const deals = useDeals();
+  const { user } = useAuth();
+  const deals = useDeals(user?.id);
   const { lang } = useLanguage();
   const [selectedId, setSelectedId] = useState(initialDealId);
   const [mobileShowDetail, setMobileShowDetail] = useState(

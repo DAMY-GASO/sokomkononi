@@ -31,6 +31,7 @@ import {
 } from "../config/userCreditsStore.js";
 import { useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { api } from "../api/client.js";
 
 // Icon resolver
 const ICON_MAP = {
@@ -318,6 +319,27 @@ export default function BundlesPage() {
                 "Nunua kifurushi — salio litaingizwa papo hapo",
                 "Buy bundle — credits will be added instantly"
               )}
+              onSubmit={async ({ reference }) => {
+                try {
+                  const purchase = await api.post("/bundles/purchases/", {
+                    bundle: payingBundle.id,
+                  });
+                  const purchaseId =
+                    purchase?.id ||
+                    purchase?.purchase_id ||
+                    purchase?.purchaseId;
+                  if (!purchaseId) {
+                    throw new Error("Backend did not return purchase id.");
+                  }
+                  await api.post(
+                    `/bundles/purchases/${purchaseId}/pay/`,
+                    { payment_reference: reference }
+                  );
+                  return { ok: true, data: purchase };
+                } catch (err) {
+                  return { ok: false, error: err };
+                }
+              }}
               onCancel={() => setPayingBundle(null)}
               onSuccess={handlePaymentSuccess}
             />

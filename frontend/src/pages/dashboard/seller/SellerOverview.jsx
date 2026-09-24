@@ -23,7 +23,7 @@ import { COLORS } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 // ⬇️ MABADILIKO: useAuth kutoka authStore
 import { useAuth } from "../../../config/authStore.js";
-import { useListings } from "../../../config/listingsStore.js";
+import { useMyListings } from "../../../config/listingsStore.js";
 import { useDeals } from "../../../config/dealsStore.js";
 import StatTile from "./StatTile.jsx";
 import RecentActivity from "../components/RecentActivity.jsx";
@@ -31,8 +31,8 @@ import RecentActivity from "../components/RecentActivity.jsx";
 export default function SellerOverview({ onNavigate }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
-  const listings = useListings();
-  const deals = useDeals();
+  const listings = useMyListings();
+  const deals = useDeals(user?.id);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 

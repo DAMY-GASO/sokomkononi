@@ -71,9 +71,6 @@ export async function sendMessageAsync(conversationId, text) {
   if (!trimmed) return { ok: false, error: new Error("Message empty") };
   try {
     const raw = await api.post(`/messaging/conversations/${conversationId}/messages/`, { text: trimmed });
-    // Refresh the whole list to stay consistent
-    const { hydrateConversationsFromApi } = await import("./messagesStore.js");
-    // no-op dynamic import — refresh via getter
     const current = getConversations();
     const msg = {
       id: raw?.id ?? `m_${Date.now()}`,

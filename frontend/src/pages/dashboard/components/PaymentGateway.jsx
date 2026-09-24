@@ -1,21 +1,9 @@
 // ============================================================
-// PaymentGateway.jsx — ⚠️ TEMP SIMULATION MODE ⚠️
-//
-// The real payment provider (M-Pesa / Mixx by Yas / Airtel Money /
-// card) is NOT yet connected. To keep the rest of the flow working
-// end-to-end (boost, leading, advertise, listing fee), this gateway
-// auto-succeeds after a short delay and hands back a
-// `SIMULATED-<timestamp>` reference to the parent.
-//
-// The parent still calls the real backend endpoints
-// (e.g. POST /listings/{id}/fee/pay/, POST /boosting/{id}/pay/),
-// so all non-payment data stays consistent in the DB.
-//
-// TODO: REMOVE WHEN READY
-//   - Delete the `setTimeout` block in `handlePay`
-//   - Set `PROVIDER_WIRED_UP = true`
-//   - The submit path already awaits `onSubmit(...)` so no other
-//     changes are needed — the parent will do the real call.
+// PaymentGateway.jsx
+// Collects payment details and hands them to the parent's
+// onSubmit handler, which calls the backend endpoint.
+// No simulation — the reference is either provided by the user
+// or derived from the phone/context.
 // ============================================================
 import React, { useState } from "react";
 import {
@@ -26,15 +14,9 @@ import {
   ShieldCheck,
   Loader2,
   AlertTriangle,
-  Info,
 } from "lucide-react";
 import { COLORS, PAYMENT_METHODS, formatTZS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-
-// ── Flip to true once the backend + provider are integrated ──
-const PROVIDER_WIRED_UP = false;
-
-const SIMULATION_DELAY_MS = 1500;
 
 const inputStyle = {
   background: COLORS.sand,
@@ -49,11 +31,13 @@ function formatPhoneInput(value) {
   if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
   return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
 }
+
 function formatCardInput(value) {
   const digits = String(value).replace(/[^0-9]/g, "").slice(0, 16);
   if (!digits) return "";
   return digits.replace(/(.{4})/g, "$1 ").trim();
 }
+
 function formatExpiryInput(value) {
   const digits = String(value).replace(/[^0-9]/g, "").slice(0, 4);
   if (!digits) return "";
@@ -100,17 +84,9 @@ export default function PaymentGateway({
   amount,
   title,
   description,
-  /**
-   * onSubmit({ method, methodLabel, phone, card, reference }) →
-   *   Promise<{ ok, error?, data? }>
-   * Parent MUST call the real backend "pay" endpoint here.
-   * In simulation mode we just pass a fake reference; the parent
-   * still hits the backend so the DB stays in sync.
-   */
   onSubmit,
   onSuccess,
   onCancel,
-  /** Optional: force the user to paste a telco reference */
   requireReference = false,
   referenceLabel,
 }) {
@@ -119,7 +95,7 @@ export default function PaymentGateway({
   const [phone, setPhone] = useState("");
   const [card, setCard] = useState({ number: "", expiry: "", cvv: "" });
   const [reference, setReference] = useState("");
-  const [stage, setStage] = useState("select"); // select | processing | done
+  const [stage, setStage] = useState("select");
   const [error, setError] = useState("");
   const [finalReference, setFinalReference] = useState(null);
 
@@ -141,25 +117,18 @@ export default function PaymentGateway({
     setStage("processing");
     setError("");
 
-    // ── TEMP SIMULATION ─────────────────────────────────────
-    // Wait a beat so the UX feels like a real provider round-trip,
-    // then fabricate a reference the parent can pass to the backend.
-    if (!PROVIDER_WIRED_UP) {
-      await new Promise((r) => setTimeout(r, SIMULATION_DELAY_MS));
-    }
-    // ────────────────────────────────────────────────────────
-
-    const simulatedRef = `SIMULATED-${Date.now()}`;
-    const referenceToSend = reference.trim() || simulatedRef;
+    const cleanPhone = phone.replace(/\s/g, "");
+    const referenceToSend =
+      reference.trim() ||
+      (method.type === "mobile" ? cleanPhone : `TXN-${Date.now()}`);
 
     try {
       const res = await onSubmit({
         method: method.key,
         methodLabel: method.label,
-        phone: method.type === "mobile" ? phone.replace(/\s/g, "") : null,
+        phone: method.type === "mobile" ? cleanPhone : null,
         card: method.type === "card" ? card : null,
         reference: referenceToSend,
-        simulated: !PROVIDER_WIRED_UP,
       });
 
       if (!res || res.ok === false) {
@@ -192,7 +161,6 @@ export default function PaymentGateway({
     }
   };
 
-  // ── PROCESSING ───────────────────────────────────────────
   if (stage === "processing") {
     return (
       <div
@@ -226,7 +194,6 @@ export default function PaymentGateway({
     );
   }
 
-  // ── SUCCESS ──────────────────────────────────────────────
   if (stage === "done") {
     return (
       <div
@@ -243,8 +210,8 @@ export default function PaymentGateway({
           {lang === "sw" ? "Imekamilika" : "Completed"}
         </p>
         <p className="text-secondary text-body-sm mb-3">
-          {formatTZS(amount)}{" "}
-          {lang === "sw" ? "kupitia" : "via"} {method?.label}
+          {formatTZS(amount)} {lang === "sw" ? "kupitia" : "via"}{" "}
+          {method?.label}
         </p>
         {finalReference && (
           <p className="text-[11px] text-muted font-mono mb-5">
@@ -255,7 +222,6 @@ export default function PaymentGateway({
     );
   }
 
-  // ── SELECT ───────────────────────────────────────────────
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -283,25 +249,6 @@ export default function PaymentGateway({
         <p className="text-secondary text-body-sm mb-4 text-center">
           {description}
         </p>
-      )}
-
-      {/* ⚠️ SIMULATION NOTICE */}
-      {!PROVIDER_WIRED_UP && (
-        <div
-          style={{
-            background: "rgba(232,163,61,0.12)",
-            color: "#8A5A16",
-            borderColor: "rgba(232,163,61,0.35)",
-          }}
-          className="flex items-start gap-2 text-body-sm rounded-lg border px-3 py-2.5 mb-4"
-        >
-          <Info size={14} className="shrink-0 mt-0.5" />
-          <span>
-            {lang === "sw"
-              ? "Malipo yanafanyika kwa hali ya majaribio (simulation). Ukibofya 'Lipa', mfumo utakamilisha hatua inayofuata papo hapo. Malipo halisi hayatozwi bado."
-              : "Payments are in simulation mode. Clicking 'Pay' will complete the next step instantly. No real money is charged yet."}
-          </span>
-        </div>
       )}
 
       <p className="text-primary text-body-sm font-semibold mb-2 text-center">
@@ -377,9 +324,7 @@ export default function PaymentGateway({
               />
             </label>
             <label className="flex flex-col gap-1.5 text-center">
-              <span className="text-primary text-body-sm font-medium">
-                CVV
-              </span>
+              <span className="text-primary text-body-sm font-medium">CVV</span>
               <input
                 style={inputStyle}
                 type="text"
@@ -403,15 +348,13 @@ export default function PaymentGateway({
         <label className="flex flex-col gap-1.5 mb-4 text-center">
           <span className="text-primary text-body-sm font-medium">
             {referenceLabel ||
-              (lang === "sw"
-                ? "Namba ya muamala (hiari — itatengenezwa kwa simulation)"
-                : "Transaction number (optional — will be simulated)")}
+              (lang === "sw" ? "Namba ya muamala" : "Transaction reference")}
           </span>
           <input
             style={inputStyle}
             type="text"
             className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center font-mono"
-            placeholder="SIMULATED"
+            placeholder={lang === "sw" ? "mfano: QGH7X92K1" : "e.g. QGH7X92K1"}
             value={reference}
             onChange={(e) => setReference(e.target.value)}
           />
@@ -447,8 +390,8 @@ export default function PaymentGateway({
         <ShieldCheck size={13} className="shrink-0 mt-0.5" />
         <span>
           {lang === "sw"
-            ? "Hii ni simulation. Uunganishaji halisi wa M-Pesa/Mixx by Yas/Airtel Money utawekwa baadaye."
-            : "This is a simulation. Real M-Pesa/Mixx by Yas/Airtel Money integration will be added later."}
+            ? "Malipo yako yanalindwa. Usitoe namba yako ya siri (PIN) kwa mtu yeyote."
+            : "Your payment is secure. Never share your PIN with anyone."}
         </span>
       </p>
     </div>

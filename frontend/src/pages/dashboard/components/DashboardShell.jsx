@@ -32,7 +32,7 @@ import { useLanguage } from "../../../context/LanguageContext.jsx";
 // ⬇️ MABADILIKO 1: useAuth + logoutAsync kutoka authStore
 import { useAuth, logoutAsync } from "../../../config/authStore.js";
 import {
-  useListings,
+  useMyListings,
   checkListingExpiry,
   checkListingExpiringSoon,
   fetchMyListingsFromApi,
@@ -227,7 +227,7 @@ export default function DashboardShell() {
   const [tickerIndex, setTickerIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const listings = useListings();
+  const listings = useMyListings();
   const { unreadCount: unreadNotifCount } = useNotifications("user");
   const announcements = useSentAnnouncements();
   const waitingList = useWaitingList();
@@ -366,7 +366,13 @@ export default function DashboardShell() {
   };
 
   const markListingPaid = async (id) => {
-    await payListingFeeAsync(id, { payment_reference: `manual_${Date.now()}` });
+    const feeRes = await payListingFeeAsync(id, {
+      payment_reference: `LF-${id}-${Date.now()}`,
+    });
+    if (!feeRes || feeRes.ok === false) {
+      console.error("[DashboardShell] payListingFee failed:", feeRes?.error);
+      return { ok: false, error: feeRes?.error };
+    }
     const listing = listings.find((l) => l.id === id);
     if (listing) {
       notifyListingFeePaid({
@@ -559,10 +565,10 @@ export default function DashboardShell() {
   };
 
   const renderAvatar = (size = "w-8 h-8", textSize = "text-sm") => {
-    if (user?.avatar) {
+    if (user?.avatarUrl) {
       return (
         <img
-          src={user.avatar}
+          src={user.avatarUrl}
           alt={user.name || "User"}
           className={`${size} rounded-full object-cover shrink-0`}
         />

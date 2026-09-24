@@ -49,7 +49,7 @@ function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
-    audience: raw.recipient_is_staff ? "admin" : "user",
+    audience: raw.recipient_is_staff ? "admin" : "user", // backend has no such field → always "user"
     type: raw.notification_type,
     title: raw.title,
     body: raw.message,

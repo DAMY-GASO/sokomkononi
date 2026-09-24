@@ -425,7 +425,6 @@ export async function updateAvatarAsync(file) {
   try {
     const fd = new FormData();
     fd.append("avatar", file);
-    const raw = await authApi.upload ? null : null; // placeholder to satisfy lint
     const { api } = await import("../api/client.js");
     const result = await api.upload("/auth/profile/avatar/", fd);
     // Refresh profile to get canonical avatar URL

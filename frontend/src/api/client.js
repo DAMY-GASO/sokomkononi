@@ -23,6 +23,7 @@ const PUBLIC_POST_PREFIX = [
   "/auth/password/reset/",
   "/auth/token/refresh/",
   "/contact/",
+  "/auth/social/",
 ];
 
 const PUBLIC_GET_PATTERNS = [
