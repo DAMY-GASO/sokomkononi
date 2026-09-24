@@ -32,6 +32,7 @@ import ContactPage from "./pages/ContactPage.jsx";
 import TermsPage from "./pages/TermsPage.jsx";
 import PrivacyPage from "./pages/PrivacyPage.jsx";
 import JinsiYaKununuaNaKuuza from "./pages/JinsiYaKununuaNaKuuza.jsx";
+import InviteFriends from "./pages/InviteFriends.jsx";
 
 // ============================================================
 // AUTH PAGES
@@ -222,6 +223,7 @@ function App() {
           <Route path="/wasifu" element={<ProfilePage />} />
           <Route path="/profile" element={<ProfilePage />} />
 
+          <Route path="/alika-marafiki" element={<InviteFriendsPage />} />
           {/* ============================================================ */}
           {/* FALLBACK */}
           {/* ============================================================ */}
