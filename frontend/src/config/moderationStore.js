@@ -1,14 +1,14 @@
-// ============================================================
-// moderationStore.js — API-only via /api/listings/admin/
-// ============================================================
+
 import { useEffect, useState } from "react";
 import { moderationApi } from "../api/moderation.js";
-import { normalizeListingFromApi } from "./listingsStore.js";
+import { normalizeListingFromApi, decideListing } from "./listingsStore.js";
 
 const KEY = "sokomkononi_moderation_queue_v1";
 const DEC_KEY = "sokomkononi_moderation_decisions_v1";
 const EV = "sokomkononi:moderation-updated";
 const DEC_EV = "sokomkononi:moderation-decisions-updated";
+
+const sameId = (a, b) => String(a) === String(b);
 
 function read(key, fb = []) {
   if (typeof window === "undefined") return fb;
@@ -17,80 +17,170 @@ function read(key, fb = []) {
     if (!raw) return fb;
     const p = JSON.parse(raw);
     return Array.isArray(p) ? p : fb;
-  } catch { return fb; }
+  } catch {
+    return fb;
+  }
 }
+
 function write(key, event, list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(list));
+  try {
+    window.localStorage.setItem(key, JSON.stringify(list));
+  } catch (err) {
+    console.warn("[moderationStore] storage write failed:", err);
+  }
   window.dispatchEvent(new Event(event));
 }
 
-export function getModerationQueue() { return read(KEY); }
-export function getModerationDecisions() { return read(DEC_KEY); }
-export function getDecisionForListing(id) { return getModerationDecisions().find((d) => d.listingId === id) || null; }
+export function getModerationQueue() {
+  return read(KEY);
+}
+export function getModerationDecisions() {
+  return read(DEC_KEY);
+}
+export function getDecisionForListing(id) {
+  return getModerationDecisions().find((d) => sameId(d.listingId, id)) || null;
+}
 
-export async function hydrateModerationQueueFromApi() {
+function findInQueue(id) {
+  return getModerationQueue().find((l) => sameId(l.id, id)) || null;
+}
+function removeFromQueue(id) {
+  write(KEY, EV, getModerationQueue().filter((l) => !sameId(l.id, id)));
+}
+
+// ── Hydrate (dedupe: ikiwa inaendelea, rudisha promise ileile) ──
+let hydrateInflight = null;
+
+async function runHydrate() {
   try {
     const data = await moderationApi.pendingListings();
     const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map(normalizeListingFromApi).filter(Boolean);
+    const normalized = list
+      .map((r) => normalizeListingFromApi(r, "in_review"))
+      .filter(Boolean);
     write(KEY, EV, normalized);
     return { ok: true, count: normalized.length };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
+export function hydrateModerationQueueFromApi() {
+  if (hydrateInflight) return hydrateInflight;
+  hydrateInflight = runHydrate().finally(() => {
+    hydrateInflight = null;
+  });
+  return hydrateInflight;
+}
+
+// ── Decisions ───────────────────────────────────────────────
 function recordDecision(entry) {
-  const next = [{ ...entry, id: `dec_${Date.now()}`, at: new Date().toISOString() }, ...getModerationDecisions()].slice(0, 500);
+  const next = [
+    { ...entry, id: `dec_${Date.now()}`, at: new Date().toISOString() },
+    ...getModerationDecisions(),
+  ].slice(0, 500);
   write(DEC_KEY, DEC_EV, next);
 }
 
 export async function approveListingFromQueueAsync(listingId, { adminName = "Admin" } = {}) {
-  const target = getModerationQueue().find((l) => l.id === listingId);
+  const target = findInQueue(listingId);
   if (!target) return { ok: false, error: new Error("Listing not in queue") };
   try {
     await moderationApi.approve(listingId);
-    write(KEY, EV, getModerationQueue().filter((l) => l.id !== listingId));
-    recordDecision({ listingId, listingTitle: target.title, action: "approved", adminName });
-    return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    // Huenda admin mwingine ameshughulikia — sasisha queue.
+    hydrateModerationQueueFromApi();
+    return { ok: false, error: err };
+  }
+  removeFromQueue(listingId);
+  decideListing(target.id, "live"); // sasisha caches za listingsStore
+  recordDecision({
+    listingId: target.id,
+    listingTitle: target.title,
+    action: "approved",
+    adminName,
+  });
+  return {
+    ok: true,
+    listing: {
+      ...target,
+      status: "live",
+      approvedAt: new Date().toISOString(),
+      rejectionReason: "",
+    },
+  };
 }
 
-export async function rejectListingFromQueueAsync(listingId, reason, { adminName = "Admin" } = {}) {
-  if (!reason) return { ok: false, error: new Error("Reason required") };
-  const target = getModerationQueue().find((l) => l.id === listingId);
+export async function rejectListingFromQueueAsync(
+  listingId,
+  reason,
+  { adminName = "Admin" } = {}
+) {
+  const cleanReason = (reason || "").trim();
+  if (!cleanReason) return { ok: false, error: new Error("Reason required") };
+  const target = findInQueue(listingId);
   if (!target) return { ok: false, error: new Error("Listing not in queue") };
   try {
-    await moderationApi.reject(listingId, reason);
-    write(KEY, EV, getModerationQueue().filter((l) => l.id !== listingId));
-    recordDecision({ listingId, listingTitle: target.title, action: "rejected", reason, adminName });
-    return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+    await moderationApi.reject(listingId, cleanReason);
+  } catch (err) {
+    hydrateModerationQueueFromApi();
+    return { ok: false, error: err };
+  }
+  removeFromQueue(listingId);
+  decideListing(target.id, "rejected", cleanReason);
+  recordDecision({
+    listingId: target.id,
+    listingTitle: target.title,
+    action: "rejected",
+    reason: cleanReason,
+    adminName,
+  });
+  return {
+    ok: true,
+    listing: {
+      ...target,
+      status: "rejected",
+      rejectedAt: new Date().toISOString(),
+      rejectionReason: cleanReason,
+    },
+  };
+}
+
+function settle(results, ids) {
+  const succeeded = [];
+  const failed = [];
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled" && r.value.ok) succeeded.push(ids[i]);
+    else failed.push({ listingId: ids[i], error: r.value?.error || r.reason });
+  });
+  return { ok: failed.length === 0, succeeded, failed };
 }
 
 export async function bulkApproveAsync(ids, opts) {
-  const results = await Promise.allSettled(ids.map((id) => approveListingFromQueueAsync(id, opts)));
-  const succeeded = [], failed = [];
-  results.forEach((r, i) => {
-    if (r.status === "fulfilled" && r.value.ok) succeeded.push(ids[i]);
-    else failed.push({ listingId: ids[i], error: r.value?.error || r.reason });
-  });
-  return { ok: failed.length === 0, succeeded, failed };
+  const results = await Promise.allSettled(
+    ids.map((id) => approveListingFromQueueAsync(id, opts))
+  );
+  return settle(results, ids);
 }
+
 export async function bulkRejectAsync(ids, reason, opts) {
-  if (!reason) return { ok: false, error: new Error("Reason required"), succeeded: [], failed: [] };
-  const results = await Promise.allSettled(ids.map((id) => rejectListingFromQueueAsync(id, reason, opts)));
-  const succeeded = [], failed = [];
-  results.forEach((r, i) => {
-    if (r.status === "fulfilled" && r.value.ok) succeeded.push(ids[i]);
-    else failed.push({ listingId: ids[i], error: r.value?.error || r.reason });
-  });
-  return { ok: failed.length === 0, succeeded, failed };
+  if (!(reason || "").trim()) {
+    return { ok: false, error: new Error("Reason required"), succeeded: [], failed: [] };
+  }
+  const results = await Promise.allSettled(
+    ids.map((id) => rejectListingFromQueueAsync(id, reason, opts))
+  );
+  return settle(results, ids);
 }
+
+// ── Stats (tarehe ya local, si UTC) ─────────────────────────
+const localDay = (iso) => new Date(iso).toLocaleDateString("en-CA"); // YYYY-MM-DD
 
 export function getModerationStats() {
   const d = getModerationDecisions();
-  const today = new Date().toISOString().slice(0, 10);
-  const td = d.filter((x) => x.at.startsWith(today));
+  const today = new Date().toLocaleDateString("en-CA");
+  const td = d.filter((x) => localDay(x.at) === today);
   return {
     totalDecisions: d.length,
     approved: d.filter((x) => x.action === "approved").length,
@@ -101,12 +191,19 @@ export function getModerationStats() {
   };
 }
 
-export function clearDecisions() { write(DEC_KEY, DEC_EV, []); }
+export function clearDecisions() {
+  write(DEC_KEY, DEC_EV, []);
+}
 
-export function useModerationQueue() {
+// ── Hooks ───────────────────────────────────────────────────
+/**
+ * @param {{hydrate?: boolean}} opts  hydrate=false ikiwa mtumiaji wa hook
+ *        anaita hydrateModerationQueueFromApi() mwenyewe.
+ */
+export function useModerationQueue({ hydrate = true } = {}) {
   const [q, setQ] = useState(() => getModerationQueue());
   useEffect(() => {
-    hydrateModerationQueueFromApi();
+    if (hydrate) hydrateModerationQueueFromApi();
     const sync = () => setQ(getModerationQueue());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);
@@ -114,9 +211,10 @@ export function useModerationQueue() {
       window.removeEventListener("storage", sync);
       window.removeEventListener(EV, sync);
     };
-  }, []);
+  }, [hydrate]);
   return q;
 }
+
 export function useModerationDecisions() {
   const [d, setD] = useState(() => getModerationDecisions());
   useEffect(() => {
@@ -130,7 +228,10 @@ export function useModerationDecisions() {
   }, []);
   return d;
 }
-export function usePendingModerationCount() { return useModerationQueue().length; }
+
+export function usePendingModerationCount() {
+  return useModerationQueue().length;
+}
 
 // LEGACY (compat shims)
 export const SEED_QUEUE = [];
