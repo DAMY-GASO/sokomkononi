@@ -26,13 +26,25 @@ function write(list) {
 
 function norm(raw) {
   if (!raw) return null;
+  // Backend sends label/sub as plain strings; keep them as strings so
+  // the UI can render directly. Also capture id_field (used in PATCH URL).
+  const label =
+    typeof raw.label === "string"
+      ? raw.label
+      : raw.label?.sw || raw.label?.en || null;
+  const sub =
+    typeof raw.sub === "string"
+      ? raw.sub
+      : raw.sub?.sw || raw.sub?.en || null;
+
   return {
     id: TIER_TO_ID[raw.tier] || (raw.tier || "").toLowerCase(),
     backendId: raw.id,
+    idField: raw.id_field || raw.idField || null,
     tier: raw.tier,
     hours: raw.hours,
-    label: raw.label || { sw: raw.label_sw || "", en: raw.label_en || "" },
-    sub: raw.sub || (raw.sub_sw ? { sw: raw.sub_sw, en: raw.sub_en } : null),
+    label,
+    sub,
     fee: Number(raw.fee) || 0,
     ordering: raw.ordering ?? 0,
   };
@@ -57,16 +69,38 @@ export async function updateReservationRateAsync(id, fee) {
     return { ok: false, error: new Error("fee must be a positive number") };
   }
   const target = getReservationRate(id);
-  if (!target) return { ok: false, error: new Error(`Rate "${id}" not found`) };
-  if (typeof target.backendId !== "number") {
-    return { ok: false, error: new Error(`Rate "${id}" has no backend id`) };
+  if (!target) {
+    return { ok: false, error: new Error(`Rate "${id}" not found`) };
   }
-  try {
-    const raw = await api.patch(`/reservation-rates/${target.backendId}/`, { fee: num });
-    const updated = norm(raw) || { ...target, fee: num };
-    write(read().map((r) => (r.id === id ? updated : r)));
-    return { ok: true, rate: updated };
-  } catch (err) { return { ok: false, error: err }; }
+
+  // Backend spec: PATCH /api/reservation-rates/{tier}/ where tier is
+  // one of H24, H48, H72, CUSTOM. Try tier first, then id_field, then
+  // numeric PK as last resort.
+  const candidates = [target.tier, target.idField, target.backendId]
+    .filter((x) => x !== undefined && x !== null && x !== "");
+  let lastErr = null;
+
+  for (const lookup of candidates) {
+    try {
+      const raw = await api.patch(`/reservation-rates/${lookup}/`, {
+        fee: num,
+      });
+      const updated = norm(raw) || { ...target, fee: num };
+      write(read().map((r) => (r.id === id ? updated : r)));
+      return { ok: true, rate: updated };
+    } catch (err) {
+      lastErr = err;
+      // Retry only on 404 (wrong lookup field); stop on 400/403.
+      if (err?.status !== 404) break;
+    }
+  }
+
+  return {
+    ok: false,
+    error:
+      lastErr ||
+      new Error("Could not update reservation rate on the backend."),
+  };
 }
 
 export function useReservationRates() {

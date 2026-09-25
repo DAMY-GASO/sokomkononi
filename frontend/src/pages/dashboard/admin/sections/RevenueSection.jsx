@@ -376,7 +376,7 @@ export default function RevenueSection() {
             {reservationRates.map((r) => (
               <div key={r.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2.5">
                 <span className="text-sm text-secondary min-w-0 truncate">
-                  {r.label?.[lang] || r.label?.sw || r.id}
+                  {getLocalized(r.label, lang) || r.id}
                 </span>
                 <div className="w-full sm:w-40 shrink-0">
                   <EditableAmount value={r.fee} onSave={(v) => updateReservationFee(r.id, v)} />

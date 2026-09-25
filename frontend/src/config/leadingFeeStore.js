@@ -59,15 +59,25 @@ export async function updateLeadingFeePriceAsync(price) {
     return { ok: false, error: new Error("price must be a positive number") };
   }
   const cur = getLeadingFeeConfig();
-  if (!cur.backendId) {
-    return { ok: false, error: new Error("No backend id — hydrate first") };
-  }
+
+  // Backend spec: POST /api/leading-fees/ is "admin upsert",
+  // PATCH /api/leading-fees/ is "admin partial". There is NO
+  // /leading-fees/{id}/ subpath. Try PATCH first (partial), then POST.
   try {
-    const raw = await api.patch(`/leading-fees/${cur.backendId}/`, { price: num });
+    const raw = await api.patch("/leading-fees/", { price: num });
     const updated = norm(raw) || { ...cur, price: num };
     write(updated);
     return { ok: true, config: updated };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err1) {
+    try {
+      const raw = await api.post("/leading-fees/", { price: num });
+      const updated = norm(raw) || { ...cur, price: num };
+      write(updated);
+      return { ok: true, config: updated };
+    } catch (err2) {
+      return { ok: false, error: err2 || err1 };
+    }
+  }
 }
 
 export function useLeadingFeeConfig() {

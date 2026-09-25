@@ -59,15 +59,24 @@ export async function updateAdvertisementFeePriceAsync(price) {
     return { ok: false, error: new Error("price must be a positive number") };
   }
   const cur = getAdvertisementFeeConfig();
-  if (!cur.backendId) {
-    return { ok: false, error: new Error("No backend id — hydrate first") };
-  }
+
+  // Backend spec: PATCH /api/advertisement-fees/ (collection) or
+  // POST /api/advertisement-fees/ (create/upsert). No /{id}/ subpath.
   try {
-    const raw = await api.patch(`/advertisement-fees/${cur.backendId}/`, { price: num });
+    const raw = await api.patch("/advertisement-fees/", { price: num });
     const updated = norm(raw) || { ...cur, price: num };
     write(updated);
     return { ok: true, config: updated };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err1) {
+    try {
+      const raw = await api.post("/advertisement-fees/", { price: num });
+      const updated = norm(raw) || { ...cur, price: num };
+      write(updated);
+      return { ok: true, config: updated };
+    } catch (err2) {
+      return { ok: false, error: err2 || err1 };
+    }
+  }
 }
 
 export function useAdvertisementFeeConfig() {
