@@ -1,17 +1,15 @@
 // ============================================================
-// leadingFeeStore.js — Leading Fee (API-backed)
-// Backend: GET/PATCH/POST /api/leading-fees/
-//   Spec: PATCH/POST on collection — NO /{id}/ subpath.
+// leadingFeeStore.js — API-only via /api/leading-fees/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const KEY = "sokomkononi_leading_fee_config_v2";
+const KEY = "sokomkononi_leading_fee_config_v1";
 const EV = "sokomkononi:leading-fee-config-updated";
 
 const FALLBACK = {
   price: 0,
-  days: 7,
+  days: 0,
   label: { sw: "Ada ya Kipaumbele", en: "Leading Fee" },
   desc: { sw: "", en: "" },
 };
@@ -22,7 +20,8 @@ function read() {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return FALLBACK;
     const p = JSON.parse(raw);
-    return p && typeof p === "object" ? { ...FALLBACK, ...p } : FALLBACK;
+    if (!p || typeof p !== "object") return FALLBACK;
+    return { ...FALLBACK, ...p };
   } catch { return FALLBACK; }
 }
 function write(cfg) {
@@ -30,19 +29,15 @@ function write(cfg) {
   window.localStorage.setItem(KEY, JSON.stringify(cfg));
   window.dispatchEvent(new Event(EV));
 }
-function normalizeLabel(raw, fallback) {
-  if (!raw) return fallback;
-  if (typeof raw === "string") return { sw: raw, en: raw };
-  return { sw: raw.sw || raw.en || "", en: raw.en || raw.sw || "" };
-}
+
 function norm(raw) {
   if (!raw) return null;
   return {
     backendId: raw.id,
     price: Number(raw.price) || 0,
-    days: Number(raw.days) || 7,
-    label: normalizeLabel(raw.label, FALLBACK.label),
-    desc: normalizeLabel(raw.desc, FALLBACK.desc),
+    days: Number(raw.days) || 0,
+    label: raw.label || FALLBACK.label,
+    desc: raw.desc || FALLBACK.desc,
   };
 }
 
@@ -53,43 +48,34 @@ export async function hydrateLeadingFeeFromApi() {
     const d = await api.get("/leading-fees/?page_size=100");
     const row = Array.isArray(d) ? d[0] : (d?.results?.[0] ?? d);
     const normalized = norm(row);
-    if (normalized) {
-      write(normalized);
-      console.info("[leadingFeeStore] hydrated:", normalized);
-    }
+    if (normalized) write(normalized);
     return { ok: true, config: normalized };
-  } catch (err) {
-    console.warn("[leadingFeeStore] hydrate failed:", err?.message, err?.status);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function updateLeadingFeePriceAsync(price) {
   const num = Number(price);
   if (!Number.isFinite(num) || num < 0) {
-    return { ok: false, error: new Error("price must be non-negative") };
+    return { ok: false, error: new Error("price must be a positive number") };
   }
   const cur = getLeadingFeeConfig();
 
-  // Backend spec: PATCH or POST to /leading-fees/ (collection). Try PATCH first.
+  // Backend spec: POST /api/leading-fees/ is "admin upsert",
+  // PATCH /api/leading-fees/ is "admin partial". There is NO
+  // /leading-fees/{id}/ subpath. Try PATCH first (partial), then POST.
   try {
-    console.info(`[leadingFeeStore] PATCH /leading-fees/ price=${num}`);
     const raw = await api.patch("/leading-fees/", { price: num });
     const updated = norm(raw) || { ...cur, price: num };
     write(updated);
     return { ok: true, config: updated };
-  } catch (errPatch) {
-    if (errPatch?.status && errPatch.status !== 404 && errPatch.status !== 405) {
-      return { ok: false, error: errPatch };
-    }
+  } catch (err1) {
     try {
-      console.info(`[leadingFeeStore] POST /leading-fees/ price=${num}`);
       const raw = await api.post("/leading-fees/", { price: num });
       const updated = norm(raw) || { ...cur, price: num };
       write(updated);
       return { ok: true, config: updated };
-    } catch (errPost) {
-      return { ok: false, error: errPost || errPatch };
+    } catch (err2) {
+      return { ok: false, error: err2 || err1 };
     }
   }
 }
@@ -109,8 +95,8 @@ export function useLeadingFeeConfig() {
   return cfg;
 }
 
-// Legacy
-export const SEED_LEADING_FEE_CONFIG = { price: 0, days: 0, label: { sw: "", en: "" }, desc: { sw: "", en: "" } };
+// LEGACY (compat shims)
+export const SEED_LEADING_FEE_CONFIG = { price: 0, days: 0, label: { sw: '', en: '' }, desc: { sw: '', en: '' } };
 export function saveLeadingFeeConfig() {}
 export function updateLeadingFeePrice() {}
 export async function updateLeadingFeeAsync() { return { ok: false }; }

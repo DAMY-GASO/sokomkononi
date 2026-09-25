@@ -1,10 +1,11 @@
 // ============================================================
-// RevenueSection.jsx — fully backend-synced
-// All amounts editable, all endpoints wired to real backend.
+// RevenueSection.jsx
+// Mapato & Fedha — fees zote 5 + Categories Bila Fee Config.
+// ASYNC via API for all editable fields (with rollback).
 // ============================================================
 import React, { useState } from "react";
 import {
-  Home, Clock, Rocket, Search, Smartphone, Plus, AlertTriangle, Pencil, Info, Loader2, RefreshCw,
+  Home, Clock, Rocket, Search, Smartphone, Plus, AlertTriangle, Pencil, Info, Loader2,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -12,30 +13,37 @@ import EditableAmount from "../components/Revenue/EditableAmount.jsx";
 import EditablePercent from "../components/Revenue/EditablePercent.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
-  useReservationRates, updateReservationRateAsync, hydrateReservationRatesFromApi,
+  useReservationRates,
+  updateReservationRateAsync,
 } from "../../../../config/feePolicy.js";
 import {
-  useBoostPackages, updateBoostPackagePriceAsync, hydrateBoostPackagesFromApi,
+  useBoostPackages,
+  updateBoostPackagePriceAsync,
 } from "../../../../config/boostPackagesStore.js";
 import {
-  useListingFeeConfigs, updateListingFeeConfigAsync, addFeeConfigAsync, hasFeeConfig,
-  hydrateListingFeeConfigsFromApi,
+  useListingFeeConfigs,
+  updateListingFeeConfigAsync,
+  addFeeConfigAsync,
+  hasFeeConfig,
 } from "../../../../config/listingFeeStore.js";
 import {
-  useLeadingFeeConfig, updateLeadingFeePriceAsync, hydrateLeadingFeeFromApi,
+  useLeadingFeeConfig,
+  updateLeadingFeePriceAsync,
 } from "../../../../config/leadingFeeStore.js";
 import {
-  useAdvertisementFeeConfig, updateAdvertisementFeePriceAsync, hydrateAdvertisementFeeFromApi,
+  useAdvertisementFeeConfig,
+  updateAdvertisementFeePriceAsync,
 } from "../../../../config/advertisementFeeStore.js";
 import {
-  useActiveCategories, getCategory, getCategoryIcon,
+  useActiveCategories,
+  getCategory,
+  getCategoryIcon,
 } from "../../../../config/categoriesStore.js";
 
-// ── Helpers ───────────────────────────────────────────────
 function getLocalized(field, lang) {
   if (!field) return "";
   if (typeof field === "string") return field;
-  return field?.[lang] || field?.sw || field?.en || "";
+  return field?.[lang] || field?.sw || "";
 }
 
 function RevenueCard({ accentColor, children }) {
@@ -52,10 +60,8 @@ function RevenueCard({ accentColor, children }) {
 function EditHint({ lang, accentColor = COLORS.gold }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   return (
-    <p
-      className="text-[11px] font-medium mb-3 flex items-center gap-1.5"
-      style={{ color: accentColor }}
-    >
+    <p className="text-[11px] font-medium mb-3 flex items-center gap-1.5"
+       style={{ color: accentColor }}>
       <Pencil size={11} />
       {t("Bofya kiasi chochote kuhariri", "Click any amount to edit")}
     </p>
@@ -71,11 +77,10 @@ export default function RevenueSection() {
   const adFee = useAdvertisementFeeConfig();
   const activeCategories = useActiveCategories();
 
+  const [saved, setSaved] = useState(false);
   const [flash, setFlash] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState({});
-  const [refreshing, setRefreshing] = useState(false);
-  const [lastSync, setLastSync] = useState(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -84,31 +89,9 @@ export default function RevenueSection() {
     setTimeout(() => setFlash(null), 3500);
   };
 
-  // ── Global refresh from backend ─────────────────────────
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    setError("");
-    try {
-      const results = await Promise.allSettled([
-        hydrateReservationRatesFromApi(),
-        hydrateBoostPackagesFromApi(),
-        hydrateListingFeeConfigsFromApi(),
-        hydrateLeadingFeeFromApi(),
-        hydrateAdvertisementFeeFromApi(),
-      ]);
-      const failed = results.filter((r) => r.status === "rejected" || r.value?.ok === false);
-      setLastSync(new Date());
-      if (failed.length) {
-        showFlash(
-          t(`Imeshindwa kupakia sehemu ${failed.length}`, `Failed to load ${failed.length} section(s)`),
-          "error"
-        );
-      } else {
-        showFlash(t("Data imesasishwa kutoka backend", "Data refreshed from backend"));
-      }
-    } finally {
-      setRefreshing(false);
-    }
+  const flashSaved = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
   };
 
   const withBusy = async (key, fn) => {
@@ -119,86 +102,90 @@ export default function RevenueSection() {
       const res = await fn();
       if (res && res.ok === false) {
         setError(
-          res.error?.data?.detail ||
-            res.error?.message ||
+          res.error?.message ||
             t("Imeshindwa kuhifadhi.", "Failed to save.")
         );
-        return { ok: false, error: res.error };
       }
-      return res || { ok: true };
+      return res;
     } catch (e) {
-      setError(e?.data?.detail || e?.message || t("Hitilafu.", "Error."));
+      setError(e?.message || t("Hitilafu isiyojulikana.", "Unexpected error."));
       return { ok: false, error: e };
     } finally {
-      setBusy((b) => {
-        const n = { ...b };
-        delete n[key];
-        return n;
-      });
+      setBusy((b) => { const n = { ...b }; delete n[key]; return n; });
     }
   };
 
-  const flashSaved = () => showFlash(t("Imehifadhiwa", "Saved"));
-
-  // ── Listing Fee ─────────────────────────────────────────
+  // ============================================================
+  // LISTING FEE — ASYNC
+  // ============================================================
   const updateListingFeeRate = (key, rate) =>
     withBusy(`lf-rate-${key}`, async () => {
       const res = await updateListingFeeConfigAsync(key, { rate });
       if (res.ok) flashSaved();
-      return res;
+      else setError(res.error?.message || t("Imeshindwa kuhifadhi kiwango.", "Failed to save rate."));
     });
 
   const updateListingFeeMin = (key, min) =>
     withBusy(`lf-min-${key}`, async () => {
       const res = await updateListingFeeConfigAsync(key, { min });
       if (res.ok) flashSaved();
-      return res;
+      else setError(res.error?.message || t("Imeshindwa kuhifadhi kiwango cha chini.", "Failed to save min."));
     });
 
   const updateListingFeeMax = (key, max) =>
     withBusy(`lf-max-${key}`, async () => {
       const res = await updateListingFeeConfigAsync(key, { max });
       if (res.ok) flashSaved();
-      return res;
+      else setError(res.error?.message || t("Imeshindwa kuhifadhi kiwango cha juu.", "Failed to save max."));
     });
 
-  // ── Reservation ─────────────────────────────────────────
+  // ============================================================
+  // RESERVATION — ASYNC
+  // ============================================================
   const updateReservationFee = (id, fee) =>
     withBusy(`res-${id}`, async () => {
       const res = await updateReservationRateAsync(id, fee);
       if (res.ok) flashSaved();
-      return res;
+      else setError(res.error?.message || t("Imeshindwa kuhifadhi ada ya reservation.", "Failed to save reservation fee."));
     });
 
-  // ── Boost ───────────────────────────────────────────────
+  // ============================================================
+  // BOOST — ASYNC
+  // ============================================================
   const updateBoostPrice = (key, price) =>
     withBusy(`boost-${key}`, async () => {
       const res = await updateBoostPackagePriceAsync(key, price);
       if (res.ok) flashSaved();
-      return res;
+      else setError(res.error?.message || t("Imeshindwa kuhifadhi bei ya boost.", "Failed to save boost price."));
     });
 
-  // ── Leading ─────────────────────────────────────────────
+  // ============================================================
+  // LEADING — ASYNC
+  // ============================================================
   const updateLeadingPrice = (price) =>
     withBusy("leading", async () => {
       const res = await updateLeadingFeePriceAsync(price);
       if (res.ok) flashSaved();
-      return res;
+      else setError(res.error?.message || t("Imeshindwa kuhifadhi ada ya leading.", "Failed to save leading fee."));
     });
 
-  // ── Advertisement ───────────────────────────────────────
+  // ============================================================
+  // ADVERTISEMENT — ASYNC
+  // ============================================================
   const updateAdvertisementPrice = (price) =>
     withBusy("advertisement", async () => {
       const res = await updateAdvertisementFeePriceAsync(price);
       if (res.ok) flashSaved();
-      return res;
+      else setError(res.error?.message || t("Imeshindwa kuhifadhi ada ya matangazo.", "Failed to save advertisement fee."));
     });
 
   const missingFeeCategories = activeCategories.filter((c) => !hasFeeConfig(c.key));
 
   const handleAddFeeConfig = (cat) =>
     withBusy(`add-fee-${cat.key}`, async () => {
-      const nameForApi = cat?.label?.en || cat?.label?.sw || cat?.key || "New Category";
+      // Backend expects { name, percentage, min_price, max_price, priority }
+      const nameForApi =
+        cat?.label?.en || cat?.label?.sw || cat?.key || "New Category";
       const res = await addFeeConfigAsync({
         name: nameForApi,
         percentage: 1.0,
@@ -209,12 +196,13 @@ export default function RevenueSection() {
       if (res.ok) {
         showFlash(
           t(
-            `Fee config ya "${cat.key}" imeongezwa.`,
-            `Fee config for "${cat.key}" added.`
+            `Fee config ya "${cat.key}" imeongezwa (1%, min 10,000, max 100,000).`,
+            `Fee config for "${cat.key}" added (1%, min 10,000, max 100,000).`
           )
         );
+      } else {
+        setError(res.error?.message || t("Imeshindwa kuongeza fee config.", "Failed to add fee config."));
       }
-      return res;
     });
 
   return (
@@ -223,57 +211,29 @@ export default function RevenueSection() {
         title={t("Mapato & Fedha", "Revenue & Financial Settings")}
         subtitle={t(
           "Vyanzo vyote 5 vya mapato — bofya kiasi kubadilisha",
-          "All 5 revenue streams — click any amount to edit"
+          "All 5 revenue streams — tap amount to edit"
         )}
       />
 
-      {/* Global status row */}
-      <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors disabled:opacity-60"
-          style={{
-            borderColor: COLORS.sandLine,
-            color: COLORS.night,
-            background: "white",
-          }}
-        >
-          <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
-          {refreshing
-            ? t("Inasasisha...", "Refreshing...")
-            : t("Sasisha kutoka Backend", "Refresh from Backend")}
-        </button>
-        {lastSync && (
-          <span className="text-[11px] text-muted">
-            {t("Mwisho", "Last")}:{" "}
-            {lastSync.toLocaleTimeString(lang === "sw" ? "sw-TZ" : "en-US")}
-          </span>
-        )}
-      </div>
-
-      {/* Flash + Error */}
-      {(flash || error) && (
-        <div className="flex flex-wrap gap-2 mb-4 justify-center">
+      {(saved || flash || error) && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {saved && (
+            <div style={{ background: `${COLORS.green}15`, color: COLORS.green }}
+                 className="text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5">
+              ✓ {t("Imehifadhiwa", "Saved")}
+            </div>
+          )}
           {flash && (
-            <div
-              style={{
-                background:
-                  flash.type === "error"
-                    ? `${COLORS.rust}15`
-                    : `${COLORS.green}15`,
-                color: flash.type === "error" ? COLORS.rust : COLORS.green,
-              }}
-              className="text-xs font-semibold px-3 py-2 rounded-lg"
-            >
+            <div style={{
+              background: flash.type === "error" ? `${COLORS.rust}15` : `${COLORS.green}15`,
+              color: flash.type === "error" ? COLORS.rust : COLORS.green,
+            }} className="text-xs font-semibold px-3 py-2 rounded-lg">
               {flash.msg}
             </div>
           )}
           {error && (
-            <div
-              style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
-              className="text-xs font-semibold px-3 py-2 rounded-lg"
-            >
+            <div style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+                 className="text-xs font-semibold px-3 py-2 rounded-lg">
               {error}
             </div>
           )}
@@ -281,30 +241,24 @@ export default function RevenueSection() {
       )}
 
       <div className="flex flex-col gap-4">
-        {/* Missing fee configs */}
+        {/* MISSING FEE CONFIGS */}
         {missingFeeCategories.length > 0 && (
-          <div
-            className="rounded-xl border-2 p-4 sm:p-5"
-            style={{ borderColor: COLORS.rust, background: `${COLORS.rust}05` }}
-          >
+          <div className="rounded-xl border-2 p-4 sm:p-5"
+               style={{ borderColor: COLORS.rust, background: `${COLORS.rust}05` }}>
             <div className="flex items-start gap-3 mb-4">
-              <div
-                style={{ background: `${COLORS.rust}20` }}
-                className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-              >
+              <div style={{ background: `${COLORS.rust}20` }}
+                   className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
                 <AlertTriangle size={18} color={COLORS.rust} />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-primary">
-                  {t(
-                    `Categories Bila Fee Config (${missingFeeCategories.length})`,
-                    `Categories Without Fee Config (${missingFeeCategories.length})`
-                  )}
+                  {t(`Categories Bila Fee Config (${missingFeeCategories.length})`,
+                     `Categories Without Fee Config (${missingFeeCategories.length})`)}
                 </p>
                 <p className="text-xs text-secondary mt-0.5">
                   {t(
-                    'Bofya "Ongeza Fee" kwa kila moja ili wauzaji waweze kuunda listing.',
-                    'Click "Add Fee" for each so sellers can create listings.'
+                    'Categories hizi ni hai lakini wauzaji hawawezi kuunda listing — bofya "Ongeza Fee" kwa kila moja',
+                    'These categories are active but sellers cannot create listings — click "Add Fee" for each'
                   )}
                 </p>
               </div>
@@ -316,39 +270,24 @@ export default function RevenueSection() {
                 const catLabel = cat.label?.[lang] || cat.label?.sw || cat.key;
                 const isBusy = !!busy[`add-fee-${cat.key}`];
                 return (
-                  <div
-                    key={cat.key}
-                    style={{ borderColor: COLORS.sandLine }}
-                    className="flex items-center gap-2 sm:gap-3 border rounded-lg px-2.5 sm:px-3 py-2 bg-white"
-                  >
+                  <div key={cat.key}
+                       style={{ borderColor: COLORS.sandLine }}
+                       className="flex items-center gap-2 sm:gap-3 border rounded-lg px-2.5 sm:px-3 py-2 bg-white">
                     {hasPhoto ? (
-                      <img
-                        src={cat.imageUrl}
-                        alt={catLabel}
-                        className="w-9 h-9 rounded-lg object-cover shrink-0"
-                      />
+                      <img src={cat.imageUrl} alt={catLabel} className="w-9 h-9 rounded-lg object-cover shrink-0" />
                     ) : (
-                      <div
-                        style={{ background: COLORS.night }}
-                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                      >
+                      <div style={{ background: COLORS.night }}
+                           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0">
                         <Icon size={14} color={COLORS.gold} />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-primary truncate">
-                        {catLabel}
-                      </p>
-                      <p className="text-[11px] text-muted font-mono truncate">
-                        {cat.key}
-                      </p>
+                      <p className="text-sm font-semibold text-primary truncate">{catLabel}</p>
+                      <p className="text-[11px] text-muted font-mono truncate">{cat.key}</p>
                     </div>
-                    <button
-                      onClick={() => handleAddFeeConfig(cat)}
-                      disabled={isBusy}
-                      style={{ background: COLORS.rust, color: "white" }}
-                      className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold px-2 sm:px-3 py-1.5 rounded-lg shrink-0 disabled:opacity-50"
-                    >
+                    <button onClick={() => handleAddFeeConfig(cat)} disabled={isBusy}
+                            style={{ background: COLORS.rust, color: "white" }}
+                            className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold px-2 sm:px-3 py-1.5 rounded-lg shrink-0 hover:opacity-90 transition-opacity disabled:opacity-50">
                       {isBusy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                       <span className="hidden sm:inline">{t("Ongeza Fee", "Add Fee")}</span>
                       <span className="sm:hidden">{t("Ongeza", "Add")}</span>
@@ -363,10 +302,8 @@ export default function RevenueSection() {
         {/* 1. LISTING FEE */}
         <RevenueCard accentColor={COLORS.gold}>
           <div className="flex items-center gap-3 mb-1">
-            <div
-              style={{ background: `${COLORS.gold}15` }}
-              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-            >
+            <div style={{ background: `${COLORS.gold}15` }}
+                 className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
               <Home size={18} color={COLORS.gold} />
             </div>
             <div className="min-w-0">
@@ -374,10 +311,7 @@ export default function RevenueSection() {
                 {t("Ada ya Kuchapisha", "Listing Fee")}
               </p>
               <p className="text-xs text-secondary mt-0.5">
-                {t(
-                  "Asilimia ya bei ya mali kwa category",
-                  "Percentage of property price per category"
-                )}
+                {t("Asilimia ya bei ya mali kwa category", "Percentage of property price per category")}
               </p>
             </div>
           </div>
@@ -395,10 +329,7 @@ export default function RevenueSection() {
                         {t("Kiwango", "Rate")}
                       </span>
                       <div className="w-full min-w-0">
-                        <EditablePercent
-                          value={c.rate}
-                          onSave={(v) => updateListingFeeRate(c.key, v)}
-                        />
+                        <EditablePercent value={c.rate} onSave={(v) => updateListingFeeRate(c.key, v)} />
                       </div>
                     </div>
                     <div className="flex flex-col items-start min-w-0">
@@ -406,10 +337,7 @@ export default function RevenueSection() {
                         {t("Chini", "Min")}
                       </span>
                       <div className="w-full min-w-0">
-                        <EditableAmount
-                          value={c.min}
-                          onSave={(v) => updateListingFeeMin(c.key, v)}
-                        />
+                        <EditableAmount value={c.min} onSave={(v) => updateListingFeeMin(c.key, v)} />
                       </div>
                     </div>
                     <div className="flex flex-col items-start min-w-0">
@@ -417,10 +345,7 @@ export default function RevenueSection() {
                         {t("Juu", "Max")}
                       </span>
                       <div className="w-full min-w-0">
-                        <EditableAmount
-                          value={c.max}
-                          onSave={(v) => updateListingFeeMax(c.key, v)}
-                        />
+                        <EditableAmount value={c.max} onSave={(v) => updateListingFeeMax(c.key, v)} />
                       </div>
                     </div>
                   </div>
@@ -433,10 +358,8 @@ export default function RevenueSection() {
         {/* 2. RESERVATION */}
         <RevenueCard accentColor={COLORS.green}>
           <div className="flex items-center gap-3 mb-1">
-            <div
-              style={{ background: `${COLORS.green}15` }}
-              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-            >
+            <div style={{ background: `${COLORS.green}15` }}
+                 className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
               <Clock size={18} color={COLORS.green} />
             </div>
             <div className="min-w-0">
@@ -451,39 +374,23 @@ export default function RevenueSection() {
           <EditHint lang={lang} accentColor={COLORS.green} />
           <div className="divide-y divide-gray-100">
             {reservationRates.map((r) => (
-              <div
-                key={r.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2.5"
-              >
+              <div key={r.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2.5">
                 <span className="text-sm text-secondary min-w-0 truncate">
                   {getLocalized(r.label, lang) || r.id}
                 </span>
                 <div className="w-full sm:w-40 shrink-0">
-                  <EditableAmount
-                    value={r.fee}
-                    onSave={(v) => updateReservationFee(r.id, v)}
-                  />
+                  <EditableAmount value={r.fee} onSave={(v) => updateReservationFee(r.id, v)} />
                 </div>
               </div>
             ))}
-            {reservationRates.length === 0 && (
-              <p className="text-xs text-muted py-3 text-center">
-                {t(
-                  "Hakuna rates zilizopakiwa. Bofya 'Sasisha kutoka Backend'.",
-                  "No rates loaded. Click 'Refresh from Backend'."
-                )}
-              </p>
-            )}
           </div>
         </RevenueCard>
 
         {/* 3. BOOST */}
         <RevenueCard accentColor={COLORS.rust}>
           <div className="flex items-center gap-3 mb-1">
-            <div
-              style={{ background: `${COLORS.rust}15` }}
-              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-            >
+            <div style={{ background: `${COLORS.rust}15` }}
+                 className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
               <Rocket size={18} color={COLORS.rust} />
             </div>
             <div className="min-w-0">
@@ -498,50 +405,32 @@ export default function RevenueSection() {
           <EditHint lang={lang} accentColor={COLORS.rust} />
           <div className="divide-y divide-gray-100">
             {boostPackages.map((pkg) => (
-              <div
-                key={pkg.key}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2.5"
-              >
+              <div key={pkg.key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2.5">
                 <span className="text-sm text-secondary min-w-0 truncate">
-                  {getLocalized(pkg.label, lang) || pkg.name || pkg.key}{" "}
-                  <span className="text-muted">
-                    ({pkg.days} {t("siku", "days")})
-                  </span>
+                  {pkg.label?.[lang] || pkg.label?.sw || pkg.key}{" "}
+                  <span className="text-muted">({pkg.days} {t("siku", "days")})</span>
                 </span>
                 <div className="w-full sm:w-40 shrink-0">
-                  <EditableAmount
-                    value={pkg.price}
-                    onSave={(v) => updateBoostPrice(pkg.key, v)}
-                  />
+                  <EditableAmount value={pkg.price} onSave={(v) => updateBoostPrice(pkg.key, v)} />
                 </div>
               </div>
             ))}
-            {boostPackages.length === 0 && (
-              <p className="text-xs text-muted py-3 text-center">
-                {t(
-                  "Hakuna packages zilizopakiwa. Bofya 'Sasisha kutoka Backend'.",
-                  "No packages loaded. Click 'Refresh from Backend'."
-                )}
-              </p>
-            )}
           </div>
         </RevenueCard>
 
-        {/* 4 & 5. LEADING + ADVERTISEMENT */}
+        {/* 4 + 5. LEADING + ADVERTISEMENT */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <RevenueCard accentColor={COLORS.rust}>
-            <div
-              style={{ background: `${COLORS.rust}15` }}
-              className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-            >
+            <div style={{ background: `${COLORS.rust}15` }}
+                 className="w-10 h-10 rounded-xl flex items-center justify-center mb-3">
               <Search size={18} color={COLORS.rust} />
             </div>
             <div className="mb-3">
               <p className="text-sm font-semibold text-primary">
-                {getLocalized(leadingFee.label, lang) || "Leading Fee"}
+                {getLocalized(leadingFee.label, lang)}
               </p>
               <p className="text-xs text-secondary mt-0.5">
-                {getLocalized(leadingFee.desc, lang) || ""}
+                {getLocalized(leadingFee.desc, lang)}
               </p>
             </div>
             <EditHint lang={lang} accentColor={COLORS.rust} />
@@ -552,18 +441,16 @@ export default function RevenueSection() {
           </RevenueCard>
 
           <RevenueCard accentColor={COLORS.rust}>
-            <div
-              style={{ background: `${COLORS.rust}15` }}
-              className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-            >
+            <div style={{ background: `${COLORS.rust}15` }}
+                 className="w-10 h-10 rounded-xl flex items-center justify-center mb-3">
               <Smartphone size={18} color={COLORS.rust} />
             </div>
             <div className="mb-3">
               <p className="text-sm font-semibold text-primary">
-                {getLocalized(adFee.label, lang) || "Advertisement Fee"}
+                {getLocalized(adFee.label, lang)}
               </p>
               <p className="text-xs text-secondary mt-0.5">
-                {getLocalized(adFee.desc, lang) || ""}
+                {getLocalized(adFee.desc, lang)}
               </p>
             </div>
             <EditHint lang={lang} accentColor={COLORS.rust} />
@@ -574,15 +461,13 @@ export default function RevenueSection() {
           </RevenueCard>
         </div>
 
-        <div
-          className="rounded-xl border px-4 py-3 flex items-start gap-2.5"
-          style={{ background: `${COLORS.gold}08`, borderColor: `${COLORS.gold}30` }}
-        >
+        <div className="rounded-xl border px-4 py-3 flex items-start gap-2.5"
+             style={{ background: `${COLORS.gold}08`, borderColor: `${COLORS.gold}30` }}>
           <Info size={16} color={COLORS.gold} className="shrink-0 mt-0.5" />
           <p className="text-xs text-secondary leading-relaxed">
             {t(
-              "Mabadiliko yote yanahifadhiwa papo hapo kwenye backend. Fungua Console (F12) kuona kila ombi la PATCH/POST likitoka.",
-              "All changes save to the backend instantly. Open Console (F12) to see every PATCH/POST request."
+              "Mabadiliko yote yanahifadhiwa papo hapo kwenye backend. Kama endpoint fulani haipo bado, mabadiliko yanahifadhiwa local na kusawazishwa baadaye.",
+              "All changes are saved to the backend instantly. If an endpoint isn't ready yet, changes are kept locally and synced later."
             )}
           </p>
         </div>

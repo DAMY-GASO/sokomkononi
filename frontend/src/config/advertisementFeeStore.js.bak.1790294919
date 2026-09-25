@@ -1,17 +1,15 @@
 // ============================================================
-// advertisementFeeStore.js — Advertisement Fee (API-backed)
-// Backend: GET/PATCH/POST /api/advertisement-fees/
-//   Spec: PATCH/POST on collection — NO /{id}/ subpath.
+// advertisementFeeStore.js — API-only via /api/advertisement-fees/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const KEY = "sokomkononi_advertisement_fee_config_v2";
+const KEY = "sokomkononi_advertisement_fee_config_v1";
 const EV = "sokomkononi:advertisement-fee-config-updated";
 
 const FALLBACK = {
   price: 0,
-  days: 7,
+  days: 0,
   label: { sw: "Ada ya Matangazo", en: "Advertisement Fee" },
   desc: { sw: "", en: "" },
 };
@@ -22,7 +20,8 @@ function read() {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return FALLBACK;
     const p = JSON.parse(raw);
-    return p && typeof p === "object" ? { ...FALLBACK, ...p } : FALLBACK;
+    if (!p || typeof p !== "object") return FALLBACK;
+    return { ...FALLBACK, ...p };
   } catch { return FALLBACK; }
 }
 function write(cfg) {
@@ -30,19 +29,15 @@ function write(cfg) {
   window.localStorage.setItem(KEY, JSON.stringify(cfg));
   window.dispatchEvent(new Event(EV));
 }
-function normalizeLabel(raw, fallback) {
-  if (!raw) return fallback;
-  if (typeof raw === "string") return { sw: raw, en: raw };
-  return { sw: raw.sw || raw.en || "", en: raw.en || raw.sw || "" };
-}
+
 function norm(raw) {
   if (!raw) return null;
   return {
     backendId: raw.id,
     price: Number(raw.price) || 0,
-    days: Number(raw.days) || 7,
-    label: normalizeLabel(raw.label, FALLBACK.label),
-    desc: normalizeLabel(raw.desc, FALLBACK.desc),
+    days: Number(raw.days) || 0,
+    label: raw.label || FALLBACK.label,
+    desc: raw.desc || FALLBACK.desc,
   };
 }
 
@@ -53,43 +48,33 @@ export async function hydrateAdvertisementFeeFromApi() {
     const d = await api.get("/advertisement-fees/?page_size=100");
     const row = Array.isArray(d) ? d[0] : (d?.results?.[0] ?? d);
     const normalized = norm(row);
-    if (normalized) {
-      write(normalized);
-      console.info("[advertisementFeeStore] hydrated:", normalized);
-    }
+    if (normalized) write(normalized);
     return { ok: true, config: normalized };
-  } catch (err) {
-    console.warn("[advertisementFeeStore] hydrate failed:", err?.message, err?.status);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function updateAdvertisementFeePriceAsync(price) {
   const num = Number(price);
   if (!Number.isFinite(num) || num < 0) {
-    return { ok: false, error: new Error("price must be non-negative") };
+    return { ok: false, error: new Error("price must be a positive number") };
   }
   const cur = getAdvertisementFeeConfig();
 
-  // Backend spec: PATCH or POST to /advertisement-fees/ (collection).
+  // Backend spec: PATCH /api/advertisement-fees/ (collection) or
+  // POST /api/advertisement-fees/ (create/upsert). No /{id}/ subpath.
   try {
-    console.info(`[advertisementFeeStore] PATCH /advertisement-fees/ price=${num}`);
     const raw = await api.patch("/advertisement-fees/", { price: num });
     const updated = norm(raw) || { ...cur, price: num };
     write(updated);
     return { ok: true, config: updated };
-  } catch (errPatch) {
-    if (errPatch?.status && errPatch.status !== 404 && errPatch.status !== 405) {
-      return { ok: false, error: errPatch };
-    }
+  } catch (err1) {
     try {
-      console.info(`[advertisementFeeStore] POST /advertisement-fees/ price=${num}`);
       const raw = await api.post("/advertisement-fees/", { price: num });
       const updated = norm(raw) || { ...cur, price: num };
       write(updated);
       return { ok: true, config: updated };
-    } catch (errPost) {
-      return { ok: false, error: errPost || errPatch };
+    } catch (err2) {
+      return { ok: false, error: err2 || err1 };
     }
   }
 }
@@ -109,8 +94,8 @@ export function useAdvertisementFeeConfig() {
   return cfg;
 }
 
-// Legacy
-export const SEED_ADVERTISEMENT_FEE_CONFIG = { price: 0, days: 0, label: { sw: "", en: "" }, desc: { sw: "", en: "" } };
+// LEGACY (compat shims)
+export const SEED_ADVERTISEMENT_FEE_CONFIG = { price: 0, days: 0, label: { sw: '', en: '' }, desc: { sw: '', en: '' } };
 export function saveAdvertisementFeeConfig() {}
 export function updateAdvertisementFeePrice() {}
 export async function updateAdvertisementFeeAsync() { return { ok: false }; }
