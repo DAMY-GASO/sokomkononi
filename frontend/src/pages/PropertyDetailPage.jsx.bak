@@ -484,7 +484,6 @@ export default function PropertyDetailPage() {
   const savedIds = useSavedIds();
   const isSaved = property ? savedIds.includes(property.id) : false;
   const [showContactModal, setShowContactModal] = useState(false);
-  const [contactLoading, setContactLoading] = useState(null); // "deal" | "message" | null
   const [activeTab, setActiveTab] = useState("details");
 
   const waitingListEntries = useWaitingList();
@@ -574,45 +573,46 @@ export default function PropertyDetailPage() {
   };
 
   const handleStartDealRoom = async () => {
-    if (contactLoading) return;
-    if (!user) {
-      navigate("/login", {
-        state: { from: `${location.pathname}${location.search}`, openContactModal: true },
-      });
-      return;
-    }
     setShowContactModal(false);
-    setContactLoading("deal");
-    try {
-      const res = await getOrCreateDealAsync({
-        listingId: property.id,
-        currentUserId: user.id,
-        sellerName: property.seller_name || t(lang, "Muuzaji", "Seller"),
-        buyerName: user.name || user.fullName || "",
-      });
-      if (res?.ok && res?.deal?.id) {
-        navigate(`/dashboard/buyer/deals?deal=${res.deal.id}`);
-      } else {
-        console.error("[PropertyDetail] deal create failed:", res?.error);
-        alert(
-          res?.error?.data?.detail ||
-            res?.error?.message ||
-            t(lang, "Imeshindwa kuanzisha deal.", "Failed to start deal.")
-        );
-        navigate("/dashboard/buyer/deals");
-      }
-    } catch (err) {
-      console.error("[PropertyDetail] deal handler threw:", err);
-      alert(err?.message || t(lang, "Hitilafu imetokea.", "Something went wrong."));
-      navigate("/dashboard/buyer/deals");
-    } finally {
-      setContactLoading(null);
+    const res = await getOrCreateDealAsync({
+      listingId: property.id,
+      currentUserId: user?.id,
+      sellerName: property.seller_name || t(lang, "Muuzaji", "Seller"),
+      buyerName: user?.name || user?.fullName || "",
+    });
+    if (res.ok && res.deal?.id) {
+      navigate(`/dashboard/buyer/deals?deal=${res.deal.id}`);
+    } else {
+      alert(
+        res.error?.message ||
+          t(lang, "Imeshindwa kuanzisha deal.", "Failed to start deal.")
+      );
     }
   };
 
-  const handleStartConversation = async
-
-  
+  const handleStartConversation = async () => {
+    setShowContactModal(false);
+    const res = await createConversationAsync({
+      listingId: property.id,
+      initialMessage: t(
+        lang,
+        "Habari, nina nia ya mali hii.",
+        "Hello, I'm interested in this property."
+      ),
+    });
+    if (res.ok && res.conversation?.id) {
+      navigate(`/dashboard/buyer/messages?c=${res.conversation.id}`);
+    } else {
+      alert(
+        res.error?.message ||
+          t(
+            lang,
+            "Imeshindwa kuanzisha ujumbe.",
+            "Failed to start conversation."
+          )
+      );
+    }
+  };
 
   const categoryLabel =
     CATEGORY_LABELS[property.category]?.[lang] ||
@@ -896,10 +896,8 @@ export default function PropertyDetailPage() {
             </p>
             <div className="space-y-2">
               <button
-                type="button"
                 onClick={handleStartDealRoom}
-                disabled={!!contactLoading}
-                className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left"
               >
                 <MessageSquare size={20} className="text-[#E8A33D]" />
                 <div>
@@ -916,10 +914,8 @@ export default function PropertyDetailPage() {
                 </div>
               </button>
               <button
-                type="button"
                 onClick={handleStartConversation}
-                disabled={!!contactLoading}
-                className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left"
               >
                 <MessageSquare size={20} className="text-[#2F6D4F]" />
                 <div>
