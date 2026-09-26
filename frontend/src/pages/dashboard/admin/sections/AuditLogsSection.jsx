@@ -319,7 +319,7 @@ export default function AuditLogsSection() {
                 className="rounded-xl border p-3 sm:p-4 flex items-start gap-2 sm:gap-3 w-full max-w-full min-w-0 overflow-hidden"
               >
                 <div
-                  style={{ background: colors.bg }}
+                  style={{ background: colors?.bg || "#F5F3EC" }}
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
                 >
                   <ActionIcon size={15} color={colors.fg} />
@@ -328,7 +328,7 @@ export default function AuditLogsSection() {
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span
-                      style={{ background: colors.bg, color: colors.fg }}
+                    style={{ background: colors?.bg || "#F5F3EC", color: colors?.fg || "#101A2E" }}
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                     >
                       {getActionLabel(log.action)}
