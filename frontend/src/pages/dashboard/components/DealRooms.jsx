@@ -305,7 +305,7 @@ function InspectionPanel({ deal, onResolve, lang }) {
               <button
                 key={opt.key}
                 onClick={() => handleChoose(opt.key)}
-                style={{ borderColor: opt.tone.border, background: opt.tone.bg }}
+                style={{ borderColor: opt?.tone?.border || "#E5E1D5", background: opt?.tone?.bg || "#FFFFFF" }}
                 className="flex flex-col items-center text-center gap-2 rounded-xl border px-3 py-3"
               >
                 <opt.icon size={16} color={opt.tone.fg} />
@@ -746,7 +746,7 @@ function DealListItem({ deal, active, onSelect, lang }) {
           {deal.listingTitle}
         </p>
         <span
-          style={{ background: status.bg, color: status.fg }}
+          style={{ background: status?.bg || "#F5F3EC", color: status?.fg || "#101A2E" }}
           className="inline-block text-body-sm font-semibold px-2 py-0.5 rounded-full"
         >
           {status.label}
@@ -1111,7 +1111,7 @@ function DealDetail({
           )}
         </div>
         <span
-          style={{ background: status.bg, color: status.fg }}
+          style={{ background: status?.bg || "#F5F3EC", color: status?.fg || "#101A2E" }}
           className="text-body-sm font-semibold px-2.5 py-1 rounded-full shrink-0"
         >
           {status.label}
