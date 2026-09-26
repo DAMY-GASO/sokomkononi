@@ -181,7 +181,7 @@ function TicketCard({ ticket, lang }) {
       <div className="p-3 sm:p-4 w-full min-w-0">
         <div className="flex items-start gap-2 sm:gap-3 w-full min-w-0">
           <div
-            style={{ background: catColors.bg }}
+            style={{ background: catColors?.bg || "#F5F3EC" }}
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
           >
             <Headphones size={16} color={catColors.fg} />
@@ -193,19 +193,19 @@ function TicketCard({ ticket, lang }) {
                 {ticket.id}
               </span>
               <span
-                style={{ background: catColors.bg, color: catColors.fg }}
+                style={{ background: catColors?.bg || "#F5F3EC", color: catColors?.fg || "#101A2E" }}
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {category?.label?.[lang] || category?.label?.sw || ticket.category}
               </span>
               <span
-                style={{ background: priColors.bg, color: priColors.fg }}
+                style={{ background: priColors?.bg || "#F5F3EC", color: priColors?.fg || "#101A2E" }}
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {priority?.label?.[lang] || priority?.label?.sw}
               </span>
               <span
-                style={{ background: statusColors.bg, color: statusColors.fg }}
+                style={{ background: statusColors?.bg || "#F5F3EC", color: statusColors?.fg || "#101A2E" }}
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {status?.label?.[lang] || status?.label?.sw}
