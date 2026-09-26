@@ -184,7 +184,7 @@ function TransactionItem({ txn, lang }) {
       className="rounded-xl border p-4 flex items-start gap-3"
     >
       <div
-        style={{ background: type.bg }}
+        style={{ background: type?.bg || "#F5F3EC" }}
         className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
       >
         <TypeIcon size={18} color={type.color} />
@@ -207,7 +207,7 @@ function TransactionItem({ txn, lang }) {
             </p>
           </div>
           <span
-            style={{ background: status.bg, color: status.color }}
+            style={{ background: status?.bg || "#F5F3EC", color: status?.color || "#101A2E" }}
             className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full shrink-0"
           >
             <StatusIcon size={11} />
