@@ -91,7 +91,7 @@ function StatusBadge({ status, lang }) {
   const label = s.label?.[lang] || s.label?.sw;
   return (
     <span
-      style={{ background: s.bg, color: s.fg }}
+      style={{ background: s?.bg || "#F5F3EC", color: s?.fg || "#101A2E" }}
       className="text-body-sm font-semibold px-2.5 py-1 rounded-full shrink-0"
     >
       {label}
