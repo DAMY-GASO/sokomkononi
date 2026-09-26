@@ -89,13 +89,13 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang }) {
   return (
     <div
       style={{
-        background: notif.read ? "white" : `${config.bg}`,
+        background: notif.read ? "white" : (config?.bg || "#F5F3EC"),
         borderColor: COLORS.sandLine,
       }}
       className="rounded-xl border p-4 flex items-start gap-3 transition-colors"
     >
       <div
-        style={{ background: config.bg }}
+        style={{ background: config?.bg || "#F5F3EC" }}
         className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
       >
         <Icon size={18} color={config.color} />
