@@ -93,7 +93,8 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
             </p>
           </div>
           <span
-            style={{ background: status.bg, color: status.color }}
+            // ✅
+style={{ background: status?.bg || "#F5F3EC", color: status?.color || "#101A2E" }}
             className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full shrink-0"
           >
             <StatusIcon size={11} />
