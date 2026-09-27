@@ -182,8 +182,6 @@ export default function HomePage() {
   const { user } = useAuth();
 
   const [openFaq, setOpenFaq] = useState(null);
-  const [appToastShouldRender, setAppToastShouldRender] = useState(false);
-  const [appToastVisible, setAppToastVisible] = useState(false);
 
   // === PAGE LOADER ===
   const [pageLoading, setPageLoading] = useState(true);
@@ -225,28 +223,6 @@ export default function HomePage() {
         };
       });
   }, [allListings, popularCategories]);
-
-  useEffect(() => {
-    if (sessionStorage.getItem("app_toast_dismissed")) return;
-    const showTimer = setTimeout(() => setAppToastShouldRender(true), 2500);
-    return () => clearTimeout(showTimer);
-  }, []);
-
-  useEffect(() => {
-    if (!appToastShouldRender) return;
-    const enterTimer = setTimeout(() => setAppToastVisible(true), 20);
-    const autoHideTimer = setTimeout(() => dismissAppToast(), 9000);
-    return () => {
-      clearTimeout(enterTimer);
-      clearTimeout(autoHideTimer);
-    };
-  }, [appToastShouldRender]);
-
-  function dismissAppToast() {
-    setAppToastVisible(false);
-    sessionStorage.setItem("app_toast_dismissed", "1");
-    setTimeout(() => setAppToastShouldRender(false), 300);
-  }
 
   const handleSellNow = () => {
     if (user) navigate("/dashboard/post");
@@ -885,67 +861,6 @@ export default function HomePage() {
       </section>
 
       <Footer selectedLang={lang} />
-
-      {/* TOAST */}
-      {appToastShouldRender && (
-        <div
-          className={`fixed bottom-24 sm:bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 z-[60] transition-all duration-300 ${
-            appToastVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-          }`}
-        >
-          <div className="bg-[#101A2E] text-white rounded-xl shadow-2xl border border-white/10 p-4 flex items-start gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#E8A33D]/15 flex items-center justify-center flex-shrink-0">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#E8A33D"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="7" y="2" width="10" height="20" rx="2" />
-                <path d="M11 18h2" />
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-body-sm font-semibold">
-                {lang === "sw" ? "App ya SokoMkononi inakuja!" : "The SokoMkononi app is coming!"}
-              </p>
-              <p className="text-white/60 text-body-sm mt-0.5 leading-relaxed">
-                {lang === "sw"
-                  ? "Jiunge na waitlist ili uwe wa kwanza kujua."
-                  : "Join the waitlist to be first to know."}
-              </p>
-              <Link
-                to="/waitlist"
-                onClick={dismissAppToast}
-                className="inline-block mt-2 text-[#E8A33D] text-body-sm font-semibold hover:underline"
-              >
-                {lang === "sw" ? "Jiunge Sasa →" : "Join Now →"}
-              </Link>
-            </div>
-            <button
-              onClick={dismissAppToast}
-              aria-label={lang === "sw" ? "Funga" : "Close"}
-              className="text-white/40 hover:text-white flex-shrink-0"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
 
       <BottomNav />
     </div>
