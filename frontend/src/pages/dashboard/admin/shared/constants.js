@@ -1,3 +1,7 @@
+// ============================================================
+// constants.js — Admin shared constants
+// ============================================================
+
 import {
   AlertTriangle,
   BarChart3,
@@ -28,6 +32,7 @@ import {
   Sparkles,
   Store,
   Trash2,
+  User,
   UserCheck,
   Users,
   Wallet,
@@ -50,8 +55,12 @@ export {
 // ============================================================
 export { COLORS, FONTS } from "../../../dashboard/components/shared.js";
 
+// ✅ FIX #16: Import `timeAgo` na `formatTZS` kutoka shared.js
+// Badala ya ku-copy (duplication).
+import { timeAgo as sharedTimeAgo, formatTZS as sharedFormatTZS } from "../../../dashboard/components/shared.js";
+
 // ============================================================
-// NAV — sidebar navigation (sections zote 14)
+// NAV — sidebar navigation (sections zote 16)
 // ============================================================
 export const NAV = [
   // Core
@@ -119,9 +128,11 @@ export const NAV = [
     label: { sw: "Kumbukumbu za Matendo", en: "Audit Logs" },
     icon: History,
   },
-  
-  { key: "trash", label: { sw: "Trash", en: "Trash" }, icon: Trash2 },
-  
+  {
+    key: "trash",
+    label: { sw: "Trash", en: "Trash" },
+    icon: Trash2,
+  },
   {
     key: "system",
     label: { sw: "Mipangilio ya Mfumo", en: "System Settings" },
@@ -132,8 +143,17 @@ export const NAV = [
     label: { sw: "Roles & Wafanyakazi", en: "Roles & Staff" },
     icon: Lock,
   },
+  // ✅ FIX #16: Ongeza `profile` kwenye NAV
+  {
+    key: "profile",
+    label: { sw: "Wasifu Wangu", en: "My Profile" },
+    icon: User,
+  },
 ];
 
+// ============================================================
+// ADMIN NOTIFICATION ICONS
+// ============================================================
 export const ADMIN_NOTIFICATION_ICONS = {
   // Backend NotificationTypeEnum (from OpenAPI spec)
   GENERAL: Bell,
@@ -164,24 +184,9 @@ export const ADMIN_NOTIFICATION_ICONS = {
   BOOST_ACTIVATED: Rocket,
 };
 
-export function timeAgo(dateStr, lang = "sw") {
-  const ms = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return lang === "sw" ? "Sasa hivi" : "Just now";
-  if (mins < 60)
-    return lang === "sw" ? `Dakika ${mins} zilizopita` : `${mins} min ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24)
-    return lang === "sw"
-      ? hours === 1
-        ? "Saa 1 iliyopita"
-        : `Masaa ${hours} yaliyopita`
-      : `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return lang === "sw" ? "Jana" : "Yesterday";
-  return lang === "sw" ? `Siku ${days} zilizopita` : `${days} days ago`;
-}
-
-export function formatTZS(amount) {
-  return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
-}
+// ============================================================
+// RE-EXPORT HELPERS kutoka shared.js
+// (Badala ya ku-copy — single source of truth)
+// ============================================================
+export const timeAgo = sharedTimeAgo;
+export const formatTZS = sharedFormatTZS;

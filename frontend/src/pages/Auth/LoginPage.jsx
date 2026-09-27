@@ -83,7 +83,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [socialLoading, setSocialLoading] = useState(""); // "" | "google" | "apple"
+  const [socialLoading, setSocialLoading] = useState("");
 
   const googleRef = useRef(null);
   const socialHandlerRef = useRef(null);
@@ -104,7 +104,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (!form.identifier.trim() || !form.password) {
-      setError(t("login_error_required") || "Tafadhali jaza sehemu zote.");
+      setError(t("login_error_required"));
       return;
     }
 
@@ -118,7 +118,6 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    // Backend bado inapokea `identifier`; sasa ni barua pepe tu.
     const res = await loginAsync({
       identifier: form.identifier.trim(),
       password: form.password,
@@ -126,10 +125,11 @@ export default function LoginPage() {
     setLoading(false);
 
     if (!res.ok) {
+      // ✅ FIX #21: Ondoa redundant `|| "Barua pepe..."` — `t()` inarudisha string kila wakati
       setError(
         getErrorMessage(
           res.error,
-          t("login_error_default") || "Barua pepe/nenosiri si sahihi."
+          t("login_error_default")
         )
       );
       return;
@@ -138,15 +138,14 @@ export default function LoginPage() {
     finishLogin();
   }
 
-  // Inatuma ID token kwa backend, kisha inaingia kama login ya kawaida
   async function handleSocialLogin(provider, identity) {
     setError("");
     setSocialLoading(provider);
     const res = await socialLoginAsync({
-      provider, // "google" | "apple"
+      provider,
       idToken: identity.idToken,
       code: identity.code || null,
-      user: identity.user || null, // Apple: jina/barua (mara ya kwanza tu)
+      user: identity.user || null,
     });
     setSocialLoading("");
 
@@ -183,7 +182,6 @@ export default function LoginPage() {
     await handleSocialLogin("apple", identity);
   }
 
-  // Google: chora button rasmi ya Google
   useEffect(() => {
     if (!isGoogleEnabled || !googleRef.current) return;
     renderGoogleButton(googleRef.current, {
@@ -203,7 +201,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
-        {/* ================= LEFT PANEL - Branded ================= */}
+        {/* LEFT PANEL */}
         <div className="dark-surface flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
@@ -235,7 +233,7 @@ export default function LoginPage() {
           <SkylineDecoration />
         </div>
 
-        {/* ================= RIGHT PANEL - Form ================= */}
+        {/* RIGHT PANEL */}
         <div className="flex items-center justify-center px-5 sm:px-10 py-10 md:py-12 bg-white">
           <div className="w-full max-w-sm">
             <h1 className="h-title mb-1 text-center">
@@ -311,7 +309,6 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* ============ Social sign-in ============ */}
             {showSocial && (
               <>
                 <div className="flex items-center gap-3 my-6">

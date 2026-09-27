@@ -6,7 +6,31 @@
 
 import React from "react";
 
+// ============================================================
+// HELPER: Determine change color
+// ============================================================
+function getChangeColor(change) {
+  if (!change) return "text-gray-500";
+  const str = String(change).trim();
+
+  // Positive (green): "+5%", "5%", "↑ 5"
+  if (
+    str.startsWith("+") ||
+    str.startsWith("↑") ||
+    (!str.startsWith("-") &&
+      !str.startsWith("↓") &&
+      !str.startsWith("−"))
+  ) {
+    return "text-green-600";
+  }
+
+  // Negative (red): "-5%", "↓ 5", "−5"
+  return "text-red-600";
+}
+
 export default function StatCard({ label, value, change, icon: Icon, color }) {
+  const changeColor = getChangeColor(change);
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-3.5 sm:p-5 min-w-0">
       <div className="flex items-start justify-between gap-2">
@@ -19,20 +43,24 @@ export default function StatCard({ label, value, change, icon: Icon, color }) {
             {value}
           </p>
           {change && (
-            <p className="text-[10px] sm:text-xs text-green-600 mt-1 truncate">
+            <p
+              className={`text-[10px] sm:text-xs mt-1 truncate ${changeColor}`}
+            >
               {change}
             </p>
           )}
         </div>
 
         {/* Right: icon */}
-        <div
-          style={{ background: `${color}15` }}
-          className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0"
-        >
-          <Icon size={18} color={color} className="sm:hidden" />
-          <Icon size={22} color={color} className="hidden sm:block" />
-        </div>
+        {Icon && (
+          <div
+            style={{ background: `${color}15` }}
+            className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0"
+          >
+            <Icon size={18} color={color} className="sm:hidden" />
+            <Icon size={22} color={color} className="hidden sm:block" />
+          </div>
+        )}
       </div>
     </div>
   );

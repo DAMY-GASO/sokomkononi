@@ -10,13 +10,69 @@ import { X } from "lucide-react";
 import { COLORS, FONTS } from "./constants.js";
 import StatusBadge from "./StatusBadge.jsx";
 
-export default function UserDrawer({ user, listings, deals, onClose, lang }) {
+// ============================================================
+// HELPERS
+// ============================================================
+function getSellerName(listing) {
+  if (!listing) return "";
+  return (
+    listing.seller_name ||
+    listing.seller?.name ||
+    (typeof listing.seller === "string" ? listing.seller : "") ||
+    ""
+  );
+}
+
+function getBuyerName(deal) {
+  if (!deal) return "";
+  return (
+    deal.buyerName ||
+    deal.buyer_name ||
+    deal.buyer?.name ||
+    ""
+  );
+}
+
+function getSellerNameFromDeal(deal) {
+  if (!deal) return "";
+  return (
+    deal.sellerName ||
+    deal.seller_name ||
+    deal.seller?.name ||
+    ""
+  );
+}
+
+function getUserInitial(user) {
+  const name = user?.name || user?.email || "U";
+  return String(name).charAt(0).toUpperCase();
+}
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
+export default function UserDrawer({ user, listings = [], deals = [], onClose, lang = "sw" }) {
   if (!user) return null;
 
-  const userListings = listings.filter((l) => l.seller === user.name);
-  const userDeals = deals.filter(
-    (d) => d.buyerName === user.name || d.sellerName === user.name
+  const userName = user.name || user.email || "";
+
+  // ✅ FIX: Tumia helper inayoshughulikia `seller_name`, `seller.name`, au `seller` string
+  const userListings = listings.filter(
+    (l) => getSellerName(l) === userName
   );
+
+  // ✅ FIX: Tumia helpers zinazoshughulikia `buyerName`/`sellerName` NA `buyerId`/`sellerId`
+  const userDeals = deals.filter((d) => {
+    // Kama tuna IDs, tumia IDs (bora zaidi)
+    if (user.id != null) {
+      if (d.buyerId === user.id) return true;
+      if (d.sellerId === user.id) return true;
+    }
+    // Fallback: tumia jina
+    return (
+      getBuyerName(d) === userName || getSellerNameFromDeal(d) === userName
+    );
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -52,13 +108,15 @@ export default function UserDrawer({ user, listings, deals, onClose, lang }) {
               className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-base sm:text-lg font-bold shrink-0"
               style={{ background: `${COLORS.gold}20`, color: COLORS.gold }}
             >
-              {user.name.charAt(0).toUpperCase()}
+              {getUserInitial(user)}
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-gray-800 truncate">
-                {user.name}
+                {user.name || "—"}
               </p>
-              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+              <p className="text-xs text-gray-500 truncate">
+                {user.email || "—"}
+              </p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <StatusBadge status={user.status} lang={lang} />
                 <span className="text-xs text-gray-400 capitalize">
@@ -78,7 +136,7 @@ export default function UserDrawer({ user, listings, deals, onClose, lang }) {
                 {lang === "sw" ? "Alijiunga:" : "Joined:"}
               </span>
               <span className="font-medium text-gray-700 text-right">
-                {user.joined}
+                {user.joined || "—"}
               </span>
             </div>
             <div className="flex justify-between gap-2">
@@ -146,7 +204,7 @@ export default function UserDrawer({ user, listings, deals, onClose, lang }) {
                     style={{ borderColor: COLORS.sandLine }}
                   >
                     <span className="truncate text-gray-700 min-w-0 flex-1">
-                      {d.listingTitle}
+                      {d.listingTitle || d.listing?.title || "—"}
                     </span>
                     <div className="shrink-0">
                       <StatusBadge status={d.status} lang={lang} />

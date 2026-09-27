@@ -4,11 +4,6 @@ import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
 import ScrollToHash from "./components/ScrollToHash.jsx";
 
 // ============================================================
-// AUTH — install 401 handler kutoka authStore
-// ============================================================
-import { installUnauthorizedHandler } from "./config/authStore.js";
-
-// ============================================================
 // ADMIN PATH — secret prefix
 // ============================================================
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
@@ -93,12 +88,11 @@ function BrowseRoute() {
 function App() {
   // ============================================================
   // INITIALIZE — categories + bundles + listings
-  // + install 401 handler
+  //
+  // ⚠️ NOTE: installUnauthorizedHandler() is called in `main.jsx`
+  // BEFORE React render. Do NOT call it here to avoid duplication.
   // ============================================================
   useEffect(() => {
-    // 0) Install 401 handler
-    installUnauthorizedHandler();
-
     // 1) Seed mara moja (categories only — bundles ni API-only)
     initializeCategories();
 
@@ -106,7 +100,7 @@ function App() {
     async function hydrateFromApi() {
       await Promise.allSettled([
         hydrateCategoriesFromApi(),
-        hydrateBundlesFromApi(),      // ⬅️ FIX #5: Badala ya initializeBundles()
+        hydrateBundlesFromApi(),
         hydrateListingsFromApi(),
       ]);
     }

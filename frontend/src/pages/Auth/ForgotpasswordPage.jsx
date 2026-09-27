@@ -117,7 +117,6 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-
   const [resetToken, setResetToken] = useState(null);
 
   function validateForm() {
@@ -253,7 +252,10 @@ export default function ForgotPasswordPage() {
           <div className="w-full max-w-sm animate-[fadeIn_0.4s_ease-out]">
             {step === "form" && (
               <>
-                
+                {/* ✅ FIX #18: Ongeza heading */}
+                <h1 className="h-title mb-1 text-center">
+                  {t("forgot_heading") || "Umesahau Nenosiri?"}
+                </h1>
                 <p className="text-secondary text-body-sm mb-7 text-center">{t("forgot_subtext")}</p>
 
                 <form onSubmit={handleSubmitNewPassword} className="space-y-4">

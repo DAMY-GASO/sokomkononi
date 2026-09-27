@@ -5,6 +5,7 @@ import { useAuth } from "../config/authStore.js";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import Navbar from "../components/Navbar.jsx";
+import PageLoader from "../components/PageLoader.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
 import {
   usePopularCategories,
@@ -15,53 +16,6 @@ function formatTZS(amount) {
   return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
 }
 
-// ============================================================
-// PAGE LOADER
-// ============================================================
-function PageLoader() {
-  return (
-    <div className="fixed inset-0 z-[100] bg-[#101A2E] flex items-center justify-center">
-      <div className="flex flex-col items-center gap-6">
-        {/* Logo */}
-        <div className="relative">
-          <div className="w-20 h-20 rounded-2xl bg-[#E8A33D] flex items-center justify-center shadow-2xl animate-pulse">
-            <span className="text-[#101A2E] font-bold text-3xl">S</span>
-          </div>
-          {/* Spinning ring */}
-          <div className="absolute inset-0 rounded-2xl border-4 border-[#E8A33D]/30 border-t-[#E8A33D] animate-spin" />
-        </div>
-
-        {/* Brand name */}
-        <div className="text-center">
-          <h1 className="text-white font-bold text-2xl tracking-tight">
-            SokoMkononi
-          </h1>
-          <p className="text-white/50 text-body-sm mt-1">
-            Inapakia...
-          </p>
-        </div>
-
-        {/* Loading bar */}
-        <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-[#E8A33D] rounded-full"
-            style={{
-              animation: "loaderBar 1.5s ease-in-out infinite",
-            }}
-          />
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes loaderBar {
-          0% { width: 0%; margin-left: 0%; }
-          50% { width: 75%; margin-left: 12.5%; }
-          100% { width: 0%; margin-left: 100%; }
-        }
-      `}</style>
-    </div>
-  );
-}
 
 // ============================================================
 // ANIMATED TEXT — maelezo yanatembea
@@ -443,8 +397,8 @@ export default function HomePage() {
   // PAGE LOADER — kama inapakia, onyesha loader
   // ============================================================
   if (pageLoading) {
-    return <PageLoader />;
-  }
+  return <PageLoader lang={lang} />;
+}
 
   return (
     <div className="min-h-screen bg-white">
