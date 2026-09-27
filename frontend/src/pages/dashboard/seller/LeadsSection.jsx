@@ -235,7 +235,7 @@ export default function LeadsSection({ onNavigate }) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <span
-                          style={{ background: status.bg, color: status.fg }}
+                          style={{ background: status?.bg || "#F5F3EC", color: status?.fg || "#101A2E" }}
                           className="text-body-sm font-bold px-2 py-0.5 rounded-full shrink-0"
                         >
                           {status.label}
