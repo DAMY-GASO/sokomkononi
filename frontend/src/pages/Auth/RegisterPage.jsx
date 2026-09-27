@@ -89,6 +89,7 @@ function FieldInput({ icon, type = "text", value, onChange, label, inputMode, re
   );
 }
 
+// Kuchukua field error kutoka DRF response
 function extractError(err, fallback) {
   if (err?.data && typeof err.data === "object") {
     if (err.data.detail) return err.data.detail;
@@ -110,7 +111,6 @@ export default function RegisterPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
@@ -156,7 +156,6 @@ export default function RegisterPage() {
       return;
     }
     setError("");
-    setInfo("");
     setLoading(true);
 
     const { confirmPassword, ...payload } = form;
@@ -179,7 +178,6 @@ export default function RegisterPage() {
       return;
     }
     setError("");
-    setInfo("");
     setLoading(true);
 
     const res = await verifyOtpAsync({
@@ -210,26 +208,17 @@ export default function RegisterPage() {
     }, 1000);
   }
 
-  // ✅ FIX #19: Tuma OTP halisi tena
   async function handleResend() {
-    if (resendCooldown > 0) return;
+    if (resendCooldown > 0 || loading) return;
     setError("");
-    setInfo("");
     setLoading(true);
-
     const { confirmPassword, ...payload } = form;
     const res = await registerAsync({ ...payload, intent: intent || null });
     setLoading(false);
-
     if (!res.ok) {
       setError(extractError(res.error, t("register_error_default")));
       return;
     }
-
-    setInfo(
-      t("register_otp_resent") ||
-        "OTP mpya imetumwa kwenye barua pepe yako."
-    );
     startResendCooldown();
   }
 
@@ -357,7 +346,6 @@ export default function RegisterPage() {
                   />
 
                   {error && <p className="text-[#C1502E] text-body-sm">{error}</p>}
-                  {info && <p className="text-[#2F6D4F] text-body-sm">{info}</p>}
 
                   <button
                     disabled={loading}
@@ -370,7 +358,7 @@ export default function RegisterPage() {
                 <div className="mt-6 text-body-sm text-secondary text-center space-y-2">
                   <button
                     onClick={handleResend}
-                    disabled={resendCooldown > 0 || loading}
+                    disabled={resendCooldown > 0}
                     className="text-[#2F6D4F] font-semibold disabled:text-muted disabled:cursor-not-allowed"
                   >
                     {resendCooldown > 0
@@ -379,7 +367,7 @@ export default function RegisterPage() {
                   </button>
                   <div>
                     <button
-                      onClick={() => { setStep("form"); setOtp(""); setError(""); setInfo(""); }}
+                      onClick={() => { setStep("form"); setOtp(""); setError(""); }}
                       className="text-secondary underline"
                     >
                       {t("register_change_email")}

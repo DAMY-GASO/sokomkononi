@@ -1,9 +1,7 @@
 // ============================================================
-// PaymentGateway.jsx
-// Collects payment details and hands them to the parent's
-// onSubmit handler, which calls the backend endpoint.
-// No simulation — the reference is either provided by the user
-// or derived from the phone/context.
+// PaymentGateway.jsx — simulated payment flow for dev/staging.
+// Set VITE_PAYMENT_SIMULATION=true to bypass real gateways.
+// CVV input removed (PCI).
 // ============================================================
 import React, { useState } from "react";
 import {
@@ -18,6 +16,8 @@ import {
 import { COLORS, PAYMENT_METHODS, formatTZS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 
+const SIMULATE = String(import.meta.env.VITE_PAYMENT_SIMULATION || "").toLowerCase() === "true";
+
 const inputStyle = {
   background: COLORS.sand,
   borderColor: COLORS.sandLine,
@@ -31,13 +31,11 @@ function formatPhoneInput(value) {
   if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
   return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
 }
-
 function formatCardInput(value) {
   const digits = String(value).replace(/[^0-9]/g, "").slice(0, 16);
   if (!digits) return "";
   return digits.replace(/(.{4})/g, "$1 ").trim();
 }
-
 function formatExpiryInput(value) {
   const digits = String(value).replace(/[^0-9]/g, "").slice(0, 4);
   if (!digits) return "";
@@ -93,7 +91,7 @@ export default function PaymentGateway({
   const { lang } = useLanguage();
   const [methodKey, setMethodKey] = useState(null);
   const [phone, setPhone] = useState("");
-  const [card, setCard] = useState({ number: "", expiry: "", cvv: "" });
+  const [card, setCard] = useState({ number: "", expiry: "" });
   const [reference, setReference] = useState("");
   const [stage, setStage] = useState("select");
   const [error, setError] = useState("");
@@ -101,27 +99,74 @@ export default function PaymentGateway({
 
   const method = PAYMENT_METHODS.find((m) => m.key === methodKey);
 
-  const phoneOk =
-    method?.type === "mobile" && phone.replace(/\D/g, "").length >= 9;
+  const phoneOk = method?.type === "mobile" && phone.replace(/\D/g, "").length >= 9;
   const cardOk =
     method?.type === "card" &&
     card.number.replace(/\D/g, "").length >= 12 &&
-    card.expiry.length >= 4 &&
-    card.cvv.length >= 3;
+    card.expiry.length >= 4;
   const refOk = !requireReference || reference.trim().length > 0;
-  const canPay =
-    Boolean(method) && (phoneOk || cardOk) && refOk && stage === "select";
+  const canPay = Boolean(method) && (phoneOk || cardOk) && refOk && stage === "select";
 
   const handlePay = async () => {
-    if (!canPay || !onSubmit) return;
+    if (!canPay) return;
     setStage("processing");
     setError("");
 
     const cleanPhone = phone.replace(/\s/g, "");
     const referenceToSend =
       reference.trim() ||
-      (method.type === "mobile" ? cleanPhone : `TXN-${Date.now()}`);
+      (SIMULATE
+        ? `SIM-${Date.now()}`
+        : method.type === "mobile"
+          ? cleanPhone
+          : `TXN-${Date.now()}`);
 
+    // ── SIMULATION ─────────────────────────────────────────
+    if (SIMULATE) {
+      // Let parent optionally call backend endpoints (listing fee,
+      // boost, banner, etc.) with the fake reference. We still call
+      // onSubmit so listing/boost states progress on the backend.
+      try {
+        const res = onSubmit
+          ? await onSubmit({
+              method: method.key,
+              methodLabel: method.label,
+              phone: method.type === "mobile" ? cleanPhone : null,
+              card: method.type === "card" ? card : null,
+              reference: referenceToSend,
+            })
+          : { ok: true };
+        if (res && res.ok === false) {
+          setError(
+            res.error?.message ||
+              res.error?.data?.detail ||
+              (lang === "sw"
+                ? "Hatua inayofuata imeshindikana."
+                : "Next step failed.")
+          );
+          setStage("select");
+          return;
+        }
+        setFinalReference(referenceToSend);
+        setStage("done");
+        onSuccess?.(res?.data);
+      } catch (err) {
+        setError(
+          err?.data?.detail ||
+            err?.message ||
+            (lang === "sw" ? "Hitilafu ya mtandao." : "Network error.")
+        );
+        setStage("select");
+      }
+      return;
+    }
+
+    // ── REAL (parent will call real gateway) ───────────────
+    if (!onSubmit) {
+      setError("Payment handler missing.");
+      setStage("select");
+      return;
+    }
     try {
       const res = await onSubmit({
         method: method.key,
@@ -142,12 +187,10 @@ export default function PaymentGateway({
         setStage("select");
         return;
       }
-
       if (res.redirectUrl) {
         window.location.href = res.redirectUrl;
         return;
       }
-
       setFinalReference(referenceToSend);
       setStage("done");
       onSuccess?.(res.data);
@@ -167,19 +210,11 @@ export default function PaymentGateway({
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="rounded-2xl border p-8 text-center"
       >
-        <Loader2
-          size={30}
-          className="animate-spin mx-auto mb-4"
-          color={COLORS.gold}
-        />
+        <Loader2 size={30} className="animate-spin mx-auto mb-4" color={COLORS.gold} />
         <p className="text-primary text-sm font-semibold mb-1.5">
           {method?.type === "mobile"
-            ? lang === "sw"
-              ? "Inasubiri uthibitisho..."
-              : "Waiting for confirmation..."
-            : lang === "sw"
-              ? "Inachakata malipo..."
-              : "Processing payment..."}
+            ? lang === "sw" ? "Inasubiri uthibitisho..." : "Waiting for confirmation..."
+            : lang === "sw" ? "Inachakata malipo..." : "Processing payment..."}
         </p>
         <p className="text-secondary text-body-sm">
           {method?.type === "mobile"
@@ -210,8 +245,7 @@ export default function PaymentGateway({
           {lang === "sw" ? "Imekamilika" : "Completed"}
         </p>
         <p className="text-secondary text-body-sm mb-3">
-          {formatTZS(amount)} {lang === "sw" ? "kupitia" : "via"}{" "}
-          {method?.label}
+          {formatTZS(amount)} {lang === "sw" ? "kupitia" : "via"} {method?.label}
         </p>
         {finalReference && (
           <p className="text-[11px] text-muted font-mono mb-5">
@@ -227,14 +261,24 @@ export default function PaymentGateway({
       style={{ borderColor: COLORS.sandLine, background: "white" }}
       className="rounded-2xl border p-5"
     >
+      {SIMULATE && (
+        <div
+          className="rounded-lg px-3 py-2 mb-3 text-[11px] text-center font-semibold"
+          style={{ background: "rgba(232,163,61,0.12)", color: "#8A5A16" }}
+        >
+          {lang === "sw"
+            ? "Hali ya majaribio — malipo yanathibitishwa papo hapo."
+            : "Test mode — payments are auto-confirmed."}
+        </div>
+      )}
+
       <div className="flex justify-center mb-3">
         <button
           type="button"
           onClick={onCancel}
           className="text-primary flex items-center gap-1 text-body-sm font-medium opacity-70"
         >
-          <ChevronLeft size={14} />{" "}
-          {lang === "sw" ? "Rudi Nyuma" : "Back"}
+          <ChevronLeft size={14} /> {lang === "sw" ? "Rudi Nyuma" : "Back"}
         </button>
       </div>
 
@@ -246,9 +290,7 @@ export default function PaymentGateway({
       </div>
 
       {description && (
-        <p className="text-secondary text-body-sm mb-4 text-center">
-          {description}
-        </p>
+        <p className="text-secondary text-body-sm mb-4 text-center">{description}</p>
       )}
 
       <p className="text-primary text-body-sm font-semibold mb-2 text-center">
@@ -276,9 +318,7 @@ export default function PaymentGateway({
             type="text"
             inputMode="tel"
             className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-            placeholder={
-              lang === "sw" ? "mfano: 0712 345 678" : "e.g. 0712 345 678"
-            }
+            placeholder={lang === "sw" ? "mfano: 0712 345 678" : "e.g. 0712 345 678"}
             value={phone}
             onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
           />
@@ -303,44 +343,22 @@ export default function PaymentGateway({
               }
             />
           </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1.5 text-center">
-              <span className="text-primary text-body-sm font-medium">
-                {lang === "sw" ? "Muda wa Mwisho" : "Expiry"}
-              </span>
-              <input
-                style={inputStyle}
-                type="text"
-                inputMode="numeric"
-                className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-                placeholder="MM/YY"
-                value={card.expiry}
-                onChange={(e) =>
-                  setCard({
-                    ...card,
-                    expiry: formatExpiryInput(e.target.value),
-                  })
-                }
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 text-center">
-              <span className="text-primary text-body-sm font-medium">CVV</span>
-              <input
-                style={inputStyle}
-                type="text"
-                inputMode="numeric"
-                className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-                placeholder="123"
-                value={card.cvv}
-                onChange={(e) =>
-                  setCard({
-                    ...card,
-                    cvv: e.target.value.replace(/[^0-9]/g, "").slice(0, 4),
-                  })
-                }
-              />
-            </label>
-          </div>
+          <label className="flex flex-col gap-1.5 text-center">
+            <span className="text-primary text-body-sm font-medium">
+              {lang === "sw" ? "Muda wa Mwisho" : "Expiry"}
+            </span>
+            <input
+              style={inputStyle}
+              type="text"
+              inputMode="numeric"
+              className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
+              placeholder="MM/YY"
+              value={card.expiry}
+              onChange={(e) =>
+                setCard({ ...card, expiry: formatExpiryInput(e.target.value) })
+              }
+            />
+          </label>
         </div>
       )}
 
@@ -381,9 +399,7 @@ export default function PaymentGateway({
         }}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm mb-3 disabled:cursor-not-allowed"
       >
-        {lang === "sw"
-          ? `Lipa ${formatTZS(amount)}`
-          : `Pay ${formatTZS(amount)}`}
+        {lang === "sw" ? `Lipa ${formatTZS(amount)}` : `Pay ${formatTZS(amount)}`}
       </button>
 
       <p className="text-muted flex items-start justify-center gap-1.5 text-body-sm leading-snug text-center">

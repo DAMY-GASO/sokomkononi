@@ -1,14 +1,15 @@
 // ============================================================
 // rolesStore.js — API-only via /api/rbac/
-// Backend shape: Role { key, permissions, label, description (RO) }
-//                StaffAssignment { user:int, role:int, active:bool }
+// NOTE: staff storage key changed to avoid collision with
+//       systemSettingsStore.js (sub-admins panel).
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
 const ROLES_KEY = "sokomkononi_roles_v1";
-const STAFF_KEY = "sokomkononi_subadmins_v1";
+const STAFF_KEY = "sokomkononi_rbac_staff_v1";     // <-- was "sokomkononi_subadmins_v1"
 const UPDATE_EVENT = "sokomkononi:roles-updated";
+const STAFF_EVENT = "sokomkononi:rbac-staff-updated";
 
 export const PERMISSIONS = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" } },
@@ -28,9 +29,6 @@ export const PERMISSIONS = [
   { key: "staff", label: { sw: "Wafanyakazi", en: "Staff" } },
 ];
 
-// ══════════════════════════════════════════════════════════════
-// STORAGE (cache for SSR-safe reads — NOT a fallback source)
-// ══════════════════════════════════════════════════════════════
 function read(key, fb) {
   if (typeof window === "undefined") return fb;
   try {
@@ -40,9 +38,15 @@ function read(key, fb) {
     return Array.isArray(parsed) ? parsed : fb;
   } catch { return fb; }
 }
-function write(key, list) {
+function writeRoles(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(list));
+  window.localStorage.setItem(ROLES_KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event(UPDATE_EVENT));
+}
+function writeStaff(list) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(STAFF_KEY, JSON.stringify(list));
+  window.dispatchEvent(new Event(STAFF_EVENT));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
@@ -71,24 +75,18 @@ function normStaff(raw) {
   };
 }
 
-// ══════════════════════════════════════════════════════════════
-// READS (sync)
-// ══════════════════════════════════════════════════════════════
 export function getRoles() { return read(ROLES_KEY, []); }
 export function getRole(key) { return getRoles().find((r) => r.key === key) || null; }
 export function getRoleById(id) { return getRoles().find((r) => r.id === id) || null; }
 export function getSubAdmins() { return read(STAFF_KEY, []); }
 export function getSubAdmin(id) { return getSubAdmins().find((s) => s.id === id) || null; }
 
-// ══════════════════════════════════════════════════════════════
-// HYDRATE
-// ══════════════════════════════════════════════════════════════
 export async function hydrateRolesFromApi() {
   const out = { roles: null, staff: null, errors: [] };
   try {
     const d = await api.get("/rbac/roles/?page_size=200");
     const list = (Array.isArray(d) ? d : d?.results || []).map(normRole).filter(Boolean);
-    write(ROLES_KEY, list);
+    writeRoles(list);
     out.roles = { ok: true, count: list.length };
   } catch (err) {
     out.roles = { ok: false, error: err };
@@ -97,7 +95,7 @@ export async function hydrateRolesFromApi() {
   try {
     const d = await api.get("/rbac/staff/?page_size=200");
     const list = (Array.isArray(d) ? d : d?.results || []).map(normStaff).filter(Boolean);
-    write(STAFF_KEY, list);
+    writeStaff(list);
     out.staff = { ok: true, count: list.length };
   } catch (err) {
     out.staff = { ok: false, error: err };
@@ -106,9 +104,6 @@ export async function hydrateRolesFromApi() {
   return out;
 }
 
-// ══════════════════════════════════════════════════════════════
-// MUTATIONS (no optimistic write without backend confirmation)
-// ══════════════════════════════════════════════════════════════
 export async function addRoleAsync({ key, permissions }) {
   if (!key || !Array.isArray(permissions)) {
     return { ok: false, error: new Error("key + permissions required") };
@@ -116,7 +111,7 @@ export async function addRoleAsync({ key, permissions }) {
   try {
     const raw = await api.post("/rbac/roles/", { key, permissions });
     const created = normRole(raw);
-    write(ROLES_KEY, [created, ...getRoles()]);
+    writeRoles([created, ...getRoles()]);
     return { ok: true, role: created };
   } catch (err) { return { ok: false, error: err }; }
 }
@@ -124,13 +119,10 @@ export async function addRoleAsync({ key, permissions }) {
 export async function updateRoleAsync(key, { permissions }) {
   const role = getRole(key);
   if (!role) return { ok: false, error: new Error("Role not found") };
-  if (role.isSystem && permissions) {
-    // System roles can still have permission arrays — allow, but backend may forbid
-  }
   try {
     const raw = await api.patch(`/rbac/roles/${role.id}/`, { permissions });
     const updated = normRole(raw);
-    write(ROLES_KEY, getRoles().map((r) => (r.key === key ? updated : r)));
+    writeRoles(getRoles().map((r) => (r.key === key ? updated : r)));
     return { ok: true, role: updated };
   } catch (err) { return { ok: false, error: err }; }
 }
@@ -141,7 +133,7 @@ export async function removeRoleAsync(key) {
   if (role.isSystem) return { ok: false, error: new Error("Cannot delete system role") };
   try {
     await api.delete(`/rbac/roles/${role.id}/`);
-    write(ROLES_KEY, getRoles().filter((r) => r.key !== key));
+    writeRoles(getRoles().filter((r) => r.key !== key));
     return { ok: true };
   } catch (err) { return { ok: false, error: err }; }
 }
@@ -153,7 +145,7 @@ export async function addStaffAsync({ userId, roleId, active = true }) {
   try {
     const raw = await api.post("/rbac/staff/", { user: userId, role: roleId, active });
     const created = normStaff(raw);
-    write(STAFF_KEY, [created, ...getSubAdmins()]);
+    writeStaff([created, ...getSubAdmins()]);
     return { ok: true, staff: created };
   } catch (err) { return { ok: false, error: err }; }
 }
@@ -168,7 +160,7 @@ export async function updateStaffAsync(id, { roleId, active }) {
   try {
     const raw = await api.patch(`/rbac/staff/${id}/`, body);
     const updated = normStaff(raw) || { ...existing, ...body };
-    write(STAFF_KEY, getSubAdmins().map((s) => (s.id === id ? updated : s)));
+    writeStaff(getSubAdmins().map((s) => (s.id === id ? updated : s)));
     return { ok: true, staff: updated };
   } catch (err) { return { ok: false, error: err }; }
 }
@@ -176,14 +168,11 @@ export async function updateStaffAsync(id, { roleId, active }) {
 export async function removeStaffAsync(id) {
   try {
     await api.delete(`/rbac/staff/${id}/`);
-    write(STAFF_KEY, getSubAdmins().filter((s) => s.id !== id));
+    writeStaff(getSubAdmins().filter((s) => s.id !== id));
     return { ok: true };
   } catch (err) { return { ok: false, error: err }; }
 }
 
-// ══════════════════════════════════════════════════════════════
-// HOOKS
-// ══════════════════════════════════════════════════════════════
 export function useRoles() {
   const [list, setList] = useState(() => getRoles());
   useEffect(() => {
@@ -210,9 +199,11 @@ export function useSubAdminsWithRoles() {
     hydrateRolesFromApi();
     const sync = () => setList(getSubAdmins());
     window.addEventListener("storage", sync);
+    window.addEventListener(STAFF_EVENT, sync);
     window.addEventListener(UPDATE_EVENT, sync);
     return () => {
       window.removeEventListener("storage", sync);
+      window.removeEventListener(STAFF_EVENT, sync);
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, []);
@@ -225,3 +216,12 @@ export function hasPermission(roleKey, perm) {
   return !!role && role.permissions.includes(perm);
 }
 
+// Legacy shims
+export const SEED_ROLES = [];
+export const DEFAULT_ROLES = [];
+export function addRole() { return null; }
+export function updateRole() {}
+export function removeRole() {}
+export function addSubAdmin() { return null; }
+export function updateSubAdmin() {}
+export function removeSubAdmin() {}

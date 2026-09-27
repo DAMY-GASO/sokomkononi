@@ -1,10 +1,10 @@
 // ============================================================
 // authStore.js — API-backed via /api/auth/
-// Backward compatible na AuthContext API
+// FIX: clears BOTH user and JWT tokens when login/me() fails.
 // ============================================================
-
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { authApi, setUnauthorizedHandler } from "../api/index.js";
+import { clearTokens as clearJWT } from "../api/client.js";
 
 const STORAGE_KEY = "sokomkononi_current_user_v1";
 const UPDATE_EVENT = "sokomkononi:auth-updated";
@@ -12,22 +12,14 @@ const AVATAR_KEY_PREFIX = "admin_avatar_";
 
 export const SEED_USER = null;
 
-// ============================================================
-// AVATAR HELPERS
-// ============================================================
 function attachStoredAvatar(user) {
   if (!user?.id) return user;
   try {
     const stored = localStorage.getItem(AVATAR_KEY_PREFIX + user.id);
     return stored ? { ...user, avatarUrl: stored } : user;
-  } catch {
-    return user;
-  }
+  } catch { return user; }
 }
 
-// ============================================================
-// STORAGE
-// ============================================================
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_USER;
   try {
@@ -35,9 +27,7 @@ function readFromStorage() {
     if (!raw) return SEED_USER;
     const parsed = JSON.parse(raw);
     return parsed ? attachStoredAvatar(parsed) : SEED_USER;
-  } catch {
-    return SEED_USER;
-  }
+  } catch { return SEED_USER; }
 }
 
 function saveUser(user) {
@@ -50,9 +40,12 @@ function saveUser(user) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-// ============================================================
-// ROLE HELPERS
-// ============================================================
+/** Clears user state AND wipes JWT tokens. */
+function hardReset() {
+  saveUser(null);
+  clearJWT();
+}
+
 function computeIsAdmin(user) {
   if (!user) return false;
   return (
@@ -66,9 +59,6 @@ function computeIsAdmin(user) {
   );
 }
 
-// ============================================================
-// NORMALIZER
-// ============================================================
 function normalizeUserFromApi(raw) {
   if (!raw) return null;
   return {
@@ -77,8 +67,6 @@ function normalizeUserFromApi(raw) {
     email: raw.email || "",
     phone: raw.phone || "",
     username: raw.username || "",
-
-    // Roles
     isStaff: !!(raw.is_staff || raw.isStaff),
     isSuperuser: !!(raw.is_superuser || raw.isSuperuser),
     is_seller: !!(raw.is_seller || raw.account_type === "BUSINESS"),
@@ -87,25 +75,17 @@ function normalizeUserFromApi(raw) {
     role: raw.is_staff || raw.is_superuser
       ? "Admin"
       : (raw.account_type === "BUSINESS" || raw.is_seller ? "Seller" : "Buyer"),
-
-    // Verification
     isVerified: !!(raw.is_verified ?? raw.isVerified),
     emailVerified: !!(raw.email_verified ?? raw.emailVerified),
     phoneVerified: !!(raw.phone_verified ?? raw.phoneVerified),
     verified: !!(raw.is_verified ?? raw.verified),
-
-    // Status
     isActive: raw.is_active !== false,
     isDeleted: !!raw.is_deleted,
-
-    // Profile
     avatarUrl: raw.avatar || raw.avatar_url || raw.avatarUrl || null,
     bio: raw.bio || "",
     region: raw.region || "",
     location: raw.location || raw.region || "",
     district: raw.district || "",
-
-    // Meta
     joinedAt: raw.date_joined || raw.created_at || null,
     memberSince: raw.date_joined || raw.created_at || null,
     lastLogin: raw.last_login || null,
@@ -113,49 +93,30 @@ function normalizeUserFromApi(raw) {
   };
 }
 
-// ============================================================
-// READS
-// ============================================================
-export function getCurrentUser() {
-  return readFromStorage();
-}
-
-export function isAuthenticated() {
-  return Boolean(getCurrentUser()?.id);
-}
-
-export function isAdmin() {
-  return computeIsAdmin(getCurrentUser());
-}
-
+export function getCurrentUser() { return readFromStorage(); }
+export function isAuthenticated() { return Boolean(getCurrentUser()?.id); }
+export function isAdmin() { return computeIsAdmin(getCurrentUser()); }
 export function hasRole(role) {
   const user = getCurrentUser();
   if (!user) return false;
   if (Array.isArray(role)) return role.includes(user.role);
   return user.role === role;
 }
+export function isSeller() { return hasRole("Seller"); }
 
-export function isSeller() {
-  return hasRole("Seller");
-}
-
-// ============================================================
-// HYDRATE
-// ============================================================
 export async function hydrateCurrentUserFromApi() {
   try {
     if (!authApi.isAuthenticated()) {
-      if (getCurrentUser() !== null) saveUser(null);
+      if (getCurrentUser() !== null) hardReset();
       return { ok: false, source: "no-token" };
     }
-
     const raw = await authApi.me();
     const user = normalizeUserFromApi(raw);
     saveUser(user);
     return { ok: true, source: "api", user };
   } catch (err) {
     if (err?.status === 401) {
-      saveUser(null);
+      hardReset();
       return { ok: false, source: "unauthorized", error: err };
     }
     console.warn("[authStore] hydrate failed:", err);
@@ -163,14 +124,10 @@ export async function hydrateCurrentUserFromApi() {
   }
 }
 
-// ============================================================
-// AUTH ACTIONS
-// ============================================================
 export async function loginAsync({ identifier, password }) {
   if (!identifier || !password) {
     return { ok: false, error: new Error("identifier na password zinahitajika") };
   }
-
   try {
     const data = await authApi.login({ identifier, password });
     const me = data?.user ?? (await authApi.me());
@@ -178,7 +135,7 @@ export async function loginAsync({ identifier, password }) {
     saveUser(user);
     return { ok: true, user };
   } catch (err) {
-    saveUser(null);
+    hardReset();
     console.warn("[authStore] login failed:", err);
     return { ok: false, error: err };
   }
@@ -188,24 +145,19 @@ export async function adminLoginAsync({ identifier, password }) {
   if (!identifier || !password) {
     return { ok: false, error: new Error("identifier na password zinahitajika") };
   }
-
   try {
     await authApi.login({ identifier, password });
     const me = await authApi.me();
-
     if (!computeIsAdmin(me)) {
-      await authApi.logout();
-      return {
-        ok: false,
-        error: new Error("Huna ruhusa ya kuingia kama admin"),
-      };
+      await authApi.logout().catch(() => {});
+      hardReset();
+      return { ok: false, error: new Error("Huna ruhusa ya kuingia kama admin") };
     }
-
     const user = normalizeUserFromApi(me);
     saveUser(user);
     return { ok: true, user };
   } catch (err) {
-    saveUser(null);
+    hardReset();
     console.warn("[authStore] adminLogin failed:", err);
     return { ok: false, error: err };
   }
@@ -215,12 +167,10 @@ export async function registerAsync(payload) {
   if (!payload?.email || !payload?.password) {
     return { ok: false, error: new Error("email na password zinahitajika") };
   }
-
   try {
     const account_type =
       payload.account_type ||
       (payload.intent === "sell" ? "BUSINESS" : "INDIVIDUAL");
-
     const data = await authApi.register({
       name: payload.name,
       email: payload.email,
@@ -236,65 +186,45 @@ export async function registerAsync(payload) {
 }
 
 export async function verifyOtpAsync({ identifier, otpCode, verificationType }) {
-  if (typeof identifier === "string" && typeof otpCode === "string" && !verificationType) {
-    verificationType = identifier.includes("@") ? "EMAIL" : "PHONE";
-  }
-
   if (!identifier || !otpCode) {
     return { ok: false, error: new Error("identifier na otpCode zinahitajika") };
   }
-
   const type = verificationType || (identifier.includes("@") ? "EMAIL" : "PHONE");
-
   try {
     const data = await authApi.verifyOtp({
-      identifier,
-      otp_code: otpCode,
-      verification_type: type,
+      identifier, otp_code: otpCode, verification_type: type,
     });
     const me = data?.user ?? (await authApi.me());
     const user = normalizeUserFromApi(me);
     saveUser(user);
     return { ok: true, user };
   } catch (err) {
+    hardReset();
     console.warn("[authStore] verifyOtp failed:", err);
     return { ok: false, error: err };
   }
 }
 
 export async function logoutAsync() {
-  try {
-    await authApi.logout();
-  } catch (err) {
-    console.warn("[authStore] logout API error (ignored):", err);
-  } finally {
-    saveUser(null);
-  }
+  try { await authApi.logout(); }
+  catch (err) { console.warn("[authStore] logout API error:", err); }
+  finally { hardReset(); }
   return { ok: true };
 }
 
-/** @deprecated OTP inatumwa kiotomatiki na registerAsync */
 export async function sendOtpAsync(_email) {
   return { ok: true, note: "OTP imetumwa na register" };
 }
 
-// ============================================================
-// PROFILE
-// ============================================================
 export async function updateProfileAsync(patch) {
   const previous = getCurrentUser();
   if (!previous) return { ok: false, error: new Error("Hakuna mtumiaji aliyeingia") };
-
   const optimistic = { ...previous, ...patch };
   saveUser(optimistic);
-
   try {
     const raw = await authApi.updateProfile(patch);
     const updated = normalizeUserFromApi(raw);
-    if (updated) {
-      saveUser(updated);
-      return { ok: true, user: updated };
-    }
+    if (updated) { saveUser(updated); return { ok: true, user: updated }; }
     return { ok: true, user: optimistic };
   } catch (err) {
     saveUser(previous);
@@ -314,14 +244,8 @@ export async function refreshProfileAsync() {
     return { ok: false, error: err };
   }
 }
+export async function refreshUserAsync() { return refreshProfileAsync(); }
 
-export async function refreshUserAsync() {
-  return refreshProfileAsync();
-}
-
-// ============================================================
-// PASSWORD
-// ============================================================
 export async function changePasswordAsync({ currentPassword, newPassword, confirmPassword }) {
   if (!currentPassword || !newPassword || !confirmPassword) {
     return { ok: false, error: new Error("Sehemu zote zinahitajika") };
@@ -329,7 +253,6 @@ export async function changePasswordAsync({ currentPassword, newPassword, confir
   if (newPassword !== confirmPassword) {
     return { ok: false, error: new Error("Nywila mpya hazifanani") };
   }
-
   try {
     await authApi.changePassword({
       current_password: currentPassword,
@@ -352,39 +275,24 @@ export async function updatePasswordAsync(args) {
 }
 
 export async function forgotPasswordAsync(identifier) {
-  if (!identifier) {
-    return { ok: false, error: new Error("identifier inahitajika") };
-  }
+  if (!identifier) return { ok: false, error: new Error("identifier inahitajika") };
   try {
     const data = await authApi.forgotPassword(identifier);
     return { ok: true, data };
-  } catch (err) {
-    console.warn("[authStore] forgotPassword failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-export async function verifyPasswordResetOtpAsync({
-  identifier,
-  otpCode,
-  verificationType,
-}) {
+export async function verifyPasswordResetOtpAsync({ identifier, otpCode, verificationType }) {
   if (!identifier || !otpCode) {
     return { ok: false, error: new Error("identifier na otpCode zinahitajika") };
   }
   const type = verificationType || (identifier.includes("@") ? "EMAIL" : "PHONE");
-
   try {
     const data = await authApi.verifyPasswordResetOtp({
-      identifier,
-      otp_code: otpCode,
-      verification_type: type,
+      identifier, otp_code: otpCode, verification_type: type,
     });
     return { ok: true, data };
-  } catch (err) {
-    console.warn("[authStore] verifyPasswordResetOtp failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function resetPasswordAsync({ resetToken, newPassword, confirmPassword }) {
@@ -394,7 +302,6 @@ export async function resetPasswordAsync({ resetToken, newPassword, confirmPassw
   if (newPassword !== confirmPassword) {
     return { ok: false, error: new Error("Nywila mpya hazifanani") };
   }
-
   try {
     await authApi.resetPassword({
       reset_token: resetToken,
@@ -402,39 +309,25 @@ export async function resetPasswordAsync({ resetToken, newPassword, confirmPassw
       confirm_password: confirmPassword,
     });
     return { ok: true };
-  } catch (err) {
-    console.warn("[authStore] resetPassword failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// AVATAR
-// ============================================================
 export async function updateAvatarAsync(file) {
   const user = getCurrentUser();
   if (!user) return { ok: false, error: new Error("Hakuna mtumiaji") };
   if (!file) return { ok: false, error: new Error("No file") };
-  if (!file.type.startsWith("image/")) {
-    return { ok: false, error: new Error("Si picha") };
-  }
-  if (file.size > 1024 * 1024) {
-    return { ok: false, error: new Error("Picha ni kubwa mno (max 1MB)") };
-  }
-
+  if (!file.type.startsWith("image/")) return { ok: false, error: new Error("Si picha") };
+  if (file.size > 1024 * 1024) return { ok: false, error: new Error("Picha ni kubwa mno (max 1MB)") };
   try {
     const fd = new FormData();
     fd.append("avatar", file);
     const { api } = await import("../api/client.js");
-    const result = await api.upload("/auth/profile/avatar/", fd);
-    // Refresh profile to get canonical avatar URL
+    await api.upload("/auth/profile/avatar/", fd);
     const me = await authApi.me();
     const fresh = normalizeUserFromApi(me);
     if (fresh) saveUser(fresh);
     return { ok: true, avatarUrl: fresh?.avatarUrl || null };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function removeAvatarAsync() {
@@ -443,56 +336,34 @@ export async function removeAvatarAsync() {
   try {
     const { api } = await import("../api/client.js");
     await api.delete("/auth/profile/avatar/");
-    const next = { ...user, avatarUrl: null };
-    saveUser(next);
+    saveUser({ ...user, avatarUrl: null });
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// ACCOUNT DELETION — ⚠️ NA GUARD YA ADMIN
-// ============================================================
 export async function deleteAccountAsync(reason = "") {
   const previous = getCurrentUser();
-  if (!previous) {
-    return { ok: false, error: new Error("Hakuna mtumiaji aliyeingia") };
-  }
-
-  // 🛡️ GUARD: Zuia admin kufuta akaunti
+  if (!previous) return { ok: false, error: new Error("Hakuna mtumiaji aliyeingia") };
   if (computeIsAdmin(previous)) {
     return {
       ok: false,
-      error: new Error(
-        "Akaunti za Admin haziwezi kufutwa kupitia UI. Wasiliana na Super Admin mwingine."
-      ),
+      error: new Error("Akaunti za Admin haziwezi kufutwa kupitia UI. Wasiliana na Super Admin mwingine."),
     };
   }
-
   try {
     await authApi.deleteAccount(reason);
-    saveUser(null);
+    hardReset();
     return { ok: true };
-  } catch (err) {
-    console.warn("[authStore] deleteAccount failed:", err);
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// 401 HANDLER
-// ============================================================
 export function installUnauthorizedHandler() {
   setUnauthorizedHandler(() => {
-    console.warn("[authStore] 401 — kusafisha user state");
-    saveUser(null);
+    console.warn("[authStore] 401 — kusafisha user + tokens");
+    hardReset();
   });
 }
 
-// ============================================================
-// HOOKS
-// ============================================================
 export function useAuth() {
   const [user, setUser] = useState(() => getCurrentUser());
   const [isLoading, setIsLoading] = useState(() => !getCurrentUser());
@@ -503,7 +374,6 @@ export function useAuth() {
     hydrateCurrentUserFromApi().finally(() => {
       if (!cancelled) setIsLoading(false);
     });
-
     const sync = () => setUser(getCurrentUser());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -524,16 +394,11 @@ export function useAuth() {
   };
 }
 
-export function useCurrentUser() {
-  const { user } = useAuth();
-  return user;
-}
-
+export function useCurrentUser() { return useAuth().user; }
 export function useIsAuthenticated() {
   const { isAuthenticated, isLoading } = useAuth();
   return { isAuthenticated, isLoading };
 }
-
 export function useHasRole(role) {
   const { user } = useAuth();
   if (!user) return false;
@@ -541,27 +406,24 @@ export function useHasRole(role) {
   return user.role === role;
 }
 
-// ============================================================
-// SOCIAL AUTH (Google / Apple)
-// ============================================================
-export async function socialLoginAsync({ provider, idToken, code }) {
+export async function socialLoginAsync({ provider, idToken, code, user: socialUser }) {
   if (!provider || !idToken) {
     return { ok: false, error: new Error("provider na idToken zinahitajika") };
   }
-
   try {
     const { api } = await import("../api/client.js");
     const data = await api.post("/auth/social/", {
-      provider,          // "google" | "apple"
+      provider,
       id_token: idToken,
       code: code || null,
+      ...(socialUser ? { user: socialUser } : {}),
     });
     const me = data?.user ?? (await authApi.me());
     const user = normalizeUserFromApi(me);
     saveUser(user);
     return { ok: true, user };
   } catch (err) {
-    saveUser(null);
+    hardReset();
     console.warn("[authStore] socialLogin failed:", err);
     return { ok: false, error: err };
   }

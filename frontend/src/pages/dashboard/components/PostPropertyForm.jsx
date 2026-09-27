@@ -59,6 +59,7 @@ export default function PostPropertyForm({
   const [feeAmount, setFeeAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [warnings, setWarnings] = useState([]);
   const [base, setBase] = useState({
     title: "",
     price: "",
@@ -212,8 +213,12 @@ export default function PostPropertyForm({
         try {
           await api.post(`/listings/${listingId}/${detailEndpoint}/`, detailBody);
         } catch (detailErr) {
-          // Non-fatal — listing is already created. Warn user.
           console.warn("[PostPropertyForm] detail submit failed:", detailErr);
+          const msg = t(
+            "Taarifa za ziada hazikuhifadhiwa — unaweza kuziongeza baadaye kwenye Mali Zangu.",
+            "Extra details were not saved — you can add them later from My Listings."
+          );
+          setWarnings((w) => (w.includes(msg) ? w : [...w, msg]));
         }
       }
 
@@ -308,6 +313,13 @@ export default function PostPropertyForm({
                 <div className="rounded-lg px-3 py-2 mb-3 text-xs" style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}>
                   <AlertTriangle size={12} className="inline mr-1" />
                   {error}
+                </div>
+              )}
+              {warnings.length > 0 && (
+                <div className="rounded-lg px-3 py-2 mb-3 text-xs text-left" style={{ background: "rgba(232,163,61,0.15)", color: "#8A5A16" }}>
+                  {warnings.map((w, i) => (
+                    <p key={i}>⚠️ {w}</p>
+                  ))}
                 </div>
               )}
 

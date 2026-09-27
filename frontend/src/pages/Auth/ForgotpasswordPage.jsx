@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   forgotPasswordAsync,
@@ -118,6 +118,11 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resetToken, setResetToken] = useState(null);
+  const cooldownRef = useRef(null);
+
+  useEffect(() => () => {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+  }, []);
 
   function validateForm() {
     if (!form.email.trim()) return t("forgot_error_email_required");
@@ -127,11 +132,15 @@ export default function ForgotPasswordPage() {
   }
 
   function startResendCooldown() {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
     setResendCooldown(30);
-    const interval = setInterval(() => {
+    cooldownRef.current = setInterval(() => {
       setResendCooldown((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
+          if (cooldownRef.current) {
+            clearInterval(cooldownRef.current);
+            cooldownRef.current = null;
+          }
           return 0;
         }
         return prev - 1;

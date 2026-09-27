@@ -1,6 +1,7 @@
 // ============================================================
-// dealsStore.js
-// Backend: /api/deals/
+// dealsStore.js — Backend: /api/deals/
+// FIX: id comparisons coerced to string; isBuyer detection now
+//      robust across number/string id shapes.
 // ============================================================
 import { useEffect, useState } from "react";
 import { dealsApi } from "../api/deals.js";
@@ -11,53 +12,38 @@ const UPDATE_EVENT = "sokomkononi:deals-updated";
 
 export const SEED_DEALS = [];
 
-// ============================================================
-// STORAGE HELPERS
-// ============================================================
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_DEALS;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return SEED_DEALS;
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return SEED_DEALS;
-    return parsed;
-  } catch {
-    return SEED_DEALS;
-  }
+    return Array.isArray(parsed) ? parsed : SEED_DEALS;
+  } catch { return SEED_DEALS; }
 }
-
-export function getDeals() {
-  return readFromStorage();
-}
-
-export function saveDeals(deals) {
+function saveDeals(deals) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(deals));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
+const sameId = (a, b) => String(a) === String(b);
 
+export function getDeals() { return readFromStorage(); }
 export function updateDeal(id, patch) {
   const current = getDeals();
-  const next = current.map((d) => (d.id === id ? { ...d, ...patch } : d));
+  const next = current.map((d) => (sameId(d.id, id) ? { ...d, ...patch } : d));
   saveDeals(next);
   return next;
 }
-
-export function getDeal(id) {
-  return getDeals().find((d) => d.id === id) || null;
-}
-
+export function getDeal(id) { return getDeals().find((d) => sameId(d.id, id)) || null; }
 export function getDealByListing(listingId) {
-  return getDeals().find((d) => d.listingId === listingId) || null;
+  return getDeals().find((d) => sameId(d.listingId, listingId)) || null;
 }
 
-// ============================================================
-// NORMALIZER
-// ============================================================
 function normalizeDealFromApi(raw, currentUserId) {
   if (!raw) return null;
-  const isBuyer = raw.buyer?.id === currentUserId;
+  const buyerId = raw.buyer?.id ?? raw.buyer_id ?? null;
+  const isBuyer = sameId(buyerId, currentUserId);
   const counterparty = isBuyer ? raw.seller : raw.buyer;
   const buyer = raw.buyer || {};
   const seller = raw.seller || {};
@@ -65,17 +51,15 @@ function normalizeDealFromApi(raw, currentUserId) {
 
   return {
     id: raw.id,
-    listingId: listing.id,
-    listingTitle: listing.title || "",
+    listingId: listing.id ?? raw.listing ?? null,
+    listingTitle: listing.title || raw.listing_title || "",
     category: listing.category_name || null,
     location: listing.location || "",
     askingPrice: Number(listing.price) || 0,
     currentOffer: Number(raw.agreed_price) || Number(listing.price) || 0,
     counterpartyName: counterparty?.name || "",
-    buyerName: buyer.name || "",
-    sellerName: seller.name || "",
-    buyerId: buyer.id ?? null,
-    sellerId: seller.id ?? null,
+    buyerName: buyer.name || raw.buyer_name || "",
+    sellerName: seller.name || raw.seller_name || "",
     status: (raw.status || "OPEN").toLowerCase(),
     agreedPrice: raw.agreed_price != null ? Number(raw.agreed_price) : null,
     agreedAt: raw.agreed_at,
@@ -83,7 +67,7 @@ function normalizeDealFromApi(raw, currentUserId) {
     updatedAt: raw.updated_at,
     messages: (raw.offers || []).map((o) => ({
       id: o.id,
-      sender: o.offered_by === currentUserId ? "me" : "them",
+      sender: sameId(o.offered_by, currentUserId) ? "me" : "them",
       text: o.message || "",
       offerAmount: Number(o.amount) || null,
       at: o.created_at,
@@ -92,9 +76,6 @@ function normalizeDealFromApi(raw, currentUserId) {
   };
 }
 
-// ============================================================
-// HYDRATE
-// ============================================================
 export async function hydrateDealsFromApi(currentUserId) {
   try {
     const data = await dealsApi.list({ page_size: 100 });
@@ -110,15 +91,8 @@ export async function hydrateDealsFromApi(currentUserId) {
   }
 }
 
-// ============================================================
-// ASYNC ACTIONS
-// ============================================================
 export async function getOrCreateDealAsync({
-  listingId,
-  currentUserId,
-  sellerName,
-  buyerName,
-  initialMessage,
+  listingId, currentUserId, sellerName, buyerName, initialMessage,
 }) {
   try {
     const raw = await dealsApi.create(listingId);
@@ -126,9 +100,8 @@ export async function getOrCreateDealAsync({
     if (!deal) return { ok: false, error: new Error("Invalid deal response") };
 
     const current = getDeals();
-    saveDeals([deal, ...current.filter((d) => d.id !== deal.id)]);
+    saveDeals([deal, ...current.filter((d) => !sameId(d.id, deal.id))]);
 
-    // Tuma offer ya kwanza kama initialMessage imetolewa
     if (initialMessage) {
       try {
         await dealsApi.sendOffer(deal.id, {
@@ -136,19 +109,10 @@ export async function getOrCreateDealAsync({
           message: initialMessage,
         });
       } catch (offerErr) {
-        console.warn(
-          "[dealsStore] initial offer failed (deal still created):",
-          offerErr
-        );
-        return {
-          ok: true,
-          deal,
-          warning: "initial_offer_failed",
-          warningError: offerErr,
-        };
+        console.warn("[dealsStore] initial offer failed:", offerErr);
+        return { ok: true, deal, warning: "initial_offer_failed", warningError: offerErr };
       }
     }
-
     return { ok: true, deal };
   } catch (err) {
     console.warn("[dealsStore] createDeal failed:", err);
@@ -156,45 +120,26 @@ export async function getOrCreateDealAsync({
   }
 }
 
-export async function sendOfferAsync(
-  dealId,
-  amount,
-  message = "",
-  respondedTo = null
-) {
+export async function sendOfferAsync(dealId, amount, message = "", respondedTo = null) {
   const previous = getDeals();
-  const deal = previous.find((d) => d.id === dealId);
+  const deal = previous.find((d) => sameId(d.id, dealId));
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
 
-  // Optimistic: ongeza message kwenye thread
   const tempMsgId = `temp_${Date.now()}`;
   const optimisticDeal = {
     ...deal,
     currentOffer: amount,
-    messages: [
-      ...(deal.messages || []),
-      {
-        id: tempMsgId,
-        sender: "me",
-        text: message,
-        offerAmount: amount,
-        at: new Date().toISOString(),
-        status: "pending",
-      },
-    ],
+    messages: [...(deal.messages || []), {
+      id: tempMsgId, sender: "me", text: message,
+      offerAmount: amount, at: new Date().toISOString(), status: "pending",
+    }],
   };
-  saveDeals(previous.map((d) => (d.id === dealId ? optimisticDeal : d)));
+  saveDeals(previous.map((d) => (sameId(d.id, dealId) ? optimisticDeal : d)));
 
   try {
-    const raw = await dealsApi.sendOffer(dealId, {
-      amount,
-      message,
-      responded_to: respondedTo,
-    });
-
-    // Badilisha temp na offer halisi kutoka backend
+    const raw = await dealsApi.sendOffer(dealId, { amount, message, responded_to: respondedTo });
     const current = getDeals();
-    const target = current.find((d) => d.id === dealId);
+    const target = current.find((d) => sameId(d.id, dealId));
     if (target && raw) {
       const realMsg = {
         id: raw.id,
@@ -204,185 +149,107 @@ export async function sendOfferAsync(
         at: raw.created_at || new Date().toISOString(),
         status: raw.status || "pending",
       };
-      saveDeals(
-        current.map((d) =>
-          d.id === dealId
-            ? {
-                ...d,
-                messages: (d.messages || []).map((m) =>
-                  m.id === tempMsgId ? realMsg : m
-                ),
-              }
-            : d
-        )
-      );
+      saveDeals(current.map((d) =>
+        sameId(d.id, dealId)
+          ? { ...d, messages: (d.messages || []).map((m) => (m.id === tempMsgId ? realMsg : m)) }
+          : d
+      ));
     }
     return { ok: true, offer: raw };
   } catch (err) {
-    saveDeals(previous); // Rollback
+    saveDeals(previous);
     console.warn("[dealsStore] sendOffer failed:", err);
     return { ok: false, error: err };
   }
 }
 
-/**
- * Kubali ofa.
- * @param {number|string} dealId - ID ya deal
- * @param {number|string} offerId - ID ya offer
- * @param {number|string} currentUserId - ID ya mtumiaji wa sasa (FIX)
- */
-export async function acceptOfferAsync(dealId, offerId, currentUserId = null) {
+export async function acceptOfferAsync(dealId, offerId) {
   const previous = getDeals();
-  const deal = previous.find((d) => d.id === dealId);
+  const deal = previous.find((d) => sameId(d.id, dealId));
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
 
-  // Optimistic
-  saveDeals(
-    previous.map((d) =>
-      d.id === dealId
-        ? { ...d, status: "accepted", agreedAt: new Date().toISOString() }
-        : d
-    )
-  );
+  saveDeals(previous.map((d) =>
+    sameId(d.id, dealId) ? { ...d, status: "accepted", agreedAt: new Date().toISOString() } : d
+  ));
 
   try {
     const raw = await dealsApi.acceptOffer(dealId, offerId);
-    const current = getDeals();
-    const target = current.find((d) => d.id === dealId);
-
-    if (target && raw) {
-      // ✅ FIX: Pitisha currentUserId halisi (kama ipo)
-      const normalized = normalizeDealFromApi(raw, currentUserId);
-      if (normalized) {
-        saveDeals(
-          current.map((d) => (d.id === dealId ? { ...d, ...normalized } : d))
-        );
-      }
-    }
     return { ok: true, offer: raw };
   } catch (err) {
-    saveDeals(previous); // Rollback
-    console.warn("[dealsStore] acceptOffer failed:", err);
+    saveDeals(previous);
     return { ok: false, error: err };
   }
 }
 
 export async function cancelDealAsync(dealId, reason = "") {
   const previous = getDeals();
-  const deal = previous.find((d) => d.id === dealId);
+  const deal = previous.find((d) => sameId(d.id, dealId));
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
 
-  saveDeals(
-    previous.map((d) =>
-      d.id === dealId
-        ? { ...d, status: "cancelled", cancelReason: reason }
-        : d
-    )
-  );
+  saveDeals(previous.map((d) =>
+    sameId(d.id, dealId) ? { ...d, status: "cancelled", cancelReason: reason } : d
+  ));
 
   try {
     await dealsApi.cancel(dealId, reason);
     return { ok: true };
   } catch (err) {
-    saveDeals(previous); // Rollback
-    console.warn("[dealsStore] cancel failed:", err);
+    saveDeals(previous);
     return { ok: false, error: err };
   }
 }
 
-// ============================================================
-// RESOLVE DISPUTE — sasa inatumia transactionsApi
-// ============================================================
-/**
- * Admin ana-resolve dispute kwa deal.
- * Backend endpoint ni /api/transactions/{id}/resolve-dispute/
- * Kwa hiyo tunahitaji `transactionId` — sio `dealId`.
- *
- * Kama transaction haijatengenezwa bado, function inarudisha error.
- */
-export async function resolveDisputeAsync(
-  dealId,
-  { resolution, note = "", transactionId = null }
-) {
-  if (!resolution) {
-    return { ok: false, error: new Error("resolution inahitajika") };
-  }
-
+export async function resolveDisputeAsync(dealId, { resolution, note = "", transactionId = null }) {
+  if (!resolution) return { ok: false, error: new Error("resolution inahitajika") };
   const previous = getDeals();
-  const deal = previous.find((d) => d.id === dealId);
+  const deal = previous.find((d) => sameId(d.id, dealId));
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
 
-  // Kama hukupewa transactionId, tafuta kutoka local transactionLifecycleStore
   let txId = transactionId;
   if (!txId) {
     try {
-      const { getTransactionByDealRoom } = await import(
-        "./transactionLifecycleStore.js"
-      );
-      const tx =
-        getTransactionByDealRoom(dealId) ||
-        getTransactionByDealRoom(deal.dealRoomId);
+      const { getTransactionByDealRoom } = await import("./transactionLifecycleStore.js");
+      const tx = getTransactionByDealRoom(dealId) || getTransactionByDealRoom(deal.dealRoomId);
       txId = tx?.id ?? null;
-    } catch (e) {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   }
 
   if (!txId) {
     return {
       ok: false,
-      error: new Error(
-        "Transaction haijatengenezwa bado kwa deal hii. Mwambie buyer/muuzaji aanzishe transaction kwanza."
-      ),
+      error: new Error("Transaction haijatengenezwa bado kwa deal hii. Mwambie buyer/muuzaji aanzishe transaction kwanza."),
     };
   }
 
-  // Optimistic — sasisha local deal
-  saveDeals(
-    previous.map((d) =>
-      d.id === dealId
-        ? {
-            ...d,
-            disputeResolvedAt: new Date().toISOString(),
-            disputeResolutionAction: resolution,
-            adminNote: note,
-          }
-        : d
-    )
-  );
+  saveDeals(previous.map((d) =>
+    sameId(d.id, dealId)
+      ? { ...d, disputeResolvedAt: new Date().toISOString(), disputeResolutionAction: resolution, adminNote: note }
+      : d
+  ));
 
   try {
     await transactionsApi.resolveDispute(txId, { resolution, note });
     return { ok: true };
   } catch (err) {
-    saveDeals(previous); // Rollback
-    console.warn("[dealsStore] resolveDispute failed:", err);
+    saveDeals(previous);
     return { ok: false, error: err };
   }
 }
 
-/** @deprecated Use resolveDisputeAsync */
 export function resolveDispute(id, { action, adminNote = "" } = {}) {
   updateDeal(id, {
     disputeResolvedAt: new Date().toISOString(),
     disputeResolutionAction: action,
     adminNote,
   });
-  console.warn(
-    "[dealsStore] resolveDispute (sync) ni deprecated — local only"
-  );
+  console.warn("[dealsStore] resolveDispute (sync) deprecated — local only");
   return getDeals();
 }
 
-// ============================================================
-// LEGACY
-// ============================================================
-/** @deprecated Use getOrCreateDealAsync */
 export function getOrCreateDeal(payload) {
   const current = getDeals();
   const existing = current.find(
-    (d) =>
-      (payload?.listingId && d.listingId === payload.listingId) ||
+    (d) => (payload?.listingId && sameId(d.listingId, payload.listingId)) ||
       (payload?.listingTitle && d.listingTitle === payload.listingTitle)
   );
   if (existing) return existing;
@@ -404,29 +271,15 @@ export function getOrCreateDeal(payload) {
     messages: [],
   };
   saveDeals([...current, deal]);
-
-  if (payload?.listingId) {
-    dealsApi
-      .create(payload.listingId)
-      .catch((err) => console.warn("[dealsStore] create silent fail:", err));
-  }
-
   return deal;
 }
 
-export function checkReservationReminders() {
-  return getDeals();
-}
+export function checkReservationReminders() { return getDeals(); }
 
-// ============================================================
-// HOOKS
-// ============================================================
 export function useDeals(currentUserId) {
   const [deals, setDeals] = useState(() => getDeals());
-
   useEffect(() => {
     hydrateDealsFromApi(currentUserId);
-
     const sync = () => setDeals(getDeals());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -435,12 +288,11 @@ export function useDeals(currentUserId) {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, [currentUserId]);
-
   return deals;
 }
 
 export function useDeal(id) {
   const deals = useDeals();
   if (!id) return null;
-  return deals.find((d) => d.id === id) || null;
+  return deals.find((d) => sameId(d.id, id)) || null;
 }

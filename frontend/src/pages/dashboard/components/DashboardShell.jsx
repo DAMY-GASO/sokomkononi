@@ -213,10 +213,11 @@ export default function DashboardShell() {
     return () => clearTimeout(id);
   }, []);
 
-  // Fetch listings kutoka API mara moja
+  // Fetch listings kutoka API — only when a user is signed in
   useEffect(() => {
+    if (!user?.id) return;
     fetchMyListingsFromApi();
-  }, []);
+  }, [user?.id]);
 
   const [side, setSide] = useState("seller");
   const [activeKey, setActiveKey] = useState("overview");

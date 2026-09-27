@@ -14,6 +14,7 @@ import {
   updateProfileAsync,
   changePasswordAsync,
   deleteAccountAsync,
+  updateAvatarAsync,
 } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Navbar from "../components/Navbar.jsx";
@@ -592,9 +593,25 @@ function EditProfileTab({ user, lang }) {
     setTimeout(() => setSaved(false), 3000);
   };
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
-    if (file) setAvatar(URL.createObjectURL(file));
+    if (!file) return;
+    const prev = avatar;
+    const preview = URL.createObjectURL(file);
+    setAvatar(preview);
+    const res = await updateAvatarAsync(file);
+    URL.revokeObjectURL(preview);
+    if (!res.ok) {
+      setAvatar(prev);
+      alert(
+        res.error?.message ||
+          (lang === "sw"
+            ? "Imeshindwa kupakia picha. Jaribu tena."
+            : "Failed to upload photo. Try again.")
+      );
+    } else {
+      setAvatar(res.avatarUrl || null);
+    }
   };
 
   return (
@@ -973,21 +990,12 @@ function SecurityTab({ lang, user }) {
                 : "Add extra security using an authenticator app"}
             </p>
           </div>
-          {twoFAEnabled ? (
-            <button
-              onClick={() => setShow2FAModal("disable")}
-              className="text-sm font-semibold text-[#C1502E] hover:underline"
-            >
-              {lang === "sw" ? "Zima 2FA" : "Disable 2FA"}
-            </button>
-          ) : (
-            <button
-              onClick={() => setShow2FAModal("enable")}
-              className="text-sm font-semibold text-[#2F6D4F] hover:underline"
-            >
-              {lang === "sw" ? "Washa 2FA" : "Enable 2FA"}
-            </button>
-          )}
+          <span
+            style={{ background: `${COLORS.night}10`, color: COLORS.night }}
+            className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
+          >
+            {lang === "sw" ? "Inakuja hivi karibuni" : "Coming soon"}
+          </span>
         </div>
       </div>
 
@@ -1003,8 +1011,18 @@ function SecurityTab({ lang, user }) {
                 <Globe size={14} className="text-secondary" />
               </div>
               <div>
-                <p className="text-sm text-primary">
-                  Chrome • {lang === "sw" ? "Dar es Salaam" : "Dar es Salaam"}
+                <p className="text-sm text-primary truncate">
+                  {(() => {
+                    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+                    if (/Edg\//.test(ua)) return "Edge";
+                    if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) return "Chrome";
+                    if (/Firefox\//.test(ua)) return "Firefox";
+                    if (/Safari\//.test(ua)) return "Safari";
+                    return lang === "sw" ? "Kivinjari" : "Browser";
+                  })()}{" "}
+                  •{" "}
+                  {(typeof navigator !== "undefined" && navigator.platform) ||
+                    (lang === "sw" ? "Kifaa hiki" : "This device")}
                 </p>
                 <p className="text-body-sm text-secondary">
                   {lang === "sw" ? "Kifaa cha sasa" : "Current device"}
@@ -1114,13 +1132,24 @@ function SecurityTab({ lang, user }) {
 // NOTIFICATIONS TAB
 // ============================================================
 function NotificationsTab({ lang }) {
-  const [settings, setSettings] = useState({
+  const PREFS_KEY = "sokomkononi_notification_prefs_v1";
+  const DEFAULT_PREFS = {
     email_deals: true, email_messages: true, email_promotions: false, email_newsletter: true,
     sms_deals: true, sms_messages: false, sms_promotions: false,
     push_deals: true, push_messages: true, push_promotions: false,
+  };
+  const [settings, setSettings] = useState(() => {
+    try {
+      const raw = localStorage.getItem(PREFS_KEY);
+      return raw ? { ...DEFAULT_PREFS, ...JSON.parse(raw) } : DEFAULT_PREFS;
+    } catch { return DEFAULT_PREFS; }
   });
-
-  const toggle = (key) => setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggle = (key) =>
+    setSettings((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem(PREFS_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
 
   const Toggle = ({ checked, onChange }) => (
     <button

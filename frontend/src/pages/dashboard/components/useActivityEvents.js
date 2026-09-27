@@ -1,26 +1,18 @@
 // ============================================================
 // useActivityEvents.js
-// Hook inayotengeneza orodha KAMILI (bila kikomo) ya shughuli
-// za mtumiaji — kwa Muuzaji (seller) na Mnunuzi (buyer).
-//
-// Inatumika na VYOTE viwili:
-//   - RecentActivity.jsx (widget ya dashboard, inaonyesha 5 za mwisho)
-//   - RecentActivityPage.jsx (ukurasa kamili wa "Shughuli Zote")
+// FIX: uses useMyListings (not the merged list) and passes
+//      currentUserId to useDeals. Recipient/sender classification
+//      is now correct for both buyers and sellers.
 // ============================================================
-
 import { useMemo } from "react";
 import {
-  PlusCircle,
-  Rocket,
-  MessagesSquare,
-  Heart,
-  Wallet,
-  CreditCard,
+  PlusCircle, Rocket, MessagesSquare, Heart, Wallet, CreditCard,
 } from "lucide-react";
 import { COLORS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { useAuth } from "../../../config/authStore.js";
 import {
-  useListings,
+  useMyListings,
   usePublicListings,
 } from "../../../config/listingsStore.js";
 import { useDeals } from "../../../config/dealsStore.js";
@@ -29,12 +21,13 @@ import { useSavedIds, useSavedSnapshots } from "../../../config/savedStore.js";
 
 export function useActivityEvents(side = "seller", onNavigate) {
   const { lang } = useLanguage();
+  const { user } = useAuth();
+  const currentUserId = user?.id || null;
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // Data kutoka stores halisi za app
-  const myListings = useListings();
+  const myListings = useMyListings();
   const allListings = usePublicListings();
-  const deals = useDeals();
+  const deals = useDeals(currentUserId);
   const transactions = useTransactions();
   const savedIds = useSavedIds();
   const savedSnapshots = useSavedSnapshots();
@@ -42,11 +35,7 @@ export function useActivityEvents(side = "seller", onNavigate) {
   return useMemo(() => {
     const events = [];
 
-    // ============================================================
-    // SELLER EVENTS
-    // ============================================================
     if (side === "seller") {
-      // Listings zilizowekwa
       myListings.forEach((l) => {
         if (l.postedAt) {
           events.push({
@@ -54,10 +43,7 @@ export function useActivityEvents(side = "seller", onNavigate) {
             type: "listing",
             icon: PlusCircle,
             color: COLORS.green,
-            title: t(
-              `Listing "${l.title}" ilichapishwa`,
-              `Listing "${l.title}" was posted`
-            ),
+            title: t(`Listing "${l.title}" ilichapishwa`, `Listing "${l.title}" was posted`),
             at: l.postedAt,
             onClick: () => onNavigate("listings"),
           });
@@ -68,17 +54,13 @@ export function useActivityEvents(side = "seller", onNavigate) {
             type: "listing",
             icon: Rocket,
             color: COLORS.gold,
-            title: t(
-              `Listing "${l.title}" imeboostiwa`,
-              `Listing "${l.title}" was boosted`
-            ),
+            title: t(`Listing "${l.title}" imeboostiwa`, `Listing "${l.title}" was boosted`),
             at: l.boostExpiresAt,
             onClick: () => onNavigate("listings"),
           });
         }
       });
 
-      // Mauzo yaliyokamilika
       transactions
         .filter((tx) => tx.type === "sale" && tx.status === "completed")
         .forEach((tx) => {
@@ -87,26 +69,14 @@ export function useActivityEvents(side = "seller", onNavigate) {
             type: "payment",
             icon: Wallet,
             color: COLORS.green,
-            title: t(
-              `Umepokea malipo — "${tx.property}"`,
-              `You received payment — "${tx.property}"`
-            ),
+            title: t(`Umepokea malipo — "${tx.title || tx.property}"`, `You received payment — "${tx.title || tx.property}"`),
             at: tx.at,
             onClick: () => onNavigate("transactions"),
           });
         });
-    }
-
-    // ============================================================
-    // BUYER EVENTS
-    // ============================================================
-    if (side === "buyer") {
-      // Saved listings
+    } else {
       const savedListings = allListings.filter((l) => savedIds.includes(l.id));
       savedListings.forEach((l) => {
-        // savedSnapshots[l.id].savedAt ni wakati halisi wa kuhifadhi
-        // (kutoka savedStore.js). Ikikosekana (mfano listing zilizohifadhiwa
-        // kabla ya snapshot kuanzishwa), tunarudi kwa postedAt.
         const savedAt = savedSnapshots[l.id]?.savedAt || l.postedAt;
         events.push({
           id: `saved_${l.id}`,
@@ -119,72 +89,44 @@ export function useActivityEvents(side = "seller", onNavigate) {
         });
       });
 
-      // Manunuzi & reservations
       transactions
-        .filter(
-          (tx) =>
-            (tx.type === "purchase" || tx.type === "reservation") &&
-            tx.status === "completed"
-        )
+        .filter((tx) =>
+          (tx.type === "purchase" || tx.type === "reservation") &&
+          tx.status === "completed")
         .forEach((tx) => {
           events.push({
             id: `txn_${tx.id}`,
             type: "payment",
             icon: tx.type === "purchase" ? Wallet : CreditCard,
             color: tx.type === "purchase" ? COLORS.green : COLORS.gold,
-            title:
-              tx.type === "purchase"
-                ? t(
-                    `Ununuzi umekamilika — "${tx.property}"`,
-                    `Purchase completed — "${tx.property}"`
-                  )
-                : t(
-                    `Umelipa Reservation Fee — "${tx.property}"`,
-                    `You paid a Reservation Fee — "${tx.property}"`
-                  ),
+            title: tx.type === "purchase"
+              ? t(`Ununuzi umekamilika — "${tx.title || tx.property}"`, `Purchase completed — "${tx.title || tx.property}"`)
+              : t(`Umelipa Reservation Fee — "${tx.title || tx.property}"`, `You paid a Reservation Fee — "${tx.title || tx.property}"`),
             at: tx.at,
             onClick: () => onNavigate("transactions"),
           });
         });
     }
 
-    // ============================================================
-    // DEAL ROOMS — pande zote mbili
-    // ============================================================
     deals.forEach((d) => {
       events.push({
         id: `deal_${d.id}`,
         type: "deal",
         icon: MessagesSquare,
         color: COLORS.rust,
-        title:
-          side === "seller"
-            ? t(
-                `Deal Room mpya — "${d.listingTitle}"`,
-                `New Deal Room — "${d.listingTitle}"`
-              )
-            : t(
-                `Deal Room na muuzaji — "${d.listingTitle}"`,
-                `Deal Room with seller — "${d.listingTitle}"`
-              ),
-        at: d.messages?.[0]?.at || new Date().toISOString(),
+        title: side === "seller"
+          ? t(`Deal Room mpya — "${d.listingTitle}"`, `New Deal Room — "${d.listingTitle}"`)
+          : t(`Deal Room na muuzaji — "${d.listingTitle}"`, `Deal Room with seller — "${d.listingTitle}"`),
+        at: d.messages?.[0]?.at || d.updatedAt || new Date().toISOString(),
         onClick: () => onNavigate("deals"),
       });
     });
 
-    // Sort kwa tarehe — orodha KAMILI, bila kikomo.
     return events
       .filter((e) => e.at)
       .sort((a, b) => new Date(b.at) - new Date(a.at));
   }, [
-    side,
-    myListings,
-    allListings,
-    savedIds,
-    savedSnapshots,
-    deals,
-    transactions,
-    lang,
-    onNavigate,
+    side, myListings, allListings, savedIds, savedSnapshots,
+    deals, transactions, lang, onNavigate, currentUserId,
   ]);
 }

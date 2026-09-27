@@ -41,6 +41,7 @@ export default function AppStoreLinksPanel() {
     setSaving(false);
 
     if (res.ok) {
+      setSavedSnapshot({ play: links.play || "", appstore: links.appstore || "" });
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
     } else {
@@ -51,7 +52,13 @@ export default function AppStoreLinksPanel() {
     }
   };
 
-  const hasChanges = links.play?.trim() || links.appstore?.trim();
+  const [savedSnapshot, setSavedSnapshot] = useState(() => ({
+    play: links.play || "",
+    appstore: links.appstore || "",
+  }));
+  const hasChanges =
+    (links.play || "") !== savedSnapshot.play ||
+    (links.appstore || "") !== savedSnapshot.appstore;
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-4 min-w-0">

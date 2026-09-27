@@ -110,11 +110,11 @@ export default function BuyerOverview({ onNavigate }) {
   // NEARBY
   // ============================================================
   const nearby = useMemo(() => {
-    const userRegion = "Dar es Salaam";
+    const userRegion = user?.region || user?.location || "";
     return listings
       .filter((l) => l.status === "live" && l.region === userRegion)
       .slice(0, 4);
-  }, [listings]);
+  }, [listings, user?.region, user?.location]);
 
   // ============================================================
   // QUICK ACTIONS

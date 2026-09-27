@@ -1,5 +1,7 @@
 // ============================================================
 // savedStore.js — API-only via /api/saved/
+// FIX: one hydrate pipeline; snapshot shape unified; toggleSaved
+//      returns {ok, saved} so callers can react to failures.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -111,7 +113,6 @@ export function useSavedIds() {
 export function useSavedSnapshots() {
   const [snaps, setSnaps] = useState(() => readSnaps());
   useEffect(() => {
-    hydrateSavedFromApi();
     const sync = () => setSnaps(readSnaps());
     window.addEventListener("storage", sync);
     window.addEventListener(SNAP_EV, sync);
@@ -123,3 +124,20 @@ export function useSavedSnapshots() {
   return snaps;
 }
 
+export function saveSnapshot(listing) {
+  if (!listing?.id) return;
+  const snaps = readSnaps();
+  snaps[listing.id] = {
+    price: listing.price,
+    status: listing.status,
+    title: listing.title,
+    savedAt: new Date().toISOString(),
+  };
+  writeSnaps(snaps);
+}
+export function removeSnapshot(id) {
+  const snaps = readSnaps();
+  delete snaps[id];
+  writeSnaps(snaps);
+}
+export function saveSavedIds(ids) { writeIds(ids); }

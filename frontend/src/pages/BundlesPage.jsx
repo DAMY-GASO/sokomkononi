@@ -27,7 +27,7 @@ import PaymentGateway from "./dashboard/components/PaymentGateway";
 import { useActiveBundles } from "../config/bundlesStore.js";
 import {
   useUserCredits,
-  addBundleCredits,
+  hydrateUserCreditsFromApi,
 } from "../config/userCreditsStore.js";
 import { useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
@@ -172,9 +172,13 @@ export default function BundlesPage() {
     setPayingBundle(bundle);
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
     if (!user || !payingBundle) return;
-    addBundleCredits(user.id, payingBundle);
+    try {
+      await hydrateUserCreditsFromApi(user.id);
+    } catch (err) {
+      console.warn("[BundlesPage] credit refresh failed:", err);
+    }
     setPayingBundle(null);
   };
 

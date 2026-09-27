@@ -1,6 +1,6 @@
 // ============================================================
 // messagesStore.js — API-only via /api/messaging/
-// No localStorage source of truth. Cache is refreshed on mount.
+// FIX: compares ids with String() so "1" === 1.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -23,12 +23,14 @@ function write(list) {
   window.dispatchEvent(new Event(EV));
 }
 
+function sameId(a, b) { return String(a) === String(b); }
+
 function norm(raw, currentUserId) {
   if (!raw) return null;
   const listing = raw.listing || {};
   const buyer = raw.buyer || {};
   const seller = raw.seller || {};
-  const isBuyer = buyer.id === currentUserId;
+  const isBuyer = sameId(buyer.id, currentUserId);
   const other = isBuyer ? seller : buyer;
   return {
     id: raw.id,
@@ -54,7 +56,7 @@ function norm(raw, currentUserId) {
 }
 
 export function getConversations() { return read(); }
-export function getConversation(id) { return read().find((c) => c.id === id) || null; }
+export function getConversation(id) { return read().find((c) => sameId(c.id, id)) || null; }
 
 export async function hydrateConversationsFromApi(currentUserId) {
   try {
@@ -80,7 +82,7 @@ export async function sendMessageAsync(conversationId, text) {
       read: !!raw?.is_read,
     };
     write(current.map((c) =>
-      c.id === conversationId
+      sameId(c.id, conversationId)
         ? { ...c, lastMessage: msg.text, lastAt: msg.at, messages: [...(c.messages || []), msg] }
         : c
     ));
@@ -93,7 +95,7 @@ export async function markConversationReadAsync(conversationId) {
     await api.post(`/messaging/conversations/${conversationId}/read/`, {});
     const current = getConversations();
     write(current.map((c) =>
-      c.id === conversationId
+      sameId(c.id, conversationId)
         ? { ...c, unreadCount: 0, messages: (c.messages || []).map((m) => ({ ...m, read: true })) }
         : c
     ));
@@ -131,19 +133,12 @@ export function useUnreadMessagesCount() {
   return read().reduce((sum, c) => sum + (c.unreadCount || 0), 0);
 }
 
-// LEGACY (compat shims)
 export function sendMessage() { return []; }
 export function markConversationRead() { return []; }
 export function receiveMessage() { return []; }
 
-// ============================================================
-// CONVERSATION CREATION
-// Backend: POST /api/messaging/conversations/  { listing, initial_message? }
-// ============================================================
 export async function createConversationAsync({ listingId, initialMessage = "" }) {
-  if (!listingId) {
-    return { ok: false, error: new Error("listingId is required") };
-  }
+  if (!listingId) return { ok: false, error: new Error("listingId is required") };
   try {
     const raw = await api.post("/messaging/conversations/", {
       listing: listingId,
@@ -151,7 +146,5 @@ export async function createConversationAsync({ listingId, initialMessage = "" }
     });
     const data = Array.isArray(raw) ? raw[0] : raw;
     return { ok: true, conversation: data };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }

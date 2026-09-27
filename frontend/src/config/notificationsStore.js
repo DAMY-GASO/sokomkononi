@@ -1,8 +1,12 @@
 // ============================================================
 // notificationsStore.js — API-only via /api/notifications/
-// The backend emits notifications for events. Frontend only
-// reads and marks read. `pushNotification` is kept as a no-op
-// for backward compatibility with legacy callers.
+// The backend emits notifications for events; the frontend only
+// reads and marks read.
+//
+// FIX: the backend's `Notification` schema does not expose an
+//      audience/recipient flag. All notifications returned by
+//      /api/notifications/ are the caller's own. So we route them
+//      all to "user". Admin dashboards consume the same list.
 // ============================================================
 import { useEffect, useState } from "react";
 import { notificationsApi } from "../api/notifications.js";
@@ -28,62 +32,6 @@ export const NOTIFICATION_EVENTS = {
   BUNDLE_PURCHASED: "bundle.purchased",
 };
 
-// ============================================================
-// NOTIFICATION TYPES — ambazo zinahusiana na ADMIN
-// (Kama backend inatuma type hizi, ziwe "admin" audience)
-// ============================================================
-const ADMIN_NOTIFICATION_TYPES = new Set([
-  "LISTING_CREATED",
-  "LISTING_DELETED",
-  "ACCOUNT_DELETED",
-  "ACCOUNT_RESTORED",
-  "DISPUTE_OPENED",
-  "REPORT_RECEIVED",
-  "TICKET_CREATED",
-  "NEW_TICKET",
-  "VERIFICATION_SUBMITTED",
-  "NEW_VERIFICATION",
-]);
-
-// ============================================================
-// AUDIENCE DETECTION
-// Inatumia data zilizopo (kutoka backend) kuamua audience:
-// 1. Kama `raw.audience` ipo — itumie moja kwa moja
-// 2. Kama `raw.recipient_is_staff` ipo — itumie
-// 3. Kama `raw.notification_type` ni ya admin — "admin"
-// 4. Kama `raw.user` au `raw.recipient` ipo — "user"
-// 5. Default: "user"
-// ============================================================
-function getNotificationAudience(raw) {
-  if (!raw) return "user";
-
-  // 1. Explicit audience field (kama backend inatuma)
-  if (raw.audience === "admin" || raw.audience === "user") {
-    return raw.audience;
-  }
-
-  // 2. recipient_is_staff (kama backend itaongeza baadaye)
-  if (typeof raw.recipient_is_staff === "boolean") {
-    return raw.recipient_is_staff ? "admin" : "user";
-  }
-
-  // 3. Notification type inayohusiana na admin
-  if (raw.notification_type && ADMIN_NOTIFICATION_TYPES.has(raw.notification_type)) {
-    return "admin";
-  }
-
-  // 4. Kama notification haihusiani na user maalum (broadcast kwa admin)
-  if (!raw.user && !raw.recipient && raw.related_object_type === "system") {
-    return "admin";
-  }
-
-  // 5. Default
-  return "user";
-}
-
-// ============================================================
-// STORAGE HELPERS
-// ============================================================
 function read() {
   if (typeof window === "undefined") return [];
   try {
@@ -91,31 +39,23 @@ function read() {
     if (!raw) return [];
     const p = JSON.parse(raw);
     return Array.isArray(p) ? p : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
-
 function write(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(EV));
 }
-
 function sortNewest(list) {
-  return [...list].sort(
-    (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()
-  );
+  return [...list].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 }
-
-// ============================================================
-// NORMALIZER
-// ============================================================
 function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
-    audience: getNotificationAudience(raw),
+    // Backend has no audience flag — everything we fetch is the
+    // caller's own notifications. Keep the field for API compat.
+    audience: "user",
     type: raw.notification_type,
     title: raw.title,
     body: raw.message,
@@ -129,13 +69,9 @@ function norm(raw) {
       related_object_id: raw.related_object_id,
     },
     priority: raw.priority,
-    userId: raw.user ?? raw.recipient ?? null,
   };
 }
 
-// ============================================================
-// HYDRATE FROM API
-// ============================================================
 export async function hydrateNotificationsFromApi() {
   try {
     const data = await notificationsApi.list({ page_size: 100 });
@@ -143,53 +79,38 @@ export async function hydrateNotificationsFromApi() {
     const normalized = rawList.map(norm).filter(Boolean);
     write(normalized);
     return { ok: true, count: normalized.length };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
-// ============================================================
-// READS
-// ============================================================
 export function getNotifications(audience) {
-  return sortNewest(read().filter((n) => n.audience === audience));
+  const all = sortNewest(read());
+  if (!audience || audience === "user") return all;
+  // Backend has no admin audience — return [] instead of lying.
+  if (audience === "admin") return [];
+  return all;
 }
-
 export function getUnreadCount(audience) {
   return getNotifications(audience).filter((n) => !n.read).length;
 }
 
-// ============================================================
-// MUTATIONS
-// ============================================================
 export async function markNotificationReadAsync(id) {
   try {
     await notificationsApi.markRead(id);
-    write(
-      read().map((n) =>
-        n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n
-      )
-    );
+    write(read().map((n) => (n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n)));
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function markAllNotificationsReadAsync(audience) {
   try {
     await notificationsApi.markAllRead();
-    write(
-      read().map((n) =>
-        n.audience === audience
-          ? { ...n, read: true, readAt: new Date().toISOString() }
-          : n
-      )
-    );
+    write(read().map((n) =>
+      !audience || audience === "user" || n.audience === audience
+        ? { ...n, read: true, readAt: new Date().toISOString() }
+        : n
+    ));
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function removeNotificationAsync(id) {
@@ -197,9 +118,7 @@ export async function removeNotificationAsync(id) {
     await notificationsApi.remove(id);
     write(read().filter((n) => n.id !== id));
     return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+  } catch (err) { return { ok: false, error: err }; }
 }
 
 export function clearNotifications(audience) {
@@ -207,17 +126,8 @@ export function clearNotifications(audience) {
   return read();
 }
 
-/** @deprecated Notifications are backend-emitted. */
-export function pushNotification() {
-  /* no-op */
-}
-
-// ============================================================
-// HOOKS
-// ============================================================
 export function useNotifications(audience) {
   const [all, setAll] = useState(() => read());
-
   useEffect(() => {
     hydrateNotificationsFromApi();
     const sync = () => setAll(read());
@@ -228,10 +138,12 @@ export function useNotifications(audience) {
       window.removeEventListener(EV, sync);
     };
   }, []);
-
-  const notifications = sortNewest(all.filter((n) => n.audience === audience));
+  const notifications = sortNewest(
+    (audience && audience !== "user")
+      ? []
+      : all.filter((n) => n.audience === "user" || !audience)
+  );
   const unreadCount = notifications.filter((n) => !n.read).length;
-
   return {
     notifications,
     unreadCount,
@@ -242,12 +154,40 @@ export function useNotifications(audience) {
   };
 }
 
-// ============================================================
-// LOCALIZATION HELPER
-// ============================================================
 export function getLocalizedField(field, lang = "sw") {
   if (!field) return "";
   if (typeof field === "string") return field;
   return field?.[lang] || field?.sw || "";
 }
 
+// ── Deprecated shims (backend emits notifications) ──────────
+export function pushNotification() {}
+export function notifyBoostPurchased() {}
+export function notifyLeadingPurchased() {}
+export function notifyAdvertisementPurchased() {}
+export function notifyListingFeePaid() {}
+export function notifyAdmin() {}
+export function notifyNewMessage() {}
+export function notifyReservationExpiringSoon() {}
+export function notifyListingReleased() {}
+export function notifyDisputeResolved() {}
+export function notifyPaymentProofSubmitted() {}
+export function notifyBundlePurchased() {}
+export function notifyListingApproved() {}
+export function notifyListingRejected() {}
+export function notifyListingSubmittedForReview() {}
+export function notifyListingExpiringSoon() {}
+export function notifyListingExpired() {}
+export function notifyPriceDrop() {}
+export function notifyNewLead() {}
+export function notifySearchMatch() {}
+export function notifyReservationCreated() {}
+export function notifyOfferAccepted() {}
+export function notifyDealCompleted() {}
+export function notifyAccountSuspended() {}
+export function notifyAccountReactivated() {}
+export function notifyVerificationSubmitted() {}
+export function notifyTicketCreated() {}
+export function notifyTicketReplied() {}
+export function notifyTicketResolved() {}
+export function notifyPaymentConfirmed() {}

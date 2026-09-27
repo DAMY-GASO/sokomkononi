@@ -3,7 +3,7 @@
 // + PageLoader (mara moja tu)
 // + Secret admin path
 // ============================================================
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth, logoutAsync } from "../../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
@@ -67,7 +67,7 @@ import { usePendingVerificationsCount } from "../../config/verificationsStore.js
 import { useOpenTicketsCount } from "../../config/ticketsStore.js";
 
 // Permissions
-import { useRoles, getRole } from "../../config/rolesStore.js";
+import { useRoles } from "../../config/rolesStore.js";
 
 // ============================================================
 // URL ↔ STATE MAPPING (dynamic na ADMIN_PATH)
@@ -238,10 +238,7 @@ export default function AdminDashboard() {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // Admin notifications (audience: "admin")
-  const { notifications, unreadCount, markRead } = useNotifications("admin");
-
+  const { notifications, unreadCount, markRead } = useNotifications("user");
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
@@ -249,29 +246,13 @@ export default function AdminDashboard() {
   const openTicketsCount = useOpenTicketsCount();
   const roles = useRoles();
 
-  // ============================================================
-  // AUTH REDIRECT + LOADER
-  // Logic:
-  //   - No user → redirect to admin login (unless already there)
-  //   - User but not admin → redirect to user dashboard
-  //   - Admin → show dashboard after brief loader
-  // ============================================================
+  // Safety: if backend rejected our session and authStore cleared user,
+  // kick to admin login instead of showing a broken dashboard shell.
   useEffect(() => {
-    if (!user) {
-      if (!location.pathname.endsWith("/enter")) {
-        navigate(ADMIN_LOGIN_PATH, { replace: true });
-      }
-      return;
+    if (!user && !location.pathname.endsWith("/enter")) {
+      navigate(ADMIN_LOGIN_PATH, { replace: true });
     }
-
-    if (!isAdmin) {
-      navigate("/dashboard", { replace: true });
-      return;
-    }
-
-    const id = setTimeout(() => setLoading(false), 300);
-    return () => clearTimeout(id);
-  }, [user, isAdmin, navigate, location.pathname]);
+  }, [user, location.pathname, navigate]);
 
   // ============================================================
   // ACTIVE SECTION — kutoka URL
@@ -282,62 +263,47 @@ export default function AdminDashboard() {
   }, [location.pathname]);
 
   // ============================================================
-  // STAFF ROLE
-  // Logic:
-  //   1. User ana roleKey → tumia hiyo
-  //   2. User ni admin → super_admin
-  //   3. Vinginevyo → null
+  // STAFF PERMISSIONS
   // ============================================================
+  const allRoles = useRoles();
+  const rolesReady = allRoles.length > 0;
   const staffRole = useMemo(() => {
-    if (user?.roleKey) {
-      return getRole(user.roleKey);
+    if (user?.isSuperuser || user?.is_superuser || user?.isStaff || user?.is_staff) {
+      return allRoles.find((r) => r.key === "super_admin")
+        || { key: "super_admin", permissions: ["*"], label: { sw: "", en: "" } };
     }
-    if (isAdmin) {
-      return getRole("super_admin");
-    }
+    if (user?.roleKey) return allRoles.find((r) => r.key === user.roleKey) || null;
     return null;
-  }, [isAdmin, user?.roleKey]);
+  }, [allRoles, user?.roleKey, user?.isSuperuser, user?.isStaff]);
 
-  // ============================================================
-  // CAN ACCESS — check kama user ana ruhusa kwa section
-  // Super users wanapata kila kitu. Wengine wanapata kwa permissions.
-  // ============================================================
-  const canAccess = useCallback(
-    (sectionKey) => {
-      // Super users (is_staff / is_superuser) — full access
-      if (
-        user?.isSuperuser ||
-        user?.isStaff ||
-        user?.is_superuser ||
-        user?.is_staff
-      ) {
-        return true;
-      }
+  const canAccess = (sectionKey) => {
+    if (
+      user?.isSuperuser ||
+      user?.isStaff ||
+      user?.is_superuser ||
+      user?.is_staff
+    ) {
+      return true;
+    }
+    // Wait for roles to hydrate before denying anything.
+    if (!rolesReady) return true;
+    if (staffRole?.key === "super_admin") return true;
+    // Everyone with a valid session can see these
+    if (
+      sectionKey === "profile" ||
+      sectionKey === "system" ||
+      sectionKey === "overview"
+    ) {
+      return true;
+    }
+    if (!staffRole) return false;
+    return (staffRole.permissions || []).includes(sectionKey);
+  };
 
-      // Role-based super admin
-      if (staffRole?.key === "super_admin") return true;
-
-      // Basic sections — kila mtu mwenye session
-      if (
-        sectionKey === "profile" ||
-        sectionKey === "system" ||
-        sectionKey === "overview"
-      ) {
-        return true;
-      }
-
-      if (!staffRole) return false;
-      return (staffRole.permissions || []).includes(sectionKey);
-    },
-    [user, staffRole]
-  );
-
-  // ============================================================
-  // VISIBLE NAV — filter kwa permissions
-  // ============================================================
   const visibleNav = useMemo(() => {
     return NAV.filter((item) => canAccess(item.key));
-  }, [canAccess]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staffRole]);
 
   const openNotification = (n) => {
     markRead(n.id);
@@ -345,6 +311,22 @@ export default function AdminDashboard() {
     navigate(STATE_TO_URL[target] || STATE_TO_URL.overview);
     setNotifOpen(false);
   };
+
+  // ============================================================
+  // AUTH CHECK + LOADER — tumia ADMIN_LOGIN_PATH
+  // ============================================================
+  useEffect(() => {
+    if (!user) {
+      navigate(ADMIN_LOGIN_PATH);
+      return;
+    }
+    if (!isAdmin) {
+      navigate("/dashboard");
+      return;
+    }
+    const id = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(id);
+  }, [user, isAdmin, navigate]);
 
   const handleLogout = async () => {
     await logoutAsync();
@@ -506,9 +488,7 @@ export default function AdminDashboard() {
               >
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <span className="text-sm font-semibold text-primary">
-                    {lang === "sw"
-                      ? "Taarifa za Admin"
-                      : "Admin Notifications"}
+                    {lang === "sw" ? "Taarifa Zangu" : "My Notifications"}
                   </span>
                   {unreadCount > 0 && (
                     <span
