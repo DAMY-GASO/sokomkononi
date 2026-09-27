@@ -216,8 +216,10 @@ const BACKEND_SLUG_TO_SEED_KEY = {
   "vifaa-vya-elektroniki": "vifaa-vya-elektroniki",
   "mifugo": "mifugo",
   "vifaa-vya-nyumbani": "vifaa-vya-nyumbani",
+  "vifaa-vizito": "vifaa-vizito",
+  "heavy-equipment": "vifaa-vizito",
+  "vifaa-vya-ujenzi": "vifaa-vizito",
 };
-
 // ============================================================
 // AVAILABLE ICONS
 // ============================================================

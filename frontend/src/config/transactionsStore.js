@@ -4,7 +4,6 @@
 //   GET /api/finance/my-transactions/   → flat list of fee payments
 //   GET /api/transactions/mine/          → transaction rows
 // ============================================================
-
 import { useEffect, useState } from "react";
 import { financeApi } from "../api/finance.js";
 
@@ -13,6 +12,9 @@ const UPDATE_EVENT = "sokomkononi:transactions-updated";
 
 export const SEED_TRANSACTIONS = [];
 
+// ============================================================
+// STORAGE
+// ============================================================
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_TRANSACTIONS;
   try {
@@ -36,13 +38,33 @@ export function saveTransactions(list) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
+/**
+ * Ongeza transaction mpya.
+ * @param {object} txn - Transaction data
+ * @returns {Array} List mpya ya transactions
+ */
 export function addTransaction(txn) {
+  if (!txn || typeof txn !== "object") {
+    console.warn("[transactionsStore] addTransaction: invalid txn");
+    return getTransactions();
+  }
+
+  // ✅ FIX: `...txn` kwanza, kisha `id`/`ref`/`at` baada ili defaults
+  // zisipotezwe na fields za txn. Field za txn zinaweza override tu
+  // kama zipo wazi.
   const entry = {
-    id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    ref: txn.ref || `SM-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
-    at: new Date().toISOString(),
+    // 1. Defaults (zinatumika kama txn haina)
     ...txn,
+    // 2. Override na values za txn (kama zipo)
+    id:
+      txn.id ||
+      `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    ref:
+      txn.ref ||
+      `SM-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+    at: txn.at || new Date().toISOString(),
   };
+
   const next = [entry, ...getTransactions()];
   saveTransactions(next);
   return next;
@@ -56,13 +78,13 @@ function normalizeMyTransaction(raw) {
   return {
     id: raw.id,
     ref: raw.ref,
-    type: raw.type,                    // "listing_fee" | "boost" | "reservation"
+    type: raw.type, // "listing_fee" | "boost" | "reservation"
     source: raw.source,
     title: raw.title,
     property: raw.listing_title || raw.title,
     listingId: raw.listing_id,
     amount: Number(raw.amount) || 0,
-    status: (raw.status || "pending").toLowerCase(),  // "completed" | "pending" | ...
+    status: (raw.status || "pending").toLowerCase(),
     paymentStatus: raw.payment_status,
     paymentReference: raw.payment_reference,
     method: raw.method || null,

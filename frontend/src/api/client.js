@@ -14,6 +14,14 @@ let accessToken = localStorage.getItem(ACCESS_KEY);
 let refreshToken = localStorage.getItem(REFRESH_KEY);
 let onUnauthorized = null;
 
+// ============================================================
+// PUBLIC ENDPOINTS
+// ============================================================
+
+/**
+ * POST endpoints ambazo hazi-hitaji authorization.
+ * Kila path inafaa kuwa complete (with trailing slash).
+ */
 const PUBLIC_POST_PREFIX = [
   "/auth/login/",
   "/auth/register/",
@@ -22,52 +30,103 @@ const PUBLIC_POST_PREFIX = [
   "/auth/password/verify-otp/",
   "/auth/password/reset/",
   "/auth/token/refresh/",
-  "/contact/",
   "/auth/social/",
+  "/contact/",
 ];
 
+/**
+ * GET endpoints ambazo hazi-hitaji authorization.
+ * Regex zina-support query strings.
+ *
+ * ⚠️ NOTE: Negative lookahead `(?!admin\/|fee-rules\/)` inazuia
+ * admin paths kuwa public.
+ */
 const PUBLIC_GET_PATTERNS = [
+  // Listings (public)
   /^\/listings\/?(\?.*)?$/,
   /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/?(\?.*)?$/,
   /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/images\/?(\?.*)?$/,
   /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/images\/([^/]+)\/?(\?.*)?$/,
+  // Category-specific details (public GET) — both with and without /detail/
+  /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/(property-details|land-details|vehicle-details|business-details|equipment-details)\/?(\?.*)?$/,
   /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/(property-details|land-details|vehicle-details|business-details|equipment-details)\/detail\/?(\?.*)?$/,
+
+  // Categories (public)
   /^\/categories\/?(\?.*)?$/,
   /^\/categories\/[^/]+\/?(\?.*)?$/,
+
+  // Content (public)
   /^\/content\/?(\?.*)?$/,
   /^\/content\/(about|terms|privacy|help)\/?(\?.*)?$/,
+
+  // Announcements (public)
   /^\/announcements\/?(\?.*)?$/,
+
+  // Boosting packages (public read)
   /^\/boosting\/packages\/?(\?.*)?$/,
   /^\/boosting\/packages\/([^/]+)\/?(\?.*)?$/,
+
+  // Bundles (public read)
   /^\/bundles\/?(\?.*)?$/,
   /^\/bundles\/([^/]+)\/?(\?.*)?$/,
+
+  // Banners (public read)
   /^\/banners\/?(\?.*)?$/,
+
+  // Fee configs (public read)
   /^\/reservation-rates\/?(\?.*)?$/,
   /^\/leading-fees\/?(\?.*)?$/,
   /^\/advertisement-fees\/?(\?.*)?$/,
 ];
 
+/**
+ * Angalia kama endpoint ni public.
+ */
 function isPublicEndpoint(path, method) {
   const m = (method || "GET").toUpperCase();
-  if (m === "GET") return PUBLIC_GET_PATTERNS.some((re) => re.test(path));
+  if (m === "GET") {
+    return PUBLIC_GET_PATTERNS.some((re) => re.test(path));
+  }
   return PUBLIC_POST_PREFIX.some((p) => path.startsWith(p));
 }
 
+// ============================================================
+// TOKEN MANAGEMENT
+// ============================================================
 export function setTokens({ access, refresh } = {}) {
   if (access !== undefined) {
     accessToken = access;
-    access ? localStorage.setItem(ACCESS_KEY, access) : localStorage.removeItem(ACCESS_KEY);
+    access
+      ? localStorage.setItem(ACCESS_KEY, access)
+      : localStorage.removeItem(ACCESS_KEY);
   }
   if (refresh !== undefined) {
     refreshToken = refresh;
-    refresh ? localStorage.setItem(REFRESH_KEY, refresh) : localStorage.removeItem(REFRESH_KEY);
+    refresh
+      ? localStorage.setItem(REFRESH_KEY, refresh)
+      : localStorage.removeItem(REFRESH_KEY);
   }
 }
-export function getAccessToken() { return accessToken; }
-export function getRefreshToken() { return refreshToken; }
-export function clearTokens() { setTokens({ access: null, refresh: null }); }
-export function setUnauthorizedHandler(fn) { onUnauthorized = fn; }
 
+export function getAccessToken() {
+  return accessToken;
+}
+
+export function getRefreshToken() {
+  return refreshToken;
+}
+
+export function clearTokens() {
+  setTokens({ access: null, refresh: null });
+}
+
+export function setUnauthorizedHandler(fn) {
+  onUnauthorized = fn;
+}
+
+// ============================================================
+// API ERROR
+// ============================================================
 export class ApiError extends Error {
   constructor(status, data) {
     const msg =
@@ -81,35 +140,62 @@ export class ApiError extends Error {
   }
 }
 
+// ============================================================
+// TOKEN REFRESH
+// ============================================================
 let refreshPromise = null;
+
 async function refreshAccessToken() {
-  if (!refreshToken) throw new ApiError(401, { detail: "No refresh token" });
+  if (!refreshToken) {
+    throw new ApiError(401, { detail: "No refresh token" });
+  }
   if (refreshPromise) return refreshPromise;
+
   refreshPromise = (async () => {
     const res = await fetch(`${BASE_URL}/auth/token/refresh/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh: refreshToken }),
     });
+
     if (!res.ok) {
       clearTokens();
       throw new ApiError(401, { detail: "Session expired" });
     }
+
     const data = await res.json();
-    setTokens({ access: data.access, ...(data.refresh ? { refresh: data.refresh } : {}) });
+    setTokens({
+      access: data.access,
+      ...(data.refresh ? { refresh: data.refresh } : {}),
+    });
     return data.access;
-  })().finally(() => { refreshPromise = null; });
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
   return refreshPromise;
 }
 
-async function request(path, {
-  method = "GET", body, headers = {}, retry = true, isFormData = false,
-} = {}) {
+// ============================================================
+// REQUEST
+// ============================================================
+async function request(
+  path,
+  {
+    method = "GET",
+    body,
+    headers = {},
+    retry = true,
+    isFormData = false,
+  } = {}
+) {
   const isPublic = isPublicEndpoint(path, method);
 
   const finalHeaders = {
     ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
-    ...(!isPublic && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...(!isPublic && accessToken
+      ? { Authorization: `Bearer ${accessToken}` }
+      : {}),
     ...headers,
   };
 
@@ -119,16 +205,24 @@ async function request(path, {
     body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
 
+  // 401 → refresh token (kama ni private na tuna refresh token)
   if (res.status === 401 && !isPublic && retry && refreshToken) {
     try {
       await refreshAccessToken();
-      return request(path, { method, body, headers, retry: false, isFormData });
+      return request(path, {
+        method,
+        body,
+        headers,
+        retry: false,
+        isFormData,
+      });
     } catch (err) {
       onUnauthorized?.();
       throw err;
     }
   }
 
+  // Parse response
   const ct = res.headers.get("content-type") || "";
   let data;
   if (res.status === 204) data = null;
@@ -139,11 +233,14 @@ async function request(path, {
   return data;
 }
 
+// ============================================================
+// API METHODS
+// ============================================================
 export const api = {
-  get:    (path, opts) => request(path, { ...opts, method: "GET" }),
-  post:   (path, body, opts) => request(path, { ...opts, method: "POST",   body }),
-  patch:  (path, body, opts) => request(path, { ...opts, method: "PATCH",  body }),
-  put:    (path, body, opts) => request(path, { ...opts, method: "PUT",    body }),
+  get: (path, opts) => request(path, { ...opts, method: "GET" }),
+  post: (path, body, opts) => request(path, { ...opts, method: "POST", body }),
+  patch: (path, body, opts) => request(path, { ...opts, method: "PATCH", body }),
+  put: (path, body, opts) => request(path, { ...opts, method: "PUT", body }),
   delete: (path, opts) => request(path, { ...opts, method: "DELETE" }),
   upload: (path, formData, opts) =>
     request(path, { ...opts, method: "POST", body: formData, isFormData: true }),

@@ -1,17 +1,17 @@
+// ============================================================
+// api/auth.js — Auth endpoints
+// Backend: /api/auth/
+// 
+// ⚠️ NOTE: Social login is handled by `socialLoginAsync` in
+// `authStore.js` (it needs access to `saveUser` and other
+// authStore internals). Do NOT duplicate it here.
+// ============================================================
 import { api, setTokens, clearTokens, getAccessToken } from "./client";
 
 export const authApi = {
   // ----- Register / Login / Logout -----
   login: async ({ identifier, password }) => {
     const data = await api.post("/auth/login/", { identifier, password });
-    if (data?.access) setTokens({ access: data.access, refresh: data.refresh });
-    return data;
-  },
-
-  // ----- Social login (Google / Apple) -----
-  // payload: { provider: "google" | "apple", id_token, code?, user? }
-  socialLogin: async (payload) => {
-    const data = await api.post("/auth/social/", payload);
     if (data?.access) setTokens({ access: data.access, refresh: data.refresh });
     return data;
   },
@@ -77,5 +77,6 @@ export const authApi = {
   deleteAccount: (reason = "") =>
     api.post("/auth/delete-account/", { reason }),
 
+  // ----- Utility -----
   isAuthenticated: () => Boolean(getAccessToken()),
 };
