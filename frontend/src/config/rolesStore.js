@@ -225,12 +225,3 @@ export function hasPermission(roleKey, perm) {
   return !!role && role.permissions.includes(perm);
 }
 
-// LEGACY (compat shims)
-export const SEED_ROLES = [];
-export const DEFAULT_ROLES = [];
-export function addRole() { return null; }
-export function updateRole() {}
-export function removeRole() {}
-export function addSubAdmin() { return null; }
-export function updateSubAdmin() {}
-export function removeSubAdmin() {}

@@ -233,6 +233,3 @@ export function usePendingModerationCount() {
   return useModerationQueue().length;
 }
 
-// LEGACY (compat shims)
-export const SEED_QUEUE = [];
-export const SEED_DECISIONS = [];

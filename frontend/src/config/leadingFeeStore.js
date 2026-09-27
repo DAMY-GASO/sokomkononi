@@ -109,8 +109,3 @@ export function useLeadingFeeConfig() {
   return cfg;
 }
 
-// Legacy
-export const SEED_LEADING_FEE_CONFIG = { price: 0, days: 0, label: { sw: "", en: "" }, desc: { sw: "", en: "" } };
-export function saveLeadingFeeConfig() {}
-export function updateLeadingFeePrice() {}
-export async function updateLeadingFeeAsync() { return { ok: false }; }

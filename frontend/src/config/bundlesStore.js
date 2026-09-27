@@ -1,5 +1,6 @@
 // ============================================================
 // bundlesStore.js — API-only via /api/bundles/
+// No seeds. Backend is the single source of truth.
 // ============================================================
 import { useEffect, useState } from "react";
 import { bundlesApi } from "../api/bundles.js";
@@ -7,6 +8,9 @@ import { bundlesApi } from "../api/bundles.js";
 const KEY = "sokomkononi_bundles_v1";
 const EV = "sokomkononi:bundles-updated";
 
+// ============================================================
+// STORAGE
+// ============================================================
 function read() {
   if (typeof window === "undefined") return [];
   try {
@@ -14,18 +18,30 @@ function read() {
     if (!raw) return [];
     const p = JSON.parse(raw);
     return Array.isArray(p) ? p : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
+
 function write(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(EV));
 }
 
+// ============================================================
+// NORMALIZER
+// ============================================================
 const TYPE_FROM_API = {
-  LISTING: "listing", LEADING: "leading", BOOST: "boost",
-  RESERVATION: "reservation", ADS: "ads", PREMIUM: "premium", PACKAGE: "package",
+  LISTING: "listing",
+  LEADING: "leading",
+  BOOST: "boost",
+  RESERVATION: "reservation",
+  ADS: "ads",
+  PREMIUM: "premium",
+  PACKAGE: "package",
 };
+
 function norm(raw) {
   if (!raw) return null;
   return {
@@ -45,14 +61,17 @@ function norm(raw) {
     featured: !!raw.featured,
   };
 }
+
 function toApi(form) {
-  const credits = form.credits && typeof form.credits === "object"
-    ? form.credits
-    : { [form.type || "listing"]: Number(form.credits) || 1 };
+  const credits =
+    form.credits && typeof form.credits === "object"
+      ? form.credits
+      : { [form.type || "listing"]: Number(form.credits) || 1 };
   return {
     code: form.code,
     type: (form.type || "PACKAGE").toUpperCase(),
-    name: form.name, description: form.description,
+    name: form.name,
+    description: form.description,
     price: Number(form.price) || 0,
     credits,
     validity_days: Number(form.validityDays) || 90,
@@ -65,14 +84,35 @@ function toApi(form) {
   };
 }
 
-export function getBundles() { return read(); }
-export function getActiveBundles() { return read().filter((b) => b.active !== false); }
-export function getBundle(id) { return read().find((b) => b.id === id) || null; }
-export function getBundlesByType(type) { return getActiveBundles().filter((b) => b.type === type); }
+// ============================================================
+// SYNCHRONOUS READS
+// ============================================================
+export function getBundles() {
+  return read();
+}
 
-export function initializeBundles() { /* API-only */ }
-export function resetBundles(list) { write(Array.isArray(list) ? list : []); }
+export function getActiveBundles() {
+  return read().filter((b) => b.active !== false);
+}
 
+export function getBundle(id) {
+  return read().find((b) => b.id === id) || null;
+}
+
+export function getBundlesByType(type) {
+  return getActiveBundles().filter((b) => b.type === type);
+}
+
+// ============================================================
+// RESET (kwa testing)
+// ============================================================
+export function resetBundles(list) {
+  write(Array.isArray(list) ? list : []);
+}
+
+// ============================================================
+// HYDRATE FROM API
+// ============================================================
 export async function hydrateBundlesFromApi() {
   try {
     const d = await bundlesApi.list({ page_size: 200 });
@@ -80,32 +120,48 @@ export async function hydrateBundlesFromApi() {
     const normalized = list.map(norm).filter(Boolean);
     write(normalized);
     return { ok: true, count: normalized.length };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
+// ============================================================
+// ASYNC MUTATIONS
+// ============================================================
 export async function createBundleAsync(form) {
-  if (!form?.code?.trim()) return { ok: false, error: new Error("Bundle code/ID required") };
+  if (!form?.code?.trim()) {
+    return { ok: false, error: new Error("Bundle code/ID required") };
+  }
   if (!form?.name?.sw?.trim() || !form?.name?.en?.trim()) {
-    return { ok: false, error: new Error("Bilingual name (SW+EN) required") };
+    return {
+      ok: false,
+      error: new Error("Bilingual name (SW+EN) required"),
+    };
   }
   try {
     const raw = await bundlesApi.create(toApi(form));
     const created = norm(raw);
     write([created, ...read()]);
     return { ok: true, bundle: created };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function updateBundleAsync(id, patch) {
   const target = getBundle(id);
   if (!target) return { ok: false, error: new Error("Bundle not found") };
-  if (typeof id !== "number") return { ok: false, error: new Error("Bundle has no backend id") };
+  if (typeof id !== "number") {
+    return { ok: false, error: new Error("Bundle has no backend id") };
+  }
   try {
     const raw = await bundlesApi.update(id, toApi({ ...target, ...patch }));
     const updated = norm(raw);
     write(read().map((b) => (b.id === id ? updated : b)));
     return { ok: true, bundle: updated };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function removeBundleAsync(id) {
@@ -113,30 +169,42 @@ export async function removeBundleAsync(id) {
     await bundlesApi.remove(id);
     write(read().filter((b) => b.id !== id));
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function toggleBundleActiveAsync(id) {
   const target = getBundle(id);
   if (!target) return { ok: false, error: new Error("Bundle not found") };
-  if (typeof id !== "number") return { ok: false, error: new Error("Bundle has no backend id") };
+  if (typeof id !== "number") {
+    return { ok: false, error: new Error("Bundle has no backend id") };
+  }
   try {
     const raw = await bundlesApi.toggleActive(id);
     const updated = norm(raw) || { ...target, active: !target.active };
     write(read().map((b) => (b.id === id ? updated : b)));
     return { ok: true, active: updated.active };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function purchaseBundleAsync(id, ref = "") {
   try {
     const raw = await bundlesApi.purchase(id, ref);
     return { ok: true, purchase: raw };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
+// ============================================================
+// HOOKS
+// ============================================================
 export function useBundles() {
   const [list, setList] = useState(() => read());
+
   useEffect(() => {
     hydrateBundlesFromApi();
     const sync = () => setList(read());
@@ -147,12 +215,14 @@ export function useBundles() {
       window.removeEventListener(EV, sync);
     };
   }, []);
+
   return list;
 }
-export function useActiveBundles() { return useBundles().filter((b) => b.active !== false); }
-export function useBundlesByType(type) { return useBundles().filter((b) => b.active !== false && b.type === type); }
 
-// ══════════════════════════════════════════════════════════════
-// LEGACY EXPORTS (backward compat — API is source of truth)
-// ══════════════════════════════════════════════════════════════
-export const SEED_BUNDLES = [];
+export function useActiveBundles() {
+  return useBundles().filter((b) => b.active !== false);
+}
+
+export function useBundlesByType(type) {
+  return useBundles().filter((b) => b.active !== false && b.type === type);
+}

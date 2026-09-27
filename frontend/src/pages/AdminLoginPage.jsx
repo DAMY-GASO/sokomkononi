@@ -53,8 +53,16 @@ function SkylineDecoration() {
   );
 }
 
+function getErrorMessage(err, fallback) {
+  const firstFieldError =
+    err?.data && typeof err.data === "object" && !err.data.detail
+      ? Object.values(err.data).flat().find((v) => typeof v === "string")
+      : null;
+  return err?.data?.detail || firstFieldError || err?.message || fallback;
+}
+
 export default function AdminLoginPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ email: "", password: "" });
@@ -66,9 +74,7 @@ export default function AdminLoginPage() {
     e.preventDefault();
 
     if (!form.email.trim() || !form.password) {
-      setError(
-        t("admin_login_error_required") || "Tafadhali jaza sehemu zote."
-      );
+      setError(t("admin_login_error_required"));
       return;
     }
 
@@ -82,18 +88,12 @@ export default function AdminLoginPage() {
     setLoading(false);
 
     if (!res.ok) {
-      const err = res.error;
-      const firstFieldError =
-        err?.data && typeof err.data === "object" && !err.data.detail
-          ? Object.values(err.data).flat().find((v) => typeof v === "string")
-          : null;
-
+      // ✅ FIX #26: Ondoa redundant `|| "Barua pepe..."` — `t()` inarudisha string kila wakati
       setError(
-        err?.data?.detail ||
-          firstFieldError ||
-          err?.message ||
-          t("admin_login_error_default") ||
-          "Barua pepe au nenosiri si sahihi."
+        getErrorMessage(
+          res.error,
+          t("admin_login_error_default")
+        )
       );
       return;
     }
@@ -102,22 +102,19 @@ export default function AdminLoginPage() {
     navigate(`${ADMIN_PATH}/dashboard`);
   }
 
-  const leftHeading = t("admin_panel_heading") || "Dhibiti SokoMkononi";
-  const leftSubtext =
-    t("admin_panel_subtext") ||
-    "Ingia kwenye paneli ya msimamizi ili kudhibiti mali, wateja na matangazo.";
+  // ✅ FIX #26: Ondoa `|| "..."` kwenye headings
+  const leftHeading = t("admin_panel_heading");
+  const leftSubtext = t("admin_panel_subtext");
 
   const adminFeatures = [
-    t("admin_feature1") || "Dhibiti mali zote",
-    t("admin_feature2") || "Simamia wateja na wauzaji",
-    t("admin_feature3") || "Thibitisha matangazo",
-    t("admin_feature4") || "Angalia taarifa za mauzo",
-  ];
+    t("admin_feature1"),
+    t("admin_feature2"),
+    t("admin_feature3"),
+    t("admin_feature4"),
+  ].filter(Boolean); // Safety: filter out empty/undefined
 
-  const formHeading = t("admin_login_heading") || "Ingia kama Msimamizi";
-  const formSubtext =
-    t("admin_login_subtext") ||
-    "Ingiza barua pepe na nenosiri lako la msimamizi.";
+  const formHeading = t("admin_login_heading");
+  const formSubtext = t("admin_login_subtext");
 
   return (
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
@@ -143,21 +140,23 @@ export default function AdminLoginPage() {
               {leftSubtext}
             </p>
 
-            <ul className="mt-8 space-y-3 inline-flex flex-col items-start mx-auto">
-              {adminFeatures.map((feature, i) => (
-                <li key={i} className="flex items-center gap-2.5 text-sm text-white/80">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                  {feature}
-                </li>
-              ))}
-            </ul>
+            {adminFeatures.length > 0 && (
+              <ul className="mt-8 space-y-3 inline-flex flex-col items-start mx-auto">
+                {adminFeatures.map((feature, i) => (
+                  <li key={i} className="flex items-center gap-2.5 text-sm text-white/80">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="relative z-10 border-t border-white/10 pt-6 max-w-sm mx-auto text-center">
             <p className="text-white/50 text-body-sm">
-              🔒 {t("admin_secure_access") || "Mwamini Msimamizi tu ndiye anayepata mamlaka ya kuingia."}
+              🔒 {t("admin_secure_access")}
             </p>
           </div>
 
@@ -177,7 +176,7 @@ export default function AdminLoginPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-body-sm font-semibold text-secondary mb-1.5">
-                  {t("admin_login_email") || "Barua pepe"}
+                  {t("admin_login_email")}
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
@@ -196,7 +195,7 @@ export default function AdminLoginPage() {
 
               <div>
                 <label className="block text-body-sm font-semibold text-secondary mb-1.5">
-                  {t("admin_login_password") || "Nenosiri"}
+                  {t("admin_login_password")}
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
@@ -229,8 +228,8 @@ export default function AdminLoginPage() {
                 className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-btn transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading
-                  ? t("admin_login_submitting") || "Inaingia..."
-                  : t("admin_login_submit") || "Ingia kama Msimamizi"}
+                  ? t("admin_login_submitting")
+                  : t("admin_login_submit")}
               </button>
             </form>
 
@@ -239,7 +238,7 @@ export default function AdminLoginPage() {
                 to="/login"
                 className="text-[#2F6D4F] font-semibold hover:underline"
               >
-                {t("admin_back_to_user_login") || "← Rudi kwenye Ingia la Mtumiaji"}
+                {t("admin_back_to_user_login")}
               </Link>
             </p>
           </div>

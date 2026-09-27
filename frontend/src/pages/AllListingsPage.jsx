@@ -1,15 +1,4 @@
-// ============================================================
-// AllListingsPage.jsx
-// "Mali Zote" — ukurasa wa umma unaoonyesha listings ZOTE hai
-// kutoka kwenye chanzo kimoja (listingsStore.js). Hii ndiyo
-// "master list": mnunuzi anapotafuta kupitia BrowseProperties,
-// anachuja (filter) kutoka data hii hii; muuzaji anapolist mali,
-// inaingia hapa hapa moja kwa moja (usePublicListings ni chanzo
-// kimoja cha ukweli kwa pande zote mbili).
-//
-// Kwa makusudi HAINA search bar/filters — hiyo ni kazi ya
-// BrowseProperties (/tafuta). Hapa ni "onyesha kila kitu".
-// ============================================================
+
 
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -19,14 +8,11 @@ import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
+import { formatTZS } from "./dashboard/components/shared.js";
 import {
   useActiveCategories,
   getCategoryIcon,
 } from "../config/categoriesStore.js";
-
-function formatTZS(amount) {
-  return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
-}
 
 const PAGE_SIZE = 12;
 

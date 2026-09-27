@@ -45,13 +45,9 @@ import {
   payListingFeeAsync,
 } from "../../../config/listingsStore.js";
 import { useSentAnnouncements } from "../../../config/announcementsStore.js";
-import {
-  useNotifications,
-  notifyListingFeePaid,
-} from "../../../config/notificationsStore.js";
+import { useNotifications } from "../../../config/notificationsStore.js";
 import { checkReservationReminders } from "../../../config/dealsStore.js";
 import { setDashboardSide } from "../../../config/dashboardSideStore.js";
-import { checkSavedListingsChanges } from "../../../config/savedListingsWatcher.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
 import { useNewLeadsCount } from "../../../config/leadsStore.js";
 import { useSearchesCount } from "../../../config/searchesStore.js";
@@ -263,18 +259,16 @@ export default function DashboardShell() {
   }, [side]);
 
   useEffect(() => {
+  checkReservationReminders();
+  checkListingExpiry();
+  checkListingExpiringSoon();
+  const interval = setInterval(() => {
     checkReservationReminders();
     checkListingExpiry();
     checkListingExpiringSoon();
-    checkSavedListingsChanges();
-    const interval = setInterval(() => {
-      checkReservationReminders();
-      checkListingExpiry();
-      checkListingExpiringSoon();
-      checkSavedListingsChanges();
-    }, 2 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  }, 2 * 60 * 1000);
+  return () => clearInterval(interval);
+}, []);
 
   useEffect(() => {
     if (announcements.length === 0) return;
@@ -366,32 +360,26 @@ export default function DashboardShell() {
   };
 
   const markListingPaid = async (id) => {
-    const feeRes = await payListingFeeAsync(id, {
-      payment_reference: `LF-${id}-${Date.now()}`,
+  const feeRes = await payListingFeeAsync(id, {
+    payment_reference: `LF-${id}-${Date.now()}`,
+  });
+  if (!feeRes || feeRes.ok === false) {
+    console.error("[DashboardShell] payListingFee failed:", feeRes?.error);
+    return { ok: false, error: feeRes?.error };
+  }
+  const listing = listings.find((l) => l.id === id);
+  if (listing) {
+    addTransaction({
+      type: "listing_fee",
+      title: `Listing Fee — ${listing.title}`,
+      property: listing.title,
+      amount: listing.listingFee,
+      status: "completed",
+      method: "M-Pesa",
+      listingId: id,
     });
-    if (!feeRes || feeRes.ok === false) {
-      console.error("[DashboardShell] payListingFee failed:", feeRes?.error);
-      return { ok: false, error: feeRes?.error };
-    }
-    const listing = listings.find((l) => l.id === id);
-    if (listing) {
-      notifyListingFeePaid({
-        listingId: id,
-        listingTitle: listing.title,
-        amount: listing.listingFee,
-      });
-      addTransaction({
-        type: "listing_fee",
-        title: `Listing Fee — ${listing.title}`,
-        property: listing.title,
-        amount: listing.listingFee,
-        status: "completed",
-        method: "M-Pesa",
-        listingId: id,
-      });
-    }
-  };
-
+  }
+};
   const handleSideChange = (newSide) => {
     setSide(newSide);
     const firstKey = "overview";

@@ -283,3 +283,18 @@ export function buildListingFromSubmission({ categoryKey, base, extra, photoCoun
     inquiries: 0,
   };
 }
+// ============================================================
+// RESOLVE SENDER — inabadilisha "me"/"them" kuwa "buyer"/"seller"
+// Inatumika kwenye DealRoomViewer na DisputeReviewPanel
+// ============================================================
+export function resolveSender(sender, deal) {
+  if (sender === "admin") return "admin";
+  if (sender === "buyer" || sender === "seller") return sender;
+
+
+  const themIsBuyer = deal?.counterpartyName === deal?.buyerName;
+
+  if (sender === "them") return themIsBuyer ? "buyer" : "seller";
+  if (sender === "me") return themIsBuyer ? "seller" : "buyer";
+  return "buyer"; 
+}

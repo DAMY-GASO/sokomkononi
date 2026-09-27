@@ -102,8 +102,3 @@ export function useActiveBannerAds() {
   }, []);
   return list;
 }
-
-// LEGACY (compat shims)
-export const SEED_BANNER_ADS = [];
-export function addBannerAd() { return null; }
-export function removeBannerAd() {}

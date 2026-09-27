@@ -239,7 +239,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // ⬇️ FIX #3: Tumia "admin" audience kwa Admin Dashboard
+  // Admin notifications (audience: "admin")
   const { notifications, unreadCount, markRead } = useNotifications("admin");
 
   const [notifOpen, setNotifOpen] = useState(false);
@@ -250,25 +250,25 @@ export default function AdminDashboard() {
   const roles = useRoles();
 
   // ============================================================
-  // FIX #2: Unganisha useEffect mbili kuwa moja
+  // AUTH REDIRECT + LOADER
+  // Logic:
+  //   - No user → redirect to admin login (unless already there)
+  //   - User but not admin → redirect to user dashboard
+  //   - Admin → show dashboard after brief loader
   // ============================================================
   useEffect(() => {
-    // Kama haipo logged in → admin login
     if (!user) {
-      // Zuia redirect loop kama tupo tayari kwenye login page
       if (!location.pathname.endsWith("/enter")) {
         navigate(ADMIN_LOGIN_PATH, { replace: true });
       }
       return;
     }
 
-    // Kama ni user (sio admin) → user dashboard
     if (!isAdmin) {
       navigate("/dashboard", { replace: true });
       return;
     }
 
-    // Kila kitu kipo sawa — ondoka kwenye loading baada ya 300ms
     const id = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(id);
   }, [user, isAdmin, navigate, location.pathname]);
@@ -282,29 +282,29 @@ export default function AdminDashboard() {
   }, [location.pathname]);
 
   // ============================================================
-  // FIX #1: STAFF PERMISSIONS — logic sahihi
+  // STAFF ROLE
+  // Logic:
+  //   1. User ana roleKey → tumia hiyo
+  //   2. User ni admin → super_admin
+  //   3. Vinginevyo → null
   // ============================================================
   const staffRole = useMemo(() => {
-    // 1. Kama user ana roleKey → tumia hiyo
     if (user?.roleKey) {
       return getRole(user.roleKey);
     }
-
-    // 2. Kama ni admin (is_staff au is_superuser) → super_admin
     if (isAdmin) {
       return getRole("super_admin");
     }
-
-    // 3. Kama si admin → hakuna role
     return null;
   }, [isAdmin, user?.roleKey]);
 
   // ============================================================
-  // CAN ACCESS — tumia useCallback kwa stable reference
+  // CAN ACCESS — check kama user ana ruhusa kwa section
+  // Super users wanapata kila kitu. Wengine wanapata kwa permissions.
   // ============================================================
   const canAccess = useCallback(
     (sectionKey) => {
-      // Super users (is_staff / is_superuser) always have full access
+      // Super users (is_staff / is_superuser) — full access
       if (
         user?.isSuperuser ||
         user?.isStaff ||
@@ -314,10 +314,10 @@ export default function AdminDashboard() {
         return true;
       }
 
-      // Role-based super admin also has full access
+      // Role-based super admin
       if (staffRole?.key === "super_admin") return true;
 
-      // Everyone with a valid session can see these
+      // Basic sections — kila mtu mwenye session
       if (
         sectionKey === "profile" ||
         sectionKey === "system" ||
@@ -333,7 +333,7 @@ export default function AdminDashboard() {
   );
 
   // ============================================================
-  // FIX #4: visibleNav — ongeza canAccess kwenye deps
+  // VISIBLE NAV — filter kwa permissions
   // ============================================================
   const visibleNav = useMemo(() => {
     return NAV.filter((item) => canAccess(item.key));

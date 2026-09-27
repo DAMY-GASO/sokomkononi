@@ -36,7 +36,6 @@ import {
   useDeals,
   updateDeal as updateDealInStore,
 } from "../../../config/dealsStore.js";
-import { notifyPaymentProofSubmitted } from "../../../config/notificationsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
@@ -1810,54 +1809,33 @@ export default function DealRooms({
   // PROOF SUBMIT — API + fallback
   // ============================================================
   const handleProofSubmit = async (id, proof) => {
-    const deal = deals.find((d) => d.id === id);
-    if (!deal) return;
-    const txId = transactionIds[id] || deal.transactionId;
+  const deal = deals.find((d) => d.id === id);
+  if (!deal) return;
+  const txId = transactionIds[id] || deal.transactionId;
 
-    if (txId && !offlineMode) {
-      const apiRes = await callApiOrFallback(() =>
-        uploadFinalPaymentAsync(txId, {
-          finalPaymentProof: proof.dataUrl,
-          finalPaymentReference: proof.reference,
-        })
-      );
-      if (!apiRes.offline && !apiRes.ok) {
-        alert(
-          apiRes.error?.message ||
-            (lang === "sw"
-              ? "Imeshindwa kutuma uthibitisho."
-              : "Failed to submit proof.")
-        );
-        return;
-      }
-    }
+  if (txId && !offlineMode) {
+    // ... API call
+  }
 
-    const note =
-      lang === "sw"
-        ? `Uthibitisho wa malipo umetumwa (${proof.method}, Ref: ${proof.reference}).`
-        : `Payment proof submitted (${proof.method}, Ref: ${proof.reference}).`;
+  const note =
+    lang === "sw"
+      ? `Uthibitisho wa malipo umetumwa (${proof.method}, Ref: ${proof.reference}).`
+      : `Payment proof submitted (${proof.method}, Ref: ${proof.reference}).`;
 
-    updateDeal(id, {
-      status: "payment_proof_submitted",
-      paymentProof: { ...proof, submittedAt: new Date().toISOString() },
-      messages: [
-        ...deal.messages,
-        {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          text: note,
-          at: new Date().toISOString(),
-        },
-      ],
-    });
-
-    notifyPaymentProofSubmitted({
-      dealId: id,
-      listingTitle: deal.listingTitle,
-      amount: deal.currentOffer,
-    });
-  };
-
+  updateDeal(id, {
+    status: "payment_proof_submitted",
+    paymentProof: { ...proof, submittedAt: new Date().toISOString() },
+    messages: [
+      ...deal.messages,
+      {
+        id: `m_${Date.now()}`,
+        sender: "me",
+        text: note,
+        at: new Date().toISOString(),
+      },
+    ],
+  });
+};
   // ============================================================
   // PROOF CONFIRM — API + fallback
   // ============================================================

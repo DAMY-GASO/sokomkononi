@@ -251,35 +251,3 @@ export function getLocalizedField(field, lang = "sw") {
   return field?.[lang] || field?.sw || "";
 }
 
-// ============================================================
-// LEGACY SHIMS — all no-ops now. Backend owns emission.
-// ============================================================
-export function notifyBoostPurchased() {}
-export function notifyLeadingPurchased() {}
-export function notifyAdvertisementPurchased() {}
-export function notifyListingFeePaid() {}
-export function notifyAdmin() {}
-export function notifyNewMessage() {}
-export function notifyReservationExpiringSoon() {}
-export function notifyListingReleased() {}
-export function notifyDisputeResolved() {}
-export function notifyPaymentProofSubmitted() {}
-export function notifyBundlePurchased() {}
-export function notifyListingApproved() {}
-export function notifyListingRejected() {}
-export function notifyListingSubmittedForReview() {}
-export function notifyListingExpiringSoon() {}
-export function notifyListingExpired() {}
-export function notifyPriceDrop() {}
-export function notifyNewLead() {}
-export function notifySearchMatch() {}
-export function notifyReservationCreated() {}
-export function notifyOfferAccepted() {}
-export function notifyDealCompleted() {}
-export function notifyAccountSuspended() {}
-export function notifyAccountReactivated() {}
-export function notifyVerificationSubmitted() {}
-export function notifyTicketCreated() {}
-export function notifyTicketReplied() {}
-export function notifyTicketResolved() {}
-export function notifyPaymentConfirmed() {}

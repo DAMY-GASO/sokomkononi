@@ -31,8 +31,6 @@ import { usePublicListings } from "../../../config/listingsStore.js";
 import {
   useSavedIds,
   toggleSaved,
-  getSavedIds,
-  saveSnapshot,
 } from "../../../config/savedStore.js";
 import {
   useActiveCategories,
@@ -643,17 +641,9 @@ export default function BrowseProperties({ lang = "sw" }) {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const toggleSave = (id, property) => {
-    const isCurrentlySaved = getSavedIds().includes(id);
-    const next = toggleSaved(id);
-
-    if (!isCurrentlySaved) {
-      const listing =
-        property || allProperties.find((p) => p.id === id);
-      if (listing) saveSnapshot(listing);
-    }
-
-    return next;
+  // ✅ FIX: toggleSaved inashughulikia snapshot yenyewe (kupitia API)
+  const toggleSave = (id, _property) => {
+    return toggleSaved(id);
   };
 
   const handleSearchSubmit = (e) => {
@@ -695,14 +685,10 @@ export default function BrowseProperties({ lang = "sw" }) {
         {/* HEADER — CENTERED */}
         {/* ============================================================ */}
         <div className="mb-5 text-center">
-          <h1
-            className="h-title"
-          >
+          <h1 className="h-title">
             {lang === "sw" ? "Tafuta Mali" : "Browse Properties"}
           </h1>
-          <p
-            className="text-secondary text-sm mt-2 max-w-xl mx-auto"
-          >
+          <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
             {lang === "sw"
               ? "Pata mali unayoitafuta kutoka kwa wauzaji walioidhinishwa."
               : "Find the property you're looking for from verified sellers."}
@@ -940,7 +926,7 @@ export default function BrowseProperties({ lang = "sw" }) {
                   onClick={clearFilters}
                   className="mt-4 px-5 py-2 bg-[#E8A33D] text-[#101A2E] rounded-lg text-sm font-semibold hover:bg-[#B87A1F] transition-colors"
                 >
-                  {lang === "sw" ? "Safisha Vichujio" : "Clear Filters"}
+                  {lang === "sw" ? "Safisha Vichujui" : "Clear Filters"}
                 </button>
               </div>
             )}

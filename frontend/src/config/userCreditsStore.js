@@ -188,8 +188,3 @@ export function useUserCredits(userId) {
 
   return c;
 }
-
-// ============================================================
-// LEGACY (compat shims)
-// ============================================================
-export function removeExpiredCredits() {}

@@ -19,20 +19,7 @@ import {
   Calendar,
   CreditCard,
 } from "lucide-react";
-import { COLORS, formatTZS, timeAgo } from "../../shared/constants.js";
-
-// ============================================================
-// RESOLVE SENDER — inabadilisha "me"/"them" kuwa "buyer"/"seller"
-// ============================================================
-function resolveSender(sender, deal) {
-  if (sender === "admin") return "admin";
-  if (sender === "buyer" || sender === "seller") return sender;
-
-  const themIsBuyer = deal?.counterpartyName === deal?.buyerName;
-  if (sender === "them") return themIsBuyer ? "buyer" : "seller";
-  if (sender === "me") return themIsBuyer ? "seller" : "buyer";
-  return "buyer";
-}
+import { COLORS, formatTZS, timeAgo, resolveSender } from "../../shared/constants.js";
 
 // ============================================================
 // HELPER — message text

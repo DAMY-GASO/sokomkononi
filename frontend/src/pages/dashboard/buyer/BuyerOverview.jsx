@@ -1,11 +1,11 @@
 // ============================================================
 // BuyerOverview.jsx
 // Muhtasari wa mnunuzi — search, categories, listings, quick actions.
-// Bilingual kamili + mobile-responsive + watcher.
+// Bilingual kamili + mobile-responsive.
 // KILA KITU CENTERED.
 // ============================================================
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -26,13 +26,11 @@ import {
 } from "lucide-react";
 import { COLORS, formatTZS } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-// ⬇️ MABADILIKO: useAuth kutoka authStore
 import { useAuth } from "../../../config/authStore.js";
 import { usePublicListings } from "../../../config/listingsStore.js";
 import { useSavedIds } from "../../../config/savedStore.js";
 import { useRecentlyViewedIds } from "../../../config/recentlyViewedStore.js";
 import { useSearches } from "../../../config/searchesStore.js";
-import { checkSavedListingsChanges } from "../../../config/savedListingsWatcher.js";
 import {
   useActiveCategories,
   getCategoryIcon,
@@ -53,19 +51,6 @@ export default function BuyerOverview({ onNavigate }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
-
-  // ============================================================
-  // WATCHER
-  // ============================================================
-  useEffect(() => {
-    checkSavedListingsChanges();
-
-    const interval = setInterval(() => {
-      checkSavedListingsChanges();
-    }, 2 * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   // ============================================================
   // STATS
@@ -206,7 +191,7 @@ export default function BuyerOverview({ onNavigate }) {
       </div>
 
       {/* ============================================================ */}
-      {/* JINSI YA KUNUNUA — onboarding guide, inaonekana mara ya kwanza */}
+      {/* JINSI YA KUNUNUA — onboarding guide */}
       {/* ============================================================ */}
       <HowToBuyGuide lang={lang} />
 
@@ -276,7 +261,7 @@ export default function BuyerOverview({ onNavigate }) {
       </div>
 
       {/* ============================================================ */}
-      {/* QUICK ACTIONS — header centered */}
+      {/* QUICK ACTIONS */}
       {/* ============================================================ */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
         <h2 className="h-card mb-4 text-center">
@@ -304,13 +289,11 @@ export default function BuyerOverview({ onNavigate }) {
       </div>
 
       {/* ============================================================ */}
-      {/* CATEGORIES — header centered */}
+      {/* CATEGORIES */}
       {/* ============================================================ */}
       <div className="mb-6">
         <div className="flex flex-col items-center gap-1 mb-4 text-center">
-          <h2 className="h-card">
-            {t("Kategoria", "Categories")}
-          </h2>
+          <h2 className="h-card">{t("Kategoria", "Categories")}</h2>
           <button
             onClick={() => navigate("/kategoria")}
             className="text-body-sm font-semibold hover:underline"
@@ -413,7 +396,7 @@ export default function BuyerOverview({ onNavigate }) {
 }
 
 // ============================================================
-// STEP FLOW — mfululizo wa hatua na mishale kati yake
+// STEP FLOW
 // ============================================================
 function StepFlow({ steps }) {
   return (
@@ -441,7 +424,7 @@ function StepFlow({ steps }) {
 }
 
 // ============================================================
-// JINSI YA KUNUNUA — onboarding guide kwa buyer dashboard
+// JINSI YA KUNUNUA — onboarding guide
 // ============================================================
 function HowToBuyGuide({ lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -583,17 +566,12 @@ function ListingSection({
               )}
             </div>
             <div className="p-3">
-              <p className="h-card truncate">
-                {l.title}
-              </p>
+              <p className="h-card truncate">{l.title}</p>
               <p className="text-body-sm text-secondary truncate mt-0.5 flex items-center gap-1">
                 <MapPin size={10} />
                 {l.location}
               </p>
-              <p
-                className="text-price mt-1.5"
-                style={{ color: COLORS.rust }}
-              >
+              <p className="text-price mt-1.5" style={{ color: COLORS.rust }}>
                 {formatTZS(l.price)}
               </p>
             </div>

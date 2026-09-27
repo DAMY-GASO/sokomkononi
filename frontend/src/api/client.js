@@ -20,7 +20,6 @@ let onUnauthorized = null;
 
 /**
  * POST endpoints ambazo hazi-hitaji authorization.
- * Kila path inafaa kuwa complete (with trailing slash).
  */
 const PUBLIC_POST_PREFIX = [
   "/auth/login/",
@@ -36,10 +35,8 @@ const PUBLIC_POST_PREFIX = [
 
 /**
  * GET endpoints ambazo hazi-hitaji authorization.
- * Regex zina-support query strings.
- *
- * ⚠️ NOTE: Negative lookahead `(?!admin\/|fee-rules\/)` inazuia
- * admin paths kuwa public.
+ * Negative lookahead `(?!admin\/|fee-rules\/)` inazuia admin paths
+ * kuwa public.
  */
 const PUBLIC_GET_PATTERNS = [
   // Listings (public)
@@ -79,9 +76,6 @@ const PUBLIC_GET_PATTERNS = [
   /^\/advertisement-fees\/?(\?.*)?$/,
 ];
 
-/**
- * Angalia kama endpoint ni public.
- */
 function isPublicEndpoint(path, method) {
   const m = (method || "GET").toUpperCase();
   if (m === "GET") {
@@ -205,7 +199,7 @@ async function request(
     body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
 
-  // 401 → refresh token (kama ni private na tuna refresh token)
+  // 401 → refresh token
   if (res.status === 401 && !isPublic && retry && refreshToken) {
     try {
       await refreshAccessToken();

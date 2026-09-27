@@ -17,10 +17,11 @@ const translations = {
     lang_prompt: "Je, unapendelea lugha gani?",
 
     // Hero
+    hero_eyebrow: "Soko la Kidijitali la Mali",
     hero_headline: "Nunua na Uza Mali kwa Urahisi",
     hero_subtext: "SokoMkononi ni jukwaa salama la kununua na kuuza nyumba, magari, viwanja na mali nyingine.",
     cta_buy: "Nunua Sasa",
-    cta_sell: "Uza sas",
+    cta_sell: "Uza Sasa",
     hero_app_teaser: "⬇ Pakua App yetu",
 
     // Trending Properties
@@ -159,6 +160,7 @@ const translations = {
     register_verifying: "Inathibitisha...",
     register_verify_submit: "Thibitisha na Ujisajili",
     register_resend_otp: "Tuma tena msimbo",
+    register_otp_resent: "OTP mpya imetumwa kwenye barua pepe yako.",
     register_change_email: "Badilisha barua pepe",
     register_error_otp_required: "Tafadhali weka msimbo uliotumwa kwenye barua pepe yako.",
     register_error_otp_invalid: "Msimbo si sahihi au umeisha muda wake. Jaribu tena.",
@@ -204,6 +206,7 @@ const translations = {
     forgot_change_email: "Badilisha barua pepe",
     forgot_error_otp_required: "Tafadhali weka msimbo uliotumwa kwenye barua pepe yako.",
     forgot_error_otp_invalid: "Msimbo si sahihi au umeisha muda wake. Jaribu tena.",
+    forgot_error_token_missing: "Imeshindwa kupata token ya kubadilisha nenosiri. Jaribu tena.",
     forgot_success_heading: "Nenosiri Limebadilishwa!",
     forgot_success_subtext: "Nenosiri lako jipya limehifadhiwa kwa mafanikio. Sasa unaweza kuingia kwenye akaunti yako kwa nenosiri hilo jipya.",
     forgot_go_to_login: "Ingia Sasa",
@@ -229,7 +232,7 @@ const translations = {
     about_heading: "Kuhusu SokoMkononi",
     about_subtext: "Tunaunganisha wanunuzi na wauzaji wa mali kote Tanzania kwa urahisi na uwazi.",
     about_mission: "SokoMkononi ilianzishwa kwa lengo moja: kufanya ununuzi na uuzaji wa mali — nyumba, magari, viwanja na zaidi — kuwa rahisi, salama na wa kuaminika kwa kila Mtanzania, popote alipo.",
-    about_values_heading: "Maadili Yetu",                       // ✅ IMEONGEZWA
+    about_values_heading: "Maadili Yetu",
     about_value1_title: "Uwazi",
     about_value1_body: "Taarifa zote za mali na bei zinaonyeshwa wazi bila kuficha gharama za ziada.",
     about_value2_title: "Usalama",
@@ -266,7 +269,7 @@ const translations = {
     safety_tip3_body: "Kamwe usitume malipo kabla ya kuthibitisha mali na hati zake halisi.",
     safety_tip4_title: "Tumia 'Deal Room' Yetu",
     safety_tip4_body: "Wasiliana na muuzaji ndani ya jukwaa letu ili mazungumzo yote yawe na kumbukumbu.",
-    safety_report_heading: "Ripoti Matangazo ya Udanganyifu",   // ✅ IMEONGEZWA
+    safety_report_heading: "Ripoti Matangazo ya Udanganyifu",
     safety_report_note: "Ukiona tangazo la udanganyifu au tabia ya kutiliwa shaka, ripoti mara moja kupitia ukurasa wa Mawasiliano ili timu yetu ichukue hatua.",
 
     // Contact Page
@@ -458,6 +461,7 @@ const translations = {
     register_verifying: "Verifying...",
     register_verify_submit: "Verify & Create Account",
     register_resend_otp: "Resend code",
+    register_otp_resent: "A new OTP has been sent to your email.",
     register_change_email: "Change email",
     register_error_otp_required: "Please enter the code sent to your email.",
     register_error_otp_invalid: "Invalid or expired code. Please try again.",
@@ -503,6 +507,7 @@ const translations = {
     forgot_change_email: "Change email",
     forgot_error_otp_required: "Please enter the code sent to your email.",
     forgot_error_otp_invalid: "Invalid or expired code. Please try again.",
+    forgot_error_token_missing: "Could not retrieve password reset token. Please try again.",
     forgot_success_heading: "Password Changed!",
     forgot_success_subtext: "Your new password has been saved successfully. You can now log in to your account using your new password.",
     forgot_go_to_login: "Login Now",
@@ -528,7 +533,7 @@ const translations = {
     about_heading: "About SokoMkononi",
     about_subtext: "We connect property buyers and sellers across Tanzania with ease and transparency.",
     about_mission: "SokoMkononi was founded with one goal: to make buying and selling property — houses, cars, land and more — simple, safe, and trustworthy for every Tanzanian, wherever they are.",
-    about_values_heading: "Our Values",                          // ✅ IMEONGEZWA
+    about_values_heading: "Our Values",
     about_value1_title: "Transparency",
     about_value1_body: "All property details and prices are shown clearly with no hidden extra costs.",
     about_value2_title: "Safety",
@@ -547,7 +552,7 @@ const translations = {
     safety_tip3_body: "Never send payment before verifying the property and its official documents.",
     safety_tip4_title: "Use Our 'Deal Room'",
     safety_tip4_body: "Communicate with sellers inside our platform so every conversation is recorded.",
-    safety_report_heading: "Report Fraudulent Listings",         // ✅ IMEONGEZWA
+    safety_report_heading: "Report Fraudulent Listings",
     safety_report_note: "If you see a fraudulent listing or suspicious behavior, report it immediately via our Contact page so our team can take action.",
 
     // Contact Page
@@ -562,7 +567,7 @@ const translations = {
     contact_submit: "Send Message",
     contact_success_heading: "Message Sent!",
     contact_success_subtext: "Thanks for reaching out. We'll get back to you as soon as possible.",
-  }
+  },
 };
 
 export function LanguageProvider({ children }) {
@@ -573,9 +578,16 @@ export function LanguageProvider({ children }) {
 
   const t = (key, params = {}) => {
     let text = translations[lang]?.[key] || translations.sw[key] || key;
+
+    // ✅ FIX #24: Badilisha placeholder ZOTE (sio ya kwanza tu)
     Object.keys(params).forEach((k) => {
-      text = text.replace(`{${k}}`, params[k]);
+      if (typeof text === "string") {
+        // Tumia split().join() kwa compatibility zaidi
+        // (au replaceAll() kwa modern browser)
+        text = text.split(`{${k}}`).join(String(params[k] ?? ""));
+      }
     });
+
     return text;
   };
 

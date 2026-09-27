@@ -12,25 +12,7 @@ import {
   XCircle,
   Shield,
 } from "lucide-react";
-import { COLORS, formatTZS } from "../../shared/constants.js";
-
-// ============================================================
-// RESOLVE SENDER — inabadilisha "me"/"them" kuwa "buyer"/"seller"
-// ============================================================
-function resolveSender(sender, deal) {
-  if (sender === "admin") return "admin";
-  if (sender === "buyer" || sender === "seller") return sender;
-
-  // "me" na "them" — inategemea counterpartyName
-  // Kama counterpartyName === buyerName: "them" = buyer, "me" = seller
-  // Kama counterpartyName === sellerName: "them" = seller, "me" = buyer
-  const themIsBuyer = deal?.counterpartyName === deal?.buyerName;
-
-  if (sender === "them") return themIsBuyer ? "buyer" : "seller";
-  if (sender === "me") return themIsBuyer ? "seller" : "buyer";
-
-  return "buyer"; // fallback
-}
+import { COLORS, formatTZS, resolveSender } from "../../shared/constants.js";
 
 // ============================================================
 // MESSAGE BUBBLE

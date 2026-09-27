@@ -92,9 +92,3 @@ export function useAuditLogs() {
 }
 export function useAuditLogsCount() { return useAuditLogs().length; }
 
-// LEGACY (compat shims)
-export const SEED_AUDIT_LOGS = [];
-export function saveAuditLogs() {}
-export function removeAuditLog() {}
-export function clearAuditLogs() {}
-export function addAuditLog() {}

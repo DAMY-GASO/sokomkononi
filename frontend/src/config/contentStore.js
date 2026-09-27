@@ -231,12 +231,3 @@ export function useTerms() { return useContent().terms || EMPTY.terms; }
 export function usePrivacy() { return useContent().privacy || EMPTY.privacy; }
 export function useHelp() { return useContent().help || EMPTY.help; }
 
-// Legacy shims
-export const DEFAULT_BANNERS = [];
-export const DEFAULT_TESTIMONIALS = [];
-export const DEFAULT_FAQS = [];
-export const DEFAULT_ABOUT = EMPTY.about;
-export const DEFAULT_TERMS = EMPTY.terms;
-export const DEFAULT_PRIVACY = EMPTY.privacy;
-export const DEFAULT_HELP = EMPTY.help;
-export const SEED_CONTENT = EMPTY;

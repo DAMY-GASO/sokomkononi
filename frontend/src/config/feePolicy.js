@@ -126,7 +126,3 @@ export function calcReservationFee(hours) {
   return Number(last.fee) + extra * perDay;
 }
 
-// Legacy compat
-export const DEFAULT_RESERVATION_RATES = [];
-export function saveReservationRates() {}
-export function updateReservationRate() {}

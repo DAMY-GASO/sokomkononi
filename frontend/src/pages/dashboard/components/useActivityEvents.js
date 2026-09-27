@@ -2,12 +2,10 @@
 // useActivityEvents.js
 // Hook inayotengeneza orodha KAMILI (bila kikomo) ya shughuli
 // za mtumiaji — kwa Muuzaji (seller) na Mnunuzi (buyer).
-// Inatumika na VYOTE viwili: RecentActivity.jsx (widget ya
-// dashboard, inaonyesha 5 za mwisho) na RecentActivityPage.jsx
-// (ukurasa kamili wa "Shughuli Zote").
 //
-// MAHALI: weka faili hii kwenye
-//   src/pages/dashboard/components/useActivityEvents.js
+// Inatumika na VYOTE viwili:
+//   - RecentActivity.jsx (widget ya dashboard, inaonyesha 5 za mwisho)
+//   - RecentActivityPage.jsx (ukurasa kamili wa "Shughuli Zote")
 // ============================================================
 
 import { useMemo } from "react";
@@ -44,8 +42,11 @@ export function useActivityEvents(side = "seller", onNavigate) {
   return useMemo(() => {
     const events = [];
 
+    // ============================================================
+    // SELLER EVENTS
+    // ============================================================
     if (side === "seller") {
-      // --- Matukio ya Muuzaji ---
+      // Listings zilizowekwa
       myListings.forEach((l) => {
         if (l.postedAt) {
           events.push({
@@ -77,6 +78,7 @@ export function useActivityEvents(side = "seller", onNavigate) {
         }
       });
 
+      // Mauzo yaliyokamilika
       transactions
         .filter((tx) => tx.type === "sale" && tx.status === "completed")
         .forEach((tx) => {
@@ -93,8 +95,13 @@ export function useActivityEvents(side = "seller", onNavigate) {
             onClick: () => onNavigate("transactions"),
           });
         });
-    } else {
-      // --- Matukio ya Mnunuzi ---
+    }
+
+    // ============================================================
+    // BUYER EVENTS
+    // ============================================================
+    if (side === "buyer") {
+      // Saved listings
       const savedListings = allListings.filter((l) => savedIds.includes(l.id));
       savedListings.forEach((l) => {
         // savedSnapshots[l.id].savedAt ni wakati halisi wa kuhifadhi
@@ -112,6 +119,7 @@ export function useActivityEvents(side = "seller", onNavigate) {
         });
       });
 
+      // Manunuzi & reservations
       transactions
         .filter(
           (tx) =>
@@ -140,7 +148,9 @@ export function useActivityEvents(side = "seller", onNavigate) {
         });
     }
 
-    // Deal Rooms — zinaonekana pande zote mbili (sawa na DealRooms.jsx)
+    // ============================================================
+    // DEAL ROOMS — pande zote mbili
+    // ============================================================
     deals.forEach((d) => {
       events.push({
         id: `deal_${d.id}`,
@@ -163,7 +173,6 @@ export function useActivityEvents(side = "seller", onNavigate) {
     });
 
     // Sort kwa tarehe — orodha KAMILI, bila kikomo.
-    // (RecentActivity.jsx ndiyo inayochukua 5 za mwanzo kwa widget.)
     return events
       .filter((e) => e.at)
       .sort((a, b) => new Date(b.at) - new Date(a.at));

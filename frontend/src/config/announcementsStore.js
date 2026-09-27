@@ -102,8 +102,3 @@ export function useAnnouncements() {
 }
 export function useSentAnnouncements() { return useAnnouncements().filter((a) => a.sent); }
 
-// LEGACY (compat shims)
-export const SEED_ANNOUNCEMENTS = [];
-export function saveAnnouncements() {}
-export function addAnnouncement() { return null; }
-export function removeAnnouncement() {}
