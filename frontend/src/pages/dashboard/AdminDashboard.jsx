@@ -3,7 +3,7 @@
 // + PageLoader (mara moja tu)
 // + Secret admin path
 // ============================================================
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth, logoutAsync } from "../../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
@@ -238,7 +238,10 @@ export default function AdminDashboard() {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { notifications, unreadCount, markRead } = useNotifications("user");
+
+  // ⬇️ FIX #3: Tumia "admin" audience kwa Admin Dashboard
+  const { notifications, unreadCount, markRead } = useNotifications("admin");
+
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
@@ -246,13 +249,29 @@ export default function AdminDashboard() {
   const openTicketsCount = useOpenTicketsCount();
   const roles = useRoles();
 
-  // Safety: if backend rejected our session and authStore cleared user,
-  // kick to admin login instead of showing a broken dashboard shell.
+  // ============================================================
+  // FIX #2: Unganisha useEffect mbili kuwa moja
+  // ============================================================
   useEffect(() => {
-    if (!user && !location.pathname.endsWith("/enter")) {
-      navigate(ADMIN_LOGIN_PATH, { replace: true });
+    // Kama haipo logged in → admin login
+    if (!user) {
+      // Zuia redirect loop kama tupo tayari kwenye login page
+      if (!location.pathname.endsWith("/enter")) {
+        navigate(ADMIN_LOGIN_PATH, { replace: true });
+      }
+      return;
     }
-  }, [user, location.pathname, navigate]);
+
+    // Kama ni user (sio admin) → user dashboard
+    if (!isAdmin) {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+
+    // Kila kitu kipo sawa — ondoka kwenye loading baada ya 300ms
+    const id = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(id);
+  }, [user, isAdmin, navigate, location.pathname]);
 
   // ============================================================
   // ACTIVE SECTION — kutoka URL
@@ -263,42 +282,62 @@ export default function AdminDashboard() {
   }, [location.pathname]);
 
   // ============================================================
-  // STAFF PERMISSIONS
+  // FIX #1: STAFF PERMISSIONS — logic sahihi
   // ============================================================
   const staffRole = useMemo(() => {
-    if (isAdmin && !user?.roleKey) return getRole("super_admin");
-    if (user?.roleKey) return getRole(user.roleKey);
-    return getRole("super_admin");
+    // 1. Kama user ana roleKey → tumia hiyo
+    if (user?.roleKey) {
+      return getRole(user.roleKey);
+    }
+
+    // 2. Kama ni admin (is_staff au is_superuser) → super_admin
+    if (isAdmin) {
+      return getRole("super_admin");
+    }
+
+    // 3. Kama si admin → hakuna role
+    return null;
   }, [isAdmin, user?.roleKey]);
 
-  const canAccess = (sectionKey) => {
-    // Super users (is_staff / is_superuser) always have full access
-    if (
-      user?.isSuperuser ||
-      user?.isStaff ||
-      user?.is_superuser ||
-      user?.is_staff
-    ) {
-      return true;
-    }
-    // Role-based super admin also has full access
-    if (staffRole?.key === "super_admin") return true;
-    // Everyone with a valid session can see these
-    if (
-      sectionKey === "profile" ||
-      sectionKey === "system" ||
-      sectionKey === "overview"
-    ) {
-      return true;
-    }
-    if (!staffRole) return false;
-    return (staffRole.permissions || []).includes(sectionKey);
-  };
+  // ============================================================
+  // CAN ACCESS — tumia useCallback kwa stable reference
+  // ============================================================
+  const canAccess = useCallback(
+    (sectionKey) => {
+      // Super users (is_staff / is_superuser) always have full access
+      if (
+        user?.isSuperuser ||
+        user?.isStaff ||
+        user?.is_superuser ||
+        user?.is_staff
+      ) {
+        return true;
+      }
 
+      // Role-based super admin also has full access
+      if (staffRole?.key === "super_admin") return true;
+
+      // Everyone with a valid session can see these
+      if (
+        sectionKey === "profile" ||
+        sectionKey === "system" ||
+        sectionKey === "overview"
+      ) {
+        return true;
+      }
+
+      if (!staffRole) return false;
+      return (staffRole.permissions || []).includes(sectionKey);
+    },
+    [user, staffRole]
+  );
+
+  // ============================================================
+  // FIX #4: visibleNav — ongeza canAccess kwenye deps
+  // ============================================================
   const visibleNav = useMemo(() => {
     return NAV.filter((item) => canAccess(item.key));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staffRole]);
+  }, [canAccess]);
 
   const openNotification = (n) => {
     markRead(n.id);
@@ -306,22 +345,6 @@ export default function AdminDashboard() {
     navigate(STATE_TO_URL[target] || STATE_TO_URL.overview);
     setNotifOpen(false);
   };
-
-  // ============================================================
-  // AUTH CHECK + LOADER — tumia ADMIN_LOGIN_PATH
-  // ============================================================
-  useEffect(() => {
-    if (!user) {
-      navigate(ADMIN_LOGIN_PATH);
-      return;
-    }
-    if (!isAdmin) {
-      navigate("/dashboard");
-      return;
-    }
-    const id = setTimeout(() => setLoading(false), 300);
-    return () => clearTimeout(id);
-  }, [user, isAdmin, navigate]);
 
   const handleLogout = async () => {
     await logoutAsync();

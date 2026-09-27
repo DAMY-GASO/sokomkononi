@@ -14,13 +14,13 @@ import { installUnauthorizedHandler } from "./config/authStore.js";
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
 
 // ============================================================
-// INITIALIZE — categories + bundles za awali
+// INITIALIZE — categories + bundles + listings
 // ============================================================
 import {
   initializeCategories,
   hydrateCategoriesFromApi,
 } from "./config/categoriesStore.js";
-import { initializeBundles } from "./config/bundlesStore.js";
+import { hydrateBundlesFromApi } from "./config/bundlesStore.js";
 import { hydrateListingsFromApi } from "./config/listingsStore.js";
 
 // ============================================================
@@ -92,21 +92,21 @@ function BrowseRoute() {
 
 function App() {
   // ============================================================
-  // INITIALIZE — categories + bundles + hydrate kutoka API
+  // INITIALIZE — categories + bundles + listings
   // + install 401 handler
   // ============================================================
   useEffect(() => {
     // 0) Install 401 handler
     installUnauthorizedHandler();
 
-    // 1) Seed mara moja
+    // 1) Seed mara moja (categories only — bundles ni API-only)
     initializeCategories();
-    initializeBundles();
 
     // 2) Hydrate kutoka API
     async function hydrateFromApi() {
       await Promise.allSettled([
         hydrateCategoriesFromApi(),
+        hydrateBundlesFromApi(),      // ⬅️ FIX #5: Badala ya initializeBundles()
         hydrateListingsFromApi(),
       ]);
     }
@@ -224,6 +224,7 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
 
           <Route path="/alika-marafiki" element={<InviteFriendsPage />} />
+
           {/* ============================================================ */}
           {/* FALLBACK */}
           {/* ============================================================ */}

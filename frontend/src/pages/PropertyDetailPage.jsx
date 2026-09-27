@@ -39,12 +39,13 @@ import {
   useWaitingList,
   joinWaitingList,
 } from "../config/waitingListStore.js";
-import { getOrCreateDeal } from "../config/dealsStore.js";
+import { getOrCreateDealAsync } from "../config/dealsStore.js";
+import { createConversationAsync } from "../config/messagesStore.js";
 import {
   COLORS,
   isBoostActive,
   isLeadingActive,
-} from "./dashboard/components/shared";
+} from "./dashboard/components/shared.js";
 
 const CATEGORY_ICONS = {
   nyumba: HomeIcon,
@@ -577,7 +578,10 @@ export default function PropertyDetailPage() {
     if (contactLoading) return;
     if (!user) {
       navigate("/login", {
-        state: { from: `${location.pathname}${location.search}`, openContactModal: true },
+        state: {
+          from: `${location.pathname}${location.search}`,
+          openContactModal: true,
+        },
       });
       return;
     }
@@ -603,16 +607,58 @@ export default function PropertyDetailPage() {
       }
     } catch (err) {
       console.error("[PropertyDetail] deal handler threw:", err);
-      alert(err?.message || t(lang, "Hitilafu imetokea.", "Something went wrong."));
+      alert(
+        err?.message || t(lang, "Hitilafu imetokea.", "Something went wrong.")
+      );
       navigate("/dashboard/buyer/deals");
     } finally {
       setContactLoading(null);
     }
   };
 
-  const handleStartConversation = async
-
-  
+  const handleStartConversation = async () => {
+    if (contactLoading) return;
+    if (!user) {
+      navigate("/login", {
+        state: {
+          from: `${location.pathname}${location.search}`,
+          openContactModal: true,
+        },
+      });
+      return;
+    }
+    setShowContactModal(false);
+    setContactLoading("message");
+    try {
+      const res = await createConversationAsync({
+        listingId: property.id,
+        initialMessage: "",
+      });
+      if (res?.ok && res?.conversation?.id) {
+        navigate(`/dashboard/buyer/messages?c=${res.conversation.id}`);
+      } else {
+        console.error("[PropertyDetail] conversation create failed:", res?.error);
+        alert(
+          res?.error?.data?.detail ||
+            res?.error?.message ||
+            t(
+              lang,
+              "Imeshindwa kuanza mazungumzo.",
+              "Failed to start conversation."
+            )
+        );
+        navigate("/dashboard/buyer/messages");
+      }
+    } catch (err) {
+      console.error("[PropertyDetail] conversation handler threw:", err);
+      alert(
+        err?.message || t(lang, "Hitilafu imetokea.", "Something went wrong.")
+      );
+      navigate("/dashboard/buyer/messages");
+    } finally {
+      setContactLoading(null);
+    }
+  };
 
   const categoryLabel =
     CATEGORY_LABELS[property.category]?.[lang] ||
