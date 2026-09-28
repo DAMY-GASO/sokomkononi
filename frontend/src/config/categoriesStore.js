@@ -137,7 +137,7 @@ export const SEED_CATEGORIES = Object.entries(CATEGORY_TRANSLATIONS).map(([key, 
   extra: v.extra,
 }));
 
-export export const BACKEND_SLUG_TO_SEED_KEY = {
+export const BACKEND_SLUG_TO_SEED_KEY = {
   // Canonical
   "nyumba-majengo": "nyumba",
   "viwanja-mashamba": "viwanja",
