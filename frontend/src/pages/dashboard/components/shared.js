@@ -32,7 +32,94 @@ export const COLORS = {
 export const FONTS = {
   display: "'Inter', system-ui, -apple-system, sans-serif",
   body: "'Inter', system-ui, -apple-system, sans-serif",
-};
+}
+
+// ============================================================
+// IMAGE URL RESOLVER
+// Backends often return absolute URLs using the internal Docker
+// hostname (e.g. http://sokomkononi-...-rcnbg2:8000/media/...).
+// Browsers cannot resolve those names — we rewrite them to a
+// relative path so the frontend nginx proxies /media/ correctly.
+// Also handles many field-name variants and nested objects.
+// ============================================================
+const INTERNAL_HOST_PATTERNS = [
+  /^https?:\/\/[^/]*rcnbg2[^/]*/i,
+  /^https?:\/\/[^/]*\.internal[^/]*/i,
+  /^https?:\/\/localhost(?::\d+)?/i,
+  /^https?:\/\/127\.0\.0\.1(?::\d+)?/i,
+  /^https?:\/\/10\.\d+\.\d+\.\d+(?::\d+)?/i,
+  /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+(?::\d+)?/i,
+  /^https?:\/\/192\.168\.\d+\.\d+(?::\d+)?/i,
+  // docker-style hostname:8000 (any host ending in :8000 without a domain)
+  /^https?:\/\/[a-z0-9_-]+(?::8000)(?![a-z\.])/i,
+];
+
+function stripInternalHost(url) {
+  if (typeof url !== "string") return url;
+  for (const pattern of INTERNAL_HOST_PATTERNS) {
+    if (pattern.test(url)) {
+      try {
+        const u = new URL(url);
+        return u.pathname + u.search;
+      } catch {
+        return url.replace(/^https?:\/\/[^/]+/i, "");
+      }
+    }
+  }
+  return url;
+}
+
+/**
+ * Extract the first image URL from a listing/category-ish object.
+ * Tries every common field name so we don't miss anything.
+ */
+export function pickImageUrl(entity) {
+  if (!entity) return null;
+  if (typeof entity === "string") return stripInternalHost(entity);
+
+  const candidates = [
+    entity.imageUrl,
+    entity.image_url,
+    entity.primary_image_url,
+    entity.primary_image,
+    entity.image,
+    entity.thumbnail,
+    entity.thumbnail_url,
+    entity.cover_image,
+    entity.photo,
+    entity.photo_url,
+    entity.url,
+    entity.src,
+  ];
+  for (const c of candidates) {
+    const v = typeof c === "object" && c !== null ? c.url || c.image_url || c.image : c;
+    if (v && typeof v === "string") return stripInternalHost(v);
+  }
+  // Arrays
+  const arr = entity.photos || entity.images || entity.gallery;
+  if (Array.isArray(arr) && arr.length > 0) {
+    const first = arr[0];
+    const v = typeof first === "string" ? first
+      : first?.url || first?.image_url || first?.image || first?.src;
+    if (v) return stripInternalHost(v);
+  }
+  return null;
+}
+
+/**
+ * Resolve a possibly-relative path to a full URL usable in <img src>.
+ * Returns "" (empty string) when there is no valid URL — callers
+ * should fall back to an icon in that case.
+ */
+export function resolveImageUrl(value) {
+  const url = pickImageUrl(value);
+  if (!url) return "";
+  if (url.startsWith("data:")) return url;
+  if (/^https?:\/\//i.test(url)) return url;   // already absolute
+  if (url.startsWith("/")) return url;            // relative — same origin
+  return `/${url}`;                               // no leading slash
+}
+;
 
 // ============================================================
 // CATEGORIES — sasa zinatoka categoriesStore.js

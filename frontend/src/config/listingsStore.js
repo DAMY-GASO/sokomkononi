@@ -8,6 +8,7 @@ import { getPlatformPolicy } from "./systemSettingsStore.js";
 import { listingsApi } from "../api/listings.js";
 import { authApi } from "../api/auth.js";
 import { getSeedKeyFromSlug } from "./categoriesStore.js";
+import { pickImageUrl, resolveImageUrl } from "../pages/dashboard/components/shared.js";
 
 const PUBLIC_KEY = "sokomkononi_listings_public_v1";
 const MINE_KEY = "sokomkononi_listings_mine_v1";
@@ -239,13 +240,25 @@ export function useHydratePublicListings() {
 export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   if (!raw) return null;
 
+  // Extract photos from every common shape the backend might use.
   let photos = [];
   if (Array.isArray(raw.photos)) photos = raw.photos;
-  else if (Array.isArray(raw.images)) {
-    photos = raw.images
-      .map((img) => (typeof img === "string" ? img : img?.image_url || img?.image))
-      .filter(Boolean);
-  } else if (raw.image) photos = [raw.image];
+  else if (Array.isArray(raw.images)) photos = raw.images;
+  else if (Array.isArray(raw.gallery)) photos = raw.gallery;
+
+  // Normalize each entry to a string URL.
+  photos = photos
+    .map((img) => {
+      if (typeof img === "string") return img;
+      return img?.image_url || img?.url || img?.image || img?.src || null;
+    })
+    .filter(Boolean);
+
+  // Also try the new universal picker (handles primary_image, thumbnail, etc.)
+  const singleImage = pickImageUrl(raw);
+  if (singleImage && !photos.includes(singleImage)) {
+    photos.unshift(singleImage);
+  }
 
   const categoryObj = raw.category;
   const rawCategorySlug =
@@ -279,7 +292,10 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   const leadingExpiresAt =
     raw.leading_expires_at || raw.leadingExpiresAt || null;
 
-  const primaryPhoto = raw.primary_image || photos[0] || raw.imageUrl || null;
+  // Resolve the final URL for <img src>. resolveImageUrl() will
+  // rewrite internal Docker hostnames to relative paths.
+  const primaryPhoto = resolveImageUrl(photos[0] || null);
+  const normalizedPhotos = photos.map((u) => resolveImageUrl(u)).filter(Boolean);
 
   return {
     ...raw,
@@ -300,7 +316,7 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     boostedUntil,
     boostExpiresAt,
     leadingExpiresAt,
-    photos,
+    photos: normalizedPhotos,
     imageUrl: primaryPhoto,
     seller: sellerName || raw.seller,
     seller_name: sellerName,

@@ -11,7 +11,7 @@ import {
   Eye, Flag, Star, Camera, Car, Settings, Trees, Home as HomeIcon,
   Briefcase, Wrench, Clock3, BellRing, Ban,
 } from "lucide-react";
-import { useListings } from "../config/listingsStore.js";
+import { useListings, fetchListingImagesAsync } from "../config/listingsStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { useWaitingList, joinWaitingListAsync } from "../config/waitingListStore.js";
 import { getOrCreateDealAsync } from "../config/dealsStore.js";
@@ -310,6 +310,36 @@ export default function PropertyDetailPage() {
   const [contactLoading, setContactLoading] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
 
+  // If the LIST endpoint did not include images for this listing,
+  // fetch them from /listings/{id}/images/ when the detail page opens.
+  const [fetchedImages, setFetchedImages] = useState([]);
+  useEffect(() => {
+    if (!property) return;
+    const alreadyHas =
+      (Array.isArray(property.images) && property.images.length > 0) ||
+      (Array.isArray(property.photos) && property.photos.length > 0);
+    if (alreadyHas) return;
+    let cancelled = false;
+    fetchListingImagesAsync(property.id).then((res) => {
+      if (cancelled) return;
+      if (res.ok && Array.isArray(res.images)) {
+        // res.images entries may be strings or objects
+        const urls = res.images
+          .map((img) =>
+            typeof img === "string"
+              ? img
+              : img?.image_url || img?.url || img?.image || null
+          )
+          .filter(Boolean);
+        if (urls.length > 0) setFetchedImages(urls);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [property?.id]);
+
   const waitingListEntries = useWaitingList();
   const alreadyOnWaitlist = useMemo(
     () =>
@@ -480,7 +510,18 @@ export default function PropertyDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <ImageGallery property={property} lang={lang} />
+            <ImageGallery
+              property={{
+                ...property,
+                images: [
+                  ...((property.images && Array.isArray(property.images))
+                    ? property.images
+                    : []),
+                  ...fetchedImages,
+                ].filter((v, i, arr) => arr.indexOf(v) === i),
+              }}
+              lang={lang}
+            />
 
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <div className="flex items-start justify-between gap-4">
