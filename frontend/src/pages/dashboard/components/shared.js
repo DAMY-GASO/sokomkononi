@@ -111,9 +111,19 @@ export function pickImageUrl(entity) {
  * Returns "" (empty string) when there is no valid URL — callers
  * should fall back to an icon in that case.
  */
+const _loggedImageUrls = new Set();
 export function resolveImageUrl(value) {
   const url = pickImageUrl(value);
   if (!url) return "";
+  if (typeof window !== "undefined" && url.startsWith("http")) {
+    if (!_loggedImageUrls.has(url)) {
+      _loggedImageUrls.add(url);
+      // Only log the first time we see a given absolute URL.
+      // If you see docker-internal hostnames below, the host rewrite
+      // didn't kick in — check INTERNAL_HOST_PATTERNS.
+      console.log("[imageResolver] keeping absolute URL:", url);
+    }
+  }
   if (url.startsWith("data:")) return url;
   if (/^https?:\/\//i.test(url)) return url;   // already absolute
   if (url.startsWith("/")) return url;            // relative — same origin

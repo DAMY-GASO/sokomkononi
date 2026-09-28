@@ -11,7 +11,11 @@ import {
   Eye, Flag, Star, Camera, Car, Settings, Trees, Home as HomeIcon,
   Briefcase, Wrench, Clock3, BellRing, Ban,
 } from "lucide-react";
-import { useListings, fetchListingImagesAsync } from "../config/listingsStore.js";
+import {
+  useListings,
+  fetchListingImagesAsync,
+  fetchListingDetailAsync,
+} from "../config/listingsStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { useWaitingList, joinWaitingListAsync } from "../config/waitingListStore.js";
 import { getOrCreateDealAsync } from "../config/dealsStore.js";
@@ -66,7 +70,24 @@ function reservationCountdown(reservedUntil, lang) {
 
 function ImageGallery({ property, lang }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const images = property.images || property.photos || [];
+
+  // Normalize every possible source into a flat array of URL strings.
+  // Handles strings, objects with image_url/url/image/src, and single fields.
+  const rawList = [
+    ...(Array.isArray(property.images) ? property.images : []),
+    ...(Array.isArray(property.photos) ? property.photos : []),
+    ...(property.imageUrl ? [property.imageUrl] : []),
+    ...(property.image_url ? [property.image_url] : []),
+    ...(property.primary_image ? [property.primary_image] : []),
+  ];
+  const images = rawList
+    .map((img) => {
+      if (!img) return null;
+      if (typeof img === "string") return img;
+      return img.image_url || img.url || img.image || img.src || null;
+    })
+    .filter(Boolean)
+    .filter((v, i, arr) => arr.indexOf(v) === i);
   const Icon = CATEGORY_ICONS[property.category] || HomeIcon;
   const isReserved = property.status === "reserved";
   const isSold = property.status === "sold";
@@ -310,30 +331,81 @@ export default function PropertyDetailPage() {
   const [contactLoading, setContactLoading] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
 
-  // If the LIST endpoint did not include images for this listing,
-  // fetch them from /listings/{id}/images/ when the detail page opens.
+  // ============================================================
+  // IMAGE PIPELINE
+  // 1. Try the detail endpoint  GET /listings/{id}/  (usually has images)
+  // 2. If still empty, try the images endpoint  GET /listings/{id}/images/
+  // 3. Collect everything into `fetchedImages` for the gallery.
+  // ============================================================
   const [fetchedImages, setFetchedImages] = useState([]);
+
   useEffect(() => {
-    if (!property) return;
-    const alreadyHas =
-      (Array.isArray(property.images) && property.images.length > 0) ||
-      (Array.isArray(property.photos) && property.photos.length > 0);
-    if (alreadyHas) return;
+    if (!property?.id) return;
     let cancelled = false;
-    fetchListingImagesAsync(property.id).then((res) => {
-      if (cancelled) return;
-      if (res.ok && Array.isArray(res.images)) {
-        // res.images entries may be strings or objects
-        const urls = res.images
-          .map((img) =>
-            typeof img === "string"
-              ? img
-              : img?.image_url || img?.url || img?.image || null
-          )
-          .filter(Boolean);
-        if (urls.length > 0) setFetchedImages(urls);
+
+    const extractUrls = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr
+        .map((img) => {
+          if (!img) return null;
+          if (typeof img === "string") return img;
+          return (
+            img.image_url ||
+            img.url ||
+            img.image ||
+            img.src ||
+            img.file ||
+            null
+          );
+        })
+        .filter(Boolean);
+    };
+
+    (async () => {
+      // ---- Step 1: refresh the listing detail ----
+      try {
+        const detailRes = await fetchListingDetailAsync(property.id);
+        if (cancelled) return;
+        if (detailRes?.ok && detailRes.listing) {
+          const l = detailRes.listing;
+          const urls = [
+            ...extractUrls(l.photos),
+            ...extractUrls(l.images),
+            l.imageUrl,
+          ].filter(Boolean);
+          if (urls.length > 0) {
+            console.log("[PropertyDetail] images from detail endpoint:", urls);
+            setFetchedImages(urls);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("[PropertyDetail] detail fetch failed:", err);
       }
-    });
+
+      // ---- Step 2: fall back to the images endpoint ----
+      try {
+        const imagesRes = await fetchListingImagesAsync(property.id);
+        if (cancelled) return;
+        if (imagesRes?.ok) {
+          const urls = extractUrls(imagesRes.images);
+          if (urls.length > 0) {
+            console.log("[PropertyDetail] images from /images/ endpoint:", urls);
+            setFetchedImages(urls);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("[PropertyDetail] images fetch failed:", err);
+      }
+
+      console.warn(
+        "[PropertyDetail] no images found for listing",
+        property.id,
+        "— check backend /listings/ and /listings/{id}/images/"
+      );
+    })();
+
     return () => {
       cancelled = true;
     };
@@ -513,12 +585,18 @@ export default function PropertyDetailPage() {
             <ImageGallery
               property={{
                 ...property,
-                images: [
-                  ...((property.images && Array.isArray(property.images))
-                    ? property.images
-                    : []),
-                  ...fetchedImages,
-                ].filter((v, i, arr) => arr.indexOf(v) === i),
+                // Merge every possible source. ImageGallery will pick
+                // whichever list is non-empty. Dedupe by URL.
+                images: Array.from(
+                  new Set(
+                    [
+                      ...(Array.isArray(property.images) ? property.images : []),
+                      ...(Array.isArray(property.photos) ? property.photos : []),
+                      ...(property.imageUrl ? [property.imageUrl] : []),
+                      ...fetchedImages,
+                    ].filter(Boolean)
+                  )
+                ),
               }}
               lang={lang}
             />

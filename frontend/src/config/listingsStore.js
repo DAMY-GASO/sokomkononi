@@ -595,14 +595,33 @@ export async function fetchListingDetailAsync(id) {
     if (normalized) {
       const inPub = readKey(PUBLIC_KEY).some((l) => String(l.id) === String(id));
       const inMine = readKey(MINE_KEY).some((l) => String(l.id) === String(id));
-      if (inPub) savePublicListings(readKey(PUBLIC_KEY).map((l) => (l.id === id ? normalized : l)));
-      if (inMine) saveMyListings(readKey(MINE_KEY).map((l) => (l.id === id ? normalized : l)));
-      if (!inPub && !inMine && ["live", "reserved", "sold"].includes(normalized.status)) {
+      if (inPub) {
+        savePublicListings(
+          readKey(PUBLIC_KEY).map((l) =>
+            String(l.id) === String(id) ? normalized : l
+          )
+        );
+      }
+      if (inMine) {
+        saveMyListings(
+          readKey(MINE_KEY).map((l) =>
+            String(l.id) === String(id) ? normalized : l
+          )
+        );
+      }
+      if (
+        !inPub &&
+        !inMine &&
+        ["live", "reserved", "sold"].includes(normalized.status)
+      ) {
         savePublicListings([normalized, ...readKey(PUBLIC_KEY)]);
       }
     }
-    return { ok: true, listing: normalized };
-  } catch (err) { return { ok: false, error: err, listing: null }; }
+    return { ok: true, listing: normalized, raw: data };
+  } catch (err) {
+    console.warn("[listingsStore] fetchListingDetail failed:", err);
+    return { ok: false, error: err, listing: null };
+  }
 }
 
 export async function createPropertyDetailsAsync(id, payload) {
