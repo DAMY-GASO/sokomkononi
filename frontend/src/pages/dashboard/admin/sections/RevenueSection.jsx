@@ -4,7 +4,7 @@
 // ============================================================
 import React, { useState } from "react";
 import {
-  Home, Clock, Rocket, Search, Smartphone, Plus, AlertTriangle, Pencil, Info, Loader2, RefreshCw,
+  Home, Clock, Rocket, Search, Smartphone, Plus, AlertTriangle, Pencil, Info, Loader2, RefreshCw, Trash2,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -19,7 +19,7 @@ import {
 } from "../../../../config/boostPackagesStore.js";
 import {
   useListingFeeConfigs, updateListingFeeConfigAsync, addFeeConfigAsync, hasFeeConfig,
-  hydrateListingFeeConfigsFromApi,
+  hydrateListingFeeConfigsFromApi, removeFeeConfigAsync, cleanupOrphanFeeConfigsAsync,
 } from "../../../../config/listingFeeStore.js";
 import {
   useLeadingFeeConfig, updateLeadingFeePriceAsync, hydrateLeadingFeeFromApi,
@@ -194,7 +194,11 @@ export default function RevenueSection() {
       return res;
     });
 
-  const missingFeeCategories = activeCategories.filter((c) => !hasFeeConfig(c.key));
+  // A category is "missing" only when NO fee rule exists for its seed key.
+  // We dedupe against `hasFeeConfig` which already normalizes slugs.
+  const missingFeeCategories = activeCategories.filter(
+    (c) => !hasFeeConfig(c.key)
+  );
 
   const handleAddFeeConfig = (cat) =>
     withBusy(`add-fee-${cat.key}`, async () => {
@@ -217,6 +221,61 @@ export default function RevenueSection() {
       return res;
     });
 
+  // ============================================================
+  // Cleanup orphan fee rules
+  // ============================================================
+  const orphanCount = listingFeeConfigs.filter((c) => c.orphan).length;
+  const handleCleanupOrphans = async () => {
+    if (
+      !window.confirm(
+        t(
+          `Futa fee rules ${orphanCount} ambazo hazina category? Hatua hii haiwezi kurudishwa.`,
+          `Delete ${orphanCount} orphan fee rules? This cannot be undone.`
+        )
+      )
+    )
+      return;
+    setError("");
+    const res = await cleanupOrphanFeeConfigsAsync();
+    if (res.ok) {
+      showFlash(
+        t(
+          `Imetolewa ${res.removed}/${res.total} fee rules zisizohitajika.`,
+          `Removed ${res.removed}/${res.total} orphan fee rules.`
+        )
+      );
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kusafisha.", "Failed to clean up.")
+      );
+    }
+  };
+
+  const handleDeleteFeeConfig = (config) => {
+    if (
+      !window.confirm(
+        t(
+          `Futa fee rule ya "${config.backendKey || config.key}"?`,
+          `Delete fee rule for "${config.backendKey || config.key}"?`
+        )
+      )
+    )
+      return;
+    withBusy(`lf-del-${config.id}`, async () => {
+      const res = await removeFeeConfigAsync(config.key);
+      if (res.ok) {
+        showFlash(
+          t(
+            `Fee rule imefutwa.`,
+            `Fee rule deleted.`
+          )
+        );
+      }
+      return res;
+    });
+  };
+
   return (
     <>
       <SectionHeader
@@ -229,6 +288,28 @@ export default function RevenueSection() {
 
       {/* Global status row */}
       <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+        {orphanCount > 0 && (
+          <button
+            onClick={handleCleanupOrphans}
+            disabled={refreshing || !!busy["cleanup-orphans"]}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors"
+            style={{
+              borderColor: `${COLORS.rust}55`,
+              color: COLORS.rust,
+              background: "white",
+            }}
+            title={t(
+              `Futa fee rules ${orphanCount} ambazo hazina category`,
+              `Delete ${orphanCount} orphan fee rules`
+            )}
+          >
+            <Trash2 size={13} />
+            {t(
+              `Safisha Zisizohitajika (${orphanCount})`,
+              `Clean Up Orphans (${orphanCount})`
+            )}
+          </button>
+        )}
         <button
           onClick={handleRefresh}
           disabled={refreshing}
@@ -384,11 +465,59 @@ export default function RevenueSection() {
           <EditHint lang={lang} accentColor={COLORS.gold} />
           <div className="divide-y divide-gray-100">
             {listingFeeConfigs.map((c) => {
+              // c.key is now the seed key ("nyumba") — getCategory will
+              // always resolve for known categories. Fall back to the raw
+              // backendKey for orphans so admins can still see what to delete.
               const category = getCategory(c.key);
-              const catLabel = category?.label?.[lang] || category?.label?.sw || c.key;
+              const catLabel =
+                category?.label?.[lang] ||
+                category?.label?.sw ||
+                c.name ||
+                c.backendKey ||
+                c.key;
+              const isOrphan = !!c.orphan;
+              const isDeleting = !!busy[`lf-del-${c.id}`];
               return (
-                <div key={c.key} className="py-3">
-                  <p className="text-sm font-medium text-primary mb-2">{catLabel}</p>
+                <div key={c.id ?? c.key} className="py-3">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <p className="text-sm font-medium text-primary">
+                      {catLabel}
+                    </p>
+                    {isOrphan && (
+                      <span
+                        style={{
+                          background: "rgba(193,80,46,0.12)",
+                          color: COLORS.rust,
+                        }}
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                        title={t(
+                          `Haifanani na category yoyote: "${c.backendKey}"`,
+                          `Does not match any category: "${c.backendKey}"`
+                        )}
+                      >
+                        {t("BILA CATEGORY", "ORPHAN")}
+                      </span>
+                    )}
+                    {c.backendKey && c.backendKey !== c.key && (
+                      <span className="text-[10px] text-muted font-mono">
+                        ({c.backendKey})
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteFeeConfig(c)}
+                      disabled={isDeleting || busy.saving}
+                      className="ml-auto p-1.5 text-muted hover:text-[#C1502E] rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                      title={t("Futa fee rule", "Delete fee rule")}
+                      aria-label={t("Futa", "Delete")}
+                    >
+                      {isDeleting ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={12} />
+                      )}
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                     <div className="flex flex-col items-start min-w-0">
                       <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">

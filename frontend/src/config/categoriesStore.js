@@ -137,7 +137,8 @@ export const SEED_CATEGORIES = Object.entries(CATEGORY_TRANSLATIONS).map(([key, 
   extra: v.extra,
 }));
 
-export const BACKEND_SLUG_TO_SEED_KEY = {
+export export const BACKEND_SLUG_TO_SEED_KEY = {
+  // Canonical
   "nyumba-majengo": "nyumba",
   "viwanja-mashamba": "viwanja",
   "magari": "magari",
@@ -149,6 +150,27 @@ export const BACKEND_SLUG_TO_SEED_KEY = {
   "vifaa-vya-elektroniki": "vifaa-vya-elektroniki",
   "mifugo": "mifugo",
   "vifaa-vya-nyumbani": "vifaa-vya-nyumbani",
+
+  // Aliases from English admin labels
+  "houses-buildings": "nyumba",
+  "houses--buildings": "nyumba",
+  "nyumba--majengo": "nyumba",
+  "plots-land": "viwanja",
+  "viwanja--mashamba": "viwanja",
+  "businesses-for-sale": "biashara",
+  "business-for-sale": "biashara",
+  "biashara--zinazouzwa": "biashara",
+  "machinery-heavy-equipment": "mashine",
+  "mashine--heavy-equipment": "mashine",
+  "cars": "magari",
+  "motorcycles": "pikipiki",
+  "buses": "mabasi",
+  "furniture": "samani",
+  "electronics": "vifaa-vya-elektroniki",
+  "livestock": "mifugo",
+  "home-appliances": "vifaa-vya-nyumbani",
+  "vifaa--vya-elektroniki": "vifaa-vya-elektroniki",
+  "vifaa--vya-nyumbani": "vifaa-vya-nyumbani",
 };
 
 export const AVAILABLE_ICONS = {
@@ -485,5 +507,27 @@ export function useCategory(key) {
  */
 export function getSeedKeyFromSlug(slug) {
   if (!slug) return slug;
-  return BACKEND_SLUG_TO_SEED_KEY[slug] || slug;
+  // Normalize: lowercase, trim, collapse multiple dashes to one.
+  const norm = String(slug).trim().toLowerCase().replace(/-{2,}/g, "-");
+  if (BACKEND_SLUG_TO_SEED_KEY[norm]) return BACKEND_SLUG_TO_SEED_KEY[norm];
+
+  // Second pass: strip ALL dashes and try both map keys and seed keys.
+  const stripped = norm.replace(/-/g, "");
+  for (const [k, v] of Object.entries(BACKEND_SLUG_TO_SEED_KEY)) {
+    if (k.replace(/-/g, "") === stripped) return v;
+  }
+
+  // Third pass: if the slug already matches a seed key, return it.
+  if (SEED_CATEGORIES.some((c) => c.key === norm)) return norm;
+
+  // Give up — return the normalized slug so at least the display is clean.
+  return norm;
+}
+
+/**
+ * True when a fee-rule key (or any slug) belongs to a real category.
+ */
+export function isKnownCategoryKey(maybeSlug) {
+  const seedKey = getSeedKeyFromSlug(maybeSlug);
+  return SEED_CATEGORIES.some((c) => c.key === seedKey);
 }
