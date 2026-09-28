@@ -257,13 +257,28 @@ export default function PostPropertyForm({
         `/listings/${createdListing.id}/fee/pay/`,
         {}
       );
-      const fimipay = res?.fimipay || res?.data?.fimipay || {};
+      // The backend has two response shapes:
+      //   1. Fresh create_order →  { message, fimipay: { order_id, payment_status, ... } }
+      //   2. Reused existing order → raw status object at the top level:
+      //        { order_id, payment_status, amount, transid, ... }
+      // We tolerate both by unwrapping until we find an order_id.
+      const candidates = [
+        res?.fimipay,
+        res?.data?.fimipay,
+        res?.data,
+        res,
+      ].filter(Boolean);
+      const payload =
+        candidates.find((c) => c && (c.order_id || c.payment_status)) || {};
+
       return {
         ok: true,
-        orderId: fimipay.order_id,
-        gatewayUrl: fimipay.payment_gateway_url || null,
-        simulated: !!fimipay.simulated,
-        environment: fimipay.environment || "live",
+        orderId: payload.order_id || null,
+        paymentStatus: (payload.payment_status || "").toUpperCase() || null,
+        transid: payload.transid || null,
+        gatewayUrl: payload.payment_gateway_url || null,
+        simulated: !!payload.simulated,
+        environment: payload.environment || "live",
       };
     } catch (err) {
       return { ok: false, error: err };

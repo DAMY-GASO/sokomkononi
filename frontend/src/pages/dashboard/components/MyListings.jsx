@@ -274,13 +274,25 @@ function ListingCard({
                     `/listings/${listing.id}/fee/pay/`,
                     {}
                   );
-                  const fimipay = res?.fimipay || res?.data?.fimipay || {};
+                  const candidates = [
+                    res?.fimipay,
+                    res?.data?.fimipay,
+                    res?.data,
+                    res,
+                  ].filter(Boolean);
+                  const payload =
+                    candidates.find(
+                      (c) => c && (c.order_id || c.payment_status)
+                    ) || {};
                   return {
                     ok: true,
-                    orderId: fimipay.order_id,
-                    gatewayUrl: fimipay.payment_gateway_url || null,
-                    simulated: !!fimipay.simulated,
-                    environment: fimipay.environment || "live",
+                    orderId: payload.order_id || null,
+                    paymentStatus:
+                      (payload.payment_status || "").toUpperCase() || null,
+                    transid: payload.transid || null,
+                    gatewayUrl: payload.payment_gateway_url || null,
+                    simulated: !!payload.simulated,
+                    environment: payload.environment || "live",
                   };
                 } catch (err) {
                   return { ok: false, error: err };

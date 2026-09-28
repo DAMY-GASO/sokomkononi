@@ -232,6 +232,34 @@ export default function PaymentGateway({
       return;
     }
 
+    // ------------------------------------------------------------
+    // Instant success — the backend may return a reused order that
+    // is already SUCCESS (e.g. SOKO_FIMIPAY_TEST_OUTCOME=success,
+    // or a user who already paid but the resource wasn't updated).
+    // In that case skip polling entirely.
+    // ------------------------------------------------------------
+    if (String(res.paymentStatus || "").toUpperCase() === "SUCCESS") {
+      setFinalRef(res.transid || res.orderId || "");
+      setFinalData(res);
+      setStage("done");
+      onSuccess?.(res);
+      return;
+    }
+
+    // Terminal failure on initiate — no point polling
+    if (["CANCELLED", "USERCANCELLED", "REJECTED", "FAILED"].includes(
+      String(res.paymentStatus || "").toUpperCase()
+    )) {
+      setError(
+        t(
+          "Malipo yalikataliwa au yalighairiwa. Jaribu tena.",
+          "Payment was rejected or cancelled. Please try again."
+        )
+      );
+      setStage("error");
+      return;
+    }
+
     // Mobile → start polling
     if (!res.orderId) {
       setError(
