@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import {
   COLORS,
+  calculateListingFee,
   getCategory,
   formatTZS,
   timeAgo,
@@ -262,7 +263,13 @@ function ListingCard({
         {listing.status === "pending_payment" && isPaying && (
           <div className="mb-3">
             <PaymentGateway
-              amount={listing.listingFee}
+              amount={
+                Number(listing.listingFee) ||
+                Number(
+                  calculateListingFee(listing.category, listing.price)?.fee
+                ) ||
+                0
+              }
               title={t("Ada ya Kuchapisha", "Listing Fee")}
               description={t(
                 `Kuchapisha "${listing.title}"`,

@@ -7,7 +7,7 @@
 // ============================================================
 import React, { useState } from "react";
 import { ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle, Wallet } from "lucide-react";
-import { COLORS, formatTZS } from "./shared";
+import { COLORS, formatTZS, calculateListingFee } from "./shared";
 import { useActiveCategories, getCategoryIcon, getCategoryIdByKey } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
@@ -222,14 +222,49 @@ export default function PostPropertyForm({
         }
       }
 
-      // 4. Fetch fee (created by backend automatically)
+      // 4. Fetch fee from the backend. If the fee rule wasn't found
+      // (404 — a common case when the backend slug doesn't match the
+      // category slug), compute the fee locally from the fee-rules the
+      // admin already configured on the frontend.
       let fee = 0;
+      let feeSource = "backend";
       try {
         const feeRes = await api.get(`/listings/${listingId}/fee/`);
-        fee = Number(feeRes.amount) || 0;
+        fee = Number(feeRes?.amount) || 0;
+        if (!fee) {
+          // Backend returned an object but with 0 or missing amount —
+          // treat as fallback territory.
+          throw new Error("Backend returned no fee");
+        }
       } catch (feeErr) {
-        console.warn("[PostPropertyForm] fee fetch failed:", feeErr);
+        feeSource = "local";
+        console.warn(
+          "[PostPropertyForm] backend fee missing, falling back to local:",
+          feeErr?.status || feeErr?.message
+        );
+        // Compute from the fee-rules the admin configured.
+        const local = calculateListingFee(
+          categoryKey,
+          cleanPriceInput(base.price)
+        );
+        fee = Number(local?.fee) || 0;
       }
+
+      // Last-ditch safety: if we still have 0, show a warning so the
+      // user isn't blindsided by a zero-fee screen.
+      if (!fee) {
+        const msg = t(
+          "Ada ya kuchapisha haijasanidiwa kwa category hii bado. Wasiliana na Admin.",
+          "The listing fee has not been configured for this category yet. Contact admin."
+        );
+        setWarnings((w) => (w.includes(msg) ? w : [...w, msg]));
+      }
+
+      console.info("[PostPropertyForm] fee resolved:", {
+        fee,
+        source: feeSource,
+        categoryKey,
+      });
 
       setCreatedListing(created);
       setFeeAmount(fee);
