@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 const LanguageContext = createContext();
 
@@ -576,20 +576,21 @@ export function LanguageProvider({ children }) {
     return saved || "sw";
   });
 
-  const t = (key, params = {}) => {
-    let text = translations[lang]?.[key] || translations.sw[key] || key;
+  const t = useCallback(
+    (key, params = {}) => {
+      let text = translations[lang]?.[key] || translations.sw[key] || key;
 
-    // ✅ FIX #24: Badilisha placeholder ZOTE (sio ya kwanza tu)
-    Object.keys(params).forEach((k) => {
-      if (typeof text === "string") {
-        // Tumia split().join() kwa compatibility zaidi
-        // (au replaceAll() kwa modern browser)
-        text = text.split(`{${k}}`).join(String(params[k] ?? ""));
-      }
-    });
+      // Replace ALL placeholders (not just the first)
+      Object.keys(params).forEach((k) => {
+        if (typeof text === "string") {
+          text = text.split(`{${k}}`).join(String(params[k] ?? ""));
+        }
+      });
 
-    return text;
-  };
+      return text;
+    },
+    [lang]
+  );
 
   useEffect(() => {
     localStorage.setItem("preferred_language", lang);

@@ -2,7 +2,6 @@
 // MyTransactionsPage.jsx
 // Miamala Yangu — API-backed success fee + CSV download.
 // ============================================================
-
 import React, { useState } from "react";
 import {
   Receipt,
@@ -21,17 +20,14 @@ import {
   Wallet,
   Loader2,
 } from "lucide-react";
-import {
-  COLORS,
-  formatTZS,
-  timeAgo,
-} from "./dashboard/components/shared";
-import { useTransactions, addTransaction } from "../config/transactionsStore.js";
+import { COLORS, formatTZS, timeAgo } from "./dashboard/components/shared";
+import { useTransactions } from "../config/transactionsStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { api } from "../api/client.js";
+import PaymentGateway from "./dashboard/components/PaymentGateway";
 
 // ============================================================
-// TRANSACTION TYPES — bilingual kamili
+// TRANSACTION TYPES — bilingual
 // ============================================================
 const getTransactionTypes = (lang) => ({
   listing_fee: {
@@ -118,7 +114,7 @@ const getStatus = (lang) => ({
 });
 
 // ============================================================
-// SUCCESS FEE — ada ndogo inayolipwa KILA download ya CSV
+// SUCCESS FEE — charged once per CSV download
 // ============================================================
 const SUCCESS_FEE_TZS = 5000;
 
@@ -207,7 +203,10 @@ function TransactionItem({ txn, lang }) {
             </p>
           </div>
           <span
-            style={{ background: status?.bg || "#F5F3EC", color: status?.color || "#101A2E" }}
+            style={{
+              background: status?.bg || "#F5F3EC",
+              color: status?.color || "#101A2E",
+            }}
             className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full shrink-0"
           >
             <StatusIcon size={11} />
@@ -239,10 +238,10 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
   const transactions = transactionsProp ?? storeTransactions;
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showFeeModal, setShowFeeModal] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  // ⬇️ MPYA: Error state kwa modal
+  const [showFeeFlow, setShowFeeFlow] = useState(false);
   const [feeError, setFeeError] = useState("");
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const filters = [
     { key: "all", label: lang === "sw" ? "Zote" : "All" },
@@ -283,64 +282,54 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
 
   const handleDownloadClick = () => {
     if (filtered.length === 0) return;
-    setFeeError(""); // Safisha error ya awali
-    setShowFeeModal(true);
+    setFeeError("");
+    setShowFeeFlow(true);
   };
 
   // ============================================================
-  // PAY SUCCESS FEE — API HALISI
+  // SUCCESS FEE — request a reference from the backend, then
+  // submit it through PaymentGateway. Real gateway wiring lives
+  // in /finance/success-fee/ (STK push → callback → confirm).
   // ============================================================
-  const handleConfirmPayment = async () => {
-    setIsProcessing(true);
+  const handlePaymentSubmit = async ({ reference }) => {
     setFeeError("");
-
     try {
-      // 1) Unda ombi la malipo kwa backend
-      //    Backend inapaswa kurudisha { id, payment_reference, status }
+      // Step 1: create the fee record on the backend. Backend may:
+      //   a) return a reference immediately (simulated / pre-paid), OR
+      //   b) kick off an STK push and return { status: "pending" }.
       const feeRes = await api.post("/finance/success-fee/", {
         purpose: "transactions_csv",
         amount: SUCCESS_FEE_TZS,
         currency: "TZS",
+        payment_reference: reference || undefined,
       });
 
-      // 2) Kama backend inahitaji hatua ya pili (M-Pesa push, confirmation)
-      //    Unaweza kuongeza hapa. Kwa sasa tunachukulia feeRes ina
-      //    payment_reference ya kuthibitisha malipo.
-      const paymentReference =
+      const backendRef =
         feeRes?.payment_reference || feeRes?.reference || feeRes?.ref || null;
+      const backendStatus = (feeRes?.status || "").toLowerCase();
 
-      if (!paymentReference) {
-        throw new Error(
-          lang === "sw"
-            ? "Backend haikurudisha kumbukumbu ya malipo."
-            : "Backend did not return a payment reference."
-        );
+      // If backend hasn't confirmed the payment yet, surface the pending
+      // state so the UI doesn't falsely claim success.
+      if (!backendRef || (backendStatus && backendStatus !== "completed" && backendStatus !== "paid")) {
+        return {
+          ok: false,
+          error: new Error(
+            t(
+              "Malipo hayajathibitishwa bado. Subiri uthibitisho wa M-Pesa kisha ujaribu tena.",
+              "Payment not confirmed yet. Wait for the M-Pesa confirmation and try again."
+            )
+          ),
+        };
       }
 
-      // 3) Rekodi transaction kwenye store (local + backend)
-      addTransaction({
-        type: "success_fee",
-        title:
-          lang === "sw"
-            ? "Ada ya Kupakua Miamala (CSV)"
-            : "Transactions CSV Download Fee",
-        property: lang === "sw" ? "Miamala Yangu" : "My Transactions",
-        amount: SUCCESS_FEE_TZS,
-        status: "completed",
-        method: "M-Pesa",
-        ref: paymentReference,
-        paymentReference,
-      });
-
-      // 4) Pakua CSV baada ya malipo kuthibitishwa
+      // Step 2: download CSV only after the backend confirms.
       const csv = buildTransactionsCSV(filtered, lang);
       const filename = `miamala_${new Date().toISOString().slice(0, 10)}.csv`;
       downloadCSV(csv, filename);
 
-      // 5) Funga modal
-      setShowFeeModal(false);
+      setShowFeeFlow(false);
+      return { ok: true };
     } catch (err) {
-      // Kuchukua ujumbe kutoka DRF au fallback
       const msg =
         err?.data?.detail ||
         err?.data?.message ||
@@ -348,29 +337,15 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
           ? Object.values(err.data).flat().find((v) => typeof v === "string")
           : null) ||
         err?.message ||
-        (lang === "sw"
-          ? "Malipo yameshindikana. Jaribu tena."
-          : "Payment failed. Try again.");
-
+        t("Malipo yameshindikana. Jaribu tena.", "Payment failed. Try again.");
       setFeeError(msg);
-      console.warn("[MyTransactionsPage] success fee failed:", err);
-    } finally {
-      setIsProcessing(false);
+      return { ok: false, error: err };
     }
-  };
-
-  const handleCloseModal = () => {
-    if (isProcessing) return; // Zuia kufunga wakati wa malipo
-    setShowFeeModal(false);
-    setFeeError("");
   };
 
   return (
     <div
-      style={{
-        background: COLORS.sand,
-        minHeight: "100%",
-      }}
+      style={{ background: COLORS.sand, minHeight: "100%" }}
       className="w-full p-4 sm:p-6"
     >
       <div className="max-w-4xl mx-auto">
@@ -507,10 +482,7 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
             >
               {lang === "sw" ? "Hakuna miamala" : "No transactions"}
             </h3>
-            <p
-              style={{ color: "var(--text-secondary)" }}
-              className="text-sm"
-            >
+            <p style={{ color: "var(--text-secondary)" }} className="text-sm">
               {searchQuery
                 ? lang === "sw"
                   ? "Jaribu kutafuta kwa neno lingine"
@@ -529,101 +501,40 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
         )}
       </div>
 
-      {/* SUCCESS FEE MODAL — API-backed */}
-      {showFeeModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(16,26,46,0.6)" }}
-          onClick={handleCloseModal}
-        >
-          <div
-            style={{ background: "white" }}
-            className="w-full max-w-sm rounded-2xl p-6 text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{ background: "rgba(47,109,79,0.12)" }}
-              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-            >
-              <Wallet size={26} color={COLORS.green} />
-            </div>
-            <h3
-              style={{ color: "var(--text-primary)" }}
-              className="text-lg font-semibold mb-1"
-            >
-              {lang === "sw"
-                ? "Ada ya Mafanikio Inahitajika"
-                : "Success Fee Required"}
-            </h3>
-            <p
-              style={{ color: "var(--text-secondary)" }}
-              className="text-sm mb-4"
-            >
-              {lang === "sw"
-                ? "Lipa ada ndogo ili kupakua ripoti ya miamala yako kama CSV."
-                : "Pay a small fee to download your transactions report as CSV."}
-            </p>
-            <div
-              style={{ background: COLORS.sand, borderColor: COLORS.sandLine }}
-              className="rounded-xl border p-3 mb-5"
-            >
-              <p
-                style={{ color: "var(--text-secondary)" }}
-                className="text-xs mb-1"
-              >
-                {lang === "sw" ? "Kiasi cha Kulipa" : "Amount to Pay"}
-              </p>
-              <p
-                style={{ color: "var(--text-primary)" }}
-                className="text-xl font-bold"
-              >
-                {formatTZS(SUCCESS_FEE_TZS)}
-              </p>
-            </div>
-
-            {/* ERROR */}
+      {/* SUCCESS FEE — routed through PaymentGateway */}
+      {showFeeFlow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="w-full max-w-md">
             {feeError && (
               <div
                 style={{
                   background: "rgba(193,80,46,0.1)",
                   color: COLORS.rust,
                 }}
-                className="rounded-lg px-3 py-2 mb-4 text-xs text-center"
+                className="rounded-xl px-3 py-2 mb-3 text-xs text-center"
               >
                 {feeError}
               </div>
             )}
-
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={handleConfirmPayment}
-                disabled={isProcessing}
-                style={{ background: COLORS.green, color: "white" }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    {lang === "sw" ? "Inachakata..." : "Processing..."}
-                  </>
-                ) : (
-                  <>
-                    <Wallet size={16} />
-                    {lang === "sw"
-                      ? `Lipa ${formatTZS(SUCCESS_FEE_TZS)}`
-                      : `Pay ${formatTZS(SUCCESS_FEE_TZS)}`}
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleCloseModal}
-                disabled={isProcessing}
-                style={{ color: "var(--text-primary)" }}
-                className="w-full py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60"
-              >
-                {lang === "sw" ? "Ghairi" : "Cancel"}
-              </button>
-            </div>
+            <PaymentGateway
+              amount={SUCCESS_FEE_TZS}
+              title={
+                lang === "sw"
+                  ? "Ada ya Kupakua Miamala (CSV)"
+                  : "Transactions CSV Download Fee"
+              }
+              description={
+                lang === "sw"
+                  ? "Lipa ada ndogo ili kupakua ripoti ya miamala yako kama CSV."
+                  : "Pay a small fee to download your transactions report as CSV."
+              }
+              requireReference
+              onSubmit={handlePaymentSubmit}
+              onCancel={() => {
+                setShowFeeFlow(false);
+                setFeeError("");
+              }}
+            />
           </div>
         </div>
       )}

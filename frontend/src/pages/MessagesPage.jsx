@@ -232,7 +232,7 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
           </div>
         ) : (
           convo.messages.map((m) => {
-            const isMe = m.senderId === currentUserId;
+            const isMe = String(m.senderId) === String(currentUserId);
             const isPending = m.pending;
             return (
               <div

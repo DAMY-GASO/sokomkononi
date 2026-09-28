@@ -18,6 +18,7 @@ import {
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
+import { useUsers } from "../../../../config/usersStore.js";
 // ⬇️ MABADILIKO: tumia async variants
 import {
   useRoles,
@@ -374,21 +375,64 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove, isBusy }) {
 // ============================================================
 function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
+  const allUsers = useUsers();
   const [form, setForm] = useState({
+    userId: initial?.userId || null,
     name: initial?.name || "",
     email: initial?.email || "",
     roleKey: initial?.roleKey || roles[0]?.key || "",
     active: initial?.active ?? true,
-    userId: initial?.userId || null,
   });
 
-  const canSave = form.name.trim() && form.email.trim() && form.roleKey;
+  // Auto-fill name/email when a user is picked
+  const handleUserChange = (uid) => {
+    const numeric = Number(uid) || null;
+    const picked = allUsers.find((u) => u.id === numeric);
+    setForm((prev) => ({
+      ...prev,
+      userId: numeric,
+      name: picked?.name || prev.name,
+      email: picked?.email || prev.email,
+    }));
+  };
+
+  const canSave =
+    form.userId != null && form.name.trim() && form.email.trim() && form.roleKey;
 
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
       className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0"
     >
+      <label className="flex flex-col gap-1 min-w-0 w-full">
+        <span className="text-[11px] font-semibold text-secondary">
+          {t("Chagua Mtumiaji (User ID)", "Pick User (from account list)")}
+        </span>
+        <select
+          value={form.userId ?? ""}
+          onChange={(e) => handleUserChange(e.target.value)}
+          disabled={saving}
+          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+        >
+          <option value="">
+            {t("-- Chagua mtumiaji --", "-- Pick a user --")}
+          </option>
+          {allUsers.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name || u.email} (#{u.id})
+            </option>
+          ))}
+        </select>
+        {!form.userId && allUsers.length > 0 && (
+          <span className="text-[10px] text-[#C1502E] mt-1">
+            {t(
+              "User ID inahitajika kwa StaffAssignment.",
+              "User ID is required for StaffAssignment."
+            )}
+          </span>
+        )}
+      </label>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-secondary">

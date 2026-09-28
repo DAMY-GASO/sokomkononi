@@ -53,7 +53,9 @@ export default function ModerationSection() {
         setHistory((prev) => {
           const next = { ...prev };
           fetched.forEach((l) => {
-            next[l.id] = { ...prev[l.id], ...l };
+            if (!l || l.id == null) return;
+            const key = String(l.id);
+            next[key] = { ...(prev[key] || {}), ...l };
           });
           return next;
         });
@@ -111,8 +113,13 @@ export default function ModerationSection() {
       return n;
     });
 
-  const addToHistory = (listing) =>
-    setHistory((prev) => ({ ...prev, [listing.id]: listing }));
+  const addToHistory = (listing) => {
+    if (!listing || listing.id == null) return;
+    // Normalize key to string so numeric ids from API and string ids
+    // from local cache never create duplicate entries.
+    const key = String(listing.id);
+    setHistory((prev) => ({ ...prev, [key]: listing }));
+  };
 
   const handleApprove = async (listingId) => {
     if (busy[listingId]) return;

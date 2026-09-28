@@ -55,7 +55,7 @@ function norm(raw) {
     id: raw.id, code: raw.code,
     subject: raw.subject, description: raw.description,
     userId: raw.user, userName: raw.user_name, userEmail: raw.user_email,
-    category: CAT_API_TO_KEY[raw.category] || raw.category,
+    category: CAT_API_TO_KEY[raw.category] || CAT_API_TO_KEY[String(raw.category || "").toUpperCase()] || "other",
     priority: PRI_FROM[raw.priority] || raw.priority,
     status: ST_FROM[raw.status] || raw.status,
     assignedTo: raw.assigned_to, assignedToName: raw.assigned_to_name,

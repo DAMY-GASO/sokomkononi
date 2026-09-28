@@ -137,7 +137,7 @@ export const SEED_CATEGORIES = Object.entries(CATEGORY_TRANSLATIONS).map(([key, 
   extra: v.extra,
 }));
 
-const BACKEND_SLUG_TO_SEED_KEY = {
+export const BACKEND_SLUG_TO_SEED_KEY = {
   "nyumba-majengo": "nyumba",
   "viwanja-mashamba": "viwanja",
   "magari": "magari",
@@ -400,9 +400,11 @@ function normalizeCategoryFromApi(raw) {
   const name = raw.name || "";
   const slug = raw.slug || toSlug(name);
   const seedKey = BACKEND_SLUG_TO_SEED_KEY[slug] || slug;
+  // `key` is the frontend-canonical short form (matches SEED_CATEGORIES).
+  // `slug` keeps the backend form for API lookups.
   return {
     id: raw.id,
-    key: slug,
+    key: seedKey,
     slug,
     name,
     label: SEED_LABEL_BY_KEY[seedKey] || { sw: name, en: name },
@@ -473,4 +475,15 @@ export function useCategory(key) {
   const list = useCategories();
   if (!key) return null;
   return list.find((c) => c.key === key) || null;
+}
+
+
+/**
+ * Convert a backend category slug ("nyumba-majengo") into the
+ * frontend-canonical seed key ("nyumba"). Falls back to the slug
+ * unchanged when there is no mapping.
+ */
+export function getSeedKeyFromSlug(slug) {
+  if (!slug) return slug;
+  return BACKEND_SLUG_TO_SEED_KEY[slug] || slug;
 }

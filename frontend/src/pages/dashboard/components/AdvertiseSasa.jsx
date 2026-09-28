@@ -10,7 +10,7 @@ import { useActiveBannerAds, bannerDaysRemaining } from "../../../config/bannerA
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
-import { checkCredit, consumeCredit } from "../../../config/userCreditsStore.js";
+import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
 import { createBannerAdAsync } from "../../../config/bannerAdsStore.js";
 
 function getLocalized(field, lang) {
@@ -134,7 +134,7 @@ export default function AdvertiseSasa({
   const handleUseCredit = async () => {
     if (!canAdvertise || !user) return;
     if (!hasEnoughCredit) return submitAd(null);
-    const consume = consumeCredit(user.id, "ads", adFee.price);
+    const consume = await consumeCreditAsync(user.id, "ads", adFee.price);
     if (!consume.success) return submitAd(null);
     return submitAd("credits");
   };

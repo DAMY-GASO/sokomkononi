@@ -1,10 +1,9 @@
 // ============================================================
 // savedStore.js — API-only via /api/saved/
-// FIX: one hydrate pipeline; snapshot shape unified; toggleSaved
-//      returns {ok, saved} so callers can react to failures.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { getListing } from "./listingsStore.js";
 
 const IDS_KEY = "sokomkononi_saved_v1";
 const SNAP_KEY = "sokomkononi_saved_snapshots_v1";
@@ -18,7 +17,9 @@ function readIds() {
     if (!raw) return [];
     const p = JSON.parse(raw);
     return Array.isArray(p) ? p : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 function writeIds(ids) {
   if (typeof window === "undefined") return;
@@ -32,7 +33,9 @@ function readSnaps() {
     if (!raw) return {};
     const p = JSON.parse(raw);
     return p && typeof p === "object" ? p : {};
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 function writeSnaps(s) {
   if (typeof window === "undefined") return;
@@ -40,10 +43,18 @@ function writeSnaps(s) {
   window.dispatchEvent(new Event(SNAP_EV));
 }
 
-export function getSavedIds() { return readIds(); }
-export function getSnapshots() { return readSnaps(); }
-export function getSnapshot(id) { return readSnaps()[id] || null; }
-export function isSaved(id) { return readIds().includes(id); }
+export function getSavedIds() {
+  return readIds();
+}
+export function getSnapshots() {
+  return readSnaps();
+}
+export function getSnapshot(id) {
+  return readSnaps()[id] || null;
+}
+export function isSaved(id) {
+  return readIds().includes(id);
+}
 
 export async function hydrateSavedFromApi() {
   try {
@@ -54,8 +65,8 @@ export async function hydrateSavedFromApi() {
     for (const item of list) {
       if (!item.listing?.id) continue;
       snaps[item.listing.id] = {
-        price: item.snapshot_price,
-        status: item.snapshot_status,
+        price: item.snapshot_price ?? item.listing.price,
+        status: item.snapshot_status ?? item.listing.status,
         title: item.listing.title,
         savedAt: item.saved_at,
       };
@@ -63,7 +74,9 @@ export async function hydrateSavedFromApi() {
     writeIds(ids);
     writeSnaps(snaps);
     return { ok: true, count: ids.length };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function toggleSaved(id, listing = null) {
@@ -80,19 +93,26 @@ export async function toggleSaved(id, listing = null) {
     } else {
       await api.post("/saved/", { listing: id });
       writeIds([...current, id]);
-      if (listing) {
+
+      // If the caller didn't pass the listing object, look it up from the
+      // listings store so the price/status snapshot is always recorded.
+      // Without this, "we'll notify you when the price changes" never works.
+      const target = listing || getListing(id) || null;
+      if (target) {
         const snaps = readSnaps();
         snaps[id] = {
-          price: listing.price,
-          status: listing.status,
-          title: listing.title,
+          price: target.price,
+          status: target.status,
+          title: target.title,
           savedAt: new Date().toISOString(),
         };
         writeSnaps(snaps);
       }
       return { ok: true, saved: true };
     }
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export function useSavedIds() {
@@ -140,4 +160,6 @@ export function removeSnapshot(id) {
   delete snaps[id];
   writeSnaps(snaps);
 }
-export function saveSavedIds(ids) { writeIds(ids); }
+export function saveSavedIds(ids) {
+  writeIds(ids);
+}

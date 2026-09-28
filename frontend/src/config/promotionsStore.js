@@ -44,12 +44,21 @@ export async function hydratePromotionsAnalyticsFromApi() {
   } catch (err) { return { ok: false, error: err }; }
 }
 
+function toBilingual(field) {
+  if (!field) return { sw: "", en: "" };
+  if (typeof field === "string") return { sw: field, en: field };
+  return {
+    sw: field.sw || field.en || "",
+    en: field.en || field.sw || "",
+  };
+}
+
 function normCampaign(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
-    name: raw.name || { sw: "", en: "" },
-    description: raw.description || { sw: "", en: "" },
+    name: toBilingual(raw.name),
+    description: toBilingual(raw.description),
     discountPercent: Number(raw.discountPercent ?? raw.discount_percent) || 0,
     startDate: raw.startDate || raw.start_date,
     endDate: raw.endDate || raw.end_date,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { registerAsync, verifyOtpAsync } from "../../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
@@ -195,12 +195,22 @@ export default function RegisterPage() {
     navigate("/dashboard/post");
   }
 
+  const cooldownRef = useRef(null);
+
+  useEffect(() => () => {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+  }, []);
+
   function startResendCooldown() {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
     setResendCooldown(30);
-    const interval = setInterval(() => {
+    cooldownRef.current = setInterval(() => {
       setResendCooldown((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
+          if (cooldownRef.current) {
+            clearInterval(cooldownRef.current);
+            cooldownRef.current = null;
+          }
           return 0;
         }
         return prev - 1;

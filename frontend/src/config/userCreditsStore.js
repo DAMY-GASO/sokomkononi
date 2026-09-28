@@ -1,6 +1,5 @@
 // ============================================================
 // userCreditsStore.js — API-only via /api/credits/
-// FIX: consumeCredit now awaits backend, returns real success.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -15,7 +14,9 @@ function read() {
     if (!raw) return {};
     const p = JSON.parse(raw);
     return p && typeof p === "object" ? p : {};
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 function write(map) {
   if (typeof window === "undefined") return;
@@ -52,12 +53,16 @@ export function checkCredit(userId, service, amount = 1) {
   if (entry.expiresAt && new Date(entry.expiresAt).getTime() < Date.now()) {
     return { hasCredit: false, remaining: 0, expired: true };
   }
-  return { hasCredit: entry.remaining >= amount, remaining: entry.remaining };
+  return {
+    hasCredit: entry.remaining >= amount,
+    remaining: entry.remaining,
+  };
 }
 
 /**
- * Consume a credit via the backend. Awaits the response.
- * @returns {Promise<{success:boolean, remaining:number, error?:any}>}
+ * Consume a credit via the backend. Awaits the response and refreshes
+ * the caller's balance from the server.
+ * @returns {Promise<{success:boolean, remaining:number, data?:any, error?:any}>}
  */
 export async function consumeCreditAsync(userId, service, amount = 1) {
   try {
@@ -65,23 +70,42 @@ export async function consumeCreditAsync(userId, service, amount = 1) {
       service_key: service,
       amount,
     });
-    // Refresh the caller's balance from server
     await hydrateUserCreditsFromApi(userId);
     const fresh = getCreditBalance(userId, service);
     return { success: true, remaining: fresh, data: res };
   } catch (err) {
-    return { success: false, remaining: getCreditBalance(userId, service), error: err };
+    return {
+      success: false,
+      remaining: getCreditBalance(userId, service),
+      error: err,
+    };
   }
 }
 
-/** @deprecated Use consumeCreditAsync — this is fire-and-forget and unsafe. */
+/**
+ * @deprecated Use consumeCreditAsync — this is fire-and-forget and unsafe.
+ *
+ * IMPORTANT: this now returns { success: false } so any caller that
+ * hasn't migrated to the async version will fall back to real payment
+ * instead of leaking revenue. Also fires the async call in the
+ * background so credit accounting still happens if the backend allows it.
+ */
 export function consumeCredit(userId, service, amount = 1) {
-  console.warn("[userCredits] consumeCredit() is deprecated — use consumeCreditAsync()");
+  console.warn(
+    "[userCredits] consumeCredit() is deprecated — migrate to consumeCreditAsync(). " +
+    "Returning {success:false} so callers fall back to real payment."
+  );
   consumeCreditAsync(userId, service, amount).catch(() => {});
-  return { success: true, remaining: getCreditBalance(userId, service) };
+  return {
+    success: false,
+    remaining: getCreditBalance(userId, service),
+    deprecated: true,
+  };
 }
 
-export function addBundleCredits() { /* backend credits on purchase */ }
+export function addBundleCredits() {
+  /* backend credits on purchase */
+}
 
 export function hasService(userId, service) {
   const c = getUserCredits(userId);
@@ -95,7 +119,9 @@ export async function hydrateUserCreditsFromApi(userId) {
       api.get("/credits/"),
       api.get("/credits/services/").catch(() => []),
     ]);
-    const list = Array.isArray(creditsData) ? creditsData : creditsData?.results || [];
+    const list = Array.isArray(creditsData)
+      ? creditsData
+      : creditsData?.results || [];
     const credits = norm(list);
     credits.services = Array.isArray(servicesData)
       ? servicesData.map((s) => s.service_key || s)
@@ -103,7 +129,9 @@ export async function hydrateUserCreditsFromApi(userId) {
     const all = read();
     write({ ...all, [userId]: credits });
     return { ok: true, credits };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export function useUserCredits(userId) {

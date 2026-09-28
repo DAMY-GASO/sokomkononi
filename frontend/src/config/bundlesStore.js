@@ -226,3 +226,13 @@ export function useActiveBundles() {
 export function useBundlesByType(type) {
   return useBundles().filter((b) => b.active !== false && b.type === type);
 }
+
+// ============================================================
+// Backwards-compat: bundles are API-only (no local seed),
+// but older callers expect initializeBundles() to exist.
+// ============================================================
+export function initializeBundles() {
+  // No-op — bundles hydrate from the backend via
+  // hydrateBundlesFromApi(). Kept for backward compatibility.
+  return [];
+}

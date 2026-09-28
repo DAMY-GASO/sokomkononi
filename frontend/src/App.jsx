@@ -7,7 +7,6 @@ import { installUnauthorizedHandler } from "./config/authStore.js";
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
 
 import { initializeCategories, hydrateCategoriesFromApi } from "./config/categoriesStore.js";
-import { initializeBundles } from "./config/bundlesStore.js";
 import { hydrateListingsFromApi } from "./config/listingsStore.js";
 
 // Public pages
@@ -59,7 +58,6 @@ function App() {
     installUnauthorizedHandler();
 
     initializeCategories();
-    initializeBundles();
 
     (async () => {
       await Promise.allSettled([

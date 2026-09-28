@@ -1,6 +1,5 @@
 // ============================================================
 // messagesStore.js — API-only via /api/messaging/
-// FIX: compares ids with String() so "1" === 1.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -15,7 +14,9 @@ function read() {
     if (!raw) return [];
     const p = JSON.parse(raw);
     return Array.isArray(p) ? p : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 function write(list) {
   if (typeof window === "undefined") return;
@@ -23,7 +24,9 @@ function write(list) {
   window.dispatchEvent(new Event(EV));
 }
 
-function sameId(a, b) { return String(a) === String(b); }
+function sameId(a, b) {
+  return String(a) === String(b);
+}
 
 function norm(raw, currentUserId) {
   if (!raw) return null;
@@ -55,8 +58,12 @@ function norm(raw, currentUserId) {
   };
 }
 
-export function getConversations() { return read(); }
-export function getConversation(id) { return read().find((c) => sameId(c.id, id)) || null; }
+export function getConversations() {
+  return read();
+}
+export function getConversation(id) {
+  return read().find((c) => sameId(c.id, id)) || null;
+}
 
 export async function hydrateConversationsFromApi(currentUserId) {
   try {
@@ -65,46 +72,76 @@ export async function hydrateConversationsFromApi(currentUserId) {
     const normalized = list.map((c) => norm(c, currentUserId)).filter(Boolean);
     write(normalized);
     return { ok: true, count: normalized.length };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
-export async function sendMessageAsync(conversationId, text) {
+// currentUserId is REQUIRED so we can stamp senderId correctly even if the
+// backend's response shape changes.
+export async function sendMessageAsync(conversationId, text, currentUserId = null) {
   const trimmed = (text || "").trim();
   if (!trimmed) return { ok: false, error: new Error("Message empty") };
   try {
-    const raw = await api.post(`/messaging/conversations/${conversationId}/messages/`, { text: trimmed });
+    const raw = await api.post(
+      `/messaging/conversations/${conversationId}/messages/`,
+      { text: trimmed }
+    );
     const current = getConversations();
     const msg = {
       id: raw?.id ?? `m_${Date.now()}`,
-      senderId: raw?.sender?.id ?? raw?.sender,
+      // Prefer backend sender id; fall back to currentUserId; final fallback
+      // to "me" so the bubble still lands on the correct side.
+      senderId: raw?.sender?.id ?? raw?.sender ?? currentUserId ?? "me",
       text: raw?.text ?? trimmed,
       at: raw?.created_at ?? new Date().toISOString(),
       read: !!raw?.is_read,
     };
-    write(current.map((c) =>
-      sameId(c.id, conversationId)
-        ? { ...c, lastMessage: msg.text, lastAt: msg.at, messages: [...(c.messages || []), msg] }
-        : c
-    ));
+    write(
+      current.map((c) =>
+        sameId(c.id, conversationId)
+          ? {
+              ...c,
+              lastMessage: msg.text,
+              lastAt: msg.at,
+              messages: [...(c.messages || []), msg],
+            }
+          : c
+      )
+    );
     return { ok: true, message: msg };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function markConversationReadAsync(conversationId) {
   try {
     await api.post(`/messaging/conversations/${conversationId}/read/`, {});
     const current = getConversations();
-    write(current.map((c) =>
-      sameId(c.id, conversationId)
-        ? { ...c, unreadCount: 0, messages: (c.messages || []).map((m) => ({ ...m, read: true })) }
-        : c
-    ));
+    write(
+      current.map((c) =>
+        sameId(c.id, conversationId)
+          ? {
+              ...c,
+              unreadCount: 0,
+              messages: (c.messages || []).map((m) => ({ ...m, read: true })),
+            }
+          : c
+      )
+    );
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export function useConversations(currentUserId) {
-  const [state, setState] = useState({ conversations: [], isLoading: true, error: null });
+  const [state, setState] = useState({
+    conversations: [],
+    isLoading: true,
+    error: null,
+  });
   useEffect(() => {
     let cancelled = false;
     if (!currentUserId) {
@@ -114,8 +151,15 @@ export function useConversations(currentUserId) {
     (async () => {
       const res = await hydrateConversationsFromApi(currentUserId);
       if (cancelled) return;
-      if (res.ok) setState({ conversations: getConversations(), isLoading: false, error: null });
-      else setState({ conversations: [], isLoading: false, error: res.error?.message || "Failed to load" });
+      if (res.ok) {
+        setState({ conversations: getConversations(), isLoading: false, error: null });
+      } else {
+        setState({
+          conversations: [],
+          isLoading: false,
+          error: res.error?.message || "Failed to load",
+        });
+      }
     })();
     const sync = () => setState((s) => ({ ...s, conversations: getConversations() }));
     window.addEventListener("storage", sync);
@@ -129,13 +173,33 @@ export function useConversations(currentUserId) {
   return state;
 }
 
+// Reactive unread count (was previously a one-shot read).
 export function useUnreadMessagesCount() {
-  return read().reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  const [count, setCount] = useState(() =>
+    read().reduce((sum, c) => sum + (c.unreadCount || 0), 0)
+  );
+  useEffect(() => {
+    const sync = () =>
+      setCount(read().reduce((sum, c) => sum + (c.unreadCount || 0), 0));
+    window.addEventListener("storage", sync);
+    window.addEventListener(EV, sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(EV, sync);
+    };
+  }, []);
+  return count;
 }
 
-export function sendMessage() { return []; }
-export function markConversationRead() { return []; }
-export function receiveMessage() { return []; }
+export function sendMessage() {
+  return [];
+}
+export function markConversationRead() {
+  return [];
+}
+export function receiveMessage() {
+  return [];
+}
 
 export async function createConversationAsync({ listingId, initialMessage = "" }) {
   if (!listingId) return { ok: false, error: new Error("listingId is required") };
@@ -146,5 +210,7 @@ export async function createConversationAsync({ listingId, initialMessage = "" }
     });
     const data = Array.isArray(raw) ? raw[0] : raw;
     return { ok: true, conversation: data };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }

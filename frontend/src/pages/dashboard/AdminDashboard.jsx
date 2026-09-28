@@ -232,7 +232,7 @@ function LanguageSwitcher({ lang, setLang }) {
 // ADMIN DASHBOARD
 // ============================================================
 export default function AdminDashboard() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isLoading } = useAuth();
   const { lang, setLang } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
@@ -244,15 +244,15 @@ export default function AdminDashboard() {
 
   const pendingVerificationsCount = usePendingVerificationsCount();
   const openTicketsCount = useOpenTicketsCount();
-  const roles = useRoles();
 
   // Safety: if backend rejected our session and authStore cleared user,
   // kick to admin login instead of showing a broken dashboard shell.
   useEffect(() => {
+    if (isLoading) return;
     if (!user && !location.pathname.endsWith("/enter")) {
       navigate(ADMIN_LOGIN_PATH, { replace: true });
     }
-  }, [user, location.pathname, navigate]);
+  }, [user, isLoading, location.pathname, navigate]);
 
   // ============================================================
   // ACTIVE SECTION — kutoka URL
@@ -268,26 +268,40 @@ export default function AdminDashboard() {
   const allRoles = useRoles();
   const rolesReady = allRoles.length > 0;
   const staffRole = useMemo(() => {
-    if (user?.isSuperuser || user?.is_superuser || user?.isStaff || user?.is_staff) {
-      return allRoles.find((r) => r.key === "super_admin")
-        || { key: "super_admin", permissions: ["*"], label: { sw: "", en: "" } };
+    // If backend gives us an explicit roleKey, that's the source of truth.
+    if (user?.roleKey) {
+      return allRoles.find((r) => r.key === user.roleKey) || null;
     }
-    if (user?.roleKey) return allRoles.find((r) => r.key === user.roleKey) || null;
+    // Legacy: no roleKey yet → fall back to super-admin for is_superuser,
+    // admin for is_staff. Keeps existing admins working while the backend
+    // gradually starts sending roleKey.
+    if (user?.isSuperuser || user?.is_superuser) {
+      return allRoles.find((r) => r.key === "super_admin") || {
+        key: "super_admin",
+        permissions: ["*"],
+        label: { sw: "Super Admin", en: "Super Admin" },
+      };
+    }
+    if (user?.isStaff || user?.is_staff) {
+      return allRoles.find((r) => r.key === "admin") || {
+        key: "admin",
+        permissions: ["*"],
+        label: { sw: "Admin", en: "Admin" },
+      };
+    }
     return null;
-  }, [allRoles, user?.roleKey, user?.isSuperuser, user?.isStaff]);
+  }, [
+    allRoles,
+    user?.roleKey,
+    user?.isSuperuser,
+    user?.is_superuser,
+    user?.isStaff,
+    user?.is_staff,
+  ]);
 
   const canAccess = (sectionKey) => {
-    if (
-      user?.isSuperuser ||
-      user?.isStaff ||
-      user?.is_superuser ||
-      user?.is_staff
-    ) {
-      return true;
-    }
     // Wait for roles to hydrate before denying anything.
     if (!rolesReady) return true;
-    if (staffRole?.key === "super_admin") return true;
     // Everyone with a valid session can see these
     if (
       sectionKey === "profile" ||
@@ -297,18 +311,23 @@ export default function AdminDashboard() {
       return true;
     }
     if (!staffRole) return false;
+    // super_admin and admin have full access
+    if (staffRole.key === "super_admin" || staffRole.key === "admin") {
+      return true;
+    }
     return (staffRole.permissions || []).includes(sectionKey);
   };
 
   const visibleNav = useMemo(() => {
     return NAV.filter((item) => canAccess(item.key));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staffRole]);
+  }, [staffRole, rolesReady]);
 
   const openNotification = (n) => {
     markRead(n.id);
-    const target = n.target || "overview";
-    navigate(STATE_TO_URL[target] || STATE_TO_URL.overview);
+    // Prefer the mapped admin section; fall back to overview.
+    const target = n?.target && STATE_TO_URL[n.target] ? n.target : "overview";
+    navigate(STATE_TO_URL[target]);
     setNotifOpen(false);
   };
 
@@ -316,6 +335,7 @@ export default function AdminDashboard() {
   // AUTH CHECK + LOADER — tumia ADMIN_LOGIN_PATH
   // ============================================================
   useEffect(() => {
+    if (isLoading) return;
     if (!user) {
       navigate(ADMIN_LOGIN_PATH);
       return;

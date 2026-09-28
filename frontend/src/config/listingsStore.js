@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
 import { listingsApi } from "../api/listings.js";
 import { authApi } from "../api/auth.js";
+import { getSeedKeyFromSlug } from "./categoriesStore.js";
 
 const PUBLIC_KEY = "sokomkononi_listings_public_v1";
 const MINE_KEY = "sokomkononi_listings_mine_v1";
@@ -27,6 +28,7 @@ export const LISTING_STATUS_MAP = {
 };
 
 const API_TO_FRONTEND_STATUS = {
+  // lowercase (backend variant)
   live: "live",
   paused: "paused",
   reserved: "reserved",
@@ -36,16 +38,24 @@ const API_TO_FRONTEND_STATUS = {
   pending_payment: "pending_payment",
   rejected: "rejected",
   active: "live",
-  AVAILABLE: "live",
+  archived: "paused",
+  draft: "pending_payment",
+  pending_review: "in_review",
+  // UPPERCASE (backend variant)
+  LIVE: "live",
+  PAUSED: "paused",
   RESERVED: "reserved",
   SOLD: "sold",
-  pending_review: "in_review",
-  PENDING_APPROVAL: "in_review",
-  draft: "pending_payment",
-  DRAFT: "pending_payment",
+  EXPIRED: "expired",
+  IN_REVIEW: "in_review",
+  PENDING_PAYMENT: "pending_payment",
   REJECTED: "rejected",
+  AVAILABLE: "live",
   ARCHIVED: "paused",
-  archived: "paused",
+  DRAFT: "pending_payment",
+  PENDING_APPROVAL: "in_review",
+  REJECT: "rejected",
+  // Mixed case ("Available", "Rejected") is caught by the .toUpperCase() fallback
 };
 
 function toApiPatch(patch) {
@@ -238,14 +248,23 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   } else if (raw.image) photos = [raw.image];
 
   const categoryObj = raw.category;
-  const category =
+  const rawCategorySlug =
     categoryObj?.slug ||
     categoryObj?.key ||
     raw.category_slug ||
     (typeof categoryObj === "string" ? categoryObj : null) ||
     null;
+  // Normalize backend slug ("nyumba-majengo") to the seed key ("nyumba")
+  // so `listing.category === category.key` matches everywhere.
+  const category = getSeedKeyFromSlug(rawCategorySlug);
 
-  const status = API_TO_FRONTEND_STATUS[raw.status] || fallbackStatus;
+  // Case-insensitive: backend may send "available", "AVAILABLE",
+  // "Available" — we don't want to silently fall back to "in_review".
+  const rawStatus = raw.status ? String(raw.status).toUpperCase() : "";
+  const status =
+    API_TO_FRONTEND_STATUS[raw.status] ||
+    API_TO_FRONTEND_STATUS[rawStatus] ||
+    fallbackStatus;
 
   const sellerName =
     raw.seller_name ||
@@ -461,6 +480,16 @@ export async function markSoldAsync(id) {
 }
 
 export async function payListingFeeAsync(id, payload) {
+  // Optimistic temp id — the backend has not accepted the listing yet.
+  // Sending POST /listings/temp_xxx/fee/pay/ would 404. Reject early.
+  if (String(id).startsWith("temp_")) {
+    return {
+      ok: false,
+      error: new Error(
+        "Listing bado haijathibitishwa na backend (temp id). Subiri sync au jaribu tena."
+      ),
+    };
+  }
   const snap = snapshot();
   updateListing(id, { status: "in_review", paidAt: new Date().toISOString() });
   try {

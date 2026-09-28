@@ -10,7 +10,7 @@ import { useBoostPackages } from "../../../config/boostPackagesStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
-import { checkCredit, consumeCredit } from "../../../config/userCreditsStore.js";
+import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
 import { boostingApi } from "../../../api/boosting.js";
 import PaymentGateway from "./PaymentGateway";
 
@@ -223,7 +223,7 @@ export default function BoostSasa({
     setCreating(true);
     setError("");
     try {
-      const consume = consumeCredit(user.id, "boost");
+      const consume = await consumeCreditAsync(user.id, "boost");
       if (!consume.success) {
         setCreating(false);
         return handleBeginPayment();

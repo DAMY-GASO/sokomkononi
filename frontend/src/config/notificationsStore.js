@@ -1,12 +1,5 @@
 // ============================================================
 // notificationsStore.js — API-only via /api/notifications/
-// The backend emits notifications for events; the frontend only
-// reads and marks read.
-//
-// FIX: the backend's `Notification` schema does not expose an
-//      audience/recipient flag. All notifications returned by
-//      /api/notifications/ are the caller's own. So we route them
-//      all to "user". Admin dashboards consume the same list.
 // ============================================================
 import { useEffect, useState } from "react";
 import { notificationsApi } from "../api/notifications.js";
@@ -32,6 +25,45 @@ export const NOTIFICATION_EVENTS = {
   BUNDLE_PURCHASED: "bundle.purchased",
 };
 
+// Map backend notification_type → admin section key (used by
+// AdminDashboard.openNotification to navigate somewhere sensible).
+const TYPE_TO_TARGET = {
+  LISTING_CREATED: "moderation",
+  LISTING_APPROVED: "moderation",
+  LISTING_REJECTED: "moderation",
+  LISTING_DELETED: "trash",
+  LISTING_RESTORED: "moderation",
+  LISTING_RELEASED: "moderation",
+  LISTING_EXPIRED: "moderation",
+  LISTING_FEE_PAID: "revenue",
+  ACCOUNT_DELETED: "users",
+  ACCOUNT_RESTORED: "users",
+  NEW_OFFER: "deals",
+  OFFER_COUNTERED: "deals",
+  OFFER_ACCEPTED: "deals",
+  TRANSACTION_CREATED: "deals",
+  RESERVATION_CREATED: "deals",
+  RESERVATION_PAID: "deals",
+  RESERVATION_EXPIRING: "deals",
+  RESERVATION_EXPIRED: "deals",
+  INSPECTION_STARTED: "deals",
+  INSPECTION_COMPLETED: "deals",
+  BUYER_DECISION: "deals",
+  PAYMENT_PROOF_UPLOADED: "deals",
+  PAYMENT_CONFIRMED: "deals",
+  TRANSACTION_COMPLETED: "deals",
+  TRANSACTION_CANCELLED: "deals",
+  WAITING_LIST_JOINED: "deals",
+  WAITING_LIST_AVAILABLE: "deals",
+  BOOST_ACTIVATED: "promotions",
+  BOOST_PURCHASED: "promotions",
+  LEADING_PURCHASED: "promotions",
+  ADVERTISEMENT_PURCHASED: "promotions",
+  MESSAGE_RECEIVED: "support",
+  BUNDLE_PURCHASED: "revenue",
+  DISPUTE_RESOLVED: "deals",
+};
+
 function read() {
   if (typeof window === "undefined") return [];
   try {
@@ -39,7 +71,9 @@ function read() {
     if (!raw) return [];
     const p = JSON.parse(raw);
     return Array.isArray(p) ? p : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 function write(list) {
   if (typeof window === "undefined") return;
@@ -53,8 +87,6 @@ function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
-    // Backend has no audience flag — everything we fetch is the
-    // caller's own notifications. Keep the field for API compat.
     audience: "user",
     type: raw.notification_type,
     title: raw.title,
@@ -63,7 +95,7 @@ function norm(raw) {
     read: !!raw.is_read,
     readAt: raw.read_at,
     link: raw.action_url,
-    target: null,
+    target: TYPE_TO_TARGET[raw.notification_type] || null,
     meta: {
       related_object_type: raw.related_object_type,
       related_object_id: raw.related_object_id,
@@ -79,13 +111,14 @@ export async function hydrateNotificationsFromApi() {
     const normalized = rawList.map(norm).filter(Boolean);
     write(normalized);
     return { ok: true, count: normalized.length };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export function getNotifications(audience) {
   const all = sortNewest(read());
   if (!audience || audience === "user") return all;
-  // Backend has no admin audience — return [] instead of lying.
   if (audience === "admin") return [];
   return all;
 }
@@ -96,21 +129,31 @@ export function getUnreadCount(audience) {
 export async function markNotificationReadAsync(id) {
   try {
     await notificationsApi.markRead(id);
-    write(read().map((n) => (n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n)));
+    write(
+      read().map((n) =>
+        n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n
+      )
+    );
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function markAllNotificationsReadAsync(audience) {
   try {
     await notificationsApi.markAllRead();
-    write(read().map((n) =>
-      !audience || audience === "user" || n.audience === audience
-        ? { ...n, read: true, readAt: new Date().toISOString() }
-        : n
-    ));
+    write(
+      read().map((n) =>
+        !audience || audience === "user" || n.audience === audience
+          ? { ...n, read: true, readAt: new Date().toISOString() }
+          : n
+      )
+    );
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function removeNotificationAsync(id) {
@@ -118,7 +161,9 @@ export async function removeNotificationAsync(id) {
     await notificationsApi.remove(id);
     write(read().filter((n) => n.id !== id));
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export function clearNotifications(audience) {
@@ -139,7 +184,7 @@ export function useNotifications(audience) {
     };
   }, []);
   const notifications = sortNewest(
-    (audience && audience !== "user")
+    audience && audience !== "user"
       ? []
       : all.filter((n) => n.audience === "user" || !audience)
   );
@@ -154,10 +199,12 @@ export function useNotifications(audience) {
   };
 }
 
+// ✅ FIXED — was `field?.[lang] || field?.sw || ""`, which returned "" when
+// lang="sw" and only `en` was present (and vice versa).
 export function getLocalizedField(field, lang = "sw") {
   if (!field) return "";
   if (typeof field === "string") return field;
-  return field?.[lang] || field?.sw || "";
+  return field?.[lang] || field?.sw || field?.en || "";
 }
 
 // ── Deprecated shims (backend emits notifications) ──────────

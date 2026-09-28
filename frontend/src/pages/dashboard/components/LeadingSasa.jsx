@@ -9,7 +9,7 @@ import { useLeadingFeeConfig } from "../../../config/leadingFeeStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
-import { checkCredit, consumeCredit } from "../../../config/userCreditsStore.js";
+import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
 
 function getLocalized(field, lang) {
@@ -128,7 +128,7 @@ export default function LeadingSasa({
 
   const handleUseCredit = async () => {
     if (!canLead || !user) return;
-    const consume = consumeCredit(user.id, "leading");
+    const consume = await consumeCreditAsync(user.id, "leading");
     if (!consume.success) return submitLeading(null);
     return submitLeading("credits");
   };

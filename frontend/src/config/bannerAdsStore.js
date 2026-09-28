@@ -32,9 +32,14 @@ export function bannerDaysRemaining(b) {
 }
 function norm(raw) {
   if (!raw) return null;
+  const nestedListing = raw.listing && typeof raw.listing === "object" ? raw.listing : null;
   return {
     id: raw.id,
-    listingId: raw.listingId ?? raw.listing_id,
+    listingId:
+      nestedListing?.id ??
+      raw.listingId ??
+      raw.listing_id ??
+      (typeof raw.listing === "number" || typeof raw.listing === "string" ? raw.listing : null),
     listingTitle: raw.listingTitle ?? raw.listing_title ?? "",
     category: raw.category || "",
     location: raw.location || "",

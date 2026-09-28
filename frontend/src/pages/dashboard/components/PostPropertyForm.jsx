@@ -11,7 +11,7 @@ import { COLORS, formatTZS } from "./shared";
 import { useActiveCategories, getCategoryIcon, getCategoryIdByKey } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
-import { checkCredit, consumeCredit } from "../../../config/userCreditsStore.js";
+import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 
@@ -266,7 +266,7 @@ export default function PostPropertyForm({
 
   const handleUseCredit = async () => {
     if (!createdListing || !user) return;
-    const consume = consumeCredit(user.id, "listing");
+    const consume = await consumeCreditAsync(user.id, "listing");
     if (!consume.success) {
       setStage("paying");
       return;

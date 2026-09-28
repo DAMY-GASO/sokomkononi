@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useListings } from "../config/listingsStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
-import { useWaitingList, joinWaitingList } from "../config/waitingListStore.js";
+import { useWaitingList, joinWaitingListAsync } from "../config/waitingListStore.js";
 import { getOrCreateDealAsync } from "../config/dealsStore.js";
 import { createConversationAsync } from "../config/messagesStore.js";
 import {
@@ -328,7 +328,11 @@ export default function PropertyDetailPage() {
     const { openContactModal, autoJoinWaitlist } = location.state;
 
     if (openContactModal) setShowContactModal(true);
-    if (autoJoinWaitlist && !alreadyOnWaitlist) joinWaitingList(property.id);
+    if (autoJoinWaitlist && !alreadyOnWaitlist) {
+      joinWaitingListAsync(property.id).then((res) => {
+        if (!res.ok) console.warn("[PropertyDetailPage] auto-join waiting list failed:", res.error);
+      });
+    }
 
     if (openContactModal || autoJoinWaitlist) {
       navigate(`${location.pathname}${location.search}`, { replace: true, state: {} });
@@ -345,7 +349,9 @@ export default function PropertyDetailPage() {
       });
       return;
     }
-    joinWaitingList(property.id);
+    joinWaitingListAsync(property.id).then((res) => {
+      if (!res.ok) console.warn("[PropertyDetailPage] joinWaitingList failed:", res.error);
+    });
   };
 
   const handleSave = () => toggleSaved(property.id, property);

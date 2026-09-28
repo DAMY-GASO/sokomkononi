@@ -259,6 +259,9 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
                 value={initialCredits[form.type] ?? 1}
                 onChange={(e) =>
                   updateField("credits", {
+                    ...(form.credits && typeof form.credits === "object"
+                      ? form.credits
+                      : {}),
                     [form.type]: Number(e.target.value),
                   })
                 }

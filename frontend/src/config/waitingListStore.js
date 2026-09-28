@@ -14,7 +14,9 @@ function read() {
     if (!raw) return [];
     const p = JSON.parse(raw);
     return Array.isArray(p) ? p : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 function write(list) {
   if (typeof window === "undefined") return;
@@ -32,16 +34,23 @@ function norm(raw) {
     price: Number(listing.price) || 0,
     location: listing.location || "",
     status: (raw.status || "WAITING").toLowerCase(),
-    position: raw.position ?? 1,
+    position: raw.position ?? null,
     joinedAt: raw.joined_at,
     notifiedAt: raw.notified_at,
+    respondBy: raw.respond_by,
     updatedAt: raw.updated_at,
   };
 }
 
-export function getWaitingList() { return read(); }
-export function getWaitingListEntry(id) { return read().find((e) => e.id === id) || null; }
-export function getWaitingListForListing(id) { return read().filter((e) => e.listingId === id); }
+export function getWaitingList() {
+  return read();
+}
+export function getWaitingListEntry(id) {
+  return read().find((e) => e.id === id) || null;
+}
+export function getWaitingListForListing(id) {
+  return read().filter((e) => e.listingId === id);
+}
 
 export async function hydrateWaitingListFromApi() {
   try {
@@ -50,7 +59,9 @@ export async function hydrateWaitingListFromApi() {
     const normalized = list.map(norm).filter(Boolean);
     write(normalized);
     return { ok: true, count: normalized.length };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function joinWaitingListAsync(listingId) {
@@ -59,9 +70,11 @@ export async function joinWaitingListAsync(listingId) {
     const raw = await waitingListApi.join(listingId);
     const created = norm(raw);
     const current = read().filter((e) => e.listingId !== listingId);
-    write([created, ...current]);
+    if (created) write([created, ...current]);
     return { ok: true, entry: created };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function leaveWaitingListAsync(id) {
@@ -69,11 +82,18 @@ export async function leaveWaitingListAsync(id) {
     await waitingListApi.leave(id);
     write(read().filter((e) => e.id !== id));
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
-export function joinWaitingList() { /* deprecated — use joinWaitingListAsync */ }
-export function leaveWaitingList(id) { leaveWaitingListAsync(id); }
+// Backwards-compat shim: now forwards to the async version.
+export function joinWaitingList(listingId) {
+  return joinWaitingListAsync(listingId);
+}
+export function leaveWaitingList(id) {
+  return leaveWaitingListAsync(id);
+}
 
 export function useWaitingList() {
   const [list, setList] = useState(() => read());
@@ -89,6 +109,10 @@ export function useWaitingList() {
   }, []);
   return list;
 }
-export function useWaitingListForListing(id) { return id ? useWaitingList().filter((e) => e.listingId === id) : []; }
-export function useWaitingListCount() { return useWaitingList().length; }
-
+export function useWaitingListForListing(id) {
+  const list = useWaitingList();
+  return id ? list.filter((e) => e.listingId === id) : [];
+}
+export function useWaitingListCount() {
+  return useWaitingList().length;
+}

@@ -10,6 +10,20 @@ const STORAGE_KEY = "sokomkononi_current_user_v1";
 const UPDATE_EVENT = "sokomkononi:auth-updated";
 const AVATAR_KEY_PREFIX = "admin_avatar_";
 
+// ============================================================
+// /auth/me/ dedupe + short TTL cache
+// Multiple components calling useAuth() will share the same
+// request instead of firing one per mount. A fresh call after
+// HYDRATE_TTL_MS still refreshes to keep the data current.
+// ============================================================
+let inflightHydrate = null;
+let lastHydrateAt = 0;
+const HYDRATE_TTL_MS = 30_000;
+function resetHydrateCache() {
+  inflightHydrate = null;
+  lastHydrateAt = 0;
+}
+
 export const SEED_USER = null;
 
 function attachStoredAvatar(user) {
@@ -40,10 +54,41 @@ function saveUser(user) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-/** Clears user state AND wipes JWT tokens. */
+/** Force the next useAuth() mount to refetch /auth/me/. */
+export function invalidateAuthCache() {
+  resetHydrateCache();
+}
+
+// Keys we deliberately keep after logout (language preference, admin path,
+// etc. are stored elsewhere so nothing to keep here).
+const PRESERVE_AFTER_LOGOUT = new Set([]);
+
+/** Clears user state, wipes JWT tokens, and purges user-scoped caches. */
 function hardReset() {
   saveUser(null);
   clearJWT();
+  resetHydrateCache();
+  if (typeof window === "undefined") return;
+  try {
+    const toRemove = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (!k) continue;
+      // Only touch our own namespaced keys — leave anything else alone.
+      if (!k.startsWith("sokomkononi_")) continue;
+      if (PRESERVE_AFTER_LOGOUT.has(k)) continue;
+      toRemove.push(k);
+    }
+    toRemove.forEach((k) => {
+      try {
+        window.localStorage.removeItem(k);
+      } catch {
+        /* noop */
+      }
+    });
+  } catch {
+    /* noop */
+  }
 }
 
 function computeIsAdmin(user) {
@@ -104,24 +149,45 @@ export function hasRole(role) {
 }
 export function isSeller() { return hasRole("Seller"); }
 
-export async function hydrateCurrentUserFromApi() {
-  try {
-    if (!authApi.isAuthenticated()) {
-      if (getCurrentUser() !== null) hardReset();
-      return { ok: false, source: "no-token" };
-    }
-    const raw = await authApi.me();
-    const user = normalizeUserFromApi(raw);
-    saveUser(user);
-    return { ok: true, source: "api", user };
-  } catch (err) {
-    if (err?.status === 401) {
-      hardReset();
-      return { ok: false, source: "unauthorized", error: err };
-    }
-    console.warn("[authStore] hydrate failed:", err);
-    return { ok: false, source: "error", error: err };
+export function hydrateCurrentUserFromApi() {
+  if (!authApi.isAuthenticated()) {
+    if (getCurrentUser() !== null) hardReset();
+    return Promise.resolve({ ok: false, source: "no-token" });
   }
+
+  // Fresh cache hit — return immediately.
+  const now = Date.now();
+  if (lastHydrateAt && now - lastHydrateAt < HYDRATE_TTL_MS) {
+    return Promise.resolve({
+      ok: true,
+      source: "cache",
+      user: getCurrentUser(),
+    });
+  }
+
+  // Dedupe concurrent calls — return the same in-flight promise.
+  if (inflightHydrate) return inflightHydrate;
+
+  inflightHydrate = (async () => {
+    try {
+      const raw = await authApi.me();
+      const user = normalizeUserFromApi(raw);
+      saveUser(user);
+      lastHydrateAt = Date.now();
+      return { ok: true, source: "api", user };
+    } catch (err) {
+      if (err?.status === 401) {
+        hardReset();
+        return { ok: false, source: "unauthorized", error: err };
+      }
+      console.warn("[authStore] hydrate failed:", err);
+      return { ok: false, source: "error", error: err };
+    } finally {
+      inflightHydrate = null;
+    }
+  })();
+
+  return inflightHydrate;
 }
 
 export async function loginAsync({ identifier, password }) {
@@ -133,6 +199,8 @@ export async function loginAsync({ identifier, password }) {
     const me = data?.user ?? (await authApi.me());
     const user = normalizeUserFromApi(me);
     saveUser(user);
+    resetHydrateCache();
+    lastHydrateAt = Date.now();
     return { ok: true, user };
   } catch (err) {
     hardReset();
@@ -155,6 +223,8 @@ export async function adminLoginAsync({ identifier, password }) {
     }
     const user = normalizeUserFromApi(me);
     saveUser(user);
+    resetHydrateCache();
+    lastHydrateAt = Date.now();
     return { ok: true, user };
   } catch (err) {
     hardReset();
@@ -197,6 +267,8 @@ export async function verifyOtpAsync({ identifier, otpCode, verificationType }) 
     const me = data?.user ?? (await authApi.me());
     const user = normalizeUserFromApi(me);
     saveUser(user);
+    resetHydrateCache();
+    lastHydrateAt = Date.now();
     return { ok: true, user };
   } catch (err) {
     hardReset();
@@ -421,6 +493,8 @@ export async function socialLoginAsync({ provider, idToken, code, user: socialUs
     const me = data?.user ?? (await authApi.me());
     const user = normalizeUserFromApi(me);
     saveUser(user);
+    resetHydrateCache();
+    lastHydrateAt = Date.now();
     return { ok: true, user };
   } catch (err) {
     hardReset();
