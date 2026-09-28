@@ -62,11 +62,31 @@ export async function hydrateBannerAdsFromApi() {
 
 export async function createBannerAdAsync(listingId, payment_reference = "") {
   try {
-    const raw = await api.post("/banners/", { listing: listingId, payment_reference });
+    const raw = await api.post("/banners/", { listing: listingId });
     const b = norm(raw);
     write([b, ...getBannerAds()]);
     return { ok: true, banner: b };
   } catch (err) { return { ok: false, error: err }; }
+}
+
+// ============================================================
+// Pay + activate a banner. Backend flow:
+//   POST /api/banners/{id}/pay/ { payment_reference } → activates
+// ============================================================
+export async function payBannerAdAsync(bannerId, payment_reference = "") {
+  if (!bannerId) return { ok: false, error: new Error("bannerId required") };
+  try {
+    const raw = await api.post(`/banners/${bannerId}/pay/`, {
+      payment_reference: payment_reference || `BAN-${Date.now()}`,
+    });
+    const updated = norm(raw) || null;
+    if (updated) {
+      write(getBannerAds().map((b) => (b.id === bannerId ? updated : b)));
+    }
+    return { ok: true, banner: updated };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function removeBannerAdAsync(id) {

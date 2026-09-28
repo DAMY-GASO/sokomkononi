@@ -69,11 +69,16 @@ export async function removeAuditLogAsync(id) {
 }
 
 export async function clearAuditLogsAsync() {
-  try {
-    await api.post("/audit/clear/", {});
-    write([]);
-    return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  // Backend does not expose a bulk-clear endpoint. Audit logs are
+  // intentionally read-only at the API layer (they exist for compliance).
+  // Return a clear error so the UI can hide the button / explain why.
+  return {
+    ok: false,
+    error: new Error(
+      "Audit logs cannot be bulk-deleted. They are read-only for compliance."
+    ),
+    unsupported: true,
+  };
 }
 
 export function useAuditLogs() {

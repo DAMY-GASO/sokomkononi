@@ -109,35 +109,14 @@ export default function AuditLogsSection() {
   // HANDLERS — async
   // ============================================================
   const handleClearAll = async () => {
-    if (
-      !window.confirm(
-        t(
-          "Futa logs zote? Hatua hii haiwezi kurudishwa.",
-          "Delete all logs? This cannot be undone."
-        )
+    // Backend has no bulk-clear endpoint. Inform the user directly
+    // instead of pretending the request worked.
+    setError(
+      t(
+        "Kumbukumbu za matendo haziwezi kufutwa kwa pamoja — zimehifadhiwa kwa mujibu wa sheria.",
+        "Audit logs cannot be bulk-deleted — they are kept for compliance."
       )
-    )
-      return;
-
-    if (busy.clearing) return;
-
-    setBusy((b) => ({ ...b, clearing: true }));
-    setError("");
-
-    const res = await clearAuditLogsAsync();
-
-    setBusy((b) => {
-      const next = { ...b };
-      delete next.clearing;
-      return next;
-    });
-
-    if (!res.ok) {
-      setError(
-        res.error?.message ||
-          t("Imeshindwa kufuta logs.", "Failed to clear logs.")
-      );
-    }
+    );
   };
 
   const handleRemove = async (id) => {

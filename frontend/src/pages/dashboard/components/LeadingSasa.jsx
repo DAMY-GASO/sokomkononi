@@ -1,10 +1,16 @@
 // ============================================================
-// LeadingSasa.jsx (production)
-// Backend: POST /listings/{id}/leading/
+// LeadingSasa.jsx — production
+// Backend flow:
+//   POST /api/leading-fees/purchases/apply/  { listing: <id> }  → returns { id, ... }
+//   POST /api/leading-fees/purchases/{id}/pay/ { payment_reference } → activates
 // ============================================================
 import React, { useState, useEffect } from "react";
-import { TrendingUp, MapPin, Search, Loader2, AlertTriangle, Wallet } from "lucide-react";
-import { COLORS, getCategory, formatTZS, isLeadingActive, leadingDaysRemaining } from "./shared";
+import {
+  TrendingUp, MapPin, Search, Loader2, AlertTriangle, Wallet,
+} from "lucide-react";
+import {
+  COLORS, getCategory, formatTZS, isLeadingActive, leadingDaysRemaining,
+} from "./shared";
 import { useLeadingFeeConfig } from "../../../config/leadingFeeStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -62,7 +68,9 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
                 className="flex items-center gap-1 text-body-sm font-semibold px-2 py-1 rounded-full shrink-0"
               >
                 <TrendingUp size={11} />{" "}
-                {lang === "sw" ? `Siku ${leadingDaysRemaining(l)} zimebaki` : `${leadingDaysRemaining(l)} days left`}
+                {lang === "sw"
+                  ? `Siku ${leadingDaysRemaining(l)} zimebaki`
+                  : `${leadingDaysRemaining(l)} days left`}
               </span>
             )}
           </button>
@@ -107,17 +115,51 @@ export default function LeadingSasa({
   const leadingLabel = getLocalized(leadingFee.label, lang);
   const leadingDesc = getLocalized(leadingFee.desc, lang);
 
+  // ============================================================
+  // CORRECT FLOW: apply → pay
+  // ============================================================
   const submitLeading = async (reference) => {
+    if (!selectedListing) return;
     setBusy(true);
     setError("");
     try {
-      // Backend expects a POST to /listings/{id}/leading/ (no reference needed per spec).
-      await api.post(`/listings/${selectedListing.id}/leading/`, { payment_reference: reference || `LEAD-${Date.now()}` });
-      onLead(selectedListing.id, { leadingExpiresAt: new Date(Date.now() + (leadingFee.days || 7) * 86400000).toISOString() });
+      // 1. Create the leading purchase (PENDING)
+      const purchase = await api.post("/leading-fees/purchases/apply/", {
+        listing: selectedListing.id,
+      });
+      const purchaseId =
+        purchase?.id || purchase?.purchase_id || purchase?.purchaseId;
+      if (!purchaseId) {
+        throw new Error(
+          t(
+            "Backend haikurudisha purchase id. Jaribu tena.",
+            "Backend did not return a purchase id. Try again."
+          )
+        );
+      }
+
+      // 2. Pay for it → activates
+      const paid = await api.post(
+        `/leading-fees/purchases/${purchaseId}/pay/`,
+        {
+          payment_reference:
+            reference ||
+            `LEAD-${Date.now()}-${selectedListing.id}`,
+        }
+      );
+
+      const expiresAt =
+        paid?.expires_at ||
+        new Date(
+          Date.now() + (leadingFee.days || 7) * 86400000
+        ).toISOString();
+
+      onLead(selectedListing.id, { leadingExpiresAt: expiresAt });
       setDone({ listing: selectedListing });
     } catch (err) {
       setError(
         err?.data?.detail ||
+          err?.data?.message ||
           err?.message ||
           t("Imeshindwa kuweka leading. Jaribu tena.", "Failed to apply leading. Try again.")
       );
@@ -129,7 +171,10 @@ export default function LeadingSasa({
   const handleUseCredit = async () => {
     if (!canLead || !user) return;
     const consume = await consumeCreditAsync(user.id, "leading");
-    if (!consume.success) return submitLeading(null);
+    if (!consume.success) {
+      // No credit path — fall through to payment
+      return submitLeading(null);
+    }
     return submitLeading("credits");
   };
 
@@ -142,7 +187,10 @@ export default function LeadingSasa({
           </div>
           <h2 className="h-title mb-2">{t("Leading Imewekwa", "Leading Applied")}</h2>
           <p className="text-secondary text-sm mb-5">
-            {t("Listing yako itaonekana juu ya matokeo ya utafutaji.", "Your listing will appear at the top of search results.")}
+            {t(
+              "Listing yako itaonekana juu ya matokeo ya utafutaji.",
+              "Your listing will appear at the top of search results."
+            )}
           </p>
           <button
             onClick={() => setDone(null)}
@@ -163,15 +211,17 @@ export default function LeadingSasa({
           <h1 className="h-title">{t("Ada ya Kipaumbele", "Leading Fee")}</h1>
           <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
             {t(
-              'Pandisha bidhaa yako JUU kabisa ya matokeo ya utafutaji.',
-              'Push your listing to the very TOP of search results.'
+              "Pandisha bidhaa yako JUU kabisa ya matokeo ya utafutaji.",
+              "Push your listing to the very TOP of search results."
             )}
           </p>
         </div>
 
         {error && (
-          <div className="rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm"
-               style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}>
+          <div
+            className="rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm"
+            style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
+          >
             <AlertTriangle size={14} />
             {error}
           </div>
@@ -182,7 +232,10 @@ export default function LeadingSasa({
             <div className="flex items-center gap-2">
               <Wallet size={16} color={COLORS.green} />
               <span className="text-sm text-[#2F6D4F] font-medium">
-                {t(`Una Leading Credits ${creditInfo.remaining}`, `You have ${creditInfo.remaining} Leading Credits`)}
+                {t(
+                  `Una Leading Credits ${creditInfo.remaining}`,
+                  `You have ${creditInfo.remaining} Leading Credits`
+                )}
               </span>
             </div>
             <button
@@ -199,13 +252,22 @@ export default function LeadingSasa({
           {t("Chagua Mali (Live pekee)", "Select Property (Live only)")}
         </p>
         <div className="mb-6">
-          <ListingPicker listings={liveListings} selectedId={selectedId} onSelect={setSelectedId} lang={lang} />
+          <ListingPicker
+            listings={liveListings}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            lang={lang}
+          />
         </div>
 
-        <div className="rounded-2xl border p-4 flex flex-col items-center text-center gap-2 mb-4"
-             style={{ borderColor: COLORS.sandLine, background: "white" }}>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-               style={{ background: `${COLORS.green}15` }}>
+        <div
+          className="rounded-2xl border p-4 flex flex-col items-center text-center gap-2 mb-4"
+          style={{ borderColor: COLORS.sandLine, background: "white" }}
+        >
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: `${COLORS.green}15` }}
+          >
             <Search size={18} color={COLORS.green} />
           </div>
           <p className="text-primary text-sm font-semibold mb-0.5">

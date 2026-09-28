@@ -81,7 +81,13 @@ export default function AllListingsPage() {
               {visibleListings.map((l) => {
                 const cat = categories.find((c) => c.key === l.category);
                 const Icon = getCategoryIcon(cat?.iconKey || "Home");
-                const hasPhoto = Boolean(cat?.imageUrl);
+                // Prefer the listing's own photo; fall back to the
+                // category photo; then to the category icon.
+                const listingPhoto =
+                  l.imageUrl ||
+                  (Array.isArray(l.photos) && l.photos[0]) ||
+                  null;
+                const img = listingPhoto || cat?.imageUrl || null;
                 const region = l.region || l.location;
 
                 return (
@@ -91,11 +97,12 @@ export default function AllListingsPage() {
                     className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
                   >
                     <div className="h-32 sm:h-40 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
-                      {hasPhoto ? (
+                      {img ? (
                         <img
-                          src={cat.imageUrl}
+                          src={img}
                           alt={l.title}
                           className="w-full h-full object-cover"
+                          loading="lazy"
                         />
                       ) : (
                         <Icon size={40} className="text-[#E8A33D]" />

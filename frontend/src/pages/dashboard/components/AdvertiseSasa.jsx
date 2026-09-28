@@ -11,7 +11,7 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
-import { createBannerAdAsync } from "../../../config/bannerAdsStore.js";
+import { createBannerAdAsync, payBannerAdAsync } from "../../../config/bannerAdsStore.js";
 
 function getLocalized(field, lang) {
   if (!field) return "";
@@ -113,16 +113,37 @@ export default function AdvertiseSasa({
   const adDesc = getLocalized(adFee.desc, lang);
 
   const submitAd = async (reference) => {
+    if (!selectedListing) return;
     setBusy(true);
     setError("");
     try {
-      const res = await createBannerAdAsync(selectedListing.id, reference || "manual");
-      if (!res.ok) throw res.error;
-      onAdvertised(selectedListing.id, res.banner);
-      setDone({ listing: selectedListing, banner: res.banner });
+      // 1) Create the banner (PENDING) — backend requires just { listing }
+      const created = await createBannerAdAsync(selectedListing.id);
+      if (!created.ok) throw created.error;
+
+      const bannerId = created.banner?.id;
+      if (!bannerId) {
+        throw new Error(
+          t(
+            "Backend haikurudisha banner id. Jaribu tena.",
+            "Backend did not return a banner id. Try again."
+          )
+        );
+      }
+
+      // 2) Pay for it — activates
+      const paid = await payBannerAdAsync(
+        bannerId,
+        reference || `BAN-${Date.now()}-${selectedListing.id}`
+      );
+      if (!paid.ok) throw paid.error;
+
+      onAdvertised(selectedListing.id, paid.banner || created.banner);
+      setDone({ listing: selectedListing, banner: paid.banner || created.banner });
     } catch (err) {
       setError(
         err?.data?.detail ||
+          err?.data?.message ||
           err?.message ||
           t("Imeshindwa kutangaza. Jaribu tena.", "Failed to advertise. Try again.")
       );
