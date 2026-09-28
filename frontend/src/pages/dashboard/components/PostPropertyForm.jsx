@@ -249,19 +249,32 @@ export default function PostPropertyForm({
     }
   };
 
-  // ── Step 4: Pay the listing fee ──────────────────────────
-  const handleFeeSubmit = async ({ reference }) => {
+  // ── Step 4a: initiate FimiPay payment ──────────────────────
+  const handleFeeInitiate = async () => {
     if (!createdListing) return { ok: false, error: new Error("no listing") };
     try {
-      await api.post(`/listings/${createdListing.id}/fee/pay/`, {
-        payment_reference: reference || "manual",
-      });
-      onPaid?.(createdListing.id);
-      setStage("done");
-      return { ok: true };
+      const res = await api.post(
+        `/listings/${createdListing.id}/fee/pay/`,
+        {}
+      );
+      const fimipay = res?.fimipay || res?.data?.fimipay || {};
+      return {
+        ok: true,
+        orderId: fimipay.order_id,
+        gatewayUrl: fimipay.payment_gateway_url || null,
+        simulated: !!fimipay.simulated,
+        environment: fimipay.environment || "live",
+      };
     } catch (err) {
       return { ok: false, error: err };
     }
+  };
+
+  // ── Step 4b: FimiPay confirms → mark done ──────────────────
+  const handleFeeSuccess = () => {
+    if (!createdListing) return;
+    onPaid?.(createdListing.id);
+    setStage("done");
   };
 
   const handleUseCredit = async () => {
@@ -361,8 +374,8 @@ export default function PostPropertyForm({
               amount={feeAmount}
               title={t("Ada ya Kuchapisha", "Listing Fee")}
               description={t(`Kuchapisha "${base.title}"`, `Publishing "${base.title}"`)}
-              requireReference
-              onSubmit={handleFeeSubmit}
+              onInitiate={handleFeeInitiate}
+              onSuccess={handleFeeSuccess}
               onCancel={() => setStage("review")}
             />
           )}

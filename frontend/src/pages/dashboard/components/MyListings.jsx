@@ -268,12 +268,20 @@ function ListingCard({
                 `Kuchapisha "${listing.title}"`,
                 `Publishing "${listing.title}"`
               )}
-              onSubmit={async ({ reference }) => {
+              onInitiate={async () => {
                 try {
-                  await api.post(`/listings/${listing.id}/fee/pay/`, {
-                    payment_reference: reference,
-                  });
-                  return { ok: true };
+                  const res = await api.post(
+                    `/listings/${listing.id}/fee/pay/`,
+                    {}
+                  );
+                  const fimipay = res?.fimipay || res?.data?.fimipay || {};
+                  return {
+                    ok: true,
+                    orderId: fimipay.order_id,
+                    gatewayUrl: fimipay.payment_gateway_url || null,
+                    simulated: !!fimipay.simulated,
+                    environment: fimipay.environment || "live",
+                  };
                 } catch (err) {
                   return { ok: false, error: err };
                 }

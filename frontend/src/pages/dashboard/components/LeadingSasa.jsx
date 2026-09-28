@@ -17,6 +17,7 @@ import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
+import PaymentGateway from "./PaymentGateway";
 
 function getLocalized(field, lang) {
   if (!field) return "";
@@ -97,6 +98,7 @@ export default function LeadingSasa({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(null);
+  const [stage, setStage] = useState("select"); // select | paying
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -118,64 +120,103 @@ export default function LeadingSasa({
   // ============================================================
   // CORRECT FLOW: apply → pay
   // ============================================================
-  const submitLeading = async (reference) => {
-    if (!selectedListing) return;
+  // ── Step 1: create the PENDING leading purchase ────────────
+  const createPendingPurchase = async () => {
+    const purchase = await api.post("/leading-fees/purchases/apply/", {
+      listing: selectedListing.id,
+    });
+    const purchaseId =
+      purchase?.id || purchase?.purchase_id || purchase?.purchaseId;
+    if (!purchaseId) {
+      throw new Error(
+        t(
+          "Backend haikurudisha purchase id. Jaribu tena.",
+          "Backend did not return a purchase id. Try again."
+        )
+      );
+    }
+    return purchaseId;
+  };
+
+  // ── Step 2a: initiate FimiPay (called by PaymentGateway) ────
+  const handlePaymentInitiate = async () => {
+    if (!selectedListing) return { ok: false, error: new Error("no listing") };
     setBusy(true);
     setError("");
     try {
-      // 1. Create the leading purchase (PENDING)
-      const purchase = await api.post("/leading-fees/purchases/apply/", {
-        listing: selectedListing.id,
-      });
-      const purchaseId =
-        purchase?.id || purchase?.purchase_id || purchase?.purchaseId;
-      if (!purchaseId) {
-        throw new Error(
-          t(
-            "Backend haikurudisha purchase id. Jaribu tena.",
-            "Backend did not return a purchase id. Try again."
-          )
-        );
-      }
-
-      // 2. Pay for it → activates
+      const purchaseId = await createPendingPurchase();
       const paid = await api.post(
         `/leading-fees/purchases/${purchaseId}/pay/`,
-        {
-          payment_reference:
-            reference ||
-            `LEAD-${Date.now()}-${selectedListing.id}`,
-        }
+        {}
       );
-
-      const expiresAt =
-        paid?.expires_at ||
-        new Date(
-          Date.now() + (leadingFee.days || 7) * 86400000
-        ).toISOString();
-
-      onLead(selectedListing.id, { leadingExpiresAt: expiresAt });
-      setDone({ listing: selectedListing });
+      const fimipay = paid?.fimipay || paid?.data?.fimipay || {};
+      return {
+        ok: true,
+        orderId: fimipay.order_id,
+        gatewayUrl: fimipay.payment_gateway_url || null,
+        simulated: !!fimipay.simulated,
+        environment: fimipay.environment || "live",
+      };
     } catch (err) {
       setError(
         err?.data?.detail ||
-          err?.data?.message ||
           err?.message ||
-          t("Imeshindwa kuweka leading. Jaribu tena.", "Failed to apply leading. Try again.")
+          t("Imeshindwa kuanzisha malipo.", "Failed to start payment.")
       );
+      return { ok: false, error: err };
     } finally {
       setBusy(false);
     }
   };
 
+  // ── Step 2b: FimiPay confirms SUCCESS ───────────────────────
+  const handlePaymentSuccess = async () => {
+    if (!selectedListing) return;
+    const expiresAt = new Date(
+      Date.now() + (leadingFee.days || 7) * 86400000
+    ).toISOString();
+    onLead(selectedListing.id, { leadingExpiresAt: expiresAt });
+    setDone({ listing: selectedListing });
+  };
+
+  // ── Credit path stays the same (both steps run at once) ─────
   const handleUseCredit = async () => {
     if (!canLead || !user) return;
-    const consume = await consumeCreditAsync(user.id, "leading");
-    if (!consume.success) {
-      // No credit path — fall through to payment
-      return submitLeading(null);
+    setBusy(true);
+    setError("");
+    try {
+      const consume = await consumeCreditAsync(user.id, "leading");
+      if (!consume.success) {
+        setBusy(false);
+        return handlePaymentInitiate().then((res) => {
+          // Credit failed → user goes through FimiPay via the parent UI.
+          // The parent's onInitiate is only called from PaymentGateway,
+          // so we simply reset the stage. As a fallback, do the whole flow:
+          // this branch should rarely run if credits are shown correctly.
+          return res;
+        });
+      }
+      const purchaseId = await createPendingPurchase();
+      // When paying with credits the backend treats "credits" as the ref
+      // and skips the gateway.
+      const paid = await api.post(
+        `/leading-fees/purchases/${purchaseId}/pay/`,
+        { payment_reference: "credits" }
+      );
+      const expiresAt =
+        paid?.expires_at ||
+        new Date(Date.now() + (leadingFee.days || 7) * 86400000).toISOString();
+      onLead(selectedListing.id, { leadingExpiresAt: expiresAt });
+      setDone({ listing: selectedListing });
+    } catch (err) {
+      setError(
+        err?.data?.detail ||
+          err?.message ||
+          t("Imeshindwa kutumia credit.", "Failed to use credit.")
+      );
+    } finally {
+      setBusy(false);
     }
-    return submitLeading("credits");
   };
 
   if (done) {
@@ -279,18 +320,34 @@ export default function LeadingSasa({
           </p>
         </div>
 
-        <button
-          onClick={() => submitLeading(null)}
-          disabled={!canLead || busy}
-          style={{
-            background: canLead && !busy ? COLORS.gold : COLORS.sandLine,
-            color: canLead && !busy ? COLORS.night : "rgba(16,26,46,0.4)",
-          }}
-          className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
-        >
-          {busy ? <Loader2 size={15} className="animate-spin" /> : <TrendingUp size={15} />}
-          {t("Weka Leading", "Apply Leading")}
-        </button>
+        {stage === "select" && (
+          <button
+            onClick={() => setStage("paying")}
+            disabled={!canLead || busy}
+            style={{
+              background: canLead && !busy ? COLORS.gold : COLORS.sandLine,
+              color: canLead && !busy ? COLORS.night : "rgba(16,26,46,0.4)",
+            }}
+            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
+          >
+            {busy ? <Loader2 size={15} className="animate-spin" /> : <TrendingUp size={15} />}
+            {t("Weka Leading", "Apply Leading")}
+          </button>
+        )}
+
+        {stage === "paying" && selectedListing && (
+          <PaymentGateway
+            amount={leadingFee.price}
+            title={leadingLabel || "Leading"}
+            description={t(
+              `Leading kwa "${selectedListing.title}"`,
+              `Leading for "${selectedListing.title}"`
+            )}
+            onInitiate={handlePaymentInitiate}
+            onSuccess={handlePaymentSuccess}
+            onCancel={() => setStage("select")}
+          />
+        )}
       </div>
     </div>
   );

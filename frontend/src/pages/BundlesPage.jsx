@@ -323,7 +323,7 @@ export default function BundlesPage() {
                 "Nunua kifurushi — salio litaingizwa papo hapo",
                 "Buy bundle — credits will be added instantly"
               )}
-              onSubmit={async ({ reference }) => {
+              onInitiate={async () => {
                 try {
                   const purchase = await api.post("/bundles/purchases/", {
                     bundle: payingBundle.id,
@@ -335,11 +335,21 @@ export default function BundlesPage() {
                   if (!purchaseId) {
                     throw new Error("Backend did not return purchase id.");
                   }
-                  await api.post(
+                  // Store for later activation (not strictly needed — the
+                  // backend pays for the purchase when the poll says SUCCESS)
+                  lastPurchaseIdRef.current = purchaseId;
+                  const paid = await api.post(
                     `/bundles/purchases/${purchaseId}/pay/`,
-                    { payment_reference: reference }
+                    {}
                   );
-                  return { ok: true, data: purchase };
+                  const fimipay = paid?.fimipay || paid?.data?.fimipay || {};
+                  return {
+                    ok: true,
+                    orderId: fimipay.order_id,
+                    gatewayUrl: fimipay.payment_gateway_url || null,
+                    simulated: !!fimipay.simulated,
+                    environment: fimipay.environment || "live",
+                  };
                 } catch (err) {
                   return { ok: false, error: err };
                 }

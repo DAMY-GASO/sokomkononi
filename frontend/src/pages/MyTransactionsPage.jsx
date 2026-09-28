@@ -287,60 +287,44 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
   };
 
   // ============================================================
-  // SUCCESS FEE — request a reference from the backend, then
-  // submit it through PaymentGateway. Real gateway wiring lives
-  // in /finance/success-fee/ (STK push → callback → confirm).
+  // SUCCESS FEE — FimiPay flow
+  //   1. POST /finance/success-fee/  → returns fimipay order
+  //   2. PaymentGateway polls until SUCCESS
+  //   3. onSuccess → download the CSV
   // ============================================================
-  const handlePaymentSubmit = async ({ reference }) => {
+  const handleFeeInitiate = async () => {
     setFeeError("");
     try {
-      // Step 1: create the fee record on the backend. Backend may:
-      //   a) return a reference immediately (simulated / pre-paid), OR
-      //   b) kick off an STK push and return { status: "pending" }.
       const feeRes = await api.post("/finance/success-fee/", {
         purpose: "transactions_csv",
         amount: SUCCESS_FEE_TZS,
         currency: "TZS",
-        payment_reference: reference || undefined,
       });
-
-      const backendRef =
-        feeRes?.payment_reference || feeRes?.reference || feeRes?.ref || null;
-      const backendStatus = (feeRes?.status || "").toLowerCase();
-
-      // If backend hasn't confirmed the payment yet, surface the pending
-      // state so the UI doesn't falsely claim success.
-      if (!backendRef || (backendStatus && backendStatus !== "completed" && backendStatus !== "paid")) {
-        return {
-          ok: false,
-          error: new Error(
-            t(
-              "Malipo hayajathibitishwa bado. Subiri uthibitisho wa M-Pesa kisha ujaribu tena.",
-              "Payment not confirmed yet. Wait for the M-Pesa confirmation and try again."
-            )
-          ),
-        };
-      }
-
-      // Step 2: download CSV only after the backend confirms.
-      const csv = buildTransactionsCSV(filtered, lang);
-      const filename = `miamala_${new Date().toISOString().slice(0, 10)}.csv`;
-      downloadCSV(csv, filename);
-
-      setShowFeeFlow(false);
-      return { ok: true };
+      const fimipay = feeRes?.fimipay || feeRes?.data?.fimipay || {};
+      return {
+        ok: true,
+        orderId: fimipay.order_id,
+        gatewayUrl: fimipay.payment_gateway_url || null,
+        simulated: !!fimipay.simulated,
+        environment: fimipay.environment || "live",
+      };
     } catch (err) {
       const msg =
         err?.data?.detail ||
         err?.data?.message ||
-        (err?.data && typeof err.data === "object"
-          ? Object.values(err.data).flat().find((v) => typeof v === "string")
-          : null) ||
         err?.message ||
         t("Malipo yameshindikana. Jaribu tena.", "Payment failed. Try again.");
       setFeeError(msg);
       return { ok: false, error: err };
     }
+  };
+
+  const handleFeeSuccess = () => {
+    // Backend confirms the payment. Download the CSV now.
+    const csv = buildTransactionsCSV(filtered, lang);
+    const filename = `miamala_${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadCSV(csv, filename);
+    setShowFeeFlow(false);
   };
 
   return (
@@ -528,8 +512,8 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
                   ? "Lipa ada ndogo ili kupakua ripoti ya miamala yako kama CSV."
                   : "Pay a small fee to download your transactions report as CSV."
               }
-              requireReference
-              onSubmit={handlePaymentSubmit}
+              onInitiate={handleFeeInitiate}
+              onSuccess={handleFeeSuccess}
               onCancel={() => {
                 setShowFeeFlow(false);
                 setFeeError("");

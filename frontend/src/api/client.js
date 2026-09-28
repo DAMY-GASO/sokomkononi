@@ -151,8 +151,33 @@ async function request(path, {
   const ct = res.headers.get("content-type") || "";
   let data;
   if (res.status === 204) data = null;
-  else if (ct.includes("application/json")) data = await res.json();
-  else data = await res.text();
+  else if (ct.includes("application/json")) {
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      // Server claimed JSON but the body wasn't parseable
+      data = { detail: `Invalid JSON response (${res.status})` };
+    }
+  } else if (ct.includes("text/html")) {
+    // Django error pages arrive as HTML. Detect the common ones and
+    // surface a clean message so the console isn't flooded with markup.
+    const html = await res.text();
+    let detail = `Server returned HTML (${res.status})`;
+    if (/DisallowedHost/i.test(html)) {
+      detail =
+        "Backend rejected the request: DisallowedHost. " +
+        "Add this domain to Django ALLOWED_HOSTS and restart the backend.";
+    } else if (/CSRF/i.test(html)) {
+      detail =
+        "CSRF verification failed. Add this origin to Django CSRF_TRUSTED_ORIGINS.";
+    } else if (/<title>([^<]+)<\/title>/i.test(html)) {
+      const m = html.match(/<title>([^<]+)<\/title>/i);
+      detail = m ? m[1].trim() : detail;
+    }
+    data = { detail, htmlLength: html.length };
+  } else {
+    data = await res.text();
+  }
 
   if (!res.ok) throw new ApiError(res.status, data);
   return data;

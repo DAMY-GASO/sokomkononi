@@ -12,6 +12,7 @@ import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
 import { createBannerAdAsync, payBannerAdAsync } from "../../../config/bannerAdsStore.js";
+import PaymentGateway from "./PaymentGateway";
 
 function getLocalized(field, lang) {
   if (!field) return "";
@@ -112,52 +113,69 @@ export default function AdvertiseSasa({
   const adLabel = getLocalized(adFee.label, lang);
   const adDesc = getLocalized(adFee.desc, lang);
 
-  const submitAd = async (reference) => {
-    if (!selectedListing) return;
+  // ── Step 1: create PENDING banner ──────────────────────────
+  const createPendingBanner = async () => {
+    const created = await createBannerAdAsync(selectedListing.id);
+    if (!created.ok) throw created.error;
+    const bannerId = created.banner?.id;
+    if (!bannerId) {
+      throw new Error(
+        t(
+          "Backend haikurudisha banner id. Jaribu tena.",
+          "Backend did not return a banner id. Try again."
+        )
+      );
+    }
+    return { bannerId, banner: created.banner };
+  };
+
+  // ── Step 2a: initiate FimiPay ───────────────────────────────
+  const handlePaymentInitiate = async () => {
+    if (!selectedListing) return { ok: false, error: new Error("no listing") };
     setBusy(true);
     setError("");
     try {
-      // 1) Create the banner (PENDING) — backend requires just { listing }
-      const created = await createBannerAdAsync(selectedListing.id);
-      if (!created.ok) throw created.error;
-
-      const bannerId = created.banner?.id;
-      if (!bannerId) {
-        throw new Error(
-          t(
-            "Backend haikurudisha banner id. Jaribu tena.",
-            "Backend did not return a banner id. Try again."
-          )
-        );
-      }
-
-      // 2) Pay for it — activates
-      const paid = await payBannerAdAsync(
-        bannerId,
-        reference || `BAN-${Date.now()}-${selectedListing.id}`
-      );
+      const { bannerId } = await createPendingBanner();
+      // Store for later activation
+      pendingBannerIdRef.current = bannerId;
+      const paid = await payBannerAdAsync(bannerId, "");
       if (!paid.ok) throw paid.error;
-
-      onAdvertised(selectedListing.id, paid.banner || created.banner);
-      setDone({ listing: selectedListing, banner: paid.banner || created.banner });
+      const fimipay = paid?.fimipay || paid?.data?.fimipay || {};
+      return {
+        ok: true,
+        orderId: fimipay.order_id,
+        gatewayUrl: fimipay.payment_gateway_url || null,
+        simulated: !!fimipay.simulated,
+        environment: fimipay.environment || "live",
+      };
     } catch (err) {
       setError(
         err?.data?.detail ||
-          err?.data?.message ||
           err?.message ||
-          t("Imeshindwa kutangaza. Jaribu tena.", "Failed to advertise. Try again.")
+          t("Imeshindwa kuanzisha malipo.", "Failed to start payment.")
       );
+      return { ok: false, error: err };
     } finally {
       setBusy(false);
     }
   };
 
-  const handleUseCredit = async () => {
-    if (!canAdvertise || !user) return;
-    if (!hasEnoughCredit) return submitAd(null);
-    const consume = await consumeCreditAsync(user.id, "ads", adFee.price);
-    if (!consume.success) return submitAd(null);
-    return submitAd("credits");
+  // ── Step 2b: SUCCESS → mark done ────────────────────────────
+  const handlePaymentSuccess = () => {
+    if (!selectedListing) return;
+    onAdvertised(selectedListing.id, null);
+    setDone({ listing: selectedListing, banner: null });
+  };
+
+  // Credit-based ad purchase is not wired into the FimiPay flow yet.
+  // Users can still purchase with real payment via PaymentGateway.
+  const handleUseCredit = () => {
+    setError(
+      t(
+        "Malipo kwa credit yataungwa hivi karibuni. Tafadhali tumia malipo ya kawaida.",
+        "Credit-based payments will be wired shortly. Please use the normal payment flow."
+      )
+    );
   };
 
   if (done) {
@@ -255,18 +273,34 @@ export default function AdvertiseSasa({
           </p>
         </div>
 
-        <button
-          onClick={() => submitAd(null)}
-          disabled={!canAdvertise || busy}
-          style={{
-            background: canAdvertise && !busy ? COLORS.gold : COLORS.sandLine,
-            color: canAdvertise && !busy ? COLORS.night : "rgba(16,26,46,0.4)",
-          }}
-          className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
-        >
-          {busy ? <Loader2 size={15} className="animate-spin" /> : <Megaphone size={15} />}
-          {t("Tangaza Sasa", "Advertise Now")}
-        </button>
+        {stage === "select" && (
+          <button
+            onClick={() => setStage("paying")}
+            disabled={!canAdvertise || busy}
+            style={{
+              background: canAdvertise && !busy ? COLORS.gold : COLORS.sandLine,
+              color: canAdvertise && !busy ? COLORS.night : "rgba(16,26,46,0.4)",
+            }}
+            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
+          >
+            {busy ? <Loader2 size={15} className="animate-spin" /> : <Megaphone size={15} />}
+            {t("Tangaza Sasa", "Advertise Now")}
+          </button>
+        )}
+
+        {stage === "paying" && selectedListing && (
+          <PaymentGateway
+            amount={adFee.price}
+            title={adLabel || "Advertisement"}
+            description={t(
+              `Tangazo kwa "${selectedListing.title}"`,
+              `Advertisement for "${selectedListing.title}"`
+            )}
+            onInitiate={handlePaymentInitiate}
+            onSuccess={handlePaymentSuccess}
+            onCancel={() => setStage("select")}
+          />
+        )}
       </div>
     </div>
   );

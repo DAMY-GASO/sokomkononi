@@ -15,8 +15,7 @@ export const boostingApi = {
   mine: (params = {}) => api.get(`/boosting/my/${toQuery(params)}`),
   create: ({ listing, package: pkg }) =>
     api.post("/boosting/", { listing, package: pkg }),
-  pay: (id, payment_reference) =>
-    api.post(`/boosting/${id}/pay/`, { payment_reference }),
+  pay: (id) => api.post(`/boosting/${id}/pay/`, {}),
   activate: (id) => api.post(`/boosting/${id}/activate/`, {}),
   cancel: (id) => api.post(`/boosting/${id}/cancel/`, { confirm: true }),
 };

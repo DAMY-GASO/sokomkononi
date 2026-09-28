@@ -195,25 +195,51 @@ export default function BoostSasa({
     }
   };
 
-  // ── Step 2: submit payment reference (payment provider callback came in) ──
-  const handlePaymentSubmit = async ({ reference }) => {
+  // ── Step 2a: initiate FimiPay payment ─────────────────────
+  const handlePaymentInitiate = async () => {
     if (!pendingBoost) return { ok: false, error: new Error("no pending boost") };
     try {
-      const paid = await boostingApi.pay(pendingBoost.id, reference || "");
+      const res = await boostingApi.pay(pendingBoost.id);
+      const fimipay = res?.fimipay || res?.data?.fimipay || {};
+      return {
+        ok: true,
+        orderId: fimipay.order_id,
+        gatewayUrl: fimipay.payment_gateway_url || null,
+        simulated: !!fimipay.simulated,
+        environment: fimipay.environment || "live",
+      };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  };
+
+  // ── Step 2b: called by PaymentGateway when the status flips to SUCCESS ──
+  const handlePaymentSuccess = async () => {
+    if (!pendingBoost) return;
+    try {
       const activated = await boostingApi.activate(pendingBoost.id);
       setDone({
         listing: pendingBoost.listing,
         pkg: pendingBoost.package,
-        boost: activated || paid,
+        boost: activated,
       });
       setStage("done");
       onBoosted(pendingBoost.listing.id, {
         boostTier: pendingBoost.package.key,
-        boostExpiresAt: activated?.expires_at || paid?.expires_at,
+        boostExpiresAt: activated?.expires_at,
       });
-      return { ok: true, data: activated };
     } catch (err) {
-      return { ok: false, error: err };
+      console.warn("[BoostSasa] activate after payment failed:", err);
+      // FimiPay confirmed the payment — show success anyway
+      setDone({
+        listing: pendingBoost.listing,
+        pkg: pendingBoost.package,
+        boost: null,
+      });
+      setStage("done");
+      onBoosted(pendingBoost.listing.id, {
+        boostTier: pendingBoost.package.key,
+      });
     }
   };
 
@@ -378,8 +404,8 @@ export default function BoostSasa({
               `Boost kwa "${pendingBoost.listing.title}"`,
               `Boost for "${pendingBoost.listing.title}"`
             )}
-            requireReference
-            onSubmit={handlePaymentSubmit}
+            onInitiate={handlePaymentInitiate}
+            onSuccess={handlePaymentSuccess}
             onCancel={() => setStage("select")}
           />
         )}
