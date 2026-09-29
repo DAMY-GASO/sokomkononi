@@ -113,7 +113,26 @@ async function callApiOrFallback(apiCall) {
   }
 }
 
+const FALLBACK_DEAL_STATUS = (lang, key) => ({
+  label: key
+    ? String(key).replace(/_/g, " ")
+    : (lang === "sw" ? "Inaendelea" : "In Progress"),
+  bg: "rgba(47,109,79,0.12)",
+  fg: COLORS.green,
+});
+
 const getDealStatus = (lang) => ({
+  // Backend creates deals with OPEN / PENDING — map them explicitly
+  open: {
+    label: lang === "sw" ? "Wazi" : "Open",
+    bg: "rgba(47,109,79,0.12)",
+    fg: COLORS.green,
+  },
+  pending: {
+    label: lang === "sw" ? "Inasubiri" : "Pending",
+    bg: "rgba(232,163,61,0.16)",
+    fg: "#8A5A16",
+  },
   negotiating: {
     label: lang === "sw" ? "Inaendelea" : "Negotiating",
     bg: "rgba(47,109,79,0.12)",
@@ -719,7 +738,9 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
 function DealListItem({ deal, active, onSelect, lang }) {
   const category = getCategory(deal.category);
   const Icon = getCategoryIcon(category?.iconKey);
-  const status = getDealStatus(lang)[deal.status];
+  const status =
+    getDealStatus(lang)[deal.status] ||
+    FALLBACK_DEAL_STATUS(lang, deal.status);
   const lastMessage = deal.messages[deal.messages.length - 1];
 
   return (
@@ -753,7 +774,7 @@ function DealListItem({ deal, active, onSelect, lang }) {
           style={{ background: status?.bg || "#F5F3EC", color: status?.fg || "#101A2E" }}
           className="inline-block text-body-sm font-semibold px-2 py-0.5 rounded-full"
         >
-          {status.label}
+          {status?.label || deal.status || '—'}
         </span>
       </div>
     </button>
@@ -1052,7 +1073,9 @@ function DealDetail({
   const [reserveOpen, setReserveOpen] = useState(false);
   const category = getCategory(deal.category);
   const CategoryIcon = getCategoryIcon(category?.iconKey);
-  const status = getDealStatus(lang)[deal.status];
+  const status =
+    getDealStatus(lang)[deal.status] ||
+    FALLBACK_DEAL_STATUS(lang, deal.status);
   const counterpartyLabel =
     side === "seller"
       ? lang === "sw"
@@ -1120,7 +1143,7 @@ function DealDetail({
           style={{ background: status?.bg || "#F5F3EC", color: status?.fg || "#101A2E" }}
           className="text-body-sm font-semibold px-2.5 py-1 rounded-full shrink-0"
         >
-          {status.label}
+          {status?.label || deal.status || '—'}
         </span>
       </div>
 

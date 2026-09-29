@@ -29,6 +29,27 @@ function saveDeals(deals) {
 }
 const sameId = (a, b) => String(a) === String(b);
 
+// Backend statuses → frontend slugs. Anything unmapped falls through
+// lowercased so the display layer's fallback kicks in.
+const API_TO_FRONTEND_DEAL_STATUS = {
+  OPEN: "negotiating",
+  PENDING: "negotiating",
+  NEW: "negotiating",
+  NEGOTIATING: "negotiating",
+  OFFER_SENT: "offer_sent",
+  ACCEPTED: "accepted",
+  DECLINED: "declined",
+  REJECTED: "declined",
+  RESERVED: "reserved",
+  RESERVATION_PAID: "reserved",
+  AWAITING_FINAL_PAYMENT: "awaiting_final_payment",
+  PAYMENT_PROOF_SUBMITTED: "payment_proof_submitted",
+  COMPLETED: "completed",
+  DISPUTED: "disputed",
+  CANCELLED: "cancelled",
+  EXPIRED: "cancelled",
+};
+
 export function getDeals() {
   return readFromStorage();
 }
@@ -70,7 +91,10 @@ function normalizeDealFromApi(raw, currentUserId) {
     buyerName: buyer.name || raw.buyer_name || "",
     sellerId: seller.id ?? null,
     sellerName: seller.name || raw.seller_name || "",
-    status: (raw.status || "OPEN").toLowerCase(),
+    status: (() => {
+      const upper = String(raw.status || "OPEN").toUpperCase();
+      return API_TO_FRONTEND_DEAL_STATUS[upper] || upper.toLowerCase();
+    })(),
     agreedPrice: raw.agreed_price != null ? Number(raw.agreed_price) : null,
     agreedAt: raw.agreed_at,
 
