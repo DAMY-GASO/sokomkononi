@@ -10,6 +10,7 @@ import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 import { AVAILABLE_ICONS } from "../../../../../config/categoriesStore.js";
 import { categoriesApi } from "../../../../../api/categories.js";
+import { useToast } from "../../../../../components/Toast.jsx";
 
 export default function CategoryForm({
   initial = {},
@@ -20,6 +21,7 @@ export default function CategoryForm({
   error = "",
 }) {
   const { lang } = useLanguage();
+  const toast = useToast();
   const [form, setForm] = useState({
     key: initial.key || "",
     labelSw: initial.label?.sw || "",
@@ -44,11 +46,11 @@ export default function CategoryForm({
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      alert(t("Tafadhali chagua picha.", "Please choose an image."));
+      toast.error(t("Tafadhali chagua picha.", "Please choose an image."));
       return;
     }
     if (file.size > 1024 * 1024) {
-      alert(t("Picha ni kubwa sana (max 1MB).", "Image is too large (max 1MB)."));
+      toast.error(t("Picha ni kubwa sana (max 1MB).", "Image is too large (max 1MB)."));
       return;
     }
     const reader = new FileReader();
@@ -78,7 +80,7 @@ export default function CategoryForm({
         finalImageUrl = res?.image_url || res?.url || null;
       } catch (err) {
         console.warn("[CategoryForm] image upload failed:", err);
-        alert(
+        toast.error(
           t(
             "Imeshindwa kupakia picha. Jaribu tena.",
             "Failed to upload image. Try again."

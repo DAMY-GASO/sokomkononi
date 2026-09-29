@@ -472,3 +472,5 @@ export function useActiveTransactionsCount() {
   ];
   return useTransactions().filter((t) => ACTIVE.includes(t.status)).length;
 }
+
+export function useDealTransactions() { return useTransactions(); }

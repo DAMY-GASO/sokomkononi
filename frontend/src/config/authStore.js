@@ -377,15 +377,45 @@ export async function resetPasswordAsync({ resetToken, newPassword, confirmPassw
   } catch (err) { return { ok: false, error: err }; }
 }
 
+async function resizeImageFile(file, maxDim = 512, quality = 0.85) {
+  if (typeof document === "undefined") return file;
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Could not read image"));
+      el.src = url;
+    });
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", quality)
+    );
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], "avatar.jpg", { type: "image/jpeg" });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export async function updateAvatarAsync(file) {
   const user = getCurrentUser();
   if (!user) return { ok: false, error: new Error("Hakuna mtumiaji") };
   if (!file) return { ok: false, error: new Error("No file") };
   if (!file.type.startsWith("image/")) return { ok: false, error: new Error("Si picha") };
-  if (file.size > 1024 * 1024) return { ok: false, error: new Error("Picha ni kubwa mno (max 1MB)") };
   try {
+    const toUpload = await resizeImageFile(file);
+    if (toUpload.size > 2 * 1024 * 1024) {
+      return { ok: false, error: new Error("Picha ni kubwa mno — chagua nyingine (max 2MB)") };
+    }
     const fd = new FormData();
-    fd.append("avatar", file);
+    fd.append("avatar", toUpload);
     const { api } = await import("../api/client.js");
     await api.upload("/auth/profile/avatar/", fd);
     const me = await authApi.me();

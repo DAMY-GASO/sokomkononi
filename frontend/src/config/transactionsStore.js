@@ -148,3 +148,5 @@ export function useMyTransactionsAggregate() {
     .reduce((sum, t) => sum + (t.amount || 0), 0);
   return { revenue, spent, earned, totalCount: list.length };
 }
+
+export function useFeeTransactions() { return useTransactions(); }

@@ -2,6 +2,9 @@ import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
 import ScrollToHash from "./components/ScrollToHash.jsx";
+import { ToastProvider } from "./components/Toast.jsx";
+import { ConfirmProvider } from "./components/ConfirmDialog.jsx";
+import PaymentReturnRoute from "./components/PaymentReturnRoute.jsx";
 
 import { installUnauthorizedHandler } from "./config/authStore.js";
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
@@ -69,6 +72,8 @@ function App() {
 
   return (
     <LanguageProvider>
+      <ToastProvider>
+        <ConfirmProvider>
       <Router>
         <ScrollToHash />
         <Routes>
@@ -164,6 +169,8 @@ function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
+        </ConfirmProvider>
+      </ToastProvider>
     </LanguageProvider>
   );
 }

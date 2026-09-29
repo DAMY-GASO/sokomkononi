@@ -211,6 +211,21 @@ export default function PaymentGateway({
       setError("Payment handler missing.");
       return;
     }
+    // concurrent-tab lock — prevents double-charging from a second tab
+    try {
+      const lockKey = "sokomkononi_pending_payment_order";
+      const lockRaw = window.localStorage.getItem(lockKey);
+      if (lockRaw) {
+        const lock = JSON.parse(lockRaw);
+        const ageMs = Date.now() - (lock.startedAt || 0);
+        if (lock?.orderId && ageMs < 30 * 60 * 1000 && lock.amount === amount) {
+          setOrderId(lock.orderId);
+          setStage("polling");
+          runPolling(lock.orderId);
+          return;
+        }
+      }
+    } catch { /* noop */ }
     setStage("initiating");
     setError("");
 
@@ -243,6 +258,20 @@ export default function PaymentGateway({
 
     setOrderId(res.orderId || "");
     setSimulated(Boolean(res.simulated));
+    // Persist so a refresh or a return-from-hosted-page can resume.
+    try {
+      if (res.orderId) {
+        window.localStorage.setItem(
+          "sokomkononi_pending_payment_order",
+          JSON.stringify({
+            orderId: res.orderId,
+            startedAt: Date.now(),
+            amount,
+            title,
+          })
+        );
+      }
+    } catch { /* noop */ }
     // Persist so a refresh does not orphan the pending order.
     try {
       if (res.orderId) {
