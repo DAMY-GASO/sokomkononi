@@ -132,7 +132,7 @@ export default function AdvertiseSasa({
   };
 
   // ── Step 2a: initiate FimiPay ───────────────────────────────
-  const handlePaymentInitiate = async () => {
+  const handlePaymentInitiate = async ({ methodKey, phone } = {}) => {
     if (!selectedListing) return { ok: false, error: new Error("no listing") };
     setBusy(true);
     setError("");
