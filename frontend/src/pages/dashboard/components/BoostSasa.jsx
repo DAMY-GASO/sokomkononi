@@ -199,11 +199,7 @@ export default function BoostSasa({
   const handlePaymentInitiate = async ({ methodKey, methodLabel, phone } = {}) => {
     if (!pendingBoost) return { ok: false, error: new Error("no pending boost") };
     try {
-      const res = await boostingApi.pay(pendingBoost.id, undefined, {
-        method: methodKey,
-        method_label: methodLabel,
-        phone,
-      });
+      const res = await boostingApi.pay(pendingBoost.id, undefined, { payment_method: methodKey || "", phone: phone || "" });
       // The backend has two response shapes:
       //   1. Fresh create_order →  { message, fimipay: { order_id, payment_status, ... } }
       //   2. Reused existing order → raw status object at the top level:

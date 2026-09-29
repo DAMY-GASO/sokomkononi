@@ -291,9 +291,8 @@ export default function PostPropertyForm({
       const res = await api.post(
         `/listings/${createdListing.id}/fee/pay/`,
         {
-          ...(methodKey ? { method: methodKey } : {}),
-          ...(methodLabel ? { method_label: methodLabel } : {}),
-          ...(phone ? { phone } : {}),
+          payment_method: methodKey || "",
+          phone: phone || "",
         }
       );
       // The backend has two response shapes:

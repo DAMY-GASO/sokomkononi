@@ -280,9 +280,8 @@ function ListingCard({
                   const res = await api.post(
                     `/listings/${listing.id}/fee/pay/`,
                     {
-                      method: methodKey,
-                      method_label: methodLabel,
-                      phone,
+                      payment_method: methodKey || "",
+                      phone: phone || "",
                     }
                   );
                   const candidates = [

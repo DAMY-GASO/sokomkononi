@@ -148,9 +148,8 @@ export default function LeadingSasa({
       const paid = await api.post(
         `/leading-fees/purchases/${purchaseId}/pay/`,
         {
-          method: methodKey,
-          method_label: methodLabel,
-          phone,
+          payment_method: methodKey || "",
+          phone: phone || "",
         }
       );
       const fimipay = paid?.fimipay || paid?.data?.fimipay || {};
