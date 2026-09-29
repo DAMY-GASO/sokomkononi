@@ -1221,30 +1221,45 @@ function DealDetail({
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-t flex-wrap"
         >
-          <button
-            onClick={() => onRespond(deal.id, "accepted")}
-            style={{ background: COLORS.green, color: "white" }}
-            className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg"
-          >
-            <Check size={13} />{" "}
-            {lang === "sw"
-              ? `Kubali Ofa ya ${formatTZS(deal.currentOffer)}`
-              : `Accept Offer of ${formatTZS(deal.currentOffer)}`}
-          </button>
-          <button
-            onClick={() => onRespond(deal.id, "declined")}
-            style={{ borderColor: "rgba(193,80,46,0.35)", color: COLORS.rust }}
-            className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border"
-          >
-            <X size={13} /> {lang === "sw" ? "Kataa" : "Decline"}
-          </button>
+          {deal.currentOffer > 0 ? (
+            <>
+              <button
+                onClick={() => onRespond(deal.id, "accepted")}
+                style={{ background: COLORS.green, color: "white" }}
+                className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg"
+              >
+                <Check size={13} />{" "}
+                {lang === "sw"
+                  ? `Kubali Ofa ya ${formatTZS(deal.currentOffer)}`
+                  : `Accept Offer of ${formatTZS(deal.currentOffer)}`}
+              </button>
+              <button
+                onClick={() => onRespond(deal.id, "declined")}
+                style={{ borderColor: "rgba(193,80,46,0.35)", color: COLORS.rust }}
+                className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border"
+              >
+                <X size={13} /> {lang === "sw" ? "Kataa" : "Decline"}
+              </button>
+            </>
+          ) : (
+            <span
+              style={{ color: "var(--text-muted)" }}
+              className="text-body-sm italic flex-1"
+            >
+              {lang === "sw"
+                ? "Hakuna ofa bado — toa ofa yako ya kwanza hapa chini."
+                : "No offer yet — make the first offer below."}
+            </span>
+          )}
           <button
             onClick={() => setOfferOpen((v) => !v)}
             style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
             className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border ml-auto"
           >
             <HandCoins size={13} />{" "}
-            {lang === "sw" ? "Toa Ofa Nyingine" : "Make Another Offer"}
+            {deal.currentOffer > 0
+              ? (lang === "sw" ? "Toa Ofa Nyingine" : "Make Another Offer")
+              : (lang === "sw" ? "Toa Ofa" : "Make an Offer")}
             <ChevronDown
               size={12}
               style={{ transform: offerOpen ? "rotate(180deg)" : "none" }}

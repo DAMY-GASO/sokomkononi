@@ -1,10 +1,11 @@
 // ============================================================
 // dealsStore.js — Backend: /api/deals/
 // ============================================================
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { dealsApi } from "../api/deals.js";
 import { transactionsApi } from "../api/transactions.js";
 import { getTransactionByDealRoom } from "./transactionLifecycleStore.js";
+import { getListings, useListings } from "./listingsStore.js";
 
 const STORAGE_KEY = "sokomkononi_deals_v1";
 const UPDATE_EVENT = "sokomkononi:deals-updated";
@@ -66,6 +67,72 @@ export function getDealByListing(listingId) {
   return getDeals().find((d) => sameId(d.listingId, listingId)) || null;
 }
 
+
+// ── Price resolution ────────────────────────────────────────
+// The /deals/ endpoint does not always serialize listing.price,
+// agreed_price, or the latest offer. Try every field, then fall
+// back to the listings cache (already hydrated from /listings/).
+function resolveAskingPrice(raw, listing, listingId) {
+  const candidates = [
+    listing?.price,
+    raw?.listing?.price,
+    raw?.asking_price,
+    raw?.price,
+  ];
+  for (const c of candidates) {
+    const n = Number(c);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  const id = listing?.id ?? raw?.listing_id ?? raw?.listing ?? listingId;
+  if (id != null) {
+    try {
+      const cached = getListings().find((l) => String(l.id) === String(id));
+      const n = Number(cached?.price);
+      if (Number.isFinite(n) && n > 0) return n;
+    } catch { /* noop */ }
+  }
+  return 0;
+}
+
+function resolveCurrentOffer(raw, offers) {
+  // Latest offer wins
+  const arr = Array.isArray(offers) ? offers : (raw?.offers || []);
+  if (arr.length > 0) {
+    const sorted = [...arr].sort(
+      (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+    );
+    const n = Number(sorted[0]?.amount);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  // Then any explicitly agreed price
+  for (const c of [raw?.agreed_price, raw?.current_offer, raw?.offer_amount]) {
+    const n = Number(c);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  // Genuinely no offer yet — 0 is correct here.
+  return 0;
+}
+
+function resolveMeta(raw, listing, listingId) {
+  let category = listing?.category_name || listing?.category || raw?.category || null;
+  let location = listing?.location || raw?.location || "";
+  let listingTitle = listing?.title || raw?.listing_title || "";
+  if (!category || !location || !listingTitle) {
+    const id = listing?.id ?? raw?.listing_id ?? raw?.listing ?? listingId;
+    if (id != null) {
+      try {
+        const cached = getListings().find((l) => String(l.id) === String(id));
+        if (cached) {
+          category = category || cached.category || null;
+          location = location || cached.location || "";
+          listingTitle = listingTitle || cached.title || "";
+        }
+      } catch { /* noop */ }
+    }
+  }
+  return { category, location, listingTitle };
+}
+
 function normalizeDealFromApi(raw, currentUserId) {
   if (!raw) return null;
   const buyerId = raw.buyer?.id ?? raw.buyer_id ?? null;
@@ -81,11 +148,9 @@ function normalizeDealFromApi(raw, currentUserId) {
     dealRoomId: dealRoom.id ?? raw.deal_room ?? null,
     transactionId: raw.transaction?.id ?? raw.transaction ?? null,
     listingId: listing.id ?? raw.listing ?? null,
-    listingTitle: listing.title || raw.listing_title || "",
-    category: listing.category_name || null,
-    location: listing.location || "",
-    askingPrice: Number(listing.price) || 0,
-    currentOffer: Number(raw.agreed_price) || Number(listing.price) || 0,
+    ...resolveMeta(raw, listing, raw?.listing_id ?? raw?.listing),
+    askingPrice: resolveAskingPrice(raw, listing, raw?.listing_id ?? raw?.listing),
+    currentOffer: resolveCurrentOffer(raw, raw?.offers),
     counterpartyName: counterparty?.name || "",
     buyerId: buyer.id ?? buyerId,
     buyerName: buyer.name || raw.buyer_name || "",
@@ -418,6 +483,9 @@ export function checkReservationReminders() {
 
 export function useDeals(currentUserId) {
   const [deals, setDeals] = useState(() => getDeals());
+  // Reactive listings cache — triggers a re-render when listings hydrate.
+  const listings = useListings();
+
   useEffect(() => {
     hydrateDealsFromApi(currentUserId);
     const sync = () => setDeals(getDeals());
@@ -428,7 +496,26 @@ export function useDeals(currentUserId) {
       window.removeEventListener(UPDATE_EVENT, sync);
     };
   }, [currentUserId]);
-  return deals;
+
+  // Merge price/category/location from the listings cache when missing.
+  return useMemo(() => {
+    return deals.map((d) => {
+      const needsPrice = !d.askingPrice || d.askingPrice <= 0;
+      const needsMeta = !d.category || !d.location || !d.listingTitle;
+      if (!needsPrice && !needsMeta) return d;
+
+      const cached = listings.find((l) => String(l.id) === String(d.listingId));
+      if (!cached) return d;
+
+      return {
+        ...d,
+        askingPrice: needsPrice ? (Number(cached.price) || 0) : d.askingPrice,
+        category: d.category || cached.category || null,
+        location: d.location || cached.location || "",
+        listingTitle: d.listingTitle || cached.title || "",
+      };
+    });
+  }, [deals, listings]);
 }
 
 export function useDeal(id) {

@@ -1,21 +1,21 @@
 // ============================================================
-// MessagesPage.jsx
-// Mazungumzo ya wanunuzi na wauzaji.
-// Bilingual kamili + KILA KITU CENTERED (header, search).
+// MessagesPage.jsx — full-height 2-pane messaging UI
+//
+// Layout:
+//   ┌──────────────────────────────────────────────┐
+//   │ header: title + unread + search              │
+//   ├───────────────┬──────────────────────────────┤
+//   │ conversation  │  chat header                 │
+//   │ list          │  ──────────────────────────  │
+//   │ (scrollable)  │  messages (scrollable)       │
+//   │               │  ──────────────────────────  │
+//   │               │  composer                    │
+//   └───────────────┴──────────────────────────────┘
 // ============================================================
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
-  MessageSquare,
-  Search,
-  Send,
-  ArrowLeft,
-  Phone,
-  MoreVertical,
-  Check,
-  CheckCheck,
-  Loader2,
-  AlertCircle,
+  MessageSquare, Search, Send, ArrowLeft, Phone, MoreVertical,
+  Check, CheckCheck, Loader2, AlertCircle,
 } from "lucide-react";
 import { COLORS, timeAgo } from "./dashboard/components/shared";
 import {
@@ -26,21 +26,15 @@ import {
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../config/authStore.js";
 
-// ============================================================
-// HELPER — tafsiri fupi
-// ============================================================
 function t(lang, sw, en) {
   return lang === "sw" ? sw : en;
 }
 
-// ============================================================
-// HELPER — pata jina la mwenzake na avatar kutoka convo
-// ============================================================
 function getCounterparty(convo, currentUserId) {
   if (!convo?.participants || !currentUserId) {
     return { name: convo?.name || "—", avatar: convo?.avatar || "?" };
   }
-  const other = convo.participants.find((p) => p.id !== currentUserId);
+  const other = convo.participants.find((p) => String(p.id) !== String(currentUserId));
   if (!other) {
     return { name: convo.name || "—", avatar: convo.avatar || "?" };
   }
@@ -50,16 +44,43 @@ function getCounterparty(convo, currentUserId) {
   };
 }
 
-// ============================================================
-// ConversationListItem — kadi imeachwa kushoto (data nyingi)
-// ============================================================
-function ConversationListItem({
-  convo,
-  currentUserId,
-  active,
-  onSelect,
-  lang,
-}) {
+function dayLabel(dateStr, lang) {
+  const d = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const sameDay = (a, b) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  if (sameDay(d, today)) return lang === "sw" ? "Leo" : "Today";
+  if (sameDay(d, yesterday)) return lang === "sw" ? "Jana" : "Yesterday";
+  return d.toLocaleDateString(lang === "sw" ? "sw-TZ" : "en-US", {
+    day: "numeric",
+    month: "short",
+    year: d.getFullYear() === today.getFullYear() ? undefined : "numeric",
+  });
+}
+
+function groupMessages(messages, lang) {
+  const groups = [];
+  let currentDay = null;
+
+  for (const m of messages) {
+    const day = dayLabel(m.at, lang);
+    if (day !== currentDay) {
+      groups.push({ type: "day", label: day, key: `day-${m.id}-${day}` });
+      currentDay = day;
+    }
+    groups.push({ type: "msg", msg: m, key: `msg-${m.id}` });
+  }
+  return groups;
+}
+
+// ── Conversation list item ───────────────────────────────
+function ConversationListItem({ convo, currentUserId, active, onSelect, lang }) {
   const { name, avatar } = getCounterparty(convo, currentUserId);
   const lastMessage = convo.lastMessage || "";
   const unread = convo.unreadCount || 0;
@@ -67,11 +88,12 @@ function ConversationListItem({
   return (
     <button
       onClick={() => onSelect(convo.id)}
-      style={{
-        background: active ? "white" : "transparent",
-        borderColor: COLORS.sandLine,
-      }}
-      className="w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-colors"
+      className={`w-full flex items-start gap-3 p-3 rounded-xl text-left transition-colors ${
+        active
+          ? "bg-white border"
+          : "hover:bg-white/60 border border-transparent"
+      }`}
+      style={{ borderColor: active ? COLORS.sandLine : "transparent" }}
     >
       <div className="relative flex-shrink-0">
         <div
@@ -82,7 +104,7 @@ function ConversationListItem({
         </div>
         {convo.online && (
           <span
-            style={{ background: COLORS.green, borderColor: COLORS.sand }}
+            style={{ background: COLORS.green, borderColor: "white" }}
             className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
             aria-label={t(lang, "Yupo mtandaoni", "Online")}
           />
@@ -103,11 +125,14 @@ function ConversationListItem({
             {convo.lastAt ? timeAgo(convo.lastAt, lang) : ""}
           </span>
         </div>
+        <p className="text-xs text-secondary truncate mt-0.5">
+          {convo.listingTitle}
+        </p>
         <p
           style={{
-            color: unread ? "var(--text-primary)" : "var(--text-secondary)",
+            color: unread ? "var(--text-primary)" : "var(--text-muted)",
           }}
-          className={`text-xs truncate ${unread ? "font-medium" : ""}`}
+          className={`text-xs truncate mt-0.5 ${unread ? "font-medium" : ""}`}
         >
           {lastMessage}
         </p>
@@ -117,20 +142,32 @@ function ConversationListItem({
           style={{ background: COLORS.rust, color: "white" }}
           className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 self-center"
         >
-          {unread}
+          {unread > 99 ? "99+" : unread}
         </span>
       )}
     </button>
   );
 }
 
-// ============================================================
-// ChatView — messages bubbles zimeachwa (kushoto/kulia)
-// ============================================================
+// ── Chat view ────────────────────────────────────────────
 function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const { name, avatar } = getCounterparty(convo, currentUserId);
+  const scrollRef = useRef(null);
+  const endRef = useRef(null);
+
+  const grouped = useMemo(
+    () => groupMessages(convo.messages || [], lang),
+    [convo.messages, lang]
+  );
+
+  // Auto-scroll on new message
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+  }, [grouped.length]);
 
   const handleSend = async () => {
     const trimmed = text.trim();
@@ -141,10 +178,8 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
     setSending(false);
 
     if (res?.ok) {
-      setText(""); // Safisha tu kama imefanikiwa
+      setText("");
     } else {
-      // TODO: badilisha na toast/notify yako
-      console.warn("[ChatView] send failed:", res?.error);
       alert(
         res?.error?.message ||
           t(lang, "Imeshindwa kutuma ujumbe. Jaribu tena.", "Failed to send message. Try again.")
@@ -157,11 +192,11 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
       {/* Header */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
-        className="flex items-center gap-3 border-b p-3 sm:p-4"
+        className="flex items-center gap-3 border-b px-3 sm:px-4 py-3 shrink-0"
       >
         <button
           onClick={onBack}
-          className="md:hidden shrink-0"
+          className="md:hidden shrink-0 -ml-1 p-1 rounded-lg hover:bg-gray-100"
           aria-label={t(lang, "Rudi", "Back")}
         >
           <ArrowLeft size={18} color={COLORS.night} />
@@ -191,21 +226,20 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
             style={{
               color: convo.online ? COLORS.green : "var(--text-muted)",
             }}
-            className="text-xs"
+            className="text-[11px] truncate"
           >
-            {convo.online
-              ? t(lang, "Yupo mtandaoni", "Online")
-              : t(lang, "Hayupo mtandaoni", "Offline")}
+            {convo.listingTitle}
+            {convo.online ? ` · ${t(lang, "mtandaoni", "online")}` : ""}
           </p>
         </div>
         <button
-          className="p-2 text-muted hover:text-secondary rounded-lg hover:bg-gray-100 transition-colors"
+          className="p-2 text-muted hover:text-secondary rounded-lg hover:bg-gray-100 transition-colors shrink-0"
           aria-label={t(lang, "Piga simu", "Call")}
         >
           <Phone size={18} />
         </button>
         <button
-          className="p-2 text-muted hover:text-secondary rounded-lg hover:bg-gray-100 transition-colors"
+          className="p-2 text-muted hover:text-secondary rounded-lg hover:bg-gray-100 transition-colors shrink-0"
           aria-label={t(lang, "Zaidi", "More")}
         >
           <MoreVertical size={18} />
@@ -214,73 +248,93 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
 
       {/* Messages */}
       <div
+        ref={scrollRef}
         style={{ background: COLORS.sand }}
-        className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5"
+        className="flex-1 overflow-y-auto px-3 sm:px-4 py-4"
       >
-        {(convo.messages || []).length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
+        {grouped.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
             <p
               style={{ color: "var(--text-muted)" }}
-              className="text-sm text-center"
+              className="text-sm text-center max-w-xs"
             >
               {t(
                 lang,
-                "Hakuna ujumbe bado. Anza mazungumzo.",
-                "No messages yet. Start the conversation."
+                "Hakuna ujumbe bado. Anza mazungumzo hapa chini.",
+                "No messages yet. Start the conversation below."
               )}
             </p>
           </div>
         ) : (
-          convo.messages.map((m) => {
-            const isMe = String(m.senderId) === String(currentUserId);
-            const isPending = m.pending;
-            return (
-              <div
-                key={m.id}
-                className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  style={{
-                    background: isMe ? COLORS.night : "white",
-                    color: isMe ? COLORS.sand : "var(--text-primary)",
-                    borderColor: COLORS.sandLine,
-                    opacity: isPending ? 0.6 : 1,
-                  }}
-                  className="border rounded-2xl px-4 py-2.5 max-w-[75%]"
-                >
-                  <p className="text-sm whitespace-pre-wrap break-words">
-                    {m.text}
-                  </p>
-                  <div
-                    className="flex items-center gap-1 justify-end mt-1"
-                    style={{
-                      color: isMe
-                        ? "rgba(245,243,236,0.6)"
-                        : "var(--text-muted)",
-                    }}
-                  >
-                    <span className="text-[10px]">
-                      {isPending
-                        ? t(lang, "Inatuma...", "Sending...")
-                        : new Date(m.at).toLocaleTimeString(
-                            lang === "sw" ? "sw-TZ" : "en-US",
-                            { hour: "2-digit", minute: "2-digit" }
-                          )}
+          <div className="flex flex-col gap-1.5 max-w-3xl mx-auto">
+            {grouped.map((item) => {
+              if (item.type === "day") {
+                return (
+                  <div key={item.key} className="flex justify-center my-3">
+                    <span
+                      style={{
+                        background: "rgba(16,26,46,0.06)",
+                        color: "var(--text-secondary)",
+                      }}
+                      className="text-[10px] font-semibold px-3 py-1 rounded-full uppercase tracking-wide"
+                    >
+                      {item.label}
                     </span>
-                    {isMe && !isPending &&
-                      (m.read ? <CheckCheck size={12} /> : <Check size={12} />)}
+                  </div>
+                );
+              }
+              const m = item.msg;
+              const isMe = String(m.senderId) === String(currentUserId);
+              const isPending = m.pending;
+              return (
+                <div
+                  key={item.key}
+                  className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    style={{
+                      background: isMe ? COLORS.night : "white",
+                      color: isMe ? COLORS.sand : "var(--text-primary)",
+                      borderColor: COLORS.sandLine,
+                      opacity: isPending ? 0.6 : 1,
+                    }}
+                    className="border rounded-2xl px-3.5 py-2 max-w-[78%] sm:max-w-[70%]"
+                  >
+                    <p className="text-sm whitespace-pre-wrap break-words leading-snug">
+                      {m.text}
+                    </p>
+                    <div
+                      className="flex items-center gap-1 justify-end mt-1"
+                      style={{
+                        color: isMe
+                          ? "rgba(245,243,236,0.6)"
+                          : "var(--text-muted)",
+                      }}
+                    >
+                      <span className="text-[10px]">
+                        {isPending
+                          ? t(lang, "Inatuma...", "Sending...")
+                          : new Date(m.at).toLocaleTimeString(
+                              lang === "sw" ? "sw-TZ" : "en-US",
+                              { hour: "2-digit", minute: "2-digit" }
+                            )}
+                      </span>
+                      {isMe && !isPending &&
+                        (m.read ? <CheckCheck size={12} /> : <Check size={12} />)}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+            <div ref={endRef} />
+          </div>
         )}
       </div>
 
       {/* Composer */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
-        className="flex items-center gap-2 p-3 border-t"
+        className="flex items-center gap-2 p-2.5 sm:p-3 border-t shrink-0"
       >
         <input
           style={{
@@ -313,28 +367,46 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
   );
 }
 
+// ── Empty chat pane ─────────────────────────────────────
+function EmptyChat({ lang }) {
+  return (
+    <div className="flex-1 flex items-center justify-center px-6">
+      <div className="text-center">
+        <MessageSquare size={56} className="text-muted mx-auto mb-3" />
+        <p
+          style={{ color: "var(--text-primary)" }}
+          className="text-sm font-semibold"
+        >
+          {t(lang, "Chagua mazungumzo", "Select a conversation")}
+        </p>
+        <p
+          style={{ color: "var(--text-muted)" }}
+          className="text-xs mt-1 max-w-xs mx-auto"
+        >
+          {t(
+            lang,
+            "Chagua mazungumzo kwenye orodha kuanza kuwasiliana.",
+            "Pick a conversation from the list to start chatting."
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================
-// MessagesPage — MAIN
+// MAIN
 // ============================================================
 export default function MessagesPage({ initialConversationId = null }) {
   const { lang } = useLanguage();
-  // ⬇️ MABADILIKO: useAuth kutoka authStore
   const { user } = useAuth();
   const currentUserId = user?.id || null;
 
-  // ⬇️ BUG FIX: Pitisha currentUserId kama argument!
-  const {
-    conversations = [],
-    isLoading = false,
-    error = null,
-  } = useConversations(currentUserId) || {};
+  const { conversations = [], isLoading = false, error = null } =
+    useConversations(currentUserId) || {};
 
-  const [selectedId, setSelectedId] = useState(
-    initialConversationId || null
-  );
-  const [mobileShowChat, setMobileShowChat] = useState(
-    !!initialConversationId
-  );
+  const [selectedId, setSelectedId] = useState(initialConversationId || null);
+  const [mobileShowChat, setMobileShowChat] = useState(!!initialConversationId);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -350,13 +422,10 @@ export default function MessagesPage({ initialConversationId = null }) {
     }
   }, [initialConversationId]);
 
-  // ⬇️ MABADILIKO: markConversationReadAsync
   useEffect(() => {
     if (selectedId) {
       markConversationReadAsync(selectedId).then((res) => {
-        if (!res.ok) {
-          console.warn("[MessagesPage] markRead failed:", res.error);
-        }
+        if (!res.ok) console.warn("[MessagesPage] markRead failed:", res.error);
       });
     }
   }, [selectedId]);
@@ -377,7 +446,6 @@ export default function MessagesPage({ initialConversationId = null }) {
     setMobileShowChat(true);
   };
 
-  // ⬇️ MABADILIKO: async handler inarudisha { ok, error }
   const handleSend = async (id, text) => {
     if (!currentUserId) return { ok: false, error: new Error("No user") };
     return sendMessageAsync(id, text, currentUserId);
@@ -385,43 +453,33 @@ export default function MessagesPage({ initialConversationId = null }) {
 
   return (
     <div
-      style={{ background: COLORS.sand, height: "100%" }}
       className="w-full flex flex-col"
+      style={{
+        background: COLORS.sand,
+        height: "min(760px, calc(100vh - 120px))",
+        minHeight: 520,
+      }}
     >
-
-      {/* ============================================================ */}
-      {/* HEADER — CENTERED */}
-      {/* ============================================================ */}
-      <div className="p-4 sm:p-6 pb-2 text-center">
-        <div className="flex items-center justify-center gap-3 mb-1">
-          <h1
-            style={{ color: "var(--text-primary)" }}
-            className="text-2xl sm:text-3xl font-semibold"
-          >
-            {t(lang, "Ujumbe", "Messages")}
-          </h1>
-          {totalUnread > 0 && (
-            <span
-              style={{ background: COLORS.rust, color: "white" }}
-              className="text-xs font-bold px-2.5 py-1 rounded-full"
-            >
-              {totalUnread}
-            </span>
-          )}
-        </div>
-        <p
-          style={{ color: "var(--text-secondary)" }}
-          className="text-sm mb-4 max-w-xl mx-auto"
+      {/* ── Header bar ───────────────────────────────────── */}
+      <div
+        style={{ background: "white", borderColor: COLORS.sandLine }}
+        className="border-b px-3 sm:px-5 py-3 flex items-center gap-3 shrink-0"
+      >
+        <h1
+          style={{ color: "var(--text-primary)" }}
+          className="text-base sm:text-lg font-semibold shrink-0"
         >
-          {t(
-            lang,
-            "Mazungumzo yako na wanunuzi na wauzaji.",
-            "Your conversations with buyers and sellers."
-          )}
-        </p>
-
-        {/* Search — centered */}
-        <div className="relative max-w-md mx-auto">
+          {t(lang, "Ujumbe", "Messages")}
+        </h1>
+        {totalUnread > 0 && (
+          <span
+            style={{ background: COLORS.rust, color: "white" }}
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+          >
+            {totalUnread}
+          </span>
+        )}
+        <div className="relative flex-1 max-w-md ml-auto">
           <Search
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
@@ -430,54 +488,48 @@ export default function MessagesPage({ initialConversationId = null }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t(
-              lang,
-              "Tafuta mazungumzo...",
-              "Search conversations..."
-            )}
+            placeholder={t(lang, "Tafuta...", "Search...")}
             style={{
-              background: "white",
+              background: COLORS.sand,
               borderColor: COLORS.sandLine,
               color: "var(--text-primary)",
             }}
-            className="w-full rounded-xl border pl-10 pr-3 py-2.5 text-sm outline-none"
+            className="w-full rounded-lg border pl-10 pr-3 py-2 text-sm outline-none"
           />
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0" style={{ height: "520px" }}>
-        {/* List pane */}
+      {/* ── Two-pane body ────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0">
+        {/* List pane — full width on mobile until a chat is open */}
         <div
           style={{ borderColor: COLORS.sandLine }}
           className={`${
             mobileShowChat ? "hidden" : "flex"
-          } md:flex flex-col w-full md:w-80 shrink-0 border-r px-3 sm:px-4 pb-4 gap-2 overflow-y-auto`}
+          } md:flex flex-col w-full md:w-72 lg:w-80 shrink-0 border-r`}
         >
-          {/* Loading */}
-          {isLoading && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader2
-                size={28}
-                className="animate-spin mb-3"
-                color={COLORS.gold}
-              />
-              <p style={{ color: "var(--text-secondary)" }} className="text-sm">
-                {t(lang, "Inapakia mazungumzo...", "Loading conversations...")}
-              </p>
-            </div>
-          )}
+          <div className="flex-1 overflow-y-auto p-2">
+            {isLoading && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 size={28} className="animate-spin mb-3" color={COLORS.gold} />
+                <p
+                  style={{ color: "var(--text-secondary)" }}
+                  className="text-sm"
+                >
+                  {t(lang, "Inapakia mazungumzo...", "Loading conversations...")}
+                </p>
+              </div>
+            )}
 
-          {/* Error */}
-          {!isLoading && error && (
-            <div
-              style={{
-                borderColor: COLORS.rust,
-                background: "rgba(193,80,46,0.06)",
-              }}
-              className="rounded-2xl border p-4 flex flex-col items-center text-center gap-2"
-            >
-              <AlertCircle size={18} color={COLORS.rust} />
-              <div>
+            {!isLoading && error && (
+              <div
+                style={{
+                  borderColor: COLORS.rust,
+                  background: "rgba(193,80,46,0.06)",
+                }}
+                className="rounded-xl border p-4 flex flex-col items-center text-center gap-2 m-2"
+              >
+                <AlertCircle size={18} color={COLORS.rust} />
                 <p
                   style={{ color: COLORS.rust }}
                   className="text-sm font-semibold"
@@ -486,55 +538,51 @@ export default function MessagesPage({ initialConversationId = null }) {
                 </p>
                 <p
                   style={{ color: "var(--text-secondary)" }}
-                  className="text-xs mt-0.5"
+                  className="text-xs"
                 >
                   {typeof error === "string"
                     ? error
                     : t(
                         lang,
-                        "Imeshindwa kupakia mazungumzo. Jaribu tena.",
-                        "Failed to load conversations. Try again."
+                        "Imeshindwa kupakia mazungumzo.",
+                        "Failed to load conversations."
                       )}
                 </p>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Empty */}
-          {!isLoading && !error && filteredConvos.length === 0 && (
-            <div
-              style={{ borderColor: COLORS.sandLine }}
-              className="rounded-2xl border-2 border-dashed p-8 text-center"
-            >
-              <MessageSquare size={40} className="mx-auto text-muted mb-2" />
-              <p style={{ color: "var(--text-secondary)" }} className="text-sm">
-                {searchQuery
-                  ? t(lang, "Hakuna matokeo", "No results")
-                  : t(lang, "Hakuna mazungumzo", "No conversations")}
-              </p>
-            </div>
-          )}
+            {!isLoading && !error && filteredConvos.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <MessageSquare size={40} className="text-muted mb-2" />
+                <p
+                  style={{ color: "var(--text-secondary)" }}
+                  className="text-sm"
+                >
+                  {searchQuery
+                    ? t(lang, "Hakuna matokeo", "No results")
+                    : t(lang, "Hakuna mazungumzo", "No conversations")}
+                </p>
+              </div>
+            )}
 
-          {/* List */}
-          {!isLoading &&
-            !error &&
-            filteredConvos.map((c) => (
-              <ConversationListItem
-                key={c.id}
-                convo={c}
-                currentUserId={currentUserId}
-                active={c.id === selectedId}
-                onSelect={handleSelect}
-                lang={lang}
-              />
-            ))}
+            {!isLoading &&
+              !error &&
+              filteredConvos.map((c) => (
+                <ConversationListItem
+                  key={c.id}
+                  convo={c}
+                  currentUserId={currentUserId}
+                  active={c.id === selectedId}
+                  onSelect={handleSelect}
+                  lang={lang}
+                />
+              ))}
+          </div>
         </div>
 
-        {/* Chat pane */}
+        {/* Chat pane — desktop always visible; mobile overlay */}
         <div
-          className={`${
-            mobileShowChat ? "flex" : "hidden"
-          } md:flex flex-1 min-w-0 flex-col`}
+          className={`hidden md:flex flex-1 min-w-0 flex-col`}
         >
           {selectedConvo ? (
             <ChatView
@@ -545,24 +593,26 @@ export default function MessagesPage({ initialConversationId = null }) {
               lang={lang}
             />
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <MessageSquare size={56} className="text-muted mx-auto mb-3" />
-                <p
-                  style={{ color: "var(--text-muted)" }}
-                  className="text-sm"
-                >
-                  {t(
-                    lang,
-                    "Chagua mazungumzo kuanza.",
-                    "Select a conversation to start."
-                  )}
-                </p>
-              </div>
-            </div>
+            <EmptyChat lang={lang} />
           )}
         </div>
       </div>
+
+      {/* Mobile overlay: full-screen chat when a conversation is open */}
+      {mobileShowChat && selectedConvo && (
+        <div
+          className="md:hidden fixed inset-0 z-[9999] flex flex-col"
+          style={{ background: "white" }}
+        >
+          <ChatView
+            convo={selectedConvo}
+            currentUserId={currentUserId}
+            onBack={() => setMobileShowChat(false)}
+            onSend={handleSend}
+            lang={lang}
+          />
+        </div>
+      )}
     </div>
   );
 }
