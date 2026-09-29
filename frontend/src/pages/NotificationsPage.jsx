@@ -31,7 +31,9 @@ import {
 import {
   useNotifications,
   getLocalizedField,
+  resolveNotificationRoute,
 } from "../config/notificationsStore.js";
+import { useDashboardSide } from "../config/dashboardSideStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 
 // ============================================================
@@ -79,7 +81,7 @@ const NOTIFICATION_TYPES = {
 // ============================================================
 // NOTIFICATION ITEM — kadi zimeachwa kushoto (data nyingi)
 // ============================================================
-function NotificationItem({ notif, onMarkRead, onRemove, lang }) {
+function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
   const config = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.system;
   const Icon = config.icon;
 
@@ -172,6 +174,7 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang }) {
 // ============================================================
 export default function NotificationsPage() {
   const { lang } = useLanguage();
+  const side = useDashboardSide();
   const { notifications, unreadCount, markRead, markAllRead, remove, clearAll } =
     useNotifications("user");
   const [filter, setFilter] = useState("all");
@@ -335,6 +338,7 @@ export default function NotificationsPage() {
                 onMarkRead={handleMarkRead}
                 onRemove={handleRemove}
                 lang={lang}
+                side={side}
               />
             ))}
           </div>

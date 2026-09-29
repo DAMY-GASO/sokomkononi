@@ -203,10 +203,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
         {/* LEFT PANEL */}
         <div className="dark-surface flex relative bg-[#101A2E] text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
-          <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
-            <span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span>
-            <span className="font-bold tracking-tight">SokoMkononi</span>
-          </Link>
+          <div className="relative z-10 w-full flex items-center justify-between gap-2"><button type="button" onClick={() => navigate("/")} aria-label={lang === "sw" ? "Rudi nyumbani" : "Back to home"} className="flex items-center gap-1.5 text-white/60 hover:text-white text-xs sm:text-sm font-medium transition-colors rounded-full px-2 sm:px-3 py-1.5 hover:bg-white/[0.08]"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg><span>{lang === "sw" ? "Nyumbani" : "Home"}</span></button><Link to="/" className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2"><span className="w-7 h-7 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-sm">S</span><span className="font-bold tracking-tight">SokoMkononi</span></Link><span className="w-16 sm:w-20" aria-hidden="true" /></div>
 
           <div className="relative z-10 max-w-sm mx-auto text-center py-8 md:py-0">
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
