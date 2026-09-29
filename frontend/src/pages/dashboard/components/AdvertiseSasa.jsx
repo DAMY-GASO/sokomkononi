@@ -9,6 +9,7 @@ import { useAdvertisementFeeConfig } from "../../../config/advertisementFeeStore
 import { useActiveBannerAds, bannerDaysRemaining } from "../../../config/bannerAdsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { api } from "../../../api/client.js";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
 import { createBannerAdAsync, payBannerAdAsync } from "../../../config/bannerAdsStore.js";
@@ -138,20 +139,34 @@ export default function AdvertiseSasa({
     setError("");
     try {
       const { bannerId } = await createPendingBanner();
-      // Store for later activation
       pendingBannerIdRef.current = bannerId;
-      const paid = await payBannerAdAsync(bannerId, {
+
+      // Call the /pay/ endpoint DIRECTLY so we receive the full backend
+      // response — including the `fimipay` object. Going through
+      // payBannerAdAsync() strips the FimiPay order data, which is why
+      // PaymentGateway previously saw an empty order_id.
+      const raw = await api.post(`/banners/${bannerId}/pay/`, {
         payment_method: methodKey || "",
         phone: phone || "",
       });
-      if (!paid.ok) throw paid.error;
-      const fimipay = paid?.fimipay || paid?.data?.fimipay || {};
+
+      const candidates = [
+        raw?.fimipay,
+        raw?.data?.fimipay,
+        raw?.data,
+        raw,
+      ].filter(Boolean);
+      const payload =
+        candidates.find((c) => c && (c.order_id || c.payment_status)) || {};
+
       return {
         ok: true,
-        orderId: fimipay.order_id,
-        gatewayUrl: fimipay.payment_gateway_url || null,
-        simulated: !!fimipay.simulated,
-        environment: fimipay.environment || "live",
+        orderId: payload.order_id || null,
+        paymentStatus: (payload.payment_status || "").toUpperCase() || null,
+        transid: payload.transid || null,
+        gatewayUrl: payload.payment_gateway_url || null,
+        simulated: !!payload.simulated,
+        environment: payload.environment || "live",
       };
     } catch (err) {
       setError(
