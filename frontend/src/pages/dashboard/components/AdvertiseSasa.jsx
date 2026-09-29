@@ -140,7 +140,10 @@ export default function AdvertiseSasa({
       const { bannerId } = await createPendingBanner();
       // Store for later activation
       pendingBannerIdRef.current = bannerId;
-      const paid = await payBannerAdAsync(bannerId, "");
+      const paid = await payBannerAdAsync(bannerId, {
+        payment_method: methodKey || "",
+        phone: phone || "",
+      });
       if (!paid.ok) throw paid.error;
       const fimipay = paid?.fimipay || paid?.data?.fimipay || {};
       return {

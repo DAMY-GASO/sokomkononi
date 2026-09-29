@@ -73,11 +73,13 @@ export async function createBannerAdAsync(listingId, payment_reference = "") {
 // Pay + activate a banner. Backend flow:
 //   POST /api/banners/{id}/pay/ { payment_reference } → activates
 // ============================================================
-export async function payBannerAdAsync(bannerId, payment_reference = "") {
+export async function payBannerAdAsync(bannerId, body = {}) {
   if (!bannerId) return { ok: false, error: new Error("bannerId required") };
+  const safeBody = body && typeof body === "object" ? body : {};
   try {
     const raw = await api.post(`/banners/${bannerId}/pay/`, {
-      payment_reference: payment_reference || `BAN-${Date.now()}`,
+      ...safeBody,
+      payment_reference: safeBody.payment_reference || `BAN-${Date.now()}`,
     });
     const updated = norm(raw) || null;
     if (updated) {

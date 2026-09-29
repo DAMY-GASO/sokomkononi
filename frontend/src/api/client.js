@@ -72,10 +72,25 @@ export function getRefreshToken() { return refreshToken; }
 export function clearTokens() { setTokens({ access: null, refresh: null }); }
 export function setUnauthorizedHandler(fn) { onUnauthorized = fn; }
 
+function extractFieldMessage(data) {
+  if (!data || typeof data !== "object") return "";
+  // DRF field errors: { "phone": ["..."], "payment_method": ["..."] }
+  for (const value of Object.values(data)) {
+    if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+    if (typeof value === "string") return value;
+  }
+  return "";
+}
+
 export class ApiError extends Error {
   constructor(status, data) {
+    const detail = data?.detail;
     const msg =
-      (data && (data.detail || data.message || data.error)) ||
+      (typeof detail === "string" && detail) ||
+      (typeof data?.message === "string" && data.message) ||
+      (typeof data?.error === "string" && data.error) ||
+      (typeof detail === "object" && JSON.stringify(detail)) ||
+      extractFieldMessage(data) ||
       (typeof data === "string" ? data : "") ||
       `API error ${status}`;
     super(msg);

@@ -299,9 +299,8 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
         purpose: "transactions_csv",
         amount: SUCCESS_FEE_TZS,
         currency: "TZS",
-        method: methodKey,
-        method_label: methodLabel,
-        phone,
+        payment_method: methodKey || "",
+        phone: phone || "",
       });
       const candidates = [
         feeRes?.fimipay,
