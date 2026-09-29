@@ -1,27 +1,20 @@
 // ============================================================
 // PaymentReturnRoute.jsx — return page after FimiPay hosted redirect
 //
-// Per spec: read sessionStorage.pending_order_id, resume polling,
-// show success/failure, then clear the pending order.
+// Reads sessionStorage.pending_order_id, resumes polling, shows
+// the outcome. Clears the pending order on terminal status.
 // ============================================================
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { CheckCircle, AlertTriangle, Loader2, ExternalLink } from "lucide-react";
 import { COLORS } from "../pages/dashboard/components/shared";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import { paymentsApi } from "../api/payments.js";
+import { paymentsApi, TERMINAL_FAILURE } from "../api/payments.js";
 
-const POLL_INTERVAL_MS = 4000;
-const MAX_ATTEMPTS = 30;
+const POLL_INTERVAL_MS  = 4000;
+const MAX_ATTEMPTS      = 30;
 const SESSION_ORDER_KEY = "pending_order_id";
-const SESSION_AMOUNT_KEY = "pending_order_amount";
-
-const TERMINAL_FAILURE = new Set([
-  "CANCELLED",
-  "USERCANCELLED",
-  "REJECTED",
-  "FAILED",
-]);
+const SESSION_AMOUNT_KEY= "pending_order_amount";
 
 export default function PaymentReturnRoute() {
   const { lang } = useLanguage();
@@ -42,19 +35,12 @@ export default function PaymentReturnRoute() {
       try {
         sessionStorage.removeItem(SESSION_ORDER_KEY);
         sessionStorage.removeItem(SESSION_AMOUNT_KEY);
-      } catch {
-        /* noop */
-      }
+      } catch { /* noop */ }
     };
 
     let orderId = null;
-    try {
-      orderId = sessionStorage.getItem(SESSION_ORDER_KEY);
-    } catch {
-      /* noop */
-    }
+    try { orderId = sessionStorage.getItem(SESSION_ORDER_KEY); } catch { /* noop */ }
 
-    // Fall back to query-string variants from the gateway
     if (!orderId) {
       orderId =
         params.get("order_id") ||
@@ -80,11 +66,7 @@ export default function PaymentReturnRoute() {
         setAttempt(i + 1);
 
         let data;
-        try {
-          data = await paymentsApi.orderStatus(orderId);
-        } catch {
-          // Network blip — retry on next tick
-        }
+        try { data = await paymentsApi.orderStatus(orderId); } catch { /* retry */ }
 
         const status = String(data?.payment_status || "").toUpperCase();
         if (data?.channel) setChannel(data.channel);
@@ -111,8 +93,6 @@ export default function PaymentReturnRoute() {
           }
           return;
         }
-
-        // PENDING / INPROGRESS → keep polling
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
       }
 
@@ -127,9 +107,7 @@ export default function PaymentReturnRoute() {
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -144,11 +122,7 @@ export default function PaymentReturnRoute() {
       >
         {stage === "polling" && (
           <>
-            <Loader2
-              size={32}
-              className="animate-spin mx-auto mb-4"
-              color={COLORS.gold}
-            />
+            <Loader2 size={32} className="animate-spin mx-auto mb-4" color={COLORS.gold} />
             <h1 className="text-lg font-bold text-primary mb-2">
               {t("Tunathibitisha malipo...", "Confirming your payment...")}
             </h1>
