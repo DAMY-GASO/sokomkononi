@@ -26,6 +26,48 @@ export default {
         rust: "#C1502E",
         sandline: "#E6E2D6",
       },
+      keyframes: {
+        float: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%":      { transform: "translateY(-20px)" },
+        },
+        "float-slow": {
+          "0%, 100%": { transform: "translateY(0px) translateX(0px)" },
+          "33%":      { transform: "translateY(-16px) translateX(12px)" },
+          "66%":      { transform: "translateY(10px) translateX(-12px)" },
+        },
+        aurora: {
+          "0%, 100%": { transform: "translate(0px, 0px) scale(1)" },
+          "25%":      { transform: "translate(30px, -20px) scale(1.08)" },
+          "50%":      { transform: "translate(-20px, 25px) scale(0.94)" },
+          "75%":      { transform: "translate(-30px, -15px) scale(1.04)" },
+        },
+        shimmer: {
+          "0%":   { backgroundPosition: "-200% 50%" },
+          "100%": { backgroundPosition: "200% 50%" },
+        },
+        "fade-in-up": {
+          "0%":   { opacity: "0", transform: "translateY(24px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "bounce-subtle": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%":      { transform: "translateY(6px)" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(232,163,61,0.4)" },
+          "50%":      { boxShadow: "0 0 0 12px rgba(232,163,61,0)" },
+        },
+      },
+      animation: {
+        "float":          "float 6s ease-in-out infinite",
+        "float-slow":     "float-slow 12s ease-in-out infinite",
+        "aurora":         "aurora 18s ease-in-out infinite",
+        "shimmer":        "shimmer 3s linear infinite",
+        "fade-in-up":     "fade-in-up 0.7s cubic-bezier(0.16,1,0.3,1) both",
+        "bounce-subtle":  "bounce-subtle 2.4s ease-in-out infinite",
+        "glow-pulse":     "glow-pulse 2.6s ease-in-out infinite",
+      },
       fontSize: {
         // Typography scale
         "body": ["1rem", { lineHeight: "1.55" }],       // 16px

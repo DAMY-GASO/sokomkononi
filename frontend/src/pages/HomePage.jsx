@@ -229,70 +229,228 @@ export default function HomePage() {
       <Navbar lang={lang} setLang={setLang} categories={categories} />
 
       {/* HERO */}
-      <section className="dark-surface bg-[#101A2E] text-white py-12 sm:py-16 px-4 overflow-hidden">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight">
-            {lang === "sw"
-              ? "Nunua na Uza Mali kwa Urahisi"
-              : "Buy and Sell Property Easily"}
+      <section className="relative dark-surface bg-[#0A1220] text-white py-14 sm:py-20 lg:py-24 px-4 overflow-hidden">
+        {/* ── Aurora background orbs ───────────────────── */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div
+            className="absolute -top-1/3 -left-1/4 w-[70%] h-[70%] rounded-full opacity-25 blur-[120px] animate-aurora"
+            style={{ background: "radial-gradient(circle, #E8A33D 0%, transparent 60%)" }}
+          />
+          <div
+            className="absolute -bottom-1/3 -right-1/4 w-[70%] h-[70%] rounded-full opacity-20 blur-[120px] animate-aurora"
+            style={{ background: "radial-gradient(circle, #2F6D4F 0%, transparent 60%)", animationDelay: "-6s" }}
+          />
+          <div
+            className="absolute top-1/4 left-1/3 w-[60%] h-[60%] rounded-full opacity-[0.14] blur-[120px] animate-aurora"
+            style={{ background: "radial-gradient(circle, #C1502E 0%, transparent 60%)", animationDelay: "-12s" }}
+          />
+        </div>
+
+        {/* ── Grid overlay with radial mask ──────────────── */}
+        <div
+          className="absolute inset-0 opacity-[0.05] pointer-events-none"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+            WebkitMaskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+          }}
+        />
+
+        {/* ── Floating dots ──────────────────────────────── */}
+        <span className="absolute top-[15%] left-[8%] w-2 h-2 rounded-full bg-[#E8A33D] opacity-70 animate-float hidden md:block" />
+        <span className="absolute top-[25%] right-[10%] w-1.5 h-1.5 rounded-full bg-[#2F6D4F] opacity-60 animate-float-slow hidden md:block" style={{ animationDelay: "-2s" }} />
+        <span className="absolute bottom-[22%] left-[14%] w-2.5 h-2.5 rounded-full bg-[#E8A33D] opacity-50 animate-float-slow hidden md:block" style={{ animationDelay: "-4s" }} />
+        <span className="absolute top-[62%] right-[7%] w-1.5 h-1.5 rounded-full bg-white opacity-40 animate-float hidden md:block" style={{ animationDelay: "-1s" }} />
+
+        {/* ── Floating value-prop cards ──────────────────── */}
+        <div className="absolute top-[18%] left-[3%] hidden xl:block animate-float" style={{ animationDelay: "-1s" }}>
+          <div className="backdrop-blur-xl bg-white/[0.05] border border-white/[0.08] rounded-2xl px-4 py-3 shadow-2xl">
+            <p className="text-[10px] text-white/50 uppercase tracking-wider font-semibold">Mali Zinazopatikana</p>
+            <p className="text-lg font-bold text-white mt-0.5">2,500+</p>
+          </div>
+        </div>
+        <div className="absolute top-[12%] right-[3%] hidden xl:block animate-float-slow" style={{ animationDelay: "-3s" }}>
+          <div className="backdrop-blur-xl bg-white/[0.05] border border-white/[0.08] rounded-2xl px-4 py-3 shadow-2xl">
+            <p className="text-[10px] text-white/50 uppercase tracking-wider font-semibold">Wauzaji Walioidhinishwa</p>
+            <p className="text-lg font-bold text-[#E8A33D] mt-0.5">1,200+</p>
+          </div>
+        </div>
+        <div className="absolute bottom-[16%] left-[5%] hidden xl:block animate-float-slow" style={{ animationDelay: "-5s" }}>
+          <div className="backdrop-blur-xl bg-white/[0.05] border border-white/[0.08] rounded-2xl px-4 py-3 shadow-2xl">
+            <p className="text-[10px] text-white/50 uppercase tracking-wider font-semibold">Malipo Salama</p>
+            <p className="text-lg font-bold text-[#2F6D4F] mt-0.5">100%</p>
+          </div>
+        </div>
+        <div className="absolute bottom-[12%] right-[5%] hidden xl:block animate-float" style={{ animationDelay: "-2s" }}>
+          <div className="backdrop-blur-xl bg-white/[0.05] border border-white/[0.08] rounded-2xl px-4 py-3 shadow-2xl">
+            <p className="text-[10px] text-white/50 uppercase tracking-wider font-semibold">Mikataba</p>
+            <p className="text-lg font-bold text-white mt-0.5">850+</p>
+          </div>
+        </div>
+
+        {/* ── Main content ──────────────────────────────── */}
+        <div className="relative max-w-4xl mx-auto text-center">
+          {/* Pulse-dot badge */}
+          <div className="inline-flex items-center gap-2 bg-white/[0.06] backdrop-blur-xl border border-white/[0.1] rounded-full px-4 py-1.5 mb-6 animate-fade-in-up">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E8A33D] opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E8A33D]" />
+            </span>
+            <span className="text-xs font-medium text-white/80 tracking-wide">
+              {lang === "sw" ? "Soko la Kidijitali la Mali" : "Digital Property Marketplace"}
+            </span>
+          </div>
+
+          {/* Headline with shimmer */}
+          <h1
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] tracking-tight animate-fade-in-up"
+            style={{ animationDelay: "0.1s" }}
+          >
+            {lang === "sw" ? (
+              <>
+                Nunua na Uza{" "}
+                <span className="bg-gradient-to-r from-[#E8A33D] via-[#F5C976] to-[#E8A33D] bg-clip-text text-transparent bg-[length:200%_auto] animate-shimmer">
+                  Mali
+                </span>{" "}
+                kwa Urahisi
+              </>
+            ) : (
+              <>
+                Buy and Sell{" "}
+                <span className="bg-gradient-to-r from-[#E8A33D] via-[#F5C976] to-[#E8A33D] bg-clip-text text-transparent bg-[length:200%_auto] animate-shimmer">
+                  Property
+                </span>{" "}
+                Easily
+              </>
+            )}
           </h1>
 
-          <div className="mt-6 max-w-3xl mx-auto min-h-[4rem] sm:min-h-[5rem]">
-            <p className="text-white/75 text-lg sm:text-xl md:text-2xl leading-relaxed font-regular">
+          {/* Subtitle */}
+          <div
+            className="mt-6 max-w-2xl mx-auto min-h-[3.5rem] sm:min-h-[4rem] animate-fade-in-up"
+            style={{ animationDelay: "0.2s" }}
+          >
+            <p className="text-white/70 text-base sm:text-lg md:text-xl leading-relaxed">
               <TypewriterText
                 text={
                   lang === "sw"
                     ? "SokoMkononi ni jukwaa linalowaunganisha wanunuzi na wauzaji sehemu moja, kwa kurahisisha kutafuta, kuuza na kununua kwa urahisi na kujiamini."
                     : "SokoMkononi is a safe platform that brings together buyers and sellers in one place, simplifying searches, buying and selling with confidence."
                 }
-                speed={30}
+                speed={25}
               />
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-stretch sm:items-center mt-10 max-w-md sm:max-w-none mx-auto">
+          {/* CTA buttons */}
+          <div
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center mt-10 max-w-md sm:max-w-none mx-auto animate-fade-in-up"
+            style={{ animationDelay: "0.3s" }}
+          >
             <button
               onClick={handleBuyNow}
-              className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-bold text-lg sm:text-xl px-8 sm:px-12 py-5 sm:py-6 rounded-2xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="group relative overflow-hidden bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-bold text-base sm:text-lg px-8 sm:px-10 py-4 sm:py-5 rounded-2xl transition-all duration-300 shadow-lg shadow-[#E8A33D]/20 hover:shadow-[0_0_45px_8px_rgba(232,163,61,0.4)] transform hover:-translate-y-1 active:translate-y-0"
             >
-              {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
+              </span>
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
             </button>
+
             <button
               onClick={handleSellNow}
-              className="bg-[#2F6D4F] hover:bg-[#245a41] text-white font-bold text-lg sm:text-xl px-8 sm:px-12 py-5 sm:py-6 rounded-2xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="group relative overflow-hidden bg-[#2F6D4F] hover:bg-[#245a41] text-white font-bold text-base sm:text-lg px-8 sm:px-10 py-4 sm:py-5 rounded-2xl transition-all duration-300 shadow-lg shadow-[#2F6D4F]/20 hover:shadow-[0_0_45px_8px_rgba(47,109,79,0.4)] transform hover:-translate-y-1 active:translate-y-0"
             >
-              {lang === "sw" ? "Uza Sasa" : "Sell Now"}
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                {lang === "sw" ? "Uza Sasa" : "Sell Now"}
+              </span>
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
             </button>
           </div>
 
-          <div className="flex flex-wrap gap-3 justify-center mt-10">
+          {/* Trust row */}
+          <div
+            className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-white/60 text-xs sm:text-sm animate-fade-in-up"
+            style={{ animationDelay: "0.4s" }}
+          >
+            <span className="flex items-center gap-1.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2F6D4F" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
+              {lang === "sw" ? "Malipo Salama" : "Secure Payments"}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              {lang === "sw" ? "Wauzaji Walioidhinishwa" : "Verified Sellers"}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              {lang === "sw" ? "Msaada wa Haraka" : "Fast Support"}
+            </span>
+          </div>
+
+          {/* App badges */}
+          <div
+            className="flex flex-wrap gap-3 justify-center mt-10 animate-fade-in-up"
+            style={{ animationDelay: "0.5s" }}
+          >
             <Link
               to="/waitlist"
-              className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors"
+              className="group flex items-center gap-3 border border-white/15 hover:border-white/35 rounded-xl px-4 py-2.5 hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5"
             >
+              <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0" aria-hidden="true">
+                <path d="M4.5 3.5c-.3.3-.5.7-.5 1.2v14.6c0 .5.2.9.5 1.2l.1.1L13 12.1v-.2L4.6 3.4l-.1.1z" fill="#00D2FF" />
+                <path d="M15.9 15L13 12.1v-.2l2.9-2.9 6.5 3.7c.8.5.8 1.3 0 1.8l-6.5 3.7z" fill="#FFCE00" />
+                <path d="M15.9 15L13 12l-8.4 8.5c.4.4 1 .4 1.7.1L15.9 15" fill="#FF3A44" />
+                <path d="M15.9 9.1L6.3 3.6c-.7-.4-1.3-.3-1.7.1L13 12l2.9-2.9z" fill="#00F076" />
+              </svg>
               <span className="text-xs text-left">
                 <span className="block text-white/50 text-[10px]">
                   {lang === "sw" ? "Pata kwenye" : "Get it on"}
                 </span>
-                <span className="block font-semibold text-white">
-                  Google Play
-                </span>
+                <span className="block font-semibold text-white text-sm">Google Play</span>
               </span>
             </Link>
             <Link
               to="/waitlist"
-              className="flex items-center gap-2 border border-white/20 rounded-md px-4 py-2 hover:bg-white/5 transition-colors"
+              className="group flex items-center gap-3 border border-white/15 hover:border-white/35 rounded-xl px-4 py-2.5 hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5"
             >
+              <svg viewBox="0 0 384 512" className="w-6 h-6 shrink-0 fill-white" aria-hidden="true">
+                <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.3c0 26.2 4.8 53.3 14.4 81.3 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.8zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+              </svg>
               <span className="text-xs text-left">
                 <span className="block text-white/50 text-[10px]">
                   {lang === "sw" ? "Pata kwenye" : "Get it on"}
                 </span>
-                <span className="block font-semibold text-white">
-                  App Store
-                </span>
+                <span className="block font-semibold text-white text-sm">App Store</span>
               </span>
             </Link>
           </div>
+        </div>
+
+        {/* ── Scroll hint ─────────────────────────────────── */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 hidden sm:flex flex-col items-center gap-1 text-white/35 animate-bounce-subtle pointer-events-none">
+          <span className="text-[10px] uppercase tracking-[0.2em]">
+            {lang === "sw" ? "Sogeza" : "Scroll"}
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M19 12l-7 7-7-7" />
+          </svg>
         </div>
       </section>
 
