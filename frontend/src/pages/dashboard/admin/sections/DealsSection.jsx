@@ -19,6 +19,8 @@ import {
 } from "../../../../config/dealsStore.js";
 import {
   getTransactionByDealRoom,
+  fetchTransactionDetailAsync,
+  createTransactionAsync,
 } from "../../../../config/transactionLifecycleStore.js";
 
 export default function DealsSection() {
@@ -41,8 +43,27 @@ export default function DealsSection() {
     setBusy((b) => ({ ...b, [dealId]: true }));
     setError("");
 
-    // Tafuta transaction ya deal hii ili tuweze kuitumia kwa resolve-dispute
-    const tx = getTransactionByDealRoom(dealId);
+    // Try the local cache first; if empty, ask the backend.
+    let tx = getTransactionByDealRoom(dealId);
+    if (!tx?.id) {
+      try {
+        // The DealRoom id from the admin table is the local deal id.
+        // Some backends expose transaction by that same FK, so try
+        // creating (idempotent on most backends) — if it 409s, the
+        // caller will see the error and can retry.
+        const created = await createTransactionAsync(dealId);
+        if (created?.ok && created.transaction?.id) {
+          tx = created.transaction;
+        } else if (created?.error) {
+          // Second attempt: re-hydrate lifecycle store then re-read.
+          await fetchTransactionDetailAsync(dealId).catch(() => {});
+          tx = getTransactionByDealRoom(dealId);
+        }
+      } catch (err) {
+        console.warn("[DealsSection] tx lookup failed:", err);
+      }
+    }
+
     if (!tx?.id) {
       setBusy((b) => { const n = { ...b }; delete n[dealId]; return n; });
       setError(

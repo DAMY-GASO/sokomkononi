@@ -114,8 +114,8 @@ export default function OverviewSection({ onNavigate }) {
         .reduce((s, t) => s + (t.amount || 0), 0),
     [transactions]
   );
-  const totalRevenue =
-    platformRevenue != null ? platformRevenue : localRevenue;
+  const revenueIsPlatformWide = platformRevenue != null;
+  const totalRevenue = revenueIsPlatformWide ? platformRevenue : localRevenue;
 
   const pendingPayments = useMemo(
     () => transactions.filter((t) => t.status === "pending").length,
@@ -232,6 +232,11 @@ export default function OverviewSection({ onNavigate }) {
       value: formatTZS(totalRevenue),
       icon: Wallet,
       color: COLORS.rust,
+      change: revenueIsPlatformWide
+        ? undefined
+        : (lang === "sw"
+          ? "⚠️ Kikokotoo cha jumla hakijapatikana — inaonyesha miamala yako pekee"
+          : "⚠️ Platform total unavailable — showing your transactions only"),
     },
     {
       id: "pendingPayments",

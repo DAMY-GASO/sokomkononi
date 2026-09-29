@@ -11,7 +11,9 @@ export default function RecentActivityPage({ side = "seller", onNavigate }) {
 
   const allEvents = useActivityEvents(side, onNavigate);
 
-  const filterTabs = useMemo(() => {
+  // NOTE: not memoized — `t` changes with the language, and the array
+  // is tiny. Memoizing here just adds a stale-closure risk.
+  const filterTabs = (() => {
     const base = [{ key: "all", label: t("Zote", "All") }];
     if (side === "seller") {
       base.push(
@@ -27,7 +29,7 @@ export default function RecentActivityPage({ side = "seller", onNavigate }) {
       );
     }
     return base;
-  }, [side, lang]);
+  })();
 
   const filtered = useMemo(() => {
     if (typeFilter === "all") return allEvents;

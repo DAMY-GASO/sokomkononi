@@ -4,7 +4,7 @@
 // Bilingual kamili + mobile-responsive.
 // ============================================================
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Package,
   ListChecks,
@@ -154,6 +154,7 @@ export default function BundlesPage() {
 
   const [selectedType, setSelectedType] = useState("all");
   const [payingBundle, setPayingBundle] = useState(null);
+  const lastPurchaseIdRef = useRef(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -174,10 +175,24 @@ export default function BundlesPage() {
 
   const handlePaymentSuccess = async () => {
     if (!user || !payingBundle) return;
-    try {
-      await hydrateUserCreditsFromApi(user.id);
-    } catch (err) {
-      console.warn("[BundlesPage] credit refresh failed:", err);
+    // FimiPay's webhook to the backend may land a few seconds after the
+    // poll reports SUCCESS. Retry up to 4 times with 2s gaps so the
+    // user actually sees their new balance.
+    const delays = [0, 2000, 4000, 6000];
+    for (const ms of delays) {
+      if (ms) await new Promise((r) => setTimeout(r, ms));
+      try {
+        const r = await hydrateUserCreditsFromApi(user.id);
+        if (r?.ok) {
+          const hasCredits =
+            r.credits && Object.keys(r.credits).some(
+              (k) => k !== "services" && (r.credits[k]?.remaining || 0) > 0
+            );
+          if (hasCredits) break;
+        }
+      } catch (err) {
+        console.warn("[BundlesPage] credit refresh retry failed:", err);
+      }
     }
     setPayingBundle(null);
   };

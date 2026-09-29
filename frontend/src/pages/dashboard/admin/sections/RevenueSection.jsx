@@ -226,15 +226,21 @@ export default function RevenueSection() {
   // ============================================================
   const orphanCount = listingFeeConfigs.filter((c) => c.orphan).length;
   const handleCleanupOrphans = async () => {
-    if (
-      !window.confirm(
-        t(
-          `Futa fee rules ${orphanCount} ambazo hazina category? Hatua hii haiwezi kurudishwa.`,
-          `Delete ${orphanCount} orphan fee rules? This cannot be undone.`
-        )
+    const orphans = listingFeeConfigs.filter((c) => c.orphan);
+    if (orphans.length === 0) return;
+    // Show the actual slugs before deleting so an admin can't nuke a
+    // rule that belongs to a category the frontend simply hasn't been
+    // taught about yet.
+    const preview = orphans
+      .map((c) => `  • ${c.backendKey || c.key} — ${c.name || "?"}`)
+      .join("\n");
+    const ok = window.confirm(
+      t(
+        `Futa fee rules ${orphanCount}:\n\n${preview}\n\nHatua hii haiwezi kurudishwa.`,
+        `Delete ${orphanCount} orphan fee rules:\n\n${preview}\n\nThis cannot be undone.`
       )
-    )
-      return;
+    );
+    if (!ok) return;
     setError("");
     const res = await cleanupOrphanFeeConfigsAsync();
     if (res.ok) {

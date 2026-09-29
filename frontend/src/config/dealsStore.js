@@ -118,14 +118,26 @@ function normalizeDealFromApi(raw, currentUserId) {
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
 
-    messages: (raw.offers || []).map((o) => ({
-      id: o.id,
-      sender: sameId(o.offered_by, currentUserId) ? "me" : "them",
-      text: o.message || "",
-      offerAmount: Number(o.amount) || null,
-      at: o.created_at,
-      status: o.status,
-    })),
+    messages: [
+      // Real chat messages (if the backend ever returns them).
+      ...((raw.messages || []).map((m) => ({
+        id: m.id,
+        sender: sameId(m.sender_id ?? m.sender, currentUserId) ? "me" : "them",
+        text: m.text || "",
+        offerAmount: null,
+        at: m.created_at,
+        status: m.status || null,
+      }))),
+      // Offers appear as their own bubbles.
+      ...((raw.offers || []).map((o) => ({
+        id: o.id,
+        sender: sameId(o.offered_by, currentUserId) ? "me" : "them",
+        text: o.message || "",
+        offerAmount: Number(o.amount) || null,
+        at: o.created_at,
+        status: o.status,
+      }))),
+    ].sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0)),
   };
 }
 
@@ -209,7 +221,7 @@ export async function sendOfferAsync(dealId, amount, message = "", respondedTo =
     const raw = await dealsApi.sendOffer(dealId, {
       amount,
       message,
-      responded_to: respondedTo,
+      responded_to_id: respondedTo,
     });
     const current = getDeals();
     const target = current.find((d) => sameId(d.id, dealId));

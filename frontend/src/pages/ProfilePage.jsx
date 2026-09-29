@@ -100,6 +100,7 @@ function TwoFactorModal({ mode, onClose, onEnable, onDisable, lang }) {
       return;
     }
     onEnable();
+    setStep("done"); // show backup codes screen
   };
 
   const handleDisable = () => {
@@ -1096,23 +1097,14 @@ function SecurityTab({ lang, user }) {
         );
       })()}
 
-      {/* MODALS */}
-      {show2FAModal && show2FAModal !== "done" && (
+      {/* MODALS — single render, modal drives its own step */}
+      {show2FAModal && (
         <TwoFactorModal
-          mode={show2FAModal}
+          mode={show2FAModal === "disable" ? "disable" : "enable"}
           lang={lang}
           onClose={() => setShow2FAModal(null)}
           onEnable={handleEnable2FA}
           onDisable={handleDisable2FA}
-        />
-      )}
-      {show2FAModal === "done" && (
-        <TwoFactorModal
-          mode="enable"
-          lang={lang}
-          onClose={() => setShow2FAModal(null)}
-          onEnable={() => {}}
-          onDisable={() => {}}
         />
       )}
 

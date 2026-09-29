@@ -53,11 +53,16 @@ export {
 // COLORS na FONTS haziandikwi tena hapa; zinatoka moja kwa moja
 // kwenye chanzo halisi ili zisitofautiane kamwe.
 // ============================================================
-export { COLORS, FONTS } from "../../../dashboard/components/shared.js";
+// Single import for everything we borrow from shared.js.
+import {
+  COLORS as _COLORS,
+  FONTS as _FONTS,
+  timeAgo as sharedTimeAgo,
+  formatTZS as sharedFormatTZS,
+} from "../../../dashboard/components/shared.js";
 
-// ✅ FIX #16: Import `timeAgo` na `formatTZS` kutoka shared.js
-// Badala ya ku-copy (duplication).
-import { timeAgo as sharedTimeAgo, formatTZS as sharedFormatTZS } from "../../../dashboard/components/shared.js";
+export const COLORS = _COLORS;
+export const FONTS = _FONTS;
 
 // ============================================================
 // NAV — sidebar navigation (sections zote 16)

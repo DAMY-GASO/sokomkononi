@@ -25,6 +25,7 @@ export default function ModerationSection() {
   const [statusFilter, setStatusFilter] = useState("in_review");
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
+  const [rejectModal, setRejectModal] = useState(null); // { listingId, reason }
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const formatTZS = (amount) =>
@@ -48,7 +49,7 @@ export default function ModerationSection() {
     Promise.all(tasks).then((results) => {
       if (cancelled) return;
 
-      const fetched = results.flatMap((r) => r.listings || []);
+      const fetched = results.flatMap((r) => r?.listings || []);
       if (fetched.length) {
         setHistory((prev) => {
           const next = { ...prev };
@@ -61,7 +62,7 @@ export default function ModerationSection() {
         });
       }
 
-      if (results.length && results.every((r) => !r.ok)) {
+      if (results.length && results.every((r) => !r?.ok)) {
         const err = results[0]?.error;
         console.warn("[ModerationSection] fetch failed:", err);
         setError(
@@ -75,7 +76,7 @@ export default function ModerationSection() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, [statusFilter, lang]);
 
   // ── Chuja + panga (mpya juu) ────────────────────────────────
   const filtered = useMemo(() => {
@@ -137,22 +138,27 @@ export default function ModerationSection() {
     }
   };
 
-  const handleReject = async (listingId) => {
+  const openRejectModal = (listingId) => {
     if (busy[listingId]) return;
-    const reason = window.prompt(
-      t("Sababu ya kukataa (inahitajika):", "Reason for rejection (required):")
-    );
-    if (reason === null) return;
-    if (!reason.trim()) {
+    setError("");
+    setRejectModal({ listingId, reason: "" });
+  };
+
+  const submitReject = async () => {
+    if (!rejectModal) return;
+    const reason = (rejectModal.reason || "").trim();
+    if (!reason) {
       setError(
         t("Sababu ya kukataa inahitajika.", "A rejection reason is required.")
       );
       return;
     }
+    const { listingId } = rejectModal;
     setBusy((b) => ({ ...b, [listingId]: "reject" }));
     setError("");
     const res = await rejectListingFromQueueAsync(listingId, reason);
     clearBusy(listingId);
+    setRejectModal(null);
     if (res.ok) {
       addToHistory(res.listing);
     } else {
@@ -186,7 +192,7 @@ export default function ModerationSection() {
             {t("Idhinisha", "Approve")}
           </button>
           <button
-            onClick={() => handleReject(listing.id)}
+            onClick={() => openRejectModal(listing.id)}
             disabled={isBusy}
             style={{ color: COLORS.rust }}
             className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -381,6 +387,52 @@ export default function ModerationSection() {
             )}
           </div>
         </>
+      )}
+
+      {/* Rejection reason modal — replaces window.prompt */}
+      {rejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5">
+            <h3 className="text-base font-semibold text-primary mb-2">
+              {t("Kataa Listing", "Reject Listing")}
+            </h3>
+            <p className="text-xs text-secondary mb-3">
+              {t(
+                "Sababu itatumwa kwa muuzaji. Inahitajika.",
+                "The reason is sent to the seller. Required."
+              )}
+            </p>
+            <textarea
+              value={rejectModal.reason}
+              onChange={(e) =>
+                setRejectModal((prev) => ({ ...prev, reason: e.target.value }))
+              }
+              rows={3}
+              autoFocus
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none focus:border-[#C1502E] mb-3"
+              placeholder={t(
+                "mfano: Picha hazitoshi, bei haijaeleweka",
+                "e.g. Insufficient photos, unclear price"
+              )}
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setRejectModal(null)}
+                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+              >
+                {t("Ghairi", "Cancel")}
+              </button>
+              <button
+                onClick={submitReject}
+                disabled={!rejectModal.reason.trim()}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                style={{ background: COLORS.rust }}
+              >
+                {t("Kataa", "Reject")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

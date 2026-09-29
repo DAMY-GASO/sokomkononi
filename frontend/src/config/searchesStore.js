@@ -67,7 +67,7 @@ export async function addSearchAsync(search) {
   } catch (err) { return { ok: false, error: err }; }
 }
 
-export function addSearch(search) { addSearchAsync(search); }
+export function addSearch(search) { return addSearchAsync(search); }
 
 export async function removeSearchAsync(id) {
   try {
@@ -77,7 +77,7 @@ export async function removeSearchAsync(id) {
   } catch (err) { return { ok: false, error: err }; }
 }
 
-export function removeSearch(id) { removeSearchAsync(id); }
+export function removeSearch(id) { return removeSearchAsync(id); }
 
 export function countMatches(search, listings) {
   if (!search || !Array.isArray(listings)) return 0;

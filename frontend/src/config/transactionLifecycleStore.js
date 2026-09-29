@@ -394,10 +394,21 @@ export async function resolveDisputeAsync(id, { resolution, note = "" }) {
   if (!resolution) {
     return { ok: false, error: new Error("resolution is required") };
   }
+  // Refund / cancel → CANCELLED. Continue → back to the negotiation
+  // stage (the backend will handle the exact status; we just make the
+  // local optimistic value sane).
+  const lower = String(resolution).toLowerCase();
+  const newStatus =
+    lower.includes("refund") || lower.includes("cancel")
+      ? TX_STATUS.CANCELLED
+      : lower.includes("continue")
+        ? TX_STATUS.INSPECTING
+        : TX_STATUS.COMPLETED;
+
   return mutateWithRollback({
     id,
     patch: {
-      status: TX_STATUS.COMPLETED,
+      status: newStatus,
       resolution,
       resolutionNote: note,
       resolvedAt: new Date().toISOString(),

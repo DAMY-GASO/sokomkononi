@@ -117,7 +117,11 @@ export function useActivityEvents(side = "seller", onNavigate) {
         title: side === "seller"
           ? t(`Deal Room mpya — "${d.listingTitle}"`, `New Deal Room — "${d.listingTitle}"`)
           : t(`Deal Room na muuzaji — "${d.listingTitle}"`, `Deal Room with seller — "${d.listingTitle}"`),
-        at: d.messages?.[0]?.at || d.updatedAt || new Date().toISOString(),
+        at:
+          d.updatedAt ||
+          d.messages?.[d.messages.length - 1]?.at ||
+          d.messages?.[0]?.at ||
+          new Date().toISOString(),
         onClick: () => onNavigate("deals"),
       });
     });
