@@ -18,6 +18,9 @@ RUN npm run build
 # ============================================================
 FROM nginx:alpine
 
+# Silence the nginx entrypoint banner + ipv6 script info logs
+ENV NGINX_ENTRYPOINT_QUIET_LOGS=1
+
 RUN rm /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
