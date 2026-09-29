@@ -108,6 +108,10 @@ export default {
           "0%":   { opacity: "0", transform: "scale(0.92)" },
           "100%": { opacity: "1", transform: "scale(1)" },
         },
+        blink: {
+          "0%, 49%":   { opacity: "1" },
+          "50%, 100%": { opacity: "0" },
+        },
         "drift-grow": {
           "0%":   { transform: "translate(0,0) scale(0.8)",       opacity: "0" },
           "15%":  { opacity: "1" },
@@ -148,6 +152,7 @@ export default {
         "glow-pulse":     "glow-pulse 2.6s ease-in-out infinite",
         "scale-in":       "scale-in 0.7s cubic-bezier(0.16,1,0.3,1) both",
         "drift-grow":     "drift-grow 26s ease-in-out infinite",
+        "blink":          "blink 1s step-end infinite",
         "drift-across":   "drift-across 34s linear infinite",
         "beam":           "beam 20s ease-in-out infinite",
         "glow-breathe":   "glow-breathe 9s ease-in-out infinite",

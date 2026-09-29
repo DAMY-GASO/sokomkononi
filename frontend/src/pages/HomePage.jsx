@@ -1,7 +1,7 @@
 // ============================================================
 // HomePage.jsx — public landing page
-// Ambient moving lights, aurora hero, delayed-faint stats.
-// Fully responsive with reduced-motion fallbacks.
+// Refined: faint ambient dots, elegant typewriter, premium CTAs,
+// editorial "Why" section. Fully responsive.
 // ============================================================
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -21,19 +21,22 @@ function formatTZS(amount) {
 }
 
 // ============================================================
-// TypewriterText
+// TypewriterText — elegant with blinking cursor
 // ============================================================
-function TypewriterText({ text, speed = 40 }) {
+function TypewriterText({ text, speed = 30 }) {
   const [displayed, setDisplayed] = useState("");
+  const [done, setDone] = useState(false);
   const indexRef = useRef(0);
 
   useEffect(() => {
     setDisplayed("");
+    setDone(false);
     indexRef.current = 0;
     if (!text) return;
     const interval = setInterval(() => {
       if (indexRef.current >= text.length) {
         clearInterval(interval);
+        setDone(true);
         return;
       }
       const ch = text[indexRef.current];
@@ -43,7 +46,17 @@ function TypewriterText({ text, speed = 40 }) {
     return () => clearInterval(interval);
   }, [text, speed]);
 
-  return <span>{displayed}</span>;
+  return (
+    <span className="inline">
+      {displayed}
+      <span
+        className={`inline-block w-[2px] h-[1em] align-middle ml-0.5 bg-[#E8A33D] ${
+          done ? "animate-blink opacity-60" : "opacity-100"
+        }`}
+        aria-hidden="true"
+      />
+    </span>
+  );
 }
 
 // ============================================================
@@ -92,8 +105,7 @@ function Reveal({ children, delay = 0, direction = "up", className = "" }) {
 }
 
 // ============================================================
-// AmbientBackground — fixed layer of moving light particles
-// sits behind the entire page (z-index below content)
+// AmbientBackground — extremely subtle moving lights
 // ============================================================
 function AmbientBackground() {
   return (
@@ -102,72 +114,69 @@ function AmbientBackground() {
       className="fixed inset-0 pointer-events-none overflow-hidden"
       style={{ zIndex: 0 }}
     >
-      {/* Slow diagonal beams — very low opacity */}
+      {/* Very faint diagonal beams */}
       <div
-        className="absolute top-0 h-px w-[45%] bg-gradient-to-r from-transparent via-[#E8A33D] to-transparent animate-beam"
-        style={{ opacity: 0.35 }}
+        className="absolute top-[8%] h-px w-[30%] bg-gradient-to-r from-transparent via-[#E8A33D] to-transparent animate-beam"
+        style={{ opacity: 0.12 }}
       />
       <div
-        className="absolute top-[28%] h-px w-[35%] bg-gradient-to-r from-transparent via-[#2F6D4F] to-transparent animate-beam"
-        style={{ animationDelay: "-7s", opacity: 0.3 }}
+        className="absolute top-[38%] h-px w-[25%] bg-gradient-to-r from-transparent via-[#2F6D4F] to-transparent animate-beam"
+        style={{ animationDelay: "-8s", opacity: 0.1 }}
       />
       <div
-        className="absolute top-[62%] h-px w-[50%] bg-gradient-to-r from-transparent via-[#E8A33D] to-transparent animate-beam"
-        style={{ animationDelay: "-13s", opacity: 0.25 }}
-      />
-      <div
-        className="absolute bottom-[18%] h-px w-[40%] bg-gradient-to-r from-transparent via-[#2F6D4F] to-transparent animate-beam"
-        style={{ animationDelay: "-3s", opacity: 0.3 }}
+        className="absolute top-[72%] h-px w-[35%] bg-gradient-to-r from-transparent via-[#E8A33D] to-transparent animate-beam"
+        style={{ animationDelay: "-15s", opacity: 0.09 }}
       />
 
-      {/* Drifting dots — different sizes & speeds, fading in/out */}
+      {/* Barely-there drifting dots */}
       <span
-        className="absolute top-[12%] w-2 h-2 rounded-full bg-[#E8A33D] animate-drift-across"
-        style={{ boxShadow: "0 0 12px 2px rgba(232,163,61,0.5)", animationDuration: "38s" }}
+        className="absolute top-[14%] w-1 h-1 rounded-full bg-[#E8A33D] animate-drift-across"
+        style={{ opacity: 0.22, animationDuration: "55s" }}
       />
       <span
-        className="absolute top-[42%] w-1.5 h-1.5 rounded-full bg-[#2F6D4F] animate-drift-across"
-        style={{ boxShadow: "0 0 10px 2px rgba(47,109,79,0.45)", animationDuration: "46s", animationDelay: "-12s" }}
+        className="absolute top-[48%] w-[3px] h-[3px] rounded-full bg-[#2F6D4F] animate-drift-across"
+        style={{ opacity: 0.18, animationDuration: "68s", animationDelay: "-20s" }}
       />
       <span
-        className="absolute top-[68%] w-2.5 h-2.5 rounded-full bg-[#E8A33D] animate-drift-across"
-        style={{ boxShadow: "0 0 14px 3px rgba(232,163,61,0.4)", animationDuration: "52s", animationDelay: "-24s" }}
-      />
-      <span
-        className="absolute top-[84%] w-1.5 h-1.5 rounded-full bg-white animate-drift-across"
-        style={{ boxShadow: "0 0 10px 2px rgba(255,255,255,0.4)", animationDuration: "44s", animationDelay: "-6s" }}
+        className="absolute top-[76%] w-1 h-1 rounded-full bg-[#E8A33D] animate-drift-across"
+        style={{ opacity: 0.2, animationDuration: "62s", animationDelay: "-38s" }}
       />
 
-      {/* Ambient breathing glows — very faint */}
+      {/* Very soft breathing glows */}
       <div
         className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full animate-glow-breathe"
-        style={{ background: "radial-gradient(circle, rgba(232,163,61,0.08) 0%, transparent 70%)" }}
+        style={{ background: "radial-gradient(circle, rgba(232,163,61,0.04) 0%, transparent 70%)" }}
       />
       <div
         className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full animate-glow-breathe"
-        style={{ background: "radial-gradient(circle, rgba(47,109,79,0.08) 0%, transparent 70%)", animationDelay: "-4s" }}
+        style={{ background: "radial-gradient(circle, rgba(47,109,79,0.04) 0%, transparent 70%)", animationDelay: "-4s" }}
       />
     </div>
   );
 }
 
 // ============================================================
-// HeroStatCard — faint, appears after delay
+// HeroStatCard — barely visible, appears after a long delay
 // ============================================================
-function HeroStatCard({ label, value, accent = "white", delay = 0 }) {
+function HeroStatCard({ label, value, accent = "rgba(255,255,255,0.7)", delay = 0 }) {
   return (
     <div
-      className="backdrop-blur-xl bg-white/[0.03] border border-white/[0.06] rounded-2xl px-4 py-3 shadow-2xl animate-fade-in-soft-delayed transition-opacity duration-700 hover:!opacity-100"
+      className="backdrop-blur-md rounded-2xl px-3.5 py-2.5 animate-fade-in-soft-delayed"
       style={{
-        animationDelay: `${4 + delay}s`,
+        animationDelay: `${6 + delay}s`,
         opacity: 0,
+        background: "rgba(255,255,255,0.012)",
+        border: "1px solid rgba(255,255,255,0.035)",
       }}
     >
-      <p className="text-[10px] text-white/40 uppercase tracking-wider font-semibold">
+      <p
+        className="text-[9px] uppercase tracking-[0.15em] font-medium"
+        style={{ color: "rgba(255,255,255,0.18)" }}
+      >
         {label}
       </p>
       <p
-        className="text-base lg:text-lg font-bold mt-0.5"
+        className="text-sm lg:text-base font-semibold mt-0.5"
         style={{ color: accent }}
       >
         {value}
@@ -308,6 +317,47 @@ export default function HomePage() {
     },
   ];
 
+  const whyFeatures = [
+    {
+      title: lang === "sw" ? "Jukwaa la Kisasa" : "A Modern Platform",
+      desc: lang === "sw"
+        ? "Linalowaunganisha wanunuzi na wauzaji kwa urahisi, uwazi na kuaminiana."
+        : "Connecting buyers and sellers with ease, transparency and trust.",
+      accent: "#E8A33D",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5Z" />
+        </svg>
+      ),
+    },
+    {
+      title: lang === "sw" ? "Upatikanaji Rahisi" : "Easy Access",
+      desc: lang === "sw"
+        ? "Tafuta mali popote Tanzania — Web, iOS na Android."
+        : "Find properties anywhere in Tanzania — Web, iOS and Android.",
+      accent: "#2F6D4F",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2F6D4F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      ),
+    },
+    {
+      title: lang === "sw" ? "Salama na Inaaminika" : "Safe & Trusted",
+      desc: lang === "sw"
+        ? "Watumiaji wanathibitishwa kabla ya kufanya muamala wowote."
+        : "Users are verified before any transaction takes place.",
+      accent: "#C1502E",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C1502E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" />
+          <path d="M9 12l2 2 4-4" />
+        </svg>
+      ),
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-white relative">
       <AmbientBackground />
@@ -318,26 +368,22 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════ */}
         {/* HERO                                                */}
         {/* ═══════════════════════════════════════════════════ */}
-        <section className="relative dark-surface bg-[#0A1220] text-white px-4 py-12 sm:py-16 lg:py-20 overflow-hidden min-h-[92svh] sm:min-h-[88svh] flex items-center">
+        <section className="relative dark-surface bg-[#0A1220] text-white px-4 py-14 sm:py-20 lg:py-24 overflow-hidden min-h-[92svh] sm:min-h-[88svh] flex items-center">
           {/* Aurora orbs */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div
-              className="absolute -top-1/3 -left-1/4 w-[70%] h-[70%] rounded-full opacity-25 blur-[120px] animate-aurora"
+              className="absolute -top-1/3 -left-1/4 w-[70%] h-[70%] rounded-full opacity-20 blur-[130px] animate-aurora"
               style={{ background: "radial-gradient(circle, #E8A33D 0%, transparent 60%)" }}
             />
             <div
-              className="absolute -bottom-1/3 -right-1/4 w-[70%] h-[70%] rounded-full opacity-20 blur-[120px] animate-aurora"
+              className="absolute -bottom-1/3 -right-1/4 w-[70%] h-[70%] rounded-full opacity-[0.15] blur-[130px] animate-aurora"
               style={{ background: "radial-gradient(circle, #2F6D4F 0%, transparent 60%)", animationDelay: "-6s" }}
-            />
-            <div
-              className="absolute top-1/4 left-1/3 w-[60%] h-[60%] rounded-full opacity-[0.12] blur-[120px] animate-aurora"
-              style={{ background: "radial-gradient(circle, #C1502E 0%, transparent 60%)", animationDelay: "-12s" }}
             />
           </div>
 
           {/* Grid overlay */}
           <div
-            className="absolute inset-0 opacity-[0.05] pointer-events-none"
+            className="absolute inset-0 opacity-[0.04] pointer-events-none"
             style={{
               backgroundImage:
                 "linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px)",
@@ -347,52 +393,56 @@ export default function HomePage() {
             }}
           />
 
-          {/* Local moving beams */}
+          {/* Faint local beams */}
           <div
-            className="absolute top-[10%] h-px w-[40%] bg-gradient-to-r from-transparent via-[#E8A33D] to-transparent animate-beam"
-            style={{ opacity: 0.5 }}
+            className="absolute top-[12%] h-px w-[30%] bg-gradient-to-r from-transparent via-[#E8A33D] to-transparent animate-beam"
+            style={{ opacity: 0.15 }}
           />
           <div
-            className="absolute bottom-[14%] h-px w-[35%] bg-gradient-to-r from-transparent via-[#2F6D4F] to-transparent animate-beam"
-            style={{ animationDelay: "-9s", opacity: 0.45 }}
+            className="absolute bottom-[16%] h-px w-[25%] bg-gradient-to-r from-transparent via-[#2F6D4F] to-transparent animate-beam"
+            style={{ animationDelay: "-10s", opacity: 0.12 }}
           />
 
-          {/* Floating dots */}
-          <span className="absolute top-[15%] left-[8%] w-2 h-2 rounded-full bg-[#E8A33D] opacity-70 animate-float hidden md:block" />
-          <span className="absolute top-[25%] right-[10%] w-1.5 h-1.5 rounded-full bg-[#2F6D4F] opacity-60 animate-float-slow hidden md:block" style={{ animationDelay: "-2s" }} />
-          <span className="absolute bottom-[22%] left-[14%] w-2.5 h-2.5 rounded-full bg-[#E8A33D] opacity-50 animate-float-slow hidden md:block" style={{ animationDelay: "-4s" }} />
-          <span className="absolute top-[62%] right-[7%] w-1.5 h-1.5 rounded-full bg-white opacity-40 animate-float hidden md:block" style={{ animationDelay: "-1s" }} />
+          {/* Barely-visible drifting dots (mobile + desktop) */}
+          <span
+            className="absolute top-[22%] left-[10%] w-1 h-1 rounded-full bg-[#E8A33D] animate-drift-across"
+            style={{ opacity: 0.2, animationDuration: "58s" }}
+          />
+          <span
+            className="absolute top-[68%] right-[12%] w-[3px] h-[3px] rounded-full bg-[#2F6D4F] animate-drift-across"
+            style={{ opacity: 0.18, animationDuration: "72s", animationDelay: "-22s" }}
+          />
 
-          {/* ── Corner stat cards — delayed + faint ─────── */}
-          <div className="absolute top-[14%] left-[3%] hidden xl:block animate-float" style={{ animationDelay: "-1s" }}>
-            <HeroStatCard label="Mali Zinazopatikana" value="2,500+" accent="white" delay={0} />
+          {/* ── Corner stat cards — barely visible, delay 6s ── */}
+          <div className="absolute top-[16%] left-[4%] hidden xl:block animate-float" style={{ animationDelay: "-2s" }}>
+            <HeroStatCard label="Mali Zinazopatikana" value="2,500+" delay={0} />
           </div>
-          <div className="absolute top-[10%] right-[3%] hidden xl:block animate-float-slow" style={{ animationDelay: "-3s" }}>
-            <HeroStatCard label="Wauzaji Walioidhinishwa" value="1,200+" accent="#E8A33D" delay={0.4} />
+          <div className="absolute top-[12%] right-[4%] hidden xl:block animate-float-slow" style={{ animationDelay: "-4s" }}>
+            <HeroStatCard label="Wauzaji Walioidhinishwa" value="1,200+" accent="rgba(232,163,61,0.55)" delay={0.4} />
           </div>
-          <div className="absolute bottom-[14%] left-[5%] hidden xl:block animate-float-slow" style={{ animationDelay: "-5s" }}>
-            <HeroStatCard label="Malipo Salama" value="100%" accent="#2F6D4F" delay={0.8} />
+          <div className="absolute bottom-[16%] left-[5%] hidden xl:block animate-float-slow" style={{ animationDelay: "-6s" }}>
+            <HeroStatCard label="Malipo Salama" value="100%" accent="rgba(47,109,79,0.55)" delay={0.8} />
           </div>
-          <div className="absolute bottom-[10%] right-[5%] hidden xl:block animate-float" style={{ animationDelay: "-2s" }}>
-            <HeroStatCard label="Mikataba" value="850+" accent="white" delay={1.2} />
+          <div className="absolute bottom-[12%] right-[5%] hidden xl:block animate-float" style={{ animationDelay: "-3s" }}>
+            <HeroStatCard label="Mikataba" value="850+" delay={1.2} />
           </div>
 
           {/* Content */}
-          <div className="relative w-full max-w-5xl mx-auto text-center">
+          <div className="relative w-full max-w-4xl mx-auto text-center">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/[0.06] backdrop-blur-xl border border-white/[0.1] rounded-full px-4 py-1.5 mb-6 animate-fade-in-up">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E8A33D] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E8A33D]" />
+            <div className="inline-flex items-center gap-2 bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-full px-4 py-1.5 mb-7 animate-fade-in-up">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E8A33D] opacity-60" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#E8A33D]" />
               </span>
-              <span className="text-[11px] sm:text-xs font-medium text-white/80 tracking-wide">
+              <span className="text-[11px] font-medium text-white/70 tracking-wider uppercase">
                 {lang === "sw" ? "Soko la Kidijitali la Mali" : "Digital Property Marketplace"}
               </span>
             </div>
 
             {/* Headline */}
             <h1
-              className="font-bold leading-[1.05] tracking-tight animate-fade-in-up text-[clamp(2rem,7vw,4.5rem)]"
+              className="font-bold leading-[1.05] tracking-[-0.02em] animate-fade-in-up text-[clamp(2rem,7vw,4.25rem)]"
               style={{ animationDelay: "0.1s" }}
             >
               {lang === "sw" ? (
@@ -414,79 +464,105 @@ export default function HomePage() {
               )}
             </h1>
 
-            {/* Subtitle */}
+            {/* ── Elegant typewriter subtitle ───────────────── */}
             <div
-              className="mt-5 sm:mt-6 max-w-2xl mx-auto min-h-[3.5rem] animate-fade-in-up"
+              className="mt-7 max-w-3xl mx-auto animate-fade-in-up"
               style={{ animationDelay: "0.2s" }}
             >
-              <p className="text-white/70 text-sm sm:text-base md:text-lg leading-relaxed px-2">
+              <p
+                className="text-white/75 leading-[1.7] px-2"
+                style={{
+                  fontSize: "clamp(0.95rem, 2.1vw, 1.2rem)",
+                  fontWeight: 300,
+                  letterSpacing: "-0.005em",
+                  minHeight: "clamp(3.5rem, 8vw, 5rem)",
+                  fontFamily:
+                    "'Inter', 'Playfair Display', system-ui, sans-serif",
+                }}
+              >
                 <TypewriterText
                   text={
                     lang === "sw"
                       ? "SokoMkononi ni jukwaa linalowaunganisha wanunuzi na wauzaji sehemu moja, kwa kurahisisha kutafuta, kuuza na kununua kwa urahisi na kujiamini."
                       : "SokoMkononi is a safe platform that brings together buyers and sellers in one place, simplifying searches, buying and selling with confidence."
                   }
-                  speed={25}
+                  speed={22}
                 />
               </p>
             </div>
 
-            {/* CTAs */}
+            {/* ── Premium CTA buttons ───────────────────────── */}
             <div
-              className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center mt-8 sm:mt-10 max-w-md sm:max-w-none mx-auto animate-fade-in-up px-2"
-              style={{ animationDelay: "0.3s" }}
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center mt-10 max-w-md sm:max-w-none mx-auto animate-fade-in-up px-2"
+              style={{ animationDelay: "0.35s" }}
             >
+              {/* Buy Now — primary gold */}
               <button
                 onClick={handleBuyNow}
-                className="group relative overflow-hidden bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-bold text-base sm:text-lg px-6 sm:px-10 py-4 sm:py-5 rounded-2xl transition-all duration-300 shadow-lg shadow-[#E8A33D]/20 hover:shadow-[0_0_45px_8px_rgba(232,163,61,0.4)] transform hover:-translate-y-1 active:translate-y-0"
+                className="group relative overflow-hidden inline-flex items-center gap-3 rounded-full
+                  bg-gradient-to-r from-[#E8A33D] to-[#F5C976]
+                  hover:from-[#D99728] hover:to-[#E8A33D]
+                  text-[#101A2E] font-semibold
+                  pl-2 pr-6 sm:pr-8 py-2 sm:py-2.5
+                  shadow-[0_8px_30px_-8px_rgba(232,163,61,0.55)]
+                  hover:shadow-[0_14px_45px_-8px_rgba(232,163,61,0.75)]
+                  transition-all duration-300
+                  hover:-translate-y-1 active:translate-y-0"
               >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <span className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#101A2E]/10 group-hover:bg-[#101A2E]/[0.16] flex items-center justify-center shrink-0 transition-colors">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8" />
                     <path d="m21 21-4.3-4.3" />
                   </svg>
+                </span>
+                <span className="text-base sm:text-lg whitespace-nowrap">
                   {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                 </span>
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
               </button>
 
+              {/* Sell Now — secondary green */}
               <button
                 onClick={handleSellNow}
-                className="group relative overflow-hidden bg-[#2F6D4F] hover:bg-[#245a41] text-white font-bold text-base sm:text-lg px-6 sm:px-10 py-4 sm:py-5 rounded-2xl transition-all duration-300 shadow-lg shadow-[#2F6D4F]/20 hover:shadow-[0_0_45px_8px_rgba(47,109,79,0.4)] transform hover:-translate-y-1 active:translate-y-0"
+                className="group relative overflow-hidden inline-flex items-center gap-3 rounded-full
+                  bg-gradient-to-r from-[#2F6D4F] to-[#3E8A66]
+                  hover:from-[#245a41] hover:to-[#2F6D4F]
+                  text-white font-semibold
+                  pl-2 pr-6 sm:pr-8 py-2 sm:py-2.5
+                  shadow-[0_8px_30px_-8px_rgba(47,109,79,0.55)]
+                  hover:shadow-[0_14px_45px_-8px_rgba(47,109,79,0.75)]
+                  transition-all duration-300
+                  hover:-translate-y-1 active:translate-y-0"
               >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <span className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/15 group-hover:bg-white/25 flex items-center justify-center shrink-0 transition-colors">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
+                </span>
+                <span className="text-base sm:text-lg whitespace-nowrap">
                   {lang === "sw" ? "Uza Sasa" : "Sell Now"}
                 </span>
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] bg-gradient-to-r from-transparent via-white/25 to-transparent" />
               </button>
             </div>
 
-            {/* Trust row */}
+            {/* ── Elegant trust row ─────────────────────────── */}
             <div
-              className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-x-5 sm:gap-x-6 gap-y-2 sm:gap-y-3 text-white/60 text-xs sm:text-sm animate-fade-in-up px-2"
-              style={{ animationDelay: "0.4s" }}
+              className="mt-8 flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-5 gap-y-2 text-[11px] sm:text-xs text-white/45 animate-fade-in-up"
+              style={{ animationDelay: "0.5s" }}
             >
               <span className="flex items-center gap-1.5">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2F6D4F" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" />
-                  <path d="M9 12l2 2 4-4" />
-                </svg>
+                <span className="w-1 h-1 rounded-full bg-[#2F6D4F]" />
                 {lang === "sw" ? "Malipo Salama" : "Secure Payments"}
               </span>
+              <span className="hidden sm:block w-px h-3 bg-white/10" aria-hidden="true" />
               <span className="flex items-center gap-1.5">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
+                <span className="w-1 h-1 rounded-full bg-[#E8A33D]" />
                 {lang === "sw" ? "Wauzaji Walioidhinishwa" : "Verified Sellers"}
               </span>
-              <span className="hidden sm:flex items-center gap-1.5">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
+              <span className="hidden sm:block w-px h-3 bg-white/10" aria-hidden="true" />
+              <span className="flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-white/40" />
                 {lang === "sw" ? "Msaada wa Haraka" : "Fast Support"}
               </span>
             </div>
@@ -494,11 +570,11 @@ export default function HomePage() {
             {/* App badges */}
             <div
               className="flex flex-wrap gap-2 sm:gap-3 justify-center mt-8 sm:mt-10 animate-fade-in-up"
-              style={{ animationDelay: "0.5s" }}
+              style={{ animationDelay: "0.6s" }}
             >
               <Link
                 to="/waitlist"
-                className="group flex items-center gap-2 sm:gap-3 border border-white/15 hover:border-white/35 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5"
+                className="group flex items-center gap-2 sm:gap-3 border border-white/10 hover:border-white/25 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 hover:bg-white/[0.04] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5"
               >
                 <svg viewBox="0 0 24 24" className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" aria-hidden="true">
                   <path d="M4.5 3.5c-.3.3-.5.7-.5 1.2v14.6c0 .5.2.9.5 1.2l.1.1L13 12.1v-.2L4.6 3.4l-.1.1z" fill="#00D2FF" />
@@ -507,7 +583,7 @@ export default function HomePage() {
                   <path d="M15.9 9.1L6.3 3.6c-.7-.4-1.3-.3-1.7.1L13 12l2.9-2.9z" fill="#00F076" />
                 </svg>
                 <span className="text-[11px] sm:text-xs text-left">
-                  <span className="block text-white/50 text-[9px] sm:text-[10px]">
+                  <span className="block text-white/40 text-[9px] sm:text-[10px]">
                     {lang === "sw" ? "Pata kwenye" : "Get it on"}
                   </span>
                   <span className="block font-semibold text-white text-xs sm:text-sm">Google Play</span>
@@ -515,13 +591,13 @@ export default function HomePage() {
               </Link>
               <Link
                 to="/waitlist"
-                className="group flex items-center gap-2 sm:gap-3 border border-white/15 hover:border-white/35 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 hover:bg-white/[0.06] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5"
+                className="group flex items-center gap-2 sm:gap-3 border border-white/10 hover:border-white/25 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 hover:bg-white/[0.04] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5"
               >
-                <svg viewBox="0 0 384 512" className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 fill-white" aria-hidden="true">
+                <svg viewBox="0 0 384 512" className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 fill-white/90" aria-hidden="true">
                   <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.3c0 26.2 4.8 53.3 14.4 81.3 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.8zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
                 </svg>
                 <span className="text-[11px] sm:text-xs text-left">
-                  <span className="block text-white/50 text-[9px] sm:text-[10px]">
+                  <span className="block text-white/40 text-[9px] sm:text-[10px]">
                     {lang === "sw" ? "Pata kwenye" : "Get it on"}
                   </span>
                   <span className="block font-semibold text-white text-xs sm:text-sm">App Store</span>
@@ -531,95 +607,74 @@ export default function HomePage() {
           </div>
 
           {/* Scroll hint */}
-          <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 hidden sm:flex flex-col items-center gap-1 text-white/35 animate-bounce-subtle pointer-events-none">
-            <span className="text-[10px] uppercase tracking-[0.2em]">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 hidden md:flex flex-col items-center gap-1 text-white/25 animate-bounce-subtle pointer-events-none">
+            <span className="text-[9px] uppercase tracking-[0.25em]">
               {lang === "sw" ? "Sogeza" : "Scroll"}
             </span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14M19 12l-7 7-7-7" />
             </svg>
           </div>
         </section>
 
         {/* ═══════════════════════════════════════════════════ */}
-        {/* WHY                                                 */}
+        {/* WHY — editorial two-column layout                   */}
         {/* ═══════════════════════════════════════════════════ */}
-        <section className="relative py-16 sm:py-20 px-4 max-w-6xl mx-auto">
-          <Reveal>
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E8A33D]/10 text-[#8A5A16] text-xs font-semibold mb-4">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#E8A33D]" />
-                {lang === "sw" ? "Kwa Nini SokoMkononi" : "Why SokoMkononi"}
-              </div>
-              <h2 className="text-[clamp(1.5rem,4vw,2.25rem)] font-bold text-primary">
-                {lang === "sw" ? "Kwa Nini SokoMkononi?" : "Why SokoMkononi?"}
-              </h2>
-              <p className="text-body-sm text-secondary mt-4 italic">
-                {lang === "sw"
-                  ? "SokoMkononi — Nunua na Uza kwa Kujiamini"
-                  : "SokoMkononi — Buy and Sell with Confidence"}
-              </p>
-            </div>
-          </Reveal>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 max-w-5xl mx-auto">
-            {[
-              {
-                title: lang === "sw" ? "Jukwaa la Kisasa" : "A Modern Platform",
-                desc: lang === "sw"
-                  ? "Jukwaa la kisasa linalowaunganisha wanunuzi na wauzaji wa mali Tanzania kwa urahisi, uwazi na kuaminiana."
-                  : "A modern platform connecting property buyers and sellers in Tanzania with ease, transparency and trust.",
-                icon: (
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5Z" />
-                  </svg>
-                ),
-                accent: "#E8A33D",
-              },
-              {
-                title: lang === "sw" ? "Upatikanaji Rahisi" : "Easy Access",
-                desc: lang === "sw"
-                  ? "Tafuta na pata mali unayohitaji popote Tanzania, kwa urahisi kupitia SokoMkononi Web Platform na Apps za iOS & Android."
-                  : "Find and get the property you need anywhere in Tanzania, easily through the SokoMkononi Web Platform and iOS & Android Apps.",
-                icon: (
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2F6D4F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.3-4.3" />
-                  </svg>
-                ),
-                accent: "#2F6D4F",
-              },
-              {
-                title: lang === "sw" ? "Salama na Inaaminika" : "Safe & Trusted",
-                desc: lang === "sw"
-                  ? "Tunajenga mazingira ya biashara yenye uwazi na uaminifu, huku watumiaji wakipewa nafasi ya kuthibitisha taarifa kabla ya kufanya muamala."
-                  : "We build a transparent and trustworthy trading environment, while giving users the opportunity to verify information before making a transaction.",
-                icon: (
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C1502E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" />
-                    <path d="M9 12l2 2 4-4" />
-                  </svg>
-                ),
-                accent: "#C1502E",
-              },
-            ].map((item, i) => (
-              <Reveal key={i} delay={i * 120}>
-                <div className="group relative h-full p-6 sm:p-7 rounded-2xl bg-white border border-gray-100 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/[0.06]">
-                  <div
-                    className="absolute inset-x-0 top-0 h-1 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ background: `linear-gradient(90deg, transparent, ${item.accent}, transparent)` }}
-                  />
-                  <div
-                    className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
-                    style={{ background: `${item.accent}12` }}
+        <section className="relative py-16 sm:py-24 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
+              {/* Left column — heading */}
+              <Reveal>
+                <div className="lg:sticky lg:top-24">
+                  <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+                    {lang === "sw" ? "Kwa Nini SokoMkononi" : "Why SokoMkononi"}
+                  </span>
+                  <h2 className="text-[clamp(1.75rem,4vw,2.5rem)] font-bold text-primary mt-4 leading-[1.15] tracking-[-0.015em]">
+                    {lang === "sw"
+                      ? "Jukwaa lililoundwa kwa ajili yako"
+                      : "A platform built for you"}
+                  </h2>
+                  <p className="text-secondary text-base sm:text-lg mt-5 leading-relaxed max-w-md">
+                    {lang === "sw"
+                      ? "Tunajenga mazingira salama, yenye uwazi na uaminifu kwa wanunuzi na wauzaji wa mali Tanzania."
+                      : "We build a safe, transparent and trustworthy environment for property buyers and sellers in Tanzania."}
+                  </p>
+                  <Link
+                    to="/kuhusu"
+                    className="inline-flex items-center gap-2 mt-7 text-[#E8A33D] font-semibold text-sm hover:gap-3 transition-all duration-300 group"
                   >
-                    {item.icon}
-                  </div>
-                  <h3 className="text-lg font-bold text-primary">{item.title}</h3>
-                  <p className="text-secondary text-sm mt-3 leading-relaxed">{item.desc}</p>
+                    {lang === "sw" ? "Jifunze zaidi" : "Learn more"}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg>
+                  </Link>
                 </div>
               </Reveal>
-            ))}
+
+              {/* Right column — stacked features */}
+              <div className="flex flex-col gap-4">
+                {whyFeatures.map((f, i) => (
+                  <Reveal key={i} delay={i * 120}>
+                    <div className="group flex items-start gap-4 sm:gap-5 p-5 sm:p-6 bg-white border border-gray-100 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:border-[#E8A33D]/25 hover:shadow-[0_20px_40px_-20px_rgba(0,0,0,0.1)]">
+                      <div
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105"
+                        style={{ background: `${f.accent}10` }}
+                      >
+                        {f.icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-primary text-base sm:text-[17px] leading-tight">
+                          {f.title}
+                        </h3>
+                        <p className="text-secondary text-sm mt-1.5 leading-relaxed">
+                          {f.desc}
+                        </p>
+                      </div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -628,20 +683,26 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════ */}
         <section id="matangazo" className="scroll-mt-16 py-14 px-4 max-w-7xl mx-auto">
           <Reveal>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 mb-7">
               <div>
-                <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary">
+                <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+                  {lang === "sw" ? "Trending" : "Trending"}
+                </span>
+                <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
                   {lang === "sw" ? "Mali Zinazotrendi" : "Trending Properties"}
                 </h2>
-                <p className="text-sm text-secondary mt-1">
+                <p className="text-sm text-secondary mt-1.5">
                   {lang === "sw" ? "Mali zinazoangaliwa zaidi sasa hivi" : "Most viewed listings right now"}
                 </p>
               </div>
               <Link
                 to="/mali-zote"
-                className="text-[#E8A33D] text-sm font-semibold hover:underline shrink-0"
+                className="group inline-flex items-center gap-1.5 text-[#E8A33D] text-sm font-semibold shrink-0 hover:gap-2.5 transition-all"
               >
-                {lang === "sw" ? "Tazama Zote →" : "View All →"}
+                {lang === "sw" ? "Tazama Zote" : "View All"}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
               </Link>
             </div>
           </Reveal>
@@ -712,62 +773,70 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════ */}
         {/* CATEGORIES                                          */}
         {/* ═══════════════════════════════════════════════════ */}
-        <section id="kategoria" className="scroll-mt-16 py-14 px-4 max-w-7xl mx-auto bg-[#FAF9F5] rounded-3xl my-8">
-          <Reveal>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
-              <div>
-                <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary">
-                  {lang === "sw" ? "Kategoria Maarufu" : "Popular Categories"}
-                </h2>
-                <p className="text-sm text-secondary mt-1">
-                  {lang === "sw" ? "Chagua aina ya mali unayotafuta" : "Pick the type of property you're looking for"}
-                </p>
+        <section id="kategoria" className="scroll-mt-16 py-14 px-4 max-w-7xl mx-auto">
+          <div className="bg-[#FAF9F5] rounded-3xl p-6 sm:p-10">
+            <Reveal>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 mb-7">
+                <div>
+                  <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+                    {lang === "sw" ? "Kategoria" : "Categories"}
+                  </span>
+                  <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
+                    {lang === "sw" ? "Kategoria Maarufu" : "Popular Categories"}
+                  </h2>
+                  <p className="text-sm text-secondary mt-1.5">
+                    {lang === "sw" ? "Chagua aina ya mali unayotafuta" : "Pick the type of property you're looking for"}
+                  </p>
+                </div>
+                <Link
+                  to="/kategoria"
+                  className="group inline-flex items-center gap-1.5 text-[#E8A33D] text-sm font-semibold shrink-0 hover:gap-2.5 transition-all"
+                >
+                  {lang === "sw" ? "Tazama Yote" : "View All"}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </Link>
               </div>
-              <Link
-                to="/kategoria"
-                className="text-[#E8A33D] text-sm font-semibold hover:underline shrink-0"
-              >
-                {lang === "sw" ? "Tazama Yote →" : "View All →"}
-              </Link>
+            </Reveal>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+              {categories.map((cat, i) => {
+                const Icon = getCategoryIcon(cat.iconKey);
+                const hasPhoto = Boolean(cat.imageUrl);
+                return (
+                  <Reveal key={cat.key} delay={Math.min(i * 60, 360)}>
+                    <Link
+                      to={`/kategoria/${cat.key}`}
+                      className="group block bg-white rounded-2xl overflow-hidden text-center border border-gray-100 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg hover:shadow-black/[0.06] hover:border-[#E8A33D]/30"
+                    >
+                      <div className="h-32 sm:h-36 bg-[#F5F3EC] flex items-center justify-center overflow-hidden relative">
+                        {hasPhoto ? (
+                          <img
+                            src={cat.imageUrl}
+                            alt={cat.label?.[lang] || cat.label?.sw}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        ) : (
+                          <Icon
+                            size={44}
+                            className="text-[#E8A33D] transition-transform duration-300 group-hover:scale-110"
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <div className="p-3">
+                        <h3 className="font-semibold text-primary text-sm">
+                          {cat.label?.[lang] || cat.label?.sw}
+                        </h3>
+                        <p className="text-xs text-secondary mt-0.5">
+                          {cat.count} {lang === "sw" ? "mali" : "listings"}
+                        </p>
+                      </div>
+                    </Link>
+                  </Reveal>
+                );
+              })}
             </div>
-          </Reveal>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-            {categories.map((cat, i) => {
-              const Icon = getCategoryIcon(cat.iconKey);
-              const hasPhoto = Boolean(cat.imageUrl);
-              return (
-                <Reveal key={cat.key} delay={Math.min(i * 60, 360)}>
-                  <Link
-                    to={`/kategoria/${cat.key}`}
-                    className="group block bg-white rounded-2xl overflow-hidden text-center border border-gray-100 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg hover:shadow-black/[0.06] hover:border-[#E8A33D]/30"
-                  >
-                    <div className="h-32 sm:h-36 bg-[#F5F3EC] flex items-center justify-center overflow-hidden relative">
-                      {hasPhoto ? (
-                        <img
-                          src={cat.imageUrl}
-                          alt={cat.label?.[lang] || cat.label?.sw}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                      ) : (
-                        <Icon
-                          size={44}
-                          className="text-[#E8A33D] transition-transform duration-300 group-hover:scale-110"
-                        />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                    <div className="p-3">
-                      <h3 className="font-semibold text-primary text-sm">
-                        {cat.label?.[lang] || cat.label?.sw}
-                      </h3>
-                      <p className="text-xs text-secondary mt-0.5">
-                        {cat.count} {lang === "sw" ? "mali" : "listings"}
-                      </p>
-                    </div>
-                  </Link>
-                </Reveal>
-              );
-            })}
           </div>
         </section>
 
@@ -777,7 +846,10 @@ export default function HomePage() {
         <section className="py-16 px-4 max-w-7xl mx-auto">
           <Reveal>
             <div className="text-center mb-10">
-              <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary">
+              <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+                {lang === "sw" ? "Ushuhuda" : "Testimonials"}
+              </span>
+              <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
                 {lang === "sw"
                   ? "Wanachosema Wadau Wetu"
                   : "What Our Contributors Say"}
@@ -829,7 +901,10 @@ export default function HomePage() {
         <section id="faq" className="scroll-mt-16 py-16 px-4 max-w-3xl mx-auto">
           <Reveal>
             <div className="text-center mb-10">
-              <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary">
+              <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+                FAQ
+              </span>
+              <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
                 {lang === "sw"
                   ? "Maswali Yanayoulizwa Mara kwa Mara"
                   : "Frequently Asked Questions"}
