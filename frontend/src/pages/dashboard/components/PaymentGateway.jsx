@@ -1,13 +1,12 @@
 // ============================================================
-// PaymentGateway.jsx — FimiPay mobile-money + card integration
+// PaymentGateway.jsx — FimiPay modal
 //
-// Flow (per FimiPay docs, "currency + payment_method select the rail"):
-//   1. User picks Mobile Money or Card/Bank
-//   2. Mobile → user enters phone, we send { payment_method, phone }
-//      Card  → we send { payment_method }, backend returns gateway URL
-//   3. Card  → redirect to fimipay hosted checkout
-//      Mobile → poll order-status every 4s
-//   4. Terminal success → onSuccess(); failure → retry UI
+// Implements the state machine from the FimiPay frontend spec:
+//   SELECT | INITIATING | POLLING | REDIRECTING | SUCCESS | FAILED
+//
+// The component never talks to FimiPay directly. The parent page
+// receives `onInitiate({ methodKey, phone })` and returns:
+//   { ok, orderId, gatewayUrl, paymentStatus, simulated, channel, transid }
 // ============================================================
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -17,81 +16,83 @@ import {
 import { COLORS, formatTZS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import {
-  paymentsApi,
   MOBILE_METHODS,
   CARD_METHODS,
   isMobileMethod,
   isCardMethod,
   normalizeTzPhone,
   isValidTzPhone,
+  formatTzPhoneDisplay,
+  POLL_INTERVAL_MS,
+  MAX_POLL_ATTEMPTS,
   TERMINAL_FAILURE,
 } from "../../../api/payments.js";
 
-// ── Spec constants ──────────────────────────────────────────
-const POLL_INTERVAL_MS = 4000;
-const MAX_POLL_ATTEMPTS = 30;      // ~2 minutes
-const SESSION_ORDER_KEY    = "pending_order_id";
-const SESSION_AMOUNT_KEY   = "pending_order_amount";
-const SESSION_METHOD_KEY   = "pending_order_method";
+// ── Session keys (spec Section 8) ──────────────────────────
+const SS_ORDER_ID = "pending_order_id";
+const SS_AMOUNT   = "pending_order_amount";
+const SS_METHOD   = "pending_order_method";
 
-// ── Helpers ─────────────────────────────────────────────────
-function formatPhoneInput(value) {
-  const digits = String(value).replace(/[^0-9]/g, "").slice(0, 10);
-  if (!digits) return "";
-  if (digits.length <= 4) return digits;
-  if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
-  return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
-}
-
-function failureMessage(status, lang) {
-  const t = (sw, en) => (lang === "sw" ? sw : en);
-  switch (String(status || "").toUpperCase()) {
-    case "USERCANCELLED":
-      return t(
-        "Ulikataa ombi kwenye simu yako. Jaribu tena.",
-        "You declined the prompt on your phone. Try again."
-      );
-    case "CANCELLED":
-      return t("Malipo yameghairiwa. Jaribu tena.", "Payment was cancelled. Try again.");
-    case "REJECTED":
-      return t(
-        "Malipo yamekataliwa. Angalia salio lako kisha ujaribu tena.",
-        "Payment rejected. Check your balance and try again."
-      );
-    case "FAILED":
-    default:
-      return t("Malipo hayakufanikishwa. Jaribu tena.", "Payment failed. Try again.");
-  }
-}
-
-// ── Session persistence ─────────────────────────────────────
 const session = {
   save(orderId, amount, methodKey) {
     try {
-      sessionStorage.setItem(SESSION_ORDER_KEY, orderId);
-      sessionStorage.setItem(SESSION_AMOUNT_KEY, String(amount));
-      sessionStorage.setItem(SESSION_METHOD_KEY, methodKey);
+      sessionStorage.setItem(SS_ORDER_ID, String(orderId || ""));
+      sessionStorage.setItem(SS_AMOUNT, String(amount ?? ""));
+      sessionStorage.setItem(SS_METHOD, String(methodKey || ""));
     } catch { /* noop */ }
   },
   read() {
     try {
       return {
-        orderId: sessionStorage.getItem(SESSION_ORDER_KEY),
-        amount: sessionStorage.getItem(SESSION_AMOUNT_KEY),
-        method: sessionStorage.getItem(SESSION_METHOD_KEY),
+        orderId: sessionStorage.getItem(SS_ORDER_ID),
+        amount: sessionStorage.getItem(SS_AMOUNT),
+        method: sessionStorage.getItem(SS_METHOD),
       };
-    } catch { return { orderId: null, amount: null, method: null }; }
+    } catch {
+      return { orderId: null, amount: null, method: null };
+    }
   },
   clear() {
     try {
-      sessionStorage.removeItem(SESSION_ORDER_KEY);
-      sessionStorage.removeItem(SESSION_AMOUNT_KEY);
-      sessionStorage.removeItem(SESSION_METHOD_KEY);
+      sessionStorage.removeItem(SS_ORDER_ID);
+      sessionStorage.removeItem(SS_AMOUNT);
+      sessionStorage.removeItem(SS_METHOD);
     } catch { /* noop */ }
   },
 };
 
-// ── Method option row ───────────────────────────────────────
+// ── Status → message (spec Section 7) ──────────────────────
+function failureMessage(status, lang) {
+  const sw = lang === "sw";
+  switch (String(status || "").toUpperCase()) {
+    case "USERCANCELLED":
+      return sw
+        ? "Ulikataa ombi kwenye simu yako. Jaribu tena."
+        : "You declined the prompt on your phone. Try again.";
+    case "CANCELLED":
+      return sw
+        ? "Malipo yameghairiwa. Jaribu tena."
+        : "Payment was cancelled. Try again.";
+    case "REJECTED":
+      return sw
+        ? "Malipo yamekataliwa. Angalia salio lako kisha ujaribu tena."
+        : "Payment rejected. Check your balance and try again.";
+    case "FAILED":
+      return sw
+        ? "Malipo hayakufanikishwa. Jaribu tena."
+        : "Payment failed. Try again.";
+    case "TIMEOUT":
+      return sw
+        ? "Muda wa malipo umepita. Angalia historia ya miamala yako."
+        : "Payment timed out. Check your transaction history.";
+    default:
+      return sw
+        ? "Malipo hayakufanikishwa. Jaribu tena."
+        : "Payment failed. Try again.";
+  }
+}
+
+// ── Method row ─────────────────────────────────────────────
 function MethodOption({ method, selected, onSelect, disabled }) {
   const Icon =
     method.icon === "card" ? CreditCard :
@@ -131,39 +132,47 @@ function MethodOption({ method, selected, onSelect, disabled }) {
 }
 
 // ============================================================
-// MAIN COMPONENT
+// MAIN
 // ============================================================
 export default function PaymentGateway({
   amount,
   title,
   description,
-  onInitiate,     // async ({ methodKey, methodLabel, phone }) => { ok, orderId, gatewayUrl, ... }
-  onSuccess,      // (data) => void
-  onCancel,       // () => void
+  onInitiate,
+  onSuccess,
+  onCancel,
 }) {
   const { lang } = useLanguage();
-  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const sw = lang === "sw";
 
-  // stage: select | initiating | polling | redirecting | done | error
-  const [stage, setStage] = useState("select");
+  // State machine
+  const [stage, setStage] = useState("SELECT");
   const [error, setError] = useState("");
+
+  // Form
   const [methodKey, setMethodKey] = useState(null);
   const [phone, setPhone] = useState("");
+
+  // Order
   const [orderId, setOrderId] = useState(null);
-  const [simulated, setSimulated] = useState(false);
+  const [pollStatus, setPollStatus] = useState("");
   const [attempt, setAttempt] = useState(0);
-  const [finalRef, setFinalRef] = useState("");
+  const [simulated, setSimulated] = useState(false);
   const [channel, setChannel] = useState("");
+  const [transid, setTransid] = useState("");
 
   const cancelledRef = useRef(false);
   const pollTimerRef = useRef(null);
 
-  const method = methodKey ? [...MOBILE_METHODS, ...CARD_METHODS].find((m) => m.key === methodKey) : null;
-  const isMobile = methodKey ? isMobileMethod(methodKey) : false;
-  const isCard = methodKey ? isCardMethod(methodKey) : false;
-  const phoneOk = isValidTzPhone(phone);
+  const isMobile = isMobileMethod(methodKey);
+  const isCard = isCardMethod(methodKey);
+  const method = [...MOBILE_METHODS, ...CARD_METHODS].find((m) => m.key === methodKey);
 
-  const canPay = Boolean(method) && (isCard || (isMobile && phoneOk)) && stage === "select";
+  const phoneValid = isValidTzPhone(phone);
+  const canPay =
+    Boolean(method) &&
+    stage === "SELECT" &&
+    (isCard || (isMobile && phoneValid));
 
   // ── Cleanup ─────────────────────────────────────────────
   useEffect(() => {
@@ -173,95 +182,97 @@ export default function PaymentGateway({
     };
   }, []);
 
-  // ── Resume a pending order after refresh / return from redirect
+  // ── Resume polling after refresh (spec Section 11.9) ────
   useEffect(() => {
     const saved = session.read();
     if (!saved.orderId) return;
+    // Only resume if the parent prop amount matches what we stored
     if (saved.amount && Number(saved.amount) !== Number(amount)) return;
-    setOrderId(saved.orderId);
     if (saved.method) setMethodKey(saved.method);
-    setStage("polling");
-    runPolling(saved.orderId);
+    setOrderId(saved.orderId);
+    setStage("POLLING");
+    runPoll(saved.orderId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Polling ─────────────────────────────────────────────
-  const runPolling = async (oid) => {
+  const runPoll = async (oid) => {
     for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
       if (cancelledRef.current) return;
       await new Promise((resolve) => {
         pollTimerRef.current = setTimeout(resolve, POLL_INTERVAL_MS);
       });
       if (cancelledRef.current) return;
+
       setAttempt(i + 1);
 
       let data;
-      try { data = await paymentsApi.orderStatus(oid); } catch { continue; }
+      try {
+        data = await (await import("../../../api/client.js")).api.post(
+          "/payments/order-status/",
+          { order_id: oid }
+        );
+      } catch {
+        continue; // network blip
+      }
 
       const status = String(data?.payment_status || "").toUpperCase();
+      setPollStatus(status);
       if (data?.channel) setChannel(data.channel);
       if (data?.simulated != null) setSimulated(Boolean(data.simulated));
+      if (data?.transid) setTransid(data.transid);
 
       if (status === "SUCCESS") {
-        setFinalRef(data?.transid || data?.order_id || "");
-        setStage("done");
+        setTransid(data?.transid || data?.order_id || "");
         session.clear();
+        setStage("SUCCESS");
         onSuccess?.(data);
         return;
       }
 
       if (TERMINAL_FAILURE.has(status)) {
         setError(failureMessage(status, lang));
-        setStage("error");
+        setStage("FAILED");
         return;
       }
-      // PENDING / INPROGRESS → keep polling
     }
 
-    setError(
-      t(
-        "Muda wa malipo umepita. Angalia historia ya miamala yako.",
-        "Payment timed out. Check your transaction history."
-      )
-    );
-    setStage("error");
+    // Timeout after 30 attempts
+    setError(failureMessage("TIMEOUT", lang));
+    setStage("FAILED");
   };
 
-  // ── Initiate + route ────────────────────────────────────
+  // ── Initiate ────────────────────────────────────────────
   const handlePay = async () => {
     if (!canPay || !onInitiate) return;
-    setStage("initiating");
+    setStage("INITIATING");
     setError("");
 
-    const cleanPhone = isMobile ? normalizeTzPhone(phone) : null;
+    const cleanPhone = isMobile ? normalizeTzPhone(phone) : "";
 
     let res;
     try {
-      res = await onInitiate({
-        methodKey: method.key,
-        methodLabel: method.label,
-        phone: cleanPhone,
-        isCard,
-        isMobile,
-      });
+      res = await onInitiate({ methodKey: method.key, phone: cleanPhone });
     } catch (err) {
       setError(
-        err?.data?.detail ||
-          err?.message ||
-          t("Hitilafu ya mtandao.", "Network error.")
+        err?.data?.detail && typeof err.data.detail === "string"
+          ? err.data.detail
+          : err?.message ||
+            (sw ? "Hitilafu ya mtandao. Jaribu tena." : "Network error. Try again.")
       );
-      setStage("error");
+      setStage("FAILED");
       return;
     }
 
     if (!res || res.ok === false) {
       const detail =
-        res?.error?.data?.detail ||
-        res?.error?.data?.message ||
-        res?.error?.message ||
-        (typeof res?.error === "string" ? res.error : "");
-      setError(detail || t("Hatua ya malipo imeshindikana.", "Payment step failed."));
-      setStage("error");
+        (typeof res?.error?.data?.detail === "string" && res.error.data.detail) ||
+        (typeof res?.error?.data?.message === "string" && res.error.data.message) ||
+        (typeof res?.error?.message === "string" && res.error.message) ||
+        (typeof res?.error === "string" && res.error) ||
+        "";
+      setError(detail || (sw ? "Malipo hayakuanza. Jaribu tena." : "Payment could not be started. Try again."));
+      setStage("FAILED");
       return;
     }
 
@@ -270,46 +281,48 @@ export default function PaymentGateway({
     setOrderId(oid);
     setSimulated(Boolean(res.simulated));
     if (res.channel) setChannel(res.channel);
+    if (res.transid) setTransid(res.transid);
 
-    // ── Card / bank redirect ────────────────────────────
+    // ── Card / Bank → redirect ─────────────────────────
     if (res.gatewayUrl) {
       session.save(oid, amount, method.key);
-      setStage("redirecting");
-      setTimeout(() => { window.location.href = res.gatewayUrl; }, 600);
+      setStage("REDIRECTING");
+      setTimeout(() => {
+        window.location.href = res.gatewayUrl;
+      }, 600);
       return;
     }
 
-    // ── Instant SUCCESS ─────────────────────────────────
+    // ── Instant SUCCESS (test mode with override) ──────
     if (pstatus === "SUCCESS") {
-      setFinalRef(res.transid || oid || "");
-      setStage("done");
+      setTransid(res.transid || oid || "");
       session.clear();
+      setStage("SUCCESS");
       onSuccess?.(res);
       return;
     }
 
-    // ── Terminal failure ────────────────────────────────
+    // ── Terminal failure on initiate ───────────────────
     if (TERMINAL_FAILURE.has(pstatus)) {
       setError(failureMessage(pstatus, lang));
-      setStage("error");
+      setStage("FAILED");
       return;
     }
 
     if (!oid) {
       setError(
-        t(
-          "Backend haikurudisha order_id. Wasiliana na msaada.",
-          "Backend did not return an order_id. Contact support."
-        )
+        sw
+          ? "Backend haikurudisha order_id. Wasiliana na msaada."
+          : "Backend did not return an order_id. Contact support."
       );
-      setStage("error");
+      setStage("FAILED");
       return;
     }
 
-    // ── Mobile: poll ────────────────────────────────────
+    // ── Mobile → poll ──────────────────────────────────
     session.save(oid, amount, method.key);
-    setStage("polling");
-    runPolling(oid);
+    setStage("POLLING");
+    runPoll(oid);
   };
 
   const handleCancel = () => {
@@ -322,10 +335,12 @@ export default function PaymentGateway({
   const handleRetry = () => {
     cancelledRef.current = false;
     setError("");
-    setStage("select");
+    setStage("SELECT");
     setAttempt(0);
     setOrderId(null);
+    setPollStatus("");
     setChannel("");
+    setTransid("");
   };
 
   const TestModeBadge = () =>
@@ -339,32 +354,37 @@ export default function PaymentGateway({
     ) : null;
 
   // ═════════════════════════════════════════════════════════
-  // RENDER
+  // RENDER — one state at a time
   // ═════════════════════════════════════════════════════════
 
-  // ── DONE ────────────────────────────────────────────────
-  if (stage === "done") {
+  // ── SUCCESS ─────────────────────────────────────────────
+  if (stage === "SUCCESS") {
     return (
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="rounded-2xl border p-8 text-center"
+        aria-live="polite"
       >
         <div
           style={{ background: COLORS.green }}
-          className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+          className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
         >
-          <Check color="white" size={22} />
+          <Check color="white" size={26} />
         </div>
-        <p className="text-primary text-sm font-semibold mb-1">
-          {t("Malipo Yamefanikiwa", "Payment Successful")}
+        <p className="text-primary text-base font-semibold mb-1">
+          {sw ? "Malipo Yamefanikiwa!" : "Payment Successful!"}
         </p>
-        <p className="text-secondary text-body-sm mb-3">
+        <p className="text-secondary text-body-sm mb-2 font-semibold">
           {formatTZS(amount)}
-          {channel ? <> · {channel}</> : null}
         </p>
-        {finalRef && (
+        {channel && (
+          <p className="text-xs text-secondary mb-2">
+            {sw ? "Njia" : "Channel"}: <strong>{channel}</strong>
+          </p>
+        )}
+        {transid && (
           <p className="text-[11px] text-muted font-mono mb-3">
-            {t("Kumbukumbu", "Reference")}: {finalRef}
+            {sw ? "Kumbukumbu" : "Reference"}: {transid}
           </p>
         )}
         <TestModeBadge />
@@ -372,8 +392,8 @@ export default function PaymentGateway({
     );
   }
 
-  // ── REDIRECTING (card/bank) ─────────────────────────────
-  if (stage === "redirecting") {
+  // ── REDIRECTING ─────────────────────────────────────────
+  if (stage === "REDIRECTING") {
     return (
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -381,20 +401,22 @@ export default function PaymentGateway({
       >
         <ExternalLink size={28} className="mx-auto mb-3" color={COLORS.gold} />
         <p className="text-primary text-sm font-semibold mb-2">
-          {t("Unahamishwa kwenye ukurasa wa malipo...", "Redirecting to payment page...")}
+          {sw
+            ? "Unahamishwa kwenye ukurasa wa malipo..."
+            : "Redirecting to payment page..."}
         </p>
-        <p className="text-[11px] text-muted">
-          {t("Usifunge ukurasa huu.", "Do not close this page.")}
+        <p className="text-[11px] text-muted mb-4">
+          {sw
+            ? "Usifunge ukurasa huu."
+            : "Do not close this page."}
         </p>
-        <div className="mt-4">
-          <Loader2 size={18} className="animate-spin mx-auto" color={COLORS.gold} />
-        </div>
+        <Loader2 size={18} className="animate-spin mx-auto" color={COLORS.gold} />
       </div>
     );
   }
 
   // ── INITIATING ──────────────────────────────────────────
-  if (stage === "initiating") {
+  if (stage === "INITIATING") {
     return (
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -402,18 +424,19 @@ export default function PaymentGateway({
       >
         <Loader2 size={28} className="animate-spin mx-auto mb-3" color={COLORS.gold} />
         <p className="text-primary text-sm font-semibold">
-          {t("Inaanzisha malipo...", "Starting payment...")}
+          {sw ? "Inaanzisha malipo..." : "Starting payment..."}
         </p>
       </div>
     );
   }
 
-  // ── POLLING (mobile) ────────────────────────────────────
-  if (stage === "polling") {
+  // ── POLLING ─────────────────────────────────────────────
+  if (stage === "POLLING") {
     return (
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="rounded-2xl border p-6 text-center"
+        aria-live="polite"
       >
         {simulated && (
           <div
@@ -421,7 +444,9 @@ export default function PaymentGateway({
             style={{ background: "rgba(232,163,61,0.12)", color: "#8A5A16" }}
           >
             TEST MODE —{" "}
-            {t("Hakuna pesa halisi inayotolewa", "No real money is charged")}
+            {sw
+              ? "Hakuna pesa halisi inayotolewa"
+              : "No real money is charged"}
           </div>
         )}
         <div
@@ -431,42 +456,42 @@ export default function PaymentGateway({
           <Smartphone size={24} color={COLORS.gold} />
         </div>
         <p className="text-primary text-sm font-semibold mb-1">
-          {t("Angalia simu yako", "Check your phone")}
+          {sw ? "Angalia simu yako" : "Check your phone"}
         </p>
         <p className="text-secondary text-body-sm mb-4 max-w-md mx-auto">
-          {t(
-            "Tumetuma ombi la malipo kwenye simu yako. Idhinisha kwa kuingiza PIN yako.",
-            "We sent a payment request to your phone. Approve it by entering your PIN."
-          )}
+          {sw
+            ? "Tumetuma ombi la malipo kwenye simu yako. Idhinisha kwa kuingiza PIN yako."
+            : "We sent a payment request to your phone. Approve it by entering your PIN."}
         </p>
         <div className="flex items-center justify-center gap-2 text-body-sm text-secondary mb-4">
           <Loader2 size={14} className="animate-spin" />
-          {t("Inasubiri uthibitisho...", "Waiting for confirmation...")}
+          {sw ? "Inasubiri uthibitisho..." : "Waiting for confirmation..."}
           <span className="text-muted">
             ({attempt}/{MAX_POLL_ATTEMPTS})
           </span>
         </div>
         {orderId && (
           <p className="text-[10px] text-muted font-mono mb-4">
-            {t("Order", "Order")}: {orderId}
+            {sw ? "Order" : "Order"}: {orderId}
           </p>
         )}
         <button
           onClick={handleCancel}
           className="text-xs font-medium text-secondary hover:text-primary underline"
         >
-          {t("Ghairi", "Cancel")}
+          {sw ? "Ghairi" : "Cancel"}
         </button>
       </div>
     );
   }
 
-  // ── ERROR ───────────────────────────────────────────────
-  if (stage === "error") {
+  // ── FAILED ──────────────────────────────────────────────
+  if (stage === "FAILED") {
     return (
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="rounded-2xl border p-6 text-center"
+        aria-live="assertive"
       >
         <div
           style={{ background: "rgba(193,80,46,0.12)" }}
@@ -475,22 +500,24 @@ export default function PaymentGateway({
           <AlertTriangle size={22} color={COLORS.rust} />
         </div>
         <p className="text-primary text-sm font-semibold mb-1">
-          {t("Malipo Hayakufanikiwa", "Payment Failed")}
+          {sw ? "Malipo Hayakufanikiwa" : "Payment Failed"}
         </p>
-        <p className="text-secondary text-body-sm mb-4">{error}</p>
+        <p className="text-secondary text-body-sm mb-4">
+          {typeof error === "string" ? error : (sw ? "Hitilafu imetokea." : "Something went wrong.")}
+        </p>
         <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={handleCancel}
             className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-secondary"
           >
-            {t("Ghairi", "Cancel")}
+            {sw ? "Ghairi" : "Cancel"}
           </button>
           <button
             onClick={handleRetry}
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
           >
-            {t("Jaribu Tena", "Try Again")}
+            {sw ? "Jaribu Tena" : "Try Again"}
           </button>
         </div>
       </div>
@@ -498,7 +525,7 @@ export default function PaymentGateway({
   }
 
   // ═════════════════════════════════════════════════════════
-  // SELECT (default) — method + phone input
+  // SELECT (default)
   // ═════════════════════════════════════════════════════════
   return (
     <div
@@ -511,7 +538,7 @@ export default function PaymentGateway({
           onClick={onCancel}
           className="text-primary flex items-center gap-1 text-body-sm font-medium opacity-70"
         >
-          <ChevronLeft size={14} /> {t("Rudi Nyuma", "Back")}
+          <ChevronLeft size={14} /> {sw ? "Rudi Nyuma" : "Back"}
         </button>
       </div>
 
@@ -530,12 +557,11 @@ export default function PaymentGateway({
 
       {/* Method section */}
       <p className="text-primary text-body-sm font-semibold mb-2 text-center">
-        {t("Chagua Njia ya Malipo", "Choose Payment Method")}
+        {sw ? "Chagua Njia ya Malipo" : "Choose Payment Method"}
       </p>
 
-      {/* Mobile money */}
       <p className="text-[11px] font-semibold text-secondary uppercase mb-1.5 tracking-wide">
-        {t("Malipo ya Simu", "Mobile Money")}
+        {sw ? "Malipo ya Simu" : "Mobile Money"}
       </p>
       <div className="flex flex-col gap-2 mb-4">
         {MOBILE_METHODS.map((m) => (
@@ -544,14 +570,13 @@ export default function PaymentGateway({
             method={m}
             selected={m.key === methodKey}
             onSelect={setMethodKey}
-            disabled={stage !== "select"}
+            disabled={stage !== "SELECT"}
           />
         ))}
       </div>
 
-      {/* Card / bank */}
       <p className="text-[11px] font-semibold text-secondary uppercase mb-1.5 tracking-wide">
-        {t("Kadi / Benki", "Card / Bank")}
+        {sw ? "Kadi / Benki" : "Card / Bank"}
       </p>
       <div className="flex flex-col gap-2 mb-4">
         {CARD_METHODS.map((m) => (
@@ -560,16 +585,16 @@ export default function PaymentGateway({
             method={m}
             selected={m.key === methodKey}
             onSelect={setMethodKey}
-            disabled={stage !== "select"}
+            disabled={stage !== "SELECT"}
           />
         ))}
       </div>
 
-      {/* Phone input — only for mobile */}
+      {/* Phone input — mobile only */}
       {isMobile && (
         <label className="flex flex-col gap-1.5 mb-4 text-center">
           <span className="text-primary text-body-sm font-medium">
-            {t("Namba ya Simu", "Phone Number")} ({method?.label})
+            {sw ? "Namba ya Simu" : "Phone Number"} ({method?.label})
           </span>
           <input
             type="tel"
@@ -577,27 +602,25 @@ export default function PaymentGateway({
             autoComplete="tel"
             style={{
               background: COLORS.sand,
-              borderColor: COLORS.sandLine,
+              borderColor: phone && !phoneValid ? COLORS.rust : COLORS.sandLine,
               color: COLORS.night,
             }}
             className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-            placeholder={t("mfano: 0712 345 678", "e.g. 0712 345 678")}
-            value={phone}
-            onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
-            disabled={stage !== "select"}
+            placeholder={sw ? "0712 345 678" : "0712 345 678"}
+            value={formatTzPhoneDisplay(phone)}
+            onChange={(e) => setPhone(e.target.value)}
+            disabled={stage !== "SELECT"}
           />
-          {phone && !phoneOk && (
+          {phone && !phoneValid && (
             <span className="text-[11px]" style={{ color: COLORS.rust }}>
-              {t(
-                "Weka namba sahihi ya Tanzania (mf. 0712345678).",
-                "Enter a valid Tanzania number (e.g. 0712345678)."
-              )}
+              {sw
+                ? "Weka namba sahihi ya Tanzania (mf. 0712345678)."
+                : "Enter a valid Tanzania number (e.g. 0712345678)."}
             </span>
           )}
         </label>
       )}
 
-      {/* Card hint */}
       {isCard && (
         <div
           className="rounded-lg px-3 py-2.5 mb-4 text-[11px] flex items-start gap-2"
@@ -605,10 +628,9 @@ export default function PaymentGateway({
         >
           <ExternalLink size={12} className="shrink-0 mt-0.5" />
           <span>
-            {t(
-              "Utapelekwa kwenye ukurasa salama wa FimiPay kukamilisha malipo kwa kadi yako.",
-              "You'll be taken to FimiPay's secure page to complete payment by card."
-            )}
+            {sw
+              ? "Utapelekwa kwenye ukurasa salama wa FimiPay kukamilisha malipo kwa kadi yako."
+              : "You'll be taken to FimiPay's secure page to complete payment by card."}
           </span>
         </div>
       )}
@@ -619,7 +641,7 @@ export default function PaymentGateway({
           className="rounded-lg px-3 py-2 mb-3 text-xs text-center flex items-center justify-center gap-1.5"
         >
           <AlertTriangle size={12} />
-          {error}
+          {typeof error === "string" ? error : "Error"}
         </div>
       )}
 
@@ -634,20 +656,18 @@ export default function PaymentGateway({
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm mb-3 disabled:cursor-not-allowed"
       >
         {isCard
-          ? t(
-              `Endelea — Lipa ${formatTZS(amount)}`,
-              `Continue — Pay ${formatTZS(amount)}`
-            )
-          : t(
-              `Lipa ${formatTZS(amount)}`,
-              `Pay ${formatTZS(amount)}`
-            )}
+          ? sw
+            ? `Endelea — Lipa ${formatTZS(amount)}`
+            : `Continue — Pay ${formatTZS(amount)}`
+          : sw
+            ? `Lipa ${formatTZS(amount)}`
+            : `Pay ${formatTZS(amount)}`}
       </button>
 
       <p className="text-muted flex items-start justify-center gap-1.5 text-body-sm leading-snug text-center">
         <ShieldCheck size={13} className="shrink-0 mt-0.5" />
         <span>
-          {lang === "sw"
+          {sw
             ? "Malipo yako yanalindwa. Hatuna uwezo wa kuona PIN au taarifa za kadi yako."
             : "Your payment is secure. We never see your PIN or card details."}
         </span>
