@@ -463,6 +463,7 @@ export default function DashboardShell() {
           onPause={handlePause}
           onResume={handleResume}
           onMarkSold={handleMarkSold}
+          onPostNew={() => handleNavClick("post")}
         />
       );
     }

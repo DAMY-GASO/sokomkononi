@@ -238,3 +238,131 @@ export function notifyTicketCreated() {}
 export function notifyTicketReplied() {}
 export function notifyTicketResolved() {}
 export function notifyPaymentConfirmed() {}
+
+// ============================================================
+// NOTIFICATION ROUTE RESOLVER
+// Maps a notification to a concrete in-app route so the "View →"
+// link always navigates somewhere sensible.
+//
+// Priority:
+//   1. Explicit `link` from the backend (action_url) — respected as-is
+//   2. Type-based routing
+//   3. Deep-link via `meta.related_object_id` (message id, deal id, etc.)
+//   4. Fallback to the notifications list
+// ============================================================
+export function resolveNotificationRoute(notif, side = "seller") {
+  if (!notif) return "/dashboard/notifications";
+
+  // 1. Respect the backend's action_url if it looks in-app
+  const explicit = typeof notif.link === "string" ? notif.link.trim() : "";
+  if (explicit && explicit.startsWith("/")) return explicit;
+  if (explicit && /^https?:\/\//i.test(explicit)) return explicit;
+
+  const prefix = side === "buyer" ? "/dashboard/buyer" : "/dashboard";
+  const rawType = String(notif.type || "").toUpperCase();
+  const type = rawType.replace(/\./g, "_"); // "message.received" → "MESSAGE_RECEIVED"
+  const meta = notif.meta || {};
+  const relatedId = meta.related_object_id;
+
+  const withQuery = (base, key) =>
+    relatedId != null && relatedId !== ""
+      ? `${base}?${key}=${encodeURIComponent(relatedId)}`
+      : base;
+
+  switch (type) {
+    // ── Messages ─────────────────────────────────────────
+    case "MESSAGE_RECEIVED":
+    case "MESSAGE":
+    case "NEW_MESSAGE":
+      return withQuery(`${prefix}/messages`, "c");
+
+    // ── Deals & transactions ─────────────────────────────
+    case "DEAL_ROOM_CREATED":
+    case "DEAL_ROOM":
+    case "NEW_DEAL_ROOM":
+    case "DEAL_CREATED":
+    case "NEW_OFFER":
+    case "OFFER_COUNTERED":
+    case "OFFER_ACCEPTED":
+    case "RESERVATION_CREATED":
+    case "RESERVATION_PAID":
+    case "RESERVATION_EXPIRING":
+    case "RESERVATION_EXPIRED":
+    case "INSPECTION_STARTED":
+    case "INSPECTION_COMPLETED":
+    case "BUYER_DECISION":
+    case "PAYMENT_PROOF_UPLOADED":
+    case "PAYMENT_PROOF_SUBMITTED":
+    case "PAYMENT_CONFIRMED":
+    case "TRANSACTION_CREATED":
+    case "TRANSACTION_COMPLETED":
+    case "TRANSACTION_CANCELLED":
+    case "DISPUTE_RESOLVED":
+      return withQuery(`${prefix}/deals`, "deal");
+
+    // ── Listings ─────────────────────────────────────────
+    case "LISTING_CREATED":
+    case "LISTING_APPROVED":
+    case "LISTING_REJECTED":
+    case "LISTING_RELEASED":
+    case "LISTING_EXPIRED":
+    case "LISTING_DELETED":
+    case "LISTING_RESTORED":
+    case "LISTING_SUBMITTED":
+      return `${prefix}/listings`;
+
+    case "LISTING_FEE_PAID":
+    case "SUCCESS_FEE_PAID":
+      return `${prefix}/transactions`;
+
+    // ── Promotions ───────────────────────────────────────
+    case "BOOST_PURCHASED":
+    case "BOOST_ACTIVATED":
+      return `${prefix}/boost`;
+
+    case "LEADING_PURCHASED":
+      return `${prefix}/leading`;
+
+    case "ADVERTISEMENT_PURCHASED":
+      return `${prefix}/advertise`;
+
+    // ── Bundles / credits ────────────────────────────────
+    case "BUNDLE_PURCHASED":
+      return `${prefix}/bundles`;
+
+    // ── Waiting list ─────────────────────────────────────
+    case "WAITING_LIST_JOINED":
+    case "WAITING_LIST_AVAILABLE":
+      return "/dashboard/buyer/waiting";
+
+    // ── Fallback ─────────────────────────────────────────
+    default:
+      return `${prefix}/notifications`;
+  }
+}
+
+// ============================================================
+// NOTIFICATION ROUTE LABEL
+// Returns the CTA label used next to the arrow ("View", "Reply", ...).
+// ============================================================
+export function notificationCtaKey(notif) {
+  const rawType = String(notif?.type || "").toUpperCase();
+  const type = rawType.replace(/\./g, "_");
+  switch (type) {
+    case "MESSAGE_RECEIVED":
+    case "MESSAGE":
+    case "NEW_MESSAGE":
+      return "reply";
+    case "DEAL_ROOM_CREATED":
+    case "DEAL_ROOM":
+    case "NEW_DEAL_ROOM":
+    case "DEAL_CREATED":
+      return "open";
+    case "LISTING_APPROVED":
+    case "LISTING_RELEASED":
+      return "view_listing";
+    default:
+      return "view";
+  }
+}
+
