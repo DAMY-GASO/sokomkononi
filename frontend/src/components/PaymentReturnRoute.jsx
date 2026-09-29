@@ -1,5 +1,8 @@
 // ============================================================
-// PaymentReturnRoute.jsx — landing page after hosted redirect
+// PaymentReturnRoute.jsx — return page after FimiPay hosted redirect
+//
+// Per spec: read sessionStorage.pending_order_id, resume polling,
+// show success/failure, then clear the pending order.
 // ============================================================
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -8,32 +11,57 @@ import { COLORS } from "../pages/dashboard/components/shared";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { paymentsApi } from "../api/payments.js";
 
-const POLL_INTERVAL = 3000;
-const MAX_ATTEMPTS = 60;
-const FAIL = new Set(["CANCELLED", "USERCANCELLED", "REJECTED", "FAILED"]);
+const POLL_INTERVAL_MS = 4000;
+const MAX_ATTEMPTS = 30;
+const SESSION_ORDER_KEY = "pending_order_id";
+const SESSION_AMOUNT_KEY = "pending_order_amount";
+
+const TERMINAL_FAILURE = new Set([
+  "CANCELLED",
+  "USERCANCELLED",
+  "REJECTED",
+  "FAILED",
+]);
 
 export default function PaymentReturnRoute() {
   const { lang } = useLanguage();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
   const [stage, setStage] = useState("polling");
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const [channel, setChannel] = useState("");
+  const [finalRef, setFinalRef] = useState("");
 
   useEffect(() => {
     let cancelled = false;
-    let saved = null;
-    try {
-      const raw = window.localStorage.getItem("sokomkononi_pending_payment_order");
-      if (raw) saved = JSON.parse(raw);
-    } catch { /* noop */ }
 
-    const orderId =
-      params.get("order_id") ||
-      params.get("orderId") ||
-      params.get("reference") ||
-      saved?.orderId;
+    const clearPending = () => {
+      try {
+        sessionStorage.removeItem(SESSION_ORDER_KEY);
+        sessionStorage.removeItem(SESSION_AMOUNT_KEY);
+      } catch {
+        /* noop */
+      }
+    };
+
+    let orderId = null;
+    try {
+      orderId = sessionStorage.getItem(SESSION_ORDER_KEY);
+    } catch {
+      /* noop */
+    }
+
+    // Fall back to query-string variants from the gateway
+    if (!orderId) {
+      orderId =
+        params.get("order_id") ||
+        params.get("orderId") ||
+        params.get("reference") ||
+        null;
+    }
 
     if (!orderId) {
       setStage("failed");
@@ -50,19 +78,28 @@ export default function PaymentReturnRoute() {
       for (let i = 0; i < MAX_ATTEMPTS; i++) {
         if (cancelled) return;
         setAttempt(i + 1);
+
         let data;
         try {
           data = await paymentsApi.orderStatus(orderId);
-        } catch { /* transient, retry */ }
+        } catch {
+          // Network blip — retry on next tick
+        }
+
         const status = String(data?.payment_status || "").toUpperCase();
+        if (data?.channel) setChannel(data.channel);
+
         if (status === "SUCCESS") {
-          try {
-            window.localStorage.removeItem("sokomkononi_pending_payment_order");
-          } catch { /* noop */ }
-          if (!cancelled) setStage("success");
+          clearPending();
+          if (!cancelled) {
+            setFinalRef(data?.transid || data?.order_id || "");
+            setStage("success");
+          }
           return;
         }
-        if (FAIL.has(status)) {
+
+        if (TERMINAL_FAILURE.has(status)) {
+          clearPending();
           if (!cancelled) {
             setStage("failed");
             setError(
@@ -74,8 +111,11 @@ export default function PaymentReturnRoute() {
           }
           return;
         }
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+
+        // PENDING / INPROGRESS → keep polling
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
       }
+
       if (!cancelled) {
         setStage("failed");
         setError(
@@ -87,7 +127,9 @@ export default function PaymentReturnRoute() {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -102,14 +144,23 @@ export default function PaymentReturnRoute() {
       >
         {stage === "polling" && (
           <>
-            <Loader2 size={32} className="animate-spin mx-auto mb-4" color={COLORS.gold} />
+            <Loader2
+              size={32}
+              className="animate-spin mx-auto mb-4"
+              color={COLORS.gold}
+            />
             <h1 className="text-lg font-bold text-primary mb-2">
               {t("Tunathibitisha malipo...", "Confirming your payment...")}
             </h1>
             <p className="text-sm text-secondary mb-3">
-              {t("Tafadhali usifunge ukurasa huu.", "Please don't close this page.")}
+              {t(
+                "Tafadhali usifunge ukurasa huu.",
+                "Please don't close this page."
+              )}
             </p>
-            <p className="text-[11px] text-muted">{attempt}/{MAX_ATTEMPTS}</p>
+            <p className="text-[11px] text-muted">
+              {attempt}/{MAX_ATTEMPTS}
+            </p>
           </>
         )}
 
@@ -124,9 +175,22 @@ export default function PaymentReturnRoute() {
             <h1 className="text-lg font-bold text-primary mb-2">
               {t("Malipo Yamefanikiwa!", "Payment Successful!")}
             </h1>
-            <p className="text-sm text-secondary mb-5">
-              {t("Asante. Unaweza kuendelea kutumia SokoMkononi.", "Thank you. You can keep using SokoMkononi.")}
+            <p className="text-sm text-secondary mb-3">
+              {t(
+                "Asante. Unaweza kuendelea kutumia SokoMkononi.",
+                "Thank you. You can keep using SokoMkononi."
+              )}
             </p>
+            {channel && (
+              <p className="text-xs text-secondary mb-2">
+                {t("Njia", "Channel")}: <strong>{channel}</strong>
+              </p>
+            )}
+            {finalRef && (
+              <p className="text-[11px] text-muted font-mono mb-5">
+                {t("Kumbukumbu", "Reference")}: {finalRef}
+              </p>
+            )}
             <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={() => navigate("/dashboard/transactions")}
