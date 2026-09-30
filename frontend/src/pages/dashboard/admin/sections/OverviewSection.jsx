@@ -228,7 +228,7 @@ export default function OverviewSection({ onNavigate }) {
     },
     {
       id: "revenue",
-      label: lang === "sw" ? "Mapato ya SokoMkononi" : "SokoMkononi Revenue",
+      label: lang === "sw" ? "Mapato" : "Revenue",
       value: formatTZS(totalRevenue),
       icon: Wallet,
       color: COLORS.rust,
