@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
 import ScrollToHash from "./components/ScrollToHash.jsx";
 import { ToastProvider } from "./components/Toast.jsx";
@@ -25,7 +25,6 @@ import NotFoundPage from "./pages/NotFoundPage.jsx";
 // Auth
 import LoginPage from "./pages/Auth/LoginPage.jsx";
 import RegisterPage from "./pages/Auth/RegisterPage.jsx";
-import WaitlistPage from "./pages/Auth/WaitlistPage.jsx";
 import ForgotpasswordPage from "./pages/Auth/ForgotpasswordPage.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 
@@ -89,7 +88,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotpasswordPage />} />
-          <Route path="/waitlist" element={<WaitlistPage />} />
+          
 
           {/* PROPERTY & SEARCH */}
           <Route path="/mali/:id" element={<PropertyDetailPage />} />
