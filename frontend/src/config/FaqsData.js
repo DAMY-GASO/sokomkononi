@@ -1,10 +1,8 @@
 // ============================================================
 // faqsData.js — FAQs zote (chanzo kimoja cha ukweli).
-// HomePage inaonyesha za mwanzo tu (HOME_FAQ_COUNT),
-// ContactPage inaonyesha zote.
+// ContactPage inaonyesha zote. HomePage ina FAQ zake chache
+// zilizobaki (zimeandikwa ndani ya HomePage.jsx).
 // ============================================================
-
-export const HOME_FAQ_COUNT = 6;
 
 export const faqs = [
   {
@@ -169,5 +167,3 @@ export const faqs = [
     },
   },
 ];
-
-export const homeFaqs = faqs.slice(0, HOME_FAQ_COUNT);
