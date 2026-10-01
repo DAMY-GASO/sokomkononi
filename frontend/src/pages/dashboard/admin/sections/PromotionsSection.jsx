@@ -870,33 +870,6 @@ export default function PromotionsSection() {
           color="#0891B2"
         />
 
-        {/* ⬇️ Total Revenue — inachukua columns 5 kwenye desktop */}
-        {/* Kwenye simu: inachukua columns 2 (full width) */}
-        <div
-          className="col-span-2 sm:col-span-3 lg:col-span-5 rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6 min-w-0 overflow-hidden"
-          style={{
-            background: `linear-gradient(135deg, ${COLORS.night} 0%, #1a2842 100%)`,
-            color: COLORS.sand,
-          }}
-        >
-          {/* Kiasi kikubwa cha mapato */}
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div
-              className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0"
-              style={{ background: "rgba(232,163,61,0.18)" }}
-            >
-              <DollarSign size={22} color={COLORS.gold} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-70">
-                {t("Jumla ya Mapato", "Total Revenue")}
-              </p>
-              <p className="text-[clamp(1.25rem,4.5vw,2.25rem)] font-bold mt-0.5 break-words leading-tight tabular-nums">
-                {formatTZS(promotions.totalPromotionRevenue)}
-              </p>
-            </div>
-          </div>
-
           {/* Mini breakdown kwa desktop */}
           <div className="grid grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 shrink-0">
             <MiniRevenue

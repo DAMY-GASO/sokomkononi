@@ -3,6 +3,7 @@
 // Muhtasari wa mfumo — stats + live transactions.
 // Total Revenue kadi kubwa — span 5 columns kwenye desktop,
 // full width kwenye simu.
+// Rangi: maandishi yote yanaonekana kwenye dark background.
 // ============================================================
 import React, { useMemo, useEffect, useState } from "react";
 import {
@@ -20,7 +21,6 @@ import {
   UserPlus,
   CreditCard,
   TrendingUp,
-  DollarSign,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import StatCard from "../shared/StatCard.jsx";
@@ -36,12 +36,14 @@ import { useDeals } from "../../../../config/dealsStore.js";
 import { useTransactions } from "../../../../config/transactionsStore.js";
 import { financeApi } from "../../../../api/finance.js";
 
+// ⬇️ Ongeza "success_fee" kwenye orodha
 const PLATFORM_FEE_TYPES = [
   "listing_fee",
   "reservation",
   "boost",
   "leading",
   "advertisement",
+  "success_fee",
 ];
 const NEW_REGISTRATION_WINDOW_DAYS = 7;
 
@@ -55,7 +57,6 @@ export default function OverviewSection({ onNavigate }) {
   const [platformRevenue, setPlatformRevenue] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
 
-  // ── Fetch admin dashboard revenue ────────────────────────────
   useEffect(() => {
     let cancelled = false;
     financeApi
@@ -77,7 +78,6 @@ export default function OverviewSection({ onNavigate }) {
     };
   }, []);
 
-  // ── Fetch pending listings count ─────────────────────────────
   useEffect(() => {
     fetchPendingListingsAsync().then((res) => {
       if (res.ok) setPendingCount((res.listings || []).length);
@@ -178,7 +178,6 @@ export default function OverviewSection({ onNavigate }) {
 
   const maxDayRevenue = Math.max(...revenueByDay.map((d) => d.total), 1);
 
-  // Stats — 6 za kawaida (revenue imetolewa)
   const stats = [
     {
       id: "users",
@@ -268,7 +267,7 @@ export default function OverviewSection({ onNavigate }) {
         }
       />
 
-      {/* Grid ya stats za kawaida — 10 stats */}
+      {/* Grid ya stats za kawaida */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4">
         {stats.map((stat) => (
           <StatCard key={stat.id} {...stat} />
@@ -280,25 +279,34 @@ export default function OverviewSection({ onNavigate }) {
         className="rounded-2xl p-5 sm:p-7 lg:p-8 mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 lg:gap-8"
         style={{
           background: `linear-gradient(135deg, ${COLORS.night} 0%, #1a2842 100%)`,
-          color: COLORS.sand,
+          color: "#FFFFFF",
         }}
       >
         <div className="flex items-center gap-4 min-w-0">
           <div
             className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0"
-            style={{ background: "rgba(232,163,61,0.18)" }}
+            style={{ background: "rgba(232,163,61,0.25)" }}
           >
             <Wallet size={28} color={COLORS.gold} />
           </div>
           <div className="min-w-0">
-            <p className="text-xs sm:text-sm font-semibold uppercase tracking-wider opacity-70">
+            <p
+              className="text-xs sm:text-sm font-semibold uppercase tracking-wider"
+              style={{ color: "rgba(255,255,255,0.75)" }}
+            >
               {lang === "sw" ? "Mapato ya Jumla" : "Total Revenue"}
             </p>
-            <p className="text-[clamp(1.75rem,6vw,3rem)] font-bold mt-1 break-words leading-tight tabular-nums">
+            <p
+              className="text-[clamp(1.75rem,6vw,3rem)] font-bold mt-1 break-words leading-tight tabular-nums"
+              style={{ color: "#FFFFFF" }}
+            >
               {formatTZS(totalRevenue)}
             </p>
             {revenueIsPlatformWide ? (
-              <p className="text-xs sm:text-sm mt-2 opacity-70">
+              <p
+                className="text-xs sm:text-sm mt-2"
+                style={{ color: "rgba(255,255,255,0.7)" }}
+              >
                 {lang === "sw"
                   ? "Mapato yote ya jukwaa kutoka vyanzo vyote"
                   : "All platform revenue from every source"}
@@ -307,8 +315,8 @@ export default function OverviewSection({ onNavigate }) {
               <p
                 className="text-[11px] sm:text-xs mt-2 inline-block px-2 py-0.5 rounded"
                 style={{
-                  background: "rgba(232,163,61,0.18)",
-                  color: COLORS.gold,
+                  background: "rgba(232,163,61,0.25)",
+                  color: "#E8A33D",
                 }}
               >
                 {lang === "sw"
@@ -319,8 +327,8 @@ export default function OverviewSection({ onNavigate }) {
           </div>
         </div>
 
-        {/* Breakdown ya mapato kwa aina */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5 w-full lg:w-auto shrink-0">
+        {/* Breakdown ya mapato kwa aina — sasa na Success Fee */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 w-full lg:w-auto shrink-0">
           <RevenueBreakdown
             label={lang === "sw" ? "Listing Fee" : "Listing Fee"}
             value={transactions
@@ -359,6 +367,15 @@ export default function OverviewSection({ onNavigate }) {
               )
               .reduce((s, t) => s + (t.amount || 0), 0)}
             color={COLORS.rust}
+          />
+          <RevenueBreakdown
+            label={lang === "sw" ? "Success Fee" : "Success Fee"}
+            value={transactions
+              .filter(
+                (t) => t.type === "success_fee" && t.status === "completed"
+              )
+              .reduce((s, t) => s + (t.amount || 0), 0)}
+            color="#0891B2"
           />
         </div>
       </div>
@@ -428,7 +445,6 @@ export default function OverviewSection({ onNavigate }) {
                 className="border rounded-lg px-3 py-3"
                 style={{ borderColor: COLORS.sandLine }}
               >
-                {/* Mobile */}
                 <div className="sm:hidden">
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <p className="text-sm font-semibold text-primary min-w-0 flex-1 line-clamp-2">
@@ -448,7 +464,6 @@ export default function OverviewSection({ onNavigate }) {
                     {formatTZS(d.currentOffer ?? d.askingPrice)}
                   </p>
                 </div>
-                {/* Desktop */}
                 <div className="hidden sm:flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-primary truncate">
@@ -484,12 +499,15 @@ function RevenueBreakdown({ label, value, color }) {
   return (
     <div className="flex flex-col items-start gap-0.5 min-w-0">
       <span
-        className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide opacity-60"
-        style={{ color }}
+        className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide"
+        style={{ color: color, opacity: 0.85 }}
       >
         {label}
       </span>
-      <span className="text-sm sm:text-base font-bold whitespace-nowrap tabular-nums">
+      <span
+        className="text-sm sm:text-base font-bold whitespace-nowrap tabular-nums"
+        style={{ color: "#FFFFFF" }}
+      >
         {"TZS " + Math.round(value || 0).toLocaleString("en-US")}
       </span>
     </div>
