@@ -139,16 +139,16 @@ function ViewAllTile({ to, label, itemCount, cols, delay = 0 }) {
     <Reveal delay={delay} className={fillSpan(itemCount, cols)}>
       <Link
         to={to}
-        className="group flex h-full min-h-[84px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-[#E8A33D]/40 bg-[#E8A33D]/10 px-4 py-5 text-center text-[#E8A33D] font-semibold text-sm transition-all duration-300 hover:-translate-y-1 hover:bg-[#E8A33D] hover:text-[#101A2E] hover:border-[#E8A33D] hover:shadow-lg hover:shadow-black/[0.06]"
+        className="group flex h-full min-h-[110px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-[#E8A33D]/50 bg-[#E8A33D]/10 px-4 py-6 text-center text-[#E8A33D] font-bold text-lg sm:text-xl leading-tight transition-all duration-300 hover:-translate-y-1 hover:bg-[#E8A33D] hover:text-[#101A2E] hover:border-[#E8A33D] hover:shadow-lg hover:shadow-black/[0.06]"
       >
         <span>{label}</span>
         <svg
-          width="18"
-          height="18"
+          width="26"
+          height="26"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2.4"
+          strokeWidth="2.6"
           strokeLinecap="round"
           strokeLinejoin="round"
           className="transition-transform duration-300 group-hover:translate-x-1"
@@ -464,19 +464,19 @@ export default function HomePage() {
           {/* Content */}
           <div className="relative w-full max-w-4xl mx-auto text-center">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-full px-4 py-1.5 mb-7 animate-fade-in-up">
-              <span className="relative flex h-1.5 w-1.5">
+            <div className="inline-flex items-center gap-2 bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-full px-4 py-2 mb-7 animate-fade-in-up">
+              <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E8A33D] opacity-60" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#E8A33D]" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E8A33D]" />
               </span>
-              <span className="text-[11px] font-medium text-white/70 tracking-wider uppercase">
+              <span className="text-xs sm:text-sm font-medium text-white/80 tracking-wider uppercase">
                 {lang === "sw" ? "Soko la Kidijitali la Mali" : "Digital Property Marketplace"}
               </span>
             </div>
 
             {/* Headline */}
             <h1
-              className="font-bold leading-[1.05] tracking-[-0.02em] animate-fade-in-up text-[clamp(2rem,7vw,4.25rem)]"
+              className="font-bold leading-[1.05] tracking-[-0.02em] animate-fade-in-up text-[clamp(2.25rem,9.5vw,4.5rem)]"
               style={{ animationDelay: "0.1s" }}
             >
               {lang === "sw" ? (
@@ -504,12 +504,11 @@ export default function HomePage() {
               style={{ animationDelay: "0.2s" }}
             >
               <p
-                className="text-white/75 leading-[1.7] px-2"
+                className="text-white/85 leading-[1.65] px-2 min-h-[9rem] sm:min-h-[5.5rem]"
                 style={{
-                  fontSize: "clamp(0.95rem, 2.1vw, 1.2rem)",
-                  fontWeight: 300,
+                  fontSize: "clamp(1.05rem, 2.6vw, 1.3rem)",
+                  fontWeight: 400,
                   letterSpacing: "-0.005em",
-                  minHeight: "clamp(3.5rem, 8vw, 5rem)",
                   fontFamily:
                     "'Inter', 'Playfair Display', system-ui, sans-serif",
                 }}
@@ -537,19 +536,19 @@ export default function HomePage() {
                   bg-gradient-to-r from-[#E8A33D] to-[#F5C976]
                   hover:from-[#D99728] hover:to-[#E8A33D]
                   text-[#101A2E] font-semibold
-                  pl-2 pr-6 sm:pr-8 py-2 sm:py-2.5
+                  pl-2 pr-6 sm:pr-8 py-2.5
                   shadow-[0_8px_30px_-8px_rgba(232,163,61,0.55)]
                   hover:shadow-[0_14px_45px_-8px_rgba(232,163,61,0.75)]
                   transition-all duration-300
                   hover:-translate-y-1 active:translate-y-0"
               >
-                <span className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#101A2E]/10 group-hover:bg-[#101A2E]/[0.16] flex items-center justify-center shrink-0 transition-colors">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <span className="w-12 h-12 rounded-full bg-[#101A2E]/10 group-hover:bg-[#101A2E]/[0.16] flex items-center justify-center shrink-0 transition-colors">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8" />
                     <path d="m21 21-4.3-4.3" />
                   </svg>
                 </span>
-                <span className="text-base sm:text-lg whitespace-nowrap">
+                <span className="text-lg sm:text-xl whitespace-nowrap">
                   {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                 </span>
                 <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
@@ -562,18 +561,18 @@ export default function HomePage() {
                   bg-gradient-to-r from-[#2F6D4F] to-[#3E8A66]
                   hover:from-[#245a41] hover:to-[#2F6D4F]
                   text-white font-semibold
-                  pl-2 pr-6 sm:pr-8 py-2 sm:py-2.5
+                  pl-2 pr-6 sm:pr-8 py-2.5
                   shadow-[0_8px_30px_-8px_rgba(47,109,79,0.55)]
                   hover:shadow-[0_14px_45px_-8px_rgba(47,109,79,0.75)]
                   transition-all duration-300
                   hover:-translate-y-1 active:translate-y-0"
               >
-                <span className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/15 group-hover:bg-white/25 flex items-center justify-center shrink-0 transition-colors">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <span className="w-12 h-12 rounded-full bg-white/15 group-hover:bg-white/25 flex items-center justify-center shrink-0 transition-colors">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 </span>
-                <span className="text-base sm:text-lg whitespace-nowrap">
+                <span className="text-lg sm:text-xl whitespace-nowrap">
                   {lang === "sw" ? "Uza Sasa" : "Sell Now"}
                 </span>
                 <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] bg-gradient-to-r from-transparent via-white/25 to-transparent" />
@@ -582,21 +581,21 @@ export default function HomePage() {
 
             {/* ── Elegant trust row ─────────────────────────── */}
             <div
-              className="mt-8 flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-5 gap-y-2 text-[11px] sm:text-xs text-white/45 animate-fade-in-up"
+              className="mt-8 flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-5 gap-y-2 text-xs sm:text-sm text-white/70 animate-fade-in-up"
               style={{ animationDelay: "0.5s" }}
             >
               <span className="flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-[#2F6D4F]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#2F6D4F]" />
                 {lang === "sw" ? "Malipo Salama" : "Secure Payments"}
               </span>
               <span className="hidden sm:block w-px h-3 bg-white/10" aria-hidden="true" />
               <span className="flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-[#E8A33D]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#E8A33D]" />
                 {lang === "sw" ? "Wauzaji Walioidhinishwa" : "Verified Sellers"}
               </span>
               <span className="hidden sm:block w-px h-3 bg-white/10" aria-hidden="true" />
               <span className="flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-white/40" />
+                <span className="w-1.5 h-1.5 rounded-full bg-white/50" />
                 {lang === "sw" ? "Msaada wa Haraka" : "Fast Support"}
               </span>
             </div>
@@ -612,21 +611,21 @@ export default function HomePage() {
                 rel="noopener noreferrer"
                 aria-disabled={!playUrl}
                 onClick={(e) => { if (!playUrl) e.preventDefault(); }}
-                className={`group flex items-center gap-2 sm:gap-3 border border-white/10 hover:border-white/25 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 hover:bg-white/[0.04] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 ${!playUrl ? "opacity-60 cursor-default pointer-events-auto" : ""}`}
+                className={`group flex items-center gap-2 sm:gap-3 border border-white/10 hover:border-white/25 rounded-xl px-3.5 sm:px-4 py-2.5 hover:bg-white/[0.04] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 ${!playUrl ? "opacity-60 cursor-default pointer-events-auto" : ""}`}
               >
-                <svg viewBox="0 0 24 24" className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="w-6 h-6 sm:w-7 sm:h-7 shrink-0" aria-hidden="true">
                   <path d="M4.5 3.5c-.3.3-.5.7-.5 1.2v14.6c0 .5.2.9.5 1.2l.1.1L13 12.1v-.2L4.6 3.4l-.1.1z" fill="#00D2FF" />
                   <path d="M15.9 15L13 12.1v-.2l2.9-2.9 6.5 3.7c.8.5.8 1.3 0 1.8l-6.5 3.7z" fill="#FFCE00" />
                   <path d="M15.9 15L13 12l-8.4 8.5c.4.4 1 .4 1.7.1L15.9 15" fill="#FF3A44" />
                   <path d="M15.9 9.1L6.3 3.6c-.7-.4-1.3-.3-1.7.1L13 12l2.9-2.9z" fill="#00F076" />
                 </svg>
-                <span className="text-[11px] sm:text-xs text-left">
-                  <span className="block text-white/40 text-[9px] sm:text-[10px]">
+                <span className="text-left">
+                  <span className="block text-white/65 text-[11px] sm:text-xs">
                     {playUrl
                       ? lang === "sw" ? "Pata kwenye" : "Get it on"
                       : lang === "sw" ? "Inakuja hivi karibuni" : "Coming soon"}
                   </span>
-                  <span className="block font-semibold text-white text-xs sm:text-sm">Google Play</span>
+                  <span className="block font-semibold text-white text-sm sm:text-base">Google Play</span>
                 </span>
               </a>
               <a
@@ -635,18 +634,18 @@ export default function HomePage() {
                 rel="noopener noreferrer"
                 aria-disabled={!appStoreUrl}
                 onClick={(e) => { if (!appStoreUrl) e.preventDefault(); }}
-                className={`group flex items-center gap-2 sm:gap-3 border border-white/10 hover:border-white/25 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 hover:bg-white/[0.04] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 ${!appStoreUrl ? "opacity-60 cursor-default pointer-events-auto" : ""}`}
+                className={`group flex items-center gap-2 sm:gap-3 border border-white/10 hover:border-white/25 rounded-xl px-3.5 sm:px-4 py-2.5 hover:bg-white/[0.04] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 ${!appStoreUrl ? "opacity-60 cursor-default pointer-events-auto" : ""}`}
               >
-                <svg viewBox="0 0 384 512" className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 fill-white/90" aria-hidden="true">
+                <svg viewBox="0 0 384 512" className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 fill-white/90" aria-hidden="true">
                   <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.3c0 26.2 4.8 53.3 14.4 81.3 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.8zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
                 </svg>
-                <span className="text-[11px] sm:text-xs text-left">
-                  <span className="block text-white/40 text-[9px] sm:text-[10px]">
+                <span className="text-left">
+                  <span className="block text-white/65 text-[11px] sm:text-xs">
                     {appStoreUrl
                       ? lang === "sw" ? "Pata kwenye" : "Get it on"
                       : lang === "sw" ? "Inakuja hivi karibuni" : "Coming soon"}
                   </span>
-                  <span className="block font-semibold text-white text-xs sm:text-sm">App Store</span>
+                  <span className="block font-semibold text-white text-sm sm:text-base">App Store</span>
                 </span>
               </a>
             </div>
@@ -766,18 +765,18 @@ export default function HomePage() {
                       to={`/mali/${prop.id}`}
                       className="group block h-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/[0.08]"
                     >
-                      <div className="relative h-32 sm:h-44 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
+                      <div className="relative aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
                         {img ? (
                           <img
                             src={img}
                             alt={prop.title}
                             loading="lazy"
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                           />
                         ) : (
                           <Icon size={48} className="text-[#E8A33D]" />
                         )}
-                        <div className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-[#2F6D4F] text-white text-[10px] font-semibold flex items-center gap-1">
+                        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 px-1.5 sm:px-2 py-0.5 rounded-full bg-[#2F6D4F] text-white text-[9px] sm:text-[10px] font-semibold flex items-center gap-1">
                           <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
                           {lang === "sw" ? "Inapatikana" : "Available"}
                         </div>
@@ -840,12 +839,12 @@ export default function HomePage() {
                       to={`/kategoria/${cat.key}`}
                       className="group block bg-white rounded-2xl overflow-hidden text-center border border-gray-100 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg hover:shadow-black/[0.06] hover:border-[#E8A33D]/30"
                     >
-                      <div className="h-32 sm:h-36 bg-[#F5F3EC] flex items-center justify-center overflow-hidden relative">
+                      <div className="aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden relative">
                         {hasPhoto ? (
                           <img
                             src={cat.imageUrl}
                             alt={cat.label?.[lang] || cat.label?.sw}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                           />
                         ) : (
                           <Icon
