@@ -742,13 +742,13 @@ function CategoryPropertyCard({
       >
         <Link
           to={`/mali/${property.id}`}
-          className="w-full sm:w-48 h-48 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative overflow-hidden"
+          className="w-full sm:w-48 aspect-square sm:self-start bg-[#F5F3EC] flex items-center justify-center flex-shrink-0 relative overflow-hidden"
         >
           {hasImage ? (
             <img
               src={photoUrl}
               alt={property.title}
-              className="w-full h-full object-cover"
+              className="absolute inset-0 block w-full h-full object-cover object-center"
               loading="lazy"
             />
           ) : (
@@ -845,12 +845,12 @@ function CategoryPropertyCard({
       }`}
     >
       <Link to={`/mali/${property.id}`} className="block relative">
-        <div className="w-full h-44 bg-gray-100 flex items-center justify-center overflow-hidden">
+        <div className="relative w-full aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
           {hasImage ? (
             <img
               src={photoUrl}
               alt={property.title}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+              className="absolute inset-0 block w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-300"
               loading="lazy"
             />
           ) : (
