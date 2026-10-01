@@ -2,10 +2,11 @@
 // UserManagementSection.jsx
 // Usimamizi wa watumiaji — table (desktop) + card list (mobile).
 // Bilingual + Async actions na rollback + loading state.
+// + Futa Permanently (hard delete) kwa admin.
 // ============================================================
 
 import React, { useState } from "react";
-import { Search, RotateCcw, Ban, Loader2 } from "lucide-react";
+import { Search, RotateCcw, Ban, Loader2, Trash2 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
@@ -14,6 +15,7 @@ import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
   useUsers,
   toggleUserStatusAsync,
+  permanentDeleteUserAsync,
 } from "../../../../config/usersStore.js";
 import { useListings } from "../../../../config/listingsStore.js";
 import { useDeals } from "../../../../config/dealsStore.js";
@@ -26,7 +28,7 @@ export default function UserManagementSection() {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState(null);
-  const [busy, setBusy] = useState({}); // { [userId]: true }
+  const [busy, setBusy] = useState({}); // { [userId]: "toggle" | "delete" }
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -42,12 +44,12 @@ export default function UserManagementSection() {
   });
 
   // ============================================================
-  // HANDLE TOGGLE — async + rollback + error
+  // HANDLE TOGGLE — suspend/activate
   // ============================================================
   const handleToggle = async (userId) => {
     if (busy[userId]) return;
 
-    setBusy((b) => ({ ...b, [userId]: true }));
+    setBusy((b) => ({ ...b, [userId]: "toggle" }));
     setError("");
 
     const res = await toggleUserStatusAsync(userId);
@@ -61,50 +63,142 @@ export default function UserManagementSection() {
     if (!res.ok) {
       setError(
         res.error?.message ||
-          t("Imeshindwa kubadilisha hali ya mtumiaji.", "Failed to change user status.")
+          t(
+            "Imeshindwa kubadilisha hali ya mtumiaji.",
+            "Failed to change user status."
+          )
       );
     }
   };
 
   // ============================================================
-  // ACTION BUTTON — inatumika table na card
+  // HANDLE PERMANENT DELETE — double confirmation
   // ============================================================
-  const ActionButton = ({ user, fullWidth = false }) => {
+  const handleDelete = async (userId, userName) => {
+    if (busy[userId]) return;
+
+    // First confirmation
+    const confirmed = window.confirm(
+      lang === "sw"
+        ? `Futa mtumiaji "${userName}" KABISA?\n\nHatua hii haiwezi kurudishwa. Data yote itaondolewa.`
+        : `Permanently delete user "${userName}"?\n\nThis cannot be undone. All data will be removed.`
+    );
+    if (!confirmed) return;
+
+    // Second confirmation
+    const doubleConfirm = window.confirm(
+      lang === "sw"
+        ? "Una uhakika KABISA? Bonyeza OK kuthibitisha."
+        : "Are you ABSOLUTELY sure? Click OK to confirm."
+    );
+    if (!doubleConfirm) return;
+
+    setBusy((b) => ({ ...b, [userId]: "delete" }));
+    setError("");
+
+    const res = await permanentDeleteUserAsync(userId);
+
+    setBusy((b) => {
+      const next = { ...b };
+      delete next[userId];
+      return next;
+    });
+
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kumfuta mtumiaji.", "Failed to delete user.")
+      );
+    } else {
+      // Kama drawer ipo wazi kwa user huyu, ifunge
+      if (selectedUser?.id === userId) {
+        setSelectedUser(null);
+      }
+    }
+  };
+
+  // ============================================================
+  // ACTION BUTTONS — inatumika table na card
+  // ============================================================
+  const ActionButtons = ({ user, fullWidth = false }) => {
     const isSuspended = user.status === "suspended";
     const isBusy = !!busy[user.id];
+    const busyAction = busy[user.id];
 
     return (
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleToggle(user.id);
-        }}
-        disabled={isBusy}
-        style={{
-          color: isSuspended ? COLORS.green : COLORS.rust,
-          borderColor: isSuspended ? `${COLORS.green}33` : `${COLORS.rust}33`,
-        }}
-        className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-          fullWidth ? "w-full" : ""
+      <div
+        className={`flex items-center gap-1.5 ${
+          fullWidth ? "w-full" : "justify-end"
         }`}
       >
-        {isBusy ? (
-          <>
-            <Loader2 size={13} className="animate-spin" />
-            {t("Inafanya...", "Working...")}
-          </>
-        ) : isSuspended ? (
-          <>
-            <RotateCcw size={13} />
-            {t("Washa Tena", "Activate")}
-          </>
-        ) : (
-          <>
-            <Ban size={13} />
-            {t("Simamisha", "Suspend")}
-          </>
-        )}
-      </button>
+        {/* Suspend / Activate */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleToggle(user.id);
+          }}
+          disabled={isBusy}
+          style={{
+            color: isSuspended ? COLORS.green : COLORS.rust,
+            borderColor: isSuspended
+              ? `${COLORS.green}33`
+              : `${COLORS.rust}33`,
+          }}
+          className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            fullWidth ? "flex-1" : ""
+          }`}
+        >
+          {busyAction === "toggle" ? (
+            <>
+              <Loader2 size={13} className="animate-spin" />
+              {t("Inafanya...", "Working...")}
+            </>
+          ) : isSuspended ? (
+            <>
+              <RotateCcw size={13} />
+              {t("Washa Tena", "Activate")}
+            </>
+          ) : (
+            <>
+              <Ban size={13} />
+              {t("Simamisha", "Suspend")}
+            </>
+          )}
+        </button>
+
+        {/* Futa Permanently */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDelete(user.id, user.name);
+          }}
+          disabled={isBusy || user.isStaff}
+          title={
+            user.isStaff
+              ? t("Hauwezi kumfuta admin", "Cannot delete admin")
+              : t("Futa Kabisa", "Delete Permanently")
+          }
+          style={{
+            color: COLORS.rust,
+            borderColor: `${COLORS.rust}33`,
+          }}
+          className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            fullWidth ? "flex-1" : ""
+          }`}
+        >
+          {busyAction === "delete" ? (
+            <>
+              <Loader2 size={13} className="animate-spin" />
+              {fullWidth && t("Inafuta...", "Deleting...")}
+            </>
+          ) : (
+            <>
+              <Trash2 size={13} />
+              {fullWidth && t("Futa", "Delete")}
+            </>
+          )}
+        </button>
+      </div>
     );
   };
 
@@ -113,8 +207,8 @@ export default function UserManagementSection() {
       <SectionHeader
         title={t("Usimamizi wa Watumiaji", "User Management")}
         subtitle={t(
-          "Dhibiti akaunti za watumiaji — simamisha au washa",
-          "Manage user accounts — suspend or activate"
+          "Dhibiti akaunti za watumiaji — simamisha, washa, au futa",
+          "Manage user accounts — suspend, activate, or delete"
         )}
       />
 
@@ -180,7 +274,7 @@ export default function UserManagementSection() {
                   {t("Alijiunga", "Joined")}
                 </th>
                 <th className="px-5 py-2.5 text-right text-xs font-medium text-secondary uppercase">
-                  {t("Kitendo", "Action")}
+                  {t("Vitendo", "Actions")}
                 </th>
               </tr>
             </thead>
@@ -194,14 +288,16 @@ export default function UserManagementSection() {
                   <td className="px-5 py-3 text-sm font-medium text-primary">
                     {u.name}
                   </td>
-                  <td className="px-5 py-3 text-sm text-secondary">{u.email}</td>
+                  <td className="px-5 py-3 text-sm text-secondary">
+                    {u.email}
+                  </td>
                   <td className="px-5 py-3 text-sm text-secondary">{u.role}</td>
                   <td className="px-5 py-3">
                     <StatusBadge status={u.status} lang={lang} />
                   </td>
                   <td className="px-5 py-3 text-sm text-muted">{u.joined}</td>
                   <td className="px-5 py-3 text-right">
-                    <ActionButton user={u} />
+                    <ActionButtons user={u} />
                   </td>
                 </tr>
               ))}
@@ -256,7 +352,7 @@ export default function UserManagementSection() {
               </span>
             </div>
 
-            <ActionButton user={u} fullWidth />
+            <ActionButtons user={u} fullWidth />
           </div>
         ))}
 
