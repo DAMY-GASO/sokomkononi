@@ -1,7 +1,9 @@
 // ============================================================
 // PromotionsSection.jsx
-// Admin — Promotions Dashboard (boosted, featured, leading,
-// advertised, campaigns).
+// Admin — Promotions Dashboard (boosted, leading, advertised,
+// reserved, success fee, listing fee, campaigns).
+// Revenue Types zote 6: boosting, advertising, leading,
+// reservation, success, listing.
 // Bilingual + mobile-responsive + Async campaign actions.
 // ============================================================
 
@@ -18,12 +20,14 @@ import {
   Calendar,
   Sparkles,
   Loader2,
+  HandCoins,
+  Wallet,
+  CreditCard,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../shared/constants.js";
 import { getCategory, getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
-// ⬇️ MABADILIKO: tumia async variants kwa campaigns
 import {
   usePromotions,
   addCampaignAsync,
@@ -32,42 +36,67 @@ import {
 } from "../../../../config/promotionsStore.js";
 
 // ============================================================
-// PROMOTION TYPE CONFIG
+// PROMOTION TYPE CONFIG — REVENUE TYPES ZOTE 6
 // ============================================================
 const PROMO_TYPES = {
   boost: {
+    key: "boost",
     label: { sw: "Boost", en: "Boost" },
     icon: Rocket,
     color: COLORS.gold,
     bg: "rgba(232,163,61,0.16)",
   },
   leading: {
+    key: "leading",
     label: { sw: "Leading", en: "Leading" },
     icon: TrendingUp,
     color: COLORS.green,
     bg: "rgba(47,109,79,0.14)",
   },
   advertise: {
+    key: "advertise",
     label: { sw: "Tangazo", en: "Advertisement" },
     icon: Megaphone,
     color: COLORS.rust,
     bg: "rgba(193,80,46,0.14)",
   },
+  reservation: {
+    key: "reservation",
+    label: { sw: "Uhifadhi", en: "Reservation" },
+    icon: HandCoins,
+    color: "#2563EB",
+    bg: "rgba(37,99,235,0.14)",
+  },
+  success: {
+    key: "success",
+    label: { sw: "Ada ya Mafanikio", en: "Success Fee" },
+    icon: Wallet,
+    color: "#7C3AED",
+    bg: "rgba(124,58,237,0.14)",
+  },
+  listing: {
+    key: "listing",
+    label: { sw: "Ada ya Kuchapisha", en: "Listing Fee" },
+    icon: CreditCard,
+    color: "#0891B2",
+    bg: "rgba(8,145,178,0.14)",
+  },
 };
 
 // ============================================================
-// PROMOTION CARD
+// PROMOTION CARD — inaonyesha listing/deal/transaction
 // ============================================================
-function PromotionCard({ listing, lang }) {
+function PromotionCard({ listing, lang, type: forcedType }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
-  const type = PROMO_TYPES[listing.promotionType] || PROMO_TYPES.boost;
+  const typeKey = forcedType || listing.promotionType || "boost";
+  const type = PROMO_TYPES[typeKey] || PROMO_TYPES.boost;
   const Icon = type.icon;
 
   const category = getCategory(listing.category);
   const CatIcon = getCategoryIcon(category?.iconKey);
   const catLabel = category?.label?.[lang] || category?.label?.sw || listing.category;
 
-  const isUrgent = listing.daysRemaining <= 2;
+  const isUrgent = listing.daysRemaining != null && listing.daysRemaining <= 2;
 
   return (
     <div
@@ -108,32 +137,51 @@ function PromotionCard({ listing, lang }) {
           </p>
 
           <div className="flex items-center gap-2 text-xs text-secondary mt-0.5 flex-wrap">
-            <span className="flex items-center gap-1 min-w-0">
-              <CatIcon size={11} className="shrink-0" />
-              <span className="truncate">{catLabel}</span>
-            </span>
-            <span className="text-muted shrink-0">•</span>
-            <span className="shrink-0">{formatTZS(listing.price)}</span>
+            {category && (
+              <>
+                <span className="flex items-center gap-1 min-w-0">
+                  <CatIcon size={11} className="shrink-0" />
+                  <span className="truncate">{catLabel}</span>
+                </span>
+                <span className="text-muted shrink-0">•</span>
+              </>
+            )}
+            {listing.price != null && (
+              <span className="shrink-0">{formatTZS(listing.price)}</span>
+            )}
+            {listing.amount != null && listing.price == null && (
+              <span className="shrink-0">{formatTZS(listing.amount)}</span>
+            )}
           </div>
 
           <p className="text-[11px] text-muted mt-1 truncate w-full">
-            {t("Muuzaji", "Seller")}: {listing.seller_name || listing.seller || "—"}
+            {t("Muuzaji", "Seller")}: {listing.seller_name || listing.seller || listing.user_name || "—"}
           </p>
         </div>
 
-        <div className="text-right shrink-0">
-          <p
-            style={{
-              color: isUrgent ? COLORS.rust : "var(--text-primary)",
-            }}
-            className="text-sm font-bold"
-          >
-            {listing.daysRemaining}d
-          </p>
-          <p className="text-[10px] text-muted whitespace-nowrap">
-            {t("zimebaki", "remaining")}
-          </p>
-        </div>
+        {listing.daysRemaining != null && (
+          <div className="text-right shrink-0">
+            <p
+              style={{
+                color: isUrgent ? COLORS.rust : "var(--text-primary)",
+              }}
+              className="text-sm font-bold"
+            >
+              {listing.daysRemaining}d
+            </p>
+            <p className="text-[10px] text-muted whitespace-nowrap">
+              {t("zimebaki", "remaining")}
+            </p>
+          </div>
+        )}
+
+        {listing.date && (
+          <div className="text-right shrink-0">
+            <p className="text-[11px] text-muted whitespace-nowrap">
+              {timeAgo(listing.date, lang)}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -424,17 +472,16 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
 export default function PromotionsSection() {
   const { lang } = useLanguage();
   const promotions = usePromotions(lang);
-  const [activeTab, setActiveTab] = useState("boosted");
+  const [activeTab, setActiveTab] = useState("boost");
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [addingCampaign, setAddingCampaign] = useState(false);
-  // ⬇️ MPYA: busy + error
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   // ============================================================
-  // HANDLERS — async + rollback
+  // CAMPAIGN HANDLERS
   // ============================================================
   const handleAddCampaign = async (form) => {
     if (busy.campaignSave) return;
@@ -510,35 +557,74 @@ export default function PromotionsSection() {
     }
   };
 
+  // ============================================================
+  // TABS — REVENUE TYPES ZOTE 6 + CAMPAIGNS
+  // ============================================================
   const TABS = [
     {
-      key: "boosted",
+      key: "boost",
       label: t("Boost", "Boost"),
       icon: Rocket,
       count: promotions.counts.boosted,
+      revenue: promotions.revenueByType.boost,
+      color: COLORS.gold,
+    },
+    {
+      key: "advertise",
+      label: t("Matangazo", "Advertisements"),
+      icon: Megaphone,
+      count: promotions.counts.advertised,
+      revenue: promotions.revenueByType.advertise,
+      color: COLORS.rust,
     },
     {
       key: "leading",
       label: t("Leading", "Leading"),
       icon: TrendingUp,
       count: promotions.counts.leading,
+      revenue: promotions.revenueByType.leading,
+      color: COLORS.green,
     },
     {
-      key: "advertised",
-      label: t("Matangazo", "Advertisements"),
-      icon: Megaphone,
-      count: promotions.counts.advertised,
+      key: "reservation",
+      label: t("Uhifadhi", "Reservation"),
+      icon: HandCoins,
+      count: promotions.counts.reserved,
+      revenue: promotions.revenueByType.reservation,
+      color: "#2563EB",
+    },
+    {
+      key: "success",
+      label: t("Ada ya Mafanikio", "Success Fee"),
+      icon: Wallet,
+      count: promotions.counts.successFee,
+      revenue: promotions.revenueByType.success,
+      color: "#7C3AED",
+    },
+    {
+      key: "listing",
+      label: t("Ada ya Kuchapisha", "Listing Fee"),
+      icon: CreditCard,
+      count: promotions.counts.listingFee,
+      revenue: promotions.revenueByType.listing,
+      color: "#0891B2",
     },
     {
       key: "campaigns",
       label: t("Kampeni", "Campaigns"),
       icon: Sparkles,
       count: promotions.counts.campaigns,
+      revenue: null,
+      color: COLORS.gold,
     },
   ];
 
+  // ============================================================
+  // TAB CONTENT RENDERER
+  // ============================================================
   const renderTabContent = () => {
-    if (activeTab === "boosted") {
+    // Boost
+    if (activeTab === "boost") {
       return promotions.boostedListings.length === 0 ? (
         <EmptyState
           icon={Rocket}
@@ -551,12 +637,33 @@ export default function PromotionsSection() {
       ) : (
         <div className="flex flex-col gap-3 w-full min-w-0">
           {promotions.boostedListings.map((l) => (
-            <PromotionCard key={l.id} listing={l} lang={lang} />
+            <PromotionCard key={l.id} listing={l} lang={lang} type="boost" />
           ))}
         </div>
       );
     }
 
+    // Advertise
+    if (activeTab === "advertise") {
+      return promotions.advertisedListings.length === 0 ? (
+        <EmptyState
+          icon={Megaphone}
+          title={t("Hakuna Matangazo", "No Advertisements")}
+          subtitle={t(
+            "Mali zenye banner zitaonekana hapa.",
+            "Advertised listings will appear here."
+          )}
+        />
+      ) : (
+        <div className="flex flex-col gap-3 w-full min-w-0">
+          {promotions.advertisedListings.map((l) => (
+            <PromotionCard key={l.id} listing={l} lang={lang} type="advertise" />
+          ))}
+        </div>
+      );
+    }
+
+    // Leading
     if (activeTab === "leading") {
       return promotions.leadingListings.length === 0 ? (
         <EmptyState
@@ -570,31 +677,73 @@ export default function PromotionsSection() {
       ) : (
         <div className="flex flex-col gap-3 w-full min-w-0">
           {promotions.leadingListings.map((l) => (
-            <PromotionCard key={l.id} listing={l} lang={lang} />
+            <PromotionCard key={l.id} listing={l} lang={lang} type="leading" />
           ))}
         </div>
       );
     }
 
-    if (activeTab === "advertised") {
-      return promotions.advertisedListings.length === 0 ? (
+    // Reservation
+    if (activeTab === "reservation") {
+      return promotions.reservedListings.length === 0 ? (
         <EmptyState
-          icon={Megaphone}
-          title={t("Hakuna Matangazo", "No Advertisements")}
+          icon={HandCoins}
+          title={t("Hakuna Reservations", "No Reservations")}
           subtitle={t(
-            "Mali zenye banner zitaonekana hapa.",
-            "Advertised listings will appear here."
+            "Mali zilizohifadhiwa zitaonekana hapa.",
+            "Reserved listings will appear here."
           )}
         />
       ) : (
         <div className="flex flex-col gap-3 w-full min-w-0">
-          {promotions.advertisedListings.map((l) => (
-            <PromotionCard key={l.id} listing={l} lang={lang} />
+          {promotions.reservedListings.map((l) => (
+            <PromotionCard key={l.id} listing={l} lang={lang} type="reservation" />
           ))}
         </div>
       );
     }
 
+    // Success Fee
+    if (activeTab === "success") {
+      return promotions.successFeeDeals.length === 0 ? (
+        <EmptyState
+          icon={Wallet}
+          title={t("Hakuna Success Fee", "No Success Fee")}
+          subtitle={t(
+            "Miamala ya success fee itaonekana hapa.",
+            "Success fee transactions will appear here."
+          )}
+        />
+      ) : (
+        <div className="flex flex-col gap-3 w-full min-w-0">
+          {promotions.successFeeDeals.map((l) => (
+            <PromotionCard key={l.id} listing={l} lang={lang} type="success" />
+          ))}
+        </div>
+      );
+    }
+
+    // Listing Fee
+    if (activeTab === "listing") {
+      return promotions.listingFeeTransactions.length === 0 ? (
+        <EmptyState
+          icon={CreditCard}
+          title={t("Hakuna Listing Fee", "No Listing Fee")}
+          subtitle={t(
+            "Miamala ya listing fee itaonekana hapa.",
+            "Listing fee transactions will appear here."
+          )}
+        />
+      ) : (
+        <div className="flex flex-col gap-3 w-full min-w-0">
+          {promotions.listingFeeTransactions.map((l) => (
+            <PromotionCard key={l.id} listing={l} lang={lang} type="listing" />
+          ))}
+        </div>
+      );
+    }
+
+    // Campaigns
     if (activeTab === "campaigns") {
       return (
         <div className="flex flex-col gap-3 w-full min-w-0">
@@ -660,6 +809,8 @@ export default function PromotionsSection() {
         </div>
       );
     }
+
+    return null;
   };
 
   return (
@@ -667,8 +818,8 @@ export default function PromotionsSection() {
       <SectionHeader
         title={t("Matangazo & Kampeni", "Promotions & Campaigns")}
         subtitle={t(
-          "Fuatilia boosted, leading, matangazo, na kampeni za matangazo.",
-          "Track boosted, leading, advertisements, and promotional campaigns."
+          "Fuatilia mapato kwa aina zote sita: Boost, Matangazo, Leading, Uhifadhi, Success Fee, na Listing Fee.",
+          "Track revenue across all six types: Boost, Advertisements, Leading, Reservation, Success Fee, and Listing Fee."
         )}
       />
 
@@ -685,19 +836,13 @@ export default function PromotionsSection() {
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-5 w-full">
+      {/* Stats — zote sita + jumla */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 sm:gap-3 mb-5 w-full">
         <StatBox
-          label={t("Boosted", "Boosted")}
+          label={t("Boost", "Boost")}
           value={promotions.counts.boosted}
           icon={Rocket}
           color={COLORS.gold}
-        />
-        <StatBox
-          label={t("Leading", "Leading")}
-          value={promotions.counts.leading}
-          icon={TrendingUp}
-          color={COLORS.green}
         />
         <StatBox
           label={t("Matangazo", "Advertisements")}
@@ -706,14 +851,38 @@ export default function PromotionsSection() {
           color={COLORS.rust}
         />
         <StatBox
-          label={t("Mapato ya Matangazo", "Promotion Revenue")}
+          label={t("Leading", "Leading")}
+          value={promotions.counts.leading}
+          icon={TrendingUp}
+          color={COLORS.green}
+        />
+        <StatBox
+          label={t("Uhifadhi", "Reservations")}
+          value={promotions.counts.reserved}
+          icon={HandCoins}
+          color="#2563EB"
+        />
+        <StatBox
+          label={t("Success Fee", "Success Fee")}
+          value={promotions.counts.successFee}
+          icon={Wallet}
+          color="#7C3AED"
+        />
+        <StatBox
+          label={t("Listing Fee", "Listing Fee")}
+          value={promotions.counts.listingFee}
+          icon={CreditCard}
+          color="#0891B2"
+        />
+        <StatBox
+          label={t("Jumla ya Mapato", "Total Revenue")}
           value={formatTZS(promotions.totalPromotionRevenue)}
           icon={DollarSign}
-          color="#2563EB"
+          color={COLORS.night}
         />
       </div>
 
-      {/* Revenue Breakdown */}
+      {/* Revenue Breakdown — zote sita */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="rounded-xl border p-3 sm:p-4 mb-5 w-full min-w-0 overflow-hidden"
@@ -721,11 +890,16 @@ export default function PromotionsSection() {
         <h3 className="text-sm font-semibold text-primary mb-3">
           {t("Mapato kwa Aina", "Revenue by Type")}
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 w-full">
           <RevenueRow
             label={t("Boost", "Boost")}
             value={promotions.revenueByType.boost}
             color={COLORS.gold}
+          />
+          <RevenueRow
+            label={t("Matangazo", "Advertisements")}
+            value={promotions.revenueByType.advertise}
+            color={COLORS.rust}
           />
           <RevenueRow
             label={t("Leading", "Leading")}
@@ -733,16 +907,26 @@ export default function PromotionsSection() {
             color={COLORS.green}
           />
           <RevenueRow
-            label={t("Matangazo", "Advertisements")}
-            value={promotions.revenueByType.advertise}
-            color={COLORS.rust}
+            label={t("Uhifadhi", "Reservation")}
+            value={promotions.revenueByType.reservation}
+            color="#2563EB"
+          />
+          <RevenueRow
+            label={t("Success Fee", "Success Fee")}
+            value={promotions.revenueByType.success}
+            color="#7C3AED"
+          />
+          <RevenueRow
+            label={t("Listing Fee", "Listing Fee")}
+            value={promotions.revenueByType.listing}
+            color="#0891B2"
           />
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
-        {TABS.map(({ key, label, icon: Icon, count }) => {
+      {/* Tabs — zote sita + campaigns */}
+      <div className="flex justify-start sm:justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
+        {TABS.map(({ key, label, icon: Icon, count, revenue, color }) => {
           const isActive = activeTab === key;
           return (
             <button
@@ -755,8 +939,8 @@ export default function PromotionsSection() {
               }}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
             >
-              <Icon size={13} />
-              {label}
+              <Icon size={13} color={isActive ? COLORS.gold : color} />
+              <span>{label}</span>
               <span
                 style={{
                   background: isActive
