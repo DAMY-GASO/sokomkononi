@@ -7,7 +7,7 @@
 import React, { useState } from "react";
 import { ShoppingBag, Plus, Trash2, Loader2 } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
-import CategoryForm from "../../sections/CategoryForm.jsx";
+import CategoryForm from "../../sections/CategoriesSections.jsx";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 // ⬇️ MABADILIKO: tumia async variants
 import {
