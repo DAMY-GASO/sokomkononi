@@ -88,7 +88,6 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotpasswordPage />} />
-          
 
           {/* PROPERTY & SEARCH */}
           <Route path="/mali/:id" element={<PropertyDetailPage />} />
@@ -134,26 +133,12 @@ function App() {
           <Route path="/dashboard/buyer/activity" element={<DashboardShell />} />
 
           {/* ADMIN — SECRET PATHS */}
+          {/* ADMIN_LOGIN_PATH pekee (mfano /admin-login-xyz) */}
           <Route path={ADMIN_LOGIN_PATH} element={<AdminLoginPage />} />
+          {/* ADMIN_PATH yenyewe (mfano /admin-xyz) */}
           <Route path={ADMIN_PATH} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/dashboard`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/overview`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/users`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/moderation`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/verification`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/deals`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/revenue`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/bundles`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/promotions`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/categories`} element={<AdminDashboard />} /> 
-          <Route path={`${ADMIN_PATH}/reports`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/support`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/content`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/audit`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/system`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/staff`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/profile`} element={<AdminDashboard />} />
-          <Route path={`${ADMIN_PATH}/trash`} element={<AdminDashboard />} />
+          {/* ADMIN_PATH/ + kitu chochote (mfano /admin-xyz/categories) */}
+          <Route path={`${ADMIN_PATH}/*`} element={<AdminDashboard />} />
 
           {/* LEGACY /admin/* — render 404 so the secret path stays secret */}
           <Route path="/admin/*" element={<NotFoundPage />} />
@@ -165,7 +150,7 @@ function App() {
 
           <Route path="/alika-marafiki" element={<InviteFriendsPage />} />
 
-          {/* REAL 404 — replaces old "/* → HomePage" */}
+          {/* REAL 404 */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
