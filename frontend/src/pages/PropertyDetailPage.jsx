@@ -21,6 +21,10 @@ import { useWaitingList, joinWaitingListAsync } from "../config/waitingListStore
 import { getOrCreateDealAsync } from "../config/dealsStore.js";
 import { createConversationAsync } from "../config/messagesStore.js";
 import {
+  CATEGORY_EXTRA,
+  getPostingConfig,
+} from "../config/categorySchemas.js";
+import {
   COLORS,
   isBoostActive,
   isLeadingActive,
@@ -71,8 +75,6 @@ function reservationCountdown(reservedUntil, lang) {
 function ImageGallery({ property, lang }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Normalize every possible source into a flat array of URL strings.
-  // Handles strings, objects with image_url/url/image/src, and single fields.
   const rawList = [
     ...(Array.isArray(property.images) ? property.images : []),
     ...(Array.isArray(property.photos) ? property.photos : []),
@@ -96,7 +98,7 @@ function ImageGallery({ property, lang }) {
 
   if (images.length === 0) {
     return (
-      <div className="relative w-full h-64 sm:h-96 md:h-[500px] rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center">
+      <div className="relative w-full aspect-square max-w-[640px] mx-auto rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center">
         <Icon size={64} className="text-muted" />
         {(isReserved || isSold) && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -209,6 +211,108 @@ function FeaturesSection({ property, lang }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
       {items.map((item, idx) => <FeatureItem key={idx} {...item} />)}
+    </div>
+  );
+}
+
+// ============================================================
+// ATTRIBUTES TABLE — inaonyesha fields zote za kategoria kama jedwali
+// Inasoma property.attributes (JSONField) + CATEGORY_EXTRA + mode fields
+// ============================================================
+function AttributesTable({ property, lang }) {
+  const rows = useMemo(() => {
+    const out = [];
+    const categoryKey = property.category;
+    const baseFields = CATEGORY_EXTRA[categoryKey] || [];
+    const cfg = getPostingConfig(categoryKey);
+    const attrs = property.attributes || {};
+
+    // Helper: rudisha thamani inayoonekana kwa field
+    const resolveValue = (f, raw) => {
+      if (raw === undefined || raw === null) return null;
+      const str = String(raw).trim();
+      if (str === "") return null;
+      const opt = f.options?.find((op) => String(op.value) === str);
+      return opt ? (opt.label?.[lang] || opt.label?.sw || str) : str;
+    };
+
+    // 1. Mode (kwa Jobs/Huduma)
+    if (cfg.modes && attrs.mode) {
+      const mode = cfg.modes.find((m) => m.key === attrs.mode);
+      if (mode) {
+        out.push({
+          label: t(lang, "Aina", "Type"),
+          value: mode.label?.[lang] || mode.label?.sw || attrs.mode,
+        });
+        // Fields za mode
+        (mode.extra || []).forEach((f) => {
+          const v = resolveValue(f, attrs[f.key]);
+          if (v !== null) {
+            out.push({
+              label: f.label?.[lang] || f.label?.sw || f.key,
+              value: v,
+            });
+          }
+        });
+      }
+    }
+
+    // 2. Fields za kategoria (kutoka CATEGORY_EXTRA)
+    baseFields.forEach((f) => {
+      // Ruka field ikiwa ni ya mode tu (tayari imeshughulikiwa)
+      if (cfg.modes && cfg.modes.some((m) => (m.extra || []).some((mf) => mf.key === f.key))) {
+        return;
+      }
+      const v = resolveValue(f, attrs[f.key]);
+      if (v !== null) {
+        out.push({
+          label: f.label?.[lang] || f.label?.sw || f.key,
+          value: v,
+        });
+      }
+    });
+
+    // 3. Eneo (Mkoa, Wilaya, Eneo)
+    if (attrs.region) {
+      out.push({ label: t(lang, "Mkoa", "Region"), value: attrs.region });
+    }
+    if (attrs.district) {
+      out.push({ label: t(lang, "Wilaya", "District"), value: attrs.district });
+    }
+    if (attrs.area) {
+      out.push({ label: t(lang, "Eneo", "Area"), value: attrs.area });
+    }
+
+    return out;
+  }, [property, lang]);
+
+  if (rows.length === 0) {
+    return (
+      <p className="text-sm text-secondary text-center py-4">
+        {t(lang, "Hakuna taarifa za ziada zilizoainishwa", "No additional details specified")}
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-gray-100">
+      <table className="w-full text-sm">
+        <tbody>
+          {rows.map((row, idx) => (
+            <tr
+              key={idx}
+              className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+            >
+              <td className="px-4 py-2.5 font-medium text-secondary w-1/2 align-top">
+                {row.label}
+              </td>
+              <td className="px-4 py-2.5 text-primary font-semibold align-top">
+                {row.value}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -333,9 +437,6 @@ export default function PropertyDetailPage() {
 
   // ============================================================
   // IMAGE PIPELINE
-  // 1. Try the detail endpoint  GET /listings/{id}/  (usually has images)
-  // 2. If still empty, try the images endpoint  GET /listings/{id}/images/
-  // 3. Collect everything into `fetchedImages` for the gallery.
   // ============================================================
   const [fetchedImages, setFetchedImages] = useState([]);
 
@@ -481,7 +582,6 @@ export default function PropertyDetailPage() {
     setShowContactModal(true);
   };
 
-  // ── Start a Deal Room ─────────────────────────────────────
   const handleStartDealRoom = async () => {
     if (contactLoading) return;
     if (!user) {
@@ -519,7 +619,6 @@ export default function PropertyDetailPage() {
     }
   };
 
-  // ── Send a quick message (open conversation) ──────────────
   const handleStartConversation = async () => {
     if (contactLoading) return;
     if (!user) {
@@ -585,8 +684,6 @@ export default function PropertyDetailPage() {
             <ImageGallery
               property={{
                 ...property,
-                // Merge every possible source. ImageGallery will pick
-                // whichever list is non-empty. Dedupe by URL.
                 images: Array.from(
                   new Set(
                     [
@@ -698,8 +795,20 @@ export default function PropertyDetailPage() {
                         {property.description || t(lang, "Hakuna maelezo yaliyotolewa.", "No description provided.")}
                       </p>
                     </div>
+
+                    {/* JEDWALI LA TAARIFA ZA KATEGORIA */}
                     <div>
-                      <h3 className="font-semibold text-primary mb-3">{t(lang, "Sifa za Mali", "Property Features")}</h3>
+                      <h3 className="font-semibold text-primary mb-3">
+                        {t(lang, "Taarifa za Kategoria", "Category Details")}
+                      </h3>
+                      <AttributesTable property={property} lang={lang} />
+                    </div>
+
+                    {/* Sifa za haraka */}
+                    <div>
+                      <h3 className="font-semibold text-primary mb-3">
+                        {t(lang, "Sifa za Haraka", "Quick Features")}
+                      </h3>
                       <FeaturesSection property={property} lang={lang} />
                     </div>
                   </div>
