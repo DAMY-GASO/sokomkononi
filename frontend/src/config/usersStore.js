@@ -1,5 +1,6 @@
 // ============================================================
 // usersStore.js — API-only via /api/admin/users/
+// + Futa Permanently (hard delete)
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -87,12 +88,45 @@ export async function verifyUserAsync(id) {
   } catch (err) { return { ok: false, error: err }; }
 }
 
+// ============================================================
+// DELETE — soft delete (backend inaamua)
+// ============================================================
 export async function deleteUserAsync(id) {
   try {
     await api.delete(`/admin/users/${id}/`);
     write(read().filter((x) => x.id !== id));
     return { ok: true };
   } catch (err) { return { ok: false, error: err }; }
+}
+
+// ============================================================
+// PERMANENT DELETE — hard delete, hairudishwi
+// ============================================================
+export async function permanentDeleteUserAsync(id) {
+  const u = getUser(id);
+  if (!u) return { ok: false, error: new Error("User not found") };
+
+  // Zuia kumfuta admin
+  if (u.isStaff) {
+    return {
+      ok: false,
+      error: new Error("Hauwezi kumfuta admin. Wasiliana na Super Admin."),
+    };
+  }
+
+  try {
+    // Endpoint maalum kwa hard delete
+    await api.delete(`/admin/users/${id}/permanent/`);
+    write(read().filter((x) => x.id !== id));
+    return { ok: true, deleted: true };
+  } catch (err) {
+    // Fallback: kama /permanent/ haipo, tumia delete ya kawaida
+    if (err?.status === 404 || err?.status === 405) {
+      console.warn("[usersStore] /permanent/ haipo — tumia delete ya kawaida");
+      return deleteUserAsync(id);
+    }
+    return { ok: false, error: err };
+  }
 }
 
 export function useUsers() {
@@ -113,4 +147,3 @@ export function useUser(id) {
   const list = useUsers();
   return id ? list.find((u) => u.id === id) || null : null;
 }
-
