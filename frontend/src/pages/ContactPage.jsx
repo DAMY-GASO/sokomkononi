@@ -4,7 +4,6 @@
 // ============================================================
 
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
@@ -25,18 +24,6 @@ export default function ContactPage() {
     const id = setTimeout(() => setReady(true), 300);
     return () => clearTimeout(id);
   }, []);
-
-  // Scroll kwenye section kulingana na hash (mfano /mawasiliano#faq)
-  const { hash } = useLocation();
-  useEffect(() => {
-    if (!ready || !hash) return;
-    const el = document.getElementById(hash.slice(1));
-    if (el) {
-      // subiri render ikamilike kisha scroll
-      const id = setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-      return () => clearTimeout(id);
-    }
-  }, [ready, hash]);
 
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
