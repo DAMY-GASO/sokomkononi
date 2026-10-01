@@ -31,6 +31,7 @@ import {
   Smartphone,
   Sparkles,
   Store,
+  Tags,            // ⬅️ MPYA
   Trash2,
   User,
   UserCheck,
@@ -49,11 +50,8 @@ export {
 } from "../../../../config/categoriesStore.js";
 
 // ============================================================
-// BRAND TOKENS — chanzo kimoja: shared.js (dashboard/components)
-// COLORS na FONTS haziandikwi tena hapa; zinatoka moja kwa moja
-// kwenye chanzo halisi ili zisitofautiane kamwe.
+// BRAND TOKENS
 // ============================================================
-// Single import for everything we borrow from shared.js.
 import {
   COLORS as _COLORS,
   FONTS as _FONTS,
@@ -65,7 +63,7 @@ export const COLORS = _COLORS;
 export const FONTS = _FONTS;
 
 // ============================================================
-// NAV — sidebar navigation (sections zote 16)
+// NAV — sidebar navigation
 // ============================================================
 export const NAV = [
   // Core
@@ -127,6 +125,13 @@ export const NAV = [
     icon: FileText,
   },
 
+  // ⬇️ MPYA — Categories section yake mwenyewe
+  {
+    key: "categories",
+    label: { sw: "Kategoria", en: "Categories" },
+    icon: Tags,
+  },
+
   // System
   {
     key: "audit",
@@ -148,7 +153,6 @@ export const NAV = [
     label: { sw: "Roles & Wafanyakazi", en: "Roles & Staff" },
     icon: Lock,
   },
-  // ✅ FIX #16: Ongeza `profile` kwenye NAV
   {
     key: "profile",
     label: { sw: "Wasifu Wangu", en: "My Profile" },
@@ -160,7 +164,6 @@ export const NAV = [
 // ADMIN NOTIFICATION ICONS
 // ============================================================
 export const ADMIN_NOTIFICATION_ICONS = {
-  // Backend NotificationTypeEnum (from OpenAPI spec)
   GENERAL: Bell,
   LISTING_CREATED: Home,
   LISTING_APPROVED: CheckCircle2,
@@ -190,8 +193,7 @@ export const ADMIN_NOTIFICATION_ICONS = {
 };
 
 // ============================================================
-// RE-EXPORT HELPERS kutoka shared.js
-// (Badala ya ku-copy — single source of truth)
+// RE-EXPORT HELPERS
 // ============================================================
 export const timeAgo = sharedTimeAgo;
 export const formatTZS = sharedFormatTZS;
