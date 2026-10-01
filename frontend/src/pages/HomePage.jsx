@@ -7,7 +7,7 @@ import BottomNav from "../components/BottomNav.jsx";
 import Navbar from "../components/Navbar.jsx";
 import PageLoader from "../components/PageLoader.jsx";
 import FaqAccordion from "../components/FaqAccordion.jsx";
-import { homeFaqs } from "../config/faqsData.js";
+import { homeFaqs } from "../config/FaqsData.js";
 import { usePublicListings } from "../config/listingsStore.js";
 import { useAppStoreLinks } from "../config/systemSettingsStore.js";
 import {
