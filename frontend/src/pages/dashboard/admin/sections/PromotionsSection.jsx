@@ -4,8 +4,6 @@
 // reserved, success fee, listing fee, campaigns).
 // Revenue Types zote 6: boosting, advertising, leading,
 // reservation, success, listing.
-// Total Revenue kadi kubwa — span 5 columns kwenye desktop,
-// full width kwenye simu.
 // Bilingual + mobile-responsive + Async campaign actions.
 // ============================================================
 
@@ -829,10 +827,8 @@ export default function PromotionsSection() {
         </div>
       )}
 
-      {/* Stats — 6 stats za kawaida kwenye grid ya 11 columns */}
-      {/* Kwenye desktop: 6 stats (kila 1 col) + Revenue (span 5) */}
-      {/* Kwenye simu: 2 cols + Revenue (span 2) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-11 gap-2 sm:gap-3 mb-5 w-full">
+      {/* Stats — 6 stats kwenye grid ya columns 6 (desktop) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-5 w-full">
         <StatBox
           label={t("Boost", "Boost")}
           value={promotions.counts.boosted}
@@ -869,41 +865,6 @@ export default function PromotionsSection() {
           icon={CreditCard}
           color="#0891B2"
         />
-
-          {/* Mini breakdown kwa desktop */}
-          <div className="grid grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 shrink-0">
-            <MiniRevenue
-              label={t("Boost", "Boost")}
-              value={promotions.revenueByType.boost}
-              color={COLORS.gold}
-            />
-            <MiniRevenue
-              label={t("Matangazo", "Ads")}
-              value={promotions.revenueByType.advertise}
-              color={COLORS.rust}
-            />
-            <MiniRevenue
-              label={t("Leading", "Leading")}
-              value={promotions.revenueByType.leading}
-              color={COLORS.green}
-            />
-            <MiniRevenue
-              label={t("Uhifadhi", "Reservation")}
-              value={promotions.revenueByType.reservation}
-              color="#2563EB"
-            />
-            <MiniRevenue
-              label={t("Success Fee", "Success")}
-              value={promotions.revenueByType.success}
-              color="#7C3AED"
-            />
-            <MiniRevenue
-              label={t("Listing Fee", "Listing")}
-              value={promotions.revenueByType.listing}
-              color="#0891B2"
-            />
-          </div>
-        </div>
       </div>
 
       {/* Revenue Breakdown — zote sita (kadi za kila aina) */}
@@ -1027,22 +988,6 @@ function RevenueRow({ label, value, color }) {
       >
         {formatTZS(value)}
       </p>
-    </div>
-  );
-}
-
-function MiniRevenue({ label, value, color }) {
-  return (
-    <div className="flex flex-col items-start gap-0.5 min-w-0">
-      <span
-        className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide opacity-70"
-        style={{ color }}
-      >
-        {label}
-      </span>
-      <span className="text-[11px] sm:text-xs lg:text-sm font-bold whitespace-nowrap tabular-nums text-white">
-        {value > 0 ? formatTZS(value) : "—"}
-      </span>
     </div>
   );
 }
