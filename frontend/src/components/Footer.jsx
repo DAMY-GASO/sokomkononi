@@ -1,12 +1,17 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { useAppStoreLinks } from "../config/systemSettingsStore.js";
 
 export default function Footer({ selectedLang: propLang }) {
-  // Soma kutoka context kama prop haijatolewa — hii inafanya Footer
-  // kubadilika lugha popote, hata kwenye kurasa zisizopitisha prop.
+  
   const { lang: ctxLang } = useLanguage();
   const selectedLang = propLang ?? ctxLang;
+
+  // Links za apps zinatoka kwenye system settings (admin anazisimamia)
+  const [appLinks] = useAppStoreLinks();
+  const playUrl = (appLinks?.play || "").trim();
+  const appStoreUrl = (appLinks?.appstore || "").trim();
 
   return (
     <footer className="bg-[#0D1524] text-white/80 border-t border-white/10">
@@ -21,9 +26,13 @@ export default function Footer({ selectedLang: propLang }) {
               : "Do business more easily wherever you are — get deal notifications, search properties, and communicate with Agents/Customers directly from your phone."}
           </p>
           <div className="flex flex-wrap gap-3 justify-center mt-4">
-            <Link
-              to="/waitlist"
-              className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors"
+            <a
+              href={playUrl || undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-disabled={!playUrl}
+              onClick={(e) => { if (!playUrl) e.preventDefault(); }}
+              className={`flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 transition-colors ${playUrl ? "hover:bg-white/5" : "opacity-60 cursor-default"}`}
             >
               <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0" aria-hidden="true">
                 <path d="M4.5 3.5c-.3.3-.5.7-.5 1.2v14.6c0 .5.2.9.5 1.2l.1.1L13 12.1v-.2L4.6 3.4l-.1.1z" fill="#00D2FF" />
@@ -33,25 +42,33 @@ export default function Footer({ selectedLang: propLang }) {
               </svg>
               <span className="text-sm text-left">
                 <span className="block text-white/50 text-[10px]">
-                  {selectedLang === "sw" ? "Pakua kwenye" : "Download on the"}
+                  {playUrl
+                    ? selectedLang === "sw" ? "Pakua kwenye" : "Download on the"
+                    : selectedLang === "sw" ? "Inakuja hivi karibuni" : "Coming soon"}
                 </span>
                 <span className="block font-semibold text-white text-sm">Google Play</span>
               </span>
-            </Link>
-            <Link
-              to="/waitlist"
-              className="flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 hover:bg-white/5 transition-colors"
+            </a>
+            <a
+              href={appStoreUrl || undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-disabled={!appStoreUrl}
+              onClick={(e) => { if (!appStoreUrl) e.preventDefault(); }}
+              className={`flex items-center gap-2 border border-white/20 rounded-md px-5 py-2.5 transition-colors ${appStoreUrl ? "hover:bg-white/5" : "opacity-60 cursor-default"}`}
             >
               <svg viewBox="0 0 384 512" className="w-6 h-6 shrink-0 fill-white" aria-hidden="true">
                 <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.3c0 26.2 4.8 53.3 14.4 81.3 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.8zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
               </svg>
               <span className="text-sm text-left">
                 <span className="block text-white/50 text-[10px]">
-                  {selectedLang === "sw" ? "Pakua kwenye" : "Download on the"}
+                  {appStoreUrl
+                    ? selectedLang === "sw" ? "Pakua kwenye" : "Download on the"
+                    : selectedLang === "sw" ? "Inakuja hivi karibuni" : "Coming soon"}
                 </span>
                 <span className="block font-semibold text-white text-sm">App Store</span>
               </span>
-            </Link>
+            </a>
           </div>
         </div>
 
@@ -108,18 +125,13 @@ export default function Footer({ selectedLang: propLang }) {
             </h3>
             <ul className="space-y-2.5">
               <li>
-                <Link to="/#faq" className="text-white/50 hover:text-white text-sm transition-colors">
+                <Link to="/mawasiliano#faq" className="text-white/50 hover:text-white text-sm transition-colors">
                   {selectedLang === "sw" ? "Maswali" : "FAQ"}
                 </Link>
               </li>
               <li>
                 <Link to="/mawasiliano" className="text-white/50 hover:text-white text-sm transition-colors">
                   {selectedLang === "sw" ? "Wasiliana Nasi" : "Contact Us"}
-                </Link>
-              </li>
-              <li>
-                <Link to="/waitlist" className="text-white/50 hover:text-white text-sm transition-colors">
-                  {selectedLang === "sw" ? "Waitlist ya App" : "App Waitlist"}
                 </Link>
               </li>
             </ul>
