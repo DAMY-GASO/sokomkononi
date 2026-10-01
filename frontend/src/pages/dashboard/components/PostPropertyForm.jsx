@@ -115,7 +115,7 @@ export default function PostPropertyForm({
   const [loc, setLoc] = useState({ mkoa: "", wilaya: "", eneo: "" });
   const [photos, setPhotos] = useState([]); // [{file, url}]
   const [cropQueue, setCropQueue] = useState([]); // mafaili yanayosubiri kukatwa (moja baada ya jingine)
-  const [stage, setStage] = useState("form"); // form | paying | done
+  const [stage, setStage] = useState("form"); // form | review | paying | done
   const [createdListing, setCreatedListing] = useState(null);
   const [feeAmount, setFeeAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -148,8 +148,11 @@ export default function PostPropertyForm({
   const locationLabel = activeMode?.locationLabel || cfg.locationLabel || { sw: "Mahali", en: "Location" };
   const descLabel = activeMode?.descLabel || { sw: "Maelezo", en: "Description" };
   const photosOptional = Boolean(cfg.photosOptional);
-  const autoTitle = cfg.autoTitle ? cfg.autoTitle(extra) : "";
-  const effectiveTitle = base.title.trim() || autoTitle;
+
+  // ⚠️ autoTitle sasa inatumika kama KIDOKEZO tu (placeholder), sio thamani halisi.
+  // Mtumiaji LAZIMA aandike jina mwenyewe ili listing iwe na jina la kipekee.
+  const suggestedTitle = cfg.autoTitle ? cfg.autoTitle(extra) : "";
+  const effectiveTitle = base.title.trim();
   const locationString = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa].filter(Boolean).join(", ");
 
   const creditInfo = checkCredit(user?.id, "listing");
@@ -174,6 +177,7 @@ export default function PostPropertyForm({
   const requiredFilled = visibleFields.every(
     (f) => !f.required || String(extra[f.key] ?? "").trim() !== ""
   );
+  // ⚠️ base.title LAZIMA iwe imeandikwa na mtumiaji (si autoTitle)
   const canSubmit =
     category &&
     !needsMode &&
@@ -343,18 +347,13 @@ export default function PostPropertyForm({
         }
       }
 
-      // 4. Fetch fee from the backend. If the fee rule wasn't found
-      // (404 — a common case when the backend slug doesn't match the
-      // category slug), compute the fee locally from the fee-rules the
-      // admin already configured on the frontend.
+      // 4. Fetch fee from the backend.
       let fee = 0;
       let feeSource = "backend";
       try {
         const feeRes = await api.get(`/listings/${listingId}/fee/`);
         fee = Number(feeRes?.amount) || 0;
         if (!fee) {
-          // Backend returned an object but with 0 or missing amount —
-          // treat as fallback territory.
           throw new Error("Backend returned no fee");
         }
       } catch (feeErr) {
@@ -363,7 +362,6 @@ export default function PostPropertyForm({
           "[PostPropertyForm] backend fee missing, falling back to local:",
           feeErr?.status || feeErr?.message
         );
-        // Compute from the fee-rules the admin configured.
         const local = calculateListingFee(
           categoryKey,
           cleanPriceInput(base.price)
@@ -371,8 +369,6 @@ export default function PostPropertyForm({
         fee = Number(local?.fee) || 0;
       }
 
-      // Last-ditch safety: if we still have 0, show a warning so the
-      // user isn't blindsided by a zero-fee screen.
       if (!fee) {
         const msg = t(
           "Ada ya kuchapisha haijasanidiwa kwa category hii bado. Wasiliana na Admin.",
@@ -416,11 +412,6 @@ export default function PostPropertyForm({
           phone: phone || "",
         }
       );
-      // The backend has two response shapes:
-      //   1. Fresh create_order →  { message, fimipay: { order_id, payment_status, ... } }
-      //   2. Reused existing order → raw status object at the top level:
-      //        { order_id, payment_status, amount, transid, ... }
-      // We tolerate both by unwrapping until we find an order_id.
       const candidates = [
         res?.fimipay,
         res?.data?.fimipay,
@@ -447,8 +438,6 @@ export default function PostPropertyForm({
   // ── Step 4b: FimiPay confirms → mark done ──────────────────
   const handleFeeSuccess = () => {
     if (!createdListing) return;
-    // PaymentGateway already triggered the backend POST.  onPaid only
-    // updates local cache — it MUST NOT hit /fee/pay/ again.
     onPaid?.(createdListing.id, { alreadyPaid: true });
     setStage("done");
   };
@@ -460,7 +449,6 @@ export default function PostPropertyForm({
       setStage("paying");
       return;
     }
-    // Backend will treat "credits" reference as a credit-based payment
     try {
       await api.post(`/listings/${createdListing.id}/fee/pay/`, {
         payment_reference: "credits",
@@ -698,14 +686,22 @@ export default function PostPropertyForm({
               </div>
             </Field>
 
-            {/* Jina */}
-            <Field label={`${titleLabel[lang] || titleLabel.sw}${autoTitle !== "" || cfg.autoTitle ? "" : " *"}`}>
-              <input style={inputStyle} className={inputCls}
-                     placeholder={titlePlaceholder[lang] || titlePlaceholder.sw}
-                     value={base.title} onChange={(e) => setBase({ ...base, title: e.target.value })} />
-              {cfg.autoTitle && autoTitle && !base.title.trim() && (
+            {/* Jina — LAZIMA mtumiaji aandike. autoTitle ni kidokezo tu. */}
+            <Field label={`${titleLabel[lang] || titleLabel.sw} *`}>
+              <input
+                style={inputStyle}
+                className={inputCls}
+                placeholder={
+                  suggestedTitle
+                    ? t(`mfano: ${suggestedTitle}`, `e.g. ${suggestedTitle}`)
+                    : (titlePlaceholder[lang] || titlePlaceholder.sw)
+                }
+                value={base.title}
+                onChange={(e) => setBase({ ...base, title: e.target.value })}
+              />
+              {suggestedTitle && !base.title.trim() && (
                 <span className="text-[11px] text-secondary">
-                  {t("Jina litakuwa", "Title will be")}: <b>{autoTitle}</b>
+                  {t("Kidokezo", "Hint")}: <b>{suggestedTitle}</b> — {t("unaweza kuandika jina lako mwenyewe", "you can write your own title")}
                 </span>
               )}
             </Field>
