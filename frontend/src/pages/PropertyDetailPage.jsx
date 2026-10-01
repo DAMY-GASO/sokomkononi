@@ -115,11 +115,11 @@ function ImageGallery({ property, lang }) {
 
   return (
     <>
-      <div className="relative w-full h-64 sm:h-96 md:h-[500px] rounded-2xl overflow-hidden bg-gray-100">
+      <div className="relative w-full aspect-square max-w-[640px] mx-auto rounded-2xl overflow-hidden bg-[#F5F3EC]">
         <img
           src={images[currentIndex]}
           alt={property.title}
-          className="w-full h-full object-cover"
+          className="absolute inset-0 block w-full h-full object-cover object-center"
           onError={(e) => { e.target.style.display = "none"; }}
         />
         {images.length > 1 && (
@@ -159,7 +159,7 @@ function ImageGallery({ property, lang }) {
       </div>
 
       {images.length > 1 && (
-        <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+        <div className="flex gap-2 mt-3 overflow-x-auto pb-2 max-w-[640px] mx-auto">
           {images.map((img, idx) => (
             <button
               key={idx}
@@ -168,7 +168,7 @@ function ImageGallery({ property, lang }) {
                 idx === currentIndex ? "border-[#E8A33D] opacity-100" : "border-transparent opacity-60 hover:opacity-100"
               }`}
             >
-              <img src={img} alt="" className="w-full h-full object-cover" />
+              <img src={img} alt="" className="w-full h-full object-cover object-center block" />
             </button>
           ))}
         </div>
