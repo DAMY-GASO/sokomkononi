@@ -50,6 +50,9 @@ import ReportsSection from "./admin/sections/ReportsSection.jsx";
 import SupportSection from "./admin/sections/SupportSection.jsx";
 import ContentSection from "./admin/sections/ContentSection.jsx";
 
+// Categories (MPYA — section yake mwenyewe)
+import CategoriesSection from "./admin/sections/CategoriesSection.jsx";
+
 // System
 import AuditLogsSection from "./admin/sections/AuditLogsSection.jsx";
 import SystemSettingsSection from "./admin/sections/SystemSettingsSection.jsx";
@@ -85,6 +88,7 @@ const URL_TO_STATE = {
   [`${ADMIN_PATH}/reports`]: "reports",
   [`${ADMIN_PATH}/support`]: "support",
   [`${ADMIN_PATH}/content`]: "content",
+  [`${ADMIN_PATH}/categories`]: "categories",   // ⬅️ MPYA
   [`${ADMIN_PATH}/audit`]: "audit",
   [`${ADMIN_PATH}/system`]: "system",
   [`${ADMIN_PATH}/staff`]: "staff",
@@ -104,6 +108,7 @@ const STATE_TO_URL = {
   reports: `${ADMIN_PATH}/reports`,
   support: `${ADMIN_PATH}/support`,
   content: `${ADMIN_PATH}/content`,
+  categories: `${ADMIN_PATH}/categories`,       // ⬅️ MPYA
   audit: `${ADMIN_PATH}/audit`,
   system: `${ADMIN_PATH}/system`,
   staff: `${ADMIN_PATH}/staff`,
@@ -245,8 +250,6 @@ export default function AdminDashboard() {
   const pendingVerificationsCount = usePendingVerificationsCount();
   const openTicketsCount = useOpenTicketsCount();
 
-  // (auth guard consolidated into the effect below)
-
   // ============================================================
   // ACTIVE SECTION — kutoka URL
   // ============================================================
@@ -261,13 +264,9 @@ export default function AdminDashboard() {
   const allRoles = useRoles();
   const rolesReady = allRoles.length > 0;
   const staffRole = useMemo(() => {
-    // If backend gives us an explicit roleKey, that's the source of truth.
     if (user?.roleKey) {
       return allRoles.find((r) => r.key === user.roleKey) || null;
     }
-    // Legacy: no roleKey yet → fall back to super-admin for is_superuser,
-    // admin for is_staff. Keeps existing admins working while the backend
-    // gradually starts sending roleKey.
     if (user?.isSuperuser || user?.is_superuser) {
       return allRoles.find((r) => r.key === "super_admin") || {
         key: "super_admin",
@@ -293,9 +292,7 @@ export default function AdminDashboard() {
   ]);
 
   const canAccess = (sectionKey) => {
-    // Wait for roles to hydrate before denying anything.
     if (!rolesReady) return true;
-    // Everyone with a valid session can see these
     if (
       sectionKey === "profile" ||
       sectionKey === "system" ||
@@ -304,7 +301,6 @@ export default function AdminDashboard() {
       return true;
     }
     if (!staffRole) return false;
-    // super_admin and admin have full access
     if (staffRole.key === "super_admin" || staffRole.key === "admin") {
       return true;
     }
@@ -318,14 +314,13 @@ export default function AdminDashboard() {
 
   const openNotification = (n) => {
     markRead(n.id);
-    // Prefer the mapped admin section; fall back to overview.
     const target = n?.target && STATE_TO_URL[n.target] ? n.target : "overview";
     navigate(STATE_TO_URL[target]);
     setNotifOpen(false);
   };
 
   // ============================================================
-  // AUTH CHECK + LOADER — tumia ADMIN_LOGIN_PATH
+  // AUTH CHECK + LOADER
   // ============================================================
   useEffect(() => {
     if (isLoading) return;
@@ -413,6 +408,8 @@ export default function AdminDashboard() {
         return <SupportSection />;
       case "content":
         return <ContentSection />;
+      case "categories":                         // ⬅️ MPYA
+        return <CategoriesSection />;
       case "audit":
         return <AuditLogsSection />;
       case "system":
