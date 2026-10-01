@@ -14,7 +14,7 @@ import { contactApi } from "../api/contact.js";
 
 import PageLoader from "../components/PageLoader.jsx";
 import FaqAccordion from "../components/FaqAccordion.jsx";
-import { faqs } from "../shared/faqsData.js";
+import { faqs } from "../config/faqsData.js";
 
 export default function ContactPage() {
   const { t, lang } = useLanguage();
