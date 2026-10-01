@@ -73,6 +73,14 @@ function reservationCountdown(reservedUntil, lang) {
 // ============================================================
 function resolveCardImage(property, category) {
   if (property?.imageUrl) return property.imageUrl;
+  if (Array.isArray(property?.photos) && property.photos[0]) {
+    const p = property.photos[0];
+    return typeof p === "string" ? p : p?.image_url || p?.url || null;
+  }
+  if (Array.isArray(property?.images) && property.images[0]) {
+    const p = property.images[0];
+    return typeof p === "string" ? p : p?.image_url || p?.url || null;
+  }
   if (category?.imageUrl) return category.imageUrl;
   return null;
 }
@@ -107,12 +115,13 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
           isSold ? "border-gray-200 opacity-75" : "border-gray-100"
         }`}
       >
-        <div className="w-full sm:w-48 h-40 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+        {/* Picha — aspect-square kwa list view pia */}
+        <div className="w-full sm:w-48 aspect-square sm:self-start bg-[#F5F3EC] flex items-center justify-center flex-shrink-0 relative overflow-hidden">
           {cardImage ? (
             <img
               src={cardImage}
               alt={property.title}
-              className="w-full h-full object-cover"
+              className="absolute inset-0 block w-full h-full object-cover object-center"
               loading="lazy"
             />
           ) : (
@@ -208,7 +217,7 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
     );
   }
 
-  // Grid view
+  // Grid view — aspect-square kwa picha
   return (
     <Link
       to={`/mali/${property.id}`}
@@ -217,12 +226,13 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
       }`}
     >
       <div className="relative">
-        <div className="w-full h-44 bg-gray-100 flex items-center justify-center overflow-hidden">
+        {/* aspect-square inafanya picha ifit sawa kwenye grid */}
+        <div className="w-full aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
           {cardImage ? (
             <img
               src={cardImage}
               alt={property.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              className="absolute inset-0 block w-full h-full object-cover object-center group-hover:scale-105 transition-transform"
               loading="lazy"
             />
           ) : (
@@ -641,7 +651,6 @@ export default function BrowseProperties({ lang = "sw" }) {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // ✅ FIX: toggleSaved inashughulikia snapshot yenyewe (kupitia API)
   const toggleSave = (id, _property) => {
     return toggleSaved(id);
   };
@@ -681,9 +690,7 @@ export default function BrowseProperties({ lang = "sw" }) {
       className="w-full p-4 sm:p-6"
     >
       <div className="max-w-7xl mx-auto">
-        {/* ============================================================ */}
         {/* HEADER — CENTERED */}
-        {/* ============================================================ */}
         <div className="mb-5 text-center">
           <h1 className="h-title">
             {lang === "sw" ? "Tafuta Mali" : "Browse Properties"}
@@ -695,9 +702,7 @@ export default function BrowseProperties({ lang = "sw" }) {
           </p>
         </div>
 
-        {/* ============================================================ */}
         {/* SEARCH BAR — CENTERED */}
-        {/* ============================================================ */}
         <form onSubmit={handleSearchSubmit} className="mb-5">
           <div className="relative max-w-2xl mx-auto">
             <Search
@@ -854,10 +859,11 @@ export default function BrowseProperties({ lang = "sw" }) {
 
             {paginatedProperties.length > 0 ? (
               <>
+                {/* GRID — 2 cols mobile, 3 sm, 4 lg kwa picha zinazolingana */}
                 <div
                   className={
                     viewMode === "grid"
-                      ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
+                      ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"
                       : "flex flex-col gap-3"
                   }
                 >
