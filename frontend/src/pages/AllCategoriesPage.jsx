@@ -82,12 +82,12 @@ export default function AllCategoriesPage() {
                   to={`/kategoria/${cat.key}`}
                   className="bg-white rounded-xl overflow-hidden text-center border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 group"
                 >
-                  <div className="h-32 sm:h-36 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
+                  <div className="relative aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
                     {hasPhoto ? (
                       <img
                         src={cat.imageUrl}
                         alt={label}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="absolute inset-0 block w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <Icon
