@@ -1,8 +1,3 @@
-// ============================================================
-// HomePage.jsx — public landing page
-// Refined: faint ambient dots, elegant typewriter, premium CTAs,
-// editorial "Why" section. Fully responsive.
-// ============================================================
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
@@ -771,7 +766,7 @@ export default function HomePage() {
                             src={img}
                             alt={prop.title}
                             loading="lazy"
-                            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                            className="absolute inset-0 block w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                           />
                         ) : (
                           <Icon size={48} className="text-[#E8A33D]" />
@@ -844,7 +839,7 @@ export default function HomePage() {
                           <img
                             src={cat.imageUrl}
                             alt={cat.label?.[lang] || cat.label?.sw}
-                            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                            className="absolute inset-0 block w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                           />
                         ) : (
                           <Icon
