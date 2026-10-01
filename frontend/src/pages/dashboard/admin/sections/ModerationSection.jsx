@@ -1,8 +1,19 @@
 // ============================================================
 // ModerationSection.jsx
+// Uidhinishaji wa Mali — admin anaweza:
+//   - Approve / Reject listings (in_review)
+//   - Disapprove listings (live → rejected)
+//   - Delete listings (scam/udanganyifu)
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
-import { CheckCircle, XCircle, MoreVertical, Loader2 } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  MoreVertical,
+  Loader2,
+  Trash2,
+  RotateCcw,
+} from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
@@ -12,20 +23,22 @@ import {
   hydrateModerationQueueFromApi,
   approveListingFromQueueAsync,
   rejectListingFromQueueAsync,
+  disapproveListingAsync,
+  deleteListingFromModerationAsync,
 } from "../../../../config/moderationStore.js";
 import { fetchListingsByStatusAsync } from "../../../../config/listingsStore.js";
 
 export default function ModerationSection() {
   const { lang } = useLanguage();
-  // Component inahydrate yenyewe (ili kupata loading/error state)
   const queue = useModerationQueue({ hydrate: false });
-  // history: { [id]: listing } za live/rejected
   const [history, setHistory] = useState({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("in_review");
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
-  const [rejectModal, setRejectModal] = useState(null); // { listingId, reason }
+  const [rejectModal, setRejectModal] = useState(null);
+  const [disapproveModal, setDisapproveModal] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const formatTZS = (amount) =>
@@ -78,7 +91,7 @@ export default function ModerationSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, lang]);
 
-  // ── Chuja + panga (mpya juu) ────────────────────────────────
+  // ── Chuja + panga ───────────────────────────────────────────
   const filtered = useMemo(() => {
     const pending = queue.map((l) => ({ ...l, status: "in_review" }));
     const hist = Object.values(history);
@@ -89,7 +102,7 @@ export default function ModerationSection() {
     } else if (statusFilter === "zote") {
       const map = new Map();
       hist.forEach((l) => map.set(String(l.id), l));
-      pending.forEach((l) => map.set(String(l.id), l)); // pending inashinda
+      pending.forEach((l) => map.set(String(l.id), l));
       list = Array.from(map.values());
     } else {
       list = hist.filter((l) => l.status === statusFilter);
@@ -116,12 +129,21 @@ export default function ModerationSection() {
 
   const addToHistory = (listing) => {
     if (!listing || listing.id == null) return;
-    // Normalize key to string so numeric ids from API and string ids
-    // from local cache never create duplicate entries.
     const key = String(listing.id);
     setHistory((prev) => ({ ...prev, [key]: listing }));
   };
 
+  const removeFromHistory = (id) => {
+    setHistory((prev) => {
+      const next = { ...prev };
+      delete next[String(id)];
+      return next;
+    });
+  };
+
+  // ============================================================
+  // APPROVE — idhinisha listing
+  // ============================================================
   const handleApprove = async (listingId) => {
     if (busy[listingId]) return;
     setBusy((b) => ({ ...b, [listingId]: "approve" }));
@@ -129,7 +151,7 @@ export default function ModerationSection() {
     const res = await approveListingFromQueueAsync(listingId);
     clearBusy(listingId);
     if (res.ok) {
-      addToHistory(res.listing); // queue inajisasisha yenyewe
+      addToHistory(res.listing);
     } else {
       setError(
         res.error?.message ||
@@ -138,6 +160,9 @@ export default function ModerationSection() {
     }
   };
 
+  // ============================================================
+  // REJECT — kataa listing
+  // ============================================================
   const openRejectModal = (listingId) => {
     if (busy[listingId]) return;
     setError("");
@@ -169,10 +194,83 @@ export default function ModerationSection() {
     }
   };
 
-  // Function ya kawaida (si component) — inazuia remount kila render
+  // ============================================================
+  // DISAPPROVE — rudisha listing iliyoidhinishwa kuwa rejected
+  // (kama admin alikosea kuapprove)
+  // ============================================================
+  const openDisapproveModal = (listingId) => {
+    if (busy[listingId]) return;
+    setError("");
+    setDisapproveModal({ listingId, reason: "" });
+  };
+
+  const submitDisapprove = async () => {
+    if (!disapproveModal) return;
+    const reason = (disapproveModal.reason || "").trim();
+    if (!reason) {
+      setError(t("Sababu inahitajika.", "Reason is required."));
+      return;
+    }
+    const { listingId } = disapproveModal;
+    setBusy((b) => ({ ...b, [listingId]: "disapprove" }));
+    setError("");
+    const res = await disapproveListingAsync(listingId, reason);
+    clearBusy(listingId);
+    setDisapproveModal(null);
+    if (res.ok) {
+      // Sasisha history — listing sasa ni rejected
+      setHistory((prev) => {
+        const key = String(listingId);
+        const existing = prev[key] || {};
+        return {
+          ...prev,
+          [key]: { ...existing, status: "rejected", rejectionReason: reason },
+        };
+      });
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kudissapprove listing.", "Failed to disapprove listing.")
+      );
+    }
+  };
+
+  // ============================================================
+  // DELETE — futa kabisa listing (scam/udanganyifu)
+  // ============================================================
+  const openDeleteModal = (listingId) => {
+    if (busy[listingId]) return;
+    setError("");
+    setDeleteModal({ listingId, reason: "" });
+  };
+
+  const submitDelete = async () => {
+    if (!deleteModal) return;
+    const reason = (deleteModal.reason || "").trim();
+    const { listingId } = deleteModal;
+    setBusy((b) => ({ ...b, [listingId]: "delete" }));
+    setError("");
+    const res = await deleteListingFromModerationAsync(listingId, reason);
+    clearBusy(listingId);
+    setDeleteModal(null);
+    if (res.ok) {
+      removeFromHistory(listingId);
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kufuta listing.", "Failed to delete listing.")
+      );
+    }
+  };
+
+  // ============================================================
+  // ACTIONS RENDERER
+  // ============================================================
   const renderActions = (listing, fullWidth = false) => {
     const isBusy = !!busy[listing.id];
     const currentAction = busy[listing.id];
+
+    // PENDING — Approve / Reject
     if (listing.status === "in_review") {
       return (
         <div className={`flex gap-2 ${fullWidth ? "w-full" : "justify-end"}`}>
@@ -209,6 +307,91 @@ export default function ModerationSection() {
         </div>
       );
     }
+
+    // LIVE — Disapprove / Delete
+    if (listing.status === "live") {
+      return (
+        <div className={`flex gap-2 ${fullWidth ? "w-full" : "justify-end"}`}>
+          <button
+            onClick={() => openDisapproveModal(listing.id)}
+            disabled={isBusy}
+            style={{ color: COLORS.rust }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed ${
+              fullWidth ? "flex-1" : ""
+            }`}
+            title={t(
+              "Rudisha kuwa Imekataliwa (kama uliidhinisha kimakosa)",
+              "Move back to Rejected (if approved by mistake)"
+            )}
+          >
+            {currentAction === "disapprove" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <RotateCcw size={13} />
+            )}
+            {t("Disapprove", "Disapprove")}
+          </button>
+          <button
+            onClick={() => openDeleteModal(listing.id)}
+            disabled={isBusy}
+            style={{ color: "#DC2626", borderColor: "rgba(220,38,38,0.4)" }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed ${
+              fullWidth ? "flex-1" : ""
+            }`}
+            title={t("Futa kabisa listing hii", "Delete this listing permanently")}
+          >
+            {currentAction === "delete" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Trash2 size={13} />
+            )}
+            {t("Futa", "Delete")}
+          </button>
+        </div>
+      );
+    }
+
+    // REJECTED — Re-approve / Delete
+    if (listing.status === "rejected") {
+      return (
+        <div className={`flex gap-2 ${fullWidth ? "w-full" : "justify-end"}`}>
+          <button
+            onClick={() => handleApprove(listing.id)}
+            disabled={isBusy}
+            style={{ color: COLORS.green }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed ${
+              fullWidth ? "flex-1" : ""
+            }`}
+            title={t("Rudisha kuwa Live", "Restore to Live")}
+          >
+            {currentAction === "approve" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <CheckCircle size={13} />
+            )}
+            {t("Idhinisha", "Approve")}
+          </button>
+          <button
+            onClick={() => openDeleteModal(listing.id)}
+            disabled={isBusy}
+            style={{ color: "#DC2626", borderColor: "rgba(220,38,38,0.4)" }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed ${
+              fullWidth ? "flex-1" : ""
+            }`}
+            title={t("Futa kabisa listing hii", "Delete this listing permanently")}
+          >
+            {currentAction === "delete" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Trash2 size={13} />
+            )}
+            {t("Futa", "Delete")}
+          </button>
+        </div>
+      );
+    }
+
+    // FALLBACK
     return (
       <div className="flex justify-end">
         <button className="text-muted hover:text-secondary p-1">
@@ -225,8 +408,8 @@ export default function ModerationSection() {
       <SectionHeader
         title={t("Uidhinishaji wa Mali & Matangazo", "Listing & Ads Moderation")}
         subtitle={t(
-          "Idhinisha au kataa mali kabla hazijachapishwa",
-          "Approve or reject listings before they are published"
+          "Idhinisha, kataa, disapprove, au futa mali kabla hazijachapishwa",
+          "Approve, reject, disapprove, or delete listings before publishing"
         )}
       />
 
@@ -288,7 +471,7 @@ export default function ModerationSection() {
                       Status
                     </th>
                     <th className="px-5 py-2.5 text-right text-xs font-medium text-secondary uppercase">
-                      {t("Kitendo", "Action")}
+                      {t("Vitendo", "Actions")}
                     </th>
                   </tr>
                 </thead>
@@ -389,7 +572,7 @@ export default function ModerationSection() {
         </>
       )}
 
-      {/* Rejection reason modal — replaces window.prompt */}
+      {/* REJECT MODAL */}
       {rejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl max-w-md w-full p-5">
@@ -429,6 +612,129 @@ export default function ModerationSection() {
                 style={{ background: COLORS.rust }}
               >
                 {t("Kataa", "Reject")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DISAPPROVE MODAL */}
+      {disapproveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: "rgba(193,80,46,0.1)" }}
+              >
+                <RotateCcw size={18} color={COLORS.rust} />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-primary">
+                  {t("Disapprove Listing", "Disapprove Listing")}
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  {t(
+                    "Rudisha kwenye kundi la Imekataliwa",
+                    "Move back to Rejected group"
+                  )}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-secondary mb-3 leading-relaxed">
+              {t(
+                "Tumia hii kama uliidhinisha listing kimakosa. Listing itarudishwa kwenye kundi la Imekataliwa na sababu itatumwa kwa muuzaji.",
+                "Use this if you approved a listing by mistake. The listing will return to the Rejected group and the reason will be sent to the seller."
+              )}
+            </p>
+            <textarea
+              value={disapproveModal.reason}
+              onChange={(e) =>
+                setDisapproveModal((prev) => ({ ...prev, reason: e.target.value }))
+              }
+              rows={3}
+              autoFocus
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none focus:border-[#C1502E] mb-3"
+              placeholder={t(
+                "mfano: Ilidhinishwa kimakosa, inahitaji mabadiliko",
+                "e.g. Approved by mistake, needs corrections"
+              )}
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setDisapproveModal(null)}
+                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+              >
+                {t("Ghairi", "Cancel")}
+              </button>
+              <button
+                onClick={submitDisapprove}
+                disabled={!disapproveModal.reason.trim()}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                style={{ background: COLORS.rust }}
+              >
+                {t("Disapprove", "Disapprove")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE MODAL */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: "rgba(220,38,38,0.1)" }}
+              >
+                <Trash2 size={18} color="#DC2626" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-primary">
+                  {t("Futa Listing Kabisa?", "Delete Listing Permanently?")}
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  {t(
+                    "Hatua hii haiwezi kurudishwa",
+                    "This action cannot be undone"
+                  )}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-secondary mb-3 leading-relaxed">
+              {t(
+                "Tumia hii kufuta listings za udanganyifu (scam). Listing itaondolewa kabisa kwenye mfumo. Sababu ni hiari lakini inashauriwa.",
+                "Use this to remove scam listings. The listing will be permanently removed from the system. Reason is optional but recommended."
+              )}
+            </p>
+            <textarea
+              value={deleteModal.reason}
+              onChange={(e) =>
+                setDeleteModal((prev) => ({ ...prev, reason: e.target.value }))
+              }
+              rows={3}
+              autoFocus
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none focus:border-[#DC2626] mb-3"
+              placeholder={t(
+                "mfano: Listing ya udanganyifu (scam), taarifa za uongo",
+                "e.g. Scam listing, false information"
+              )}
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setDeleteModal(null)}
+                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+              >
+                {t("Ghairi", "Cancel")}
+              </button>
+              <button
+                onClick={submitDelete}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white"
+                style={{ background: "#DC2626" }}
+              >
+                {t("Futa Kabisa", "Delete Permanently")}
               </button>
             </div>
           </div>

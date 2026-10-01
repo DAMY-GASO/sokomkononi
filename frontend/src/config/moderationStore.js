@@ -1,7 +1,6 @@
-
 import { useEffect, useState } from "react";
 import { moderationApi } from "../api/moderation.js";
-import { normalizeListingFromApi, decideListing } from "./listingsStore.js";
+import { normalizeListingFromApi, decideListing, removeListing } from "./listingsStore.js";
 
 const KEY = "sokomkononi_moderation_queue_v1";
 const DEC_KEY = "sokomkononi_moderation_decisions_v1";
@@ -83,18 +82,20 @@ function recordDecision(entry) {
   write(DEC_KEY, DEC_EV, next);
 }
 
+// ============================================================
+// APPROVE — idhinisha listing
+// ============================================================
 export async function approveListingFromQueueAsync(listingId, { adminName = "Admin" } = {}) {
   const target = findInQueue(listingId);
   if (!target) return { ok: false, error: new Error("Listing not in queue") };
   try {
     await moderationApi.approve(listingId);
   } catch (err) {
-    // Huenda admin mwingine ameshughulikia — sasisha queue.
     hydrateModerationQueueFromApi();
     return { ok: false, error: err };
   }
   removeFromQueue(listingId);
-  decideListing(target.id, "live"); // sasisha caches za listingsStore
+  decideListing(target.id, "live");
   recordDecision({
     listingId: target.id,
     listingTitle: target.title,
@@ -112,6 +113,9 @@ export async function approveListingFromQueueAsync(listingId, { adminName = "Adm
   };
 }
 
+// ============================================================
+// REJECT — kataa listing
+// ============================================================
 export async function rejectListingFromQueueAsync(
   listingId,
   reason,
@@ -147,6 +151,100 @@ export async function rejectListingFromQueueAsync(
   };
 }
 
+// ============================================================
+// DISAPPROVE — rudisha listing iliyoidhinishwa kuwa rejected
+// (kama admin alikosea kuapprove)
+// ============================================================
+export async function disapproveListingAsync(
+  listingId,
+  reason = "",
+  { adminName = "Admin" } = {}
+) {
+  const cleanReason = (reason || "").trim() || "Disapproved by admin";
+
+  // Jaribu endpoint maalum
+  try {
+    await moderationApi.disapprove(listingId, cleanReason);
+  } catch (err) {
+    // Fallback: tumia reject
+    if (err?.status === 404 || err?.status === 405) {
+      console.warn("[moderationStore] /disapprove/ haipo — tumia reject");
+      try {
+        await moderationApi.reject(listingId, cleanReason);
+      } catch (fallbackErr) {
+        return { ok: false, error: fallbackErr };
+      }
+    } else {
+      return { ok: false, error: err };
+    }
+  }
+
+  // Sasisha cache ya listingsStore
+  decideListing(listingId, "rejected", cleanReason);
+
+  recordDecision({
+    listingId,
+    action: "disapproved",
+    reason: cleanReason,
+    adminName,
+  });
+
+  return {
+    ok: true,
+    listing: {
+      id: listingId,
+      status: "rejected",
+      rejectedAt: new Date().toISOString(),
+      rejectionReason: cleanReason,
+    },
+  };
+}
+
+// ============================================================
+// DELETE — futa listing kabisa (kwa scam)
+// ============================================================
+export async function deleteListingFromModerationAsync(
+  listingId,
+  reason = "",
+  { adminName = "Admin" } = {}
+) {
+  const cleanReason = (reason || "").trim();
+
+  // Jaribu endpoint maalum ya moderation
+  try {
+    await moderationApi.delete(listingId, cleanReason);
+  } catch (err) {
+    // Fallback: tumia listingsApi.remove
+    if (err?.status === 404 || err?.status === 405) {
+      console.warn("[moderationStore] /delete/ haipo — tumia listingsApi");
+      try {
+        const { listingsApi } = await import("../api/listings.js");
+        await listingsApi.remove(listingId);
+      } catch (fallbackErr) {
+        return { ok: false, error: fallbackErr };
+      }
+    } else {
+      return { ok: false, error: err };
+    }
+  }
+
+  // Ondoa kwenye cache zote
+  removeFromQueue(listingId);
+  try {
+    removeListing(listingId);
+  } catch { /* ignore */ }
+
+  recordDecision({
+    listingId,
+    action: "deleted",
+    reason: cleanReason,
+    adminName,
+  });
+
+  return { ok: true };
+}
+
+// ── Bulk ────────────────────────────────────────────────────
 function settle(results, ids) {
   const succeeded = [];
   const failed = [];
@@ -174,8 +272,22 @@ export async function bulkRejectAsync(ids, reason, opts) {
   return settle(results, ids);
 }
 
-// ── Stats (tarehe ya local, si UTC) ─────────────────────────
-const localDay = (iso) => new Date(iso).toLocaleDateString("en-CA"); // YYYY-MM-DD
+export async function bulkDisapproveAsync(ids, reason, opts) {
+  const results = await Promise.allSettled(
+    ids.map((id) => disapproveListingAsync(id, reason, opts))
+  );
+  return settle(results, ids);
+}
+
+export async function bulkDeleteAsync(ids, reason, opts) {
+  const results = await Promise.allSettled(
+    ids.map((id) => deleteListingFromModerationAsync(id, reason, opts))
+  );
+  return settle(results, ids);
+}
+
+// ── Stats ───────────────────────────────────────────────────
+const localDay = (iso) => new Date(iso).toLocaleDateString("en-CA");
 
 export function getModerationStats() {
   const d = getModerationDecisions();
@@ -185,6 +297,8 @@ export function getModerationStats() {
     totalDecisions: d.length,
     approved: d.filter((x) => x.action === "approved").length,
     rejected: d.filter((x) => x.action === "rejected").length,
+    disapproved: d.filter((x) => x.action === "disapproved").length,
+    deleted: d.filter((x) => x.action === "deleted").length,
     todayApproved: td.filter((x) => x.action === "approved").length,
     todayRejected: td.filter((x) => x.action === "rejected").length,
     queueSize: getModerationQueue().length,
@@ -196,10 +310,6 @@ export function clearDecisions() {
 }
 
 // ── Hooks ───────────────────────────────────────────────────
-/**
- * @param {{hydrate?: boolean}} opts  hydrate=false ikiwa mtumiaji wa hook
- *        anaita hydrateModerationQueueFromApi() mwenyewe.
- */
 export function useModerationQueue({ hydrate = true } = {}) {
   const [q, setQ] = useState(() => getModerationQueue());
   useEffect(() => {
@@ -232,4 +342,3 @@ export function useModerationDecisions() {
 export function usePendingModerationCount() {
   return useModerationQueue().length;
 }
-
