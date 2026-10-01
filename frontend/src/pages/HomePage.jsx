@@ -106,6 +106,61 @@ function Reveal({ children, delay = 0, direction = "up", className = "" }) {
 }
 
 // ============================================================
+// ViewAllTile — kitufe cha "Tazama Zote" kinachokaa ndani ya grid.
+// Kinajaza nafasi iliyobaki ya safu ya mwisho kwa kila breakpoint,
+// ili grid ikamilike kwa usawa (mf. kategoria 11 → kitufe ni ya 12).
+// `cols` = idadi ya nguzo kwa kila breakpoint, mf. { base: 2, md: 3, lg: 4 }
+// ============================================================
+const SPAN_CLASSES = {
+  base: { 1: "col-span-1", 2: "col-span-2" },
+  sm: { 1: "sm:col-span-1", 2: "sm:col-span-2", 3: "sm:col-span-3" },
+  md: { 1: "md:col-span-1", 2: "md:col-span-2", 3: "md:col-span-3", 4: "md:col-span-4" },
+  lg: {
+    1: "lg:col-span-1", 2: "lg:col-span-2", 3: "lg:col-span-3",
+    4: "lg:col-span-4", 5: "lg:col-span-5", 6: "lg:col-span-6",
+  },
+};
+
+function fillSpan(itemCount, cols) {
+  return Object.keys(SPAN_CLASSES)
+    .filter((bp) => cols[bp])
+    .map((bp) => SPAN_CLASSES[bp][cols[bp] - (itemCount % cols[bp])])
+    .join(" ");
+}
+
+// Idadi ya mali zinazotrend kwenye grid; kitufe cha "Tazama Zote" ni nafasi ya mwisho
+// (mali 19 + kitufe 1 = nafasi 20).
+const TRENDING_LIMIT = 19;
+const TRENDING_COLS = { base: 2, md: 3, lg: 4 };
+const CATEGORY_COLS = { base: 2, sm: 3, md: 4, lg: 6 };
+
+function ViewAllTile({ to, label, itemCount, cols, delay = 0 }) {
+  return (
+    <Reveal delay={delay} className={fillSpan(itemCount, cols)}>
+      <Link
+        to={to}
+        className="group flex h-full min-h-[84px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-[#E8A33D]/40 bg-[#E8A33D]/10 px-4 py-5 text-center text-[#E8A33D] font-semibold text-sm transition-all duration-300 hover:-translate-y-1 hover:bg-[#E8A33D] hover:text-[#101A2E] hover:border-[#E8A33D] hover:shadow-lg hover:shadow-black/[0.06]"
+      >
+        <span>{label}</span>
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="transition-transform duration-300 group-hover:translate-x-1"
+        >
+          <path d="M5 12h14M12 5l7 7-7 7" />
+        </svg>
+      </Link>
+    </Reveal>
+  );
+}
+
+// ============================================================
 // AmbientBackground — extremely subtle moving lights
 // ============================================================
 function AmbientBackground() {
@@ -231,7 +286,7 @@ export default function HomePage() {
       publicListings
         .filter((l) => l.status === "live")
         .sort((a, b) => (b.views || 0) - (a.views || 0))
-        .slice(0, 8),
+        .slice(0, TRENDING_LIMIT),
     [publicListings]
   );
 
@@ -674,27 +729,16 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════ */}
         <section id="matangazo" className="scroll-mt-16 py-14 px-4 max-w-7xl mx-auto">
           <Reveal>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 mb-7">
-              <div>
-                <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
-                  {lang === "sw" ? "Trending" : "Trending"}
-                </span>
-                <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
-                  {lang === "sw" ? "Mali Zinazotrendi" : "Trending Properties"}
-                </h2>
-                <p className="text-sm text-secondary mt-1.5">
-                  {lang === "sw" ? "Mali zinazoangaliwa zaidi sasa hivi" : "Most viewed listings right now"}
-                </p>
-              </div>
-              <Link
-                to="/mali-zote"
-                className="group inline-flex items-center gap-1.5 text-[#E8A33D] text-sm font-semibold shrink-0 hover:gap-2.5 transition-all"
-              >
-                {lang === "sw" ? "Tazama Zote" : "View All"}
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </Link>
+            <div className="text-center mb-7">
+              <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+                {lang === "sw" ? "Trending" : "Trending"}
+              </span>
+              <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
+                {lang === "sw" ? "Mali Zinazotrendi" : "Trending Properties"}
+              </h2>
+              <p className="text-sm text-secondary mt-1.5">
+                {lang === "sw" ? "Mali zinazoangaliwa zaidi sasa hivi" : "Most viewed listings right now"}
+              </p>
             </div>
           </Reveal>
 
@@ -757,6 +801,13 @@ export default function HomePage() {
                   </Reveal>
                 );
               })}
+              <ViewAllTile
+                to="/mali-zote"
+                label={lang === "sw" ? "Tazama Zote" : "View All"}
+                itemCount={trendingProperties.length}
+                cols={TRENDING_COLS}
+                delay={Math.min(trendingProperties.length * 70, 350)}
+              />
             </div>
           )}
         </section>
@@ -767,27 +818,16 @@ export default function HomePage() {
         <section id="kategoria" className="scroll-mt-16 py-14 px-4 max-w-7xl mx-auto">
           <div className="bg-[#FAF9F5] rounded-3xl p-6 sm:p-10">
             <Reveal>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 mb-7">
-                <div>
-                  <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
-                    {lang === "sw" ? "Kategoria" : "Categories"}
-                  </span>
-                  <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
-                    {lang === "sw" ? "Kategoria Maarufu" : "Popular Categories"}
-                  </h2>
-                  <p className="text-sm text-secondary mt-1.5">
-                    {lang === "sw" ? "Chagua aina ya mali unayotafuta" : "Pick the type of property you're looking for"}
-                  </p>
-                </div>
-                <Link
-                  to="/kategoria"
-                  className="group inline-flex items-center gap-1.5 text-[#E8A33D] text-sm font-semibold shrink-0 hover:gap-2.5 transition-all"
-                >
-                  {lang === "sw" ? "Tazama Yote" : "View All"}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </Link>
+              <div className="text-center mb-7">
+                <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+                  {lang === "sw" ? "Kategoria" : "Categories"}
+                </span>
+                <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
+                  {lang === "sw" ? "Kategoria Maarufu" : "Popular Categories"}
+                </h2>
+                <p className="text-sm text-secondary mt-1.5">
+                  {lang === "sw" ? "Chagua aina ya mali unayotafuta" : "Pick the type of property you're looking for"}
+                </p>
               </div>
             </Reveal>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
@@ -827,6 +867,13 @@ export default function HomePage() {
                   </Reveal>
                 );
               })}
+              <ViewAllTile
+                to="/kategoria"
+                label={lang === "sw" ? "Tazama Yote" : "View All"}
+                itemCount={categories.length}
+                cols={CATEGORY_COLS}
+                delay={Math.min(categories.length * 60, 360)}
+              />
             </div>
           </div>
         </section>
