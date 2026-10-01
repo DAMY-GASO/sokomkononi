@@ -4,6 +4,8 @@
 // reserved, success fee, listing fee, campaigns).
 // Revenue Types zote 6: boosting, advertising, leading,
 // reservation, success, listing.
+// Total Revenue kadi kubwa — span 5 columns kwenye desktop,
+// full width kwenye simu.
 // Bilingual + mobile-responsive + Async campaign actions.
 // ============================================================
 
@@ -310,7 +312,6 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
       style={{ borderColor: COLORS.sandLine, background: "white" }}
       className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full max-w-full min-w-0 overflow-hidden"
     >
-      {/* Name bilingual */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-secondary">
@@ -340,7 +341,6 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
         </label>
       </div>
 
-      {/* Description bilingual */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-secondary">
@@ -378,7 +378,6 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
         </label>
       </div>
 
-      {/* Discount + Dates */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-secondary">
@@ -425,7 +424,6 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
         </label>
       </div>
 
-      {/* Active */}
       <label className="flex items-center gap-2 cursor-pointer w-full min-w-0">
         <input
           type="checkbox"
@@ -439,7 +437,6 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
         </span>
       </label>
 
-      {/* Actions */}
       <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
         <button
           onClick={onCancel}
@@ -623,7 +620,6 @@ export default function PromotionsSection() {
   // TAB CONTENT RENDERER
   // ============================================================
   const renderTabContent = () => {
-    // Boost
     if (activeTab === "boost") {
       return promotions.boostedListings.length === 0 ? (
         <EmptyState
@@ -643,7 +639,6 @@ export default function PromotionsSection() {
       );
     }
 
-    // Advertise
     if (activeTab === "advertise") {
       return promotions.advertisedListings.length === 0 ? (
         <EmptyState
@@ -663,7 +658,6 @@ export default function PromotionsSection() {
       );
     }
 
-    // Leading
     if (activeTab === "leading") {
       return promotions.leadingListings.length === 0 ? (
         <EmptyState
@@ -683,7 +677,6 @@ export default function PromotionsSection() {
       );
     }
 
-    // Reservation
     if (activeTab === "reservation") {
       return promotions.reservedListings.length === 0 ? (
         <EmptyState
@@ -703,7 +696,6 @@ export default function PromotionsSection() {
       );
     }
 
-    // Success Fee
     if (activeTab === "success") {
       return promotions.successFeeDeals.length === 0 ? (
         <EmptyState
@@ -723,7 +715,6 @@ export default function PromotionsSection() {
       );
     }
 
-    // Listing Fee
     if (activeTab === "listing") {
       return promotions.listingFeeTransactions.length === 0 ? (
         <EmptyState
@@ -743,7 +734,6 @@ export default function PromotionsSection() {
       );
     }
 
-    // Campaigns
     if (activeTab === "campaigns") {
       return (
         <div className="flex flex-col gap-3 w-full min-w-0">
@@ -813,6 +803,9 @@ export default function PromotionsSection() {
     return null;
   };
 
+  // ============================================================
+  // RENDER
+  // ============================================================
   return (
     <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
       <SectionHeader
@@ -836,8 +829,10 @@ export default function PromotionsSection() {
         </div>
       )}
 
-      {/* Stats — zote sita + jumla */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 sm:gap-3 mb-5 w-full">
+      {/* Stats — 6 stats za kawaida kwenye grid ya 11 columns */}
+      {/* Kwenye desktop: 6 stats (kila 1 col) + Revenue (span 5) */}
+      {/* Kwenye simu: 2 cols + Revenue (span 2) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-11 gap-2 sm:gap-3 mb-5 w-full">
         <StatBox
           label={t("Boost", "Boost")}
           value={promotions.counts.boosted}
@@ -874,15 +869,71 @@ export default function PromotionsSection() {
           icon={CreditCard}
           color="#0891B2"
         />
-        <StatBox
-          label={t("Jumla ya Mapato", "Total Revenue")}
-          value={formatTZS(promotions.totalPromotionRevenue)}
-          icon={DollarSign}
-          color={COLORS.night}
-        />
+
+        {/* ⬇️ Total Revenue — inachukua columns 5 kwenye desktop */}
+        {/* Kwenye simu: inachukua columns 2 (full width) */}
+        <div
+          className="col-span-2 sm:col-span-3 lg:col-span-5 rounded-2xl p-4 sm:p-5 lg:p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6 min-w-0 overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${COLORS.night} 0%, #1a2842 100%)`,
+            color: COLORS.sand,
+          }}
+        >
+          {/* Kiasi kikubwa cha mapato */}
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: "rgba(232,163,61,0.18)" }}
+            >
+              <DollarSign size={22} color={COLORS.gold} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider opacity-70">
+                {t("Jumla ya Mapato", "Total Revenue")}
+              </p>
+              <p className="text-[clamp(1.25rem,4.5vw,2.25rem)] font-bold mt-0.5 break-words leading-tight tabular-nums">
+                {formatTZS(promotions.totalPromotionRevenue)}
+              </p>
+            </div>
+          </div>
+
+          {/* Mini breakdown kwa desktop */}
+          <div className="grid grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 shrink-0">
+            <MiniRevenue
+              label={t("Boost", "Boost")}
+              value={promotions.revenueByType.boost}
+              color={COLORS.gold}
+            />
+            <MiniRevenue
+              label={t("Matangazo", "Ads")}
+              value={promotions.revenueByType.advertise}
+              color={COLORS.rust}
+            />
+            <MiniRevenue
+              label={t("Leading", "Leading")}
+              value={promotions.revenueByType.leading}
+              color={COLORS.green}
+            />
+            <MiniRevenue
+              label={t("Uhifadhi", "Reservation")}
+              value={promotions.revenueByType.reservation}
+              color="#2563EB"
+            />
+            <MiniRevenue
+              label={t("Success Fee", "Success")}
+              value={promotions.revenueByType.success}
+              color="#7C3AED"
+            />
+            <MiniRevenue
+              label={t("Listing Fee", "Listing")}
+              value={promotions.revenueByType.listing}
+              color="#0891B2"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Revenue Breakdown — zote sita */}
+      {/* Revenue Breakdown — zote sita (kadi za kila aina) */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="rounded-xl border p-3 sm:p-4 mb-5 w-full min-w-0 overflow-hidden"
@@ -1003,6 +1054,22 @@ function RevenueRow({ label, value, color }) {
       >
         {formatTZS(value)}
       </p>
+    </div>
+  );
+}
+
+function MiniRevenue({ label, value, color }) {
+  return (
+    <div className="flex flex-col items-start gap-0.5 min-w-0">
+      <span
+        className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide opacity-70"
+        style={{ color }}
+      >
+        {label}
+      </span>
+      <span className="text-[11px] sm:text-xs lg:text-sm font-bold whitespace-nowrap tabular-nums text-white">
+        {value > 0 ? formatTZS(value) : "—"}
+      </span>
     </div>
   );
 }
