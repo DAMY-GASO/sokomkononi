@@ -4,12 +4,12 @@
 // Bilingual + mobile-responsive (imeboreshwa).
 // ============================================================
 
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Users,
   Home,
   Handshake,
-  DollarSign,
+  Wallet,
   TrendingUp,
   BarChart3,
   Award,
@@ -24,6 +24,10 @@ import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useReports } from "../../../../config/reportsStore.js";
+import { useUsers } from "../../../../config/usersStore.js";
+import { useListings, useHydratePublicListings } from "../../../../config/listingsStore.js";
+import { useDeals } from "../../../../config/dealsStore.js";
+import { usePlatformRevenue, localDayKey } from "../shared/revenue.js";
 
 // ============================================================
 // STAT TILE — responsive
@@ -61,7 +65,7 @@ function ReportTile({ label, value, icon: Icon, color, subtext }) {
 // ============================================================
 // BAR CHART — responsive
 // ============================================================
-function BarChart({ data, maxValue, color, lang, emptyText }) {
+function BarChart({ data, maxValue, color, lang, emptyText, formatValue }) {
   if (!data || data.length === 0 || maxValue === 0) {
     return (
       <p className="text-xs text-muted text-center py-6 sm:py-8">{emptyText}</p>
@@ -85,7 +89,7 @@ function BarChart({ data, maxValue, color, lang, emptyText }) {
                   minHeight: height > 0 ? 4 : 2,
                 }}
                 className="w-full max-w-[16px] sm:max-w-[24px] rounded-t transition-all"
-                title={`${d.label}: ${d.value}`}
+                title={`${d.label}: ${formatValue ? formatValue(d.value) : d.value}`}
               />
             </div>
             <span className="text-[8px] sm:text-[9px] text-muted truncate w-full text-center">
@@ -186,9 +190,142 @@ function ChartCard({ title, icon: Icon, iconColor, children }) {
 // ============================================================
 export default function ReportsSection() {
   const { lang } = useLanguage();
-  const reports = useReports(lang);
+  const apiReports = useReports(lang);
+  const platformRevenue = usePlatformRevenue("all");
+  const users = useUsers();
+  useHydratePublicListings();
+  const listings = useListings();
+  const deals = useDeals();
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+  const locale = lang === "sw" ? "sw-TZ" : "en-US";
+
+  // Mapato ya Jumla: chanzo sawa na Overview (finance/dashboard)
+  const totalRevenueText = platformRevenue.loading
+    ? "…"
+    : platformRevenue.error
+      ? "—"
+      : formatTZS(platformRevenue.total);
+
+  // Data ya API ikiwa na thamani hutumika; ikiwa 0/tupu tunatumia
+  // hesabu halisi kutoka stores zile zile zinazotumiwa na Overview.
+  const reports = useMemo(() => {
+    const num = (v) => Number(v) || 0;
+    const pick = (api, local) => (num(api) > 0 ? num(api) : local);
+    const pickList = (api, local) => (Array.isArray(api) && api.length > 0 ? api : local);
+    const dayLabel = (d) => d.toLocaleDateString(locale, { day: "numeric", month: "short" });
+    const byRole = (role) => users.filter((u) => u.role === role).length;
+    const byStatus = (st) => deals.filter((d) => d.status === st).length;
+    const lsStatus = (st) => listings.filter((l) => l.status === st).length;
+
+    // ---- Deals ----
+    const apiStatus = apiReports.dealsByStatus || {};
+    const dealsByStatus = Object.values(apiStatus).some((v) => num(v) > 0)
+      ? apiStatus
+      : {
+          negotiating: byStatus("negotiating"),
+          accepted: byStatus("accepted"),
+          reserved: byStatus("reserved"),
+          completed: byStatus("completed"),
+          disputed: byStatus("disputed"),
+          cancelled: byStatus("cancelled"),
+        };
+    const totalDeals = pick(apiReports.totalDeals, deals.length);
+    const completedDeals = pick(apiReports.completedDeals, byStatus("completed"));
+    // Conversion = deals zilizokamilika ÷ deals zote
+    const conversionRate =
+      num(apiReports.conversionRate) > 0
+        ? num(apiReports.conversionRate)
+        : totalDeals > 0
+          ? (completedDeals / totalDeals) * 100
+          : 0;
+
+    // ---- Ukuaji wa watumiaji (siku 30) ----
+    const usersGrowthLocal = [];
+    if (users.length > 0) {
+      for (let i = 29; i >= 0; i--) {
+        const end = new Date();
+        end.setHours(23, 59, 59, 999);
+        end.setDate(end.getDate() - i);
+        const cumulative = users.filter((u) => {
+          const j = new Date(u.joined).getTime();
+          return !Number.isNaN(j) && j <= end.getTime();
+        }).length;
+        usersGrowthLocal.push({ label: dayLabel(end), cumulative });
+      }
+    }
+
+    // ---- Mali (listingsStore) ----
+    const perDay = {};
+    listings.forEach((l) => {
+      const d = new Date(l.postedAt);
+      if (Number.isNaN(d.getTime())) return;
+      const k = localDayKey(d);
+      perDay[k] = (perDay[k] || 0) + 1;
+    });
+    const listingsGrowthLocal = [];
+    if (listings.length > 0) {
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() - i);
+        listingsGrowthLocal.push({ label: dayLabel(d), count: perDay[localDayKey(d)] || 0 });
+      }
+    }
+
+    const sellerOf = (l) =>
+      (typeof l.seller_name === "string" && l.seller_name) ||
+      (typeof l.seller === "string" ? l.seller : "");
+    const group = (keyFn) => {
+      const m = new Map();
+      listings.forEach((l) => {
+        const k = keyFn(l);
+        if (!k) return;
+        const e = m.get(k) || { key: k, count: 0, views: 0 };
+        e.count += 1;
+        e.views += num(l.views);
+        m.set(k, e);
+      });
+      return Array.from(m.values())
+        .sort((a, b) => b.views - a.views || b.count - a.count)
+        .slice(0, 5);
+    };
+    const topSellersLocal = group(sellerOf).map((g) => ({
+      name: g.key, listings: g.count, views: g.views,
+    }));
+    const topCategoriesLocal = group((l) => l.category).map((g) => ({
+      key: g.key, count: g.count, views: g.views,
+    }));
+    const topLocationsLocal = group((l) => String(l.location || "").trim()).map((g) => ({
+      name: g.key, count: g.count, views: g.views,
+    }));
+    const mostViewedLocal = listings
+      .filter((l) => num(l.views) > 0)
+      .sort((a, b) => num(b.views) - num(a.views))
+      .slice(0, 5)
+      .map((l) => ({ id: l.id, title: l.title, views: num(l.views), price: l.price }));
+
+    return {
+      ...apiReports,
+      totalUsers: pick(apiReports.totalUsers, users.length),
+      totalSellers: pick(apiReports.totalSellers, byRole("Seller")),
+      totalBuyers: pick(apiReports.totalBuyers, byRole("Buyer")),
+      totalListings: pick(apiReports.totalListings, listings.length),
+      liveListings: pick(apiReports.liveListings, lsStatus("live")),
+      soldListings: pick(apiReports.soldListings, lsStatus("sold")),
+      totalDeals,
+      completedDeals,
+      disputedDeals: pick(apiReports.disputedDeals, byStatus("disputed")),
+      conversionRate,
+      dealsByStatus,
+      usersGrowth: pickList(apiReports.usersGrowth, usersGrowthLocal),
+      listingsGrowth: pickList(apiReports.listingsGrowth, listingsGrowthLocal),
+      topSellers: pickList(apiReports.topSellers, topSellersLocal),
+      mostViewedListings: pickList(apiReports.mostViewedListings, mostViewedLocal),
+      topCategories: pickList(apiReports.topCategories, topCategoriesLocal),
+      topLocations: pickList(apiReports.topLocations, topLocationsLocal),
+    };
+  }, [apiReports, users, listings, deals, locale]);
 
   // Compute max values for charts
   const usersMax = Math.max(
@@ -248,8 +385,8 @@ export default function ReportsSection() {
         />
         <ReportTile
           label={t("Mapato", "Revenue")}
-          value={formatTZS(reports.totalRevenue)}
-          icon={DollarSign}
+          value={totalRevenueText}
+          icon={Wallet}
           color={COLORS.rust}
           subtext={t(
             `Conversion: ${Number(reports.conversionRate || 0).toFixed(1)}%`,
@@ -308,6 +445,7 @@ export default function ReportsSection() {
               value: d.total,
             }))}
             maxValue={revenueMax}
+            formatValue={formatTZS}
             color={COLORS.rust}
             lang={lang}
             emptyText={t("Hakuna data bado", "No data yet")}

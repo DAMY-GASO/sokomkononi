@@ -1,8 +1,7 @@
 // ============================================================
 // OverviewSection.jsx
 // Muhtasari wa mfumo — stats + live transactions.
-// Total Revenue kadi kubwa — span 5 columns kwenye desktop,
-// full width kwenye simu.
+// Mapato ya Jumla = jumla ya njia zote 6 za mapato (shared/revenue.js).
 // Rangi: maandishi yote yanaonekana kwenye dark background.
 // ============================================================
 import React, { useMemo, useEffect, useState } from "react";
@@ -34,18 +33,24 @@ import {
 } from "../../../../config/listingsStore.js";
 import { useDeals } from "../../../../config/dealsStore.js";
 import { useTransactions } from "../../../../config/transactionsStore.js";
-import { financeApi } from "../../../../api/finance.js";
+import {
+  usePlatformRevenue,
+  isRevenueTransaction,
+  localDayKey,
+} from "../shared/revenue.js";
 
-// ⬇️ Ongeza "success_fee" kwenye orodha
-const PLATFORM_FEE_TYPES = [
-  "listing_fee",
-  "reservation",
-  "boost",
-  "leading",
-  "advertisement",
-  "success_fee",
-];
 const NEW_REGISTRATION_WINDOW_DAYS = 7;
+
+// Rangi za kila njia ya mapato
+const STREAM_COLORS = {
+  listing: COLORS.gold,
+  reservation: COLORS.green,
+  boost: "#2563EB",
+  leading: "#7C3AED",
+  advertise: COLORS.rust,
+  success: "#0891B2",
+  bundle: "#DB2777",
+};
 
 export default function OverviewSection({ onNavigate }) {
   const { lang } = useLanguage();
@@ -53,30 +58,9 @@ export default function OverviewSection({ onNavigate }) {
   const listings = useListings();
   const deals = useDeals();
   const transactions = useTransactions();
+  const revenue = usePlatformRevenue("all");
 
-  const [platformRevenue, setPlatformRevenue] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    financeApi
-      .dashboard("all")
-      .then((data) => {
-        if (cancelled) return;
-        const rev =
-          data?.total_revenue ??
-          data?.revenue?.total ??
-          data?.totalRevenue ??
-          null;
-        if (rev != null) setPlatformRevenue(Number(rev) || 0);
-      })
-      .catch(() => {
-        /* fallback to local sum below */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     fetchPendingListingsAsync().then((res) => {
@@ -105,19 +89,6 @@ export default function OverviewSection({ onNavigate }) {
   }, [users]);
 
   const totalListings = listings.length;
-
-  const localRevenue = useMemo(
-    () =>
-      transactions
-        .filter(
-          (t) =>
-            t.status === "completed" && PLATFORM_FEE_TYPES.includes(t.type)
-        )
-        .reduce((s, t) => s + (t.amount || 0), 0),
-    [transactions]
-  );
-  const revenueIsPlatformWide = platformRevenue != null;
-  const totalRevenue = revenueIsPlatformWide ? platformRevenue : localRevenue;
 
   const pendingPayments = useMemo(
     () => transactions.filter((t) => t.status === "pending").length,
@@ -158,7 +129,7 @@ export default function OverviewSection({ onNavigate }) {
       d.setHours(0, 0, 0, 0);
       d.setDate(d.getDate() - i);
       days.push({
-        key: d.toISOString().slice(0, 10),
+        key: localDayKey(d),
         label: d.toLocaleDateString(lang === "sw" ? "sw-TZ" : "en-US", {
           weekday: "short",
         }),
@@ -167,11 +138,11 @@ export default function OverviewSection({ onNavigate }) {
     }
     const byKey = Object.fromEntries(days.map((d) => [d.key, d]));
     transactions.forEach((t) => {
-      if (t.status !== "completed" || !PLATFORM_FEE_TYPES.includes(t.type)) return;
+      if (!isRevenueTransaction(t)) return;
       const tDate = new Date(t.at);
       if (Number.isNaN(tDate.getTime())) return;
-      const key = tDate.toISOString().slice(0, 10);
-      if (byKey[key]) byKey[key].total += t.amount || 0;
+      const key = localDayKey(tDate);
+      if (byKey[key]) byKey[key].total += Number(t.amount) || 0;
     });
     return days;
   }, [transactions, lang]);
@@ -300,83 +271,40 @@ export default function OverviewSection({ onNavigate }) {
               className="text-[clamp(1.75rem,6vw,3rem)] font-bold mt-1 break-words leading-tight tabular-nums"
               style={{ color: "#FFFFFF" }}
             >
-              {formatTZS(totalRevenue)}
+              {revenue.loading ? "…" : revenue.error ? "—" : formatTZS(revenue.total)}
             </p>
-            {revenueIsPlatformWide ? (
+            {revenue.error ? (
+              <p
+                className="text-[11px] sm:text-xs mt-2 inline-block px-2 py-0.5 rounded"
+                style={{ background: "rgba(232,163,61,0.25)", color: "#E8A33D" }}
+              >
+                {lang === "sw"
+                  ? "⚠️ Imeshindwa kupakia mapato ya jukwaa"
+                  : "⚠️ Could not load platform revenue"}
+              </p>
+            ) : (
               <p
                 className="text-xs sm:text-sm mt-2"
                 style={{ color: "rgba(255,255,255,0.7)" }}
               >
                 {lang === "sw"
-                  ? "Mapato yote ya jukwaa kutoka vyanzo vyote"
-                  : "All platform revenue from every source"}
-              </p>
-            ) : (
-              <p
-                className="text-[11px] sm:text-xs mt-2 inline-block px-2 py-0.5 rounded"
-                style={{
-                  background: "rgba(232,163,61,0.25)",
-                  color: "#E8A33D",
-                }}
-              >
-                {lang === "sw"
-                  ? "⚠️ Kikokotoo cha jumla hakijapatikana — inaonyesha miamala yako pekee"
-                  : "⚠️ Platform total unavailable — showing your transactions only"}
+                  ? "Jumla ya njia zote za mapato za jukwaa"
+                  : "Sum of all platform revenue streams"}
               </p>
             )}
           </div>
         </div>
 
-        {/* Breakdown ya mapato kwa aina — sasa na Success Fee */}
+        {/* Breakdown ya mapato kwa aina — jumla hapo juu = jumla ya hizi 6 */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 w-full lg:w-auto shrink-0">
-          <RevenueBreakdown
-            label={lang === "sw" ? "Listing Fee" : "Listing Fee"}
-            value={transactions
-              .filter((t) => t.type === "listing_fee" && t.status === "completed")
-              .reduce((s, t) => s + (t.amount || 0), 0)}
-            color={COLORS.gold}
-          />
-          <RevenueBreakdown
-            label={lang === "sw" ? "Reservation" : "Reservation"}
-            value={transactions
-              .filter(
-                (t) => t.type === "reservation" && t.status === "completed"
-              )
-              .reduce((s, t) => s + (t.amount || 0), 0)}
-            color={COLORS.green}
-          />
-          <RevenueBreakdown
-            label={lang === "sw" ? "Boost" : "Boost"}
-            value={transactions
-              .filter((t) => t.type === "boost" && t.status === "completed")
-              .reduce((s, t) => s + (t.amount || 0), 0)}
-            color="#2563EB"
-          />
-          <RevenueBreakdown
-            label={lang === "sw" ? "Leading" : "Leading"}
-            value={transactions
-              .filter((t) => t.type === "leading" && t.status === "completed")
-              .reduce((s, t) => s + (t.amount || 0), 0)}
-            color="#7C3AED"
-          />
-          <RevenueBreakdown
-            label={lang === "sw" ? "Ads" : "Ads"}
-            value={transactions
-              .filter(
-                (t) => t.type === "advertisement" && t.status === "completed"
-              )
-              .reduce((s, t) => s + (t.amount || 0), 0)}
-            color={COLORS.rust}
-          />
-          <RevenueBreakdown
-            label={lang === "sw" ? "Success Fee" : "Success Fee"}
-            value={transactions
-              .filter(
-                (t) => t.type === "success_fee" && t.status === "completed"
-              )
-              .reduce((s, t) => s + (t.amount || 0), 0)}
-            color="#0891B2"
-          />
+          {revenue.streams.map(({ key, label }) => (
+            <RevenueBreakdown
+              key={key}
+              label={label}
+              value={revenue.byType[key]}
+              color={STREAM_COLORS[key]}
+            />
+          ))}
         </div>
       </div>
 

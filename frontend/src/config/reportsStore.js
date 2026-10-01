@@ -126,6 +126,8 @@ function buildFromApi(raw) {
 export async function hydrateReportsFromApi() {
   try {
     const raw = await api.get("/finance/reports/");
+    // Uchunguzi: angalia Console ili kuona backend inarudisha keys gani
+    console.info("[reportsStore] /finance/reports/ keys:", Object.keys(raw || {}), raw);
     const data = buildFromApi(raw);
     write(data);
     return { ok: true, data };

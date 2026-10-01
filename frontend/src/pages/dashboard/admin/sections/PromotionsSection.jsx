@@ -12,7 +12,6 @@ import {
   Rocket,
   TrendingUp,
   Megaphone,
-  DollarSign,
   Plus,
   Trash2,
   Pencil,
