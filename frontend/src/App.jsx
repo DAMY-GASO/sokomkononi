@@ -145,6 +145,7 @@ function App() {
           <Route path={`${ADMIN_PATH}/revenue`} element={<AdminDashboard />} />
           <Route path={`${ADMIN_PATH}/bundles`} element={<AdminDashboard />} />
           <Route path={`${ADMIN_PATH}/promotions`} element={<AdminDashboard />} />
+          <Route path={`${ADMIN_PATH}/categories`} element={<AdminDashboard />} /> 
           <Route path={`${ADMIN_PATH}/reports`} element={<AdminDashboard />} />
           <Route path={`${ADMIN_PATH}/support`} element={<AdminDashboard />} />
           <Route path={`${ADMIN_PATH}/content`} element={<AdminDashboard />} />
