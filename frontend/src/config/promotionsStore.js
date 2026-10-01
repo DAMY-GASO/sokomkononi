@@ -1,5 +1,7 @@
 // ============================================================
 // promotionsStore.js — API-only via /api/promotions/
+// + Revenue Types zote 6: boost, advertising, leading,
+//   reservation, success, listing
 // ============================================================
 import { useEffect, useState } from "react";
 import { promotionsApi } from "../api/promotions.js";
@@ -10,9 +12,37 @@ const A_EV = "sokomkononi:promotions-analytics-updated";
 const C_EV = "sokomkononi:campaigns-updated";
 
 const EMPTY_ANALYTICS = {
-  boostedListings: [], leadingListings: [], advertisedListings: [],
-  counts: { boosted: 0, leading: 0, advertised: 0, campaigns: 0, totalActive: 0 },
-  revenueByType: { boost: 0, leading: 0, advertise: 0 },
+  // Listings kwa kila aina
+  boostedListings: [],
+  leadingListings: [],
+  advertisedListings: [],
+  reservedListings: [],
+  successFeeDeals: [],
+  listingFeeTransactions: [],
+
+  // Counts
+  counts: {
+    boosted: 0,
+    leading: 0,
+    advertised: 0,
+    reserved: 0,
+    successFee: 0,
+    listingFee: 0,
+    campaigns: 0,
+    totalActive: 0,
+  },
+
+  // Revenue kwa kila aina
+  revenueByType: {
+    boost: 0,
+    leading: 0,
+    advertise: 0,
+    reservation: 0,
+    success: 0,
+    listing: 0,
+  },
+
+  // Jumla
   totalPromotionRevenue: 0,
   topPromotedSellers: [],
   source: "empty",
@@ -39,8 +69,15 @@ export function getCampaigns() { return readJson(C_KEY, []); }
 export async function hydratePromotionsAnalyticsFromApi() {
   try {
     const data = await promotionsApi.analytics();
-    writeJson(A_KEY, A_EV, data);
-    return { ok: true, data };
+    // Merge na EMPTY_ANALYTICS ili fields zote ziwepo
+    const merged = {
+      ...EMPTY_ANALYTICS,
+      ...data,
+      counts: { ...EMPTY_ANALYTICS.counts, ...(data?.counts || {}) },
+      revenueByType: { ...EMPTY_ANALYTICS.revenueByType, ...(data?.revenueByType || {}) },
+    };
+    writeJson(A_KEY, A_EV, merged);
+    return { ok: true, data: merged };
   } catch (err) { return { ok: false, error: err }; }
 }
 
@@ -162,4 +199,3 @@ export function useActiveCampaigns() {
     return true;
   });
 }
-
