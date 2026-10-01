@@ -5,6 +5,8 @@
 // FIX: categories zisizo kwenye seed (mf. zilizoongezwa kupitia admin)
 //      sasa zinahifadhi jina la Kiingereza (label override) kwa hiyo
 //      lugha inabadilika ipasavyo.
+// FIX: Translations (name_en, description_en) zinasomwa kutoka
+//      `extra` field kwa sababu backend haina fields za lugha mbili.
 // NEW: mashine (pekee), fashion, jobs, mali-nyinginezo, huduma.
 // ============================================================
 import { useEffect, useState } from "react";
@@ -316,17 +318,30 @@ async function tryApi(apiCall, { onSuccess, onFail, optimistic, previous }) {
   }
 }
 
+// ── Backend payload ──────────────────────────────────────────────────
+// Backend haina `name_en` / `description_en` fields. Tunahifadhi
+// translations kwenye `extra` (JSONField) ili admin aweze kuhariri
+// lugha zote mbili kupitia admin panel.
 function toBackendPayload(category) {
+  const existingExtra =
+    category.extra && typeof category.extra === "object" && !Array.isArray(category.extra)
+      ? category.extra
+      : {};
+
   return {
     name: category.label?.sw || category.key,
     slug: category.key,
-    name_en: category.label?.en || "",
     description: category.description?.sw || "",
-    description_en: category.description?.en || "",
     icon_key: category.iconKey || "",
     image_url: category.imageUrl || "",
     is_popular: !!category.isPopular,
     is_active: category.active !== false,
+    // ⬇️ Translations zimehifadhiwa kwenye extra
+    extra: {
+      ...existingExtra,
+      name_en: category.label?.en || "",
+      description_en: category.description?.en || "",
+    },
   };
 }
 
@@ -472,23 +487,46 @@ function normalizeCategoryFromApi(raw) {
   const name = raw.name || "";
   const slug = raw.slug || toSlug(name);
   const seedKey = BACKEND_SLUG_TO_SEED_KEY[slug] || slug;
+
   // `key` is the frontend-canonical short form (matches SEED_CATEGORIES).
   // `slug` keeps the backend form for API lookups.
+  //
   // MAJINA YA ADMIN YANA NGUVU:
   //   sw → jina la backend (admin akihariri, linaonekana)
-  //   en → override ya admin (localStorage) → name_en ya backend → seed → name
+  //   en → extra.name_en ya backend → override ya admin (localStorage)
+  //        → name_en ya backend → seed → name
   // Seed inatumika tu kama admin hajaweka kitu.
+  //
+  // Kumbuka: Backend haina `name_en` field. Translations zimehifadhiwa
+  // kwenye `extra.name_en` na `extra.description_en`.
   const override = readLabelOverrides()[seedKey] || {};
   const seedLabel = SEED_LABEL_BY_KEY[seedKey];
   const seedDesc = SEED_DESCRIPTION_BY_KEY[seedKey];
+
+  // ⬇️ Soma translations kutoka: extra.name_en → raw.name_en → override → seed → name
+  const extraData =
+    raw.extra && typeof raw.extra === "object" && !Array.isArray(raw.extra)
+      ? raw.extra
+      : {};
+  const nameEn =
+    extraData.name_en || raw.name_en || override.label?.en || seedLabel?.en || name;
+  const descEn =
+    extraData.description_en ||
+    raw.description_en ||
+    override.description?.en ||
+    seedDesc?.en ||
+    raw.description ||
+    "";
+
   const label = {
     sw: name || override.label?.sw || seedLabel?.sw || "",
-    en: override.label?.en || raw.name_en || seedLabel?.en || name,
+    en: nameEn,
   };
   const description = {
     sw: raw.description || override.description?.sw || seedDesc?.sw || "",
-    en: override.description?.en || raw.description_en || seedDesc?.en || raw.description || "",
+    en: descEn,
   };
+
   return {
     id: raw.id,
     key: seedKey,
@@ -526,9 +564,30 @@ export async function hydrateCategoriesFromApi() {
       const seeded = initializeCategories();
       return { source: "seed", count: seeded.length };
     }
+
+    // Kategoria zilizorudishwa na backend
     const normalized = rawList.map(normalizeCategoryFromApi).filter(Boolean);
-    saveAll(normalized);
-    return { source: "api", count: normalized.length };
+    const apiKeys = new Set(normalized.map((c) => c.key));
+
+    // Kategoria za seed ambazo HAZIPO kwenye API (bado backend haijaziweka)
+    // Hii inahakikisha kategoria zote zinaonekana hata kama backend haijasasishwa.
+    const seedOnly = SEED_CATEGORIES
+      .filter((c) => !apiKeys.has(c.key))
+      .map((c) => ({ ...c, id: null }));
+
+    // Merge: API + seed-only, bila duplicates
+    const merged = [...normalized, ...seedOnly];
+
+    // Panga kwa `ordering`
+    merged.sort((a, b) => {
+      const ao = a.ordering ?? 999;
+      const bo = b.ordering ?? 999;
+      if (ao !== bo) return ao - bo;
+      return String(a.key).localeCompare(String(b.key));
+    });
+
+    saveAll(merged);
+    return { source: "api+seed", count: merged.length };
   } catch (err) {
     console.warn("[categoriesStore] hydrate failed:", err);
     const seeded = initializeCategories();
