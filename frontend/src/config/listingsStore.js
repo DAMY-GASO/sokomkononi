@@ -2,11 +2,14 @@
 // listingsStore.js
 // FIX: normalizer maps boosted_until → boostExpiresAt so the
 //      dashboard's isBoostActive() actually fires for API data.
+// NEW: checkDuplicateListing + checkDuplicateListingAsync — zuia
+//      seller kuweka listing inayofanana na iliyopo.
 // ============================================================
 import { useEffect, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
 import { listingsApi } from "../api/listings.js";
 import { authApi } from "../api/auth.js";
+import { api } from "../api/client.js";
 import { getSeedKeyFromSlug } from "./categoriesStore.js";
 import { pickImageUrl, resolveImageUrl } from "../pages/dashboard/components/shared.js";
 
@@ -29,7 +32,6 @@ export const LISTING_STATUS_MAP = {
 };
 
 const API_TO_FRONTEND_STATUS = {
-  // lowercase (backend variant)
   live: "live",
   paused: "paused",
   reserved: "reserved",
@@ -42,7 +44,6 @@ const API_TO_FRONTEND_STATUS = {
   archived: "paused",
   draft: "pending_payment",
   pending_review: "in_review",
-  // UPPERCASE (backend variant)
   LIVE: "live",
   PAUSED: "paused",
   RESERVED: "reserved",
@@ -56,7 +57,6 @@ const API_TO_FRONTEND_STATUS = {
   DRAFT: "pending_payment",
   PENDING_APPROVAL: "in_review",
   REJECT: "rejected",
-  // Mixed case ("Available", "Rejected") is caught by the .toUpperCase() fallback
 };
 
 function toApiPatch(patch) {
@@ -175,6 +175,123 @@ export function markAsSold(id) {
   return updateListing(id, { status: "sold", soldAt: new Date().toISOString() });
 }
 
+// ============================================================
+// DUPLICATE DETECTION
+// ============================================================
+function normalizeForCompare(str) {
+  return String(str || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[^\w\s\u00C0-\u024F\u1E00-\u1EFF]/g, "");
+}
+
+/**
+ * Angalia kama listing ni duplicate ya listing nyingine ya seller huyu.
+ * Returns { isDuplicate: bool, existing: listing | null }
+ *
+ * Local (frontend-only) check — inatumika kama fallback kama
+ * backend haina endpoint ya check-duplicate.
+ */
+export function checkDuplicateListing({
+  title,
+  price,
+  location,
+  category,
+  sellerId,
+  windowDays = 30,
+}) {
+  if (!title || !sellerId) return { isDuplicate: false, existing: null };
+
+  const all = getListings();
+  const normalizedTitle = normalizeForCompare(title);
+  const normalizedLocation = normalizeForCompare(location);
+  const priceNum = Number(price) || 0;
+
+  const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+
+  for (const listing of all) {
+    // Ruka listings za seller mwingine
+    if (String(listing.sellerId) !== String(sellerId)) continue;
+
+    // Ruka listings za zamani sana
+    if (listing.postedAt && new Date(listing.postedAt).getTime() < cutoff) continue;
+
+    // Ruka listings zilizofutwa au zilizokataliwa
+    if (listing.status === "deleted" || listing.status === "rejected") continue;
+
+    // Linganisha
+    const sameTitle = normalizeForCompare(listing.title) === normalizedTitle;
+    const sameLocation =
+      normalizeForCompare(listing.location) === normalizedLocation;
+    const sameCategory = String(listing.category) === String(category);
+    const samePrice = Math.abs((Number(listing.price) || 0) - priceNum) < 1;
+
+    if (sameTitle && sameLocation && sameCategory && samePrice) {
+      return { isDuplicate: true, existing: listing };
+    }
+  }
+
+  return { isDuplicate: false, existing: null };
+}
+
+/**
+ * Angalia kama listing ni duplicate kupitia backend.
+ * Backend inaweza kufanya check ya kina zaidi (fuzzy matching).
+ *
+ * Fallback: kama endpoint haipo, tumia local check.
+ */
+export async function checkDuplicateListingAsync({
+  title,
+  price,
+  location,
+  category,
+  windowDays = 30,
+}) {
+  try {
+    // Jaribu backend kwanza
+    const res = await api.post("/listings/check-duplicate/", {
+      title,
+      price,
+      location,
+      category,
+      window_days: windowDays,
+    });
+    return {
+      ok: true,
+      isDuplicate: !!res?.is_duplicate,
+      existing: res?.existing || null,
+      source: "backend",
+    };
+  } catch (err) {
+    // Kama endpoint haipo (404/405), tumia local check
+    if (err?.status === 404 || err?.status === 405) {
+      console.warn(
+        "[listingsStore] /listings/check-duplicate/ haipo — tumia local check"
+      );
+      try {
+        const me = await authApi.me();
+        const sellerId = me?.id;
+        if (!sellerId) return { ok: true, isDuplicate: false, existing: null, source: "local" };
+
+        const local = checkDuplicateListing({
+          title,
+          price,
+          location,
+          category,
+          sellerId,
+          windowDays,
+        });
+        return { ok: true, ...local, source: "local" };
+      } catch (authErr) {
+        return { ok: false, error: authErr };
+      }
+    }
+    // Kosa jingine — rudisha kama error
+    return { ok: false, error: err };
+  }
+}
+
 function useStoreValue(getter) {
   const [value, setValue] = useState(() => getter());
   useEffect(() => {
@@ -249,21 +366,14 @@ if (typeof window !== "undefined") {
   } catch { /* noop */ }
 }
 
-/**
- * Normalize a listing from API — critical:
- *   boosted_until → boostExpiresAt (so isBoostActive fires)
- *   leading_expires_at → leadingExpiresAt (if backend ever adds it)
- */
 export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   if (!raw) return null;
 
-  // Extract photos from every common shape the backend might use.
   let photos = [];
   if (Array.isArray(raw.photos)) photos = raw.photos;
   else if (Array.isArray(raw.images)) photos = raw.images;
   else if (Array.isArray(raw.gallery)) photos = raw.gallery;
 
-  // Normalize each entry to a string URL.
   photos = photos
     .map((img) => {
       if (typeof img === "string") return img;
@@ -271,7 +381,6 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     })
     .filter(Boolean);
 
-  // Also try the new universal picker (handles primary_image, thumbnail, etc.)
   const singleImage = pickImageUrl(raw);
   if (singleImage && !photos.includes(singleImage)) {
     photos.unshift(singleImage);
@@ -284,12 +393,8 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     raw.category_slug ||
     (typeof categoryObj === "string" ? categoryObj : null) ||
     null;
-  // Normalize backend slug ("nyumba-majengo") to the seed key ("nyumba")
-  // so `listing.category === category.key` matches everywhere.
   const category = getSeedKeyFromSlug(rawCategorySlug);
 
-  // Case-insensitive: backend may send "available", "AVAILABLE",
-  // "Available" — we don't want to silently fall back to "in_review".
   const rawStatus = raw.status ? String(raw.status).toUpperCase() : "";
   const status =
     API_TO_FRONTEND_STATUS[raw.status] ||
@@ -301,7 +406,6 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     raw.seller?.name ||
     (typeof raw.seller === "string" ? raw.seller : "");
 
-  // ⬇️ Critical: derive boostExpiresAt from backend's `boosted_until`.
   const boostedUntil = raw.boosted_until || raw.boostedUntil || null;
   const boostExpiresAt =
     raw.boostExpiresAt ||
@@ -309,8 +413,6 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   const leadingExpiresAt =
     raw.leading_expires_at || raw.leadingExpiresAt || null;
 
-  // Resolve the final URL for <img src>. resolveImageUrl() will
-  // rewrite internal Docker hostnames to relative paths.
   const primaryPhoto = resolveImageUrl(photos[0] || null);
   const normalizedPhotos = photos.map((u) => resolveImageUrl(u)).filter(Boolean);
 
@@ -513,8 +615,6 @@ export async function markSoldAsync(id) {
 }
 
 export async function payListingFeeAsync(id, payload) {
-  // Optimistic temp id — the backend has not accepted the listing yet.
-  // Sending POST /listings/temp_xxx/fee/pay/ would 404. Reject early.
   if (String(id).startsWith("temp_")) {
     return {
       ok: false,
@@ -552,8 +652,6 @@ export async function approveListingAsync(id) {
   try {
     const data = await listingsApi.approve(id);
     applyServerListing(id, data, "live");
-    // Push the freshly-approved listing into the PUBLIC cache so buyers
-    // see it without a hard reload.
     const nowLive = getListing(id);
     if (nowLive && nowLive.status === "live") {
       const pub = readKey(PUBLIC_KEY);
@@ -579,7 +677,6 @@ export async function rejectListingAsync(id, rejectionReason) {
   try {
     const data = await listingsApi.reject(id, rejectionReason);
     applyServerListing(id, data, "rejected");
-    // Pull it out of the public cache right away.
     writeKey(
       PUBLIC_KEY,
       readKey(PUBLIC_KEY).filter((l) => String(l.id) !== String(id))

@@ -1,18 +1,16 @@
 // ============================================================
 // PostPropertyForm.jsx (production)
 // Category-specific posting: fields/modes zinatoka config/categorySchemas.js
-// 1. POST /listings/              → creates DRAFT listing
-// 2. POST /listings/{id}/images/  → uploads images (one by one)
-// 3. POST /listings/{id}/{kind}-details/   → category-specific details
-// 4. POST /listings/{id}/fee/pay/ → pays fee (moves listing to PENDING_APPROVAL)
+// + Duplicate check kabla ya submit + real-time warning
 // ============================================================
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle, Wallet } from "lucide-react";
 import { COLORS, formatTZS, calculateListingFee } from "./shared";
 import { useActiveCategories, getCategoryIcon, getCategoryIdByKey } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
+import { checkDuplicateListingAsync } from "../../../config/listingsStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 import ImageCropper from "../../../components/ImageCropper.jsx";
@@ -111,16 +109,17 @@ export default function PostPropertyForm({
   const categories = useActiveCategories();
 
   const [categoryKey, setCategoryKey] = useState(null);
-  const [mode, setMode] = useState(null); // Jobs: "seek" | "hire"
+  const [mode, setMode] = useState(null);
   const [loc, setLoc] = useState({ mkoa: "", wilaya: "", eneo: "" });
-  const [photos, setPhotos] = useState([]); // [{file, url}]
-  const [cropQueue, setCropQueue] = useState([]); // mafaili yanayosubiri kukatwa (moja baada ya jingine)
-  const [stage, setStage] = useState("form"); // form | review | paying | done
+  const [photos, setPhotos] = useState([]);
+  const [cropQueue, setCropQueue] = useState([]);
+  const [stage, setStage] = useState("form");
   const [createdListing, setCreatedListing] = useState(null);
   const [feeAmount, setFeeAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState([]);
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [base, setBase] = useState({
     title: "",
     price: "",
@@ -149,8 +148,6 @@ export default function PostPropertyForm({
   const descLabel = activeMode?.descLabel || { sw: "Maelezo", en: "Description" };
   const photosOptional = Boolean(cfg.photosOptional);
 
-  // ⚠️ autoTitle sasa inatumika kama KIDOKEZO tu (placeholder), sio thamani halisi.
-  // Mtumiaji LAZIMA aandike jina mwenyewe ili listing iwe na jina la kipekee.
   const suggestedTitle = cfg.autoTitle ? cfg.autoTitle(extra) : "";
   const effectiveTitle = base.title.trim();
   const locationString = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa].filter(Boolean).join(", ");
@@ -158,9 +155,42 @@ export default function PostPropertyForm({
   const creditInfo = checkCredit(user?.id, "listing");
   const hasCredit = creditInfo.hasCredit;
 
+  // ============================================================
+  // REAL-TIME DUPLICATE CHECK (debounced)
+  // ============================================================
+  useEffect(() => {
+    // Ruka kama fields muhimu hazipo
+    if (!categoryKey || !effectiveTitle || !base.price || !loc.eneo) {
+      setDuplicateWarning(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const check = await checkDuplicateListingAsync({
+          title: effectiveTitle,
+          price: Number(cleanPriceInput(base.price)) || 0,
+          location: locationString,
+          category: categoryKey,
+        });
+
+        if (check.ok && check.isDuplicate) {
+          setDuplicateWarning(check.existing);
+        } else {
+          setDuplicateWarning(null);
+        }
+      } catch (err) {
+        console.warn("[PostPropertyForm] duplicate check failed:", err);
+        setDuplicateWarning(null);
+      }
+    }, 800); // debounce 800ms
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveTitle, base.price, loc.mkoa, loc.wilaya, loc.eneo, categoryKey]);
+
   const handlePhotoAdd = (e) => {
     const files = Array.from(e.target.files || []).slice(0, 8 - photos.length);
-    // Kila picha inapita kwenye cropper ya mraba kabla ya kuongezwa
     setCropQueue((q) => [...q, ...files]);
     e.target.value = "";
   };
@@ -177,7 +207,6 @@ export default function PostPropertyForm({
   const requiredFilled = visibleFields.every(
     (f) => !f.required || String(extra[f.key] ?? "").trim() !== ""
   );
-  // ⚠️ base.title LAZIMA iwe imeandikwa na mtumiaji (si autoTitle)
   const canSubmit =
     category &&
     !needsMode &&
@@ -187,13 +216,15 @@ export default function PostPropertyForm({
     loc.eneo.trim() &&
     requiredFilled &&
     (photosOptional || photos.length > 0) &&
-    !submitting;
+    !submitting &&
+    !duplicateWarning; // ⬅️ Zuia kama duplicate ipo
 
   const chooseCategory = (key) => {
     setCategoryKey(key);
     setMode(null);
     setExtra({});
     setError("");
+    setDuplicateWarning(null);
   };
   const clearCategory = () => chooseCategory(null);
   const chooseMode = (m) => {
@@ -201,8 +232,6 @@ export default function PostPropertyForm({
     setExtra({});
   };
 
-  // Muhtasari wa fields → unaongezwa kwenye maelezo ili data isipotee
-  // hata kama backend haina endpoint ya category hii.
   const buildSummary = () => {
     const lines = [];
     if (activeMode) lines.push(`${t("Aina", "Type")}: ${activeMode.label[lang]}`);
@@ -233,6 +262,7 @@ export default function PostPropertyForm({
     });
     setExtra({});
     setError("");
+    setDuplicateWarning(null);
     setFeeAmount(0);
   };
 
@@ -243,6 +273,36 @@ export default function PostPropertyForm({
     setSubmitting(true);
     setError("");
 
+    // ⬇️ MPYA: Angalia duplicate MARA MOJA ZAIDI kabla ya kuwasilisha
+    // (kwa usalama — kama debounce haikufanya kazi au mtumiaji ali-copy paste haraka)
+    try {
+      const finalCheck = await checkDuplicateListingAsync({
+        title: effectiveTitle,
+        price: Number(cleanPriceInput(base.price)) || 0,
+        location: locationString,
+        category: categoryKey,
+      });
+
+      if (finalCheck.ok && finalCheck.isDuplicate) {
+        setError(
+          t(
+            `Umekwisha kuweka tangazo linalofanana na hili${
+              finalCheck.existing?.title ? `: "${finalCheck.existing.title}"` : ""
+            }. Tafadhali badilisha jina, bei, au mahali.`,
+            `You've already posted a similar listing${
+              finalCheck.existing?.title ? `: "${finalCheck.existing.title}"` : ""
+            }. Please change the title, price, or location.`
+          )
+        );
+        setDuplicateWarning(finalCheck.existing);
+        setSubmitting(false);
+        return;
+      }
+    } catch (checkErr) {
+      console.warn("[PostPropertyForm] final duplicate check failed:", checkErr);
+      // Endelea tu — usizuie kama check imeshindwa
+    }
+
     const categoryId = getCategoryIdByKey(categoryKey);
     if (!categoryId) {
       setError(t("Category haina backend id. Hydrate kwanza.", "Category has no backend id. Hydrate first."));
@@ -251,20 +311,15 @@ export default function PostPropertyForm({
     }
 
     try {
-      // 1. Create listing (DRAFT)
       const created = await api.post("/listings/", {
         category_id: categoryId,
         title: effectiveTitle,
         description: [base.description.trim(), buildSummary()].filter(Boolean).join("\n\n"),
         price: Number(cleanPriceInput(base.price)) || 0,
         location: locationString,
-        // Haina madhara kama backend haina field hii (DRF inaipuuza)
         attributes: { ...extra, ...(mode ? { mode } : {}), region: loc.mkoa, district: loc.wilaya.trim(), area: loc.eneo.trim() },
       });
 
-      // ⚠️ Backend contract note: POST /listings/ returns ListingWrite
-      // which has NO `id`. We must resolve the new listing id by fetching
-      // our own newest listings and matching by title.
       let listingId =
         created?.id ?? created?.pk ?? created?.listing_id ?? created?.listingId;
 
@@ -291,10 +346,8 @@ export default function PostPropertyForm({
         );
       }
 
-      // Ensure downstream calls have the id
       created.id = listingId;
 
-      // 2. Upload images sequentially (multipart)
       for (const p of photos) {
         const fd = new FormData();
         fd.append("image", p.file);
@@ -304,7 +357,6 @@ export default function PostPropertyForm({
         await api.upload(`/listings/${listingId}/images/`, fd);
       }
 
-      // 3. Category details
       const detailEndpoint = CATEGORY_DETAIL_ENDPOINT[categoryKey];
       if (detailEndpoint) {
         const detailBody = {};
@@ -347,15 +399,12 @@ export default function PostPropertyForm({
         }
       }
 
-      // 4. Fetch fee from the backend.
       let fee = 0;
       let feeSource = "backend";
       try {
         const feeRes = await api.get(`/listings/${listingId}/fee/`);
         fee = Number(feeRes?.amount) || 0;
-        if (!fee) {
-          throw new Error("Backend returned no fee");
-        }
+        if (!fee) throw new Error("Backend returned no fee");
       } catch (feeErr) {
         feeSource = "local";
         console.warn(
@@ -401,7 +450,6 @@ export default function PostPropertyForm({
     }
   };
 
-  // ── Step 4a: initiate FimiPay payment ──────────────────────
   const handleFeeInitiate = async ({ methodKey, methodLabel, phone } = {}) => {
     if (!createdListing) return { ok: false, error: new Error("no listing") };
     try {
@@ -435,7 +483,6 @@ export default function PostPropertyForm({
     }
   };
 
-  // ── Step 4b: FimiPay confirms → mark done ──────────────────
   const handleFeeSuccess = () => {
     if (!createdListing) return;
     onPaid?.(createdListing.id, { alreadyPaid: true });
@@ -460,7 +507,6 @@ export default function PostPropertyForm({
     }
   };
 
-  // ── Review stage ─────────────────────────────────────────
   if (stage === "review" || stage === "paying") {
     return (
       <div className="w-full flex items-center justify-center p-6" style={{ background: COLORS.sand, minHeight: "600px" }}>
@@ -642,7 +688,6 @@ export default function PostPropertyForm({
           </div>
         )}
 
-        {/* Jobs: chagua Tafuta Kazi / Tangaza Kazi kwanza */}
         {category && needsMode && (
           <div className="max-w-md mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
             {cfg.modes.map((m) => (
@@ -686,7 +731,6 @@ export default function PostPropertyForm({
               </div>
             </Field>
 
-            {/* Jina — LAZIMA mtumiaji aandike. autoTitle ni kidokezo tu. */}
             <Field label={`${titleLabel[lang] || titleLabel.sw} *`}>
               <input
                 style={inputStyle}
@@ -706,7 +750,6 @@ export default function PostPropertyForm({
               )}
             </Field>
 
-            {/* Fields za kategoria (mpangilio wa schema) */}
             {visibleFields.length > 0 && (
               <div style={{ borderColor: COLORS.sandLine, background: "white" }}
                    className="rounded-2xl border p-4 flex flex-col gap-4">
@@ -724,7 +767,6 @@ export default function PostPropertyForm({
               </div>
             )}
 
-            {/* Eneo: Mkoa → Wilaya → Eneo */}
             <div style={{ borderColor: COLORS.sandLine, background: "white" }}
                  className="rounded-2xl border p-4 flex flex-col gap-4">
               <span className="text-primary text-sm font-medium text-center">
@@ -754,7 +796,6 @@ export default function PostPropertyForm({
               </div>
             </div>
 
-            {/* Bei */}
             <Field label={`${priceMeta.label[lang] || priceMeta.label.sw}${priceMeta.optional ? "" : " *"}`}>
               <input style={inputStyle} type="text" inputMode="numeric" className={inputCls}
                      placeholder={t("mfano: 85,000,000", "e.g. 85,000,000")}
@@ -772,6 +813,35 @@ export default function PostPropertyForm({
                         placeholder={t("Eleza kwa ufupi...", "Briefly describe...")}
                         value={base.description} onChange={(e) => setBase({ ...base, description: e.target.value })} />
             </Field>
+
+            {/* ⬇️ MPYA: Duplicate Warning */}
+            {duplicateWarning && (
+              <div
+                style={{
+                  background: "rgba(232,163,61,0.15)",
+                  color: "#8A5A16",
+                  borderColor: "rgba(232,163,61,0.4)",
+                }}
+                className="rounded-xl border px-4 py-3 flex items-start gap-2.5 text-sm"
+              >
+                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="font-semibold mb-0.5">
+                    {t("Tangazo linalofanana lipo", "Similar listing exists")}
+                  </p>
+                  <p className="text-xs leading-relaxed">
+                    {t(
+                      `Umekwisha kuweka tangazo "${
+                        duplicateWarning.title || ""
+                      }" lenye bei sawa na mahali sawa. Tafadhali badilisha jina, bei, au mahali ili kuendelea.`,
+                      `You already have a listing "${
+                        duplicateWarning.title || ""
+                      }" with the same price and location. Please change the title, price, or location to continue.`
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {cfg.modes && (
               <p className="text-center text-xs text-secondary rounded-xl px-3 py-2"
