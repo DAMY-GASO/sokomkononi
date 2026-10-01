@@ -11,6 +11,7 @@ import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 import { AVAILABLE_ICONS } from "../../../../../config/categoriesStore.js";
 import { categoriesApi } from "../../../../../api/categories.js";
 import { useToast } from "../../../../../components/Toast.jsx";
+import ImageCropper from "../../../../../components/ImageCropper.jsx";
 
 export default function CategoryForm({
   initial = {},
@@ -36,6 +37,7 @@ export default function CategoryForm({
     active: initial.active ?? true,
   });
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [cropFile, setCropFile] = useState(null); // faili linalosubiri kukatwa
   const fileInputRef = useRef(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -49,14 +51,23 @@ export default function CategoryForm({
       toast.error(t("Tafadhali chagua picha.", "Please choose an image."));
       return;
     }
-    if (file.size > 1024 * 1024) {
-      toast.error(t("Picha ni kubwa sana (max 1MB).", "Image is too large (max 1MB)."));
+    // Picha ya asili inaweza kuwa kubwa — cropper itaipunguza chini ya 1MB.
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error(t("Picha ni kubwa sana (max 15MB).", "Image is too large (max 15MB)."));
       return;
     }
+    setCropFile(file);
+    // ruhusu kuchagua faili lilelile tena
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Cropper imemaliza → hifadhi faili la mraba na onyesha preview
+  const handleCropped = (cropped) => {
+    setCropFile(null);
     const reader = new FileReader();
     reader.onload = () =>
-      setForm((f) => ({ ...f, imagePreview: reader.result, imageFile: file }));
-    reader.readAsDataURL(file);
+      setForm((f) => ({ ...f, imagePreview: reader.result, imageFile: cropped }));
+    reader.readAsDataURL(cropped);
   };
 
   const handleRemoveImage = () => {
@@ -116,6 +127,17 @@ export default function CategoryForm({
   };
 
   return (
+    <>
+    {cropFile && (
+      <ImageCropper
+        file={cropFile}
+        lang={lang}
+        outputSize={800}
+        maxBytes={1024 * 1024}
+        onConfirm={handleCropped}
+        onCancel={() => setCropFile(null)}
+      />
+    )}
     <form
       onSubmit={handleSubmit}
       style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
@@ -152,7 +174,7 @@ export default function CategoryForm({
             <img
               src={form.imagePreview}
               alt="Category preview"
-              className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border shrink-0"
+              className="w-20 h-20 sm:w-24 sm:h-24 aspect-square rounded-lg object-cover border shrink-0"
               style={{ borderColor: COLORS.sandLine }}
             />
             <div className="flex flex-row sm:flex-col gap-2 sm:gap-1.5">
@@ -187,7 +209,7 @@ export default function CategoryForm({
           >
             <ImagePlus size={22} color="rgba(16,26,46,0.35)" />
             <span className="text-xs font-medium text-center px-2">
-              {t("Bofya kupakia picha (max 1MB)", "Click to upload photo (max 1MB)")}
+              {t("Bofya kupakia picha (itakatwa kuwa mraba)", "Click to upload photo (will be cropped square)")}
             </span>
           </button>
         )}
@@ -346,5 +368,6 @@ export default function CategoryForm({
         </button>
       </div>
     </form>
+    </>
   );
 }
