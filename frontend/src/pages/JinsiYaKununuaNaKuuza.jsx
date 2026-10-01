@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowRight, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
@@ -8,27 +8,34 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../config/authStore.js";
 
 // ============================================================
-// STEP FLOW — mfululizo wa hatua na mishale kati yake
+// STEP FLOW — hatua zimepangwa wima, zimeunganishwa na mstari.
+// startAt: namba ya hatua ya kwanza (ili hatua zinazoendelea
+// baada ya kisanduku cha maelezo ziendelee kuhesabiwa).
 // ============================================================
-function StepFlow({ steps }) {
+function StepFlow({ steps, startAt = 1 }) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-3">
+    <ol className="flex flex-col max-w-md mx-auto text-left">
       {steps.map((step, i) => (
-        <React.Fragment key={i}>
-          <div className="flex items-center gap-1.5 bg-[#F5F3EC] rounded-full pl-1.5 pr-3 py-1.5">
-            <span className="w-5 h-5 rounded-full bg-[#101A2E] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-              {i + 1}
-            </span>
-            <span className="text-body-sm font-medium text-secondary whitespace-nowrap">
-              {step}
-            </span>
-          </div>
+        <li
+          key={i}
+          className="relative flex items-start gap-3 pb-3 last:pb-0"
+        >
+          {/* Mstari wa kuunganisha hatua */}
           {i < steps.length - 1 && (
-            <ArrowRight size={14} className="text-muted shrink-0" />
+            <span
+              className="absolute left-[15px] top-8 bottom-0 w-px bg-gray-300"
+              aria-hidden="true"
+            />
           )}
-        </React.Fragment>
+          <span className="relative z-10 w-8 h-8 rounded-full bg-[#101A2E] text-white text-xs font-bold flex items-center justify-center shrink-0">
+            {startAt + i}
+          </span>
+          <div className="flex-1 min-h-[2rem] flex items-center bg-[#F5F3EC] rounded-xl px-4 py-1.5 text-body-sm font-medium text-secondary">
+            {step}
+          </div>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }
 
@@ -178,7 +185,10 @@ export default function JinsiYaKununuaNaKuuza() {
           </span>
         </div>
 
-        <StepFlow steps={buyStepsAfterNote} />
+        <StepFlow
+          steps={buyStepsAfterNote}
+          startAt={buyStepsBeforeNote.length + 1}
+        />
 
         <div
           className="text-sm sm:text-base font-medium rounded-lg px-4 py-3 mt-8 max-w-2xl mx-auto"
@@ -252,7 +262,7 @@ export default function JinsiYaKununuaNaKuuza() {
         <p className="text-body-sm text-secondary">
           {t("Bado una maswali?", "Still have questions?")}{" "}
           <Link
-            to="/#faq"
+            to="/mawasiliano#faq"
             className="font-semibold hover:underline"
             style={{ color: "#E8A33D" }}
           >
