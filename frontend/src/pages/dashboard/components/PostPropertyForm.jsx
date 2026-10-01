@@ -1,5 +1,6 @@
 // ============================================================
 // PostPropertyForm.jsx (production)
+// Category-specific posting: fields/modes zinatoka config/categorySchemas.js
 // 1. POST /listings/              → creates DRAFT listing
 // 2. POST /listings/{id}/images/  → uploads images (one by one)
 // 3. POST /listings/{id}/{kind}-details/   → category-specific details
@@ -14,6 +15,14 @@ import { useAuth } from "../../../config/authStore.js";
 import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
+import ImageCropper from "../../../components/ImageCropper.jsx";
+import {
+  getPostingConfig,
+  getVisibleFields,
+  getPriceMeta,
+  TZ_REGIONS,
+  WILAYA_SUGGESTIONS,
+} from "../../../config/categorySchemas.js";
 
 function Field({ label, children }) {
   return (
@@ -25,6 +34,55 @@ function Field({ label, children }) {
 }
 
 const inputStyle = { background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night };
+const inputCls = "rounded-xl border px-3 py-2.5 text-sm outline-none text-center w-full";
+
+// Input moja ya field ya kategoria (text | number | select | textarea | date)
+function SchemaField({ f, value, onChange, lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const label = (f.label?.[lang] || f.label?.sw) + (f.required ? " *" : "");
+  const placeholder = f.placeholder?.[lang] || f.placeholder?.sw || "";
+  const listId = f.suggestions ? `dl-${f.key}` : undefined;
+  const today = new Date().toISOString().slice(0, 10);
+
+  let control;
+  if (f.type === "select") {
+    control = (
+      <select style={inputStyle} className={inputCls} value={value || ""} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{t("Chagua...", "Choose...")}</option>
+        {f.options?.map((op) => (
+          <option key={op.value} value={op.value}>{op.label?.[lang] || op.label?.sw}</option>
+        ))}
+      </select>
+    );
+  } else if (f.type === "textarea") {
+    control = (
+      <textarea style={inputStyle} rows={3} className={`${inputCls} resize-none`} placeholder={placeholder}
+                value={value || ""} onChange={(e) => onChange(e.target.value)} />
+    );
+  } else {
+    control = (
+      <>
+        <input style={inputStyle} className={inputCls}
+               type={f.type === "number" ? "number" : f.type === "date" ? "date" : "text"}
+               inputMode={f.type === "number" ? "numeric" : undefined}
+               min={f.type === "date" ? today : f.min} max={f.max}
+               list={listId} placeholder={placeholder}
+               value={value || ""} onChange={(e) => onChange(e.target.value)} />
+        {f.suggestions && (
+          <datalist id={listId}>
+            {f.suggestions.map((sg) => <option key={sg} value={sg} />)}
+          </datalist>
+        )}
+      </>
+    );
+  }
+  return (
+    <Field label={label}>
+      {control}
+      {f.hint && <span className="text-[11px] text-secondary">{f.hint[lang] || f.hint.sw}</span>}
+    </Field>
+  );
+}
 
 function formatPriceInput(v) {
   if (!v) return "";
@@ -53,7 +111,10 @@ export default function PostPropertyForm({
   const categories = useActiveCategories();
 
   const [categoryKey, setCategoryKey] = useState(null);
+  const [mode, setMode] = useState(null); // Jobs: "seek" | "hire"
+  const [loc, setLoc] = useState({ mkoa: "", wilaya: "", eneo: "" });
   const [photos, setPhotos] = useState([]); // [{file, url}]
+  const [cropQueue, setCropQueue] = useState([]); // mafaili yanayosubiri kukatwa (moja baada ya jingine)
   const [stage, setStage] = useState("form"); // form | paying | done
   const [createdListing, setCreatedListing] = useState(null);
   const [feeAmount, setFeeAmount] = useState(0);
@@ -75,29 +136,88 @@ export default function PostPropertyForm({
   const category = categories.find((c) => c.key === categoryKey);
   const categoryLabel = category?.label?.[lang] || category?.label?.sw || "";
 
+  const cfg = getPostingConfig(categoryKey);
+  const activeMode = cfg.modes?.find((m) => m.key === mode) || null;
+  const needsMode = Boolean(cfg.modes) && !activeMode;
+  const visibleFields = getVisibleFields(category?.extra, cfg, mode, extra);
+  const priceMeta = getPriceMeta(cfg, mode, extra);
+  const titleLabel = activeMode?.titleLabel || cfg.titleLabel || { sw: "Jina la Mali", en: "Property Title" };
+  const titlePlaceholder =
+    activeMode?.titlePlaceholder || cfg.titlePlaceholder ||
+    { sw: "mfano: Nyumba ya Ghorofa Mbezi Beach", en: "e.g. Mbezi Beach Apartment Building" };
+  const locationLabel = activeMode?.locationLabel || cfg.locationLabel || { sw: "Mahali", en: "Location" };
+  const descLabel = activeMode?.descLabel || { sw: "Maelezo", en: "Description" };
+  const photosOptional = Boolean(cfg.photosOptional);
+  const autoTitle = cfg.autoTitle ? cfg.autoTitle(extra) : "";
+  const effectiveTitle = base.title.trim() || autoTitle;
+  const locationString = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa].filter(Boolean).join(", ");
+
   const creditInfo = checkCredit(user?.id, "listing");
   const hasCredit = creditInfo.hasCredit;
 
   const handlePhotoAdd = (e) => {
     const files = Array.from(e.target.files || []).slice(0, 8 - photos.length);
-    const withUrls = files.map((f) => ({ file: f, url: URL.createObjectURL(f) }));
-    setPhotos((p) => [...p, ...withUrls]);
+    // Kila picha inapita kwenye cropper ya mraba kabla ya kuongezwa
+    setCropQueue((q) => [...q, ...files]);
+    e.target.value = "";
   };
+  const handleCropDone = (cropped) => {
+    setPhotos((p) =>
+      p.length >= 8 ? p : [...p, { file: cropped, url: URL.createObjectURL(cropped) }]
+    );
+    setCropQueue((q) => q.slice(1));
+  };
+  const handleCropSkip = () => setCropQueue((q) => q.slice(1));
   const removePhoto = (i) => setPhotos((p) => p.filter((_, idx) => idx !== i));
   const setExtraField = (k, v) => setExtra((e) => ({ ...e, [k]: v }));
 
+  const requiredFilled = visibleFields.every(
+    (f) => !f.required || String(extra[f.key] ?? "").trim() !== ""
+  );
   const canSubmit =
     category &&
-    base.title.trim() &&
-    base.price.trim() &&
-    base.location.trim() &&
-    photos.length > 0 &&
+    !needsMode &&
+    effectiveTitle &&
+    (priceMeta.optional || base.price.trim()) &&
+    loc.mkoa &&
+    loc.eneo.trim() &&
+    requiredFilled &&
+    (photosOptional || photos.length > 0) &&
     !submitting;
+
+  const chooseCategory = (key) => {
+    setCategoryKey(key);
+    setMode(null);
+    setExtra({});
+    setError("");
+  };
+  const clearCategory = () => chooseCategory(null);
+  const chooseMode = (m) => {
+    setMode(m);
+    setExtra({});
+  };
+
+  // Muhtasari wa fields → unaongezwa kwenye maelezo ili data isipotee
+  // hata kama backend haina endpoint ya category hii.
+  const buildSummary = () => {
+    const lines = [];
+    if (activeMode) lines.push(`${t("Aina", "Type")}: ${activeMode.label[lang]}`);
+    visibleFields.forEach((f) => {
+      const v = extra[f.key];
+      if (v === undefined || v === null || String(v).trim() === "") return;
+      const opt = f.options?.find((op) => op.value === v);
+      lines.push(`${f.label[lang]}: ${opt ? opt.label[lang] : v}`);
+    });
+    lines.push(`${t("Eneo", "Location")}: ${locationString}`);
+    return lines.join("\n");
+  };
 
   const reset = () => {
     setStage("form");
     setCreatedListing(null);
     setCategoryKey(null);
+    setMode(null);
+    setLoc({ mkoa: "", wilaya: "", eneo: "" });
     setPhotos([]);
     setBase({
       title: "",
@@ -130,10 +250,12 @@ export default function PostPropertyForm({
       // 1. Create listing (DRAFT)
       const created = await api.post("/listings/", {
         category_id: categoryId,
-        title: base.title.trim(),
-        description: base.description.trim(),
-        price: Number(cleanPriceInput(base.price)),
-        location: base.location.trim(),
+        title: effectiveTitle,
+        description: [base.description.trim(), buildSummary()].filter(Boolean).join("\n\n"),
+        price: Number(cleanPriceInput(base.price)) || 0,
+        location: locationString,
+        // Haina madhara kama backend haina field hii (DRF inaipuuza)
+        attributes: { ...extra, ...(mode ? { mode } : {}), region: loc.mkoa, district: loc.wilaya.trim(), area: loc.eneo.trim() },
       });
 
       // ⚠️ Backend contract note: POST /listings/ returns ListingWrite
@@ -149,7 +271,7 @@ export default function PostPropertyForm({
             `/listings/?seller=${me.id}&ordering=-created_at&page_size=10`
           );
           const list = Array.isArray(mine) ? mine : mine?.results || [];
-          const match = list.find((l) => l.title === base.title.trim());
+          const match = list.find((l) => l.title === effectiveTitle);
           listingId = match?.id;
         } catch (lookupErr) {
           console.warn("[PostPropertyForm] id lookup failed:", lookupErr);
@@ -182,33 +304,32 @@ export default function PostPropertyForm({
       const detailEndpoint = CATEGORY_DETAIL_ENDPOINT[categoryKey];
       if (detailEndpoint) {
         const detailBody = {};
-        // Map the seedCategories fields to backend serializer fields
+        const FUEL_MAP = { Petrol: "PETROL", Diesel: "DIESEL", Hybrid: "HYBRID", "Umeme (EV)": "ELECTRIC" };
+        const SIZE_UNIT_MAP = { Sqm: "SQM", Ekari: "ACRE", Hekta: "HECTARE" };
         if (categoryKey === "nyumba") {
           if (extra.vyumba) detailBody.bedrooms = Number(extra.vyumba);
           if (extra.bafu) detailBody.bathrooms = Number(extra.bafu);
           if (extra.ukubwa) detailBody.area_sqm = String(extra.ukubwa);
           detailBody.property_type = "HOUSE";
         } else if (categoryKey === "viwanja") {
-          if (extra.ukubwa) detailBody.size = "0";
-          detailBody.size_unit = "SQM";
-          detailBody.region = base.location.split(",").slice(-1)[0]?.trim() || "Dar es Salaam";
+          detailBody.size = extra.ukubwa ? String(Number(extra.ukubwa)) : "0";
+          detailBody.size_unit = SIZE_UNIT_MAP[extra.kipimo] || "SQM";
+          detailBody.region = loc.mkoa || "Dar es Salaam";
           detailBody.land_type = "PLOT";
         } else if (categoryKey === "magari") {
-          if (extra.make_model) {
-            const parts = String(extra.make_model).trim().split(/\s+/);
-            detailBody.make = parts[0] || "";
-            detailBody.model = parts.slice(1).join(" ") || "";
-          }
+          if (extra.brand) detailBody.make = String(extra.brand).trim();
+          if (extra.model) detailBody.model = String(extra.model).trim();
+          if (extra.year) detailBody.year = Number(extra.year);
           if (extra.mileage) detailBody.mileage_km = Number(extra.mileage);
           detailBody.vehicle_type = "CAR";
-          detailBody.fuel_type = "PETROL";
-          detailBody.transmission = "AUTOMATIC";
+          detailBody.fuel_type = FUEL_MAP[extra.mafuta] || "PETROL";
+          detailBody.transmission = String(extra.transmission || "Automatic").toUpperCase();
         } else if (categoryKey === "biashara") {
           detailBody.business_type = extra.aina || "General";
         } else if (categoryKey === "mashine") {
           detailBody.equipment_type = extra.aina || "General";
           if (extra.hours) detailBody.operating_hours = Number(extra.hours);
-          detailBody.condition = "USED";
+          detailBody.condition = extra.hali === "Mpya" ? "NEW" : "USED";
         }
         try {
           await api.post(`/listings/${listingId}/${detailEndpoint}/`, detailBody);
@@ -428,7 +549,7 @@ export default function PostPropertyForm({
             <PaymentGateway
               amount={feeAmount}
               title={t("Ada ya Kuchapisha", "Listing Fee")}
-              description={t(`Kuchapisha "${base.title}"`, `Publishing "${base.title}"`)}
+              description={t(`Kuchapisha "${effectiveTitle}"`, `Publishing "${effectiveTitle}"`)}
               onInitiate={handleFeeInitiate}
               onSuccess={handleFeeSuccess}
               onCancel={() => setStage("review")}
@@ -470,6 +591,16 @@ export default function PostPropertyForm({
 
   return (
     <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full p-4 sm:p-6">
+      {cropQueue.length > 0 && (
+        <ImageCropper
+          key={cropQueue[0].name + cropQueue[0].size + cropQueue.length}
+          file={cropQueue[0]}
+          lang={lang}
+          outputSize={1080}
+          onConfirm={handleCropDone}
+          onCancel={handleCropSkip}
+        />
+      )}
       <div className="max-w-2xl mx-auto">
         {error && (
           <div className="rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm"
@@ -481,8 +612,8 @@ export default function PostPropertyForm({
 
         {category && (
           <div className="flex justify-center mb-3">
-            <button onClick={() => setCategoryKey(null)} className="text-primary flex items-center gap-1 text-sm font-medium opacity-70">
-              <ChevronLeft size={16} /> {t("Badilisha Category", "Change Category")}
+            <button onClick={() => (activeMode ? setMode(null) : clearCategory())} className="text-primary flex items-center gap-1 text-sm font-medium opacity-70">
+              <ChevronLeft size={16} /> {activeMode ? t("Badilisha Chaguo", "Change Option") : t("Badilisha Category", "Change Category")}
             </button>
           </div>
         )}
@@ -491,7 +622,7 @@ export default function PostPropertyForm({
           <h1 className="h-title">{t("Weka Mali Yako", "Post Your Property")}</h1>
           <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
             {category
-              ? `${t("Category", "Category")}: ${categoryLabel}`
+              ? `${t("Category", "Category")}: ${categoryLabel}${activeMode ? ` — ${activeMode.label[lang]}` : ""}`
               : t("Chagua category ya mali unayotaka kuiweka", "Choose the category of the property you want to list")}
           </p>
         </div>
@@ -505,12 +636,12 @@ export default function PostPropertyForm({
               return (
                 <button
                   key={cat.key}
-                  onClick={() => setCategoryKey(cat.key)}
+                  onClick={() => chooseCategory(cat.key)}
                   style={{ borderColor: COLORS.sandLine, background: "white" }}
                   className="flex flex-col items-center text-center gap-3 p-4 rounded-2xl border hover:shadow-sm transition-shadow overflow-hidden"
                 >
                   {hasPhoto ? (
-                    <img src={cat.imageUrl} alt={catLabel} className="w-full h-20 rounded-xl object-cover" />
+                    <img src={cat.imageUrl} alt={catLabel} className="w-full aspect-square rounded-xl object-cover object-center" />
                   ) : (
                     <div style={{ background: COLORS.night }} className="w-10 h-10 rounded-xl flex items-center justify-center">
                       <Icon size={18} color={COLORS.gold} />
@@ -523,12 +654,32 @@ export default function PostPropertyForm({
           </div>
         )}
 
-        {category && (
+        {/* Jobs: chagua Tafuta Kazi / Tangaza Kazi kwanza */}
+        {category && needsMode && (
+          <div className="max-w-md mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {cfg.modes.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => chooseMode(m.key)}
+                style={{ borderColor: COLORS.sandLine, background: "white" }}
+                className="rounded-2xl border p-5 text-center hover:shadow-sm transition-shadow"
+              >
+                <span className="block text-primary text-base font-semibold">{m.label[lang]}</span>
+                <span className="block text-secondary text-xs mt-1">{m.desc[lang]}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {category && !needsMode && (
           <form onSubmit={handleFormSubmit} className="max-w-md mx-auto flex flex-col gap-5">
-            <Field label={t("Picha za Mali (angalau 1, mpaka 8)", "Property Photos (at least 1, up to 8)")}>
+            <Field label={photosOptional
+              ? t("Picha (hiari, mpaka 8) — zitakatwa kuwa mraba", "Photos (optional, up to 8) — cropped to square")
+              : t("Picha za Mali (angalau 1, mpaka 8) — zitakatwa kuwa mraba", "Property Photos (at least 1, up to 8) — cropped to square")}>
               <div className="flex flex-wrap justify-center gap-2">
                 {photos.map((p, i) => (
-                  <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden">
+                  <div key={i} className="relative w-20 h-20 aspect-square rounded-xl overflow-hidden">
                     <img src={p.url} alt="" className="w-full h-full object-cover" />
                     <button type="button" onClick={() => removePhoto(i)} style={{ background: COLORS.rust }}
                             className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center">
@@ -547,60 +698,94 @@ export default function PostPropertyForm({
               </div>
             </Field>
 
-            <Field label={t("Jina la Mali", "Property Title")}>
-              <input style={inputStyle} className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-                     placeholder={t("mfano: Nyumba ya Ghorofa Mbezi Beach", "e.g. Mbezi Beach Apartment Building")}
+            {/* Jina */}
+            <Field label={`${titleLabel[lang] || titleLabel.sw}${autoTitle !== "" || cfg.autoTitle ? "" : " *"}`}>
+              <input style={inputStyle} className={inputCls}
+                     placeholder={titlePlaceholder[lang] || titlePlaceholder.sw}
                      value={base.title} onChange={(e) => setBase({ ...base, title: e.target.value })} />
+              {cfg.autoTitle && autoTitle && !base.title.trim() && (
+                <span className="text-[11px] text-secondary">
+                  {t("Jina litakuwa", "Title will be")}: <b>{autoTitle}</b>
+                </span>
+              )}
             </Field>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Field label={t("Bei (TZS)", "Price (TZS)")}>
-                <input style={inputStyle} type="text" inputMode="numeric"
-                       className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-                       placeholder={t("mfano: 85,000,000", "e.g. 85,000,000")}
-                       value={formatPriceInput(base.price)}
-                       onChange={(e) => setBase({ ...base, price: cleanPriceInput(e.target.value) })} />
-              </Field>
-              <Field label={t("Mahali", "Location")}>
-                <input style={inputStyle} className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-                       placeholder={t("mfano: Mbezi Beach, Dar es Salaam", "e.g. Mbezi Beach, Dar es Salaam")}
-                       value={base.location} onChange={(e) => setBase({ ...base, location: e.target.value })} />
-              </Field>
-            </div>
-
-            {category.extra && category.extra.length > 0 && (
+            {/* Fields za kategoria (mpangilio wa schema) */}
+            {visibleFields.length > 0 && (
               <div style={{ borderColor: COLORS.sandLine, background: "white" }}
                    className="rounded-2xl border p-4 flex flex-col gap-4">
                 <span style={{ color: COLORS.rust }} className="text-body-sm font-semibold text-center">
                   {t("Taarifa za Ziada", "Additional Details")} — {categoryLabel}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {category.extra.map((f) => (
-                    <Field key={f.key} label={f.label?.[lang] || f.label?.sw}>
-                      {f.type === "select" ? (
-                        <select style={inputStyle} className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-                                value={extra[f.key] || ""} onChange={(e) => setExtraField(f.key, e.target.value)}>
-                          <option value="">{t("Chagua...", "Choose...")}</option>
-                          {f.options?.map((o) => (
-                            <option key={o.value} value={o.value}>{o.label?.[lang] || o.label?.sw}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input style={inputStyle} type={f.type} className="rounded-xl border px-3 py-2.5 text-sm outline-none text-center"
-                               placeholder={f.placeholder?.[lang] || f.placeholder?.sw}
-                               value={extra[f.key] || ""} onChange={(e) => setExtraField(f.key, e.target.value)} />
-                      )}
-                    </Field>
+                  {visibleFields.map((f) => (
+                    <div key={f.key} className={f.type === "textarea" ? "sm:col-span-2" : ""}>
+                      <SchemaField f={f} lang={lang} value={extra[f.key]}
+                                   onChange={(v) => setExtraField(f.key, v)} />
+                    </div>
                   ))}
                 </div>
               </div>
             )}
 
-            <Field label={t("Maelezo", "Description")}>
-              <textarea style={inputStyle} rows={4} className="rounded-xl border px-3 py-2.5 text-sm outline-none resize-none text-center"
-                        placeholder={t("Eleza kwa ufupi kuhusu mali yako...", "Briefly describe your property...")}
+            {/* Eneo: Mkoa → Wilaya → Eneo */}
+            <div style={{ borderColor: COLORS.sandLine, background: "white" }}
+                 className="rounded-2xl border p-4 flex flex-col gap-4">
+              <span className="text-primary text-sm font-medium text-center">
+                {(locationLabel[lang] || locationLabel.sw)} *
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Field label={`${t("Mkoa", "Region")} *`}>
+                  <select style={inputStyle} className={inputCls} value={loc.mkoa}
+                          onChange={(e) => setLoc({ mkoa: e.target.value, wilaya: "", eneo: loc.eneo })}>
+                    <option value="">{t("Chagua...", "Choose...")}</option>
+                    {TZ_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </Field>
+                <Field label={t("Wilaya", "District")}>
+                  <input style={inputStyle} className={inputCls} list="dl-wilaya"
+                         placeholder={t("mfano: Kinondoni", "e.g. Kinondoni")}
+                         value={loc.wilaya} onChange={(e) => setLoc({ ...loc, wilaya: e.target.value })} />
+                  <datalist id="dl-wilaya">
+                    {(WILAYA_SUGGESTIONS[loc.mkoa] || []).map((w) => <option key={w} value={w} />)}
+                  </datalist>
+                </Field>
+                <Field label={`${t("Eneo", "Area")} *`}>
+                  <input style={inputStyle} className={inputCls}
+                         placeholder={t("mfano: Mbezi Beach", "e.g. Mbezi Beach")}
+                         value={loc.eneo} onChange={(e) => setLoc({ ...loc, eneo: e.target.value })} />
+                </Field>
+              </div>
+            </div>
+
+            {/* Bei */}
+            <Field label={`${priceMeta.label[lang] || priceMeta.label.sw}${priceMeta.optional ? "" : " *"}`}>
+              <input style={inputStyle} type="text" inputMode="numeric" className={inputCls}
+                     placeholder={t("mfano: 85,000,000", "e.g. 85,000,000")}
+                     value={formatPriceInput(base.price)}
+                     onChange={(e) => setBase({ ...base, price: cleanPriceInput(e.target.value) })} />
+              {priceMeta.optional && (
+                <span className="text-[11px] text-secondary">
+                  {t("Hiari — acha wazi kama inajadiliwa.", "Optional — leave empty if negotiable.")}
+                </span>
+              )}
+            </Field>
+
+            <Field label={descLabel[lang] || descLabel.sw}>
+              <textarea style={inputStyle} rows={4} className={`${inputCls} resize-none`}
+                        placeholder={t("Eleza kwa ufupi...", "Briefly describe...")}
                         value={base.description} onChange={(e) => setBase({ ...base, description: e.target.value })} />
             </Field>
+
+            {cfg.modes && (
+              <p className="text-center text-xs text-secondary rounded-xl px-3 py-2"
+                 style={{ background: "white", border: `1px solid ${COLORS.sandLine}` }}>
+                {t(
+                  "Mawasiliano yote yatafanyika kupitia Deal Room — hakuna haja ya kuweka namba ya simu.",
+                  "All contact happens through the Deal Room — no need to add a phone number."
+                )}
+              </p>
+            )}
 
             <button
               type="submit"
