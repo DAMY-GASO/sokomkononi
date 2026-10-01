@@ -1,6 +1,7 @@
 // ============================================================
 // PrivacyPage.jsx
 // Sera ya Faragha — bilingual kamili + PageLoader.
+// Inasoma kutoka contentStore (backend) kwa fallback kwenye code.
 // ============================================================
 
 import React, { useState, useEffect } from "react";
@@ -25,10 +26,8 @@ import {
   Clock,
 } from "lucide-react";
 
-// ============================================================
-// PAGE LOADER — rahisi, inaonekana mara moja tu
-// ============================================================
 import PageLoader from "../components/PageLoader.jsx";
+import { usePrivacy } from "../config/contentStore.js";
 
 const COLORS = {
   night: "#101A2E",
@@ -40,7 +39,42 @@ const COLORS = {
 };
 
 // ============================================================
-// CONTENT
+// ICON MAP — jina la icon (string) → lucide component
+// ============================================================
+const ICON_MAP = {
+  FileText,
+  Shield,
+  Lock,
+  Eye,
+  Database,
+  UserCheck,
+  Share2,
+  Cookie,
+  Mail,
+  Clock,
+  // Jina za kawaida za sections
+  Intro: Shield,
+  Introduction: Shield,
+  Collection: Database,
+  Information: Database,
+  Usage: Eye,
+  Sharing: Share2,
+  Security: Lock,
+  Rights: UserCheck,
+  Cookies: Cookie,
+  Retention: Clock,
+  Children: Shield,
+  Changes: FileText,
+  Contact: Mail,
+  // Fallbacks
+  AlertTriangle: Shield,
+  Scale: Shield,
+  Users: UserCheck,
+  CreditCard: FileText,
+};
+
+// ============================================================
+// FALLBACK CONTENT (kama backend haipo)
 // ============================================================
 const PRIVACY_CONTENT = {
   sw: {
@@ -54,7 +88,7 @@ const PRIVACY_CONTENT = {
         icon: Shield,
         title: "1. Utangulizi",
         content: [
-          "SokoMkononi inaheshimu faragha yako na imejitolea kulinda taarifa zako za kibinafsi. Sera hii inaeleza jinsi tunakusanya, kutumia, na kulinda taarifa zako.",
+          "SokoMkononi inaheshimu faragha yako na imejitolea kulinda taarifa zako za kibinafsi. Sera hii inaelezea jinsi tunakusanya, kutumia, na kulinda taarifa zako.",
           "Kwa kutumia jukwaa letu, unakubali mkusanyiko na matumizi ya taarifa zako kama ilivyoelezwa katika sera hii.",
         ],
       },
@@ -297,7 +331,7 @@ const PRIVACY_CONTENT = {
 // ACCORDION SECTION
 // ============================================================
 function AccordionSection({ section, isOpen, onToggle }) {
-  const Icon = section.icon;
+  const Icon = section.icon || Shield;
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -309,9 +343,7 @@ function AccordionSection({ section, isOpen, onToggle }) {
           <div className="w-10 h-10 rounded-lg bg-[#2F6D4F]/10 flex items-center justify-center flex-shrink-0">
             <Icon size={18} color={COLORS.green} />
           </div>
-          <h2 className="h-card">
-            {section.title}
-          </h2>
+          <h2 className="h-card">{section.title}</h2>
         </div>
         <div className="flex-shrink-0 text-muted">
           {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -343,13 +375,42 @@ function AccordionSection({ section, isOpen, onToggle }) {
 // ============================================================
 export default function PrivacyPage() {
   const { lang } = useLanguage();
-  const content = PRIVACY_CONTENT[lang] || PRIVACY_CONTENT.sw;
+  const storePrivacy = usePrivacy();
 
   // ============================================================
-  // LOADER — inaonekana mara moja tu ukurasa unapofunguka
+  // CHAGUA CONTENT: store kwanza, kisha fallback
+  // ============================================================
+  const storeSections = storePrivacy?.sections || [];
+  const hasStoreContent = storeSections.length > 0;
+  const codeContent = PRIVACY_CONTENT[lang] || PRIVACY_CONTENT.sw;
+
+  const content = hasStoreContent
+    ? {
+        title:
+          storePrivacy.heading?.[lang] ||
+          storePrivacy.heading?.sw ||
+          codeContent.title,
+        subtitle:
+          storePrivacy.subtitle?.[lang] ||
+          storePrivacy.subtitle?.sw ||
+          codeContent.subtitle,
+        lastUpdated: storePrivacy.lastUpdated || codeContent.lastUpdated,
+        sections: storeSections.map((s) => ({
+          id: s.id,
+          icon: ICON_MAP[s.icon] || Shield,
+          title: s.title?.[lang] || s.title?.sw || "",
+          content:
+            (s.content?.[lang] && s.content[lang].length > 0
+              ? s.content[lang]
+              : s.content?.sw) || [],
+        })),
+      }
+    : codeContent;
+
+  // ============================================================
+  // LOADER
   // ============================================================
   const [ready, setReady] = useState(false);
-
   useEffect(() => {
     const id = setTimeout(() => setReady(true), 300);
     return () => clearTimeout(id);
@@ -358,38 +419,24 @@ export default function PrivacyPage() {
   const [openSections, setOpenSections] = useState({});
 
   const toggleSection = (id) => {
-    setOpenSections((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const expandAll = () => {
     const all = {};
-    content.sections.forEach((s) => {
-      all[s.id] = true;
-    });
+    content.sections.forEach((s) => { all[s.id] = true; });
     setOpenSections(all);
   };
 
-  const collapseAll = () => {
-    setOpenSections({});
-  };
+  const collapseAll = () => setOpenSections({});
 
-  // ============================================================
-  // LOADER — kama bado haijawa tayari, onyesha loader
-  // ============================================================
-  if (!ready) {
-    return <PageLoader lang={lang} />;
-  }
+  if (!ready) return <PageLoader lang={lang} />;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* ============================================================ */}
       {/* HERO — CENTERED */}
-      {/* ============================================================ */}
       <section className="dark-surface bg-[#101A2E] text-white py-12 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <Link
@@ -419,11 +466,8 @@ export default function PrivacyPage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
       {/* CONTENT */}
-      {/* ============================================================ */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Controls — centered */}
         <div className="flex items-center justify-center gap-2 mb-4">
           <button
             onClick={expandAll}
@@ -440,7 +484,6 @@ export default function PrivacyPage() {
           </button>
         </div>
 
-        {/* Sections */}
         <div className="space-y-3">
           {content.sections.map((section) => (
             <AccordionSection
@@ -452,7 +495,6 @@ export default function PrivacyPage() {
           ))}
         </div>
 
-        {/* Footer Note — centered */}
         <div className="mt-8 p-5 bg-[#2F6D4F]/5 border border-[#2F6D4F]/20 rounded-xl text-center">
           <p className="text-body-sm text-secondary max-w-xl mx-auto">
             {lang === "sw"

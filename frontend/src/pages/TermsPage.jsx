@@ -1,6 +1,7 @@
 // ============================================================
 // TermsPage.jsx
 // Sheria na Masharti — bilingual kamili + PageLoader.
+// Inasoma kutoka contentStore (backend) kwa fallback kwenye code.
 // ============================================================
 
 import React, { useState, useEffect } from "react";
@@ -22,10 +23,8 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-// ============================================================
-// PAGE LOADER — rahisi, inaonekana mara moja tu
-// ============================================================
 import PageLoader from "../components/PageLoader.jsx";
+import { useTerms } from "../config/contentStore.js";
 
 const COLORS = {
   night: "#101A2E",
@@ -37,7 +36,39 @@ const COLORS = {
 };
 
 // ============================================================
-// CONTENT
+// ICON MAP — jina la icon (string) → lucide component
+// ============================================================
+const ICON_MAP = {
+  FileText,
+  Shield,
+  Users,
+  CreditCard,
+  AlertTriangle,
+  Scale,
+  Mail,
+  // Jina za kawaida za sections
+  Intro: FileText,
+  Introduction: FileText,
+  Accounts: Users,
+  Listings: FileText,
+  Payments: CreditCard,
+  Conduct: AlertTriangle,
+  Liability: Scale,
+  Safety: Shield,
+  Changes: FileText,
+  Contact: Mail,
+  // Fallbacks
+  Database: FileText,
+  Lock: Shield,
+  Eye: Shield,
+  Share2: Users,
+  UserCheck: Users,
+  Cookie: FileText,
+  Clock: FileText,
+};
+
+// ============================================================
+// FALLBACK CONTENT (kama backend haipo)
 // ============================================================
 const TERMS_CONTENT = {
   sw: {
@@ -95,7 +126,7 @@ const TERMS_CONTENT = {
           "Ni marufuku kutumia jukwaa letu kwa shughuli zozote za udanganyifu, utapeli, au ukiukaji wa sheria.",
           "Ni marufuku kuchapisha maudhui ya kashfa, matusi, au yanayochochea chuki.",
           "Ni marufuku kujaribu kuvunja usalama wa jukwaa letu au kuingilia mifumo yetu.",
-          "Watumiaji wanaotakiwa kuwasiliana kwa heshima na wauzaji na wanunuzi wengine.",
+          "Watumiaji wanatakiwa kuwasiliana kwa heshima na wauzaji na wanunuzi wengine.",
         ],
       },
       {
@@ -254,7 +285,7 @@ const TERMS_CONTENT = {
 // ACCORDION SECTION
 // ============================================================
 function AccordionSection({ section, isOpen, onToggle }) {
-  const Icon = section.icon;
+  const Icon = section.icon || FileText;
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -266,9 +297,7 @@ function AccordionSection({ section, isOpen, onToggle }) {
           <div className="w-10 h-10 rounded-lg bg-[#E8A33D]/10 flex items-center justify-center flex-shrink-0">
             <Icon size={18} color={COLORS.gold} />
           </div>
-          <h2 className="h-card">
-            {section.title}
-          </h2>
+          <h2 className="h-card">{section.title}</h2>
         </div>
         <div className="flex-shrink-0 text-muted">
           {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -303,13 +332,42 @@ function AccordionSection({ section, isOpen, onToggle }) {
 // ============================================================
 export default function TermsPage() {
   const { lang } = useLanguage();
-  const content = TERMS_CONTENT[lang] || TERMS_CONTENT.sw;
+  const storeTerms = useTerms();
 
   // ============================================================
-  // LOADER — inaonekana mara moja tu ukurasa unapofunguka
+  // CHAGUA CONTENT: store kwanza, kisha fallback
+  // ============================================================
+  const storeSections = storeTerms?.sections || [];
+  const hasStoreContent = storeSections.length > 0;
+  const codeContent = TERMS_CONTENT[lang] || TERMS_CONTENT.sw;
+
+  const content = hasStoreContent
+    ? {
+        title:
+          storeTerms.heading?.[lang] ||
+          storeTerms.heading?.sw ||
+          codeContent.title,
+        subtitle:
+          storeTerms.subtitle?.[lang] ||
+          storeTerms.subtitle?.sw ||
+          codeContent.subtitle,
+        lastUpdated: storeTerms.lastUpdated || codeContent.lastUpdated,
+        sections: storeSections.map((s) => ({
+          id: s.id,
+          icon: ICON_MAP[s.icon] || FileText,
+          title: s.title?.[lang] || s.title?.sw || "",
+          content:
+            (s.content?.[lang] && s.content[lang].length > 0
+              ? s.content[lang]
+              : s.content?.sw) || [],
+        })),
+      }
+    : codeContent;
+
+  // ============================================================
+  // LOADER
   // ============================================================
   const [ready, setReady] = useState(false);
-
   useEffect(() => {
     const id = setTimeout(() => setReady(true), 300);
     return () => clearTimeout(id);
@@ -318,38 +376,24 @@ export default function TermsPage() {
   const [openSections, setOpenSections] = useState({});
 
   const toggleSection = (id) => {
-    setOpenSections((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const expandAll = () => {
     const all = {};
-    content.sections.forEach((s) => {
-      all[s.id] = true;
-    });
+    content.sections.forEach((s) => { all[s.id] = true; });
     setOpenSections(all);
   };
 
-  const collapseAll = () => {
-    setOpenSections({});
-  };
+  const collapseAll = () => setOpenSections({});
 
-  // ============================================================
-  // LOADER — kama bado haijawa tayari, onyesha loader
-  // ============================================================
-  if (!ready) {
-    return <PageLoader lang={lang} />;
-  }
+  if (!ready) return <PageLoader lang={lang} />;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* ============================================================ */}
       {/* HERO — CENTERED */}
-      {/* ============================================================ */}
       <section className="dark-surface bg-[#101A2E] text-white py-12 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <Link
@@ -379,11 +423,8 @@ export default function TermsPage() {
         </div>
       </section>
 
-      {/* ============================================================ */}
       {/* CONTENT */}
-      {/* ============================================================ */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Controls — centered */}
         <div className="flex items-center justify-center gap-2 mb-4">
           <button
             onClick={expandAll}
@@ -400,7 +441,6 @@ export default function TermsPage() {
           </button>
         </div>
 
-        {/* Sections */}
         <div className="space-y-3">
           {content.sections.map((section) => (
             <AccordionSection
@@ -412,7 +452,6 @@ export default function TermsPage() {
           ))}
         </div>
 
-        {/* Footer Note — centered */}
         <div className="mt-8 p-5 bg-[#E8A33D]/5 border border-[#E8A33D]/20 rounded-xl text-center">
           <p className="text-body-sm text-secondary max-w-xl mx-auto">
             {lang === "sw"
