@@ -1,5 +1,3 @@
-
-
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Home as HomeIcon } from "lucide-react";
@@ -96,12 +94,12 @@ export default function AllListingsPage() {
                     to={`/mali/${l.id}`}
                     className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
                   >
-                    <div className="h-32 sm:h-40 bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
+                    <div className="relative aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
                       {img ? (
                         <img
                           src={img}
                           alt={l.title}
-                          className="w-full h-full object-cover"
+                          className="absolute inset-0 block w-full h-full object-cover object-center"
                           loading="lazy"
                         />
                       ) : (
