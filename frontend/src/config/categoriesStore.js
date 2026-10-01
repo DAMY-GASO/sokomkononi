@@ -7,6 +7,8 @@
 //      lugha inabadilika ipasavyo.
 // FIX: Translations (name_en, description_en) zinasomwa kutoka
 //      `extra` field kwa sababu backend haina fields za lugha mbili.
+// FIX: DEDUPE kwa key kwenye saveAll + hydrate + updateCategoryAsync
+//      ili kuzuia duplicate unapohariri kategoria.
 // NEW: mashine (pekee), fashion, jobs, mali-nyinginezo, huduma.
 // ============================================================
 import { useEffect, useState } from "react";
@@ -23,7 +25,7 @@ import { CATEGORY_EXTRA, getPostingConfig } from "./categorySchemas.js";
 export { getPostingConfig };
 
 const STORAGE_KEY = "sokomkononi_categories_v2";
-const LABELS_KEY = "sokomkononi_category_labels_v1"; // { [key]: { label, description } }
+const LABELS_KEY = "sokomkononi_category_labels_v1";
 const UPDATE_EVENT = "sokomkononi:categories-updated";
 
 const CATEGORY_TRANSLATIONS = {
@@ -130,7 +132,6 @@ const SEED_DESCRIPTION_BY_KEY = Object.fromEntries(Object.entries(CATEGORY_TRANS
 const SEED_ICON_BY_KEY = Object.fromEntries(Object.entries(CATEGORY_TRANSLATIONS).map(([k, v]) => [k, v.iconKey]));
 const SEED_EXTRA_BY_KEY = Object.fromEntries(Object.entries(CATEGORY_TRANSLATIONS).map(([k, v]) => [k, v.extra]));
 
-/** The fallback list used on a fresh install / backend 404. */
 export const SEED_CATEGORIES = Object.entries(CATEGORY_TRANSLATIONS).map(([key, v], idx) => ({
   id: null,
   key,
@@ -221,15 +222,18 @@ function readFromStorage() {
   } catch { return []; }
 }
 
+// ⬇️ DEDUPE kwa `key` — hifadhi ya mwisho inashinda
 function saveAll(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  const seen = new Map();
+  (Array.isArray(list) ? list : []).forEach((c) => {
+    if (c && c.key) seen.set(c.key, c);
+  });
+  const deduped = Array.from(seen.values());
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(deduped));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-// ── Label overrides: majina ya categories zisizo kwenye seed ─────────
-// Backend inahifadhi jina moja tu (`name`). Ili Kiingereza kisipotee,
-// tunakihifadhi hapa (localStorage) kwa kila key.
 function readLabelOverrides() {
   if (typeof window === "undefined") return {};
   try {
@@ -284,10 +288,6 @@ export function getCategoryOptionLabel(option, lang = "sw") {
   return option?.label?.[lang] || option?.label?.sw || option?.value || "";
 }
 
-/**
- * FIX: if a list is passed, use it as the initial seed.
- * If nothing is stored yet, fall back to SEED_CATEGORIES.
- */
 export function initializeCategories(list) {
   const current = getCategories();
   if (current.length > 0) return current;
@@ -318,10 +318,6 @@ async function tryApi(apiCall, { onSuccess, onFail, optimistic, previous }) {
   }
 }
 
-// ── Backend payload ──────────────────────────────────────────────────
-// Backend haina `name_en` / `description_en` fields. Tunahifadhi
-// translations kwenye `extra` (JSONField) ili admin aweze kuhariri
-// lugha zote mbili kupitia admin panel.
 function toBackendPayload(category) {
   const existingExtra =
     category.extra && typeof category.extra === "object" && !Array.isArray(category.extra)
@@ -336,7 +332,6 @@ function toBackendPayload(category) {
     image_url: category.imageUrl || "",
     is_popular: !!category.isPopular,
     is_active: category.active !== false,
-    // ⬇️ Translations zimehifadhiwa kwenye extra
     extra: {
       ...existingExtra,
       name_en: category.label?.en || "",
@@ -383,8 +378,14 @@ export async function updateCategoryAsync(key, patch) {
 
   if (!target.id) return { ok: true, warning: "local_only", category: optimistic };
 
+  // ⬇️ Tuma slug YA AWALI ili slug isibadilike (inazuia duplicate)
+  const payload = {
+    ...toBackendPayload(optimistic),
+    slug: target.slug,  // ← slug ya awali
+  };
+
   return tryApi(
-    () => api.patch(`/categories/${target.id}/`, toBackendPayload(optimistic)),
+    () => api.patch(`/categories/${target.id}/`, payload),
     {
       optimistic, previous: current,
       onSuccess: (raw) => {
@@ -488,22 +489,10 @@ function normalizeCategoryFromApi(raw) {
   const slug = raw.slug || toSlug(name);
   const seedKey = BACKEND_SLUG_TO_SEED_KEY[slug] || slug;
 
-  // `key` is the frontend-canonical short form (matches SEED_CATEGORIES).
-  // `slug` keeps the backend form for API lookups.
-  //
-  // MAJINA YA ADMIN YANA NGUVU:
-  //   sw → jina la backend (admin akihariri, linaonekana)
-  //   en → extra.name_en ya backend → override ya admin (localStorage)
-  //        → name_en ya backend → seed → name
-  // Seed inatumika tu kama admin hajaweka kitu.
-  //
-  // Kumbuka: Backend haina `name_en` field. Translations zimehifadhiwa
-  // kwenye `extra.name_en` na `extra.description_en`.
   const override = readLabelOverrides()[seedKey] || {};
   const seedLabel = SEED_LABEL_BY_KEY[seedKey];
   const seedDesc = SEED_DESCRIPTION_BY_KEY[seedKey];
 
-  // ⬇️ Soma translations kutoka: extra.name_en → raw.name_en → override → seed → name
   const extraData =
     raw.extra && typeof raw.extra === "object" && !Array.isArray(raw.extra)
       ? raw.extra
@@ -565,20 +554,25 @@ export async function hydrateCategoriesFromApi() {
       return { source: "seed", count: seeded.length };
     }
 
-    // Kategoria zilizorudishwa na backend
-    const normalized = rawList.map(normalizeCategoryFromApi).filter(Boolean);
+    // ⬇️ DEDUPE kwa `key` — backend inaweza kurudisha slug mbili
+    //    zinazopata key moja (mfano "mashine" na "mashine-heavy-equipment")
+    const seen = new Map();
+    rawList.forEach((raw) => {
+      const normalized = normalizeCategoryFromApi(raw);
+      if (!normalized) return;
+      if (!seen.has(normalized.key)) {
+        seen.set(normalized.key, normalized);
+      }
+    });
+    const normalized = Array.from(seen.values());
     const apiKeys = new Set(normalized.map((c) => c.key));
 
-    // Kategoria za seed ambazo HAZIPO kwenye API (bado backend haijaziweka)
-    // Hii inahakikisha kategoria zote zinaonekana hata kama backend haijasasishwa.
     const seedOnly = SEED_CATEGORIES
       .filter((c) => !apiKeys.has(c.key))
       .map((c) => ({ ...c, id: null }));
 
-    // Merge: API + seed-only, bila duplicates
     const merged = [...normalized, ...seedOnly];
 
-    // Panga kwa `ordering`
     merged.sort((a, b) => {
       const ao = a.ordering ?? 999;
       const bo = b.ordering ?? 999;
@@ -624,33 +618,21 @@ export function useCategory(key) {
 }
 
 
-/**
- * Convert a backend category slug ("nyumba-majengo") into the
- * frontend-canonical seed key ("nyumba"). Falls back to the slug
- * unchanged when there is no mapping.
- */
 export function getSeedKeyFromSlug(slug) {
   if (!slug) return slug;
-  // Normalize: lowercase, trim, collapse multiple dashes to one.
   const norm = String(slug).trim().toLowerCase().replace(/-{2,}/g, "-");
   if (BACKEND_SLUG_TO_SEED_KEY[norm]) return BACKEND_SLUG_TO_SEED_KEY[norm];
 
-  // Second pass: strip ALL dashes and try both map keys and seed keys.
   const stripped = norm.replace(/-/g, "");
   for (const [k, v] of Object.entries(BACKEND_SLUG_TO_SEED_KEY)) {
     if (k.replace(/-/g, "") === stripped) return v;
   }
 
-  // Third pass: if the slug already matches a seed key, return it.
   if (SEED_CATEGORIES.some((c) => c.key === norm)) return norm;
 
-  // Give up — return the normalized slug so at least the display is clean.
   return norm;
 }
 
-/**
- * True when a fee-rule key (or any slug) belongs to a real category.
- */
 export function isKnownCategoryKey(maybeSlug) {
   const seedKey = getSeedKeyFromSlug(maybeSlug);
   return SEED_CATEGORIES.some((c) => c.key === seedKey);
