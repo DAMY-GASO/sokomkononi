@@ -5,7 +5,6 @@ import {
   usePopularCategories,
   getCategoryIcon,
 } from "../config/categoriesStore.js";
-// ⬇️ MABADILIKO: Import useAuth + logoutAsync kutoka authStore
 import { useAuth, logoutAsync } from "../config/authStore.js";
 
 export default function Navbar({
@@ -15,7 +14,6 @@ export default function Navbar({
   trustLinks = [],
 }) {
   const navigate = useNavigate();
-  // ⬇️ MABADILIKO: toa `user` pekee (logout ipo kama logoutAsync kutoka import)
   const { user } = useAuth();
 
   // Soma kutoka context kama props hazijatolewa
@@ -51,7 +49,7 @@ export default function Navbar({
   const helpMenuItems = [
     { label: { sw: "Jinsi ya Kununua", en: "How to Buy" }, link: "/jinsi-ya-kununua" },
     { label: { sw: "Jinsi ya Kuuza", en: "How to Sell" }, link: "/jinsi-ya-kununua#kuuza" },
-    { label: { sw: "FAQ", en: "FAQ" }, link: "/#faq" },
+    { label: { sw: "FAQ", en: "FAQ" }, link: "/mawasiliano#faq" },
     { label: { sw: "Wasiliana Nasi", en: "Contact Us" }, link: "/mawasiliano" },
   ];
 
@@ -74,7 +72,7 @@ export default function Navbar({
     }
   };
 
-  // ⬇️ MABADILIKO: tumia logoutAsync
+
   const handleLogout = async () => {
     await logoutAsync();
     navigate("/login");
