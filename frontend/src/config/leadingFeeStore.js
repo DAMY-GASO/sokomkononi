@@ -1,17 +1,18 @@
 // ============================================================
 // leadingFeeStore.js — Leading Fee (API-backed)
-// Backend: GET/PATCH/POST /api/leading-fees/
-//   Spec: PATCH/POST on collection — NO /{id}/ subpath.
+// Backend: GET/PATCH /api/leading-fees/
+//          POST      /api/leading-fees/toggle/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const KEY = "sokomkononi_leading_fee_config_v2";
+const KEY = "sokomkononi_leading_fee_config_v3";
 const EV = "sokomkononi:leading-fee-config-updated";
 
 const FALLBACK = {
   price: 0,
   days: 7,
+  is_enabled: true,
   label: { sw: "Ada ya Kipaumbele", en: "Leading Fee" },
   desc: { sw: "", en: "" },
 };
@@ -41,8 +42,10 @@ function norm(raw) {
     backendId: raw.id,
     price: Number(raw.price) || 0,
     days: Number(raw.days) || 7,
+    is_enabled: raw.is_enabled !== false,
     label: normalizeLabel(raw.label, FALLBACK.label),
     desc: normalizeLabel(raw.desc, FALLBACK.desc),
+    updated_at: raw.updated_at || null,
   };
 }
 
@@ -50,7 +53,7 @@ export function getLeadingFeeConfig() { return read(); }
 
 export async function hydrateLeadingFeeFromApi() {
   try {
-    const d = await api.get("/leading-fees/?page_size=100");
+    const d = await api.get("/leading-fees/");
     const row = Array.isArray(d) ? d[0] : (d?.results?.[0] ?? d);
     const normalized = norm(row);
     if (normalized) {
@@ -70,27 +73,44 @@ export async function updateLeadingFeePriceAsync(price) {
     return { ok: false, error: new Error("price must be non-negative") };
   }
   const cur = getLeadingFeeConfig();
+  write({ ...cur, price: num });
 
-  // Backend spec: PATCH or POST to /leading-fees/ (collection). Try PATCH first.
   try {
-    console.info(`[leadingFeeStore] PATCH /leading-fees/ price=${num}`);
     const raw = await api.patch("/leading-fees/", { price: num });
     const updated = norm(raw) || { ...cur, price: num };
     write(updated);
     return { ok: true, config: updated };
   } catch (errPatch) {
     if (errPatch?.status && errPatch.status !== 404 && errPatch.status !== 405) {
+      write(cur);
       return { ok: false, error: errPatch };
     }
     try {
-      console.info(`[leadingFeeStore] POST /leading-fees/ price=${num}`);
       const raw = await api.post("/leading-fees/", { price: num });
       const updated = norm(raw) || { ...cur, price: num };
       write(updated);
       return { ok: true, config: updated };
     } catch (errPost) {
+      write(cur);
       return { ok: false, error: errPost || errPatch };
     }
+  }
+}
+
+// ⬇️ MPYA — Toggle
+export async function toggleLeadingFeeAsync() {
+  const cur = getLeadingFeeConfig();
+  const newState = !cur.is_enabled;
+  write({ ...cur, is_enabled: newState });
+
+  try {
+    const raw = await api.post("/leading-fees/toggle/", {});
+    const updated = { ...cur, is_enabled: raw?.is_enabled ?? newState };
+    write(updated);
+    return { ok: true, is_enabled: updated.is_enabled };
+  } catch (err) {
+    write(cur);
+    return { ok: false, error: err };
   }
 }
 
@@ -108,4 +128,3 @@ export function useLeadingFeeConfig() {
   }, []);
   return cfg;
 }
-

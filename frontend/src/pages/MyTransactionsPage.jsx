@@ -1,9 +1,8 @@
 // ============================================================
 // MyTransactionsPage.jsx
 // Miamala Yangu — API-backed success fee + PDF/CSV/DOC download.
+// Sasa ina: bundle + credit support kwa success fee.
 // Format: PDF (default, best for mobile), CSV (Excel), DOC (Word).
-// Fee inatoka backend (SuccessFeeConfig.min_fee).
-// Download ni free kama SuccessFeeConfig.is_enabled = false.
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -29,8 +28,15 @@ import {
 import { COLORS, formatTZS, timeAgo } from "./dashboard/components/shared";
 import { useTransactions } from "../config/transactionsStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { useAuth } from "../config/authStore.js";
+import {
+  checkCredit,
+  consumeCreditAsync,
+} from "../config/userCreditsStore.js";
+import { useActiveBundles } from "../config/bundlesStore.js";
 import { api } from "../api/client.js";
 import PaymentGateway from "./dashboard/components/PaymentGateway";
+import { useSuccessFeeConfig } from "../config/successFeeStore.js";
 
 // ============================================================
 // TRANSACTION TYPES — bilingual
@@ -256,7 +262,6 @@ function FormatSelectorModal({
               )}
         </p>
 
-        {/* Format options */}
         <div className="grid grid-cols-3 gap-2 mb-5">
           {FORMAT_OPTIONS.map((opt) => {
             const Icon = opt.icon;
@@ -295,7 +300,6 @@ function FormatSelectorModal({
           })}
         </div>
 
-        {/* Fee info */}
         {requiresPayment && (
           <div
             style={{
@@ -337,7 +341,6 @@ function FormatSelectorModal({
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex gap-2">
           <button
             onClick={onClose}
@@ -369,10 +372,165 @@ function FormatSelectorModal({
 }
 
 // ============================================================
+// BUNDLE SELECTOR MODAL — kwa success fee
+// ============================================================
+function SuccessBundleModal({
+  lang,
+  format,
+  bundles,
+  onBuyBundle,
+  onUseCredit,
+  onClose,
+  hasCredit,
+  creditRemaining,
+  loading,
+  error,
+}) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [selectedBundleId, setSelectedBundleId] = useState(null);
+
+  useEffect(() => {
+    if (!selectedBundleId && bundles.length > 0) {
+      setSelectedBundleId(bundles[0].id);
+    }
+  }, [bundles, selectedBundleId]);
+
+  const selectedBundle = bundles.find((b) => b.id === selectedBundleId);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-md w-full p-5 sm:p-6 max-h-[95vh] overflow-y-auto">
+        <h3
+          style={{ color: "var(--text-primary)" }}
+          className="text-base font-semibold text-center mb-1"
+        >
+          {t("Pakua Ripoti", "Download Report")}
+        </h3>
+        <p
+          style={{ color: "var(--text-secondary)" }}
+          className="text-xs text-center mb-5"
+        >
+          {t(
+            `Format: ${format.toUpperCase()} — chagua njia ya malipo`,
+            `Format: ${format.toUpperCase()} — choose payment method`
+          )}
+        </p>
+
+        {/* Credit button */}
+        {hasCredit && (
+          <button
+            onClick={onUseCredit}
+            disabled={loading}
+            style={{
+              background: "rgba(47,109,79,0.10)",
+              borderColor: "rgba(47,109,79,0.35)",
+              color: COLORS.green,
+            }}
+            className="w-full rounded-xl border p-3 mb-3 flex items-center justify-between gap-2 disabled:opacity-50"
+          >
+            <div className="flex items-center gap-2">
+              <Wallet size={16} color={COLORS.green} />
+              <span className="text-sm font-semibold">
+                {t(
+                  `Tumia Credit (${creditRemaining})`,
+                  `Use Credit (${creditRemaining})`
+                )}
+              </span>
+            </div>
+            {loading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <span className="text-xs">→</span>
+            )}
+          </button>
+        )}
+
+        {/* Bundle options */}
+        {bundles.length > 0 && (
+          <>
+            <p
+              style={{ color: "var(--text-muted)" }}
+              className="text-[11px] font-semibold uppercase tracking-wide text-center my-3"
+            >
+              {t("AU Nunua Kifurushi", "OR Buy Bundle")}
+            </p>
+            <div className="flex flex-col gap-2 mb-4">
+              {bundles.map((b) => {
+                const other = lang === "sw" ? "en" : "sw";
+                const bName = b.name?.[lang] || b.name?.[other] || b.code;
+                const selected = b.id === selectedBundleId;
+                return (
+                  <button
+                    key={b.id}
+                    onClick={() => setSelectedBundleId(b.id)}
+                    style={{
+                      borderColor: selected ? COLORS.gold : COLORS.sandLine,
+                      background: selected ? "rgba(232,163,61,0.08)" : "white",
+                    }}
+                    className="flex items-center justify-between gap-2 p-3 rounded-xl border-2 text-left"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Package size={14} color={COLORS.gold} />
+                      <span className="text-sm font-semibold text-primary truncate">
+                        {bName}
+                      </span>
+                    </div>
+                    <span
+                      className="text-sm font-bold shrink-0"
+                      style={{ color: COLORS.rust }}
+                    >
+                      {formatTZS(b.price)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {error && (
+          <div
+            style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
+            className="rounded-xl px-3 py-2 mb-3 text-xs text-center"
+          >
+            {error}
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            style={{ borderColor: COLORS.sandLine }}
+            className="flex-1 py-3 rounded-xl border text-sm font-semibold disabled:opacity-50"
+          >
+            {t("Ghairi", "Cancel")}
+          </button>
+          <button
+            onClick={() => onBuyBundle(selectedBundle)}
+            disabled={loading || !selectedBundle}
+            style={{ background: COLORS.gold, color: COLORS.night }}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Download size={14} />
+            )}
+            {t("Nunua & Pakua", "Buy & Download")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // MAIN COMPONENT
 // ============================================================
 export default function MyTransactionsPage({ transactions: transactionsProp }) {
   const { lang } = useLanguage();
+  const { user } = useAuth();
   const storeTransactions = useTransactions();
   const transactions = transactionsProp ?? storeTransactions;
   const [filter, setFilter] = useState("all");
@@ -380,37 +538,32 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
   const [showFeeFlow, setShowFeeFlow] = useState(false);
   const [feeError, setFeeError] = useState("");
   const [format, setFormat] = useState("pdf");
-  const [status, setStatus] = useState(null);
   const [downloading, setDownloading] = useState(false);
 
-  const t = (sw, en) => (lang === "sw" ? sw : en);
+  // Bundle flow state
+  const [showBundleModal, setShowBundleModal] = useState(false);
+  const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
+  const [bundleError, setBundleError] = useState("");
+  const [bundleLoading, setBundleLoading] = useState(false);
 
-  // ============================================================
-  // LOAD SUCCESS FEE STATUS FROM BACKEND
-  // ============================================================
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await api.get("/finance/success-fee/status/");
-        if (!cancelled) setStatus(res);
-      } catch (err) {
-        console.warn("[MyTransactions] status fetch failed:", err);
-        // Fallback: assume requires payment
-        if (!cancelled) {
-          setStatus({
-            requires_payment: true,
-            is_free: false,
-            fee: "5000.00",
-            formats: ["pdf", "csv", "doc"],
-          });
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const successFee = useSuccessFeeConfig();
+  const successBundles = useActiveBundles().filter((b) => b.type === "success");
+
+  const creditInfo = checkCredit(user?.id, "success");
+  const hasCredit = creditInfo.hasCredit;
+  const creditRemaining = creditInfo.remaining || 0;
+
+  const status = {
+    is_free: !successFee.is_enabled,
+    fee: String(successFee.min_fee || 0),
+    requires_payment: successFee.is_enabled,
+    formats: ["pdf", "csv", "doc"],
+    success_fee_enabled: successFee.is_enabled,
+  };
+
+  const requiresPayment = status.requires_payment;
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const filters = [
     { key: "all", label: lang === "sw" ? "Zote" : "All" },
@@ -455,22 +608,21 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
   const handleDownloadClick = () => {
     if (filtered.length === 0) return;
     setFeeError("");
+    setBundleError("");
     setShowFeeFlow(true);
   };
 
-  // Actual download from backend
   const performDownload = async () => {
     setDownloading(true);
     setFeeError("");
     try {
-      // Trigger backend file download
-      const url = `/api/finance/success-fee/download/?format=${format}`;
-      // Use window.location for direct file download
-      // Backend sets Content-Disposition: attachment
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
+      const url = `${baseUrl}/finance/success-fee/download/?format=${format}`;
       window.location.href = url;
-      // Close modal after brief delay
       setTimeout(() => {
         setShowFeeFlow(false);
+        setShowBundleModal(false);
+        setPendingBundlePurchase(null);
         setDownloading(false);
       }, 800);
     } catch (err) {
@@ -482,16 +634,8 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
     }
   };
 
-  // Free download path
-  const handleFreeDownload = async () => {
-    if (status?.is_free) {
-      return performDownload();
-    }
-    return null;
-  };
-
   // ============================================================
-  // PAYMENT FLOW (when success fee is enabled)
+  // PAYMENT FLOW — success fee (flat)
   // ============================================================
   const handleFeeInitiate = async ({ methodKey, phone } = {}) => {
     setFeeError("");
@@ -531,23 +675,108 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
   };
 
   const handleFeeSuccess = async () => {
-    // After payment success, trigger backend download
     await performDownload();
   };
 
-  // Modal confirm handler
   const handleModalConfirm = () => {
     if (status?.is_free) {
       performDownload();
     }
-    // Kama requires payment, PaymentGateway itaonekana baada ya modal
-    // (tunaacha showFeeFlow = true)
+    // Kama requires payment, tunaonyesha PaymentGateway
   };
 
   // ============================================================
-  // DECIDE FLOW: free download OR payment
+  // CREDIT FLOW
   // ============================================================
-  const requiresPayment = status?.requires_payment ?? true;
+  const handleUseCredit = async () => {
+    if (!user) return;
+    setBundleLoading(true);
+    setBundleError("");
+    try {
+      const res = await consumeCreditAsync(user.id, "success");
+      if (!res.success) {
+        setBundleError(
+          t("Hakuna success credit ya kutosha.", "No success credit available.")
+        );
+        setBundleLoading(false);
+        return;
+      }
+      // Baada ya kutumia credit, pakua
+      await performDownload();
+    } catch (err) {
+      setBundleError(
+        err?.message ||
+          t("Imeshindwa kutumia credit.", "Failed to use credit.")
+      );
+      setBundleLoading(false);
+    }
+  };
+
+  // ============================================================
+  // BUNDLE FLOW
+  // ============================================================
+  const handleBuyBundle = async (bundle) => {
+    if (!bundle) return;
+    setBundleLoading(true);
+    setBundleError("");
+    try {
+      const purchase = await api.post("/bundles/purchases/", {
+        bundle: bundle.id,
+      });
+      const purchaseId =
+        purchase?.id || purchase?.purchase_id || purchase?.purchaseId;
+      if (!purchaseId) {
+        throw new Error("Backend did not return purchase id.");
+      }
+      setPendingBundlePurchase({ id: purchaseId, bundle });
+      // Funga modal ya bundle, fungua PaymentGateway
+      setShowBundleModal(false);
+    } catch (err) {
+      setBundleError(
+        err?.data?.detail ||
+          err?.message ||
+          t(
+            "Imeshindwa kununua kifurushi. Jaribu tena.",
+            "Could not purchase bundle. Try again."
+          )
+      );
+    } finally {
+      setBundleLoading(false);
+    }
+  };
+
+  const handleBundlePaymentInitiate = async ({ methodKey, phone } = {}) => {
+    if (!pendingBundlePurchase) return { ok: false, error: new Error("no bundle") };
+    try {
+      const paid = await api.post(
+        `/bundles/purchases/${pendingBundlePurchase.id}/pay/`,
+        {
+          payment_method: methodKey || "",
+          phone: phone || "",
+        }
+      );
+      const fimipay = paid?.fimipay || paid?.data?.fimipay || {};
+      return {
+        ok: true,
+        orderId: fimipay.order_id,
+        gatewayUrl: fimipay.payment_gateway_url || null,
+        simulated: !!fimipay.simulated,
+        environment: fimipay.environment || "live",
+      };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  };
+
+  const handleBundlePaymentSuccess = async () => {
+    // Bundle credits zinaingizwa. Sasa tumia credit → download
+    try {
+      await consumeCreditAsync(user.id, "success");
+    } catch (err) {
+      console.warn("[MyTransactionsPage] consume credit after bundle failed:", err);
+    }
+    await performDownload();
+  };
 
   return (
     <div
@@ -555,7 +784,7 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
       className="w-full p-4 sm:p-6"
     >
       <div className="max-w-4xl mx-auto">
-        {/* HEADER — CENTERED */}
+        {/* HEADER */}
         <div className="mb-5 text-center">
           <h1
             style={{ color: "var(--text-primary)" }}
@@ -573,7 +802,7 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
           </p>
         </div>
 
-        {/* SUMMARY CARDS — consistent white backgrounds */}
+        {/* SUMMARY CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
           <div
             style={{ background: "white", borderColor: COLORS.sandLine }}
@@ -613,7 +842,10 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
             >
               {lang === "sw" ? "Idadi ya Miamala" : "Number of Transactions"}
             </p>
-            <p style={{ color: "var(--text-primary)" }} className="text-lg font-bold">
+            <p
+              style={{ color: "var(--text-primary)" }}
+              className="text-lg font-bold"
+            >
               {transactions.length}
             </p>
           </div>
@@ -708,7 +940,7 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
         )}
       </div>
 
-      {/* FORMAT SELECTOR MODAL */}
+      {/* FORMAT SELECTOR MODAL — Free download */}
       {showFeeFlow && !requiresPayment && (
         <FormatSelectorModal
           lang={lang}
@@ -725,11 +957,30 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
         />
       )}
 
-      {/* PAYMENT FLOW — when success fee is enabled */}
-      {showFeeFlow && requiresPayment && (
+      {/* BUNDLE MODAL — kwa requires payment */}
+      {showFeeFlow && requiresPayment && showBundleModal && (
+        <SuccessBundleModal
+          lang={lang}
+          format={format}
+          bundles={successBundles}
+          hasCredit={hasCredit}
+          creditRemaining={creditRemaining}
+          onUseCredit={handleUseCredit}
+          onBuyBundle={handleBuyBundle}
+          onClose={() => {
+            setShowFeeFlow(false);
+            setShowBundleModal(false);
+            setBundleError("");
+          }}
+          loading={bundleLoading || downloading}
+          error={bundleError || feeError}
+        />
+      )}
+
+      {/* PAYMENT FLOW — flat fee (requires payment) */}
+      {showFeeFlow && requiresPayment && !showBundleModal && !pendingBundlePurchase && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
           <div className="w-full max-w-md my-4">
-            {/* Format selector juu ya PaymentGateway */}
             <div
               style={{ background: "white", borderColor: COLORS.sandLine }}
               className="rounded-2xl border p-4 mb-3"
@@ -798,6 +1049,46 @@ export default function MyTransactionsPage({ transactions: transactionsProp }) {
               onCancel={() => {
                 setShowFeeFlow(false);
                 setFeeError("");
+              }}
+            />
+
+            {/* Bundle button chini ya PaymentGateway */}
+            {successBundles.length > 0 && (
+              <button
+                onClick={() => setShowBundleModal(true)}
+                className="w-full mt-3 py-3 rounded-xl border-2 border-dashed text-xs font-semibold"
+                style={{
+                  borderColor: COLORS.gold,
+                  color: COLORS.gold,
+                  background: "white",
+                }}
+              >
+                {t(
+                  "AU Nunua Kifurushi cha Ripoti",
+                  "OR Buy a Report Bundle"
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT GATEWAY — bundle purchase */}
+      {pendingBundlePurchase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
+          <div className="w-full max-w-md my-4">
+            <PaymentGateway
+              amount={pendingBundlePurchase.bundle?.price || 0}
+              title={t("Nunua Kifurushi cha Ripoti", "Buy Report Bundle")}
+              description={t(
+                "Credits zitaingizwa kwenye akaunti yako",
+                "Credits will be added to your account"
+              )}
+              onInitiate={handleBundlePaymentInitiate}
+              onSuccess={handleBundlePaymentSuccess}
+              onCancel={() => {
+                setPendingBundlePurchase(null);
+                setShowBundleModal(true);
               }}
             />
           </div>

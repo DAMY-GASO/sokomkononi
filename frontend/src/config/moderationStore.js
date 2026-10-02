@@ -1,6 +1,18 @@
+// ============================================================
+// moderationStore.js — API-backed moderation queue + decisions
+// Backend:
+//   GET  /api/listings/admin/pending/
+//   POST /api/listings/{id}/approve/
+//   POST /api/listings/{id}/reject/
+//   DELETE /api/listings/{id}/?hard=true   (admin pekee)
+// ============================================================
 import { useEffect, useState } from "react";
 import { moderationApi } from "../api/moderation.js";
-import { normalizeListingFromApi, decideListing, removeListing } from "./listingsStore.js";
+import {
+  normalizeListingFromApi,
+  decideListing,
+  removeListing,
+} from "./listingsStore.js";
 
 const KEY = "sokomkononi_moderation_queue_v1";
 const DEC_KEY = "sokomkononi_moderation_decisions_v1";
@@ -85,7 +97,10 @@ function recordDecision(entry) {
 // ============================================================
 // APPROVE — idhinisha listing
 // ============================================================
-export async function approveListingFromQueueAsync(listingId, { adminName = "Admin" } = {}) {
+export async function approveListingFromQueueAsync(
+  listingId,
+  { adminName = "Admin" } = {}
+) {
   const target = findInQueue(listingId);
   if (!target) return { ok: false, error: new Error("Listing not in queue") };
   try {
@@ -153,30 +168,20 @@ export async function rejectListingFromQueueAsync(
 
 // ============================================================
 // DISAPPROVE — rudisha listing iliyoidhinishwa kuwa rejected
-// (kama admin alikosea kuapprove)
+// Backend haina /disapprove/ — tunatumia /reject/ (inafanya kazi sawa)
 // ============================================================
 export async function disapproveListingAsync(
   listingId,
   reason = "",
   { adminName = "Admin" } = {}
 ) {
-  const cleanReason = (reason || "").trim() || "Disapproved by admin";
+  const cleanReason =
+    (reason || "").trim() || "Disapproved by admin";
 
-  // Jaribu endpoint maalum
   try {
-    await moderationApi.disapprove(listingId, cleanReason);
+    await moderationApi.reject(listingId, cleanReason);
   } catch (err) {
-    // Fallback: tumia reject
-    if (err?.status === 404 || err?.status === 405) {
-      console.warn("[moderationStore] /disapprove/ haipo — tumia reject");
-      try {
-        await moderationApi.reject(listingId, cleanReason);
-      } catch (fallbackErr) {
-        return { ok: false, error: fallbackErr };
-      }
-    } else {
-      return { ok: false, error: err };
-    }
+    return { ok: false, error: err };
   }
 
   // Sasisha cache ya listingsStore
@@ -202,6 +207,7 @@ export async function disapproveListingAsync(
 
 // ============================================================
 // DELETE — futa listing kabisa (kwa scam)
+// Inatumia ListingViewSet.destroy + ?hard=true (admin pekee)
 // ============================================================
 export async function deleteListingFromModerationAsync(
   listingId,
@@ -210,16 +216,20 @@ export async function deleteListingFromModerationAsync(
 ) {
   const cleanReason = (reason || "").trim();
 
-  // Jaribu endpoint maalum ya moderation
   try {
     await moderationApi.delete(listingId, cleanReason);
   } catch (err) {
-    // Fallback: tumia listingsApi.remove
+    // Fallback: listingsApi.remove + hard=true (kama /delete/ haipo)
     if (err?.status === 404 || err?.status === 405) {
-      console.warn("[moderationStore] /delete/ haipo — tumia listingsApi");
+      console.warn(
+        "[moderationStore] /delete/ haipo — tumia listingsApi.remove"
+      );
       try {
         const { listingsApi } = await import("../api/listings.js");
-        await listingsApi.remove(listingId);
+        await listingsApi.remove(listingId, {
+          hard: true,
+          reason: cleanReason,
+        });
       } catch (fallbackErr) {
         return { ok: false, error: fallbackErr };
       }
@@ -232,7 +242,9 @@ export async function deleteListingFromModerationAsync(
   removeFromQueue(listingId);
   try {
     removeListing(listingId);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   recordDecision({
     listingId,
@@ -264,7 +276,12 @@ export async function bulkApproveAsync(ids, opts) {
 
 export async function bulkRejectAsync(ids, reason, opts) {
   if (!(reason || "").trim()) {
-    return { ok: false, error: new Error("Reason required"), succeeded: [], failed: [] };
+    return {
+      ok: false,
+      error: new Error("Reason required"),
+      succeeded: [],
+      failed: [],
+    };
   }
   const results = await Promise.allSettled(
     ids.map((id) => rejectListingFromQueueAsync(id, reason, opts))

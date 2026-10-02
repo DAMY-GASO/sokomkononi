@@ -3,6 +3,7 @@
 // - AbortController timeout on every request
 // - Precise public-endpoint detection
 // - No local fallbacks
+// - DELETE inakubali body (kwa hard delete na reason)
 // ============================================================
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -236,12 +237,36 @@ async function request(path, {
   return data;
 }
 
+// ------------------------------------------------------------
+// Convenience helpers
+// ------------------------------------------------------------
+function normalizeBody(body) {
+  // Kama body ni tupu au null → undefined
+  if (body === undefined || body === null) return undefined;
+  if (typeof body === "object" && Object.keys(body).length === 0) return undefined;
+  return body;
+}
+
 export const api = {
   get:    (path, opts) => request(path, { ...opts, method: "GET" }),
-  post:   (path, body, opts) => request(path, { ...opts, method: "POST",   body }),
-  patch:  (path, body, opts) => request(path, { ...opts, method: "PATCH",  body }),
-  put:    (path, body, opts) => request(path, { ...opts, method: "PUT",    body }),
-  delete: (path, opts) => request(path, { ...opts, method: "DELETE" }),
+
+  post:   (path, body, opts) =>
+    request(path, { ...opts, method: "POST", body: normalizeBody(body) }),
+
+  patch:  (path, body, opts) =>
+    request(path, { ...opts, method: "PATCH", body: normalizeBody(body) }),
+
+  put:    (path, body, opts) =>
+    request(path, { ...opts, method: "PUT", body: normalizeBody(body) }),
+
+  // ⬇️ DELETE sasa inakubali body (kwa hard delete + reason)
+  delete: (path, body = {}, opts) =>
+    request(path, {
+      ...opts,
+      method: "DELETE",
+      body: normalizeBody(body),
+    }),
+
   upload: (path, formData, opts) =>
     request(path, { ...opts, method: "POST", body: formData, isFormData: true, timeoutMs: UPLOAD_TIMEOUT_MS }),
 };

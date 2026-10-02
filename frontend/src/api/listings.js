@@ -25,7 +25,10 @@ export const listingsApi = {
   // ----- Mutations -----
   create: (payload) => api.post("/listings/", payload),
   update: (id, patch) => api.patch(`/listings/${id}/`, patch),
-  remove: (id) => api.delete(`/listings/${id}/`),
+  remove: (id, { hard = false, reason = "" } = {}) => {
+  const qs = hard ? "?hard=true" : "";
+  return api.delete(`/listings/${id}/${qs}`, reason ? { reason } : {});
+},
 
   // ----- Fee -----
   getFee: (id) => api.get(`/listings/${id}/fee/`),

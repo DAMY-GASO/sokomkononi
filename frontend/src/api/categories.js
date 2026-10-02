@@ -10,4 +10,7 @@ export const categoriesApi = {
   list: (params = {}) => api.get(`/categories/${toQuery(params)}`),
   detail: (idOrSlug) => api.get(`/categories/${idOrSlug}/`),
   uploadImage: (formData) => api.upload("/categories/upload-image/", formData),
+
+  // ⬇️ MPYA: reorder — inatuma list ya keys kwa mpangilio mpya
+  reorder: (order) => api.post("/categories/reorder/", { order }),
 };

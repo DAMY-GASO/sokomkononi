@@ -78,7 +78,7 @@ function normalizeMyTransaction(raw) {
   return {
     id: raw.id,
     ref: raw.ref,
-    type: raw.type, // "listing_fee" | "boost" | "reservation"
+    type: raw.type, // "listing_fee" | "boost" | "reservation" | "bundle_purchase"
     source: raw.source,
     title: raw.title,
     property: raw.listing_title || raw.title,
@@ -90,6 +90,10 @@ function normalizeMyTransaction(raw) {
     method: raw.method || null,
     paidAt: raw.paid_at,
     at: raw.created_at || raw.paid_at,
+    // ⬇️ MPYA — Bundle fields
+    bundleId: raw.bundle_id,
+    bundleName: raw.bundle_name,
+    credits: raw.credits,
   };
 }
 
@@ -138,6 +142,7 @@ export function useMyTransactionsAggregate() {
     "boost",
     "leading",
     "advertisement",
+    "bundle_purchase",   // ⬅️ MPYA
   ];
   const revenue = list
     .filter((t) => t.status === "completed" && FEE_TYPES.includes(t.type))
@@ -149,4 +154,6 @@ export function useMyTransactionsAggregate() {
   return { revenue, spent, earned, totalCount: list.length };
 }
 
-export function useFeeTransactions() { return useTransactions(); }
+export function useFeeTransactions() {
+  return useTransactions();
+}

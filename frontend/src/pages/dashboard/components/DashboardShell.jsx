@@ -26,10 +26,11 @@ import {
   Package,
   Tag,
   ShoppingBag,
+  ShieldCheck,
 } from "lucide-react";
 import { COLORS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-// ⬇️ MABADILIKO 1: useAuth + logoutAsync kutoka authStore
+import MyVerificationsPanel from "./MyVerificationsPanel";
 import { useAuth, logoutAsync } from "../../../config/authStore.js";
 import {
   useMyListings,
@@ -102,6 +103,7 @@ const SELLER_NAV = [
   { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
   { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
   { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
+  { key: "verification", label: { sw: "Uthibitisho", en: "Verification" }, icon: ShieldCheck },
 ];
 
 // ============================================================
@@ -118,6 +120,7 @@ const BUYER_NAV = [
   { key: "waiting", label: { sw: "Orodha ya Kusubiri", en: "Waiting List" }, icon: Clock3 },
   { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
   { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
+  { key: "verification", label: { sw: "Uthibitisho", en: "Verification" }, icon: ShieldCheck },
   { key: "safety", label: { sw: "Usalama & Msaada", en: "Safety & Support" }, icon: Shield },
 ];
 
@@ -137,6 +140,7 @@ const URL_TO_STATE = {
   "/dashboard/notifications": { side: "seller", key: "notifications" },
   "/dashboard/transactions": { side: "seller", key: "transactions" },
   "/dashboard/bundles": { side: "seller", key: "bundles" },
+  "/dashboard/verification": { side: "seller", key: "verification" },
   "/dashboard/activity": { side: "seller", key: "activity" },
 
   "/dashboard/buyer": { side: "buyer", key: "overview" },
@@ -150,6 +154,7 @@ const URL_TO_STATE = {
   "/dashboard/buyer/waiting": { side: "buyer", key: "waiting" },
   "/dashboard/buyer/transactions": { side: "buyer", key: "transactions" },
   "/dashboard/buyer/bundles": { side: "buyer", key: "bundles" },
+  "/dashboard/buyer/verification": { side: "buyer", key: "verification" },
   "/dashboard/buyer/safety": { side: "buyer", key: "safety" },
   "/dashboard/buyer/activity": { side: "buyer", key: "activity" },
 };
@@ -169,6 +174,7 @@ const STATE_TO_URL = {
     notifications: "/dashboard/notifications",
     transactions: "/dashboard/transactions",
     bundles: "/dashboard/bundles",
+    verification: "/dashboard/verification",
     activity: "/dashboard/activity",
   },
   buyer: {
@@ -182,6 +188,7 @@ const STATE_TO_URL = {
     waiting: "/dashboard/buyer/waiting",
     transactions: "/dashboard/buyer/transactions",
     bundles: "/dashboard/buyer/bundles",
+    verification: "/dashboard/buyer/verification",
     safety: "/dashboard/buyer/safety",
     activity: "/dashboard/buyer/activity",
   },
@@ -203,7 +210,6 @@ export default function DashboardShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const { lang, setLang } = useLanguage();
-  // ⬇️ MABADILIKO 2: toa `user` pekee (logout ipo kama logoutAsync)
   const { user } = useAuth();
 
   const [ready, setReady] = useState(false);
@@ -213,7 +219,6 @@ export default function DashboardShell() {
     return () => clearTimeout(id);
   }, []);
 
-  // Fetch listings kutoka API — only when a user is signed in
   useEffect(() => {
     if (!user?.id) return;
     fetchMyListingsFromApi();
@@ -260,16 +265,16 @@ export default function DashboardShell() {
   }, [side]);
 
   useEffect(() => {
-  checkReservationReminders();
-  checkListingExpiry();
-  checkListingExpiringSoon();
-  const interval = setInterval(() => {
     checkReservationReminders();
     checkListingExpiry();
     checkListingExpiringSoon();
-  }, 2 * 60 * 1000);
-  return () => clearInterval(interval);
-}, []);
+    const interval = setInterval(() => {
+      checkReservationReminders();
+      checkListingExpiry();
+      checkListingExpiringSoon();
+    }, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (announcements.length === 0) return;
@@ -291,12 +296,8 @@ export default function DashboardShell() {
   // ============================================================
   // LISTING HELPERS — API-backed
   // ============================================================
-  // NOTE: PostPropertyForm creates the listing on the backend itself.
-  // This wrapper therefore only syncs the local cache when the form
-  // hands us a fully-created listing object.
   const addListing = (listing) => {
     if (listing && (listing.id || listing.pk)) {
-      // Already on backend — just cache it.
       return { ok: true, listing };
     }
     return createListingAsync(listing);
@@ -393,9 +394,6 @@ export default function DashboardShell() {
   );
 
   const markListingPaid = async (id, { alreadyPaid = false } = {}) => {
-    // PaymentGateway already POSTed /listings/{id}/fee/pay/ on success.
-    // Calling payListingFeeAsync here would charge the seller twice.
-    // We only sync the local cache.
     const listing = listings.find((l) => String(l.id) === String(id));
     if (listing) {
       updateListing(id, {
@@ -403,7 +401,6 @@ export default function DashboardShell() {
         paidAt: new Date().toISOString(),
       });
       if (!alreadyPaid) {
-        // Legacy path (rare): no gateway ran, treat this as a manual mark.
         addTransaction({
           type: "listing_fee",
           title: `Listing Fee — ${listing.title}`,
@@ -418,13 +415,11 @@ export default function DashboardShell() {
     return { ok: true };
   };
 
-
   const handleLanguageSelect = (code) => {
     setLang(code);
     setLangOpen(false);
   };
 
-  // ⬇️ MABADILIKO 3: tumia logoutAsync
   const handleLogout = async () => {
     setUserMenuOpen(false);
     await logoutAsync();
@@ -471,7 +466,9 @@ export default function DashboardShell() {
       return <LeadsSection onNavigate={handleNavClick} />;
     }
     if (activeKey === "browse") {
-      return <BrowseProperties lang={lang} />;
+      // ⬇️ Tunapitisha `user` ili BrowseProperties iweze kuchuja
+      //    listings za user mwenyewe (seller hawezi kununua bidhaa yake)
+      return <BrowseProperties lang={lang} excludeSellerId={user?.id} />;
     }
     if (activeKey === "saved") {
       return <SavedPropertiesPage />;
@@ -535,6 +532,9 @@ export default function DashboardShell() {
     if (activeKey === "bundles") {
       return <BundlesPage />;
     }
+    if (activeKey === "verification") {
+      return <MyVerificationsPanel />;
+    }
     if (activeKey === "waiting") {
       return (
         <WaitingListPage
@@ -549,14 +549,10 @@ export default function DashboardShell() {
     }
     return (
       <main className="flex-1 p-4 sm:p-6 text-center">
-        <h1
-          className="h-title"
-        >
+        <h1 className="h-title">
           {nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}
         </h1>
-        <p
-          className="text-secondary text-sm mt-2 max-w-xl mx-auto"
-        >
+        <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
           {side === "seller"
             ? t(
                 "Upande wa Muuzaji — dhibiti mali zako, malipo na maombi ya wanunuzi.",

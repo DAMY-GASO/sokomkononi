@@ -2,6 +2,8 @@
 // AdminBundles.jsx
 // Admin anaweza kuongeza/kubadilisha/kufuta bundles.
 // FIXED: uses async CRUD (API-backed) — no more local-only writes.
+// Types: listing, leading, boost, reservation, success, ads,
+//        premium, package
 // ============================================================
 import React, { useState } from "react";
 import {
@@ -29,12 +31,13 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 
 const TYPE_LABELS = {
   listing: { sw: "Kuweka Mali", en: "Listing" },
-  leading: { sw: "Kuongoza", en: "Leading" },
-  boost: { sw: "Kukuza", en: "Boost" },
   reservation: { sw: "Kuhifadhi", en: "Reservation" },
+  success: { sw: "Ripoti", en: "Reports" },
+  package: { sw: "Kifurushi Maalum", en: "Package" },
+  boost: { sw: "Kukuza", en: "Boost" },
+  leading: { sw: "Kuongoza", en: "Leading" },
   ads: { sw: "Matangazo", en: "Ads" },
   premium: { sw: "Hadhi ya Juu", en: "Premium" },
-  package: { sw: "Kifurushi", en: "Package" },
 };
 
 const CREDIT_LABELS = {
@@ -42,6 +45,7 @@ const CREDIT_LABELS = {
   leading: { sw: "Kuongoza", en: "Leading" },
   boost: { sw: "Kukuza", en: "Boost" },
   reservation: { sw: "Kuhifadhi", en: "Reservation" },
+  success: { sw: "Ripoti", en: "Reports" },
   ads: { sw: "Matangazo", en: "Ads" },
   premium: { sw: "Hadhi ya Juu", en: "Premium" },
 };
@@ -55,8 +59,6 @@ const pickLang = (obj, lang) =>
 function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // NOTE: we derive credits from the LIVE form state so switching the
-  // type dropdown shows the correct bucket. No stale snapshot.
   const getCreditsForType = (type) => {
     const c = form.credits;
     if (c && typeof c === "object") return c[type] ?? 1;

@@ -1,19 +1,34 @@
 // ============================================================
-// BoostSasa.jsx (production)
-// Flow: POST /boosting/ {listing, package} → POST /boosting/{id}/pay/ →
-//       POST /boosting/{id}/activate/
+// BoostSasa.jsx (production + bundle + credits support)
+// Flow:
+//   A. Flat fee  → POST /boosting/ → /pay/ → /activate/
+//   B. Bundle    → POST /bundles/purchases/ → /pay/ (credits added)
+//                  kisha POST /boosting/ → /pay/ {payment_reference:"credits"}
+//                  → /activate/
+//   C. Credit    → POST /boosting/ → /pay/ {payment_reference:"credits"}
+//                  → /activate/
 // ============================================================
 import React, { useState, useEffect } from "react";
-import { Rocket, Check, MapPin, TrendingUp, Clock, Loader2, AlertTriangle, Wallet } from "lucide-react";
-import { COLORS, getCategory, formatTZS, isBoostActive, boostDaysRemaining } from "./shared";
+import {
+  Rocket, Check, MapPin, TrendingUp, Clock, Loader2,
+  AlertTriangle, Wallet, Package, Sparkles,
+} from "lucide-react";
+import {
+  COLORS, getCategory, formatTZS, isBoostActive, boostDaysRemaining,
+} from "./shared";
 import { useBoostPackages } from "../../../config/boostPackagesStore.js";
+import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
 import { boostingApi } from "../../../api/boosting.js";
+import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 
+// ============================================================
+// HELPERS
+// ============================================================
 function getLocalized(field, lang) {
   if (!field) return "";
   if (typeof field === "string") return field;
@@ -25,6 +40,9 @@ function getLocalizedArray(field, lang) {
   return field?.[lang] || field?.sw || [];
 }
 
+// ============================================================
+// LISTING PICKER
+// ============================================================
 function ListingPicker({ listings, selectedId, onSelect, lang }) {
   if (listings.length === 0) {
     return (
@@ -79,7 +97,10 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
   );
 }
 
-function PackageCard({ pkg, selected, onSelect, lang }) {
+// ============================================================
+// FLAT PACKAGE CARD
+// ============================================================
+function FlatPackageCard({ pkg, selected, onSelect, lang }) {
   const isFeatured = pkg.key === "featured";
   const label = getLocalized(pkg.label, lang);
   const benefits = getLocalizedArray(pkg.benefits, lang);
@@ -117,18 +138,86 @@ function PackageCard({ pkg, selected, onSelect, lang }) {
           / {lang === "sw" ? `siku ${pkg.days}` : `${pkg.days} days`}
         </span>
       </div>
-      <ul className="flex flex-col gap-1.5 w-full text-left">
-        {benefits.map((b, i) => (
-          <li key={i} className="text-secondary flex items-start gap-1.5 text-body-sm">
-            <TrendingUp size={12} className="shrink-0 mt-0.5" color={COLORS.green} />
-            {b}
-          </li>
-        ))}
-      </ul>
+      {benefits.length > 0 && (
+        <ul className="flex flex-col gap-1.5 w-full text-left">
+          {benefits.map((b, i) => (
+            <li key={i} className="text-secondary flex items-start gap-1.5 text-body-sm">
+              <TrendingUp size={12} className="shrink-0 mt-0.5" color={COLORS.green} />
+              {b}
+            </li>
+          ))}
+        </ul>
+      )}
     </button>
   );
 }
 
+// ============================================================
+// BOOST BUNDLE CARD
+// ============================================================
+function BoostBundleCard({ bundle, selected, onSelect, lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const other = lang === "sw" ? "en" : "sw";
+  const name =
+    bundle.name?.[lang] || bundle.name?.[other] || t("Kifurushi", "Bundle");
+  const description =
+    bundle.description?.[lang] || bundle.description?.[other] || "";
+
+  return (
+    <button
+      onClick={() => onSelect(bundle.id)}
+      style={{
+        borderColor: selected ? COLORS.gold : COLORS.sandLine,
+        background: "white",
+      }}
+      className="relative flex flex-col items-center text-center gap-3 p-4 rounded-2xl border w-full"
+    >
+      {bundle.featured && (
+        <span
+          style={{ background: COLORS.rust, color: "white" }}
+          className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-body-sm font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+        >
+          {t("Maarufu Zaidi", "Most Popular")}
+        </span>
+      )}
+      <div className="flex items-center justify-center gap-2 w-full">
+        <Package size={16} color={COLORS.gold} />
+        <span className="text-primary text-sm font-bold">{name}</span>
+        <span
+          style={{ background: selected ? COLORS.gold : COLORS.sandLine, borderColor: COLORS.gold }}
+          className="w-5 h-5 rounded-full border flex items-center justify-center shrink-0"
+        >
+          {selected && <Check size={12} color={COLORS.night} />}
+        </span>
+      </div>
+      {description && (
+        <p className="text-secondary text-body-sm line-clamp-2">{description}</p>
+      )}
+      <div className="flex items-baseline justify-center gap-1.5">
+        <span style={{ color: COLORS.rust }} className="text-lg font-bold">
+          {formatTZS(bundle.price)}
+        </span>
+        {bundle.validityDays && (
+          <span className="text-secondary text-body-sm">
+            / {lang === "sw" ? `siku ${bundle.validityDays}` : `${bundle.validityDays} days`}
+          </span>
+        )}
+      </div>
+      {bundle.discountPercent > 0 && (
+        <span
+          style={{ background: "rgba(47,109,79,0.12)", color: COLORS.green }}
+          className="text-body-sm font-semibold px-2 py-0.5 rounded-full"
+        >
+          {t(`Okoa ${bundle.discountPercent}%`, `Save ${bundle.discountPercent}%`)}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// ============================================================
+// MAIN
+// ============================================================
 export default function BoostSasa({
   listings = [],
   initialListingId = null,
@@ -138,26 +227,39 @@ export default function BoostSasa({
   const { user } = useAuth();
   const liveListings = listings.filter((l) => l.status === "live");
   const boostPackages = useBoostPackages();
+  const boostBundles = useActiveBundles().filter((b) => b.type === "boost");
 
   const [selectedId, setSelectedId] = useState(
     initialListingId && liveListings.some((l) => l.id === initialListingId)
       ? initialListingId
       : liveListings[0]?.id ?? null
   );
-  const [packageId, setPackageId] = useState(null);
+
+  // paymentMode: "flat" | "bundle"
+  const [paymentMode, setPaymentMode] = useState("flat");
+  const [flatPackageId, setFlatPackageId] = useState(null);
+  const [bundleId, setBundleId] = useState(null);
+
   const [stage, setStage] = useState("select"); // select | paying | done
   const [done, setDone] = useState(null);
   const [creating, setCreating] = useState(false);
-  const [pendingBoost, setPendingBoost] = useState(null); // { id, listing, package }
+  const [pendingBoost, setPendingBoost] = useState(null);
+  const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   useEffect(() => {
-    if (!packageId && boostPackages.length) {
-      setPackageId(boostPackages[0].id);
+    if (!flatPackageId && boostPackages.length) {
+      setFlatPackageId(boostPackages[0].id);
     }
-  }, [boostPackages, packageId]);
+  }, [boostPackages, flatPackageId]);
+
+  useEffect(() => {
+    if (!bundleId && boostBundles.length) {
+      setBundleId(boostBundles[0].id);
+    }
+  }, [boostBundles, bundleId]);
 
   useEffect(() => {
     if (initialListingId && liveListings.some((l) => l.id === initialListingId)) {
@@ -166,23 +268,37 @@ export default function BoostSasa({
   }, [initialListingId, liveListings]);
 
   const selectedListing = liveListings.find((l) => l.id === selectedId);
-  const selectedPackage = boostPackages.find((p) => p.id === packageId);
-  const canBoost = Boolean(selectedListing && selectedPackage);
+  const flatPackage = boostPackages.find((p) => p.id === flatPackageId);
+  const selectedBundle = boostBundles.find((b) => b.id === bundleId);
 
   const creditInfo = checkCredit(user?.id, "boost");
   const hasCredit = creditInfo.hasCredit;
+  const boostCreditRemaining = creditInfo.remaining || 0;
 
-  // ── Step 1: create the boost on backend ─────────────────
-  const handleBeginPayment = async () => {
-    if (!canBoost || creating) return;
+  const canBoost =
+    Boolean(selectedListing) &&
+    ((paymentMode === "flat" && flatPackage) ||
+      (paymentMode === "bundle" && selectedBundle));
+
+  // ── Create boost on backend (used by all paths) ────────────
+  const createBoostOnBackend = async () => {
+    const raw = await boostingApi.create({
+      listing: selectedListing.id,
+      package: flatPackage?.id || boostPackages[0]?.id,
+    });
+    return raw;
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // PATH A: FLAT FEE
+  // ══════════════════════════════════════════════════════════
+  const handleBeginFlatPayment = async () => {
+    if (!selectedListing || !flatPackage || creating) return;
     setCreating(true);
     setError("");
     try {
-      const raw = await boostingApi.create({
-        listing: selectedListing.id,
-        package: selectedPackage.id,
-      });
-      setPendingBoost({ id: raw.id, listing: selectedListing, package: selectedPackage });
+      const raw = await createBoostOnBackend();
+      setPendingBoost({ id: raw.id, listing: selectedListing, package: flatPackage });
       setStage("paying");
     } catch (err) {
       setError(
@@ -195,98 +311,56 @@ export default function BoostSasa({
     }
   };
 
-  // ── Step 2a: initiate FimiPay payment ─────────────────────
-  const handlePaymentInitiate = async ({ methodKey, methodLabel, phone } = {}) => {
-    if (!pendingBoost) return { ok: false, error: new Error("no pending boost") };
-    try {
-      const res = await boostingApi.pay(pendingBoost.id, {
-        payment_method: methodKey || "",
-        phone: phone || "",
-      });
-      // The backend has two response shapes:
-      //   1. Fresh create_order →  { message, fimipay: { order_id, payment_status, ... } }
-      //   2. Reused existing order → raw status object at the top level:
-      //        { order_id, payment_status, amount, transid, ... }
-      // We tolerate both by unwrapping until we find an order_id.
-      const candidates = [
-        res?.fimipay,
-        res?.data?.fimipay,
-        res?.data,
-        res,
-      ].filter(Boolean);
-      const payload =
-        candidates.find((c) => c && (c.order_id || c.payment_status)) || {};
-
-      return {
-        ok: true,
-        orderId: payload.order_id || null,
-        paymentStatus: (payload.payment_status || "").toUpperCase() || null,
-        transid: payload.transid || null,
-        gatewayUrl: payload.payment_gateway_url || null,
-        simulated: !!payload.simulated,
-        environment: payload.environment || "live",
-      };
-    } catch (err) {
-      return { ok: false, error: err };
-    }
-  };
-
-  // ── Step 2b: called by PaymentGateway when the status flips to SUCCESS ──
-  const handlePaymentSuccess = async () => {
-    if (!pendingBoost) return;
-    try {
-      // Backend may have already activated the boost if it reused a
-      // SUCCESS order. Calling activate() again is harmless on the backend
-      // (idempotent), but we guard anyway.
-      const activated = await boostingApi.activate(pendingBoost.id);
-      setDone({
-        listing: pendingBoost.listing,
-        pkg: pendingBoost.package,
-        boost: activated,
-      });
-      setStage("done");
-      onBoosted(pendingBoost.listing.id, {
-        boostTier: pendingBoost.package.key,
-        boostExpiresAt: activated?.expires_at,
-      });
-    } catch (err) {
-      console.warn("[BoostSasa] activate after payment failed:", err);
-      // FimiPay confirmed the payment — show success anyway
-      setDone({
-        listing: pendingBoost.listing,
-        pkg: pendingBoost.package,
-        boost: null,
-      });
-      setStage("done");
-      onBoosted(pendingBoost.listing.id, {
-        boostTier: pendingBoost.package.key,
-      });
-    }
-  };
-
-  // ── Credit path: consume a bundle-issued credit via backend ──
-  const handleUseCredit = async () => {
-    if (!canBoost || !user) return;
+  // ══════════════════════════════════════════════════════════
+  // PATH B: BUNDLE PURCHASE
+  // ══════════════════════════════════════════════════════════
+  const handleBeginBundlePayment = async () => {
+    if (!selectedBundle || creating) return;
     setCreating(true);
     setError("");
     try {
-      const consume = await consumeCreditAsync(user.id, "boost");
-      if (!consume.success) {
-        setCreating(false);
-        return handleBeginPayment();
-      }
-      // Backend must also create + activate the boost. We pass the reference "credits" so
-      // the backend knows to skip payment and consume a credit.
-      const raw = await boostingApi.create({
-        listing: selectedListing.id,
-        package: selectedPackage.id,
+      const purchase = await api.post("/bundles/purchases/", {
+        bundle: selectedBundle.id,
       });
-      await boostingApi.pay(raw.id, { payment_reference: "credits" });
-      const activated = await boostingApi.activate(raw.id);
-      setDone({ listing: selectedListing, pkg: selectedPackage, boost: activated });
+      const purchaseId = purchase?.id || purchase?.purchase_id || purchase?.purchaseId;
+      if (!purchaseId) throw new Error("Backend did not return purchase id.");
+      setPendingBundlePurchase({ id: purchaseId, bundle: selectedBundle });
+      setStage("paying");
+    } catch (err) {
+      setError(
+        err?.data?.detail ||
+          err?.message ||
+          t("Imeshindwa kununua kifurushi. Jaribu tena.", "Could not purchase bundle. Try again.")
+      );
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // PATH C: USE CREDIT (moja kwa moja)
+  // ══════════════════════════════════════════════════════════
+  const handleUseCredit = async () => {
+    if (!selectedListing || !user) return;
+    setCreating(true);
+    setError("");
+    try {
+      // Unda boost, kisha lipa kwa credits (backend ina-consume credit)
+      const raw = await createBoostOnBackend();
+      const paid = await boostingApi.pay(raw.id, { payment_reference: "credits" });
+      
+      // Backend ina-activate tayari kwenye pay() — kama haipo, ita-activate hapa
+      const activated = paid?.boost || (await boostingApi.activate(raw.id).catch(() => null));
+      
+      setDone({
+        listing: selectedListing,
+        pkg: flatPackage,
+        boost: activated,
+        mode: "credit",
+      });
       setStage("done");
       onBoosted(selectedListing.id, {
-        boostTier: selectedPackage.key,
+        boostTier: flatPackage?.key || "credits",
         boostExpiresAt: activated?.expires_at,
       });
     } catch (err) {
@@ -300,19 +374,137 @@ export default function BoostSasa({
     }
   };
 
+  // ══════════════════════════════════════════════════════════
+  // PAYMENT GATEWAY INITIATE
+  // ══════════════════════════════════════════════════════════
+  const handlePaymentInitiate = async ({ methodKey, phone } = {}) => {
+    // Path A: Flat fee
+    if (paymentMode === "flat" && pendingBoost) {
+      try {
+        const res = await boostingApi.pay(pendingBoost.id, {
+          payment_method: methodKey || "",
+          phone: phone || "",
+        });
+        const candidates = [res?.fimipay, res?.data?.fimipay, res?.data, res].filter(Boolean);
+        const payload = candidates.find((c) => c && (c.order_id || c.payment_status)) || {};
+        return {
+          ok: true,
+          orderId: payload.order_id || null,
+          paymentStatus: (payload.payment_status || "").toUpperCase() || null,
+          transid: payload.transid || null,
+          gatewayUrl: payload.payment_gateway_url || null,
+          simulated: !!payload.simulated,
+          environment: payload.environment || "live",
+        };
+      } catch (err) {
+        return { ok: false, error: err };
+      }
+    }
+
+    // Path B: Bundle purchase
+    if (paymentMode === "bundle" && pendingBundlePurchase) {
+      try {
+        const paid = await api.post(
+          `/bundles/purchases/${pendingBundlePurchase.id}/pay/`,
+          {
+            payment_method: methodKey || "",
+            phone: phone || "",
+          }
+        );
+        const fimipay = paid?.fimipay || paid?.data?.fimipay || {};
+        return {
+          ok: true,
+          orderId: fimipay.order_id,
+          gatewayUrl: fimipay.payment_gateway_url || null,
+          simulated: !!fimipay.simulated,
+          environment: fimipay.environment || "live",
+        };
+      } catch (err) {
+        return { ok: false, error: err };
+      }
+    }
+
+    return { ok: false, error: new Error("invalid payment mode") };
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // PAYMENT SUCCESS
+  // ══════════════════════════════════════════════════════════
+  const handlePaymentSuccess = async () => {
+    if (paymentMode === "flat" && pendingBoost) {
+      // Activate boost
+      try {
+        const activated = await boostingApi.activate(pendingBoost.id);
+        setDone({ listing: pendingBoost.listing, pkg: pendingBoost.package, boost: activated, mode: "flat" });
+        setStage("done");
+        onBoosted(pendingBoost.listing.id, {
+          boostTier: pendingBoost.package.key,
+          boostExpiresAt: activated?.expires_at,
+        });
+      } catch (err) {
+        console.warn("[BoostSasa] activate after flat payment failed:", err);
+        setDone({ listing: pendingBoost.listing, pkg: pendingBoost.package, boost: null, mode: "flat" });
+        setStage("done");
+        onBoosted(pendingBoost.listing.id, { boostTier: pendingBoost.package.key });
+      }
+      return;
+    }
+
+    if (paymentMode === "bundle" && pendingBundlePurchase) {
+      // Bundle credits zinaingizwa na backend. Sasa create boost + use credit.
+      try {
+        const raw = await createBoostOnBackend();
+        const paid = await boostingApi.pay(raw.id, { payment_reference: "credits" });
+        const activated = paid?.boost || (await boostingApi.activate(raw.id).catch(() => null));
+        setDone({ listing: selectedListing, pkg: flatPackage, boost: activated, mode: "bundle" });
+        setStage("done");
+        onBoosted(selectedListing.id, {
+          boostTier: flatPackage?.key || "bundle",
+          boostExpiresAt: activated?.expires_at,
+        });
+      } catch (err) {
+        console.warn("[BoostSasa] activate after bundle payment failed:", err);
+        setDone({ listing: selectedListing, pkg: null, boost: null, mode: "bundle-only" });
+        setStage("done");
+      }
+      return;
+    }
+  };
+
+  const resetAll = () => {
+    setDone(null);
+    setStage("select");
+    setPendingBoost(null);
+    setPendingBundlePurchase(null);
+    setError("");
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // DONE SCREEN
+  // ══════════════════════════════════════════════════════════
   if (stage === "done" && done) {
+    const doneTitle =
+      done.mode === "bundle-only"
+        ? t("Kifurushi Kimeongezwa", "Bundle Added")
+        : t("Boost Imewekwa", "Boost Applied");
+    const doneMsg =
+      done.mode === "bundle-only"
+        ? t(
+            "Kifurushi kimeongezwa kwenye akaunti yako. Tumia credits ku-boost mali yako.",
+            "Bundle has been added to your account. Use credits to boost your listing."
+          )
+        : t("Boost imeanza kufanya kazi.", "Your boost is now active.");
+
     return (
       <div className="w-full flex items-center justify-center p-6" style={{ background: COLORS.sand, minHeight: "600px" }}>
         <div className="max-w-md w-full text-center bg-white rounded-2xl border p-8" style={{ borderColor: COLORS.sandLine }}>
           <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: COLORS.gold }}>
             <Rocket color={COLORS.night} size={24} />
           </div>
-          <h2 className="h-title mb-2">{t("Boost Imewekwa", "Boost Applied")}</h2>
-          <p className="text-secondary text-sm mb-5">
-            {t("Boost imeanza kufanya kazi.", "Your boost is now active.")}
-          </p>
+          <h2 className="h-title mb-2">{doneTitle}</h2>
+          <p className="text-secondary text-sm mb-5">{doneMsg}</p>
           <button
-            onClick={() => { setDone(null); setStage("select"); setPendingBoost(null); }}
+            onClick={resetAll}
             style={{ background: COLORS.gold, color: COLORS.night }}
             className="w-full py-3 rounded-xl font-semibold text-sm"
           >
@@ -323,6 +515,9 @@ export default function BoostSasa({
     );
   }
 
+  // ══════════════════════════════════════════════════════════
+  // MAIN RENDER
+  // ══════════════════════════════════════════════════════════
   return (
     <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full p-4 sm:p-6">
       <div className="max-w-2xl mx-auto">
@@ -344,20 +539,21 @@ export default function BoostSasa({
           </div>
         )}
 
+        {/* Credit banner */}
         {hasCredit && stage !== "paying" && (
           <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <Wallet size={16} color={COLORS.green} />
               <span className="text-sm text-[#2F6D4F] font-medium">
                 {t(
-                  `Una Boost Credits ${creditInfo.remaining}`,
-                  `You have ${creditInfo.remaining} Boost Credits`
+                  `Una Boost Credits ${boostCreditRemaining}`,
+                  `You have ${boostCreditRemaining} Boost Credits`
                 )}
               </span>
             </div>
             <button
               onClick={handleUseCredit}
-              disabled={!canBoost || creating}
+              disabled={!selectedListing || creating}
               className="text-body-sm font-semibold px-3 py-2 rounded-lg bg-[#2F6D4F] text-white disabled:opacity-50"
             >
               {creating ? <Loader2 size={14} className="animate-spin" /> : t("Tumia Credit", "Use Credit")}
@@ -365,6 +561,7 @@ export default function BoostSasa({
           </div>
         )}
 
+        {/* 1. Chagua Mali */}
         {stage !== "paying" && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
@@ -376,33 +573,102 @@ export default function BoostSasa({
           </>
         )}
 
+        {/* 2. Chagua Njia ya Malipo */}
         {liveListings.length > 0 && stage !== "paying" && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
-              2. {t("Chagua Package", "Choose Package")}
+              2. {t("Chagua Njia ya Malipo", "Choose Payment Option")}
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-              {boostPackages.map((pkg) => (
-                <PackageCard
-                  key={pkg.id}
-                  pkg={pkg}
-                  selected={pkg.id === packageId}
-                  onSelect={setPackageId}
-                  lang={lang}
-                />
-              ))}
+
+            {/* Payment mode toggle */}
+            <div className="flex justify-center gap-2 mb-4">
+              <button
+                onClick={() => setPaymentMode("flat")}
+                className="flex-1 sm:flex-none text-xs font-semibold px-4 py-2 rounded-full border transition-colors"
+                style={{
+                  background: paymentMode === "flat" ? COLORS.night : "white",
+                  color: paymentMode === "flat" ? COLORS.sand : COLORS.night,
+                  borderColor: paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
+                }}
+              >
+                {t("Ada ya Kawaida", "Flat Fee")}
+              </button>
+              {boostBundles.length > 0 && (
+                <button
+                  onClick={() => setPaymentMode("bundle")}
+                  className="flex-1 sm:flex-none text-xs font-semibold px-4 py-2 rounded-full border transition-colors"
+                  style={{
+                    background: paymentMode === "bundle" ? COLORS.night : "white",
+                    color: paymentMode === "bundle" ? COLORS.sand : COLORS.night,
+                    borderColor: paymentMode === "bundle" ? COLORS.night : COLORS.sandLine,
+                  }}
+                >
+                  {t("Kifurushi (Bundle)", "Bundle Package")}
+                </button>
+              )}
             </div>
 
+            {/* Flat packages grid */}
+            {paymentMode === "flat" && (
+              <>
+                {boostPackages.length === 0 ? (
+                  <p className="text-muted text-sm text-center py-6">
+                    {t("Hakuna packages za boost.", "No boost packages available.")}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                    {boostPackages.map((pkg) => (
+                      <FlatPackageCard
+                        key={pkg.id}
+                        pkg={pkg}
+                        selected={pkg.id === flatPackageId}
+                        onSelect={setFlatPackageId}
+                        lang={lang}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Bundle cards grid */}
+            {paymentMode === "bundle" && (
+              <>
+                {boostBundles.length === 0 ? (
+                  <p className="text-muted text-sm text-center py-6">
+                    {t("Hakuna vifurushi vya boost.", "No boost bundles available.")}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                    {boostBundles.map((b) => (
+                      <BoostBundleCard
+                        key={b.id}
+                        bundle={b}
+                        selected={b.id === bundleId}
+                        onSelect={setBundleId}
+                        lang={lang}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Total + CTA */}
             <div className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"
                  style={{ borderColor: COLORS.sandLine, background: "white" }}>
               <div>
                 <p className="text-secondary text-body-sm mb-0.5">{t("Jumla ya Malipo", "Total Payment")}</p>
                 <p className="text-lg font-bold" style={{ color: COLORS.rust }}>
-                  {formatTZS(selectedPackage?.price || 0)}
+                  {formatTZS(
+                    paymentMode === "flat"
+                      ? flatPackage?.price || 0
+                      : selectedBundle?.price || 0
+                  )}
                 </p>
               </div>
               <button
-                onClick={handleBeginPayment}
+                onClick={paymentMode === "flat" ? handleBeginFlatPayment : handleBeginBundlePayment}
                 disabled={!canBoost || creating}
                 style={{
                   background: canBoost && !creating ? COLORS.gold : COLORS.sandLine,
@@ -410,24 +676,52 @@ export default function BoostSasa({
                 }}
                 className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
               >
-                {creating ? <Loader2 size={15} className="animate-spin" /> : <Rocket size={15} />}
-                {t("Endelea Kulipa", "Continue to Payment")}
+                {creating ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : paymentMode === "flat" ? (
+                  <Rocket size={15} />
+                ) : (
+                  <Package size={15} />
+                )}
+                {paymentMode === "flat"
+                  ? t("Endelea Kulipa", "Continue to Payment")
+                  : t("Nunua Kifurushi", "Buy Bundle")}
               </button>
             </div>
           </>
         )}
 
-        {stage === "paying" && pendingBoost && (
+        {/* Payment Gateway */}
+        {stage === "paying" && (
           <PaymentGateway
-            amount={pendingBoost.package.price}
-            title={getLocalized(pendingBoost.package.label, lang)}
-            description={t(
-              `Boost kwa "${pendingBoost.listing.title}"`,
-              `Boost for "${pendingBoost.listing.title}"`
-            )}
+            amount={
+              paymentMode === "flat"
+                ? pendingBoost?.package?.price || 0
+                : pendingBundlePurchase?.bundle?.price || 0
+            }
+            title={
+              paymentMode === "flat"
+                ? getLocalized(pendingBoost?.package?.label, lang)
+                : t("Nunua Kifurushi cha Boost", "Buy Boost Bundle")
+            }
+            description={
+              paymentMode === "flat"
+                ? t(
+                    `Boost kwa "${pendingBoost?.listing?.title}"`,
+                    `Boost for "${pendingBoost?.listing?.title}"`
+                  )
+                : t(
+                    `${pendingBundlePurchase?.bundle?.name?.[lang] || ""} — credits zitaingizwa`,
+                    `${pendingBundlePurchase?.bundle?.name?.[lang] || ""} — credits will be added`
+                  )
+            }
             onInitiate={handlePaymentInitiate}
             onSuccess={handlePaymentSuccess}
-            onCancel={() => setStage("select")}
+            onCancel={() => {
+              setStage("select");
+              setPendingBoost(null);
+              setPendingBundlePurchase(null);
+            }}
           />
         )}
       </div>

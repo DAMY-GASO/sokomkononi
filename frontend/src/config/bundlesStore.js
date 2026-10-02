@@ -37,6 +37,7 @@ const TYPE_FROM_API = {
   LEADING: "leading",
   BOOST: "boost",
   RESERVATION: "reservation",
+  SUCCESS: "success",          // ⬅️ MPYA
   ADS: "ads",
   PREMIUM: "premium",
   PACKAGE: "package",

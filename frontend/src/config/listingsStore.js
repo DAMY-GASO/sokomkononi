@@ -4,6 +4,7 @@
 //      dashboard's isBoostActive() actually fires for API data.
 // NEW: checkDuplicateListing + checkDuplicateListingAsync — zuia
 //      seller kuweka listing inayofanana na iliyopo.
+// NEW: attributes (JSONField) inasomwa kutoka API na kuhifadhiwa.
 // ============================================================
 import { useEffect, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
@@ -425,6 +426,7 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     category,
     categoryId: categoryObj?.id ?? raw.category_id ?? null,
     location: raw.location || raw.region || raw.address || "",
+    attributes: raw.attributes || {},   // ⬅️ MPYA
     region: raw.region || raw.location || "",
     status,
     views: Number(raw.views_count ?? raw.views) || 0,

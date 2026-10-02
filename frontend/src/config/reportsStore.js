@@ -1,17 +1,12 @@
 // ============================================================
 // reportsStore.js
-// Backend reality: the only reports endpoint is
-//   GET /api/finance/reports/   (Staff)
-// The old /admin/reports/* endpoints don't exist — they 404'd.
-// This version fetches the one endpoint and maps whatever fields
-// come back into the shape ReportsSection expects. Missing fields
-// default to 0 / empty arrays, so the UI shows "no data yet"
-// instead of crashing.
+// Backend: GET /api/finance/reports/   (Admin)
+// Inarudisha camelCase: totalUsers, totalSellers, usersGrowth, n.k.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 
-const KEY = "sokomkononi_reports_cache_v1";
+const KEY = "sokomkononi_reports_cache_v2";
 const EV = "sokomkononi:reports-updated";
 
 const EMPTY = {
@@ -60,7 +55,7 @@ function write(d) {
   window.dispatchEvent(new Event(EV));
 }
 
-// Tolerant normalizer — reads any of the common field names.
+// ── Tolerant helpers ────────────────────────────────────────
 function pickNum(obj, ...keys) {
   for (const k of keys) {
     if (obj && obj[k] != null) return Number(obj[k]) || 0;
@@ -74,51 +69,85 @@ function pickArr(obj, ...keys) {
   return [];
 }
 
+// ── Normalize camelCase kutoka backend ──────────────────────
 function buildFromApi(raw) {
   const src = raw || {};
-  const overview = src.overview || src.summary || src || {};
+  const overview = src.overview || src.summary || src;
 
   return {
-    totalUsers: pickNum(overview, "total_users", "totalUsers", "users"),
-    totalSellers: pickNum(overview, "total_sellers", "totalSellers", "sellers"),
-    totalBuyers: pickNum(overview, "total_buyers", "totalBuyers", "buyers"),
-    totalListings: pickNum(overview, "total_listings", "totalListings", "listings"),
-    liveListings: pickNum(overview, "live_listings", "liveListings"),
-    soldListings: pickNum(overview, "sold_listings", "soldListings"),
-    totalDeals: pickNum(overview, "total_deals", "totalDeals", "deals"),
-    completedDeals: pickNum(overview, "completed_deals", "completedDeals"),
-    disputedDeals: pickNum(overview, "disputed_deals", "disputedDeals"),
-    totalRevenue: pickNum(overview, "total_revenue", "totalRevenue", "revenue"),
-    conversionRate: pickNum(overview, "conversion_rate", "conversionRate"),
+    totalUsers: pickNum(overview, "totalUsers", "total_users", "users"),
+    totalSellers: pickNum(overview, "totalSellers", "total_sellers", "sellers"),
+    totalBuyers: pickNum(overview, "totalBuyers", "total_buyers", "buyers"),
+    totalListings: pickNum(overview, "totalListings", "total_listings", "listings"),
+    liveListings: pickNum(overview, "liveListings", "live_listings"),
+    soldListings: pickNum(overview, "soldListings", "sold_listings"),
+    totalDeals: pickNum(overview, "totalDeals", "total_deals", "deals"),
+    completedDeals: pickNum(overview, "completedDeals", "completed_deals"),
+    disputedDeals: pickNum(overview, "disputedDeals", "disputed_deals"),
+    totalRevenue: pickNum(overview, "totalRevenue", "total_revenue", "revenue"),
+    conversionRate: pickNum(overview, "conversionRate", "conversion_rate"),
 
-    usersGrowth: pickArr(src, "users_growth", "usersGrowth").map((d) => ({
-      date: d.date || d.day,
+    usersGrowth: pickArr(src, "usersGrowth", "users_growth").map((d) => ({
+      date: d.date || d.day || d.label,
       label: d.label || d.date || d.day || "",
-      count: d.count ?? 0,
-      cumulative: d.cumulative ?? d.total ?? 0,
+      count: Number(d.count) || 0,
+      cumulative: Number(d.cumulative ?? d.total ?? 0) || 0,
     })),
-    listingsGrowth: pickArr(src, "listings_growth", "listingsGrowth").map((d) => ({
-      date: d.date || d.day,
+
+    listingsGrowth: pickArr(src, "listingsGrowth", "listings_growth").map((d) => ({
+      date: d.date || d.day || d.label,
       label: d.label || d.date || d.day || "",
-      count: d.count ?? 0,
+      count: Number(d.count) || 0,
     })),
-    revenueByMonth: pickArr(src, "revenue_by_month", "revenueByMonth").map((d) => ({
-      date: d.date || d.month,
+
+    revenueByMonth: pickArr(src, "revenueByMonth", "revenue_by_month").map((d) => ({
+      date: d.date || d.month || d.label,
       label: d.label || d.month || "",
       total: Number(d.total ?? d.revenue) || 0,
     })),
+
     dealsByStatus: {
-      negotiating: pickNum(src.deals_by_status || src.dealsByStatus, "negotiating"),
-      accepted: pickNum(src.deals_by_status || src.dealsByStatus, "accepted"),
-      reserved: pickNum(src.deals_by_status || src.dealsByStatus, "reserved"),
-      completed: pickNum(src.deals_by_status || src.dealsByStatus, "completed"),
-      disputed: pickNum(src.deals_by_status || src.dealsByStatus, "disputed"),
-      cancelled: pickNum(src.deals_by_status || src.dealsByStatus, "cancelled"),
+      negotiating: pickNum(
+        src.dealsByStatus || src.deals_by_status,
+        "negotiating"
+      ),
+      accepted: pickNum(src.dealsByStatus || src.deals_by_status, "accepted"),
+      reserved: pickNum(src.dealsByStatus || src.deals_by_status, "reserved"),
+      completed: pickNum(src.dealsByStatus || src.deals_by_status, "completed"),
+      disputed: pickNum(src.dealsByStatus || src.deals_by_status, "disputed"),
+      cancelled: pickNum(src.dealsByStatus || src.deals_by_status, "cancelled"),
     },
-    topSellers: pickArr(src, "top_sellers", "topSellers"),
-    mostViewedListings: pickArr(src, "most_viewed_listings", "mostViewedListings"),
-    topCategories: pickArr(src, "top_categories", "topCategories"),
-    topLocations: pickArr(src, "top_locations", "topLocations"),
+
+    topSellers: pickArr(src, "topSellers", "top_sellers").map((s) => ({
+      name: s.name || s.seller_name || "—",
+      listings: Number(s.listings) || 0,
+      views: Number(s.views) || 0,
+    })),
+
+    mostViewedListings: pickArr(
+      src,
+      "mostViewedListings",
+      "most_viewed_listings"
+    ).map((l) => ({
+      id: l.id,
+      title: l.title || "—",
+      views: Number(l.views) || 0,
+      price: Number(l.price) || 0,
+    })),
+
+    topCategories: pickArr(src, "topCategories", "top_categories").map((c) => ({
+      key: c.key || c.category__slug || "—",
+      name: c.name || c.category__name || "—",
+      count: Number(c.count) || 0,
+      views: Number(c.views) || 0,
+    })),
+
+    topLocations: pickArr(src, "topLocations", "top_locations").map((l) => ({
+      name: l.name || l.location || "—",
+      count: Number(l.count) || 0,
+      views: Number(l.views) || 0,
+    })),
+
     source: "api",
   };
 }
@@ -126,13 +155,16 @@ function buildFromApi(raw) {
 export async function hydrateReportsFromApi() {
   try {
     const raw = await api.get("/finance/reports/");
-    // Uchunguzi: angalia Console ili kuona backend inarudisha keys gani
     console.info("[reportsStore] /finance/reports/ keys:", Object.keys(raw || {}), raw);
     const data = buildFromApi(raw);
     write(data);
     return { ok: true, data };
   } catch (err) {
-    console.warn("[reportsStore] /finance/reports/ failed:", err?.status, err?.message);
+    console.warn(
+      "[reportsStore] /finance/reports/ failed:",
+      err?.status,
+      err?.message
+    );
     return { ok: false, error: err };
   }
 }

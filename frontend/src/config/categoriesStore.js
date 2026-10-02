@@ -1,22 +1,48 @@
 // ============================================================
 // categoriesStore.js
-// FIX: initializeCategories() now seeds from CATEGORY_TRANSLATIONS
-//      so a fresh install / offline backend still renders categories.
-// FIX: categories zisizo kwenye seed (mf. zilizoongezwa kupitia admin)
-//      sasa zinahifadhi jina la Kiingereza (label override) kwa hiyo
-//      lugha inabadilika ipasavyo.
-// FIX: Translations (name_en, description_en) zinasomwa kutoka
-//      `extra` field kwa sababu backend haina fields za lugha mbili.
-// FIX: DEDUPE kwa key kwenye saveAll + hydrate + updateCategoryAsync
-//      ili kuzuia duplicate unapohariri kategoria.
-// NEW: mashine (pekee), fashion, jobs, mali-nyinginezo, huduma.
+// - initializeCategories() inaseed from CATEGORY_TRANSLATIONS
+// - Label overrides (name_en, description_en) kwenye `extra`
+// - DEDUPE kwa key
+// - REORDER support (admin anaweza kupanga)
+// - AVAILABLE_ICONS — icons TOFAUTI KABISA
 // ============================================================
 import { useEffect, useState } from "react";
 import {
-  Home, Trees, Car, Briefcase, Wrench, Truck, Bike, Bus, Sofa,
-  Tv, PawPrint, Refrigerator, ShoppingBag, Building2, Package,
-  Ship, Plane, Store, Factory, Bed,
-  Shirt, Users, Boxes, HandHelping,
+  // Nyumba / Majengo
+  Home, Building2, Store, Factory,
+  // Viwanja
+  Trees, TreePine, Mountain, Waves,
+  // Magari
+  Car, Truck, Bike, Bus, Ship, Plane, Tractor, Fuel,
+  // Biashara
+  Briefcase, ShoppingBag, Package, Boxes, Box, Container,
+  // Huduma — TOFAUTI KABISA
+  HandHelping, Wrench, Hammer, Scissors, Stethoscope,
+  GraduationCap, Shield, Sparkles, BookOpen, PenTool, Palette,
+  // Vyakula
+  Coffee, Utensils, UtensilsCrossed, Pizza, IceCream,
+  // Mavazi / Mapambo
+  Shirt, Crown, Award, Star, Gem, Watch, Glasses, Backpack,
+  // Samani
+  Sofa, Bed, Armchair, Bath, Refrigerator, Tv,
+  // Electronics
+  Smartphone, Laptop, Monitor, Camera, Headphones, Cpu, Plug, Wifi,
+  // Wanyama
+  PawPrint, Dog, Cat, Fish, Bird, Bug,
+  // Mimea
+  Leaf, Flower, Flower2,
+  // Fedha
+  Coins, CreditCard, Wallet, TrendingUp, BarChart3,
+  // Mengine
+  Key, Lock, DoorOpen, Sun, Moon, Cloud, Umbrella,
+  Lightbulb, Zap, Droplet, Flame, Heart, Tag,
+  Layers, Grid3x3, LayoutGrid,
+  // Media
+  Music, Mic, Video, Film, Gamepad2,
+  // Michezo
+  Dumbbell, Activity, PersonStanding,
+  // Watu
+  Users,
 } from "lucide-react";
 import { categoriesApi } from "../api/categories.js";
 import { api } from "../api/client.js";
@@ -62,7 +88,7 @@ const CATEGORY_TRANSLATIONS = {
   "vifaa-vizito": {
     label: { sw: "Vifaa vizito", en: "Heavy Equipment" },
     description: { sw: "Vifaa vizito vya ujenzi, kilimo, na viwanda", en: "Construction, agricultural, and industrial heavy equipment" },
-    iconKey: "Wrench",
+    iconKey: "Tractor",   // ⬅️ TOFAUTI (sio Wrench)
     extra: CATEGORY_EXTRA["vifaa-vizito"] || [],
   },
   pikipiki: {
@@ -110,7 +136,7 @@ const CATEGORY_TRANSLATIONS = {
   jobs: {
     label: { sw: "Ajira", en: "Jobs" },
     description: { sw: "Nafasi za kazi na watafuta kazi Tanzania", en: "Job openings and job seekers in Tanzania" },
-    iconKey: "Users",
+    iconKey: "Users",    // ⬅️ TOFAUTI (sio Briefcase)
     extra: CATEGORY_EXTRA["jobs"] || [],
   },
   "mali-nyinginezo": {
@@ -122,7 +148,7 @@ const CATEGORY_TRANSLATIONS = {
   huduma: {
     label: { sw: "Huduma", en: "Services" },
     description: { sw: "Huduma za kitaalamu na za kila siku", en: "Professional and everyday services" },
-    iconKey: "HandHelping",
+    iconKey: "HandHelping",   // ⬅️ TOFAUTI KABISA (sio Home)
     extra: CATEGORY_EXTRA["huduma"] || [],
   },
 };
@@ -148,7 +174,6 @@ export const SEED_CATEGORIES = Object.entries(CATEGORY_TRANSLATIONS).map(([key, 
 }));
 
 export const BACKEND_SLUG_TO_SEED_KEY = {
-  // Canonical
   "nyumba-majengo": "nyumba",
   "viwanja-mashamba": "viwanja",
   "magari": "magari",
@@ -160,8 +185,6 @@ export const BACKEND_SLUG_TO_SEED_KEY = {
   "vifaa-vya-elektroniki": "vifaa-vya-elektroniki",
   "mifugo": "mifugo",
   "vifaa-vya-nyumbani": "vifaa-vya-nyumbani",
-
-  // Aliases from English admin labels
   "houses-buildings": "nyumba",
   "houses--buildings": "nyumba",
   "nyumba--majengo": "nyumba",
@@ -181,8 +204,6 @@ export const BACKEND_SLUG_TO_SEED_KEY = {
   "home-appliances": "vifaa-vya-nyumbani",
   "vifaa--vya-elektroniki": "vifaa-vya-elektroniki",
   "vifaa--vya-nyumbani": "vifaa-vya-nyumbani",
-
-  // New categories
   "fashion": "fashion",
   "mavazi": "fashion",
   "jobs": "jobs",
@@ -201,11 +222,60 @@ export const BACKEND_SLUG_TO_SEED_KEY = {
   "service": "huduma",
 };
 
+// ══════════════════════════════════════════════════════════
+// AVAILABLE_ICONS — icons TOFAUTI KABISA kwa kila category
+// ══════════════════════════════════════════════════════════
 export const AVAILABLE_ICONS = {
-  Home, Trees, Car, Briefcase, Wrench, Truck, Bike, Bus, Sofa, Tv,
-  PawPrint, Refrigerator, ShoppingBag, Building2, Package, Ship,
-  Plane, Store, Factory, Bed,
-  Shirt, Users, Boxes, HandHelping,
+  // Nyumba / Majengo
+  Home, Building2, Store, Factory,
+
+  // Viwanja / Ardhi
+  Trees, TreePine, Mountain, Waves,
+
+  // Magari
+  Car, Truck, Bike, Bus, Ship, Plane, Tractor, Fuel,
+
+  // Biashara
+  Briefcase, ShoppingBag, Package, Boxes, Box, Container,
+
+  // Huduma — TOFAUTI KABISA (sio Home)
+  HandHelping, Wrench, Hammer, Scissors, Stethoscope,
+  GraduationCap, Shield, Sparkles, BookOpen, PenTool, Palette,
+
+  // Vyakula
+  Coffee, Utensils, UtensilsCrossed, Pizza, IceCream,
+
+  // Mavazi / Mapambo
+  Shirt, Crown, Award, Star, Gem, Watch, Glasses, Backpack,
+
+  // Samani / Nyumbani
+  Sofa, Bed, Armchair, Bath, Refrigerator, Tv,
+
+  // Electronics
+  Smartphone, Laptop, Monitor, Camera, Headphones, Cpu, Plug, Wifi,
+
+  // Wanyama
+  PawPrint, Dog, Cat, Fish, Bird, Bug,
+
+  // Mimea
+  Leaf, Flower, Flower2,
+
+  // Fedha / Biashara
+  Coins, CreditCard, Wallet, TrendingUp, BarChart3,
+
+  // Mengine
+  Key, Lock, DoorOpen, Sun, Moon, Cloud, Umbrella,
+  Lightbulb, Zap, Droplet, Flame, Heart, Tag,
+  Layers, Grid3x3, LayoutGrid,
+
+  // Media / Burudani
+  Music, Mic, Video, Film, Gamepad2,
+
+  // Michezo
+  Dumbbell, Activity, PersonStanding,
+
+  // Watu
+  Users,
 };
 
 export function getCategoryIcon(iconKey) {
@@ -219,10 +289,11 @@ function readFromStorage() {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
-// ⬇️ DEDUPE kwa `key` — hifadhi ya mwisho inashinda
 function saveAll(list) {
   if (typeof window === "undefined") return;
   const seen = new Map();
@@ -240,19 +311,30 @@ function readLabelOverrides() {
     const raw = window.localStorage.getItem(LABELS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     return parsed && typeof parsed === "object" ? parsed : {};
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 function saveLabelOverride(key, { label, description }) {
   if (typeof window === "undefined" || !key) return;
   try {
     const all = readLabelOverrides();
-    all[key] = { label: label || all[key]?.label, description: description || all[key]?.description };
+    all[key] = {
+      label: label || all[key]?.label,
+      description: description || all[key]?.description,
+    };
     window.localStorage.setItem(LABELS_KEY, JSON.stringify(all));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
-export function getCategories() { return readFromStorage(); }
-export function getActiveCategories() { return getCategories().filter((c) => c.active !== false); }
+export function getCategories() {
+  return readFromStorage();
+}
+export function getActiveCategories() {
+  return getCategories().filter((c) => c.active !== false);
+}
 export function getPopularCategories() {
   return getCategories().filter((c) => c.active !== false && c.isPopular === true);
 }
@@ -262,7 +344,11 @@ export function getCategory(key) {
 }
 export function getCategoryById(id) {
   if (id == null) return null;
-  return getCategories().find((c) => c.id === id || String(c.id) === String(id)) || null;
+  return (
+    getCategories().find(
+      (c) => c.id === id || String(c.id) === String(id)
+    ) || null
+  );
 }
 export function getCategoryIdByKey(key) {
   const cat = getCategory(key);
@@ -291,7 +377,6 @@ export function getCategoryOptionLabel(option, lang = "sw") {
 export function initializeCategories(list) {
   const current = getCategories();
   if (current.length > 0) return current;
-
   const seed = Array.isArray(list) && list.length > 0 ? list : SEED_CATEGORIES;
   saveAll(seed);
   return seed;
@@ -320,7 +405,9 @@ async function tryApi(apiCall, { onSuccess, onFail, optimistic, previous }) {
 
 function toBackendPayload(category) {
   const existingExtra =
-    category.extra && typeof category.extra === "object" && !Array.isArray(category.extra)
+    category.extra &&
+    typeof category.extra === "object" &&
+    !Array.isArray(category.extra)
       ? category.extra
       : {};
 
@@ -341,31 +428,40 @@ function toBackendPayload(category) {
 }
 
 export async function addCategoryAsync(category) {
-  if (!category?.key) return { ok: false, error: new Error("key inahitajika") };
+  if (!category?.key)
+    return { ok: false, error: new Error("key inahitajika") };
   const current = getCategories();
   if (current.some((c) => c.key === category.key)) {
-    return { ok: false, error: new Error(`Category "${category.key}" ipo tayari`) };
+    return {
+      ok: false,
+      error: new Error(`Category "${category.key}" ipo tayari`),
+    };
   }
-  const optimistic = { imageUrl: null, isPopular: false, active: true, extra: [], ...category };
+  const optimistic = {
+    imageUrl: null,
+    isPopular: false,
+    active: true,
+    extra: [],
+    ordering: current.length,
+    ...category,
+  };
   saveLabelOverride(category.key, category);
   saveAll([...current, optimistic]);
 
-  return tryApi(
-    () => api.post("/categories/", toBackendPayload(category)),
-    {
-      optimistic, previous: current,
-      onSuccess: (raw) => {
-        const created = normalizeCategoryFromApi(raw);
-        if (created) {
-          saveAll([
-            ...current.filter((c) => c.key !== category.key),
-            { ...created, ...preserveExtras(optimistic, created) },
-          ]);
-        }
-      },
-      onFail: () => saveAll(current),
-    }
-  );
+  return tryApi(() => api.post("/categories/", toBackendPayload(category)), {
+    optimistic,
+    previous: current,
+    onSuccess: (raw) => {
+      const created = normalizeCategoryFromApi(raw);
+      if (created) {
+        saveAll([
+          ...current.filter((c) => c.key !== category.key),
+          { ...created, ...preserveExtras(optimistic, created) },
+        ]);
+      }
+    },
+    onFail: () => saveAll(current),
+  });
 }
 
 export async function updateCategoryAsync(key, patch) {
@@ -376,31 +472,31 @@ export async function updateCategoryAsync(key, patch) {
   if (patch.label || patch.description) saveLabelOverride(key, optimistic);
   saveAll(current.map((c) => (c.key === key ? optimistic : c)));
 
-  if (!target.id) return { ok: true, warning: "local_only", category: optimistic };
+  if (!target.id)
+    return { ok: true, warning: "local_only", category: optimistic };
 
-  // ⬇️ Tuma slug YA AWALI ili slug isibadilike (inazuia duplicate)
   const payload = {
     ...toBackendPayload(optimistic),
-    slug: target.slug,  // ← slug ya awali
+    slug: target.slug,
   };
 
-  return tryApi(
-    () => api.patch(`/categories/${target.id}/`, payload),
-    {
-      optimistic, previous: current,
-      onSuccess: (raw) => {
-        const updated = normalizeCategoryFromApi(raw);
-        if (updated) {
-          saveAll(
-            current.map((c) =>
-              c.key === key ? { ...updated, ...preserveExtras(optimistic, updated) } : c
-            )
-          );
-        }
-      },
-      onFail: () => saveAll(current),
-    }
-  );
+  return tryApi(() => api.patch(`/categories/${target.id}/`, payload), {
+    optimistic,
+    previous: current,
+    onSuccess: (raw) => {
+      const updated = normalizeCategoryFromApi(raw);
+      if (updated) {
+        saveAll(
+          current.map((c) =>
+            c.key === key
+              ? { ...updated, ...preserveExtras(optimistic, updated) }
+              : c
+          )
+        );
+      }
+    },
+    onFail: () => saveAll(current),
+  });
 }
 
 export async function removeCategoryAsync(key) {
@@ -410,10 +506,12 @@ export async function removeCategoryAsync(key) {
   saveAll(current.filter((c) => c.key !== key));
   if (!target.id) return { ok: true, warning: "local_only" };
 
-  return tryApi(
-    () => api.delete(`/categories/${target.id}/`),
-    { optimistic: null, previous: current, onSuccess: () => {}, onFail: () => saveAll(current) }
-  );
+  return tryApi(() => api.delete(`/categories/${target.id}/`), {
+    optimistic: null,
+    previous: current,
+    onSuccess: () => {},
+    onFail: () => saveAll(current),
+  });
 }
 
 export async function toggleCategoryActiveAsync(key) {
@@ -430,12 +528,52 @@ export async function updateCategoryImageAsync(key, imageUrl) {
   return updateCategoryAsync(key, { imageUrl });
 }
 
+// ══════════════════════════════════════════════════════════
+// REORDER — inatuma mpangilio mpya kwa backend
+// ══════════════════════════════════════════════════════════
+export async function reorderCategoriesAsync(newOrder) {
+  const order = (Array.isArray(newOrder) ? newOrder : []).map((item) =>
+    typeof item === "string" ? item : item.key
+  );
+  if (order.length === 0)
+    return { ok: false, error: new Error("order tupu") };
+
+  const current = getCategories();
+
+  // Optimistic: weka ordering kulingana na index kwenye `order`
+  const updated = current.map((c) => {
+    const idx = order.indexOf(c.key);
+    return idx >= 0 ? { ...c, ordering: idx } : c;
+  });
+
+  saveAll(updated);
+
+  try {
+    await categoriesApi.reorder(order);
+    return { ok: true };
+  } catch (err) {
+    if (err?.status === 404 || err?.status === 405) {
+      console.warn("[categoriesStore] /reorder/ haipo — local-only");
+      return { ok: true, warning: "local_only" };
+    }
+    saveAll(current);
+    return { ok: false, error: err };
+  }
+}
+
 export function addCategory(category) {
   const current = getCategories();
   if (current.some((c) => c.key === category.key)) {
     throw new Error(`Category "${category.key}" already exists`);
   }
-  const newCat = { imageUrl: null, isPopular: false, active: true, extra: [], ...category };
+  const newCat = {
+    imageUrl: null,
+    isPopular: false,
+    active: true,
+    extra: [],
+    ordering: current.length,
+    ...category,
+  };
   saveAll([...current, newCat]);
   return [...current, newCat];
 }
@@ -455,7 +593,9 @@ export function toggleCategoryActive(key) {
 }
 export function toggleCategoryPopular(key) {
   const current = getCategories();
-  const next = current.map((c) => (c.key === key ? { ...c, isPopular: !c.isPopular } : c));
+  const next = current.map((c) =>
+    c.key === key ? { ...c, isPopular: !c.isPopular } : c
+  );
   saveAll(next);
   return next;
 }
@@ -473,14 +613,19 @@ export function removeCategory(key, listingsCount = 0) {
   saveAll(next);
   return { success: true, categories: next };
 }
-export function updateCategoryImage(key, imageUrl) { return updateCategory(key, { imageUrl }); }
+export function updateCategoryImage(key, imageUrl) {
+  return updateCategory(key, { imageUrl });
+}
 export function hasCategoryImage(category) {
   return Boolean(category?.imageUrl && category.imageUrl.length > 0);
 }
 
 function toSlug(str) {
-  return String(str || "").trim().toLowerCase()
-    .replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  return String(str || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
 }
 
 function normalizeCategoryFromApi(raw) {
@@ -494,11 +639,17 @@ function normalizeCategoryFromApi(raw) {
   const seedDesc = SEED_DESCRIPTION_BY_KEY[seedKey];
 
   const extraData =
-    raw.extra && typeof raw.extra === "object" && !Array.isArray(raw.extra)
+    raw.extra &&
+    typeof raw.extra === "object" &&
+    !Array.isArray(raw.extra)
       ? raw.extra
       : {};
   const nameEn =
-    extraData.name_en || raw.name_en || override.label?.en || seedLabel?.en || name;
+    extraData.name_en ||
+    raw.name_en ||
+    override.label?.en ||
+    seedLabel?.en ||
+    name;
   const descEn =
     extraData.description_en ||
     raw.description_en ||
@@ -554,8 +705,6 @@ export async function hydrateCategoriesFromApi() {
       return { source: "seed", count: seeded.length };
     }
 
-    // ⬇️ DEDUPE kwa `key` — backend inaweza kurudisha slug mbili
-    //    zinazopata key moja (mfano "mashine" na "mashine-heavy-equipment")
     const seen = new Map();
     rawList.forEach((raw) => {
       const normalized = normalizeCategoryFromApi(raw);
@@ -567,9 +716,9 @@ export async function hydrateCategoriesFromApi() {
     const normalized = Array.from(seen.values());
     const apiKeys = new Set(normalized.map((c) => c.key));
 
-    const seedOnly = SEED_CATEGORIES
-      .filter((c) => !apiKeys.has(c.key))
-      .map((c) => ({ ...c, id: null }));
+    const seedOnly = SEED_CATEGORIES.filter((c) => !apiKeys.has(c.key)).map(
+      (c) => ({ ...c, id: null })
+    );
 
     const merged = [...normalized, ...seedOnly];
 
@@ -609,14 +758,15 @@ export function useActiveCategories() {
   return useCategories().filter((c) => c.active !== false);
 }
 export function usePopularCategories() {
-  return useCategories().filter((c) => c.active !== false && c.isPopular === true);
+  return useCategories().filter(
+    (c) => c.active !== false && c.isPopular === true
+  );
 }
 export function useCategory(key) {
   const list = useCategories();
   if (!key) return null;
   return list.find((c) => c.key === key) || null;
 }
-
 
 export function getSeedKeyFromSlug(slug) {
   if (!slug) return slug;

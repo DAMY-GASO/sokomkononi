@@ -210,6 +210,13 @@ a {
 .dark-surface h6 {
   color: #ffffff;
 }
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 /* ============================================================
    REDUCED MOTION — accessibility

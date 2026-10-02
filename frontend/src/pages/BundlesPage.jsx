@@ -2,6 +2,8 @@
 // BundlesPage.jsx
 // User anaona na kununua bundles/vifurushi vya huduma.
 // Bilingual kamili + mobile-responsive.
+// Types: listing, reservation, success, package, boost, leading,
+//        ads, premium
 // ============================================================
 
 import React, { useState, useRef } from "react";
@@ -17,12 +19,11 @@ import {
   Check,
   Sparkles,
   Wallet,
+  FileText,
+  Crown,
 } from "lucide-react";
 
-import {
-  COLORS,
-  formatTZS,
-} from "./dashboard/components/shared";
+import { COLORS, formatTZS } from "./dashboard/components/shared";
 import PaymentGateway from "./dashboard/components/PaymentGateway";
 import { useActiveBundles } from "../config/bundlesStore.js";
 import {
@@ -33,7 +34,7 @@ import { useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { api } from "../api/client.js";
 
-// Icon resolver
+// Icon resolver — lazima iwe na icons zote zinazotumika kwenye bundles
 const ICON_MAP = {
   ListChecks,
   Rocket,
@@ -43,6 +44,9 @@ const ICON_MAP = {
   Star,
   Package,
   Building2,
+  FileText,
+  Sparkles,
+  Crown,
 };
 
 // ============================================================
@@ -53,34 +57,47 @@ const CREDIT_LABELS = {
   leading: { sw: "Kuongoza", en: "Leading" },
   boost: { sw: "Kukuza", en: "Boost" },
   reservation: { sw: "Kuhifadhi", en: "Reservation" },
+  success: { sw: "Ripoti", en: "Reports" },
   ads: { sw: "Matangazo", en: "Ads" },
   premium: { sw: "Hadhi ya Juu", en: "Premium" },
 };
 
 // ============================================================
 // BILINGUAL — bundle type labels
+// Mpangilio: msingi → combo → mwonekano → combo ya mwonekano
 // ============================================================
 const TYPE_LABELS = {
   all: { sw: "Zote", en: "All" },
   listing: { sw: "Kuweka Mali", en: "Listings" },
-  leading: { sw: "Kuongoza", en: "Leading" },
-  boost: { sw: "Kukuza", en: "Boost" },
   reservation: { sw: "Kuhifadhi", en: "Reservation" },
+  success: { sw: "Ripoti", en: "Reports" },
+  package: { sw: "Vifurushi Maalum", en: "Packages" },
+  boost: { sw: "Kukuza", en: "Boost" },
+  leading: { sw: "Kuongoza", en: "Leading" },
   ads: { sw: "Matangazo", en: "Ads" },
   premium: { sw: "Hadhi ya Juu", en: "Premium" },
-  package: { sw: "Vifurushi", en: "Packages" },
 };
 
 function BundleCard({ bundle, lang, onBuy, owned }) {
   const Icon = ICON_MAP[bundle.icon] || Package;
   const t = (sw, en) => (lang === "sw" ? sw : en);
-  // Fallback chain: lugha iliyochaguliwa → lugha nyingine → neno la jumla
-  // kwa lugha iliyochaguliwa (sio Kiswahili daima).
   const other = lang === "sw" ? "en" : "sw";
   const name =
     bundle.name?.[lang] || bundle.name?.[other] || t("Kifurushi", "Bundle");
   const description =
     bundle.description?.[lang] || bundle.description?.[other] || "";
+
+  // Credits display — inaonyesha credits zote zilizomo kwenye bundle
+  const creditsList =
+    bundle.credits && typeof bundle.credits === "object"
+      ? Object.entries(bundle.credits)
+          .filter(([_, v]) => Number(v) > 0)
+          .map(([k, v]) => {
+            const label = CREDIT_LABELS[k];
+            const lbl = label ? label[lang] || label.sw : k;
+            return `${v}× ${lbl}`;
+          })
+      : [];
 
   return (
     <div
@@ -99,13 +116,27 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
       </div>
 
       <div className="min-w-0 w-full">
-        <h3 className="font-bold text-primary text-sm sm:text-base truncate">
+        <h3 className="font-bold text-primary text-sm sm:text-base">
           {name}
         </h3>
         <p className="text-[11px] sm:text-xs text-secondary mt-1 line-clamp-2">
           {description}
         </p>
       </div>
+
+      {/* Credits breakdown — kwa combo bundles */}
+      {creditsList.length > 0 && (
+        <div className="w-full flex flex-wrap justify-center gap-1.5">
+          {creditsList.map((c, i) => (
+            <span
+              key={i}
+              className="text-[10px] font-medium bg-[#F5F3EC] text-secondary px-2 py-0.5 rounded-full"
+            >
+              {c}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="flex items-baseline justify-center gap-1 flex-wrap">
         <span className="text-xl sm:text-2xl font-bold text-[#C1502E]">
@@ -350,8 +381,6 @@ export default function BundlesPage() {
                   if (!purchaseId) {
                     throw new Error("Backend did not return purchase id.");
                   }
-                  // Store for later activation (not strictly needed — the
-                  // backend pays for the purchase when the poll says SUCCESS)
                   lastPurchaseIdRef.current = purchaseId;
                   const paid = await api.post(
                     `/bundles/purchases/${purchaseId}/pay/`,

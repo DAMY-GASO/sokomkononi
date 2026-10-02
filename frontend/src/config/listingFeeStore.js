@@ -1,12 +1,13 @@
 // ============================================================
 // listingFeeStore.js — API-only via /api/listings/fee-rules/
+// Sasa ina: fee_mode (PERCENTAGE|FLAT), flat_fee, is_enabled.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import { listingFeeRulesApi } from "../api/listingFeeRules.js";
 import { getSeedKeyFromSlug, isKnownCategoryKey } from "./categoriesStore.js";
 
-const KEY = "sokomkononi_listing_fee_config_v1";
+const KEY = "sokomkononi_listing_fee_config_v2";
 const EV = "sokomkononi:listing-fee-config-updated";
 
 function read() {
@@ -35,7 +36,6 @@ export function getListingFeeConfigs() {
 export function getListingFeeConfig(key) {
   if (!key) return null;
   const target = getSeedKeyFromSlug(key);
-  // First try seed-key match, then exact key match
   return (
     read().find((c) => c.key === target) ||
     read().find((c) => c.key === key) ||
@@ -57,7 +57,7 @@ function toSlug(str) {
 }
 
 // ------------------------------------------------------------
-// Normalizer — maps backend slug to frontend seed key
+// Normalizer — sasa ina fee_mode, flat_fee, is_enabled
 // ------------------------------------------------------------
 function norm(raw) {
   if (!raw) return null;
@@ -68,12 +68,14 @@ function norm(raw) {
 
   return {
     id: raw.id,
-    key: seedKey,               // frontend key: "nyumba"
-    backendKey: rawSlug,        // original slug: "nyumba-majengo"
-    name: raw.name,             // raw name from the backend
-    orphan,                     // true if no matching category
-    rate: pct / 100,
+    key: seedKey,
+    backendKey: rawSlug,
+    name: raw.name,
+    orphan,
+    feeMode: raw.fee_mode || "PERCENTAGE",       // ⬅️ MPYA
     percentage: pct,
+    rate: pct / 100,
+    flatFee: Number(raw.flat_fee) || 0,          // ⬅️ MPYA
     min: Number(raw.min_price) || 0,
     max: raw.max_price != null ? Number(raw.max_price) : 999999999,
     isActive: raw.is_active !== false,
@@ -110,8 +112,12 @@ export async function updateListingFeeConfigAsync(key, patch) {
   }
   const apiPatch = {};
   if (patch.rate != null) apiPatch.percentage = patch.rate * 100;
+  if (patch.percentage != null) apiPatch.percentage = patch.percentage;
   if (patch.min != null) apiPatch.min_price = patch.min;
   if (patch.max != null) apiPatch.max_price = patch.max;
+  if (patch.flat_fee != null) apiPatch.flat_fee = patch.flat_fee;
+  if (patch.fee_mode != null) apiPatch.fee_mode = patch.fee_mode;
+  if (patch.is_active != null) apiPatch.is_active = patch.is_active;
   if (!Object.keys(apiPatch).length) return { ok: true, config: target };
   try {
     const raw = await listingFeeRulesApi.update(target.id, apiPatch);
@@ -123,16 +129,41 @@ export async function updateListingFeeConfigAsync(key, patch) {
   }
 }
 
+// ⬇️ MPYA — Update flat_fee
+export async function updateListingFeeFlatAsync(key, flatFee) {
+  const num = Number(flatFee);
+  if (!Number.isFinite(num) || num < 0) {
+    return { ok: false, error: new Error("flat_fee must be non-negative") };
+  }
+  return updateListingFeeConfigAsync(key, { flat_fee: num });
+}
+
+// ⬇️ MPYA — Update fee_mode
+export async function updateListingFeeModeAsync(key, mode) {
+  if (!["PERCENTAGE", "FLAT"].includes(mode)) {
+    return { ok: false, error: new Error("fee_mode must be PERCENTAGE or FLAT") };
+  }
+  return updateListingFeeConfigAsync(key, { fee_mode: mode });
+}
+
+// ⬇️ MPYA — Toggle is_active
+export async function toggleListingFeeActiveAsync(key) {
+  const target = getListingFeeConfig(key);
+  if (!target) return { ok: false, error: new Error("Fee config not found") };
+  return updateListingFeeConfigAsync(key, { is_active: !target.isActive });
+}
+
 export async function addFeeConfigAsync({
   name,
   percentage = 1.0,
   min_price = 10000,
   max_price = 100000,
+  flat_fee = 5000,
+  fee_mode = "PERCENTAGE",
   priority = 0,
 }) {
   if (!name) return { ok: false, error: new Error("name required") };
   const slug = toSlug(name);
-  // Dedupe on the *seed key*, not the raw slug
   const seedKey = getSeedKeyFromSlug(slug);
   if (hasFeeConfig(seedKey)) {
     return {
@@ -146,6 +177,8 @@ export async function addFeeConfigAsync({
       percentage,
       min_price,
       max_price,
+      flat_fee,
+      fee_mode,
       priority,
       is_active: true,
     });
@@ -169,7 +202,6 @@ export async function removeFeeConfigAsync(key) {
   }
 }
 
-/** Remove every orphaned fee rule (slug no longer matches any category). */
 export async function cleanupOrphanFeeConfigsAsync() {
   const orphans = read().filter((c) => c.orphan);
   if (orphans.length === 0) return { ok: true, removed: 0 };
@@ -177,7 +209,6 @@ export async function cleanupOrphanFeeConfigsAsync() {
     orphans.map((c) => listingFeeRulesApi.remove(c.id))
   );
   const succeeded = results.filter((r) => r.status === "fulfilled").length;
-  // Refresh from the backend so the store reflects the truth
   await hydrateListingFeeConfigsFromApi();
   return { ok: true, removed: succeeded, total: orphans.length };
 }

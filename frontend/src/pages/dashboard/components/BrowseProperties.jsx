@@ -115,7 +115,6 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
           isSold ? "border-gray-200 opacity-75" : "border-gray-100"
         }`}
       >
-        {/* Picha — aspect-square kwa list view pia */}
         <div className="w-full sm:w-48 aspect-square sm:self-start bg-[#F5F3EC] flex items-center justify-center flex-shrink-0 relative overflow-hidden">
           {cardImage ? (
             <img
@@ -217,7 +216,6 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
     );
   }
 
-  // Grid view — aspect-square kwa picha
   return (
     <Link
       to={`/mali/${property.id}`}
@@ -226,7 +224,6 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
       }`}
     >
       <div className="relative">
-        {/* aspect-square inafanya picha ifit sawa kwenye grid */}
         <div className="w-full aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
           {cardImage ? (
             <img
@@ -545,7 +542,10 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-export default function BrowseProperties({ lang = "sw" }) {
+export default function BrowseProperties({
+  lang = "sw",
+  excludeSellerId = null, // ⬅️ MPYA — seller hawezi kuona listings zake kwenye browse
+}) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid");
@@ -562,7 +562,15 @@ export default function BrowseProperties({ lang = "sw" }) {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 9;
 
-  const allProperties = usePublicListings();
+  const allPropertiesRaw = usePublicListings();
+
+  // ⬇️ MPYA: Chuja listings za seller mwenyewe
+  const allProperties = useMemo(() => {
+    if (!excludeSellerId) return allPropertiesRaw;
+    return allPropertiesRaw.filter(
+      (p) => String(p.sellerId) !== String(excludeSellerId)
+    );
+  }, [allPropertiesRaw, excludeSellerId]);
 
   const filteredProperties = useMemo(() => {
     let result = [...allProperties];
@@ -859,7 +867,6 @@ export default function BrowseProperties({ lang = "sw" }) {
 
             {paginatedProperties.length > 0 ? (
               <>
-                {/* GRID — 2 cols mobile, 3 sm, 4 lg kwa picha zinazolingana */}
                 <div
                   className={
                     viewMode === "grid"

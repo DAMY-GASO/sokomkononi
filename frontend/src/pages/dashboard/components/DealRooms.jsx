@@ -1,6 +1,8 @@
 // ============================================================
 // DealRooms.jsx — Vyumba vya Majadiliano
 // API-backed kwa transactions, na local fallback kama backend haipo.
+// ReservationPanel: flat fee + credit pekee (bundle imeondolewa).
+// Bundle purchase inafanyika kwenye BundlesPage.
 // ============================================================
 
 import React, { useState, useRef, useEffect } from "react";
@@ -26,6 +28,7 @@ import {
   ThumbsDown,
   PartyPopper,
   Paperclip,
+  Loader2,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS, timeAgo } from "./shared";
 import {
@@ -39,9 +42,14 @@ import {
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
+import {
+  checkCredit,
+  consumeCreditAsync,
+} from "../../../config/userCreditsStore.js";
+import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 
-// ⬇️ MPYA: Transaction lifecycle (API + fallback)
+// ⬇️ Transaction lifecycle (API + fallback)
 import {
   createTransactionAsync,
   createReservationAsync,
@@ -96,7 +104,6 @@ function txStatusToDealStatus(txStatus) {
 
 // ============================================================
 // API FALLBACK HELPER
-// Returns { ok, data, offline } — offline: true kama API haipo (404/501)
 // ============================================================
 async function callApiOrFallback(apiCall) {
   try {
@@ -108,7 +115,6 @@ async function callApiOrFallback(apiCall) {
       console.warn("[DealRooms] backend haipo — local fallback:", status);
       return { ok: false, error: err, offline: true };
     }
-    // Error nyingine
     return { ok: false, error: err, offline: false };
   }
 }
@@ -122,7 +128,6 @@ const FALLBACK_DEAL_STATUS = (lang, key) => ({
 });
 
 const getDealStatus = (lang) => ({
-  // Backend creates deals with OPEN / PENDING — map them explicitly
   open: {
     label: lang === "sw" ? "Wazi" : "Open",
     bg: "rgba(47,109,79,0.12)",
@@ -455,9 +460,9 @@ function PaymentProofPanel({ deal, onSubmit, lang }) {
     setSubmitting(true);
     try {
       await onSubmit({
-        file,               // real File — API needs multipart
+        file,
         fileName,
-        dataUrl: preview,   // kept for local preview only
+        dataUrl: preview,
         reference: reference.trim(),
         method,
       });
@@ -813,14 +818,17 @@ function OfferBubble({ amount, mine, lang }) {
 }
 
 // ============================================================
-// RESERVATION PANEL
+// RESERVATION PANEL — flat fee + credit pekee (bundle imeondolewa)
 // ============================================================
-function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
+function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
   const [step, setStep] = useState("choose");
   const [selected, setSelected] = useState(24);
   const [customHours, setCustomHours] = useState(96);
   const [method, setMethod] = useState(PAYMENT_METHODS[0]);
   const [paying, setPaying] = useState(false);
+  const [paymentMode, setPaymentMode] = useState("flat"); // "flat" | "credit"
+  const [error, setError] = useState("");
+
   const reservationRates = useReservationRates();
   const reservationOptions = reservationRates.filter((r) => r.hours != null);
 
@@ -831,10 +839,36 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
     (Number(customHours) >= CUSTOM_MIN_HOURS &&
       Number(customHours) <= CUSTOM_MAX_HOURS);
 
+  const creditInfo = checkCredit(user?.id, "reservation");
+  const hasCredit = creditInfo.hasCredit;
+  const reservationCreditRemaining = creditInfo.remaining || 0;
+
   const handlePay = async () => {
     if (!validCustom) return;
-    // Hand off to PaymentGateway — the parent will run the real FimiPay
-    // flow and only then mark the reservation as paid.
+
+    // Credit path
+    if (paymentMode === "credit") {
+      setPaying(true);
+      setError("");
+      try {
+        const res = await consumeCreditAsync(user.id, "reservation");
+        if (!res.success) {
+          setError(
+            lang === "sw"
+              ? "Hakuna reservation credit ya kutosha."
+              : "No reservation credit available."
+          );
+          setPaying(false);
+          return;
+        }
+        await onConfirm({ hours, fee: 0, method: "credits" });
+      } finally {
+        setPaying(false);
+      }
+      return;
+    }
+
+    // Flat
     setPaying(true);
     try {
       await onConfirm({ hours, fee, method });
@@ -948,6 +982,41 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
             </p>
           )}
 
+          {hasCredit && (
+            <div className="flex justify-center gap-2">
+              <button
+                onClick={() => setPaymentMode("flat")}
+                className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border transition-colors"
+                style={{
+                  background: paymentMode === "flat" ? COLORS.night : "white",
+                  color: paymentMode === "flat" ? COLORS.sand : COLORS.night,
+                  borderColor: paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
+                }}
+              >
+                {lang === "sw" ? "Lipa Fedha" : "Pay Cash"}
+              </button>
+              <button
+                onClick={() => setPaymentMode("credit")}
+                className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border transition-colors"
+                style={{
+                  background: paymentMode === "credit" ? COLORS.green : "white",
+                  color: paymentMode === "credit" ? "white" : COLORS.night,
+                  borderColor: paymentMode === "credit" ? COLORS.green : COLORS.sandLine,
+                }}
+              >
+                {lang === "sw"
+                  ? `Tumia Credit (${reservationCreditRemaining})`
+                  : `Use Credit (${reservationCreditRemaining})`}
+              </button>
+            </div>
+          )}
+
+          {error && (
+            <p style={{ color: COLORS.rust }} className="text-body-sm text-center">
+              {error}
+            </p>
+          )}
+
           <div className="flex items-center gap-2 pt-1">
             <button
               onClick={onCancel}
@@ -966,8 +1035,12 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
               className="flex-1 text-body-sm font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
             >
               {lang === "sw"
-                ? `Endelea — Lipa ${formatTZS(fee)}`
-                : `Continue — Pay ${formatTZS(fee)}`}
+                ? `Endelea — ${
+                    paymentMode === "credit" ? "Tumia Credit" : `Lipa ${formatTZS(fee)}`
+                  }`
+                : `Continue — ${
+                    paymentMode === "credit" ? "Use Credit" : `Pay ${formatTZS(fee)}`
+                  }`}
             </button>
           </div>
         </>
@@ -978,7 +1051,9 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
           <div className="flex flex-col items-center text-center gap-2">
             <CreditCard size={14} color={COLORS.night} />
             <p className="text-primary text-body-sm font-semibold">
-              {lang === "sw" ? "Lipa Reservation Fee" : "Pay Reservation Fee"}
+              {paymentMode === "credit"
+                ? (lang === "sw" ? "Tumia Credit" : "Use Credit")
+                : (lang === "sw" ? "Lipa Reservation Fee" : "Pay Reservation Fee")}
             </p>
           </div>
 
@@ -990,30 +1065,42 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
               {deal.listingTitle} · {formatHours(hours, lang)}
             </p>
             <p className="text-primary text-base font-bold">
-              {formatTZS(fee)}
+              {paymentMode === "credit"
+                ? (lang === "sw" ? "1 Reservation Credit" : "1 Reservation Credit")
+                : formatTZS(fee)}
             </p>
             <ShieldCheck size={20} color={COLORS.green} />
           </div>
 
-          <p className="text-secondary text-body-sm text-center">
-            {lang === "sw" ? "Chagua njia ya malipo" : "Choose payment method"}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {PAYMENT_METHODS.map((m) => (
-              <button
-                key={m}
-                onClick={() => setMethod(m)}
-                style={{
-                  borderColor: method === m ? COLORS.green : COLORS.sandLine,
-                  background: method === m ? "rgba(47,109,79,0.08)" : "white",
-                  color: COLORS.night,
-                }}
-                className="rounded-lg border px-2.5 py-2 text-body-sm font-medium text-center"
-              >
-                {m}
-              </button>
-            ))}
-          </div>
+          {paymentMode === "flat" && (
+            <>
+              <p className="text-secondary text-body-sm text-center">
+                {lang === "sw" ? "Chagua njia ya malipo" : "Choose payment method"}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {PAYMENT_METHODS.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMethod(m)}
+                    style={{
+                      borderColor: method === m ? COLORS.green : COLORS.sandLine,
+                      background: method === m ? "rgba(47,109,79,0.08)" : "white",
+                      color: COLORS.night,
+                    }}
+                    className="rounded-lg border px-2.5 py-2 text-body-sm font-medium text-center"
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {error && (
+            <p style={{ color: COLORS.rust }} className="text-body-sm text-center">
+              {error}
+            </p>
+          )}
 
           <div className="flex items-center gap-2 pt-1">
             <button
@@ -1030,20 +1117,18 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang }) {
               style={{ background: COLORS.green, color: "white" }}
               className="flex-1 flex items-center justify-center gap-2 text-body-sm font-semibold px-3 py-2 rounded-lg disabled:opacity-70"
             >
-              {paying
-                ? lang === "sw"
-                  ? "Inathibitisha malipo..."
-                  : "Confirming payment..."
-                : lang === "sw"
-                  ? `Thibitisha Malipo — ${formatTZS(fee)}`
-                  : `Confirm Payment — ${formatTZS(fee)}`}
+              {paying ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  {lang === "sw" ? "Inathibitisha..." : "Processing..."}
+                </>
+              ) : paymentMode === "credit" ? (
+                lang === "sw" ? "Tumia Credit" : "Use Credit"
+              ) : (
+                lang === "sw" ? `Thibitisha Malipo — ${formatTZS(fee)}` : `Confirm Payment — ${formatTZS(fee)}`
+              )}
             </button>
           </div>
-          <p className="text-muted text-body-sm text-center">
-            {lang === "sw"
-              ? "Kwa demo hii, malipo yanathibitishwa papo hapo. Kwenye uzalishaji itaunganishwa na gateway halisi ya M-Pesa/Mixx by Yas/Airtel Money."
-              : "In this demo, payments are confirmed instantly. In production this will connect to a real M-Pesa/Mixx by Yas/Airtel Money gateway."}
-          </p>
         </>
       )}
     </div>
@@ -1066,6 +1151,7 @@ function DealDetail({
   onProofConfirm,
   onProofReject,
   lang,
+  user,
 }) {
   const [text, setText] = useState("");
   const [offerOpen, setOfferOpen] = useState(false);
@@ -1332,6 +1418,7 @@ function DealDetail({
         <ReservationPanel
           deal={deal}
           lang={lang}
+          user={user}
           onCancel={() => setReserveOpen(false)}
           onConfirm={(details) => {
             setReserveOpen(false);
@@ -1542,9 +1629,7 @@ export default function DealRooms({
   const [mobileShowDetail, setMobileShowDetail] = useState(
     Boolean(initialDealId)
   );
-  // ⬇️ Track transactionId per deal (kwa API)
-  const [transactionIds, setTransactionIds] = useState({}); // { [dealId]: txId }
-  // ⬇️ Track offline mode (backend haipo)
+  const [transactionIds, setTransactionIds] = useState({});
   const [offlineMode, setOfflineMode] = useState(false);
 
   useEffect(() => {
@@ -1562,10 +1647,6 @@ export default function DealRooms({
     setMobileShowDetail(true);
   };
 
-  // ============================================================
-  // ENSURE TRANSACTION — unda au rejesha txId
-  // Inatuma API; kama 404, inaendelea local.
-  // ============================================================
   const ensureTransactionId = async (deal) => {
     let txId = transactionIds[deal.id] || deal.transactionId;
     if (txId) return txId;
@@ -1575,7 +1656,6 @@ export default function DealRooms({
     );
 
     if (res.offline) {
-      // Backend haipo — kaa local
       setOfflineMode(true);
       return null;
     }
@@ -1592,9 +1672,6 @@ export default function DealRooms({
     return txId;
   };
 
-  // ============================================================
-  // SEND MESSAGE — local (deal store)
-  // ============================================================
   const handleSendMessage = (id, text) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
@@ -1611,9 +1688,6 @@ export default function DealRooms({
     });
   };
 
-  // ============================================================
-  // SEND OFFER — local (deal store)
-  // ============================================================
   const handleSendOffer = (id, amount) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
@@ -1634,9 +1708,6 @@ export default function DealRooms({
     });
   };
 
-  // ============================================================
-  // RESPOND (accept/decline) — local (deal store)
-  // ============================================================
   const handleRespond = (id, newStatus) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
@@ -1662,17 +1733,14 @@ export default function DealRooms({
     });
   };
 
-  // ============================================================
-  // RESERVE CONFIRM — API + fallback
-  // ============================================================
+  // ⬇️ RESERVE CONFIRM — flat + credit pekee
   const handleReserveConfirm = async (id, { hours, fee, method }) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
 
-    // 1. Unda transaction
+    // Unda transaction (kama haipo)
     const txId = await ensureTransactionId(deal);
 
-    // 2. Reservation + Pay (kama API ipo)
     if (txId && !offlineMode) {
       const reserveRes = await callApiOrFallback(() =>
         createReservationAsync(txId, hours)
@@ -1687,8 +1755,14 @@ export default function DealRooms({
         return;
       }
 
+      // Credit vs flat
+      const payBody =
+        method === "credits"
+          ? { payment_reference: "credits" }
+          : { payment_method: method };
+
       const payRes = await callApiOrFallback(() =>
-        payReservationAsync(txId, method)
+        payReservationAsync(txId, method, payBody)
       );
       if (!payRes.offline && !payRes.ok) {
         alert(
@@ -1701,20 +1775,17 @@ export default function DealRooms({
       }
     }
 
-    // 3. Sasisha deal local
     const expiresAt = new Date(
       Date.now() + hours * 60 * 60 * 1000
     ).toISOString();
     const note =
-      lang === "sw"
-        ? `Reservation Deposit ya ${formatTZS(fee)} imelipwa (${method}) — muda: ${formatHours(
-            hours,
-            lang
-          )}. Inaisha ${new Date(expiresAt).toLocaleString("sw-TZ")}.`
-        : `Reservation Deposit of ${formatTZS(fee)} paid (${method}) — duration: ${formatHours(
-            hours,
-            lang
-          )}. Ends ${new Date(expiresAt).toLocaleString("en-US")}.`;
+      method === "credits"
+        ? lang === "sw"
+          ? `Reservation Deposit imelipwa kwa CREDITS — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(expiresAt).toLocaleString("sw-TZ")}.`
+          : `Reservation Deposit paid with CREDITS — duration: ${formatHours(hours, lang)}. Ends ${new Date(expiresAt).toLocaleString("en-US")}.`
+        : lang === "sw"
+          ? `Reservation Deposit ya ${formatTZS(fee)} imelipwa (${method}) — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(expiresAt).toLocaleString("sw-TZ")}.`
+          : `Reservation Deposit of ${formatTZS(fee)} paid (${method}) — duration: ${formatHours(hours, lang)}. Ends ${new Date(expiresAt).toLocaleString("en-US")}.`;
 
     updateDeal(id, {
       status: "reserved",
@@ -1737,15 +1808,11 @@ export default function DealRooms({
     onReservationPaid?.(deal, { hours, fee, method, expiresAt });
   };
 
-  // ============================================================
-  // INSPECTION RESOLVE — API + fallback
-  // ============================================================
   const handleInspectionResolve = async (id, outcome, note) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
     const txId = transactionIds[id] || deal.transactionId;
 
-    // REQUEST_NEGOTIATION → local (bila API)
     if (outcome === "REQUEST_NEGOTIATION") {
       const baseNote =
         lang === "sw"
@@ -1766,7 +1833,6 @@ export default function DealRooms({
       return;
     }
 
-    // Actions zingine zinahitaji API (kama ipo)
     if (txId && !offlineMode) {
       let apiRes;
       if (outcome === "READY_FOR_FINAL_PAYMENT") {
@@ -1789,7 +1855,6 @@ export default function DealRooms({
         );
       }
 
-      // Kama API imefanya kazi lakini kuna error ya kweli
       if (apiRes && !apiRes.offline && !apiRes.ok) {
         alert(
           apiRes.error?.message ||
@@ -1799,7 +1864,6 @@ export default function DealRooms({
       }
     }
 
-    // Sasisha deal local (kwa UI)
     const baseNote =
       {
         READY_FOR_FINAL_PAYMENT:
@@ -1850,9 +1914,6 @@ export default function DealRooms({
     }
   };
 
-  // ============================================================
-  // PROOF SUBMIT — API + fallback
-  // ============================================================
   const handleProofSubmit = async (id, proof) => {
   const deal = deals.find((d) => d.id === id);
   if (!deal) return;
@@ -1860,7 +1921,6 @@ export default function DealRooms({
 
   if (txId && !offlineMode) {
     try {
-      // The API expects multipart with the real File object.
       const apiRes = await uploadFinalPaymentAsync(txId, {
         finalPaymentProof: proof.file,
         finalPaymentReference: proof.reference,
@@ -1904,9 +1964,6 @@ export default function DealRooms({
     ],
   });
 };
-  // ============================================================
-  // PROOF CONFIRM — API + fallback
-  // ============================================================
   const handleProofConfirm = async (id) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
@@ -1951,9 +2008,6 @@ export default function DealRooms({
     });
   };
 
-  // ============================================================
-  // PROOF REJECT — API + fallback
-  // ============================================================
   const handleProofReject = async (id, reason) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
@@ -2006,7 +2060,6 @@ export default function DealRooms({
       }}
       className="w-full"
     >
-      {/* Header — centered */}
       <div className="p-4 sm:p-6 pb-0 text-center">
         <h1 className="h-title">
           {lang === "sw" ? "Vyumba vya Majadiliano" : "Deal Rooms"}
@@ -2060,6 +2113,7 @@ export default function DealRooms({
               deal={selectedDeal}
               side={side}
               lang={lang}
+              user={user}
               onBack={() => setMobileShowDetail(false)}
               onSendMessage={handleSendMessage}
               onSendOffer={handleSendOffer}

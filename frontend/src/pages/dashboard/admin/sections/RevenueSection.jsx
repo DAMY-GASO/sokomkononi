@@ -1,10 +1,12 @@
 // ============================================================
 // RevenueSection.jsx — fully backend-synced
-// All amounts editable, all endpoints wired to real backend.
+// Sasa ina: toggles za fee zote (listing, reservation, boost,
+//           leading, advertisement, success).
 // ============================================================
 import React, { useState } from "react";
 import {
-  Home, Clock, Rocket, Search, Smartphone, Plus, AlertTriangle, Pencil, Info, Loader2, RefreshCw, Trash2,
+  Home, Clock, Rocket, Search, Smartphone, Plus, AlertTriangle,
+  Pencil, Info, Loader2, RefreshCw, Trash2, Wallet, Power, PowerOff,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -12,20 +14,28 @@ import EditableAmount from "../components/Revenue/EditableAmount.jsx";
 import EditablePercent from "../components/Revenue/EditablePercent.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
-  useReservationRates, updateReservationRateAsync, hydrateReservationRatesFromApi,
+  useReservationFeeConfig,
+  updateReservationFeeAsync,
+  updateReservationDaysAsync,
+  toggleReservationFeeAsync,
+  hydrateReservationFeeFromApi,
 } from "../../../../config/feePolicy.js";
 import {
   useBoostPackages, updateBoostPackagePriceAsync, hydrateBoostPackagesFromApi,
 } from "../../../../config/boostPackagesStore.js";
 import {
-  useListingFeeConfigs, updateListingFeeConfigAsync, addFeeConfigAsync, hasFeeConfig,
-  hydrateListingFeeConfigsFromApi, removeFeeConfigAsync, cleanupOrphanFeeConfigsAsync,
+  useListingFeeConfigs, updateListingFeeConfigAsync, addFeeConfigAsync,
+  hasFeeConfig, hydrateListingFeeConfigsFromApi, removeFeeConfigAsync,
+  cleanupOrphanFeeConfigsAsync, updateListingFeeFlatAsync,
+  updateListingFeeModeAsync, toggleListingFeeActiveAsync,
 } from "../../../../config/listingFeeStore.js";
 import {
   useLeadingFeeConfig, updateLeadingFeePriceAsync, hydrateLeadingFeeFromApi,
+  toggleLeadingFeeAsync,
 } from "../../../../config/leadingFeeStore.js";
 import {
-  useAdvertisementFeeConfig, updateAdvertisementFeePriceAsync, hydrateAdvertisementFeeFromApi,
+  useAdvertisementFeeConfig, updateAdvertisementFeePriceAsync,
+  hydrateAdvertisementFeeFromApi, toggleAdvertisementFeeAsync,
 } from "../../../../config/advertisementFeeStore.js";
 import {
   useActiveCategories, getCategory, getCategoryIcon,
@@ -62,10 +72,30 @@ function EditHint({ lang, accentColor = COLORS.gold }) {
   );
 }
 
+// ⬇️ MPYA — Toggle Button
+function ToggleButton({ enabled, onToggle, disabled, lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+      style={{
+        background: enabled ? `${COLORS.green}15` : `${COLORS.rust}15`,
+        color: enabled ? COLORS.green : COLORS.rust,
+      }}
+    >
+      {enabled ? <Power size={11} /> : <PowerOff size={11} />}
+      {enabled ? t("Imezimwa", "Disable") : t("Imewashwa", "Enable")}
+    </button>
+  );
+}
+
 export default function RevenueSection() {
   const { lang } = useLanguage();
   const listingFeeConfigs = useListingFeeConfigs();
-  const reservationRates = useReservationRates();
+  const reservationFee = useReservationFeeConfig();
   const boostPackages = useBoostPackages();
   const leadingFee = useLeadingFeeConfig();
   const adFee = useAdvertisementFeeConfig();
@@ -90,7 +120,7 @@ export default function RevenueSection() {
     setError("");
     try {
       const results = await Promise.allSettled([
-        hydrateReservationRatesFromApi(),
+        hydrateReservationFeeFromApi(),
         hydrateBoostPackagesFromApi(),
         hydrateListingFeeConfigsFromApi(),
         hydrateLeadingFeeFromApi(),
@@ -140,10 +170,33 @@ export default function RevenueSection() {
 
   const flashSaved = () => showFlash(t("Imehifadhiwa", "Saved"));
 
-  // ── Listing Fee ─────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // LISTING FEE
+  // ═══════════════════════════════════════════════════════════
   const updateListingFeeRate = (key, rate) =>
     withBusy(`lf-rate-${key}`, async () => {
       const res = await updateListingFeeConfigAsync(key, { rate });
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const updateListingFeeFlat = (key, flatFee) =>
+    withBusy(`lf-flat-${key}`, async () => {
+      const res = await updateListingFeeFlatAsync(key, flatFee);
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const updateListingFeeMode = (key, mode) =>
+    withBusy(`lf-mode-${key}`, async () => {
+      const res = await updateListingFeeModeAsync(key, mode);
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const toggleListingFee = (key) =>
+    withBusy(`lf-toggle-${key}`, async () => {
+      const res = await toggleListingFeeActiveAsync(key);
       if (res.ok) flashSaved();
       return res;
     });
@@ -162,15 +215,33 @@ export default function RevenueSection() {
       return res;
     });
 
-  // ── Reservation ─────────────────────────────────────────
-  const updateReservationFee = (id, fee) =>
-    withBusy(`res-${id}`, async () => {
-      const res = await updateReservationRateAsync(id, fee);
+  // ═══════════════════════════════════════════════════════════
+  // RESERVATION — sasa singleton
+  // ═══════════════════════════════════════════════════════════
+  const updateReservationFlat = (fee) =>
+    withBusy("res-flat", async () => {
+      const res = await updateReservationFeeAsync(fee);
       if (res.ok) flashSaved();
       return res;
     });
 
-  // ── Boost ───────────────────────────────────────────────
+  const updateReservationDays = (days) =>
+    withBusy("res-days", async () => {
+      const res = await updateReservationDaysAsync(days);
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const toggleReservation = () =>
+    withBusy("res-toggle", async () => {
+      const res = await toggleReservationFeeAsync();
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  // ═══════════════════════════════════════════════════════════
+  // BOOST
+  // ═══════════════════════════════════════════════════════════
   const updateBoostPrice = (key, price) =>
     withBusy(`boost-${key}`, async () => {
       const res = await updateBoostPackagePriceAsync(key, price);
@@ -178,7 +249,9 @@ export default function RevenueSection() {
       return res;
     });
 
-  // ── Leading ─────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // LEADING
+  // ═══════════════════════════════════════════════════════════
   const updateLeadingPrice = (price) =>
     withBusy("leading", async () => {
       const res = await updateLeadingFeePriceAsync(price);
@@ -186,7 +259,16 @@ export default function RevenueSection() {
       return res;
     });
 
-  // ── Advertisement ───────────────────────────────────────
+  const toggleLeading = () =>
+    withBusy("leading-toggle", async () => {
+      const res = await toggleLeadingFeeAsync();
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  // ═══════════════════════════════════════════════════════════
+  // ADVERTISEMENT
+  // ═══════════════════════════════════════════════════════════
   const updateAdvertisementPrice = (price) =>
     withBusy("advertisement", async () => {
       const res = await updateAdvertisementFeePriceAsync(price);
@@ -194,8 +276,14 @@ export default function RevenueSection() {
       return res;
     });
 
-  // A category is "missing" only when NO fee rule exists for its seed key.
-  // We dedupe against `hasFeeConfig` which already normalizes slugs.
+  const toggleAdvertisement = () =>
+    withBusy("advertisement-toggle", async () => {
+      const res = await toggleAdvertisementFeeAsync();
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  // ── Fee config management ───────────────────────────────
   const missingFeeCategories = activeCategories.filter(
     (c) => !hasFeeConfig(c.key)
   );
@@ -208,6 +296,8 @@ export default function RevenueSection() {
         percentage: 1.0,
         min_price: 10000,
         max_price: 100000,
+        flat_fee: 5000,
+        fee_mode: "PERCENTAGE",
         priority: 0,
       });
       if (res.ok) {
@@ -221,16 +311,11 @@ export default function RevenueSection() {
       return res;
     });
 
-  // ============================================================
-  // Cleanup orphan fee rules
-  // ============================================================
   const orphanCount = listingFeeConfigs.filter((c) => c.orphan).length;
+
   const handleCleanupOrphans = async () => {
     const orphans = listingFeeConfigs.filter((c) => c.orphan);
     if (orphans.length === 0) return;
-    // Show the actual slugs before deleting so an admin can't nuke a
-    // rule that belongs to a category the frontend simply hasn't been
-    // taught about yet.
     const preview = orphans
       .map((c) => `  • ${c.backendKey || c.key} — ${c.name || "?"}`)
       .join("\n");
@@ -271,12 +356,7 @@ export default function RevenueSection() {
     withBusy(`lf-del-${config.id}`, async () => {
       const res = await removeFeeConfigAsync(config.key);
       if (res.ok) {
-        showFlash(
-          t(
-            `Fee rule imefutwa.`,
-            `Fee rule deleted.`
-          )
-        );
+        showFlash(t(`Fee rule imefutwa.`, `Fee rule deleted.`));
       }
       return res;
     });
@@ -287,8 +367,8 @@ export default function RevenueSection() {
       <SectionHeader
         title={t("Mapato & Fedha", "Revenue & Financial Settings")}
         subtitle={t(
-          "Vyanzo vyote 5 vya mapato — bofya kiasi kubadilisha",
-          "All 5 revenue streams — click any amount to edit"
+          "Vyanzo vyote vya mapato — bofya kiasi kubadilisha, tumia toggle kuwasha/kuzima",
+          "All revenue streams — click any amount to edit, use toggle to on/off"
         )}
       />
 
@@ -304,10 +384,6 @@ export default function RevenueSection() {
               color: COLORS.rust,
               background: "white",
             }}
-            title={t(
-              `Futa fee rules ${orphanCount} ambazo hazina category`,
-              `Delete ${orphanCount} orphan fee rules`
-            )}
           >
             <Trash2 size={13} />
             {t(
@@ -345,10 +421,7 @@ export default function RevenueSection() {
           {flash && (
             <div
               style={{
-                background:
-                  flash.type === "error"
-                    ? `${COLORS.rust}15`
-                    : `${COLORS.green}15`,
+                background: flash.type === "error" ? `${COLORS.rust}15` : `${COLORS.green}15`,
                 color: flash.type === "error" ? COLORS.rust : COLORS.green,
               }}
               className="text-xs font-semibold px-3 py-2 rounded-lg"
@@ -388,12 +461,6 @@ export default function RevenueSection() {
                     `Categories Without Fee Config (${missingFeeCategories.length})`
                   )}
                 </p>
-                <p className="text-xs text-secondary mt-0.5">
-                  {t(
-                    'Bofya "Ongeza Fee" kwa kila moja ili wauzaji waweze kuunda listing.',
-                    'Click "Add Fee" for each so sellers can create listings.'
-                  )}
-                </p>
               </div>
             </div>
             <div className="flex flex-col gap-2">
@@ -423,12 +490,8 @@ export default function RevenueSection() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-primary truncate">
-                        {catLabel}
-                      </p>
-                      <p className="text-[11px] text-muted font-mono truncate">
-                        {cat.key}
-                      </p>
+                      <p className="text-sm font-semibold text-primary truncate">{catLabel}</p>
+                      <p className="text-[11px] text-muted font-mono truncate">{cat.key}</p>
                     </div>
                     <button
                       onClick={() => handleAddFeeConfig(cat)}
@@ -461,19 +524,13 @@ export default function RevenueSection() {
                 {t("Ada ya Kuchapisha", "Listing Fee")}
               </p>
               <p className="text-xs text-secondary mt-0.5">
-                {t(
-                  "Asilimia ya bei ya mali kwa category",
-                  "Percentage of property price per category"
-                )}
+                {t("Kwa category — flat au percentage", "Per category — flat or percentage")}
               </p>
             </div>
           </div>
           <EditHint lang={lang} accentColor={COLORS.gold} />
           <div className="divide-y divide-gray-100">
             {listingFeeConfigs.map((c) => {
-              // c.key is now the seed key ("nyumba") — getCategory will
-              // always resolve for known categories. Fall back to the raw
-              // backendKey for orphans so admins can still see what to delete.
               const category = getCategory(c.key);
               const catLabel =
                 category?.label?.[lang] ||
@@ -483,12 +540,13 @@ export default function RevenueSection() {
                 c.key;
               const isOrphan = !!c.orphan;
               const isDeleting = !!busy[`lf-del-${c.id}`];
+              const isToggling = !!busy[`lf-toggle-${c.key}`];
+              const isModeBusy = !!busy[`lf-mode-${c.key}`];
+              const isFlat = c.feeMode === "FLAT";
               return (
                 <div key={c.id ?? c.key} className="py-3">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <p className="text-sm font-medium text-primary">
-                      {catLabel}
-                    </p>
+                    <p className="text-sm font-medium text-primary">{catLabel}</p>
                     {isOrphan && (
                       <span
                         style={{
@@ -496,10 +554,6 @@ export default function RevenueSection() {
                           color: COLORS.rust,
                         }}
                         className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                        title={t(
-                          `Haifanani na category yoyote: "${c.backendKey}"`,
-                          `Does not match any category: "${c.backendKey}"`
-                        )}
                       >
                         {t("BILA CATEGORY", "ORPHAN")}
                       </span>
@@ -509,55 +563,103 @@ export default function RevenueSection() {
                         ({c.backendKey})
                       </span>
                     )}
+                    <div className="ml-auto flex items-center gap-1.5">
+                      <ToggleButton
+                        enabled={c.isActive}
+                        onToggle={() => toggleListingFee(c.key)}
+                        disabled={isToggling || busy.saving}
+                        lang={lang}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteFeeConfig(c)}
+                        disabled={isDeleting || busy.saving}
+                        className="p-1.5 text-muted hover:text-[#C1502E] rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                      </button>
+                    </div>
+                  </div>
+                  {/* Fee Mode Selector */}
+                  <div className="flex gap-1.5 mb-2">
                     <button
                       type="button"
-                      onClick={() => handleDeleteFeeConfig(c)}
-                      disabled={isDeleting || busy.saving}
-                      className="ml-auto p-1.5 text-muted hover:text-[#C1502E] rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
-                      title={t("Futa fee rule", "Delete fee rule")}
-                      aria-label={t("Futa", "Delete")}
+                      onClick={() => updateListingFeeMode(c.key, "PERCENTAGE")}
+                      disabled={isModeBusy || isFlat === false}
+                      className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
+                      style={{
+                        background: !isFlat ? COLORS.gold : "white",
+                        color: !isFlat ? COLORS.night : "var(--text-secondary)",
+                        borderColor: COLORS.sandLine,
+                      }}
                     >
-                      {isDeleting ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : (
-                        <Trash2 size={12} />
-                      )}
+                      {t("Asilimia (%)", "Percentage (%)")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateListingFeeMode(c.key, "FLAT")}
+                      disabled={isModeBusy || isFlat === true}
+                      className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
+                      style={{
+                        background: isFlat ? COLORS.gold : "white",
+                        color: isFlat ? COLORS.night : "var(--text-secondary)",
+                        borderColor: COLORS.sandLine,
+                      }}
+                    >
+                      {t("Flat (TZS)", "Flat (TZS)")}
                     </button>
                   </div>
+                  {/* Fields */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-                    <div className="flex flex-col items-start min-w-0">
-                      <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                        {t("Kiwango", "Rate")}
-                      </span>
-                      <div className="w-full min-w-0">
-                        <EditablePercent
-                          value={c.rate}
-                          onSave={(v) => updateListingFeeRate(c.key, v)}
-                        />
+                    {isFlat ? (
+                      <div className="flex flex-col items-start min-w-0 sm:col-span-3">
+                        <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                          {t("Flat Fee (TZS)", "Flat Fee (TZS)")}
+                        </span>
+                        <div className="w-full min-w-0">
+                          <EditableAmount
+                            value={c.flatFee}
+                            onSave={(v) => updateListingFeeFlat(c.key, v)}
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex flex-col items-start min-w-0">
-                      <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                        {t("Chini", "Min")}
-                      </span>
-                      <div className="w-full min-w-0">
-                        <EditableAmount
-                          value={c.min}
-                          onSave={(v) => updateListingFeeMin(c.key, v)}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-start min-w-0">
-                      <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                        {t("Juu", "Max")}
-                      </span>
-                      <div className="w-full min-w-0">
-                        <EditableAmount
-                          value={c.max}
-                          onSave={(v) => updateListingFeeMax(c.key, v)}
-                        />
-                      </div>
-                    </div>
+                    ) : (
+                      <>
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                            {t("Kiwango", "Rate")}
+                          </span>
+                          <div className="w-full min-w-0">
+                            <EditablePercent
+                              value={c.rate}
+                              onSave={(v) => updateListingFeeRate(c.key, v)}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                            {t("Chini", "Min")}
+                          </span>
+                          <div className="w-full min-w-0">
+                            <EditableAmount
+                              value={c.min}
+                              onSave={(v) => updateListingFeeMin(c.key, v)}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                            {t("Juu", "Max")}
+                          </span>
+                          <div className="w-full min-w-0">
+                            <EditableAmount
+                              value={c.max}
+                              onSave={(v) => updateListingFeeMax(c.key, v)}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -565,7 +667,7 @@ export default function RevenueSection() {
           </div>
         </RevenueCard>
 
-        {/* 2. RESERVATION */}
+        {/* 2. RESERVATION — Singleton */}
         <RevenueCard accentColor={COLORS.green}>
           <div className="flex items-center gap-3 mb-1">
             <div
@@ -574,41 +676,45 @@ export default function RevenueSection() {
             >
               <Clock size={18} color={COLORS.green} />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-primary">
                 {t("Ada ya Reservation", "Reservation Fee")}
               </p>
               <p className="text-xs text-secondary mt-0.5">
-                {t("100% mapato ya SokoMkononi", "100% SokoMkononi revenue")}
+                {t("Flat fee kwa mfumo wote", "Flat fee system-wide")}
               </p>
             </div>
+            <ToggleButton
+              enabled={reservationFee.is_enabled}
+              onToggle={toggleReservation}
+              disabled={!!busy["res-toggle"]}
+              lang={lang}
+            />
           </div>
           <EditHint lang={lang} accentColor={COLORS.green} />
-          <div className="divide-y divide-gray-100">
-            {reservationRates.map((r) => (
-              <div
-                key={r.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2.5"
-              >
-                <span className="text-sm text-secondary min-w-0 truncate">
-                  {getLocalized(r.label, lang) || r.id}
-                </span>
-                <div className="w-full sm:w-40 shrink-0">
-                  <EditableAmount
-                    value={r.fee}
-                    onSave={(v) => updateReservationFee(r.id, v)}
-                  />
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col items-start min-w-0">
+              <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                {t("Flat Fee (TZS)", "Flat Fee (TZS)")}
+              </span>
+              <div className="w-full min-w-0">
+                <EditableAmount
+                  value={reservationFee.flat_fee}
+                  onSave={updateReservationFlat}
+                />
               </div>
-            ))}
-            {reservationRates.length === 0 && (
-              <p className="text-xs text-muted py-3 text-center">
-                {t(
-                  "Hakuna rates zilizopakiwa. Bofya 'Sasisha kutoka Backend'.",
-                  "No rates loaded. Click 'Refresh from Backend'."
-                )}
-              </p>
-            )}
+            </div>
+            <div className="flex flex-col items-start min-w-0">
+              <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                {t("Siku", "Days")}
+              </span>
+              <div className="w-full min-w-0">
+                <EditableAmount
+                  value={reservationFee.days}
+                  onSave={updateReservationDays}
+                />
+              </div>
+            </div>
           </div>
         </RevenueCard>
 
@@ -665,19 +771,27 @@ export default function RevenueSection() {
         {/* 4 & 5. LEADING + ADVERTISEMENT */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <RevenueCard accentColor={COLORS.rust}>
-            <div
-              style={{ background: `${COLORS.rust}15` }}
-              className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-            >
-              <Search size={18} color={COLORS.rust} />
-            </div>
-            <div className="mb-3">
-              <p className="text-sm font-semibold text-primary">
-                {getLocalized(leadingFee.label, lang) || "Leading Fee"}
-              </p>
-              <p className="text-xs text-secondary mt-0.5">
-                {getLocalized(leadingFee.desc, lang) || ""}
-              </p>
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                style={{ background: `${COLORS.rust}15` }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              >
+                <Search size={18} color={COLORS.rust} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-primary">
+                  {getLocalized(leadingFee.label, lang) || "Leading Fee"}
+                </p>
+                <p className="text-xs text-secondary mt-0.5">
+                  {getLocalized(leadingFee.desc, lang) || ""}
+                </p>
+              </div>
+              <ToggleButton
+                enabled={leadingFee.is_enabled}
+                onToggle={toggleLeading}
+                disabled={!!busy["leading-toggle"]}
+                lang={lang}
+              />
             </div>
             <EditHint lang={lang} accentColor={COLORS.rust} />
             <EditableAmount value={leadingFee.price} onSave={updateLeadingPrice} />
@@ -687,19 +801,27 @@ export default function RevenueSection() {
           </RevenueCard>
 
           <RevenueCard accentColor={COLORS.rust}>
-            <div
-              style={{ background: `${COLORS.rust}15` }}
-              className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-            >
-              <Smartphone size={18} color={COLORS.rust} />
-            </div>
-            <div className="mb-3">
-              <p className="text-sm font-semibold text-primary">
-                {getLocalized(adFee.label, lang) || "Advertisement Fee"}
-              </p>
-              <p className="text-xs text-secondary mt-0.5">
-                {getLocalized(adFee.desc, lang) || ""}
-              </p>
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                style={{ background: `${COLORS.rust}15` }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              >
+                <Smartphone size={18} color={COLORS.rust} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-primary">
+                  {getLocalized(adFee.label, lang) || "Advertisement Fee"}
+                </p>
+                <p className="text-xs text-secondary mt-0.5">
+                  {getLocalized(adFee.desc, lang) || ""}
+                </p>
+              </div>
+              <ToggleButton
+                enabled={adFee.is_enabled}
+                onToggle={toggleAdvertisement}
+                disabled={!!busy["advertisement-toggle"]}
+                lang={lang}
+              />
             </div>
             <EditHint lang={lang} accentColor={COLORS.rust} />
             <EditableAmount value={adFee.price} onSave={updateAdvertisementPrice} />
@@ -716,8 +838,8 @@ export default function RevenueSection() {
           <Info size={16} color={COLORS.gold} className="shrink-0 mt-0.5" />
           <p className="text-xs text-secondary leading-relaxed">
             {t(
-              "Mabadiliko yote yanahifadhiwa papo hapo kwenye backend. Fungua Console (F12) kuona kila ombi la PATCH/POST likitoka.",
-              "All changes save to the backend instantly. Open Console (F12) to see every PATCH/POST request."
+              "Mabadiliko yote yanahifadhiwa papo hapo kwenye backend. Tumia toggle kuwasha/kuzima kila ada.",
+              "All changes save to the backend instantly. Use toggle to enable/disable each fee."
             )}
           </p>
         </div>

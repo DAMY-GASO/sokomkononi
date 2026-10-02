@@ -1,17 +1,18 @@
 // ============================================================
 // advertisementFeeStore.js — Advertisement Fee (API-backed)
-// Backend: GET/PATCH/POST /api/advertisement-fees/
-//   Spec: PATCH/POST on collection — NO /{id}/ subpath.
+// Backend: GET/PATCH /api/advertisement-fees/
+//          POST      /api/advertisement-fees/toggle/
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const KEY = "sokomkononi_advertisement_fee_config_v2";
+const KEY = "sokomkononi_advertisement_fee_config_v3";
 const EV = "sokomkononi:advertisement-fee-config-updated";
 
 const FALLBACK = {
   price: 0,
   days: 7,
+  is_enabled: true,
   label: { sw: "Ada ya Matangazo", en: "Advertisement Fee" },
   desc: { sw: "", en: "" },
 };
@@ -41,8 +42,10 @@ function norm(raw) {
     backendId: raw.id,
     price: Number(raw.price) || 0,
     days: Number(raw.days) || 7,
+    is_enabled: raw.is_enabled !== false,
     label: normalizeLabel(raw.label, FALLBACK.label),
     desc: normalizeLabel(raw.desc, FALLBACK.desc),
+    updated_at: raw.updated_at || null,
   };
 }
 
@@ -50,7 +53,7 @@ export function getAdvertisementFeeConfig() { return read(); }
 
 export async function hydrateAdvertisementFeeFromApi() {
   try {
-    const d = await api.get("/advertisement-fees/?page_size=100");
+    const d = await api.get("/advertisement-fees/");
     const row = Array.isArray(d) ? d[0] : (d?.results?.[0] ?? d);
     const normalized = norm(row);
     if (normalized) {
@@ -70,27 +73,44 @@ export async function updateAdvertisementFeePriceAsync(price) {
     return { ok: false, error: new Error("price must be non-negative") };
   }
   const cur = getAdvertisementFeeConfig();
+  write({ ...cur, price: num });  // Optimistic
 
-  // Backend spec: PATCH or POST to /advertisement-fees/ (collection).
   try {
-    console.info(`[advertisementFeeStore] PATCH /advertisement-fees/ price=${num}`);
     const raw = await api.patch("/advertisement-fees/", { price: num });
     const updated = norm(raw) || { ...cur, price: num };
     write(updated);
     return { ok: true, config: updated };
   } catch (errPatch) {
     if (errPatch?.status && errPatch.status !== 404 && errPatch.status !== 405) {
+      write(cur);  // Rollback
       return { ok: false, error: errPatch };
     }
     try {
-      console.info(`[advertisementFeeStore] POST /advertisement-fees/ price=${num}`);
       const raw = await api.post("/advertisement-fees/", { price: num });
       const updated = norm(raw) || { ...cur, price: num };
       write(updated);
       return { ok: true, config: updated };
     } catch (errPost) {
+      write(cur);
       return { ok: false, error: errPost || errPatch };
     }
+  }
+}
+
+// ⬇️ MPYA — Toggle
+export async function toggleAdvertisementFeeAsync() {
+  const cur = getAdvertisementFeeConfig();
+  const newState = !cur.is_enabled;
+  write({ ...cur, is_enabled: newState });  // Optimistic
+
+  try {
+    const raw = await api.post("/advertisement-fees/toggle/", {});
+    const updated = { ...cur, is_enabled: raw?.is_enabled ?? newState };
+    write(updated);
+    return { ok: true, is_enabled: updated.is_enabled };
+  } catch (err) {
+    write(cur);  // Rollback
+    return { ok: false, error: err };
   }
 }
 
@@ -110,7 +130,7 @@ export function useAdvertisementFeeConfig() {
 }
 
 // Legacy
-export const SEED_ADVERTISEMENT_FEE_CONFIG = { price: 0, days: 0, label: { sw: "", en: "" }, desc: { sw: "", en: "" } };
+export const SEED_ADVERTISEMENT_FEE_CONFIG = { price: 0, days: 0, is_enabled: true, label: { sw: "", en: "" }, desc: { sw: "", en: "" } };
 export function saveAdvertisementFeeConfig() {}
 export function updateAdvertisementFeePrice() {}
 export async function updateAdvertisementFeeAsync() { return { ok: false }; }

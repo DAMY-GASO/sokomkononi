@@ -1,15 +1,17 @@
 // ============================================================
 // CategoriesPanel.jsx
-// Categories management — Add/Edit/Disable/Delete.
+// Categories management — Add/Edit/Disable/Delete + REORDER.
 // Bilingual + mobile-responsive + image support + Async actions.
 // ============================================================
 
 import React, { useState } from "react";
-import { ShoppingBag, Plus, Trash2, Loader2 } from "lucide-react";
+import {
+  ShoppingBag, Plus, Trash2, Loader2,
+  ChevronUp, ChevronDown,
+} from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import CategoryForm from "./CategoryForm.jsx";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
-// ⬇️ MABADILIKO: tumia async variants
 import {
   useCategories,
   addCategoryAsync,
@@ -18,6 +20,7 @@ import {
   toggleCategoryActiveAsync,
   toggleCategoryPopularAsync,
   getCategoryIcon,
+  reorderCategoriesAsync,
 } from "../../../../../config/categoriesStore.js";
 import { useListings } from "../../../../../config/listingsStore.js";
 
@@ -28,9 +31,10 @@ export default function CategoriesPanel() {
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
   const [flash, setFlash] = useState(null);
-  // ⬇️ MPYA: busy + error
-  const [busy, setBusy] = useState({}); // { [key]: true, saving: true }
+  const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
+  // ⬇️ MPYA: reorder
+  const [reordering, setReordering] = useState(false);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -42,12 +46,46 @@ export default function CategoriesPanel() {
   const listingsCountFor = (key) =>
     listings.filter((l) => l.category === key).length;
 
-  // ============================================================
+  // ══════════════════════════════════════════════════════════
+  // REORDER — inapanga categories
+  // ══════════════════════════════════════════════════════════
+  const sortedCategories = [...categories].sort(
+    (a, b) => (a.ordering ?? 999) - (b.ordering ?? 999)
+  );
+
+  const handleMove = async (key, direction) => {
+    if (reordering) return;
+    const currentIdx = sortedCategories.findIndex((c) => c.key === key);
+    if (currentIdx < 0) return;
+
+    const newIdx = direction === "up" ? currentIdx - 1 : currentIdx + 1;
+    if (newIdx < 0 || newIdx >= sortedCategories.length) return;
+
+    const newOrder = [...sortedCategories];
+    const [moved] = newOrder.splice(currentIdx, 1);
+    newOrder.splice(newIdx, 0, moved);
+
+    setReordering(true);
+    setError("");
+
+    const res = await reorderCategoriesAsync(newOrder);
+
+    if (res.ok) {
+      showFlash(t("Mpangilio umebadilishwa.", "Order updated."));
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kupanga upya.", "Failed to reorder.")
+      );
+    }
+    setReordering(false);
+  };
+
+  // ══════════════════════════════════════════════════════════
   // HANDLERS — async + rollback
-  // ============================================================
+  // ══════════════════════════════════════════════════════════
   const handleAdd = async (newCat) => {
     if (busy.saving) return;
-
     setBusy((b) => ({ ...b, saving: true }));
     setError("");
 
@@ -82,7 +120,6 @@ export default function CategoriesPanel() {
 
   const handleUpdate = async (key, patch) => {
     if (busy.saving) return;
-
     setBusy((b) => ({ ...b, saving: true }));
     setError("");
 
@@ -109,7 +146,6 @@ export default function CategoriesPanel() {
 
   const handleToggleActive = async (key) => {
     if (busy[`active-${key}`]) return;
-
     setBusy((b) => ({ ...b, [`active-${key}`]: true }));
     setError("");
 
@@ -131,7 +167,6 @@ export default function CategoriesPanel() {
 
   const handleTogglePopular = async (key) => {
     if (busy[`popular-${key}`]) return;
-
     setBusy((b) => ({ ...b, [`popular-${key}`]: true }));
     setError("");
 
@@ -172,7 +207,6 @@ export default function CategoriesPanel() {
       return;
 
     if (busy[`delete-${key}`]) return;
-
     setBusy((b) => ({ ...b, [`delete-${key}`]: true }));
     setError("");
 
@@ -213,8 +247,8 @@ export default function CategoriesPanel() {
             </p>
             <p className="text-xs text-secondary">
               {lang === "sw"
-                ? "Ongeza, hariri, zima, au futa categories"
-                : "Add, edit, disable, or delete categories"}
+                ? "Ongeza, hariri, panga, au futa categories"
+                : "Add, edit, reorder, or delete categories"}
             </p>
           </div>
         </div>
@@ -235,10 +269,7 @@ export default function CategoriesPanel() {
       {/* Error banner */}
       {error && (
         <div
-          style={{
-            background: "rgba(193,80,46,0.1)",
-            color: COLORS.rust,
-          }}
+          style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
           className="text-xs font-semibold px-3 py-2 rounded-lg"
         >
           {error}
@@ -274,7 +305,7 @@ export default function CategoriesPanel() {
 
       {/* Categories list */}
       <div className="flex flex-col gap-2">
-        {categories.map((cat) => {
+        {sortedCategories.map((cat, idx) => {
           const count = listingsCountFor(cat.key);
           const Icon = getCategoryIcon(cat.iconKey);
           const isEditing = editing === cat.key;
@@ -284,7 +315,14 @@ export default function CategoriesPanel() {
           const isTogglingPopular = !!busy[`popular-${cat.key}`];
           const isDeleting = !!busy[`delete-${cat.key}`];
           const isAnyBusy =
-            isTogglingActive || isTogglingPopular || isDeleting || busy.saving;
+            isTogglingActive ||
+            isTogglingPopular ||
+            isDeleting ||
+            busy.saving ||
+            reordering;
+
+          const isFirst = idx === 0;
+          const isLast = idx === sortedCategories.length - 1;
 
           return (
             <div
@@ -292,9 +330,30 @@ export default function CategoriesPanel() {
               style={{ borderColor: COLORS.sandLine }}
               className="border rounded-lg overflow-hidden"
             >
-              {/* Main row */}
               <div className="p-3 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-                {/* Top: Photo/Icon + Info */}
+                {/* ⬇️ MPYA: Reorder buttons */}
+                <div className="flex sm:flex-col gap-1 shrink-0">
+                  <button
+                    onClick={() => handleMove(cat.key, "up")}
+                    disabled={isAnyBusy || isFirst}
+                    className="w-7 h-7 rounded-md border flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ borderColor: COLORS.sandLine }}
+                    title={lang === "sw" ? "Pandisha juu" : "Move up"}
+                  >
+                    <ChevronUp size={12} />
+                  </button>
+                  <button
+                    onClick={() => handleMove(cat.key, "down")}
+                    disabled={isAnyBusy || isLast}
+                    className="w-7 h-7 rounded-md border flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ borderColor: COLORS.sandLine }}
+                    title={lang === "sw" ? "Shusha chini" : "Move down"}
+                  >
+                    <ChevronDown size={12} />
+                  </button>
+                </div>
+
+                {/* Photo/Icon + Info */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   {hasPhoto ? (
                     <img
@@ -318,6 +377,15 @@ export default function CategoriesPanel() {
                       </p>
                       <span className="text-[10px] text-muted font-mono truncate">
                         ({cat.key})
+                      </span>
+                      <span
+                        style={{
+                          background: `${COLORS.night}0D`,
+                          color: COLORS.night,
+                        }}
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                      >
+                        #{cat.ordering ?? idx}
                       </span>
                       {cat.isPopular && (
                         <span
@@ -366,7 +434,9 @@ export default function CategoriesPanel() {
                       borderColor: COLORS.sandLine,
                     }}
                   >
-                    {isTogglingActive && <Loader2 size={10} className="animate-spin" />}
+                    {isTogglingActive && (
+                      <Loader2 size={10} className="animate-spin" />
+                    )}
                     {cat.active === false
                       ? lang === "sw"
                         ? "Washa"
@@ -384,7 +454,9 @@ export default function CategoriesPanel() {
                       borderColor: COLORS.sandLine,
                     }}
                   >
-                    {isTogglingPopular && <Loader2 size={10} className="animate-spin" />}
+                    {isTogglingPopular && (
+                      <Loader2 size={10} className="animate-spin" />
+                    )}
                     {cat.isPopular
                       ? lang === "sw"
                         ? "Ondoa Popular"
@@ -401,7 +473,10 @@ export default function CategoriesPanel() {
                     }}
                     disabled={isAnyBusy}
                     className="text-[11px] font-semibold px-2 py-1.5 rounded-md border text-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ color: "var(--text-primary)", borderColor: COLORS.sandLine }}
+                    style={{
+                      color: "var(--text-primary)",
+                      borderColor: COLORS.sandLine,
+                    }}
                   >
                     {isEditing
                       ? lang === "sw"
