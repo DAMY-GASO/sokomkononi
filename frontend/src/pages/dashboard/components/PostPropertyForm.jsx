@@ -26,7 +26,7 @@ import {
   getVisibleFields,
   getPriceMeta,
   TZ_REGIONS,
-  WILAYU_SUGGESTIONS,
+  WILAYA_SUGGESTIONS,
 } from "../../../config/categorySchemas.js";
 
 function Field({ label, children }) {
