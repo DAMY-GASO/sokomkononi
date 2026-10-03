@@ -1,17 +1,4 @@
-// ============================================================
-// MessagesPage.jsx — full-height 2-pane messaging UI
-//
-// Layout:
-//   ┌──────────────────────────────────────────────┐
-//   │ header: title + unread + search              │
-//   ├───────────────┬──────────────────────────────┤
-//   │ conversation  │  chat header                 │
-//   │ list          │  ──────────────────────────  │
-//   │ (scrollable)  │  messages (scrollable)       │
-//   │               │  ──────────────────────────  │
-//   │               │  composer                    │
-//   └───────────────┴──────────────────────────────┘
-// ============================================================
+
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   MessageSquare, Search, Send, ArrowLeft, Phone, MoreVertical,
@@ -22,6 +9,7 @@ import {
   useConversations,
   sendMessageAsync,
   markConversationReadAsync,
+  fetchConversationDetailAsync,        // ⬅️ MPYA
 } from "../config/messagesStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../config/authStore.js";
@@ -150,7 +138,7 @@ function ConversationListItem({ convo, currentUserId, active, onSelect, lang }) 
 }
 
 // ── Chat view ────────────────────────────────────────────
-function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
+function ChatView({ convo, currentUserId, onBack, onSend, lang, loading }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const { name, avatar } = getCounterparty(convo, currentUserId);
@@ -252,7 +240,19 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang }) {
         style={{ background: COLORS.sand }}
         className="flex-1 overflow-y-auto px-3 sm:px-4 py-4"
       >
-        {grouped.length === 0 ? (
+        {loading && grouped.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 size={24} className="animate-spin" color={COLORS.gold} />
+              <p
+                style={{ color: "var(--text-muted)" }}
+                className="text-sm"
+              >
+                {t(lang, "Inapakia ujumbe...", "Loading messages...")}
+              </p>
+            </div>
+          </div>
+        ) : grouped.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <p
               style={{ color: "var(--text-muted)" }}
@@ -408,6 +408,7 @@ export default function MessagesPage({ initialConversationId = null }) {
   const [selectedId, setSelectedId] = useState(initialConversationId || null);
   const [mobileShowChat, setMobileShowChat] = useState(!!initialConversationId);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loadingDetail, setLoadingDetail] = useState(false);   // ⬅️ MPYA
 
   useEffect(() => {
     if (!selectedId && conversations.length > 0 && !mobileShowChat) {
@@ -422,13 +423,28 @@ export default function MessagesPage({ initialConversationId = null }) {
     }
   }, [initialConversationId]);
 
+  // ⬇️ SASISHO: fetch detail + mark read kila selectedId inabadilika
   useEffect(() => {
-    if (selectedId) {
-      markConversationReadAsync(selectedId).then((res) => {
-        if (!res.ok) console.warn("[MessagesPage] markRead failed:", res.error);
+    if (!selectedId || !currentUserId) return;
+
+    setLoadingDetail(true);
+
+    // 1. Fetch conversation detail (messages kamili)
+    fetchConversationDetailAsync(selectedId, currentUserId)
+      .then((res) => {
+        if (!res.ok) {
+          console.warn("[MessagesPage] fetchDetail failed:", res.error);
+        }
+      })
+      .finally(() => {
+        setLoadingDetail(false);
       });
-    }
-  }, [selectedId]);
+
+    // 2. Mark as read
+    markConversationReadAsync(selectedId).then((res) => {
+      if (!res.ok) console.warn("[MessagesPage] markRead failed:", res.error);
+    });
+  }, [selectedId, currentUserId]);
 
   const selectedConvo = conversations.find((c) => c.id === selectedId);
   const totalUnread = conversations.reduce(
@@ -591,6 +607,7 @@ export default function MessagesPage({ initialConversationId = null }) {
               onBack={() => setMobileShowChat(false)}
               onSend={handleSend}
               lang={lang}
+              loading={loadingDetail}
             />
           ) : (
             <EmptyChat lang={lang} />
@@ -610,6 +627,7 @@ export default function MessagesPage({ initialConversationId = null }) {
             onBack={() => setMobileShowChat(false)}
             onSend={handleSend}
             lang={lang}
+            loading={loadingDetail}
           />
         </div>
       )}

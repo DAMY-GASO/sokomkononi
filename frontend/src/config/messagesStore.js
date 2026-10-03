@@ -214,3 +214,31 @@ export async function createConversationAsync({ listingId, initialMessage = "" }
     return { ok: false, error: err };
   }
 }
+// ============================================================
+// FETCH CONVERSATION DETAIL — inarudisha messages kamili
+// Backend inarudisha ConversationSerializer (na messages field).
+// ============================================================
+export async function fetchConversationDetailAsync(conversationId, currentUserId) {
+  if (!conversationId) {
+    return { ok: false, error: new Error("conversationId is required") };
+  }
+  try {
+    const raw = await api.get(`/messaging/conversations/${conversationId}/`);
+    
+    // Update conversation kwenye store na messages kamili
+    const normalized = norm(raw, currentUserId);
+    if (normalized) {
+      const current = getConversations();
+      const exists = current.some((c) => sameId(c.id, conversationId));
+      if (exists) {
+        write(current.map((c) => (sameId(c.id, conversationId) ? normalized : c)));
+      } else {
+        write([normalized, ...current]);
+      }
+    }
+    return { ok: true, conversation: normalized };
+  } catch (err) {
+    console.warn("[messagesStore] fetchConversationDetail failed:", err);
+    return { ok: false, error: err };
+  }
+}
