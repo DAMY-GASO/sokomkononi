@@ -24,7 +24,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo, getCategory } from "./shared.js";
-import StatusBadge from "./StatusBadge";
+import StatusBadge from "../admin/shared/StatusBadge";
 import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../../config/authStore.js";
