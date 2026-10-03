@@ -5,6 +5,9 @@
 // Revenue Types zote 6: boosting, advertising, leading,
 // reservation, success, listing.
 // Bilingual + mobile-responsive + Async campaign actions.
+//
+// REVENUE: Inatoka usePlatformRevenue("all") — chanzo kimoja
+// cha ukweli kinachotumiwa na Overview na Reports pia.
 // ============================================================
 
 import React, { useState } from "react";
@@ -33,6 +36,8 @@ import {
   updateCampaignAsync,
   removeCampaignAsync,
 } from "../../../../config/promotionsStore.js";
+// ⬇️ Chanzo kimoja cha mapato — sawa na Overview & Reports
+import { usePlatformRevenue } from "../shared/revenue.js";
 
 // ============================================================
 // PROMOTION TYPE CONFIG — REVENUE TYPES ZOTE 6
@@ -466,6 +471,8 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
 export default function PromotionsSection() {
   const { lang } = useLanguage();
   const promotions = usePromotions(lang);
+  // ⬇️ Chanzo kimoja cha mapato — sawa na Overview & Reports
+  const platformRevenue = usePlatformRevenue("all");
   const [activeTab, setActiveTab] = useState("boost");
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [addingCampaign, setAddingCampaign] = useState(false);
@@ -473,6 +480,9 @@ export default function PromotionsSection() {
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ⬇️ Revenue halisi kutoka chanzo kimoja
+  const revenueByType = platformRevenue.byType;
 
   // ============================================================
   // CAMPAIGN HANDLERS
@@ -560,7 +570,7 @@ export default function PromotionsSection() {
       label: t("Boost", "Boost"),
       icon: Rocket,
       count: promotions.counts.boosted,
-      revenue: promotions.revenueByType.boost,
+      revenue: revenueByType.boost || 0,
       color: COLORS.gold,
     },
     {
@@ -568,7 +578,7 @@ export default function PromotionsSection() {
       label: t("Matangazo", "Advertisements"),
       icon: Megaphone,
       count: promotions.counts.advertised,
-      revenue: promotions.revenueByType.advertise,
+      revenue: revenueByType.advertise || 0,
       color: COLORS.rust,
     },
     {
@@ -576,7 +586,7 @@ export default function PromotionsSection() {
       label: t("Leading", "Leading"),
       icon: TrendingUp,
       count: promotions.counts.leading,
-      revenue: promotions.revenueByType.leading,
+      revenue: revenueByType.leading || 0,
       color: COLORS.green,
     },
     {
@@ -584,7 +594,7 @@ export default function PromotionsSection() {
       label: t("Uhifadhi", "Reservation"),
       icon: HandCoins,
       count: promotions.counts.reserved,
-      revenue: promotions.revenueByType.reservation,
+      revenue: revenueByType.reservation || 0,
       color: "#2563EB",
     },
     {
@@ -592,7 +602,7 @@ export default function PromotionsSection() {
       label: t("Ada ya Mafanikio", "Success Fee"),
       icon: Wallet,
       count: promotions.counts.successFee,
-      revenue: promotions.revenueByType.success,
+      revenue: revenueByType.success || 0,
       color: "#7C3AED",
     },
     {
@@ -600,7 +610,7 @@ export default function PromotionsSection() {
       label: t("Ada ya Kuchapisha", "Listing Fee"),
       icon: CreditCard,
       count: promotions.counts.listingFee,
-      revenue: promotions.revenueByType.listing,
+      revenue: revenueByType.listing || 0,
       color: "#0891B2",
     },
     {
@@ -877,32 +887,32 @@ export default function PromotionsSection() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 w-full">
           <RevenueRow
             label={t("Boost", "Boost")}
-            value={promotions.revenueByType.boost}
+            value={revenueByType.boost || 0}
             color={COLORS.gold}
           />
           <RevenueRow
             label={t("Matangazo", "Advertisements")}
-            value={promotions.revenueByType.advertise}
+            value={revenueByType.advertise || 0}
             color={COLORS.rust}
           />
           <RevenueRow
             label={t("Leading", "Leading")}
-            value={promotions.revenueByType.leading}
+            value={revenueByType.leading || 0}
             color={COLORS.green}
           />
           <RevenueRow
             label={t("Uhifadhi", "Reservation")}
-            value={promotions.revenueByType.reservation}
+            value={revenueByType.reservation || 0}
             color="#2563EB"
           />
           <RevenueRow
             label={t("Success Fee", "Success Fee")}
-            value={promotions.revenueByType.success}
+            value={revenueByType.success || 0}
             color="#7C3AED"
           />
           <RevenueRow
             label={t("Listing Fee", "Listing Fee")}
-            value={promotions.revenueByType.listing}
+            value={revenueByType.listing || 0}
             color="#0891B2"
           />
         </div>

@@ -1,7 +1,11 @@
 // ============================================================
 // promotionsStore.js — API-only via /api/promotions/
-// + Revenue Types zote 6: boost, advertising, leading,
-//   reservation, success, listing
+// Counts na listings za promotions.
+//
+// REVENUE: Haipo hapa. Inatoka usePlatformRevenue("all")
+// (shared/revenue.js) — chanzo kimoja cha ukweli kinachotumiwa
+// na Overview na Reports pia. Hii inahakikisha jumla ya mapato
+// inafanana kwenye sections zote.
 // ============================================================
 import { useEffect, useState } from "react";
 import { promotionsApi } from "../api/promotions.js";
@@ -32,18 +36,10 @@ const EMPTY_ANALYTICS = {
     totalActive: 0,
   },
 
-  // Revenue kwa kila aina
-  revenueByType: {
-    boost: 0,
-    leading: 0,
-    advertise: 0,
-    reservation: 0,
-    success: 0,
-    listing: 0,
-  },
+  // ⬇️ revenueByType na totalPromotionRevenue zimeondolewa.
+  // Revenue inatoka usePlatformRevenue("all") kwenye
+  // shared/revenue.js — chanzo kimoja cha ukweli.
 
-  // Jumla
-  totalPromotionRevenue: 0,
   topPromotedSellers: [],
   source: "empty",
 };
@@ -69,13 +65,17 @@ export function getCampaigns() { return readJson(C_KEY, []); }
 export async function hydratePromotionsAnalyticsFromApi() {
   try {
     const data = await promotionsApi.analytics();
-    // Merge na EMPTY_ANALYTICS ili fields zote ziwepo
+    // Merge na EMPTY_ANALYTICS ili fields zote ziwepo.
+    // revenueByType haipo kwenye EMPTY_ANALYTICS — hivyo
+    // hata kama backend inairudisha, tunaipuuza.
     const merged = {
       ...EMPTY_ANALYTICS,
       ...data,
       counts: { ...EMPTY_ANALYTICS.counts, ...(data?.counts || {}) },
-      revenueByType: { ...EMPTY_ANALYTICS.revenueByType, ...(data?.revenueByType || {}) },
     };
+    // ⬇️ Ondoa revenueByType kama backend imeirudisha
+    delete merged.revenueByType;
+    delete merged.totalPromotionRevenue;
     writeJson(A_KEY, A_EV, merged);
     return { ok: true, data: merged };
   } catch (err) { return { ok: false, error: err }; }
