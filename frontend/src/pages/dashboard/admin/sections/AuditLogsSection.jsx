@@ -2,6 +2,8 @@
 // AuditLogsSection.jsx
 // Admin — Audit Logs (nani, lini, nini).
 // Bilingual + mobile-responsive + Async actions na rollback.
+// NOTE: Bulk-delete imeondolewa — audit logs ni read-only
+//       kwa compliance. Kila log inaweza kuondolewa moja moja.
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -25,11 +27,9 @@ import {
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
-// ⬇️ MABADILIKO: tumia async variants kutoka store
 import {
   useAuditLogs,
   removeAuditLogAsync,
-  clearAuditLogsAsync,
   AUDIT_ACTIONS,
 } from "../../../../config/auditLogsStore.js";
 
@@ -68,7 +68,7 @@ export default function AuditLogsSection() {
   const logs = useAuditLogs();
   const [query, setQuery] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
-  // ⬇️ MPYA: busy + error
+  // ⬇️ busy + error
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
@@ -108,17 +108,6 @@ export default function AuditLogsSection() {
   // ============================================================
   // HANDLERS — async
   // ============================================================
-  const handleClearAll = async () => {
-    // Backend has no bulk-clear endpoint. Inform the user directly
-    // instead of pretending the request worked.
-    setError(
-      t(
-        "Kumbukumbu za matendo haziwezi kufutwa kwa pamoja — zimehifadhiwa kwa mujibu wa sheria.",
-        "Audit logs cannot be bulk-deleted — they are kept for compliance."
-      )
-    );
-  };
-
   const handleRemove = async (id) => {
     if (busy[id]) return;
 
@@ -191,26 +180,11 @@ export default function AuditLogsSection() {
           </p>
           <p className="text-xs text-secondary mt-0.5 break-words">
             {t(
-              "Kumbukumbu za matendo zinaonyesha kila hatua ya Admin.",
-              "Audit logs show every Admin action."
+              "Kumbukumbu za matendo zinaonyesha kila hatua ya Admin. Kila log inaweza kuondolewa moja moja.",
+              "Audit logs show every Admin action. Each log can be removed individually."
             )}
           </p>
         </div>
-        {logs.length > 0 && (
-          <button
-            onClick={handleClearAll}
-            disabled={busy.clearing}
-            style={{ color: COLORS.rust }}
-            className="flex items-center gap-1 text-xs font-semibold shrink-0 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {busy.clearing ? (
-              <Loader2 size={12} className="animate-spin" />
-            ) : (
-              <Trash2 size={12} />
-            )}
-            {t("Futa Zote", "Clear All")}
-          </button>
-        )}
       </div>
 
       {/* Action filter */}
@@ -220,7 +194,8 @@ export default function AuditLogsSection() {
             onClick={() => setActionFilter("all")}
             style={{
               background: actionFilter === "all" ? COLORS.night : "white",
-              color: actionFilter === "all" ? COLORS.sand : "var(--text-primary)",
+              color:
+                actionFilter === "all" ? COLORS.sand : "var(--text-primary)",
               borderColor: COLORS.sandLine,
             }}
             className="text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
@@ -232,13 +207,18 @@ export default function AuditLogsSection() {
               key={action.key}
               onClick={() => setActionFilter(action.key)}
               style={{
-                background: actionFilter === action.key ? COLORS.night : "white",
-                color: actionFilter === action.key ? COLORS.sand : "var(--text-primary)",
+                background:
+                  actionFilter === action.key ? COLORS.night : "white",
+                color:
+                  actionFilter === action.key
+                    ? COLORS.sand
+                    : "var(--text-primary)",
                 borderColor: COLORS.sandLine,
               }}
               className="text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
             >
-              {action.label?.[lang] || action.label?.sw} ({actionCounts[action.key]})
+              {action.label?.[lang] || action.label?.sw} (
+              {actionCounts[action.key]})
             </button>
           ))}
         </div>
@@ -267,7 +247,10 @@ export default function AuditLogsSection() {
           className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
         >
           <History size={40} className="mx-auto text-muted mb-3" />
-          <h3 style={{ color: "var(--text-primary)" }} className="font-semibold mb-1">
+          <h3
+            style={{ color: "var(--text-primary)" }}
+            className="font-semibold mb-1"
+          >
             {query || actionFilter !== "all"
               ? t("Hakuna matokeo", "No results")
               : t("Hakuna kumbukumbu", "No audit logs")}
@@ -307,7 +290,10 @@ export default function AuditLogsSection() {
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span
-                    style={{ background: colors?.bg || "#F5F3EC", color: colors?.fg || "#101A2E" }}
+                      style={{
+                        background: colors?.bg || "#F5F3EC",
+                        color: colors?.fg || "#101A2E",
+                      }}
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                     >
                       {getActionLabel(log.action)}
