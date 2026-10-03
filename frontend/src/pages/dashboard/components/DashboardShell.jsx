@@ -35,7 +35,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { COLORS } from "../shared";
-import { useLanguage } from "../../../../context/LanguageContext.jsx";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
 import MyVerificationsPanel from "../MyVerificationsPanel.jsx";
 import { useAuth, logoutAsync } from "../../../../config/authStore.js";
 import { ADMIN_PATH } from "../../../../config/adminPath.js";
