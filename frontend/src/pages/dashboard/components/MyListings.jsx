@@ -23,7 +23,7 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
-import { COLORS, formatTZS, timeAgo, getCategory } from "../shared";
+import { COLORS, formatTZS, timeAgo, getCategory } from "../shared.js";
 import StatusBadge from "./StatusBadge";
 import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
