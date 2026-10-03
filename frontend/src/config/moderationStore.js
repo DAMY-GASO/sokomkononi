@@ -1,10 +1,16 @@
 // ============================================================
 // moderationStore.js — API-backed moderation queue + decisions
 // Backend:
-//   GET  /api/listings/admin/pending/
-//   POST /api/listings/{id}/approve/
-//   POST /api/listings/{id}/reject/
-//   DELETE /api/listings/{id}/?hard=true   (admin pekee)
+//   GET    /api/listings/admin/pending/
+//   POST   /api/listings/{id}/approve/
+//   POST   /api/listings/{id}/reject/
+//   POST   /api/listings/{id}/disapprove/     (kama ipo)
+//   PATCH  /api/listings/{id}/                 (fallback ya disapprove)
+//   DELETE /api/listings/{id}/?hard=true       (admin pekee)
+//
+// SASISHO:
+// - `disapproveListingAsync` inaita `/disapprove/` kama ipo.
+//   La sivyo, tumia PATCH /listings/{id}/ na `status: "REJECTED"`.
 // ============================================================
 import { useEffect, useState } from "react";
 import { moderationApi } from "../api/moderation.js";
@@ -129,7 +135,7 @@ export async function approveListingFromQueueAsync(
 }
 
 // ============================================================
-// REJECT — kataa listing
+// REJECT — kataa listing (in_review pekee)
 // ============================================================
 export async function rejectListingFromQueueAsync(
   listingId,
@@ -168,7 +174,9 @@ export async function rejectListingFromQueueAsync(
 
 // ============================================================
 // DISAPPROVE — rudisha listing iliyoidhinishwa kuwa rejected
-// Backend haina /disapprove/ — tunatumia /reject/ (inafanya kazi sawa)
+//
+// SASISHO: Jaribu `/disapprove/` endpoint kwanza. Kama haipo
+// (404/405), tumia PATCH /listings/{id}/ na `status: "REJECTED"`.
 // ============================================================
 export async function disapproveListingAsync(
   listingId,
@@ -178,14 +186,38 @@ export async function disapproveListingAsync(
   const cleanReason =
     (reason || "").trim() || "Disapproved by admin";
 
+  // Jaribu `/disapprove/` endpoint kwanza
   try {
-    await moderationApi.reject(listingId, cleanReason);
+    await moderationApi.disapprove(listingId, cleanReason);
   } catch (err) {
-    return { ok: false, error: err };
+    if (err?.status === 404 || err?.status === 405) {
+      // Endpoint haipo — tumia PATCH kwa listing
+      console.warn(
+        "[moderationStore] /disapprove/ haipo — tumia PATCH /listings/{id}/"
+      );
+      try {
+        const { listingsApi } = await import("../api/listings.js");
+        await listingsApi.update(listingId, {
+          status: "REJECTED",              // backend inatarajia uppercase
+          rejection_reason: cleanReason,
+        });
+      } catch (patchErr) {
+        return { ok: false, error: patchErr };
+      }
+    } else {
+      return { ok: false, error: err };
+    }
   }
 
   // Sasisha cache ya listingsStore
   decideListing(listingId, "rejected", cleanReason);
+
+  // Sasisha history ya moderation (kama ipo)
+  setHistoryEntry(listingId, {
+    status: "rejected",
+    rejectionReason: cleanReason,
+    rejectedAt: new Date().toISOString(),
+  });
 
   recordDecision({
     listingId,
@@ -205,6 +237,26 @@ export async function disapproveListingAsync(
   };
 }
 
+// ── Helper: sasisha history (kwa ModerationSection) ───────
+// Inaruhusu `disapproveListingAsync` kurudisha data ambayo
+// ModerationSection inaweza kutumia kusasisha UI.
+function setHistoryEntry(listingId, patch) {
+  if (typeof window === "undefined") return;
+  const HIST_KEY = "sokomkononi_moderation_history_v1";
+  try {
+    const raw = window.localStorage.getItem(HIST_KEY);
+    const all = raw ? JSON.parse(raw) : {};
+    all[String(listingId)] = {
+      ...(all[String(listingId)] || {}),
+      ...patch,
+    };
+    window.localStorage.setItem(HIST_KEY, JSON.stringify(all));
+    window.dispatchEvent(new Event(EV));
+  } catch (err) {
+    console.warn("[moderationStore] setHistoryEntry failed:", err);
+  }
+}
+
 // ============================================================
 // DELETE — futa listing kabisa (kwa scam)
 // Inatumia ListingViewSet.destroy + ?hard=true (admin pekee)
@@ -219,7 +271,7 @@ export async function deleteListingFromModerationAsync(
   try {
     await moderationApi.delete(listingId, cleanReason);
   } catch (err) {
-    // Fallback: listingsApi.remove + hard=true (kama /delete/ haipo)
+    // Fallback: listingsApi.remove + hard=true
     if (err?.status === 404 || err?.status === 405) {
       console.warn(
         "[moderationStore] /delete/ haipo — tumia listingsApi.remove"

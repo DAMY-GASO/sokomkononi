@@ -4,6 +4,11 @@
 //   - Approve / Reject listings (in_review)
 //   - Disapprove listings (live → rejected)
 //   - Delete listings (scam/udanganyifu)
+//
+// SASISHO:
+// - `disapprove` kwa live listings — inatumia endpoint
+//   `/listings/{id}/disapprove/` kama ipo, la sivyo `PATCH`
+//   `/listings/{id}/` na `{status: "REJECTED"}` (fallback).
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import {
@@ -161,7 +166,7 @@ export default function ModerationSection() {
   };
 
   // ============================================================
-  // REJECT — kataa listing
+  // REJECT — kataa listing (in_review pekee)
   // ============================================================
   const openRejectModal = (listingId) => {
     if (busy[listingId]) return;
@@ -197,6 +202,9 @@ export default function ModerationSection() {
   // ============================================================
   // DISAPPROVE — rudisha listing iliyoidhinishwa kuwa rejected
   // (kama admin alikosea kuapprove)
+  //
+  // SASISHO: `disapproveListingAsync` inaita `/disapprove/` endpoint
+  // kama ipo, la sivyo PATCH `/listings/{id}/` na status REJECTED.
   // ============================================================
   const openDisapproveModal = (listingId) => {
     if (busy[listingId]) return;
