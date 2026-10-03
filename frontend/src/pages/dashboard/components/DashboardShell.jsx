@@ -732,9 +732,10 @@ export default function DashboardShell() {
             )}
           </div>
 
+                    
           <a
             href="/"
-            className="text-white/80 hover:text-white p-1.5 transition-colors"
+            className="hidden md:block text-white/80 hover:text-white p-1.5 transition-colors"
             aria-label={t("Rudi kwenye ukurasa wa mwanzo", "Back to homepage")}
           >
             <Home size={20} />
