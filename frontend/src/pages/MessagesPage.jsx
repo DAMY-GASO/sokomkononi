@@ -1,4 +1,25 @@
-
+// ============================================================
+// MessagesPage.jsx — full-height 2-pane messaging UI
+//
+// Layout:
+//   ┌──────────────────────────────────────────────┐
+//   │ header: title + unread + search              │
+//   ├───────────────┬──────────────────────────────┤
+//   │ conversation  │  chat header                 │
+//   │ list          │  ──────────────────────────  │
+//   │ (scrollable)  │  messages (scrollable)       │
+//   │               │  ──────────────────────────  │
+//   │               │  composer                    │
+//   └───────────────┴──────────────────────────────┘
+//
+// SASISHO:
+// - Fetch conversation detail kila selectedId inabadilika
+//   (ConversationListSerializer haina `messages`).
+// - Message yako (isMe): white text kabisa + gold border.
+// - Composer: text-white kwa button.
+// - Loading state kwa messages.
+// - `fetchConversationDetailAsync` inaitwa.
+// ============================================================
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   MessageSquare, Search, Send, ArrowLeft, Phone, MoreVertical,
@@ -85,7 +106,7 @@ function ConversationListItem({ convo, currentUserId, active, onSelect, lang }) 
     >
       <div className="relative flex-shrink-0">
         <div
-          style={{ background: COLORS.night, color: COLORS.sand }}
+          style={{ background: COLORS.night, color: "#FFFFFF" }}
           className="w-11 h-11 rounded-full flex items-center justify-center font-semibold"
         >
           {avatar}
@@ -191,7 +212,7 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang, loading }) {
         </button>
         <div className="relative flex-shrink-0">
           <div
-            style={{ background: COLORS.night, color: COLORS.sand }}
+            style={{ background: COLORS.night, color: "#FFFFFF" }}
             className="w-10 h-10 rounded-full flex items-center justify-center font-semibold"
           >
             {avatar}
@@ -294,8 +315,12 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang, loading }) {
                   <div
                     style={{
                       background: isMe ? COLORS.night : "white",
-                      color: isMe ? COLORS.sand : "var(--text-primary)",
-                      borderColor: COLORS.sandLine,
+                      // ⬇️ SASISHO: white kabisa kwa text ya message yako
+                      color: isMe ? "#FFFFFF" : "var(--text-primary)",
+                      // ⬇️ SASISHO: gold border kwa message yako
+                      borderColor: isMe
+                        ? `${COLORS.gold}55`
+                        : COLORS.sandLine,
                       opacity: isPending ? 0.6 : 1,
                     }}
                     className="border rounded-2xl px-3.5 py-2 max-w-[78%] sm:max-w-[70%]"
@@ -306,8 +331,9 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang, loading }) {
                     <div
                       className="flex items-center gap-1 justify-end mt-1"
                       style={{
+                        // ⬇️ SASISHO: white 65% kwa timestamp
                         color: isMe
-                          ? "rgba(245,243,236,0.6)"
+                          ? "rgba(255,255,255,0.65)"
                           : "var(--text-muted)",
                       }}
                     >
@@ -355,7 +381,8 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang, loading }) {
           disabled={!text.trim() || sending}
           style={{
             background: text.trim() && !sending ? COLORS.gold : COLORS.sandLine,
-            color: text.trim() && !sending ? "var(--text-primary)" : "var(--text-muted)",
+            // ⬇️ SASISHO: night kwa text ili iwe clear kwenye gold
+            color: text.trim() && !sending ? COLORS.night : "var(--text-muted)",
           }}
           className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 disabled:cursor-not-allowed"
           aria-label={t(lang, "Tuma", "Send")}
@@ -408,7 +435,7 @@ export default function MessagesPage({ initialConversationId = null }) {
   const [selectedId, setSelectedId] = useState(initialConversationId || null);
   const [mobileShowChat, setMobileShowChat] = useState(!!initialConversationId);
   const [searchQuery, setSearchQuery] = useState("");
-  const [loadingDetail, setLoadingDetail] = useState(false);   // ⬅️ MPYA
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   useEffect(() => {
     if (!selectedId && conversations.length > 0 && !mobileShowChat) {
@@ -423,7 +450,7 @@ export default function MessagesPage({ initialConversationId = null }) {
     }
   }, [initialConversationId]);
 
-  // ⬇️ SASISHO: fetch detail + mark read kila selectedId inabadilika
+  // ⬇️ Fetch detail + mark read kila selectedId inabadilika
   useEffect(() => {
     if (!selectedId || !currentUserId) return;
 
