@@ -272,7 +272,7 @@ const TERMS_CONTENT = {
         title: "9. Contact",
         content: [
           "For any questions about these terms and conditions, please contact us:",
-          "Email: info@sokomkononi.co.tz",
+          "Email: support@sokomkononi.co.tz",
           "Phone: 0743 895 038",
           "Office: Dar es Salaam, Tanzania",
         ],
