@@ -34,7 +34,7 @@ import {
   ShoppingBag,
   ShieldCheck,
 } from "lucide-react";
-import { COLORS } from "../shared.js";
+import { COLORS } from "./shared.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import MyVerificationsPanel from "../MyVerificationsPanel.jsx";
 import { useAuth, logoutAsync } from "../../../../config/authStore.js";
