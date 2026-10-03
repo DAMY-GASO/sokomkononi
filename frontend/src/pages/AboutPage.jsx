@@ -96,7 +96,7 @@ const ABOUT_CONTENT = {
     ],
     team: [
       {
-        name: "Damy Gasso",
+        name: "Misso Madirisha",
         role: "Mwanzilishi & CEO",
         bio: "Mtaalamu wa teknolojia na biashara mwenye uzoefu wa miaka 10.",
       },
@@ -144,7 +144,7 @@ const ABOUT_CONTENT = {
     ],
     team: [
       {
-        name: "Damy Gasso",
+        name: "Misso Madirisha",
         role: "Founder & CEO",
         bio: "Technology and business expert with 10+ years of experience.",
       },
