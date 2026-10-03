@@ -2,6 +2,9 @@
 // DealRoomViewer.jsx
 // Admin — Anaona kilichojiri kwenye deal room yoyote.
 // Bilingual + mobile-responsive.
+//
+// SASISHO: Inapokea `roomData` (messages, offers, paymentProof)
+// kutoka backend (DealsSection.handleViewRoom) na `loading` prop.
 // ============================================================
 
 import React from "react";
@@ -18,6 +21,7 @@ import {
   HandCoins,
   Calendar,
   CreditCard,
+  Loader2,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo, resolveSender } from "../../shared/constants.js";
 
@@ -144,13 +148,38 @@ function InfoRow({ icon: Icon, label, value, color = COLORS.night }) {
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-export default function DealRoomViewer({ deal, onClose, lang }) {
+export default function DealRoomViewer({
+  deal,
+  roomData,          // ⬅️ MPYA — { messages, offers, paymentProof }
+  loading,           // ⬅️ MPYA — bool
+  onClose,
+  lang,
+}) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   if (!deal) return null;
 
-  const messages = deal.messages || [];
+  // ⬇️ Tumia roomData kama ipo, la sivyo deal.messages (fallback)
+  const messages = roomData?.messages ?? deal.messages ?? [];
   const messageCount = messages.length;
   const isDisputed = deal.status === "disputed";
+  const paymentProof = roomData?.paymentProof ?? deal.paymentProof ?? null;
+
+  // ============================================================
+  // LOADING STATE
+  // ============================================================
+  if (loading) {
+    return (
+      <div
+        style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
+        className="border-t px-4 sm:px-5 py-8 flex items-center justify-center gap-2"
+      >
+        <Loader2 size={16} className="animate-spin text-muted" />
+        <span className="text-xs text-muted">
+          {t("Inapakia deal room...", "Loading deal room...")}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -272,8 +301,8 @@ export default function DealRoomViewer({ deal, onClose, lang }) {
         )}
       </div>
 
-      {/* Payment Proof */}
-      {deal.paymentProof && (
+           {/* Payment Proof */}
+      {paymentProof && (
         <div className="min-w-0">
           <p className="text-[11px] font-semibold text-secondary uppercase mb-1.5">
             {t("Uthibitisho wa Malipo", "Payment Proof")}
@@ -285,19 +314,30 @@ export default function DealRoomViewer({ deal, onClose, lang }) {
             <InfoRow
               icon={CreditCard}
               label={t("Njia", "Method")}
-              value={deal.paymentProof.method || "—"}
+              value={paymentProof.method || "—"}
             />
             <InfoRow
               icon={FileText}
               label="Reference"
-              value={deal.paymentProof.reference || "—"}
+              value={paymentProof.reference || "—"}
             />
-            {deal.paymentProof.submittedAt && (
+            {paymentProof.submittedAt && (
               <InfoRow
                 icon={Clock}
                 label={t("Ilitumwa", "Submitted")}
-                value={timeAgo(deal.paymentProof.submittedAt, lang)}
+                value={timeAgo(paymentProof.submittedAt, lang)}
               />
+            )}
+            {paymentProof.url && (
+              <a
+                href={paymentProof.url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-xs font-semibold text-[#2F6D4F] hover:underline mt-1"
+              >
+                <Paperclip size={12} />
+                {t("Fungua Picha ya Uthibitisho", "Open Proof Image")}
+              </a>
             )}
           </div>
         </div>
@@ -342,8 +382,13 @@ export default function DealRoomViewer({ deal, onClose, lang }) {
               )}
             </p>
           ) : (
-            messages.map((m) => (
-              <MessageBubble key={m.id} message={m} deal={deal} lang={lang} />
+            messages.map((m, idx) => (
+              <MessageBubble
+                key={m.id || `msg-${idx}`}
+                message={m}
+                deal={deal}
+                lang={lang}
+              />
             ))
           )}
         </div>

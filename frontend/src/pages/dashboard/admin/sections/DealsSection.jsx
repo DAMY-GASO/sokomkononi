@@ -2,6 +2,9 @@
 // DealsSection.jsx
 // Deal Rooms & Dispute Resolution — Admin.
 // Bilingual + mobile-responsive + Async actions na rollback.
+//
+// SASISHO: handleViewRoom inafetch messages, offers, paymentProof
+// kutoka backend (fetchDealRoomDetailAsync) ili admin aone data halisi.
 // ============================================================
 
 import React, { useState } from "react";
@@ -21,6 +24,7 @@ import {
   getTransactionByDealRoom,
   fetchTransactionDetailAsync,
   createTransactionAsync,
+  fetchDealRoomDetailAsync,        // ⬅️ MPYA
 } from "../../../../config/transactionLifecycleStore.js";
 
 export default function DealsSection() {
@@ -31,9 +35,56 @@ export default function DealsSection() {
   // ⬇️ MPYA: busy + error state
   const [busy, setBusy] = useState({}); // { [dealId]: true }
   const [error, setError] = useState("");
+  // ⬇️ MPYA: deal room cache + loading state
+  const [dealRooms, setDealRooms] = useState({}); // { [dealId]: { messages, offers, paymentProof } }
+  const [loadingRoom, setLoadingRoom] = useState(false);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+ // ============================================================
+// HANDLE VIEW ROOM — fetch deal room detail kutoka backend
+// Backend inarudisha AdminDealRoomSerializer kwa admin —
+// ina messages, paymentProof, reservation details, disputeNote.
+// ============================================================
+const handleViewRoom = async (deal) => {
+  const dealId = deal.id;
+
+  // Toggle — kama ipo wazi, funga
+  if (expandedId === dealId) {
+    setExpandedId(null);
+    return;
+  }
+
+  setExpandedId(dealId);
+  setDisputeId(null);
+  setError("");
+
+  // Kama tayari tuna data, usirudie fetch
+  if (dealRooms[dealId]) return;
+
+  setLoadingRoom(true);
+
+  const res = await fetchDealRoomDetailAsync(dealId);
+  setLoadingRoom(false);
+
+  if (res.ok) {
+    // Hifadhi deal room kamili — messages, paymentProof, n.k.
+    setDealRooms((prev) => ({
+      ...prev,
+      [dealId]: {
+        messages: res.messages || [],
+        paymentProof: res.paymentProof || null,
+        reservation: res.reservation || null,
+        disputeNote: res.disputeNote || "",
+      },
+    }));
+  } else {
+    setError(
+      res.error?.message ||
+        t("Imeshindwa kupakia deal room.", "Failed to load deal room.")
+    );
+  }
+};
   // ============================================================
   // HANDLE RESOLVE — async + rollback
   // ============================================================
@@ -47,15 +98,10 @@ export default function DealsSection() {
     let tx = getTransactionByDealRoom(dealId);
     if (!tx?.id) {
       try {
-        // The DealRoom id from the admin table is the local deal id.
-        // Some backends expose transaction by that same FK, so try
-        // creating (idempotent on most backends) — if it 409s, the
-        // caller will see the error and can retry.
         const created = await createTransactionAsync(dealId);
         if (created?.ok && created.transaction?.id) {
           tx = created.transaction;
         } else if (created?.error) {
-          // Second attempt: re-hydrate lifecycle store then re-read.
           await fetchTransactionDetailAsync(dealId).catch(() => {});
           tx = getTransactionByDealRoom(dealId);
         }
@@ -65,7 +111,11 @@ export default function DealsSection() {
     }
 
     if (!tx?.id) {
-      setBusy((b) => { const n = { ...b }; delete n[dealId]; return n; });
+      setBusy((b) => {
+        const n = { ...b };
+        delete n[dealId];
+        return n;
+      });
       setError(
         t(
           "Transaction haijatengenezwa bado kwa deal hii. Mwambie mnunuzi/muuzaji aanzishe transaction kwanza.",
@@ -88,7 +138,6 @@ export default function DealsSection() {
     });
 
     if (res.ok) {
-      // Mafanikio — funga panel
       setDisputeId(null);
       setExpandedId(null);
     } else {
@@ -110,16 +159,14 @@ export default function DealsSection() {
     const isRoomOpen = expandedId === deal.id;
     const isDisputeOpen = disputeId === deal.id;
     const isBusy = !!busy[deal.id];
+    const isLoading = loadingRoom && expandedId === deal.id;
 
     if (isDisputed) {
       return (
         <div className={`flex gap-2 ${fullWidth ? "w-full" : "justify-end"} flex-wrap`}>
           <button
-            onClick={() => {
-              setExpandedId(isRoomOpen ? null : deal.id);
-              setDisputeId(null);
-            }}
-            disabled={isBusy}
+            onClick={() => handleViewRoom(deal)}
+            disabled={isBusy || isLoading}
             style={{
               borderColor: COLORS.sandLine,
               color: "var(--text-primary)",
@@ -128,7 +175,11 @@ export default function DealsSection() {
               fullWidth ? "flex-1" : ""
             }`}
           >
-            <Eye size={13} />
+            {isLoading ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Eye size={13} />
+            )}
             {t("Angalia Room", "View Room")}
           </button>
           <button
@@ -157,8 +208,8 @@ export default function DealsSection() {
     return (
       <div className={fullWidth ? "flex justify-end" : "flex justify-end"}>
         <button
-          onClick={() => setExpandedId(isRoomOpen ? null : deal.id)}
-          disabled={isBusy}
+          onClick={() => handleViewRoom(deal)}
+          disabled={isBusy || isLoading}
           style={{
             borderColor: COLORS.sandLine,
             color: "var(--text-primary)",
@@ -167,7 +218,11 @@ export default function DealsSection() {
             fullWidth ? "w-full" : ""
           }`}
         >
-          <Eye size={13} />
+          {isLoading ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Eye size={13} />
+          )}
           {isRoomOpen
             ? t("Funga", "Close")
             : t("Angalia Room", "View Room")}
@@ -278,6 +333,8 @@ export default function DealsSection() {
                         <td colSpan={6} className="p-0">
                           <DealRoomViewer
                             deal={d}
+                            roomData={dealRooms[d.id]}
+                            loading={loadingRoom && expandedId === d.id}
                             onClose={() => setExpandedId(null)}
                             lang={lang}
                           />
@@ -379,6 +436,8 @@ export default function DealsSection() {
                 <div className="border-t border-gray-100">
                   <DealRoomViewer
                     deal={d}
+                    roomData={dealRooms[d.id]}
+                    loading={loadingRoom && expandedId === d.id}
                     onClose={() => setExpandedId(null)}
                     lang={lang}
                   />

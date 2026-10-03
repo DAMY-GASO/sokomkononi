@@ -1,20 +1,3 @@
-// ============================================================
-// transactionLifecycleStore.js
-// API-backed via transactionsApi.
-//
-// Inashughulikia mzunguko kamili wa transaction:
-//   1. create()              → unda transaction kutoka deal room
-//   2. createReservation()   → weka reservation (48h default)
-//   3. payReservation()      → lipa ada ya reservation
-//   4. startInspection()     → anza ukaguzi (24h default)
-//   5. submitDecision()      → uamuzi wa mnunuzi (accept/reject)
-//   6. uploadFinalPayment()  → thibitisha malipo ya mwisho
-//   7. confirmPayment()      → muuzaji athibitishe malipo
-//   8. cancel()              → futa transaction
-//   9. resolveDispute()      → admin atatue mgogoro
-//  10. expireReservation()   → maliza reservation (cron/admin)
-//  11. expireInspection()    → maliza inspection (cron/admin)
-// ============================================================
 
 import { useEffect, useState } from "react";
 import { transactionsApi } from "../api/transactions.js";
@@ -474,3 +457,42 @@ export function useActiveTransactionsCount() {
 }
 
 export function useDealTransactions() { return useTransactions(); }
+
+
+
+// ============================================================
+// DEAL ROOM DETAIL — fetch messages, offers, payment proof
+// Inatumika na admin (DealsSection) kuona kilichojiri.
+// ============================================================
+import { dealsApi } from "../api/deals.js";
+export async function fetchDealRoomDetailAsync(dealRoomId) {
+  if (!dealRoomId) {
+    return { ok: false, error: new Error("dealRoomId is required") };
+  }
+
+  try {
+    const data = await dealsApi.detail(dealRoomId);
+
+    return {
+      ok: true,
+      dealRoom: data,                              
+      messages: data?.messages || [],
+      paymentProof: data?.paymentProof || null,
+      reservation: {
+        fee: data?.reservationFee,
+        hours: data?.reservationHours,
+        method: data?.reservationMethod,
+        expiresAt: data?.reservationExpiresAt,
+      },
+      disputeNote: data?.disputeNote || "",
+    };
+  } catch (err) {
+    console.warn("[transactionLifecycleStore] fetchDealRoomDetail failed:", err);
+    return {
+      ok: false,
+      error: err,
+      messages: [],
+      paymentProof: null,
+    };
+  }
+}
