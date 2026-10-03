@@ -67,6 +67,36 @@ export const TZ_REGIONS = [
 // Mapendekezo ya wilaya (si lazima — mtumiaji anaweza kuandika yoyote)
 export const WILAYA_SUGGESTIONS = {
   "Dar es Salaam": ["Ilala", "Kinondoni", "Temeke", "Ubungo", "Kigamboni"],
+  "Arusha": ["Arusha City", "Arusha Rural", "Karatu", "Longido", "Meru", "Monduli", "Ngorongoro"],
+  "Mwanza": ["Ilemela", "Nyamagana", "Buchosa", "Kwimba", "Magu", "Misungwi", "Sengerema", "Ukerewe"],
+  "Dodoma": ["Dodoma City", "Bahi", "Chamwino", "Chemba", "Kondoa", "Kongwa", "Mpwapwa"],
+  "Mbeya": ["Mbeya City", "Chunya", "Kyela", "Mbarali", "Mbeya Rural", "Rungwe", "Busokelo"],
+  "Morogoro": ["Morogoro City", "Gairo", "Kilombero", "Kilosa", "Mvomero", "Ulanga", "Malinyi", "Ifakara"],
+  "Tanga": ["Tanga City", "Handeni", "Kilindi", "Korogwe", "Lushoto", "Mkinga", "Muheza", "Pangani"],
+  "Iringa": ["Iringa City", "Iringa Rural", "Kilolo", "Mafinga", "Mufindi"],
+  "Kigoma": ["Kigoma Ujiji", "Buhigwe", "Kakonko", "Kasulu", "Kibondo", "Uvinza"],
+  "Tabora": ["Tabora City", "Igunga", "Kaliua", "Nzega", "Sikonge", "Urambo", "Uyui"],
+  "Mtwara": ["Mtwara City", "Masasi", "Nanyumbu", "Newala", "Tandahimba"],
+  "Lindi": ["Lindi City", "Kilwa", "Liwale", "Nachingwea", "Ruangwa"],
+  "Ruvuma": ["Songea City", "Mbinga", "Namtumbo", "Nyasa", "Tunduru"],
+  "Rukwa": ["Sumbawanga City", "Kalambo", "Nkasi"],
+  "Katavi": ["Mpanda", "Mlele"],
+  "Singida": ["Singida City", "Ikungi", "Iramba", "Manyoni", "Mkalama"],
+  "Shinyanga": ["Shinyanga City", "Kahama", "Kishapu", "Ushetu"],
+  "Simiyu": ["Bariadi", "Busega", "Itilima", "Maswa", "Meatu"],
+  "Mara": ["Musoma City", "Bunda", "Butiama", "Rorya", "Serengeti", "Tarime"],
+  "Kagera": ["Bukoba City", "Biharamulo", "Karagwe", "Kyerwa", "Missenyi", "Muleba", "Ngara"],
+  "Geita": ["Geita", "Bukombe", "Chato", "Mbogwe", "Nyang'hwale"],
+  "Njombe": ["Njombe City", "Ludewa", "Makambako", "Wanging'ombe"],
+  "Songwe": ["Vwawa", "Ileje", "Mbozi", "Momba"],
+  "Manyara": ["Babati", "Hanang", "Kiteto", "Mbulu", "Simanjiro"],
+  "Kilimanjaro": ["Moshi City", "Hai", "Mwanga", "Rombo", "Same", "Siha"],
+  "Pwani": ["Kibaha", "Bagamoyo", "Kisarawe", "Mafia", "Mkuranga", "Rufiji", "Kibiti"],
+  "Kaskazini Pemba": ["Wete", "Micheweni"],
+  "Kusini Pemba": ["Chake Chake", "Mkoani"],
+  "Kaskazini Unguja": ["Kaskazini A", "Kaskazini B"],
+  "Kusini Unguja": ["Kati", "Kusini"],
+  "Mjini Magharibi": ["Mjini", "Magharibi"],
 };
 
 // ── Mapendekezo ya brand ────────────────────────────────────
@@ -86,7 +116,7 @@ const thisYear = new Date().getFullYear();
 // FIELDS za kila kategoria (extra)
 // ============================================================
 export const CATEGORY_EXTRA = {
-  // ── Magari: Brand → Model → Year → Transmission → Fuel → Mileage → Engine → Condition
+  // ── Magari
   magari: [
     F("brand", "Brand (Chapa)", "Brand", "text", { required: true, suggestions: CAR_BRANDS, placeholder: ph("mfano: Toyota", "e.g. Toyota") }),
     F("model", "Model", "Model", "text", { required: true, placeholder: ph("mfano: Harrier", "e.g. Harrier") }),
@@ -98,7 +128,7 @@ export const CATEGORY_EXTRA = {
     F("hali", "Hali", "Condition", "select", { required: true, options: CAR_CONDITION_OPTIONS }),
   ],
 
-  // ── Nyumba: Sale/Rent → Type → Bedrooms → Bathrooms → Plot size → Floor → Parking → Water → Electricity → Furnished
+  // ── Nyumba
   nyumba: [
     F("lengo", "Kuuza au Kupangisha", "Sale or Rent", "select", { required: true, options: [o("Kuuza", "For Sale"), o("Kupangisha", "For Rent")] }),
     F("aina", "Aina ya Nyumba", "Property Type", "select", {
@@ -131,7 +161,7 @@ export const CATEGORY_EXTRA = {
     }),
   ],
 
-  // ── Viwanja: Size → Surveyed? → Title deed? → Road → Electricity → Water → Land use
+  // ── Viwanja
   viwanja: [
     F("ukubwa", "Ukubwa", "Size", "number", { required: true, min: 0, placeholder: ph("mfano: 800", "e.g. 800") }),
     F("kipimo", "Kipimo", "Unit", "select", {
@@ -152,7 +182,7 @@ export const CATEGORY_EXTRA = {
     F("matumizi", "Matumizi ya Ardhi", "Land Use", "select", { required: true, options: LAND_USE_OPTIONS }),
   ],
 
-  // ── Mashine: Type → Brand → Model → Year → Capacity → Condition → Hours used
+  // ── Mashine
   mashine: [
     F("aina", "Aina ya Mashine", "Machine Type", "text", { required: true, placeholder: ph("mfano: Mashine ya kudarizi", "e.g. Embroidery machine") }),
     F("brand", "Brand", "Brand", "text", { suggestions: MACHINE_BRANDS }),
@@ -210,7 +240,7 @@ export const CATEGORY_EXTRA = {
     }),
   ],
 
-  // ── Biashara zinazouzwa
+  // ── Biashara
   biashara: [
     F("aina", "Aina ya Biashara", "Business Type", "text", { required: true, placeholder: ph("mfano: Duka la vifaa vya ujenzi", "e.g. Hardware store") }),
     F("mapato", "Mapato ya Wastani (kwa mwezi)", "Average Monthly Revenue", "text", { placeholder: ph("TZS ...", "TZS ...") }),
@@ -323,12 +353,13 @@ export const CATEGORY_EXTRA = {
 
 // ============================================================
 // POSTING_CONFIG — mipangilio ya fomu kwa kategoria
+// ⬇️ KILA CATEGORY INA titlePlaceholder YAKE
 // ============================================================
 const DEFAULT_PRICE_LABEL = { sw: "Bei (TZS)", en: "Price (TZS)" };
 
 export const POSTING_CONFIG = {
   magari: {
-    titlePlaceholder: ph("Tutaijaza kutoka Brand + Model + Mwaka kama utaacha wazi", "Auto-filled from Brand + Model + Year if left empty"),
+    titlePlaceholder: ph("mfano: Toyota Harrier 2016", "e.g. Toyota Harrier 2016"),
     autoTitle: (e) => [e.brand, e.model, e.year].filter(Boolean).join(" "),
   },
   nyumba: {
@@ -341,17 +372,41 @@ export const POSTING_CONFIG = {
     titlePlaceholder: ph("mfano: Kiwanja cha makazi Kigamboni", "e.g. Residential plot in Kigamboni"),
   },
   mashine: {
-    titlePlaceholder: ph("Tutaijaza kutoka Aina + Brand + Model kama utaacha wazi", "Auto-filled from Type + Brand + Model if left empty"),
+    titlePlaceholder: ph("mfano: Mashine ya kudarizi Brother 2019", "e.g. Brother embroidery machine 2019"),
     autoTitle: (e) => [e.aina, e.brand, e.model].filter(Boolean).join(" "),
   },
   "vifaa-vizito": {
+    titlePlaceholder: ph("mfano: Excavator Caterpillar 320D", "e.g. Caterpillar 320D Excavator"),
     autoTitle: (e) => [e.aina, e.brand, e.model].filter(Boolean).join(" "),
   },
   pikipiki: {
+    titlePlaceholder: ph("mfano: Boxer 150 cc 2020", "e.g. Boxer 150cc 2020"),
     autoTitle: (e) => [e.brand, e.model, e.year].filter(Boolean).join(" "),
   },
   mabasi: {
+    titlePlaceholder: ph("mfano: Scania ya viti 49", "e.g. Scania 49-seater bus"),
     autoTitle: (e) => [e.brand, e.model, e.year].filter(Boolean).join(" "),
+  },
+  biashara: {
+    titlePlaceholder: ph("mfano: Duka la vifaa vya ujenzi Kariakoo", "e.g. Hardware store in Kariakoo"),
+  },
+  samani: {
+    titlePlaceholder: ph("mfano: Sofa ya ngozi ya viti 5", "e.g. 5-seater leather sofa"),
+  },
+  "vifaa-vya-elektroniki": {
+    titlePlaceholder: ph("mfano: Samsung Galaxy S21 8GB/256GB", "e.g. Samsung Galaxy S21 8GB/256GB"),
+  },
+  mifugo: {
+    titlePlaceholder: ph("mfano: Ng'ombe wa Friesian 10", "e.g. 10 Friesian cattle"),
+  },
+  "vifaa-vya-nyumbani": {
+    titlePlaceholder: ph("mfano: Friji ya Samsung 350L", "e.g. Samsung 350L fridge"),
+  },
+  fashion: {
+    titlePlaceholder: ph("mfano: Viatu vya Nike saizi 42", "e.g. Nike shoes size 42"),
+  },
+  "mali-nyinginezo": {
+    titlePlaceholder: ph("mfano: Kiti cha michezo cha Gym", "e.g. Gym workout bench"),
   },
   huduma: {
     titleLabel: { sw: "Jina la Huduma", en: "Service Title" },
