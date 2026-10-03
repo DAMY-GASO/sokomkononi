@@ -7,6 +7,7 @@ import { ConfirmProvider } from "./components/ConfirmDialog.jsx";
 import PaymentReturnRoute from "./components/PaymentReturnRoute.jsx";
 
 import { installUnauthorizedHandler } from "./config/authStore.js";
+import UndoToast from "./components/UndoToast.jsx";
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
 
 import { initializeCategories, hydrateCategoriesFromApi } from "./config/categoriesStore.js";
@@ -72,6 +73,7 @@ function App() {
   return (
     <LanguageProvider>
       <ToastProvider>
+       <UndoToast />    
         <ConfirmProvider>
       <Router>
         <ScrollToHash />

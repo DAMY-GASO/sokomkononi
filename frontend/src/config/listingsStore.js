@@ -5,6 +5,7 @@
 // NEW: checkDuplicateListing + checkDuplicateListingAsync — zuia
 //      seller kuweka listing inayofanana na iliyopo.
 // NEW: attributes (JSONField) inasomwa kutoka API na kuhifadhiwa.
+// NEW: restoreListingAsync — rejesha listing iliyofutwa (undo).
 // ============================================================
 import { useEffect, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
@@ -190,9 +191,6 @@ function normalizeForCompare(str) {
 /**
  * Angalia kama listing ni duplicate ya listing nyingine ya seller huyu.
  * Returns { isDuplicate: bool, existing: listing | null }
- *
- * Local (frontend-only) check — inatumika kama fallback kama
- * backend haina endpoint ya check-duplicate.
  */
 export function checkDuplicateListing({
   title,
@@ -212,16 +210,10 @@ export function checkDuplicateListing({
   const cutoff = Date.now() - windowDays * 24 * 60 * 60 * 1000;
 
   for (const listing of all) {
-    // Ruka listings za seller mwingine
     if (String(listing.sellerId) !== String(sellerId)) continue;
-
-    // Ruka listings za zamani sana
     if (listing.postedAt && new Date(listing.postedAt).getTime() < cutoff) continue;
-
-    // Ruka listings zilizofutwa au zilizokataliwa
     if (listing.status === "deleted" || listing.status === "rejected") continue;
 
-    // Linganisha
     const sameTitle = normalizeForCompare(listing.title) === normalizedTitle;
     const sameLocation =
       normalizeForCompare(listing.location) === normalizedLocation;
@@ -238,9 +230,6 @@ export function checkDuplicateListing({
 
 /**
  * Angalia kama listing ni duplicate kupitia backend.
- * Backend inaweza kufanya check ya kina zaidi (fuzzy matching).
- *
- * Fallback: kama endpoint haipo, tumia local check.
  */
 export async function checkDuplicateListingAsync({
   title,
@@ -250,7 +239,6 @@ export async function checkDuplicateListingAsync({
   windowDays = 30,
 }) {
   try {
-    // Jaribu backend kwanza
     const res = await api.post("/listings/check-duplicate/", {
       title,
       price,
@@ -265,7 +253,6 @@ export async function checkDuplicateListingAsync({
       source: "backend",
     };
   } catch (err) {
-    // Kama endpoint haipo (404/405), tumia local check
     if (err?.status === 404 || err?.status === 405) {
       console.warn(
         "[listingsStore] /listings/check-duplicate/ haipo — tumia local check"
@@ -288,7 +275,6 @@ export async function checkDuplicateListingAsync({
         return { ok: false, error: authErr };
       }
     }
-    // Kosa jingine — rudisha kama error
     return { ok: false, error: err };
   }
 }
@@ -426,7 +412,7 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     category,
     categoryId: categoryObj?.id ?? raw.category_id ?? null,
     location: raw.location || raw.region || raw.address || "",
-    attributes: raw.attributes || {},   // ⬅️ MPYA
+    attributes: raw.attributes || {},
     region: raw.region || raw.location || "",
     status,
     views: Number(raw.views_count ?? raw.views) || 0,
@@ -602,6 +588,43 @@ export async function removeListingAsync(id) {
   } catch (err) {
     restore(snap);
     console.warn("[listingsStore] removeListing failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// RESTORE — rejesha listing iliyofutwa (soft delete undo)
+// ============================================================
+export async function restoreListingAsync(id) {
+  const snap = snapshot();
+  try {
+    // Endpoint ya restore (backend)
+    await listingsApi.restore(id);
+    // Sasisha local cache — ondoa `is_deleted`, rudisha status
+    mutateBoth((list) =>
+      list.map((l) =>
+        String(l.id) === String(id)
+          ? { ...l, is_deleted: false, status: "live" }
+          : l
+      )
+    );
+    return { ok: true };
+  } catch (err) {
+    // Fallback: PATCH kwa listing kurudisha status (kama /restore/ haipo)
+    if (err?.status === 404 || err?.status === 405) {
+      console.warn(
+        "[listingsStore] /restore/ haipo — tumia PATCH /listings/{id}/"
+      );
+      try {
+        await listingsApi.update(id, { status: "AVAILABLE" });
+        restore(snap);
+        return { ok: true };
+      } catch (patchErr) {
+        restore(snap);
+        return { ok: false, error: patchErr };
+      }
+    }
+    restore(snap);
     return { ok: false, error: err };
   }
 }

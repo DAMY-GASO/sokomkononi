@@ -1,3 +1,9 @@
+// ============================================================
+// DashboardShell.jsx
+// Seller/Buyer dashboard shell. Inaruhusu admin KUPITA tu kama
+// guard ya kuzuia admin kuingia dashboard za watumiaji.
+// Admin ana dashboard yake (/smk-control-9x7k).
+// ============================================================
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -28,10 +34,11 @@ import {
   ShoppingBag,
   ShieldCheck,
 } from "lucide-react";
-import { COLORS } from "./shared";
-import { useLanguage } from "../../../context/LanguageContext.jsx";
-import MyVerificationsPanel from "./MyVerificationsPanel";
-import { useAuth, logoutAsync } from "../../../config/authStore.js";
+import { COLORS } from "../shared";
+import { useLanguage } from "../../../../context/LanguageContext.jsx";
+import MyVerificationsPanel from "../MyVerificationsPanel.jsx";
+import { useAuth, logoutAsync } from "../../../../config/authStore.js";
+import { ADMIN_PATH } from "../../../../config/adminPath.js";
 import {
   useMyListings,
   checkListingExpiry,
@@ -44,47 +51,47 @@ import {
   unpauseListingAsync,
   markSoldAsync,
   payListingFeeAsync,
-} from "../../../config/listingsStore.js";
-import { useSentAnnouncements } from "../../../config/announcementsStore.js";
-import { useNotifications } from "../../../config/notificationsStore.js";
-import { checkReservationReminders } from "../../../config/dealsStore.js";
-import { setDashboardSide } from "../../../config/dashboardSideStore.js";
-import { addTransaction } from "../../../config/transactionsStore.js";
-import { useNewLeadsCount } from "../../../config/leadsStore.js";
-import { useSearchesCount } from "../../../config/searchesStore.js";
-import PostPropertyForm from "./PostPropertyForm";
-import MyListings from "./MyListings";
-import LeadsSection from "../seller/LeadsSection.jsx";
-import BoostSasa from "./BoostSasa";
-import LeadingSasa from "./LeadingSasa";
-import AdvertiseSasa from "./AdvertiseSasa";
-import PromotedBannerStrip from "./PromotedBannerStrip";
-import DealRooms from "./DealRooms";
-import BrowseProperties from "./BrowseProperties";
-import BottomNav from "../../../components/BottomNav.jsx";
+} from "../../../../config/listingsStore.js";
+import { useSentAnnouncements } from "../../../../config/announcementsStore.js";
+import { useNotifications } from "../../../../config/notificationsStore.js";
+import { checkReservationReminders } from "../../../../config/dealsStore.js";
+import { setDashboardSide } from "../../../../config/dashboardSideStore.js";
+import { addTransaction } from "../../../../config/transactionsStore.js";
+import { useNewLeadsCount } from "../../../../config/leadsStore.js";
+import { useSearchesCount } from "../../../../config/searchesStore.js";
+import PostPropertyForm from "../PostPropertyForm.jsx";
+import MyListings from "../MyListings.jsx";
+import LeadsSection from "../../seller/LeadsSection.jsx";
+import BoostSasa from "../BoostSasa.jsx";
+import LeadingSasa from "../LeadingSasa.jsx";
+import AdvertiseSasa from "../AdvertiseSasa.jsx";
+import PromotedBannerStrip from "../PromotedBannerStrip.jsx";
+import DealRooms from "../DealRooms.jsx";
+import BrowseProperties from "../BrowseProperties.jsx";
+import BottomNav from "../../../../components/BottomNav.jsx";
 
 // Seller & Buyer Overview
-import SellerOverview from "../seller/SellerOverview.jsx";
-import BuyerOverview from "../buyer/BuyerOverview.jsx";
-import RecentActivityPage from "./RecentActivityPage.jsx";
+import SellerOverview from "../../seller/SellerOverview.jsx";
+import BuyerOverview from "../../buyer/BuyerOverview.jsx";
+import RecentActivityPage from "../RecentActivityPage.jsx";
 
 // Buyer Sections
-import MySearchesSection from "../buyer/MySearchesSection.jsx";
-import SafetySupportSection from "../buyer/SafetySupportSection.jsx";
+import MySearchesSection from "../../buyer/MySearchesSection.jsx";
+import SafetySupportSection from "../../buyer/SafetySupportSection.jsx";
 
 // Kurasa mpya
-import SavedPropertiesPage from "../../SavedPropertiesPage";
-import MessagesPage from "../../MessagesPage";
-import NotificationsPage from "../../NotificationsPage";
-import MyTransactionsPage from "../../MyTransactionsPage";
-import WaitingListPage from "../../WaitingListPage";
-import BundlesPage from "../../BundlesPage";
+import SavedPropertiesPage from "../../../SavedPropertiesPage.jsx";
+import MessagesPage from "../../../MessagesPage.jsx";
+import NotificationsPage from "../../../NotificationsPage.jsx";
+import MyTransactionsPage from "../../../MyTransactionsPage.jsx";
+import WaitingListPage from "../../../WaitingListPage.jsx";
+import BundlesPage from "../../../BundlesPage.jsx";
 import {
   useWaitingList,
   leaveWaitingList,
-} from "../../../config/waitingListStore.js";
+} from "../../../../config/waitingListStore.js";
 
-import PageLoader from "../../../components/PageLoader.jsx";
+import PageLoader from "../../../../components/PageLoader.jsx";
 
 // ============================================================
 // SELLER NAV
@@ -218,6 +225,24 @@ export default function DashboardShell() {
     const id = setTimeout(() => setReady(true), 300);
     return () => clearTimeout(id);
   }, []);
+
+  // ⬇️ ZUIA ADMIN kuingia dashboard za watumiaji
+  // Admin ana dashboard yake (/smk-control-9x7k).
+  // Kama anataka kuingia dashboard za watumiaji, atengeneze account nyingine.
+  const isAdminUser =
+    user?.role === "Admin" ||
+    user?.role === "admin" ||
+    user?.role === "ADMIN" ||
+    user?.isStaff === true ||
+    user?.is_staff === true ||
+    user?.isSuperuser === true ||
+    user?.is_superuser === true;
+
+  useEffect(() => {
+    if (isAdminUser) {
+      navigate(ADMIN_PATH, { replace: true });
+    }
+  }, [isAdminUser, navigate]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -466,8 +491,6 @@ export default function DashboardShell() {
       return <LeadsSection onNavigate={handleNavClick} />;
     }
     if (activeKey === "browse") {
-      // ⬇️ Tunapitisha `user` ili BrowseProperties iweze kuchuja
-      //    listings za user mwenyewe (seller hawezi kununua bidhaa yake)
       return <BrowseProperties lang={lang} excludeSellerId={user?.id} />;
     }
     if (activeKey === "saved") {
@@ -597,6 +620,37 @@ export default function DashboardShell() {
       </div>
     );
   };
+
+  // ⬇️ Zuia render kama ni admin (kabla ya redirect)
+  if (isAdminUser) {
+    return (
+      <div
+        style={{ background: COLORS.sand, minHeight: "100vh" }}
+        className="w-full flex items-center justify-center p-6"
+      >
+        <div className="text-center max-w-md">
+          <div
+            style={{ background: `${COLORS.rust}15` }}
+            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+          >
+            <Shield size={28} color={COLORS.rust} />
+          </div>
+          <h2 className="text-lg font-bold text-primary mb-2">
+            {t("Admin Hana Ruhusa Hapa", "Admin Cannot Access Here")}
+          </h2>
+          <p className="text-sm text-secondary leading-relaxed">
+            {t(
+              "Admin ana dashboard yake. Kama unataka kuingia dashboard za watumiaji, tafadhali tengeneza account nyingine kama Buyer au Seller.",
+              "Admin has their own dashboard. If you want to access user dashboards, please create another account as a Buyer or Seller."
+            )}
+          </p>
+          <p className="text-xs text-muted mt-3">
+            {t("Unaelekezwa kwenye dashboard ya admin...", "Redirecting to admin dashboard...")}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!ready) {
     return <PageLoader lang={lang} />;
@@ -732,7 +786,6 @@ export default function DashboardShell() {
             )}
           </div>
 
-                    
           <a
             href="/"
             className="hidden md:block text-white/80 hover:text-white p-1.5 transition-colors"
@@ -825,8 +878,7 @@ export default function DashboardShell() {
         style={{ background: COLORS.nightSoft }}
         className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full"
       >
-        <button
-          onClick={() => handleSideChange("seller")}
+        <button          onClick={() => handleSideChange("seller")}
           style={{
             background: side === "seller" ? COLORS.gold : "transparent",
             color: side === "seller" ? COLORS.night : COLORS.sand,

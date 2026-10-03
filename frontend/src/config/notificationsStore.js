@@ -1,5 +1,6 @@
 // ============================================================
 // notificationsStore.js — API-only via /api/notifications/
+// + Local notifications za admin (USER_DELETED, n.k.)
 // ============================================================
 import { useEffect, useState } from "react";
 import { notificationsApi } from "../api/notifications.js";
@@ -23,6 +24,8 @@ export const NOTIFICATION_EVENTS = {
   PAYMENT_CONFIRMED: "payment.confirmed",
   DISPUTE_RESOLVED: "dispute.resolved",
   BUNDLE_PURCHASED: "bundle.purchased",
+  // ⬇️ MPYA — Local admin notifications
+  USER_DELETED: "user.deleted",
 };
 
 // Map backend notification_type → admin section key (used by
@@ -62,6 +65,8 @@ const TYPE_TO_TARGET = {
   MESSAGE_RECEIVED: "support",
   BUNDLE_PURCHASED: "revenue",
   DISPUTE_RESOLVED: "deals",
+  // ⬇️ MPYA — Local admin notifications
+  USER_DELETED: "trash",
 };
 
 function read() {
@@ -109,8 +114,23 @@ export async function hydrateNotificationsFromApi() {
     const data = await notificationsApi.list({ page_size: 100 });
     const rawList = Array.isArray(data) ? data : data?.results || [];
     const normalized = rawList.map(norm).filter(Boolean);
-    write(normalized);
-    return { ok: true, count: normalized.length };
+
+    // ⬇️ MUHIMU: usifute local admin notifications wakati wa hydrate.
+    // Tunachukua zote zilizopo (local + api), kisha tunaunganisha.
+    const existing = read();
+    const localAdminNotifs = existing.filter(
+      (n) => n.audience === "admin" || n._local === true
+    );
+
+    // Dedupe: API notifs + local admin notifs
+    const apiIds = new Set(normalized.map((n) => String(n.id)));
+    const merged = [
+      ...normalized,
+      ...localAdminNotifs.filter((n) => !apiIds.has(String(n.id))),
+    ];
+
+    write(merged);
+    return { ok: true, count: merged.length };
   } catch (err) {
     return { ok: false, error: err };
   }
@@ -118,8 +138,12 @@ export async function hydrateNotificationsFromApi() {
 
 export function getNotifications(audience) {
   const all = sortNewest(read());
-  if (!audience || audience === "user") return all;
-  if (audience === "admin") return [];
+  if (audience === "admin") {
+    return all.filter((n) => n.audience === "admin");
+  }
+  if (!audience || audience === "user") {
+    return all.filter((n) => n.audience === "user" || !n.audience);
+  }
   return all;
 }
 export function getUnreadCount(audience) {
@@ -128,7 +152,11 @@ export function getUnreadCount(audience) {
 
 export async function markNotificationReadAsync(id) {
   try {
-    await notificationsApi.markRead(id);
+    // Kama ni local notification, usiite API
+    const target = read().find((n) => n.id === id);
+    if (!target?._local) {
+      await notificationsApi.markRead(id);
+    }
     write(
       read().map((n) =>
         n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n
@@ -142,7 +170,10 @@ export async function markNotificationReadAsync(id) {
 
 export async function markAllNotificationsReadAsync(audience) {
   try {
-    await notificationsApi.markAllRead();
+    // Kama audience ni "admin", usiite API (local pekee)
+    if (audience !== "admin") {
+      await notificationsApi.markAllRead();
+    }
     write(
       read().map((n) =>
         !audience || audience === "user" || n.audience === audience
@@ -158,7 +189,11 @@ export async function markAllNotificationsReadAsync(audience) {
 
 export async function removeNotificationAsync(id) {
   try {
-    await notificationsApi.remove(id);
+    // Kama ni local, usiite API
+    const target = read().find((n) => n.id === id);
+    if (!target?._local) {
+      await notificationsApi.remove(id);
+    }
     write(read().filter((n) => n.id !== id));
     return { ok: true };
   } catch (err) {
@@ -183,11 +218,19 @@ export function useNotifications(audience) {
       window.removeEventListener(EV, sync);
     };
   }, []);
-  const notifications = sortNewest(
-    audience && audience !== "user"
-      ? []
-      : all.filter((n) => n.audience === "user" || !audience)
-  );
+
+  // Chuja kwa audience
+  let notifications;
+  if (audience === "admin") {
+    notifications = sortNewest(all.filter((n) => n.audience === "admin"));
+  } else if (audience === "user") {
+    notifications = sortNewest(
+      all.filter((n) => n.audience === "user" || !n.audience)
+    );
+  } else {
+    notifications = sortNewest(all);
+  }
+
   const unreadCount = notifications.filter((n) => !n.read).length;
   return {
     notifications,
@@ -207,13 +250,105 @@ export function getLocalizedField(field, lang = "sw") {
   return field?.[lang] || field?.sw || field?.en || "";
 }
 
+// ============================================================
+// LOCAL ADMIN NOTIFICATIONS
+// Hutumika wakati mtumiaji anafuta kitu. Backend inaweza pia
+// kutuma notification kwa admins (kupitia signal), lakini hii
+// inahakikisha admin anaona haraka bila kusubiri refresh.
+// ============================================================
+
+/**
+ * Tuma notification kwa admin.
+ */
+export function notifyAdmin({
+  type = "USER_DELETED",
+  title,
+  message,
+  meta = {},
+  itemType,
+  itemId,
+  itemTitle,
+  userId,
+  userName,
+} = {}) {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const all = read();
+    const adminNotification = {
+      id: `adm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      audience: "admin",
+      type,
+      title: title || "Mtumiaji amefuta",
+      body: message || "",
+      at: new Date().toISOString(),
+      read: false,
+      readAt: null,
+      link: null,
+      target: "trash",
+      meta: {
+        ...meta,
+        userId,
+        userName,
+        itemType,
+        itemId,
+        itemTitle,
+        source: "user_delete",
+      },
+      priority: "HIGH",
+      _local: true,
+    };
+
+    write([adminNotification, ...all]);
+    return adminNotification;
+  } catch (err) {
+    console.warn("[notificationsStore] notifyAdmin failed:", err);
+    return null;
+  }
+}
+
+/**
+ * Helper rahisi kwa kufuta kwa mtumiaji.
+ */
+export function notifyAdminAboutDeletion({
+  itemType,
+  itemId,
+  itemTitle,
+  user,
+  reason = "",
+}) {
+  const userName = user?.name || user?.email || "Mtumiaji";
+  const typeLabel =
+    {
+      listing: { sw: "tangazo", en: "listing" },
+      message: { sw: "ujumbe", en: "message" },
+      deal: { sw: "deal", en: "deal" },
+      verification: { sw: "uthibitisho", en: "verification" },
+    }[itemType] || { sw: "kitu", en: "item" };
+
+  return notifyAdmin({
+    type: "USER_DELETED",
+    title: `${userName} amefuta ${typeLabel.sw}`,
+    message: reason
+      ? `${userName} amefuta ${typeLabel.sw}: "${itemTitle}". Sababu: ${reason}`
+      : `${userName} amefuta ${typeLabel.sw}: "${itemTitle}".`,
+    meta: {
+      actionUrl: `/smk-control-9x7k/trash`,
+    },
+    itemType,
+    itemId,
+    itemTitle,
+    userId: user?.id,
+    userName,
+  });
+}
+
 // ── Deprecated shims (backend emits notifications) ──────────
 export function pushNotification() {}
 export function notifyBoostPurchased() {}
 export function notifyLeadingPurchased() {}
 export function notifyAdvertisementPurchased() {}
 export function notifyListingFeePaid() {}
-export function notifyAdmin() {}
 export function notifyNewMessage() {}
 export function notifyReservationExpiringSoon() {}
 export function notifyListingReleased() {}
@@ -241,26 +376,17 @@ export function notifyPaymentConfirmed() {}
 
 // ============================================================
 // NOTIFICATION ROUTE RESOLVER
-// Maps a notification to a concrete in-app route so the "View →"
-// link always navigates somewhere sensible.
-//
-// Priority:
-//   1. Explicit `link` from the backend (action_url) — respected as-is
-//   2. Type-based routing
-//   3. Deep-link via `meta.related_object_id` (message id, deal id, etc.)
-//   4. Fallback to the notifications list
 // ============================================================
 export function resolveNotificationRoute(notif, side = "seller") {
   if (!notif) return "/dashboard/notifications";
 
-  // 1. Respect the backend's action_url if it looks in-app
   const explicit = typeof notif.link === "string" ? notif.link.trim() : "";
   if (explicit && explicit.startsWith("/")) return explicit;
   if (explicit && /^https?:\/\//i.test(explicit)) return explicit;
 
   const prefix = side === "buyer" ? "/dashboard/buyer" : "/dashboard";
   const rawType = String(notif.type || "").toUpperCase();
-  const type = rawType.replace(/\./g, "_"); // "message.received" → "MESSAGE_RECEIVED"
+  const type = rawType.replace(/\./g, "_");
   const meta = notif.meta || {};
   const relatedId = meta.related_object_id;
 
@@ -270,13 +396,11 @@ export function resolveNotificationRoute(notif, side = "seller") {
       : base;
 
   switch (type) {
-    // ── Messages ─────────────────────────────────────────
     case "MESSAGE_RECEIVED":
     case "MESSAGE":
     case "NEW_MESSAGE":
       return withQuery(`${prefix}/messages`, "c");
 
-    // ── Deals & transactions ─────────────────────────────
     case "DEAL_ROOM_CREATED":
     case "DEAL_ROOM":
     case "NEW_DEAL_ROOM":
@@ -300,7 +424,6 @@ export function resolveNotificationRoute(notif, side = "seller") {
     case "DISPUTE_RESOLVED":
       return withQuery(`${prefix}/deals`, "deal");
 
-    // ── Listings ─────────────────────────────────────────
     case "LISTING_CREATED":
     case "LISTING_APPROVED":
     case "LISTING_REJECTED":
@@ -315,7 +438,6 @@ export function resolveNotificationRoute(notif, side = "seller") {
     case "SUCCESS_FEE_PAID":
       return `${prefix}/transactions`;
 
-    // ── Promotions ───────────────────────────────────────
     case "BOOST_PURCHASED":
     case "BOOST_ACTIVATED":
       return `${prefix}/boost`;
@@ -326,25 +448,18 @@ export function resolveNotificationRoute(notif, side = "seller") {
     case "ADVERTISEMENT_PURCHASED":
       return `${prefix}/advertise`;
 
-    // ── Bundles / credits ────────────────────────────────
     case "BUNDLE_PURCHASED":
       return `${prefix}/bundles`;
 
-    // ── Waiting list ─────────────────────────────────────
     case "WAITING_LIST_JOINED":
     case "WAITING_LIST_AVAILABLE":
       return "/dashboard/buyer/waiting";
 
-    // ── Fallback ─────────────────────────────────────────
     default:
       return `${prefix}/notifications`;
   }
 }
 
-// ============================================================
-// NOTIFICATION ROUTE LABEL
-// Returns the CTA label used next to the arrow ("View", "Reply", ...).
-// ============================================================
 export function notificationCtaKey(notif) {
   const rawType = String(notif?.type || "").toUpperCase();
   const type = rawType.replace(/\./g, "_");
@@ -365,4 +480,3 @@ export function notificationCtaKey(notif) {
       return "view";
   }
 }
-

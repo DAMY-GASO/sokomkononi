@@ -26,9 +26,12 @@ export const listingsApi = {
   create: (payload) => api.post("/listings/", payload),
   update: (id, patch) => api.patch(`/listings/${id}/`, patch),
   remove: (id, { hard = false, reason = "" } = {}) => {
-  const qs = hard ? "?hard=true" : "";
-  return api.delete(`/listings/${id}/${qs}`, reason ? { reason } : {});
-},
+    const qs = hard ? "?hard=true" : "";
+    return api.delete(`/listings/${id}/${qs}`, reason ? { reason } : {});
+  },
+
+  // ⬇️ RESTORE — rejesha listing iliyofutwa (soft delete undo)
+  restore: (id) => api.post(`/listings/${id}/restore/`, {}),
 
   // ----- Fee -----
   getFee: (id) => api.get(`/listings/${id}/fee/`),
@@ -45,38 +48,26 @@ export const listingsApi = {
   // ============================================================
   // CATEGORY-SPECIFIC DETAILS
   // ============================================================
-  // NOTE: Backend uses two different endpoints:
-  //   - POST   /listings/{id}/{kind}-details/        → CREATE (first time)
-  //   - PATCH  /listings/{id}/{kind}-details/detail/ → UPDATE (subsequent)
-  //
-  // This is intentional design on backend. Keep both paths as-is.
-  // ============================================================
-
-  // ----- Property (Nyumba) -----
   createPropertyDetails: (id, payload) =>
     api.post(`/listings/${id}/property-details/`, payload),
   updatePropertyDetails: (id, payload) =>
     api.patch(`/listings/${id}/property-details/detail/`, payload),
 
-  // ----- Land (Viwanja) -----
   createLandDetails: (id, payload) =>
     api.post(`/listings/${id}/land-details/`, payload),
   updateLandDetails: (id, payload) =>
     api.patch(`/listings/${id}/land-details/detail/`, payload),
 
-  // ----- Vehicle (Magari) -----
   createVehicleDetails: (id, payload) =>
     api.post(`/listings/${id}/vehicle-details/`, payload),
   updateVehicleDetails: (id, payload) =>
     api.patch(`/listings/${id}/vehicle-details/detail/`, payload),
 
-  // ----- Business (Biashara) -----
   createBusinessDetails: (id, payload) =>
     api.post(`/listings/${id}/business-details/`, payload),
   updateBusinessDetails: (id, payload) =>
     api.patch(`/listings/${id}/business-details/detail/`, payload),
 
-  // ----- Equipment (Mashine) -----
   createEquipmentDetails: (id, payload) =>
     api.post(`/listings/${id}/equipment-details/`, payload),
   updateEquipmentDetails: (id, payload) =>
