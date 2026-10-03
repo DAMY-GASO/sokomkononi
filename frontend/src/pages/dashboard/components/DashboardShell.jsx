@@ -36,9 +36,9 @@ import {
 } from "lucide-react";
 import { COLORS } from "./shared.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-import MyVerificationsPanel from "../MyVerificationsPanel.jsx";
-import { useAuth, logoutAsync } from "../../../../config/authStore.js";
-import { ADMIN_PATH } from "../../../../config/adminPath.js";
+import MyVerificationsPanel from "./MyVerificationsPanel.jsx";
+import { useAuth, logoutAsync } from "../../../config/authStore.js";
+import { ADMIN_PATH } from "../../../config/adminPath.js";
 import {
   useMyListings,
   checkListingExpiry,
@@ -51,47 +51,47 @@ import {
   unpauseListingAsync,
   markSoldAsync,
   payListingFeeAsync,
-} from "../../../../config/listingsStore.js";
-import { useSentAnnouncements } from "../../../../config/announcementsStore.js";
-import { useNotifications } from "../../../../config/notificationsStore.js";
-import { checkReservationReminders } from "../../../../config/dealsStore.js";
-import { setDashboardSide } from "../../../../config/dashboardSideStore.js";
-import { addTransaction } from "../../../../config/transactionsStore.js";
-import { useNewLeadsCount } from "../../../../config/leadsStore.js";
-import { useSearchesCount } from "../../../../config/searchesStore.js";
-import PostPropertyForm from "../PostPropertyForm.jsx";
-import MyListings from "../MyListings.jsx";
-import LeadsSection from "../../seller/LeadsSection.jsx";
-import BoostSasa from "../BoostSasa.jsx";
-import LeadingSasa from "../LeadingSasa.jsx";
-import AdvertiseSasa from "../AdvertiseSasa.jsx";
-import PromotedBannerStrip from "../PromotedBannerStrip.jsx";
-import DealRooms from "../DealRooms.jsx";
-import BrowseProperties from "../BrowseProperties.jsx";
-import BottomNav from "../../../../components/BottomNav.jsx";
+} from "../../../config/listingsStore.js";
+import { useSentAnnouncements } from "../../../config/announcementsStore.js";
+import { useNotifications } from "../../../config/notificationsStore.js";
+import { checkReservationReminders } from "../../../config/dealsStore.js";
+import { setDashboardSide } from "../../../config/dashboardSideStore.js";
+import { addTransaction } from "../../../config/transactionsStore.js";
+import { useNewLeadsCount } from "../../../config/leadsStore.js";
+import { useSearchesCount } from "../../../config/searchesStore.js";
+import PostPropertyForm from "./PostPropertyForm.jsx";
+import MyListings from "./MyListings.jsx";
+import LeadsSection from "../seller/LeadsSection.jsx";
+import BoostSasa from "./BoostSasa.jsx";
+import LeadingSasa from "./LeadingSasa.jsx";
+import AdvertiseSasa from "./AdvertiseSasa.jsx";
+import PromotedBannerStrip from "./PromotedBannerStrip.jsx";
+import DealRooms from "./DealRooms.jsx";
+import BrowseProperties from "./BrowseProperties.jsx";
+import BottomNav from "../../../components/BottomNav.jsx";
 
 // Seller & Buyer Overview
-import SellerOverview from "../../seller/SellerOverview.jsx";
-import BuyerOverview from "../../buyer/BuyerOverview.jsx";
-import RecentActivityPage from "../RecentActivityPage.jsx";
+import SellerOverview from "../seller/SellerOverview.jsx";
+import BuyerOverview from "../buyer/BuyerOverview.jsx";
+import RecentActivityPage from "./RecentActivityPage.jsx";
 
 // Buyer Sections
-import MySearchesSection from "../../buyer/MySearchesSection.jsx";
-import SafetySupportSection from "../../buyer/SafetySupportSection.jsx";
+import MySearchesSection from "../buyer/MySearchesSection.jsx";
+import SafetySupportSection from "../buyer/SafetySupportSection.jsx";
 
 // Kurasa mpya
-import SavedPropertiesPage from "../../../SavedPropertiesPage.jsx";
-import MessagesPage from "../../../MessagesPage.jsx";
-import NotificationsPage from "../../../NotificationsPage.jsx";
-import MyTransactionsPage from "../../../MyTransactionsPage.jsx";
-import WaitingListPage from "../../../WaitingListPage.jsx";
-import BundlesPage from "../../../BundlesPage.jsx";
+import SavedPropertiesPage from "../../SavedPropertiesPage.jsx";
+import MessagesPage from "../../MessagesPage.jsx";
+import NotificationsPage from "../../NotificationsPage.jsx";
+import MyTransactionsPage from "../../MyTransactionsPage.jsx";
+import WaitingListPage from "../../WaitingListPage.jsx";
+import BundlesPage from "../../BundlesPage.jsx";
 import {
   useWaitingList,
   leaveWaitingList,
-} from "../../../../config/waitingListStore.js";
+} from "../../../config/waitingListStore.js";
 
-import PageLoader from "../../../../components/PageLoader.jsx";
+import PageLoader from "../../../components/PageLoader.jsx";
 
 // ============================================================
 // SELLER NAV
