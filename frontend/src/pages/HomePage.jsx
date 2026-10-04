@@ -5,6 +5,7 @@ import { useAuth } from "../config/authStore.js";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import Navbar from "../components/Navbar.jsx";
+import PageLoader from "../components/PageLoader.jsx";
 import ListingCard from "../components/ListingCard.jsx";
 import CategoryTile from "../components/CategoryTile.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
@@ -204,35 +205,9 @@ function AmbientBackground() {
   );
 }
 
-// ============================================================
-// HeroStatCard — barely visible, appears after a long delay
-// ============================================================
-function HeroStatCard({ label, value, accent = "rgba(255,255,255,0.7)", delay = 0 }) {
-  return (
-    <div
-      className="backdrop-blur-md rounded-2xl px-3.5 py-2.5 animate-fade-in-soft-delayed"
-      style={{
-        animationDelay: `${6 + delay}s`,
-        opacity: 0,
-        background: "rgba(255,255,255,0.012)",
-        border: "1px solid rgba(255,255,255,0.035)",
-      }}
-    >
-      <p
-        className="text-[9px] uppercase tracking-[0.15em] font-medium"
-        style={{ color: "rgba(255,255,255,0.18)" }}
-      >
-        {label}
-      </p>
-      <p
-        className="text-sm lg:text-base font-semibold mt-0.5"
-        style={{ color: accent }}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
+// Loader inaonekana mara moja kila ukurasa unapofunguliwa upya (si kila
+// unaporudi Home kupitia navigation ndani ya app).
+let homeLoaderShown = false;
 
 // ============================================================
 // MAIN
@@ -245,6 +220,17 @@ export default function HomePage() {
   const popularCategories = usePopularCategories();
 
   const [openFaq, setOpenFaq] = useState(null);
+
+  // Page loader — inaonekana kwa muda mfupi kabla ya Home kuonyeshwa
+  const [ready, setReady] = useState(homeLoaderShown);
+  useEffect(() => {
+    if (ready) return undefined;
+    const id = setTimeout(() => {
+      homeLoaderShown = true;
+      setReady(true);
+    }, 900);
+    return () => clearTimeout(id);
+  }, [ready]);
 
   // Links za apps zinatoka kwenye system settings (admin anaziweka/kuzibadilisha)
   const [appLinks] = useAppStoreLinks();
@@ -385,6 +371,8 @@ export default function HomePage() {
     },
   ];
 
+  if (!ready) return <PageLoader lang={lang} />;
+
   return (
     <div className="min-h-screen bg-white relative">
       <AmbientBackground />
@@ -439,20 +427,6 @@ export default function HomePage() {
             className="absolute top-[68%] right-[12%] w-[3px] h-[3px] rounded-full bg-royal animate-drift-across"
             style={{ opacity: 0.18, animationDuration: "72s", animationDelay: "-22s" }}
           />
-
-          {/* ── Corner stat cards — barely visible, delay 6s ── */}
-          <div className="absolute top-[16%] left-[4%] hidden xl:block animate-float" style={{ animationDelay: "-2s" }}>
-            <HeroStatCard label="Mali Zinazopatikana" value="2,500+" delay={0} />
-          </div>
-          <div className="absolute top-[12%] right-[4%] hidden xl:block animate-float-slow" style={{ animationDelay: "-4s" }}>
-            <HeroStatCard label="Wauzaji Walioidhinishwa" value="1,200+" accent="rgba(254,164,6,0.55)" delay={0.4} />
-          </div>
-          <div className="absolute bottom-[16%] left-[5%] hidden xl:block animate-float-slow" style={{ animationDelay: "-6s" }}>
-            <HeroStatCard label="Malipo Salama" value="100%" accent="rgba(0,98,253,0.55)" delay={0.8} />
-          </div>
-          <div className="absolute bottom-[12%] right-[5%] hidden xl:block animate-float" style={{ animationDelay: "-3s" }}>
-            <HeroStatCard label="Mikataba" value="850+" delay={1.2} />
-          </div>
 
           {/* Content */}
           <div className="relative w-full max-w-4xl mx-auto text-center">
