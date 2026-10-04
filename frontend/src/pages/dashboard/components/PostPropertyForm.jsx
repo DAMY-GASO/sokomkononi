@@ -1,13 +1,3 @@
-// ============================================================
-// PostPropertyForm.jsx (production + bundle support)
-// Category-specific posting + duplicate check + skip fee
-// + bundle option kwa listing fee
-//
-// SASISHO:
-//   - Kila listing inaenda PENDING_APPROVAL (admin approval)
-//   - Hata fee imezimwa au imewashwa, admin aidhinisha
-//   - Hakuna auto-publish — kila kitu kinapitia admin
-// ============================================================
 import React, { useState, useEffect } from "react";
 import {
   ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle,
@@ -555,6 +545,14 @@ export default function PostPropertyForm({
           cleanPriceInput(base.price)
         );
         fee = Number(local?.fee) || 0;
+      }
+
+      if (!fee && !listingFeeDisabled) {
+        const msg = t(
+          "Ada ya kuchapisha haijasanidiwa kwa category hii bado. Wasiliana na Admin.",
+          "The listing fee has not been configured for this category yet. Contact admin."
+        );
+        setWarnings((w) => (w.includes(msg) ? w : [...w, msg]));
       }
 
       if (!fee && !listingFeeDisabled) {
