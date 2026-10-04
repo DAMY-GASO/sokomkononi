@@ -5,11 +5,12 @@ import { useAuth } from "../config/authStore.js";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
+import ListingImage from "../components/ListingImage.jsx";
 import {
   MapPin, Bed, Bath, Maximize, Calendar, Heart, Share2, Phone,
   MessageSquare, ChevronLeft, ChevronRight, CheckCircle, Shield,
   Eye, Flag, Star, Camera, Car, Settings, Trees, Home as HomeIcon,
-  Briefcase, Wrench, Clock3, BellRing, Ban,
+  Briefcase, Wrench, Clock3, BellRing, Ban, Download,
 } from "lucide-react";
 import {
   useListings,
@@ -29,6 +30,8 @@ import {
   isBoostActive,
   isLeadingActive,
 } from "./dashboard/components/shared";
+import SimilarListingsSection from "./SimilarListingsSection.jsx";
+import { downloadImage, downloadAllImages } from "../utils/downloadImage.js";
 
 const CATEGORY_ICONS = {
   nyumba: HomeIcon,
@@ -74,6 +77,7 @@ function reservationCountdown(reservedUntil, lang) {
 
 function ImageGallery({ property, lang }) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [downloading, setDownloading] = useState(false);
 
   const rawList = [
     ...(Array.isArray(property.images) ? property.images : []),
@@ -102,7 +106,7 @@ function ImageGallery({ property, lang }) {
         <Icon size={64} className="text-muted" />
         {(isReserved || isSold) && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="bg-[#101A2E] text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-2">
+            <span className="bg-night text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-2">
               {isSold ? <Ban size={16} /> : <Clock3 size={16} />}
               {isSold ? t(lang, "Imeuzwa", "Sold") : t(lang, "Ina Reservation", "Reserved")}
             </span>
@@ -115,15 +119,45 @@ function ImageGallery({ property, lang }) {
   const nextImage = () => setCurrentIndex((prev) => (prev + 1) % images.length);
   const prevImage = () => setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
 
+  const handleDownloadCurrent = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      await downloadImage(
+        images[currentIndex],
+        `sokomkononi-${property.id}-${currentIndex + 1}.jpg`
+      );
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleDownloadAll = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      await downloadAllImages(images, `sokomkononi-${property.id}`);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <>
-      <div className="relative w-full aspect-square max-w-[640px] mx-auto rounded-2xl overflow-hidden bg-[#F5F3EC]">
-        <img
-          src={images[currentIndex]}
-          alt={property.title}
-          className="absolute inset-0 block w-full h-full object-cover object-center"
-          onError={(e) => { e.target.style.display = "none"; }}
-        />
+      <div className="relative w-full aspect-square max-w-[640px] mx-auto rounded-2xl overflow-hidden bg-sand">
+        <div className="absolute inset-0">
+          <ListingImage
+            key={images[currentIndex]}
+            src={images[currentIndex]}
+            alt={property.title}
+            ratio="h-full w-full"
+            eager
+          />
+        </div>
         {images.length > 1 && (
           <>
             <button
@@ -142,18 +176,46 @@ function ImageGallery({ property, lang }) {
             </button>
           </>
         )}
+
+        {/* Download buttons - chini kushoto */}
+        <div className="absolute bottom-3 left-3 flex items-center gap-2 z-10">
+          <button
+            onClick={handleDownloadCurrent}
+            disabled={downloading}
+            className="bg-black/60 hover:bg-black/80 text-white text-body-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors disabled:opacity-60"
+            title={t(lang, "Download picha hii", "Download this image")}
+          >
+            <Download size={14} />
+            {t(lang, "Download", "Download")}
+          </button>
+
+          {images.length > 1 && (
+            <button
+              onClick={handleDownloadAll}
+              disabled={downloading}
+              className="bg-black/60 hover:bg-black/80 text-white text-body-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors disabled:opacity-60"
+              title={t(lang, "Download zote", "Download all")}
+            >
+              <Download size={14} />
+              {t(lang, "Zote", "All")}
+            </button>
+          )}
+        </div>
+
+        {/* Counter - chini kulia */}
         <div className="absolute bottom-3 right-3 bg-black/60 text-white text-body-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10">
           <Camera size={14} />
           {currentIndex + 1} / {images.length}
         </div>
+
         {isFeatured && (
-          <div className="absolute top-3 left-3 bg-[#E8A33D] text-[#101A2E] text-body-sm font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
-            <Star size={12} fill="#101A2E" />
+          <div className="absolute top-3 left-3 bg-gold text-night text-body-sm font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
+            <Star size={12} fill="#011957" />
             {t(lang, "Imeangaziwa", "Featured")}
           </div>
         )}
         {isVerified && (
-          <div className="absolute top-3 right-3 bg-[#2F6D4F] text-white text-body-sm font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
+          <div className="absolute top-3 right-3 bg-green text-white text-body-sm font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Shield size={12} />
             {t(lang, "Imethibitishwa", "Verified")}
           </div>
@@ -163,15 +225,36 @@ function ImageGallery({ property, lang }) {
       {images.length > 1 && (
         <div className="flex gap-2 mt-3 overflow-x-auto pb-2 max-w-[640px] mx-auto">
           {images.map((img, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentIndex(idx)}
-              className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all ${
-                idx === currentIndex ? "border-[#E8A33D] opacity-100" : "border-transparent opacity-60 hover:opacity-100"
-              }`}
-            >
-              <img src={img} alt="" className="w-full h-full object-cover object-center block" />
-            </button>
+            <div key={idx} className="relative flex-shrink-0">
+              <button
+                onClick={() => setCurrentIndex(idx)}
+                className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                  idx === currentIndex
+                    ? "border-gold opacity-100"
+                    : "border-transparent opacity-60 hover:opacity-100"
+                }`}
+              >
+                <img
+                  src={img}
+                  alt=""
+                  loading="lazy"
+                  className="w-full h-full object-cover object-center block"
+                />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  downloadImage(
+                    img,
+                    `sokomkononi-${property.id}-${idx + 1}.jpg`
+                  );
+                }}
+                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center z-10"
+                title={t(lang, "Download", "Download")}
+              >
+                <Download size={10} />
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -182,7 +265,7 @@ function ImageGallery({ property, lang }) {
 function FeatureItem({ icon: Icon, label, value }) {
   return (
     <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100">
-      <div className="w-10 h-10 rounded-lg bg-[#E8A33D]/10 flex items-center justify-center flex-shrink-0">
+      <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0">
         <Icon size={18} color={COLORS.gold} />
       </div>
       <div>
@@ -215,10 +298,6 @@ function FeaturesSection({ property, lang }) {
   );
 }
 
-// ============================================================
-// ATTRIBUTES TABLE — inaonyesha fields zote za kategoria kama jedwali
-// Inasoma property.attributes (JSONField) + CATEGORY_EXTRA + mode fields
-// ============================================================
 function AttributesTable({ property, lang }) {
   const rows = useMemo(() => {
     const out = [];
@@ -227,7 +306,6 @@ function AttributesTable({ property, lang }) {
     const cfg = getPostingConfig(categoryKey);
     const attrs = property.attributes || {};
 
-    // Helper: rudisha thamani inayoonekana kwa field
     const resolveValue = (f, raw) => {
       if (raw === undefined || raw === null) return null;
       const str = String(raw).trim();
@@ -236,7 +314,6 @@ function AttributesTable({ property, lang }) {
       return opt ? (opt.label?.[lang] || opt.label?.sw || str) : str;
     };
 
-    // 1. Mode (kwa Jobs/Huduma)
     if (cfg.modes && attrs.mode) {
       const mode = cfg.modes.find((m) => m.key === attrs.mode);
       if (mode) {
@@ -244,7 +321,6 @@ function AttributesTable({ property, lang }) {
           label: t(lang, "Aina", "Type"),
           value: mode.label?.[lang] || mode.label?.sw || attrs.mode,
         });
-        // Fields za mode
         (mode.extra || []).forEach((f) => {
           const v = resolveValue(f, attrs[f.key]);
           if (v !== null) {
@@ -257,9 +333,7 @@ function AttributesTable({ property, lang }) {
       }
     }
 
-    // 2. Fields za kategoria (kutoka CATEGORY_EXTRA)
     baseFields.forEach((f) => {
-      // Ruka field ikiwa ni ya mode tu (tayari imeshughulikiwa)
       if (cfg.modes && cfg.modes.some((m) => (m.extra || []).some((mf) => mf.key === f.key))) {
         return;
       }
@@ -272,7 +346,6 @@ function AttributesTable({ property, lang }) {
       }
     });
 
-    // 3. Eneo (Mkoa, Wilaya, Eneo)
     if (attrs.region) {
       out.push({ label: t(lang, "Mkoa", "Region"), value: attrs.region });
     }
@@ -327,13 +400,13 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5">
       <div className="flex items-center gap-4 mb-4">
-        <div className="w-14 h-14 rounded-full bg-[#E8A33D]/10 flex items-center justify-center text-[#E8A33D] font-bold text-xl flex-shrink-0">
+        <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center text-gold-ink font-bold text-xl flex-shrink-0">
           {sellerInitial}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-primary truncate">{sellerName}</h3>
-            {property.verified && <CheckCircle size={16} className="text-[#2F6D4F] flex-shrink-0" />}
+            {property.verified && <CheckCircle size={16} className="text-green flex-shrink-0" />}
           </div>
           <p className="text-body-sm text-muted mt-0.5">
             {t(lang, "Muuzaji kwenye SokoMkononi", "Seller on SokoMkononi")}
@@ -343,17 +416,17 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
 
       {isUnavailable ? (
         <>
-          <div className="mb-3 p-3 rounded-xl bg-[#E8A33D]/10 border border-[#E8A33D]/30">
-            <p className="text-body-sm font-semibold text-[#8A5A16] flex items-center gap-1.5">
+          <div className="mb-3 p-3 rounded-xl bg-gold/10 border border-gold/30">
+            <p className="text-body-sm font-semibold text-gold-ink flex items-center gap-1.5">
               {isSold ? <Ban size={13} /> : <Clock3 size={13} />}
               {isSold
                 ? t(lang, "Mali hii tayari imeuzwa.", "This property has already been sold.")
                 : t(lang, "Mali hii tayari ina Reservation.", "This property already has a Reservation.")}
             </p>
             {isReserved && property.reservedUntil && (
-              <p className="text-body-sm text-[#8A5A16] mt-1">{reservationCountdown(property.reservedUntil, lang)}</p>
+              <p className="text-body-sm text-gold-ink mt-1">{reservationCountdown(property.reservedUntil, lang)}</p>
             )}
-            <p className="text-body-sm text-[#8A5A16]/80 mt-1">
+            <p className="text-body-sm text-gold-ink/80 mt-1">
               {t(lang, "Jiunge na Waiting List ili tukutaarifu papo hapo endapo itaachiwa huru.", "Join the Waiting List so we notify you immediately if it becomes available.")}
             </p>
           </div>
@@ -361,7 +434,7 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
             onClick={onJoinWaitlist}
             disabled={alreadyOnWaitlist || isSold}
             className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 ${
-              alreadyOnWaitlist || isSold ? "bg-gray-100 text-muted cursor-not-allowed" : "bg-[#101A2E] hover:bg-[#0A1220] text-white"
+              alreadyOnWaitlist || isSold ? "bg-gray-100 text-muted cursor-not-allowed" : "bg-night hover:bg-night-deep text-white"
             }`}
           >
             <BellRing size={16} />
@@ -375,7 +448,7 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
       ) : (
         <button
           onClick={onContact}
-          className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+          className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
         >
           <MessageSquare size={16} />
           {t(lang, "Wasiliana na Muuzaji", "Contact Seller")}
@@ -405,7 +478,7 @@ function ListingNotFound({ lang }) {
         </p>
         <Link
           to="/dashboard/buyer"
-          className="inline-block bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] px-6 py-2.5 rounded-xl font-semibold text-sm transition-colors"
+          className="inline-block bg-gold hover:bg-flame text-night px-6 py-2.5 rounded-xl font-semibold text-sm transition-colors"
         >
           {t(lang, "Tafuta Mali Nyingine", "Browse Other Properties")}
         </Link>
@@ -435,9 +508,6 @@ export default function PropertyDetailPage() {
   const [contactLoading, setContactLoading] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
 
-  // ============================================================
-  // IMAGE PIPELINE
-  // ============================================================
   const [fetchedImages, setFetchedImages] = useState([]);
 
   useEffect(() => {
@@ -463,7 +533,6 @@ export default function PropertyDetailPage() {
     };
 
     (async () => {
-      // ---- Step 1: refresh the listing detail ----
       try {
         const detailRes = await fetchListingDetailAsync(property.id);
         if (cancelled) return;
@@ -475,7 +544,6 @@ export default function PropertyDetailPage() {
             l.imageUrl,
           ].filter(Boolean);
           if (urls.length > 0) {
-            console.log("[PropertyDetail] images from detail endpoint:", urls);
             setFetchedImages(urls);
             return;
           }
@@ -484,14 +552,12 @@ export default function PropertyDetailPage() {
         console.warn("[PropertyDetail] detail fetch failed:", err);
       }
 
-      // ---- Step 2: fall back to the images endpoint ----
       try {
         const imagesRes = await fetchListingImagesAsync(property.id);
         if (cancelled) return;
         if (imagesRes?.ok) {
           const urls = extractUrls(imagesRes.images);
           if (urls.length > 0) {
-            console.log("[PropertyDetail] images from /images/ endpoint:", urls);
             setFetchedImages(urls);
             return;
           }
@@ -499,12 +565,6 @@ export default function PropertyDetailPage() {
       } catch (err) {
         console.warn("[PropertyDetail] images fetch failed:", err);
       }
-
-      console.warn(
-        "[PropertyDetail] no images found for listing",
-        property.id,
-        "— check backend /listings/ and /listings/{id}/images/"
-      );
     })();
 
     return () => {
@@ -668,11 +728,11 @@ export default function PropertyDetailPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <nav className="flex items-center gap-2 text-sm text-secondary mb-4 overflow-x-auto">
-          <Link to="/" className="hover:text-[#E8A33D] transition-colors whitespace-nowrap">
+          <Link to="/" className="hover:text-gold-ink transition-colors whitespace-nowrap">
             {t(lang, "Nyumbani", "Home")}
           </Link>
           <ChevronRight size={14} className="flex-shrink-0" />
-          <Link to={`/kategoria/${property.category}`} className="hover:text-[#E8A33D] transition-colors whitespace-nowrap">
+          <Link to={`/kategoria/${property.category}`} className="hover:text-gold-ink transition-colors whitespace-nowrap">
             {categoryLabel}
           </Link>
           <ChevronRight size={14} className="flex-shrink-0" />
@@ -719,8 +779,8 @@ export default function PropertyDetailPage() {
                     onClick={handleSave}
                     className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors ${
                       isSaved
-                        ? "bg-[#C1502E] border-[#C1502E] text-white"
-                        : "border-gray-200 text-muted hover:text-[#C1502E] hover:border-[#C1502E]"
+                        ? "bg-rust border-rust text-white"
+                        : "border-gray-200 text-muted hover:text-rust hover:border-rust"
                     }`}
                     aria-label={t(lang, "Hifadhi", "Save")}
                   >
@@ -734,7 +794,7 @@ export default function PropertyDetailPage() {
                     <Share2 size={18} />
                   </button>
                   <button
-                    className="w-10 h-10 rounded-full border border-gray-200 text-muted hover:text-[#C1502E] flex items-center justify-center transition-colors"
+                    className="w-10 h-10 rounded-full border border-gray-200 text-muted hover:text-rust flex items-center justify-center transition-colors"
                     aria-label={t(lang, "Ripoti", "Report")}
                   >
                     <Flag size={18} />
@@ -744,21 +804,21 @@ export default function PropertyDetailPage() {
 
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <div className="flex items-end gap-3 flex-wrap">
-                  <p className="text-2xl sm:text-3xl font-bold text-[#C1502E]">
+                  <p className="text-2xl sm:text-3xl font-bold text-night">
                     {formatTZS(property.price)}
                   </p>
                   {property.status === "live" && (
-                    <span className="text-body-sm font-medium text-[#2F6D4F] bg-[#2F6D4F]/10 px-2.5 py-1 rounded-full mb-1">
+                    <span className="text-body-sm font-medium text-green bg-green/10 px-2.5 py-1 rounded-full mb-1">
                       {t(lang, "Inapatikana", "Available")}
                     </span>
                   )}
                   {property.status === "reserved" && (
-                    <span className="text-body-sm font-medium text-[#8A5A16] bg-[#E8A33D]/15 px-2.5 py-1 rounded-full mb-1">
+                    <span className="text-body-sm font-medium text-gold-ink bg-gold/15 px-2.5 py-1 rounded-full mb-1">
                       {t(lang, "Ina Reservation", "Reserved")}
                     </span>
                   )}
                   {property.status === "sold" && (
-                    <span className="text-body-sm font-medium text-white bg-[#101A2E] px-2.5 py-1 rounded-full mb-1">
+                    <span className="text-body-sm font-medium text-white bg-night px-2.5 py-1 rounded-full mb-1">
                       {t(lang, "Imeuzwa", "Sold")}
                     </span>
                   )}
@@ -771,7 +831,7 @@ export default function PropertyDetailPage() {
                 <button
                   onClick={() => setActiveTab("details")}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                    activeTab === "details" ? "text-[#E8A33D] border-b-2 border-[#E8A33D]" : "text-secondary hover:text-primary"
+                    activeTab === "details" ? "text-gold-ink border-b-2 border-gold" : "text-secondary hover:text-primary"
                   }`}
                 >
                   {t(lang, "Maelezo", "Details")}
@@ -779,7 +839,7 @@ export default function PropertyDetailPage() {
                 <button
                   onClick={() => setActiveTab("location")}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                    activeTab === "location" ? "text-[#E8A33D] border-b-2 border-[#E8A33D]" : "text-secondary hover:text-primary"
+                    activeTab === "location" ? "text-gold-ink border-b-2 border-gold" : "text-secondary hover:text-primary"
                   }`}
                 >
                   {t(lang, "Mahali", "Location")}
@@ -796,7 +856,6 @@ export default function PropertyDetailPage() {
                       </p>
                     </div>
 
-                    {/* JEDWALI LA TAARIFA ZA KATEGORIA */}
                     <div>
                       <h3 className="font-semibold text-primary mb-3">
                         {t(lang, "Taarifa za Kategoria", "Category Details")}
@@ -804,7 +863,6 @@ export default function PropertyDetailPage() {
                       <AttributesTable property={property} lang={lang} />
                     </div>
 
-                    {/* Sifa za haraka */}
                     <div>
                       <h3 className="font-semibold text-primary mb-3">
                         {t(lang, "Sifa za Haraka", "Quick Features")}
@@ -841,7 +899,7 @@ export default function PropertyDetailPage() {
 
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <h3 className="font-semibold text-primary mb-3 flex items-center gap-2">
-                <Shield size={16} className="text-[#E8A33D]" />
+                <Shield size={16} className="text-gold-ink" />
                 {t(lang, "Vidokezo vya Usalama", "Safety Tips")}
               </h3>
               <ul className="space-y-2.5">
@@ -852,7 +910,7 @@ export default function PropertyDetailPage() {
                   t(lang, "Tumia Deal Room yetu kwa mazungumzo", "Use our Deal Room for conversations"),
                 ].map((tip, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-body-sm text-secondary">
-                    <CheckCircle size={14} className="text-[#2F6D4F] mt-0.5 flex-shrink-0" />
+                    <CheckCircle size={14} className="text-green mt-0.5 flex-shrink-0" />
                     {tip}
                   </li>
                 ))}
@@ -874,6 +932,11 @@ export default function PropertyDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Similar Listings */}
+        {property && property.id && (
+          <SimilarListingsSection listingId={property.id} lang={lang} />
+        )}
       </div>
 
       {showContactModal && (
@@ -892,7 +955,7 @@ export default function PropertyDetailPage() {
                 disabled={!!contactLoading}
                 className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <MessageSquare size={20} className="text-[#E8A33D]" />
+                <MessageSquare size={20} className="text-gold-ink" />
                 <div>
                   <p className="text-sm font-medium text-primary">
                     {t(lang, "Anzisha Deal Room", "Start a Deal Room")}
@@ -908,7 +971,7 @@ export default function PropertyDetailPage() {
                 disabled={!!contactLoading}
                 className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <MessageSquare size={20} className="text-[#2F6D4F]" />
+                <MessageSquare size={20} className="text-green" />
                 <div>
                   <p className="text-sm font-medium text-primary">
                     {t(lang, "Tuma Ujumbe wa Haraka", "Send a Quick Message")}
