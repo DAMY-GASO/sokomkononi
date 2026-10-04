@@ -1,56 +1,79 @@
 import React from "react";
 
+/**
+ * PageLoader — inaonyesha logo halisi ya SokoMkononi (public/logo.webp)
+ * ikiwa na pete ndogo inayozunguka. Rangi zinatoka kwenye logo.
+ */
 export default function PageLoader({ lang = "sw" }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   return (
     <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
       style={{
-        background: "#101A2E",
+        background:
+          "radial-gradient(circle at 50% 42%, #042475 0%, #011957 48%, #010F3A 100%)",
         fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
       }}
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
     >
       <style>{`
-        @keyframes smk-spin { to { transform: rotate(360deg); } }
-        @keyframes smk-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        @keyframes smk-fade { from { opacity:0; transform: translateY(6px);} to { opacity:1; transform: translateY(0);} }
-        .smk-spinner { animation: smk-spin .8s linear infinite; }
-        .smk-pulse { animation: smk-pulse 1.4s ease-in-out infinite; }
-        .smk-fade { animation: smk-fade .4s ease-out; }
+        @keyframes smk-orbit { to { transform: rotate(360deg); } }
+        @keyframes smk-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+        @keyframes smk-pulse { 0%,100% { opacity: .9; } 50% { opacity: .4; } }
+        @keyframes smk-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .smk-fade    { animation: smk-fade .45s ease-out both; }
+        .smk-orbit   { animation: smk-orbit 1.3s linear infinite; transform-origin: 50% 50%; }
+        .smk-breathe { animation: smk-breathe 2.4s ease-in-out infinite; }
+        .smk-pulse   { animation: smk-pulse 1.6s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .smk-orbit, .smk-breathe, .smk-pulse { animation: none; }
+        }
       `}</style>
 
       <div className="smk-fade flex flex-col items-center">
-        <div className="flex items-center gap-2 mb-8">
-          <span
-            style={{ background: "#E8A33D", color: "#101A2E" }}
-            className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-lg"
+        {/* Logo + pete */}
+        <div className="relative h-[148px] w-[148px] sm:h-[168px] sm:w-[168px]">
+          <svg
+            className="smk-orbit absolute inset-0 h-full w-full"
+            viewBox="0 0 100 100"
+            fill="none"
+            aria-hidden="true"
           >
-            S
-          </span>
-          <span style={{ color: "#F5F3EC" }} className="font-bold tracking-tight text-xl">
-            SokoMkononi
-          </span>
-        </div>
+            <defs>
+              <linearGradient id="smk-arc" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#0062FD" />
+                <stop offset="0.55" stopColor="#3D8BFF" />
+                <stop offset="1" stopColor="#FEA406" />
+              </linearGradient>
+            </defs>
+            <circle cx="50" cy="50" r="47.5" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
+            <circle
+              cx="50"
+              cy="50"
+              r="47.5"
+              stroke="url(#smk-arc)"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeDasharray="76 223"
+            />
+          </svg>
 
-        <div className="relative w-12 h-12">
-          <div
-            style={{ borderColor: "rgba(232, 163, 61, 0.15)" }}
-            className="absolute inset-0 rounded-full border-[3px]"
-          />
-          <div
-            style={{ borderTopColor: "#E8A33D" }}
-            className="smk-spinner absolute inset-0 rounded-full border-[3px] border-transparent"
-          />
-          <div
-            style={{ background: "#E8A33D" }}
-            className="smk-pulse absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+          <img
+            src="/logo.webp"
+            alt="SokoMkononi"
+            width={512}
+            height={512}
+            draggable={false}
+            className="smk-breathe absolute left-[10px] top-[10px] h-[calc(100%-20px)] w-[calc(100%-20px)] select-none rounded-full"
           />
         </div>
 
         <p
-          style={{ color: "rgba(245, 243, 236, 0.55)" }}
-          className="text-xs mt-6 font-medium tracking-wide"
+          className="smk-pulse mt-7 text-xs font-medium tracking-wide"
+          style={{ color: "rgba(255, 255, 255, 0.65)" }}
         >
           {t("Inapakia...", "Loading...")}
         </p>
