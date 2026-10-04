@@ -37,6 +37,8 @@ import {
 } from "../../../config/categoriesStore.js";
 import StatTile from "../seller/StatTile.jsx";
 import RecentActivity from "../components/RecentActivity.jsx";
+import ListingCard from "../../../components/ListingCard.jsx";
+import CategoryTile from "../../../components/CategoryTile.jsx";
 
 export default function BuyerOverview({ onNavigate }) {
   const navigate = useNavigate();
@@ -136,7 +138,7 @@ export default function BuyerOverview({ onNavigate }) {
       key: "searches",
       label: t("Utafutaji Wangu", "My Searches"),
       icon: Bell,
-      color: "#2563EB",
+      color: COLORS.royal,
     },
     {
       key: "deals",
@@ -209,7 +211,7 @@ export default function BuyerOverview({ onNavigate }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("Unatafuta nini?", "What are you looking for?")}
-            className="w-full rounded-full border pl-12 pr-32 py-3.5 text-sm outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-all"
+            className="w-full rounded-full border pl-12 pr-32 py-3.5 text-sm outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-all"
             style={{
               background: "white",
               borderColor: COLORS.sandLine,
@@ -255,7 +257,7 @@ export default function BuyerOverview({ onNavigate }) {
           label={t("Utafutaji Wangu", "My Searches")}
           value={stats.activeSearches}
           icon={Bell}
-          color="#2563EB"
+          color={COLORS.royal}
           size="sm"
         />
       </div>
@@ -297,40 +299,23 @@ export default function BuyerOverview({ onNavigate }) {
           <button
             onClick={() => navigate("/kategoria")}
             className="text-body-sm font-semibold hover:underline"
-            style={{ color: COLORS.gold }}
+            style={{ color: COLORS.goldInk }}
           >
             {t("Ona Zote →", "View All →")}
           </button>
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {categories.slice(0, 6).map((cat) => {
             const Icon = getCategoryIcon(cat.iconKey);
-            const hasPhoto = Boolean(cat.imageUrl);
             const catLabel = cat.label?.[lang] || cat.label?.sw || cat.key;
             return (
-              <button
+              <CategoryTile
                 key={cat.key}
-                onClick={() => navigate(`/kategoria/${cat.key}`)}
-                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 bg-white hover:border-gray-300 hover:shadow-sm transition-all"
-              >
-                {hasPhoto ? (
-                  <img
-                    src={cat.imageUrl}
-                    alt={catLabel}
-                    className="w-10 h-10 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div
-                    style={{ background: `${COLORS.night}0D` }}
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  >
-                    <Icon size={18} color={COLORS.night} />
-                  </div>
-                )}
-                <span className="text-body-sm font-semibold text-secondary text-center line-clamp-2">
-                  {catLabel}
-                </span>
-              </button>
+                to={`/kategoria/${cat.key}`}
+                label={catLabel}
+                imageUrl={cat.imageUrl}
+                Icon={Icon}
+              />
             );
           })}
         </div>
@@ -403,7 +388,7 @@ function StepFlow({ steps }) {
     <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-3">
       {steps.map((step, i) => (
         <React.Fragment key={i}>
-          <div className="flex items-center gap-1.5 bg-[#F5F3EC] rounded-full pl-1.5 pr-3 py-1.5">
+          <div className="flex items-center gap-1.5 bg-sand rounded-full pl-1.5 pr-3 py-1.5">
             <span
               style={{ background: COLORS.night, color: "white" }}
               className="w-5 h-5 rounded-full text-body-sm font-bold flex items-center justify-center shrink-0"
@@ -488,7 +473,7 @@ function HowToBuyGuide({ lang }) {
       <StepFlow steps={stepsBeforeNote} />
 
       <div
-        style={{ background: "rgba(37,99,235,0.06)", color: "#1D4ED8" }}
+        style={{ background: "rgba(0,98,253,0.07)", color: COLORS.royalDark }}
         className="flex items-start gap-2 rounded-lg px-3 py-3 my-4 max-w-2xl mx-auto text-body-sm leading-relaxed"
       >
         <Lock size={14} className="shrink-0 mt-0.5" />
@@ -529,6 +514,7 @@ function ListingSection({
   navigate,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
+  const categories = useActiveCategories();
 
   return (
     <div className="mb-6">
@@ -546,37 +532,20 @@ function ListingSection({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {listings.map((l) => (
-          <button
-            key={l.id}
-            onClick={() => navigate(`/mali/${l.id}`)}
-            className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow text-left"
-          >
-            <div className="w-full h-28 sm:h-32 bg-gray-100 flex items-center justify-center overflow-hidden">
-              {l.imageUrl ? (
-                <img
-                  src={l.imageUrl}
-                  alt={l.title}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <LayoutGrid size={24} className="text-muted" />
-              )}
-            </div>
-            <div className="p-3">
-              <p className="h-card truncate">{l.title}</p>
-              <p className="text-body-sm text-secondary truncate mt-0.5 flex items-center gap-1">
-                <MapPin size={10} />
-                {l.location}
-              </p>
-              <p className="text-price mt-1.5" style={{ color: COLORS.rust }}>
-                {formatTZS(l.price)}
-              </p>
-            </div>
-          </button>
-        ))}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
+        {listings.map((l) => {
+          const cat = categories.find((c) => c.key === l.category);
+          const CatIcon = getCategoryIcon(cat?.iconKey || "Home");
+          return (
+            <ListingCard
+              key={l.id}
+              listing={l}
+              category={cat}
+              Icon={CatIcon}
+              lang={lang}
+            />
+          );
+        })}
       </div>
     </div>
   );
