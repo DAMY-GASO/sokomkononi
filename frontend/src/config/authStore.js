@@ -4,7 +4,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { authApi, setUnauthorizedHandler } from "../api/index.js";
-import { clearTokens as clearJWT } from "../api/client.js";
+import { clearTokens as clearJWT, setTokens } from "../api/client.js";
 
 const STORAGE_KEY = "sokomkononi_current_user_v1";
 const UPDATE_EVENT = "sokomkononi:auth-updated";
@@ -513,6 +513,9 @@ export async function socialLoginAsync({ provider, idToken, code, user: socialUs
       code: code || null,
       ...(socialUser ? { user: socialUser } : {}),
     });
+    // MUHIMU: hifadhi JWT kama authApi.login inavyofanya. Bila hii,
+    // authApi.me() inarudi 401 na hardReset() inamtoa mtumiaji nje.
+    if (data?.access) setTokens({ access: data.access, refresh: data.refresh });
     const me = data?.user ?? (await authApi.me());
     const user = normalizeUserFromApi(me);
     saveUser(user);
