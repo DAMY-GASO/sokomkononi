@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from "react";
 import {
   ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle,
-  Wallet, Package,
+  Wallet, Package, Smartphone, CreditCard,
 } from "lucide-react";
 import { COLORS, formatTZS, calculateListingFee } from "./shared";
 import {
@@ -20,6 +20,11 @@ import { getListingFeeConfig } from "../../../config/listingFeeStore.js";
 import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
+import {
+  normalizeTzPhone,
+  isValidTzPhone,
+  formatTzPhoneDisplay,
+} from "../../../api/payments.js";
 import ImageCropper from "../../../components/ImageCropper.jsx";
 import {
   getPostingConfig,
@@ -217,6 +222,9 @@ export default function PostPropertyForm({
   const locationString = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa]
     .filter(Boolean)
     .join(", ");
+
+  const [paymentMethodKey, setPaymentMethodKey] = useState(null);
+  const [paymentPhone, setPaymentPhone] = useState("");
 
   const creditInfo = checkCredit(user?.id, "listing");
   const hasCredit = creditInfo.hasCredit;
