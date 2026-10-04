@@ -5,8 +5,17 @@
 import { useEffect, useState } from "react";
 import { authApi, setUnauthorizedHandler } from "../api/index.js";
 import { clearTokens as clearJWT, setTokens } from "../api/client.js";
+import { getSessionScope } from "./adminPath.js";
 
-const STORAGE_KEY = "sokomkononi_current_user_v1";
+// User wa admin na wa kawaida wanahifadhiwa kwenye keys tofauti (angalia adminPath.getSessionScope)
+const USER_KEYS = {
+  user: "sokomkononi_current_user_v1",
+  admin: "sokomkononi_admin_user_v1",
+};
+const storageKey = () => USER_KEYS[getSessionScope()];
+
+export const ADMIN_BLOCKED_MESSAGE =
+  "Akaunti ya Admin haiwezi kuingia dashboard ya watumiaji. Tumia ukurasa wa admin, au ingia kwa akaunti yako ya kawaida ya mtumiaji.";
 const UPDATE_EVENT = "sokomkononi:auth-updated";
 const AVATAR_KEY_PREFIX = "admin_avatar_";
 
@@ -37,7 +46,7 @@ function attachStoredAvatar(user) {
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_USER;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey());
     if (!raw) return SEED_USER;
     const parsed = JSON.parse(raw);
     return parsed ? attachStoredAvatar(parsed) : SEED_USER;
@@ -47,9 +56,9 @@ function readFromStorage() {
 function saveUser(user) {
   if (typeof window === "undefined") return;
   if (user === null) {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(storageKey());
   } else {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    window.localStorage.setItem(storageKey(), JSON.stringify(user));
   }
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
@@ -72,11 +81,11 @@ function hardReset() {
   // Only wipe AUTH-scoped keys. Do NOT wipe the user's saved listings,
   // searches, messages, dashboard-side preference, admin avatar, etc.
   // A transient 401 must never destroy their data.
-  const AUTH_KEYS = [
-    "sokomkononi_current_user_v1",
-    "sokomkononi_access",
-    "sokomkononi_refresh",
-  ];
+  // Scope ya sasa tu — kutoka kwenye admin hakumtoi mtumiaji (na kinyume chake).
+  const AUTH_KEYS =
+    getSessionScope() === "admin"
+      ? ["sokomkononi_admin_user_v1", "sokomkononi_admin_access", "sokomkononi_admin_refresh"]
+      : ["sokomkononi_current_user_v1", "sokomkononi_access", "sokomkononi_refresh"];
   try {
     AUTH_KEYS.forEach((k) => {
       try { window.localStorage.removeItem(k); } catch { /* noop */ }
@@ -142,7 +151,11 @@ export function hasRole(role) {
 }
 export function isSeller() { return hasRole("Seller"); }
 
+let lastScope = null;
 export function hydrateCurrentUserFromApi() {
+  const scope = getSessionScope();
+  if (lastScope !== null && lastScope !== scope) resetHydrateCache();
+  lastScope = scope;
   if (!authApi.isAuthenticated()) {
     if (getCurrentUser() !== null) hardReset();
     return Promise.resolve({ ok: false, source: "no-token" });
@@ -164,6 +177,11 @@ export function hydrateCurrentUserFromApi() {
   inflightHydrate = (async () => {
     try {
       const raw = await authApi.me();
+      // Session ya scope hii lazima iwe ya aina sahihi (legacy/stale tokens)
+      if (getSessionScope() === "user" && computeIsAdmin(raw)) {
+        hardReset();
+        return { ok: false, source: "admin-blocked" };
+      }
       const user = normalizeUserFromApi(raw);
       saveUser(user);
       lastHydrateAt = Date.now();
@@ -190,6 +208,11 @@ export async function loginAsync({ identifier, password }) {
   try {
     const data = await authApi.login({ identifier, password });
     const me = data?.user ?? (await authApi.me());
+    // Admin hawezi kuingia dashboard za watumiaji — tokens zinafutwa mara moja.
+    if (getSessionScope() === "user" && computeIsAdmin(me)) {
+      hardReset();
+      return { ok: false, code: "ADMIN_BLOCKED", error: new Error(ADMIN_BLOCKED_MESSAGE) };
+    }
     const user = normalizeUserFromApi(me);
     saveUser(user);
     resetHydrateCache();
@@ -517,6 +540,10 @@ export async function socialLoginAsync({ provider, idToken, code, user: socialUs
     // authApi.me() inarudi 401 na hardReset() inamtoa mtumiaji nje.
     if (data?.access) setTokens({ access: data.access, refresh: data.refresh });
     const me = data?.user ?? (await authApi.me());
+    if (getSessionScope() === "user" && computeIsAdmin(me)) {
+      hardReset();
+      return { ok: false, code: "ADMIN_BLOCKED", error: new Error(ADMIN_BLOCKED_MESSAGE) };
+    }
     const user = normalizeUserFromApi(me);
     saveUser(user);
     resetHydrateCache();

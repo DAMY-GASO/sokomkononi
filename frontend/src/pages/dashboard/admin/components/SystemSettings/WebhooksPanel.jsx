@@ -177,7 +177,7 @@ export default function WebhooksPanel() {
                 <button
                   onClick={() => handleRemove(w.id)}
                   disabled={isRemoving || isToggling}
-                  className="text-muted hover:text-[#C1502E] p-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-muted hover:text-rust p-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label={lang === "sw" ? "Ondoa" : "Remove"}
                 >
                   {isRemoving ? (
@@ -203,7 +203,7 @@ export default function WebhooksPanel() {
           value={form.event}
           onChange={(e) => setForm({ ...form, event: e.target.value })}
           disabled={busy.adding}
-          className="border border-gray-200 rounded-lg px-2 py-2 text-xs w-full focus:border-[#E8A33D] outline-none disabled:opacity-50"
+          className="border border-gray-200 rounded-lg px-2 py-2 text-xs w-full focus:border-royal outline-none disabled:opacity-50"
         >
           {WEBHOOK_EVENTS.map((e) => (
             <option key={e.id} value={e.id}>
@@ -219,7 +219,7 @@ export default function WebhooksPanel() {
             onKeyDown={(e) => e.key === "Enter" && canAdd && handleAdd()}
             placeholder="https://..."
             disabled={busy.adding}
-            className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+            className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-royal disabled:opacity-50"
           />
           <button
             onClick={handleAdd}

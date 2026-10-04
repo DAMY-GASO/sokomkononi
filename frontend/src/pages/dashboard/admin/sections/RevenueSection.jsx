@@ -1,7 +1,8 @@
 // ============================================================
 // RevenueSection.jsx — fully backend-synced
 // Flat fees: listing, reservation, success, leading, advertisement.
-// Packages (boost, bundles) zipo kwenye ukurasa tofauti.
+// Boost packages: price + toggle.
+// Packages (bundles) zipo kwenye ukurasa tofauti (AdminBundles).
 // ============================================================
 import React, { useState } from "react";
 import {
@@ -39,6 +40,12 @@ import {
   useSuccessFeeConfig, updateSuccessFeeAsync, toggleSuccessFeeAsync,
   hydrateSuccessFeeFromApi,
 } from "../../../../config/successFeeStore.js";
+import {
+  useBoostPackages,
+  hydrateBoostPackagesFromApi,
+  updateBoostPackagePriceAsync,
+  toggleBoostPackageActiveAsync,
+} from "../../../../config/boostPackagesStore.js";
 import {
   useActiveCategories, getCategory, getCategoryIcon,
 } from "../../../../config/categoriesStore.js";
@@ -101,6 +108,7 @@ export default function RevenueSection() {
   const leadingFee = useLeadingFeeConfig();
   const adFee = useAdvertisementFeeConfig();
   const successFee = useSuccessFeeConfig();
+  const boostPackages = useBoostPackages();
   const activeCategories = useActiveCategories();
 
   const [flash, setFlash] = useState(null);
@@ -127,6 +135,7 @@ export default function RevenueSection() {
         hydrateLeadingFeeFromApi(),
         hydrateAdvertisementFeeFromApi(),
         hydrateSuccessFeeFromApi(),
+        hydrateBoostPackagesFromApi(),
       ]);
       const failed = results.filter(
         (r) => r.status === "rejected" || r.value?.ok === false
@@ -314,6 +323,23 @@ export default function RevenueSection() {
   const toggleAdvertisement = () =>
     withBusy("advertisement-toggle", async () => {
       const res = await toggleAdvertisementFeeAsync();
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  // ═══════════════════════════════════════════════════════════
+  // BOOST PACKAGES
+  // ═══════════════════════════════════════════════════════════
+  const updateBoostPrice = (key, price) =>
+    withBusy(`boost-${key}`, async () => {
+      const res = await updateBoostPackagePriceAsync(key, price);
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const toggleBoost = (key) =>
+    withBusy(`boost-toggle-${key}`, async () => {
+      const res = await toggleBoostPackageActiveAsync(key);
       if (res.ok) flashSaved();
       return res;
     });
@@ -863,7 +889,74 @@ export default function RevenueSection() {
         </RevenueCard>
 
         {/* ═══════════════════════════════════════════════════════ */}
-        {/* 4 & 5. LEADING + ADVERTISEMENT */}
+        {/* 4. BOOST PACKAGES */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        <RevenueCard accentColor={COLORS.gold}>
+          <div className="flex items-center gap-3 mb-1">
+            <div
+              style={{ background: `${COLORS.gold}15` }}
+              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+            >
+              <Rocket size={18} color={COLORS.gold} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-primary">
+                {t("Ada ya Boost", "Boost Fee")}
+              </p>
+              <p className="text-xs text-secondary mt-0.5">
+                {t(
+                  "Packages za kuongeza mwonekano wa listing",
+                  "Packages to increase listing visibility"
+                )}
+              </p>
+            </div>
+          </div>
+          <EditHint lang={lang} accentColor={COLORS.gold} />
+          {boostPackages.length === 0 ? (
+            <p className="text-xs text-muted text-center py-3">
+              {t(
+                "Hakuna boost packages. Wasiliana na developer.",
+                "No boost packages. Contact developer."
+              )}
+            </p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {boostPackages.map((pkg) => {
+                const isToggling = !!busy[`boost-toggle-${pkg.key}`];
+                return (
+                  <div
+                    key={pkg.id}
+                    className="py-3 flex items-center gap-2 flex-wrap"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-primary truncate">
+                        {getLocalized(pkg.label, lang) || pkg.key}
+                      </p>
+                      <p className="text-[10px] text-muted font-mono truncate">
+                        {pkg.key} — {pkg.days} {t("siku", "days")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <EditableAmount
+                        value={pkg.price}
+                        onSave={(v) => updateBoostPrice(pkg.key, v)}
+                      />
+                      <ToggleButton
+                        enabled={pkg.isActive}
+                        onToggle={() => toggleBoost(pkg.key)}
+                        disabled={isToggling || busy.saving}
+                        lang={lang}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </RevenueCard>
+
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/* 5 & 6. LEADING + ADVERTISEMENT */}
         {/* ═══════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <RevenueCard accentColor={COLORS.rust}>
@@ -943,8 +1036,8 @@ export default function RevenueSection() {
           <Info size={16} color={COLORS.gold} className="shrink-0 mt-0.5" />
           <p className="text-xs text-secondary leading-relaxed">
             {t(
-              "Flat fees zote zinahifadhiwa papo hapo kwenye backend. Kwa packages (Boost, Bundles), nenda kwenye ukurasa wao.",
-              "All flat fees save to the backend instantly. For packages (Boost, Bundles), go to their own page."
+              "Flat fees zote zinahifadhiwa papo hapo kwenye backend. Boost packages zinahifadhiwa moja kwa moja. Bundles zipo kwenye ukurasa wao.",
+              "All flat fees save to the backend instantly. Boost packages save directly. Bundles are on their own page."
             )}
           </p>
         </div>

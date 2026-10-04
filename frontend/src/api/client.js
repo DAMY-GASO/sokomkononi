@@ -9,13 +9,17 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 if (!BASE_URL) throw new Error("[api] VITE_API_BASE_URL is required");
 
-const ACCESS_KEY = "sokomkononi_access";
-const REFRESH_KEY = "sokomkononi_refresh";
+import { getSessionScope } from "../config/adminPath.js";
+
+// Session mbili zilizotenganishwa: "user" na "admin".
+const TOKEN_KEYS = {
+  user: { access: "sokomkononi_access", refresh: "sokomkononi_refresh" },
+  admin: { access: "sokomkononi_admin_access", refresh: "sokomkononi_admin_refresh" },
+};
+const keys = () => TOKEN_KEYS[getSessionScope()];
 const DEFAULT_TIMEOUT_MS = 20000;
 const UPLOAD_TIMEOUT_MS = 60000;
 
-let accessToken = localStorage.getItem(ACCESS_KEY);
-let refreshToken = localStorage.getItem(REFRESH_KEY);
 let onUnauthorized = null;
 
 const PUBLIC_POST_PREFIX = [
@@ -60,17 +64,18 @@ function isPublicEndpoint(path, method) {
 }
 
 export function setTokens({ access, refresh } = {}) {
+  const k = keys();
   if (access !== undefined) {
-    accessToken = access;
-    access ? localStorage.setItem(ACCESS_KEY, access) : localStorage.removeItem(ACCESS_KEY);
+    access ? localStorage.setItem(k.access, access) : localStorage.removeItem(k.access);
   }
   if (refresh !== undefined) {
-    refreshToken = refresh;
-    refresh ? localStorage.setItem(REFRESH_KEY, refresh) : localStorage.removeItem(REFRESH_KEY);
+    refresh ? localStorage.setItem(k.refresh, refresh) : localStorage.removeItem(k.refresh);
   }
 }
-export function getAccessToken() { return accessToken; }
-export function getRefreshToken() { return refreshToken; }
+// Zinasomwa moja kwa moja kutoka localStorage ya scope husika (hakuna cache
+// ya kumbukumbu inayoweza kupitwa na tab nyingine).
+export function getAccessToken() { return localStorage.getItem(keys().access); }
+export function getRefreshToken() { return localStorage.getItem(keys().refresh); }
 export function clearTokens() { setTokens({ access: null, refresh: null }); }
 export function setUnauthorizedHandler(fn) { onUnauthorized = fn; }
 
@@ -153,13 +158,13 @@ async function withRetry(fn, method) {
 
 let refreshPromise = null;
 async function refreshAccessToken() {
-  if (!refreshToken) throw new ApiError(401, { detail: "No refresh token" });
+  if (!getRefreshToken()) throw new ApiError(401, { detail: "No refresh token" });
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
     const res = await fetchWithTimeout(`${BASE_URL}/auth/token/refresh/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh: refreshToken }),
+      body: JSON.stringify({ refresh: getRefreshToken() }),
     });
     if (!res.ok) {
       clearTokens();
@@ -179,7 +184,7 @@ async function request(path, {
 
   const finalHeaders = {
     ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
-    ...(!isPublic && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...(!isPublic && getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
     ...headers,
   };
 
@@ -193,7 +198,7 @@ async function request(path, {
     method
   );
 
-  if (res.status === 401 && !isPublic && retry && refreshToken) {
+  if (res.status === 401 && !isPublic && retry && getRefreshToken()) {
     try {
       await refreshAccessToken();
       return request(path, { method, body, headers, retry: false, isFormData, timeoutMs });

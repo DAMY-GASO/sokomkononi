@@ -238,16 +238,12 @@ export default function DashboardShell() {
     user?.isSuperuser === true ||
     user?.is_superuser === true;
 
+  // Hakuna redirect ya moja kwa moja: admin anazuiwa na anapewa chaguo
+  // (angalia skrini ya kuzuia chini). Pia hatuletei data za watumiaji kwa admin.
   useEffect(() => {
-    if (isAdminUser) {
-      navigate(ADMIN_PATH, { replace: true });
-    }
-  }, [isAdminUser, navigate]);
-
-  useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || isAdminUser) return;
     fetchMyListingsFromApi();
-  }, [user?.id]);
+  }, [user?.id, isAdminUser]);
 
   const [side, setSide] = useState("seller");
   const [activeKey, setActiveKey] = useState("overview");
@@ -644,9 +640,22 @@ export default function DashboardShell() {
               "Admin has their own dashboard. If you want to access user dashboards, please create another account as a Buyer or Seller."
             )}
           </p>
-          <p className="text-xs text-muted mt-3">
-            {t("Unaelekezwa kwenye dashboard ya admin...", "Redirecting to admin dashboard...")}
-          </p>
+          <div className="mt-5 flex flex-col sm:flex-row gap-2 justify-center">
+            <button
+              onClick={() => navigate(ADMIN_PATH)}
+              style={{ background: COLORS.night, color: "white" }}
+              className="px-4 py-2.5 rounded-lg text-sm font-semibold"
+            >
+              {t("Nenda Dashboard ya Admin", "Go to Admin Dashboard")}
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
+              className="px-4 py-2.5 rounded-lg text-sm font-semibold border bg-white"
+            >
+              {t("Toka na uingie kama mtumiaji", "Log out and sign in as a user")}
+            </button>
+          </div>
         </div>
       </div>
     );

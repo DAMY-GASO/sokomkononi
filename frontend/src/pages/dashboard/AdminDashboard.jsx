@@ -329,12 +329,14 @@ export default function AdminDashboard() {
       return;
     }
     if (!isAdmin) {
-      navigate("/dashboard");
+      // Si admin → HAPELEKWI kwenye dashboard ya watumiaji. Futa session
+      // ya admin-scope na mrudishe kwenye login ya admin.
+      logoutAsync().finally(() => navigate(ADMIN_LOGIN_PATH, { replace: true }));
       return;
     }
     const id = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(id);
-  }, [user, isAdmin, navigate]);
+  }, [user, isAdmin, isLoading, navigate]);
 
   const handleLogout = async () => {
     await logoutAsync();

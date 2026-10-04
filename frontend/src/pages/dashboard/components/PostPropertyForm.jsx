@@ -2,6 +2,11 @@
 // PostPropertyForm.jsx (production + bundle support)
 // Category-specific posting + duplicate check + skip fee
 // + bundle option kwa listing fee
+//
+// SASISHO:
+//   - Kila listing inaenda PENDING_APPROVAL (admin approval)
+//   - Hata fee imezimwa au imewashwa, admin aidhinisha
+//   - Hakuna auto-publish — kila kitu kinapitia admin
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -46,7 +51,7 @@ const inputStyle = {
 const inputCls =
   "rounded-xl border px-3 py-2.5 text-sm outline-none text-center w-full";
 
-// ── SchemaField (haijabadilika) ─────────────────────────────
+// ── SchemaField ─────────────────────────────────────────────
 function SchemaField({ f, value, onChange, lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const label = (f.label?.[lang] || f.label?.sw) + (f.required ? " *" : "");
@@ -510,11 +515,12 @@ export default function PostPropertyForm({
       }
 
       // ═══════════════════════════════════════════════════════════
-      // ⬇️ Kama listing fee imezimwa → publish moja kwa moja
+      // ⬇️ Kama listing fee imezimwa → wasilisha kwa admin approval
+      //    (HAKUNA auto-publish — kila kitu kinapitia admin)
       // ═══════════════════════════════════════════════════════════
       if (listingFeeDisabled) {
         console.info(
-          "[PostPropertyForm] Listing fee disabled — auto-publishing"
+          "[PostPropertyForm] Listing fee disabled — submitting for admin approval"
         );
         try {
           await api.post(`/listings/${listingId}/publish/`, {});
@@ -551,7 +557,7 @@ export default function PostPropertyForm({
         fee = Number(local?.fee) || 0;
       }
 
-      if (!fee) {
+      if (!fee && !listingFeeDisabled) {
         const msg = t(
           "Ada ya kuchapisha haijasanidiwa kwa category hii bado. Wasiliana na Admin.",
           "The listing fee has not been configured for this category yet. Contact admin."
@@ -736,8 +742,8 @@ export default function PostPropertyForm({
               </h2>
               <p className="text-secondary text-sm mb-5">
                 {t(
-                  "Lipa ada ili listing ichapishwe na kuanza kuonekana kwa wanunuzi.",
-                  "Pay the fee so the listing is published and visible to buyers."
+                  "Lipa ada ili listing iwasilishwe kwa admin kuidhinisha.",
+                  "Pay the fee so the listing is submitted to admin for approval."
                 )}
               </p>
 
@@ -931,7 +937,7 @@ export default function PostPropertyForm({
   }
 
   // ═══════════════════════════════════════════════════════════
-  // DONE STAGE
+  // DONE STAGE — kila listing inasubiri admin approval
   // ═══════════════════════════════════════════════════════════
   if (stage === "done") {
     return (
@@ -950,20 +956,13 @@ export default function PostPropertyForm({
             <Check color={COLORS.sand} size={26} />
           </div>
           <h2 className="h-title mb-2">
-            {listingFeeDisabled
-              ? t("Listing imechapishwa!", "Listing Published!")
-              : t("Listing imewasilishwa!", "Listing Submitted!")}
+            {t("Listing imewasilishwa!", "Listing Submitted!")}
           </h2>
           <p className="text-secondary text-sm mb-6">
-            {listingFeeDisabled
-              ? t(
-                  "Ada ya kuchapisha imezimwa — listing yako imechapishwa moja kwa moja.",
-                  "Listing fee is disabled — your listing has been published directly."
-                )
-              : t(
-                  "Listing yako inasubiri idhini ya Admin. Utapata taarifa mara itakapoidhinishwa.",
-                  "Your listing awaits admin approval. You'll be notified once it's approved."
-                )}
+            {t(
+              "Listing yako inasubiri idhini ya Admin. Utapata taarifa mara itakapoidhinishwa.",
+              "Your listing awaits admin approval. You'll be notified once it's approved."
+            )}
           </p>
           <button
             onClick={onGoToListings}
@@ -984,7 +983,7 @@ export default function PostPropertyForm({
   }
 
   // ═══════════════════════════════════════════════════════════
-  // FORM STAGE (haijabadilika sana)
+  // FORM STAGE
   // ═══════════════════════════════════════════════════════════
   return (
     <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full p-4 sm:p-6">
@@ -1051,8 +1050,8 @@ export default function PostPropertyForm({
             >
               <Check size={14} />
               {t(
-                "Ada ya kuchapisha imezimwa — unaweka bure!",
-                "Listing fee is disabled — post for free!"
+                "Ada ya kuchapisha imezimwa — unaweka bure. Lakini listing bado itapitia idhini ya Admin.",
+                "Listing fee is disabled — post for free. But the listing still requires admin approval."
               )}
             </div>
           )}

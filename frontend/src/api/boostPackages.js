@@ -1,13 +1,4 @@
-// ============================================================
-// api/boostPackages.js — Admin operations for boost package prices
-// 
-// Read operations use `boostingApi.packages()` (public GET).
-// This module focuses on admin-specific operations (update price).
-//
-// ⚠️ NOTE: `list` and `detail` are aliased to `boostingApi` to
-// maintain backward compatibility. New code should use
-// `boostingApi.packages()` and `boostingApi.package(id)` directly.
-// ============================================================
+
 import { api } from "./client";
 import { boostingApi } from "./boosting";
 
@@ -25,8 +16,8 @@ export const boostPackagesApi = {
   detail: (id) => boostingApi.package(id),
 
   /**
-   * Admin: Update boost package price.
-   * Only admin-specific operation in this module.
+   * Admin: Update boost package (price, is_active, n.k.).
+   * PATCH `/boosting/packages/{id}/`
    */
   update: (id, patch) => api.patch(`/boosting/packages/${id}/`, patch),
 };

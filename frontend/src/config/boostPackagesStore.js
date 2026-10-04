@@ -16,8 +16,11 @@ function read() {
     if (!raw) return [];
     const p = JSON.parse(raw);
     return Array.isArray(p) ? p : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
+
 function write(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(list));
@@ -27,7 +30,10 @@ function write(list) {
 function norm(raw) {
   if (!raw) return null;
   const slug = (raw.code || raw.name || "")
-    .toString().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+    .toString()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
   const days = Math.round((raw.duration_hours || 0) / 24) || 1;
   return {
     id: raw.id,
@@ -43,8 +49,13 @@ function norm(raw) {
   };
 }
 
-export function getBoostPackages() { return read(); }
-export function getBoostPackage(key) { return read().find((p) => p.key === key); }
+export function getBoostPackages() {
+  return read();
+}
+
+export function getBoostPackage(key) {
+  return read().find((p) => p.key === key);
+}
 
 export async function hydrateBoostPackagesFromApi() {
   try {
@@ -53,7 +64,9 @@ export async function hydrateBoostPackagesFromApi() {
     const normalized = list.map(norm).filter(Boolean);
     write(normalized);
     return { ok: true, count: normalized.length };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function updateBoostPackagePriceAsync(key, price) {
@@ -62,16 +75,50 @@ export async function updateBoostPackagePriceAsync(key, price) {
     return { ok: false, error: new Error("price must be a positive number") };
   }
   const target = getBoostPackage(key);
-  if (!target) return { ok: false, error: new Error(`Package "${key}" not found`) };
+  if (!target) {
+    return { ok: false, error: new Error(`Package "${key}" not found`) };
+  }
   if (typeof target.id !== "number") {
-    return { ok: false, error: new Error(`Package "${key}" has no backend id — hydrate first`) };
+    return {
+      ok: false,
+      error: new Error(`Package "${key}" has no backend id — hydrate first`),
+    };
   }
   try {
     const raw = await boostPackagesApi.update(target.id, { price: num });
     const updated = norm(raw) || { ...target, price: num };
     write(read().map((p) => (p.key === key ? updated : p)));
     return { ok: true, package: updated };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// TOGGLE ACTIVE — kuwasha/kuzima boost package
+// ============================================================
+export async function toggleBoostPackageActiveAsync(key) {
+  const target = getBoostPackage(key);
+  if (!target) {
+    return { ok: false, error: new Error(`Package "${key}" not found`) };
+  }
+  if (typeof target.id !== "number") {
+    return {
+      ok: false,
+      error: new Error(`Package "${key}" has no backend id — hydrate first`),
+    };
+  }
+  try {
+    const nextActive = !target.isActive;
+    const raw = await boostPackagesApi.update(target.id, {
+      is_active: nextActive,
+    });
+    const updated = norm(raw) || { ...target, isActive: nextActive };
+    write(read().map((p) => (p.key === key ? updated : p)));
+    return { ok: true, package: updated };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export function useBoostPackages() {
