@@ -14,12 +14,21 @@ import {
 // BRAND TOKENS (SokoMkononi)
 // ============================================================
 export const COLORS = {
-  // Brand
-  night: "#101A2E",
-  nightSoft: "#1B2740",
-  sand: "#F5F3EC",
-  sandLine: "#E6E2D6",
-  gold: "#E8A33D",
+  // Brand — zimetolewa kwenye logo ya SokoMkononi
+  night: "#011957",
+  nightDeep: "#010F3A",
+  nightSoft: "#042475",
+  royal: "#0062FD",
+  royalLight: "#3D8BFF",
+  royalDark: "#0050D0",
+  gold: "#FEA406",
+  goldLight: "#FFC857",
+  goldInk: "#A35F00", // gold kwa maandishi kwenye mandhari nyeupe (5:1)
+  flame: "#FD8706",
+  sand: "#F4F7FC",
+  sandLine: "#DCE4F2",
+
+  // Semantic (hazitokani na logo kwa makusudi)
   green: "#2F6D4F",
   rust: "#C1502E",
 
@@ -250,10 +259,10 @@ export function calculateListingFee(categoryKey, priceInput) {
 // ---- Listing status metadata ----
 export const STATUS = {
   live: { label: "Live", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
-  reserved: { label: "Ina Reservation", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
-  sold: { label: "Imeuzwa", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
-  pending_payment: { label: "Inasubiri Malipo", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
-  in_review: { label: "Inakaguliwa", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
+  reserved: { label: "Ina Reservation", bg: "rgba(254,164,6,0.16)", fg: COLORS.goldInk },
+  sold: { label: "Imeuzwa", bg: "rgba(1,25,87,0.08)", fg: COLORS.night },
+  pending_payment: { label: "Inasubiri Malipo", bg: "rgba(254,164,6,0.16)", fg: COLORS.goldInk },
+  in_review: { label: "Inakaguliwa", bg: "rgba(1,25,87,0.08)", fg: COLORS.night },
   expired: { label: "Imeisha Muda", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
   rejected: { label: "Imekataliwa", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
 };

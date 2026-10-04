@@ -28,6 +28,7 @@ import {
   isLeadingActive,
 } from "./shared";
 import { usePublicListings } from "../../../config/listingsStore.js";
+import ListingImage from "../../../components/ListingImage.jsx";
 import {
   useSavedIds,
   toggleSaved,
@@ -115,25 +116,21 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
           isSold ? "border-gray-200 opacity-75" : "border-gray-100"
         }`}
       >
-        <div className="w-full sm:w-48 aspect-square sm:self-start bg-[#F5F3EC] flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-          {cardImage ? (
-            <img
-              src={cardImage}
-              alt={property.title}
-              className="absolute inset-0 block w-full h-full object-cover object-center"
-              loading="lazy"
-            />
-          ) : (
-            <Icon size={32} className="text-muted" />
-          )}
+        <div className="w-full sm:w-48 sm:self-start flex-shrink-0 relative overflow-hidden">
+          <ListingImage
+            src={cardImage}
+            alt={property.title}
+            ratio="aspect-square"
+            fallback={<Icon size={32} />}
+          />
           {isReserved && (
-            <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
+            <span className="absolute top-2 left-2 bg-gold text-night text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
               <Clock3 size={10} />
               RESERVED
             </span>
           )}
           {isSold && (
-            <span className="absolute top-2 left-2 bg-[#101A2E] text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
+            <span className="absolute top-2 left-2 bg-night text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
               <Ban size={10} />
               SOLD
             </span>
@@ -147,7 +144,7 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
                   {property.title}
                 </h3>
                 {isLeading && (
-                  <span className="shrink-0 bg-[#2F6D4F]/10 text-[#2F6D4F] text-body-sm font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                  <span className="shrink-0 bg-green/10 text-green text-body-sm font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                     <TrendingUp size={9} />
                     Priority
                   </span>
@@ -162,18 +159,18 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
               onClick={handleSave}
               className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
                 isSaved
-                  ? "bg-[#C1502E] text-white"
-                  : "text-muted hover:text-[#C1502E]"
+                  ? "bg-rust text-white"
+                  : "text-muted hover:text-rust"
               }`}
             >
               <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
             </button>
           </div>
-          <p className="text-[#C1502E] font-bold text-base mt-2">
+          <p className="text-night font-bold text-base mt-2">
             {formatTZS(property.price)}
           </p>
           {isReserved && property.reservedUntil && (
-            <p className="text-body-sm font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
+            <p className="text-body-sm font-medium text-gold-ink mt-1 flex items-center gap-1">
               <Clock3 size={11} />
               {reservationCountdown(property.reservedUntil, lang)}
             </p>
@@ -205,7 +202,7 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
               <span>{timeAgo(property.postedAt, lang)}</span>
             </div>
             {isVerified && (
-              <span className="flex items-center gap-1 text-body-sm text-[#2F6D4F] font-medium">
+              <span className="flex items-center gap-1 text-body-sm text-green font-medium">
                 <Shield size={12} />
                 Verified
               </span>
@@ -224,43 +221,34 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
       }`}
     >
       <div className="relative">
-        <div className="w-full aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
-          {cardImage ? (
-            <img
-              src={cardImage}
-              alt={property.title}
-              className="absolute inset-0 block w-full h-full object-cover object-center group-hover:scale-105 transition-transform"
-              loading="lazy"
-            />
-          ) : (
-            <Icon
-              size={40}
-              className="text-muted group-hover:scale-110 transition-transform"
-            />
-          )}
-        </div>
+        <ListingImage
+          src={cardImage}
+          alt={property.title}
+          ratio="aspect-square"
+          fallback={<Icon size={40} />}
+        />
 
         <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
           {isLeading && (
-            <span className="bg-[#2F6D4F] text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
+            <span className="bg-green text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
               <TrendingUp size={10} />
               Search Priority
             </span>
           )}
           {isFeatured && (
-            <span className="bg-[#E8A33D] text-[#101A2E] text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Star size={10} fill="#101A2E" />
+            <span className="bg-gold text-night text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
+              <Star size={10} fill="#011957" />
               Featured
             </span>
           )}
           {isReserved && (
-            <span className="bg-[#E8A33D] text-[#101A2E] text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+            <span className="bg-gold text-night text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
               <Clock3 size={10} />
               RESERVED
             </span>
           )}
           {isSold && (
-            <span className="bg-[#101A2E] text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+            <span className="bg-night text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
               <Ban size={10} />
               SOLD
             </span>
@@ -268,7 +256,7 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
         </div>
 
         {isVerified && (
-          <span className="absolute top-2 right-2 bg-[#2F6D4F] text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
+          <span className="absolute top-2 right-2 bg-green text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
             <Shield size={10} />
             Verified
           </span>
@@ -277,8 +265,8 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
           onClick={handleSave}
           className={`absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
             isSaved
-              ? "bg-[#C1502E] text-white"
-              : "bg-white/90 text-muted hover:text-[#C1502E]"
+              ? "bg-rust text-white"
+              : "bg-white/90 text-muted hover:text-rust"
           }`}
         >
           <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
@@ -286,7 +274,7 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
       </div>
       <div className="p-4">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-body-sm font-medium text-[#E8A33D] bg-[#E8A33D]/10 px-2 py-0.5 rounded-full">
+          <span className="text-body-sm font-medium text-gold-ink bg-gold/10 px-2 py-0.5 rounded-full">
             {categoryLabel}
           </span>
         </div>
@@ -297,12 +285,12 @@ function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
           <MapPin size={12} />
           <span className="truncate">{property.location}</span>
         </div>
-        <p className="text-[#C1502E] font-bold text-base mt-2">
+        <p className="text-night font-bold text-base mt-2">
           {formatTZS(property.price)}
         </p>
 
         {isReserved && property.reservedUntil && (
-          <p className="text-body-sm font-medium text-[#8A5A16] mt-1 flex items-center gap-1">
+          <p className="text-body-sm font-medium text-gold-ink mt-1 flex items-center gap-1">
             <Clock3 size={11} />
             {reservationCountdown(property.reservedUntil, lang)}
           </p>
@@ -405,7 +393,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
                   type="checkbox"
                   checked={localFilters.categories.includes(cat.key)}
                   onChange={() => toggleCategory(cat.key)}
-                  className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
+                  className="w-4 h-4 rounded text-gold-ink focus:ring-gold"
                 />
                 {cat.imageUrl ? (
                   <img
@@ -439,7 +427,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
                 onChange={() =>
                   setLocalFilters({ ...localFilters, priceRange: idx })
                 }
-                className="w-4 h-4 text-[#E8A33D] focus:ring-[#E8A33D]"
+                className="w-4 h-4 text-gold-ink focus:ring-gold"
               />
               <span className="text-sm text-secondary">
                 {lang === "sw" ? range.label : range.en}
@@ -460,7 +448,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
                 type="checkbox"
                 checked={localFilters.regions.includes(region)}
                 onChange={() => toggleRegion(region)}
-                className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
+                className="w-4 h-4 rounded text-gold-ink focus:ring-gold"
               />
               <span className="text-sm text-secondary">{region}</span>
             </label>
@@ -480,7 +468,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
               onChange={(e) =>
                 setLocalFilters({ ...localFilters, verified: e.target.checked })
               }
-              className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
+              className="w-4 h-4 rounded text-gold-ink focus:ring-gold"
             />
             <span className="text-sm text-secondary">
               {lang === "sw" ? "Zilizothibitishwa tu" : "Verified only"}
@@ -493,7 +481,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
               onChange={(e) =>
                 setLocalFilters({ ...localFilters, featured: e.target.checked })
               }
-              className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
+              className="w-4 h-4 rounded text-gold-ink focus:ring-gold"
             />
             <span className="text-sm text-secondary">
               {lang === "sw" ? "Featured tu" : "Featured only"}
@@ -505,7 +493,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
       <div className="space-y-2 pt-4 border-t border-gray-100">
         <button
           onClick={handleApply}
-          className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-sm transition-colors"
+          className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-lg font-semibold text-sm transition-colors"
         >
           {lang === "sw" ? "Tumia Vichujio" : "Apply Filters"}
         </button>
@@ -731,7 +719,7 @@ export default function BrowseProperties({
                 borderColor: COLORS.sandLine,
                 color: COLORS.night,
               }}
-              className="w-full rounded-full border pl-12 pr-32 py-3.5 text-sm outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-all"
+              className="w-full rounded-full border pl-12 pr-32 py-3.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all"
             />
             <button
               type="submit"
@@ -774,7 +762,7 @@ export default function BrowseProperties({
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 pr-8 text-sm font-medium text-secondary focus:outline-none focus:border-[#E8A33D] cursor-pointer"
+                    className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 pr-8 text-sm font-medium text-secondary focus:outline-none focus:border-gold cursor-pointer"
                   >
                     <option value="newest">
                       {lang === "sw" ? "Mpya Kwanza" : "Newest First"}
@@ -800,7 +788,7 @@ export default function BrowseProperties({
                     onClick={() => setViewMode("grid")}
                     className={`p-2 transition-colors ${
                       viewMode === "grid"
-                        ? "bg-[#E8A33D] text-[#101A2E]"
+                        ? "bg-gold text-night"
                         : "text-secondary hover:bg-gray-50"
                     }`}
                   >
@@ -810,7 +798,7 @@ export default function BrowseProperties({
                     onClick={() => setViewMode("list")}
                     className={`p-2 transition-colors ${
                       viewMode === "list"
-                        ? "bg-[#E8A33D] text-[#101A2E]"
+                        ? "bg-gold text-night"
                         : "text-secondary hover:bg-gray-50"
                     }`}
                   >
@@ -831,7 +819,7 @@ export default function BrowseProperties({
                   return (
                     <span
                       key={cat}
-                      className="inline-flex items-center gap-1.5 bg-[#E8A33D]/10 text-[#8A5A16] text-body-sm px-2.5 py-1 rounded-full"
+                      className="inline-flex items-center gap-1.5 bg-gold/10 text-gold-ink text-body-sm px-2.5 py-1 rounded-full"
                     >
                       {catImg && (
                         <img
@@ -858,7 +846,7 @@ export default function BrowseProperties({
                 })}
                 <button
                   onClick={clearFilters}
-                  className="text-body-sm text-[#C1502E] hover:underline font-medium"
+                  className="text-body-sm text-rust hover:underline font-medium"
                 >
                   {lang === "sw" ? "Safisha zote" : "Clear all"}
                 </button>
@@ -902,7 +890,7 @@ export default function BrowseProperties({
                           onClick={() => setCurrentPage(page)}
                           className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
                             currentPage === page
-                              ? "bg-[#E8A33D] text-[#101A2E]"
+                              ? "bg-gold text-night"
                               : "border border-gray-200 text-secondary hover:bg-gray-50"
                           }`}
                         >
@@ -937,7 +925,7 @@ export default function BrowseProperties({
                 </p>
                 <button
                   onClick={clearFilters}
-                  className="mt-4 px-5 py-2 bg-[#E8A33D] text-[#101A2E] rounded-lg text-sm font-semibold hover:bg-[#B87A1F] transition-colors"
+                  className="mt-4 px-5 py-2 bg-gold text-night rounded-lg text-sm font-semibold hover:bg-flame transition-colors"
                 >
                   {lang === "sw" ? "Safisha Vichujui" : "Clear Filters"}
                 </button>

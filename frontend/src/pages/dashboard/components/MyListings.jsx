@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo, getCategory } from "./shared.js";
 import StatusBadge from "../admin/shared/StatusBadge";
+import ListingImage from "../../../components/ListingImage.jsx";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
@@ -67,26 +68,19 @@ function ListingCard({
     >
       <div className="flex items-start gap-3 p-3 sm:p-4 min-w-0">
         {/* Picha ya mraba */}
-        <div
-          style={{ background: COLORS.sandLine }}
-          className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden shrink-0 aspect-square"
-        >
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={listing.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              {CategoryIcon ? (
+        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden shrink-0">
+          <ListingImage
+            src={imageUrl}
+            alt={listing.title}
+            ratio="aspect-square"
+            fallback={
+              CategoryIcon ? (
                 <CategoryIcon size={22} color={COLORS.night} />
               ) : (
                 <Tag size={22} color={COLORS.night} />
-              )}
-            </div>
-          )}
+              )
+            }
+          />
         </div>
 
         {/* Info */}
@@ -155,7 +149,7 @@ function ListingCard({
               onClick={() => onBoost(listing.id)}
               disabled={isBusy}
               className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg border transition-colors disabled:opacity-50 hover:bg-white"
-              style={{ borderColor: COLORS.sandLine, color: "#8A5A16" }}
+              style={{ borderColor: COLORS.sandLine, color: COLORS.goldInk }}
             >
               <Rocket size={11} />
               {t("Boost", "Boost")}
