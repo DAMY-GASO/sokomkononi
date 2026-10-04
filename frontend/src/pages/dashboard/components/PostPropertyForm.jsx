@@ -409,7 +409,7 @@ export default function PostPropertyForm({
 
     try {
       const created = await api.post("/listings/", {
-        category_id: categoryId,
+        category: categoryId,
         title: effectiveTitle,
         description: [base.description.trim(), buildSummary()]
           .filter(Boolean)
