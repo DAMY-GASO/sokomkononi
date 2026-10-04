@@ -31,7 +31,6 @@ import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { useToast } from "../../../components/Toast.jsx";
 import { startUndo } from "../../../config/undoStore.js";
-import { notifyAdminAboutDeletion } from "../../../config/notificationsStore.js";
 import { restoreListingAsync } from "../../../config/listingsStore.js";
 
 // ============================================================
@@ -329,15 +328,7 @@ export default function MyListings({
       },
     });
 
-    // 3. Tuma notification kwa admin
-    notifyAdminAboutDeletion({
-      itemType: "listing",
-      itemId: id,
-      itemTitle: listing.title,
-      user,
-    });
-
-    // 4. Toast ya kawaida (badala ya undo toast inayojitokeza)
+    // 3. Toast ya kawaida (badala ya undo toast inayojitokeza)
     toast.success(t("Tangazo limefutwa", "Listing deleted"), {
       duration: 2000,
     });
