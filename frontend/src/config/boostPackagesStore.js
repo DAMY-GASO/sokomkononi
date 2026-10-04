@@ -135,3 +135,9 @@ export function useBoostPackages() {
   }, []);
   return list;
 }
+
+// Packages a user may actually pick. Inactive packages stay in the
+// admin list (RevenueSection) but must never be offered for boosting.
+export function useActiveBoostPackages() {
+  return useBoostPackages().filter((p) => p.isActive);
+}

@@ -16,7 +16,8 @@ import {
 import {
   COLORS, getCategory, formatTZS, isBoostActive, boostDaysRemaining,
 } from "./shared";
-import { useBoostPackages } from "../../../config/boostPackagesStore.js";
+import { useActiveBoostPackages } from "../../../config/boostPackagesStore.js";
+import { useBoostFee } from "../../../config/boostFeeStore.js";
 import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -100,7 +101,7 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
 // ============================================================
 // FLAT PACKAGE CARD
 // ============================================================
-function FlatPackageCard({ pkg, selected, onSelect, lang }) {
+function FlatPackageCard({ pkg, selected, onSelect, lang, free = false }) {
   const isFeatured = pkg.key === "featured";
   const label = getLocalized(pkg.label, lang);
   const benefits = getLocalizedArray(pkg.benefits, lang);
@@ -132,7 +133,7 @@ function FlatPackageCard({ pkg, selected, onSelect, lang }) {
       </div>
       <div className="flex items-baseline justify-center gap-1.5">
         <span style={{ color: COLORS.rust }} className="text-lg font-bold">
-          {formatTZS(pkg.price)}
+          {free ? (lang === "sw" ? "Bure" : "Free") : formatTZS(pkg.price)}
         </span>
         <span className="text-secondary text-body-sm">
           / {lang === "sw" ? `siku ${pkg.days}` : `${pkg.days} days`}
@@ -226,7 +227,10 @@ export default function BoostSasa({
   const { lang } = useLanguage();
   const { user } = useAuth();
   const liveListings = listings.filter((l) => l.status === "live");
-  const boostPackages = useBoostPackages();
+  const boostPackages = useActiveBoostPackages();
+  const { loaded: feeLoaded, enabled: feeEnabled } = useBoostFee();
+  // Admin switched the boost fee off -> boosting is free.
+  const feeFree = feeLoaded && !feeEnabled;
   const boostBundles = useActiveBundles().filter((b) => b.type === "boost");
 
   const [selectedId, setSelectedId] = useState(
@@ -249,11 +253,21 @@ export default function BoostSasa({
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  // Keep the selection valid: drop a package that was switched off.
   useEffect(() => {
-    if (!flatPackageId && boostPackages.length) {
+    if (!boostPackages.length) {
+      if (flatPackageId !== null) setFlatPackageId(null);
+      return;
+    }
+    if (!boostPackages.some((p) => p.id === flatPackageId)) {
       setFlatPackageId(boostPackages[0].id);
     }
   }, [boostPackages, flatPackageId]);
+
+  // Bundles only make sense when the fee is on.
+  useEffect(() => {
+    if (feeFree && paymentMode !== "flat") setPaymentMode("flat");
+  }, [feeFree, paymentMode]);
 
   useEffect(() => {
     if (!bundleId && boostBundles.length) {
@@ -272,19 +286,30 @@ export default function BoostSasa({
   const selectedBundle = boostBundles.find((b) => b.id === bundleId);
 
   const creditInfo = checkCredit(user?.id, "boost");
-  const hasCredit = creditInfo.hasCredit;
+  const hasCredit = !feeFree && creditInfo.hasCredit;
   const boostCreditRemaining = creditInfo.remaining || 0;
 
   const canBoost =
+    feeLoaded &&
     Boolean(selectedListing) &&
-    ((paymentMode === "flat" && flatPackage) ||
-      (paymentMode === "bundle" && selectedBundle));
+    (feeFree
+      ? Boolean(flatPackage)
+      : (paymentMode === "flat" && Boolean(flatPackage)) ||
+        (paymentMode === "bundle" && Boolean(selectedBundle)));
 
   // ── Create boost on backend (used by all paths) ────────────
   const createBoostOnBackend = async () => {
+    if (!flatPackage?.id) {
+      throw new Error(
+        t(
+          "Hakuna boost package inayopatikana kwa sasa.",
+          "No boost package is available right now."
+        )
+      );
+    }
     const raw = await boostingApi.create({
       listing: selectedListing.id,
-      package: flatPackage?.id || boostPackages[0]?.id,
+      package: flatPackage.id,
     });
     return raw;
   };
@@ -471,6 +496,42 @@ export default function BoostSasa({
     }
   };
 
+  // ══════════════════════════════════════════════════════════
+  // PATH D: FREE (admin disabled the boost fee)
+  // ══════════════════════════════════════════════════════════
+  const handleFreeBoost = async () => {
+    if (!selectedListing || !flatPackage || creating) return;
+    setCreating(true);
+    setError("");
+    try {
+      const raw = await createBoostOnBackend();
+      // Backend ignores the reference while the fee is off, takes no
+      // payment and consumes no credit, then activates the boost.
+      const paid = await boostingApi.pay(raw.id, { payment_reference: "free" });
+      const activated =
+        paid?.boost || (await boostingApi.activate(raw.id).catch(() => null));
+      setDone({
+        listing: selectedListing,
+        pkg: flatPackage,
+        boost: activated,
+        mode: "free",
+      });
+      setStage("done");
+      onBoosted(selectedListing.id, {
+        boostTier: flatPackage.key,
+        boostExpiresAt: activated?.expires_at,
+      });
+    } catch (err) {
+      setError(
+        err?.data?.detail ||
+          err?.message ||
+          t("Imeshindwa kuweka boost. Jaribu tena.", "Could not apply boost. Try again.")
+      );
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const resetAll = () => {
     setDone(null);
     setStage("select");
@@ -577,11 +638,14 @@ export default function BoostSasa({
         {liveListings.length > 0 && stage !== "paying" && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
-              2. {t("Chagua Njia ya Malipo", "Choose Payment Option")}
+              2.{" "}
+              {feeFree
+                ? t("Chagua Package (Bure)", "Choose Package (Free)")
+                : t("Chagua Njia ya Malipo", "Choose Payment Option")}
             </p>
 
             {/* Payment mode toggle */}
-            <div className="flex justify-center gap-2 mb-4">
+            <div className={`flex justify-center gap-2 mb-4${feeFree ? " hidden" : ""}`}>
               <button
                 onClick={() => setPaymentMode("flat")}
                 className="flex-1 sm:flex-none text-xs font-semibold px-4 py-2 rounded-full border transition-colors"
@@ -623,6 +687,7 @@ export default function BoostSasa({
                         pkg={pkg}
                         selected={pkg.id === flatPackageId}
                         onSelect={setFlatPackageId}
+                        free={feeFree}
                         lang={lang}
                       />
                     ))}
@@ -660,15 +725,23 @@ export default function BoostSasa({
               <div>
                 <p className="text-secondary text-body-sm mb-0.5">{t("Jumla ya Malipo", "Total Payment")}</p>
                 <p className="text-lg font-bold" style={{ color: COLORS.rust }}>
-                  {formatTZS(
-                    paymentMode === "flat"
-                      ? flatPackage?.price || 0
-                      : selectedBundle?.price || 0
-                  )}
+                  {feeFree
+                    ? t("Bure", "Free")
+                    : formatTZS(
+                        paymentMode === "flat"
+                          ? flatPackage?.price || 0
+                          : selectedBundle?.price || 0
+                      )}
                 </p>
               </div>
               <button
-                onClick={paymentMode === "flat" ? handleBeginFlatPayment : handleBeginBundlePayment}
+                onClick={
+                  feeFree
+                    ? handleFreeBoost
+                    : paymentMode === "flat"
+                      ? handleBeginFlatPayment
+                      : handleBeginBundlePayment
+                }
                 disabled={!canBoost || creating}
                 style={{
                   background: canBoost && !creating ? COLORS.gold : COLORS.sandLine,
@@ -683,9 +756,11 @@ export default function BoostSasa({
                 ) : (
                   <Package size={15} />
                 )}
-                {paymentMode === "flat"
-                  ? t("Endelea Kulipa", "Continue to Payment")
-                  : t("Nunua Kifurushi", "Buy Bundle")}
+                {feeFree
+                  ? t("Boost Bure", "Boost for Free")
+                  : paymentMode === "flat"
+                    ? t("Endelea Kulipa", "Continue to Payment")
+                    : t("Nunua Kifurushi", "Buy Bundle")}
               </button>
             </div>
           </>

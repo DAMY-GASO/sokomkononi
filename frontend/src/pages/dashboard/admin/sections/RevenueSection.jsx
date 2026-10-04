@@ -47,6 +47,11 @@ import {
   toggleBoostPackageActiveAsync,
 } from "../../../../config/boostPackagesStore.js";
 import {
+  useBoostFee,
+  hydrateBoostFeeFromApi,
+  toggleBoostFeeAsync,
+} from "../../../../config/boostFeeStore.js";
+import {
   useActiveCategories, getCategory, getCategoryIcon,
 } from "../../../../config/categoriesStore.js";
 
@@ -109,6 +114,7 @@ export default function RevenueSection() {
   const adFee = useAdvertisementFeeConfig();
   const successFee = useSuccessFeeConfig();
   const boostPackages = useBoostPackages();
+  const boostFee = useBoostFee();
   const activeCategories = useActiveCategories();
 
   const [flash, setFlash] = useState(null);
@@ -136,6 +142,7 @@ export default function RevenueSection() {
         hydrateAdvertisementFeeFromApi(),
         hydrateSuccessFeeFromApi(),
         hydrateBoostPackagesFromApi(),
+        hydrateBoostFeeFromApi(),
       ]);
       const failed = results.filter(
         (r) => r.status === "rejected" || r.value?.ok === false
@@ -340,6 +347,13 @@ export default function RevenueSection() {
   const toggleBoost = (key) =>
     withBusy(`boost-toggle-${key}`, async () => {
       const res = await toggleBoostPackageActiveAsync(key);
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const toggleBoostFee = () =>
+    withBusy("boost-fee-toggle", async () => {
+      const res = await toggleBoostFeeAsync();
       if (res.ok) flashSaved();
       return res;
     });
@@ -910,7 +924,24 @@ export default function RevenueSection() {
                 )}
               </p>
             </div>
+            <ToggleButton
+              enabled={boostFee.enabled}
+              onToggle={toggleBoostFee}
+              disabled={!boostFee.loaded || !!busy["boost-fee-toggle"]}
+              lang={lang}
+            />
           </div>
+          {boostFee.loaded && !boostFee.enabled && (
+            <p
+              className="text-xs text-center rounded-lg px-3 py-2 mb-2"
+              style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+            >
+              {t(
+                "Ada ya Boost imezimwa — boost ni BURE kwa watumiaji wote. Packages zilizo active ndizo zinazotoa muda wa boost.",
+                "Boost fee is disabled — boosting is FREE for everyone. Active packages still define the boost duration."
+              )}
+            </p>
+          )}
           <EditHint lang={lang} accentColor={COLORS.gold} />
           {boostPackages.length === 0 ? (
             <p className="text-xs text-muted text-center py-3">

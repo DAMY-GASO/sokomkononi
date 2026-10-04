@@ -10,6 +10,10 @@ export const boostingApi = {
   packages: (params = {}) => api.get(`/boosting/packages/${toQuery(params)}`),
   package: (id) => api.get(`/boosting/packages/${id}/`),
 
+  // Global boost-fee switch. GET is public, PATCH is admin only.
+  feeConfig: () => api.get("/boosting/fee-config/"),
+  updateFeeConfig: (patch) => api.patch("/boosting/fee-config/", patch),
+
   list: (params = {}) => api.get(`/boosting/${toQuery(params)}`),
   detail: (id) => api.get(`/boosting/${id}/`),
   mine: (params = {}) => api.get(`/boosting/my/${toQuery(params)}`),

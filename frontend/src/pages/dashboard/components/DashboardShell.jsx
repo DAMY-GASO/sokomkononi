@@ -793,7 +793,7 @@ export default function DashboardShell() {
             <Home size={20} />
           </a>
 
-          <button
+                    <button
             onClick={() => handleNavClick("notifications")}
             className="relative text-white/80 hover:text-white p-1.5 transition-colors"
             aria-label={t("Taarifa", "Notifications")}
@@ -802,8 +802,10 @@ export default function DashboardShell() {
             {unreadNotifCount > 0 && (
               <span
                 style={{ background: COLORS.rust }}
-                className="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full"
-              />
+                className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+              >
+                {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
+              </span>
             )}
           </button>
 
