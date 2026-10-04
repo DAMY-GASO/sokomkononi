@@ -14,7 +14,7 @@ export default function Footer({ selectedLang: propLang }) {
   const appStoreUrl = (appLinks?.appstore || "").trim();
 
   return (
-    <footer className="bg-[#0D1524] text-white/80 border-t border-white/10">
+    <footer className="bg-night-deep text-white/80 border-t border-white/10">
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="text-center mb-10 pb-8 border-b border-white/10">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">
@@ -77,9 +77,7 @@ export default function Footer({ selectedLang: propLang }) {
           {/* Column 1: Brand */}
           <div className="col-span-2 lg:col-span-1 text-center lg:text-left">
             <div className="flex items-center justify-center lg:justify-start gap-2 mb-4">
-              <span className="w-8 h-8 rounded-md bg-[#E8A33D] flex items-center justify-center text-[#0D1524] font-bold text-sm">
-                S
-              </span>
+              <img src="/logo.webp" alt="" width={40} height={40} className="h-10 w-10 rounded-full" />
               <span className="text-white font-bold text-lg tracking-tight">SokoMkononi</span>
             </div>
             <p className="text-white/50 text-sm leading-relaxed max-w-xs mx-auto lg:mx-0">
@@ -168,7 +166,7 @@ export default function Footer({ selectedLang: propLang }) {
             </h3>
             <ul className="space-y-3">
               <li className="text-white/50 text-sm flex items-center justify-center lg:justify-start gap-2">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 fill-none stroke-[#E8A33D] stroke-2" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 fill-none stroke-gold stroke-2" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0-.828.672-1.5 1.5-1.5h16.5c.828 0 1.5.672 1.5 1.5v10.5c0 .828-.672 1.5-1.5 1.5H3.75c-.828 0-1.5-.672-1.5-1.5V6.75z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75l9.75 6.75 9.75-6.75" />
                 </svg>
@@ -177,13 +175,13 @@ export default function Footer({ selectedLang: propLang }) {
                 </a>
               </li>
               <li className="text-white/50 text-sm flex items-center justify-center lg:justify-start gap-2">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 fill-none stroke-[#E8A33D] stroke-2" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 fill-none stroke-gold stroke-2" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 4.5a1.5 1.5 0 011.5-1.5h2.086a1.5 1.5 0 011.42 1.023l1.14 3.42a1.5 1.5 0 01-.4 1.583L6.63 10.39a12.03 12.03 0 006.98 6.98l1.365-1.366a1.5 1.5 0 011.583-.4l3.42 1.14a1.5 1.5 0 011.023 1.42v2.086a1.5 1.5 0 01-1.5 1.5H18.75C9.646 21.75 2.25 14.354 2.25 5.25V4.5z" />
                 </svg>
                 <span>0743 895 038</span>
               </li>
               <li className="text-white/50 text-sm flex items-center justify-center lg:justify-start gap-2">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 fill-none stroke-[#E8A33D] stroke-2" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 fill-none stroke-gold stroke-2" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
                 </svg>

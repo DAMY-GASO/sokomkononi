@@ -208,7 +208,7 @@ export async function hydrateContentFromApi() {
 // ============================================================
 export async function addBannerAsync(form) {
   try {
-    const raw = await api.post("/content/banners/", {
+    const raw = await api.post("/admin/content/banners/", {
       title: form.title,
       subtitle: form.subtitle,
       cta_text: form.ctaText,
@@ -234,7 +234,7 @@ export async function updateBannerAsync(id, patch) {
     if (patch.active != null) body.active = patch.active;
     if (patch.order != null) body.ordering = patch.order;
 
-    const raw = await api.patch(`/content/banners/${id}/`, body);
+    const raw = await api.patch(`/admin/content/banners/${id}/`, body);
     const updated = normBanner(raw);
     write({ ...read(), banners: read().banners.map((b) => (b.id === id ? updated : b)) });
     return { ok: true, banner: updated };
@@ -243,7 +243,7 @@ export async function updateBannerAsync(id, patch) {
 
 export async function removeBannerAsync(id) {
   try {
-    await api.delete(`/content/banners/${id}/`);
+    await api.delete(`/admin/content/banners/${id}/`);
     write({ ...read(), banners: read().banners.filter((b) => b.id !== id) });
     return { ok: true };
   } catch (err) { return { ok: false, error: err }; }
@@ -254,7 +254,7 @@ export async function removeBannerAsync(id) {
 // ============================================================
 export async function addTestimonialAsync(form) {
   try {
-    const raw = await api.post("/content/testimonials/", {
+    const raw = await api.post("/admin/content/testimonials/", {
       name: form.name,
       location: form.location || "",
       quote: form.quote,
@@ -278,7 +278,7 @@ export async function updateTestimonialAsync(id, patch) {
     if (patch.avatarUrl != null) body.avatar_url = patch.avatarUrl;
     if (patch.active != null) body.active = patch.active;
 
-    const raw = await api.patch(`/content/testimonials/${id}/`, body);
+    const raw = await api.patch(`/admin/content/testimonials/${id}/`, body);
     const updated = normTestimonial(raw);
     write({ ...read(), testimonials: read().testimonials.map((t) => (t.id === id ? updated : t)) });
     return { ok: true, testimonial: updated };
@@ -287,7 +287,7 @@ export async function updateTestimonialAsync(id, patch) {
 
 export async function removeTestimonialAsync(id) {
   try {
-    await api.delete(`/content/testimonials/${id}/`);
+    await api.delete(`/admin/content/testimonials/${id}/`);
     write({ ...read(), testimonials: read().testimonials.filter((t) => t.id !== id) });
     return { ok: true };
   } catch (err) { return { ok: false, error: err }; }
@@ -298,7 +298,7 @@ export async function removeTestimonialAsync(id) {
 // ============================================================
 export async function addFaqAsync(form) {
   try {
-    const raw = await api.post("/content/faqs/", {
+    const raw = await api.post("/admin/content/faqs/", {
       question: form.question,
       answer: form.answer,
       active: form.active !== false,
@@ -318,7 +318,7 @@ export async function updateFaqAsync(id, patch) {
     if (patch.active != null) body.active = patch.active;
     if (patch.order != null) body.ordering = patch.order;
 
-    const raw = await api.patch(`/content/faqs/${id}/`, body);
+    const raw = await api.patch(`/admin/content/faqs/${id}/`, body);
     const updated = normFaq(raw);
     write({ ...read(), faqs: read().faqs.map((f) => (f.id === id ? updated : f)) });
     return { ok: true, faq: updated };
@@ -327,7 +327,7 @@ export async function updateFaqAsync(id, patch) {
 
 export async function removeFaqAsync(id) {
   try {
-    await api.delete(`/content/faqs/${id}/`);
+    await api.delete(`/admin/content/faqs/${id}/`);
     write({ ...read(), faqs: read().faqs.filter((f) => f.id !== id) });
     return { ok: true };
   } catch (err) { return { ok: false, error: err }; }
@@ -338,7 +338,7 @@ export async function removeFaqAsync(id) {
 // ============================================================
 async function updatePageAsync(section, patch) {
   try {
-    const raw = await api.patch(`/content/${section}/`, patch);
+    const raw = await api.patch(`/admin/content/${section}/`, patch);
     let updated;
     if (section === "about") updated = normAbout(raw);
     else if (section === "help") updated = normHelp(raw);

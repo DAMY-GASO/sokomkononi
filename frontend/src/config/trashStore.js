@@ -144,7 +144,7 @@ export async function permanentDeleteTrashItemAsync(type, id) {
 
 export async function emptyTrashByTypeAsync(type) {
   try {
-    await api.post(`/trash/${type}/empty/`, { confirm: true });
+    await api.post(`/trash/${type}/empty/`, { confirm: "DELETE ALL" });
     setTrashItemsByType(type, []);
     const o = readOverview();
     writeOverview({ ...o, [type]: 0, total: Math.max(0, o.total - (o[type] || 0)), lastUpdated: new Date().toISOString() });
@@ -154,7 +154,7 @@ export async function emptyTrashByTypeAsync(type) {
 
 export async function emptyTrashAsync() {
   try {
-    await api.post("/trash/empty/", { confirm: true });
+    await api.post("/trash/empty/", { confirm: "DELETE ALL" });
     writeItems({});
     writeOverview({ ...EMPTY_OVERVIEW, lastUpdated: new Date().toISOString() });
     return { ok: true };

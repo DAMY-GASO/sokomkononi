@@ -224,9 +224,10 @@ export function useActivityEvents(side = "seller", onNavigate) {
               ),
         at:
           d.updatedAt ||
+          d.createdAt ||
           d.messages?.[d.messages.length - 1]?.at ||
           d.messages?.[0]?.at ||
-          new Date().toISOString(),
+          null, // skip fabricated timestamps
         onClick: () => onNavigate("deals"),
       });
     });

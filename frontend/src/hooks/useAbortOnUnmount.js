@@ -1,12 +1,23 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 
+/**
+ * Returns an AbortSignal tied to the component's lifetime.
+ * useMemo creates the controller during render so the consumer
+ * gets the same signal object across the component's lifetime.
+ * The effect cleanup aborts it on unmount.
+ */
 export function useAbortOnUnmount() {
-  const controllerRef = useRef(null);
-  if (!controllerRef.current) controllerRef.current = new AbortController();
+  const controller = useMemo(() => new AbortController(), []);
+
   useEffect(() => {
     return () => {
-      try { controllerRef.current?.abort(); } catch { /* noop */ }
+      try {
+        controller.abort();
+      } catch {
+        /* noop */
+      }
     };
-  }, []);
-  return controllerRef.current.signal;
+  }, [controller]);
+
+  return controller.signal;
 }

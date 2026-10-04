@@ -38,6 +38,9 @@ import {
 import {
   useDeals,
   updateDeal as updateDealInStore,
+  sendOfferAsync,
+  acceptOfferAsync,
+  cancelDealAsync,
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -1673,6 +1676,9 @@ export default function DealRooms({
   };
 
   const handleSendMessage = (id, text) => {
+    // NOTE: deal-scoped messaging endpoint (/deals/{id}/messages/) is
+    // pending on the backend. Until it lands, this updates local state
+    // only. See report §B-2.
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
     updateDeal(id, {
@@ -1688,49 +1694,55 @@ export default function DealRooms({
     });
   };
 
-  const handleSendOffer = (id, amount) => {
-    const deal = deals.find((d) => d.id === id);
-    if (!deal) return;
-    updateDeal(id, {
-      currentOffer: amount,
-      offerFrom: "me",
-      status: "offer_sent",
-      messages: [
-        ...deal.messages,
-        {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          text: "",
-          at: new Date().toISOString(),
-          offerAmount: amount,
-        },
-      ],
-    });
+  const handleSendOffer = async (id, amount) => {
+    // dealsStore.sendOfferAsync performs optimistic update + rollback.
+    const res = await sendOfferAsync(id, amount);
+    if (!res.ok) {
+      console.warn("[DealRooms] sendOffer failed:", res.error);
+      alert(
+        res.error?.message ||
+          (lang === "sw"
+            ? "Imeshindwa kutuma ofa. Jaribu tena."
+            : "Failed to send offer. Try again.")
+      );
+    }
   };
 
-  const handleRespond = (id, newStatus) => {
+  const handleRespond = async (id, newStatus) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
-    const note =
-      newStatus === "accepted"
-        ? lang === "sw"
-          ? `Ofa ya ${formatTZS(deal.currentOffer)} imekubaliwa.`
-          : `Offer of ${formatTZS(deal.currentOffer)} accepted.`
-        : lang === "sw"
-          ? "Ofa imekataliwa."
-          : "Offer declined.";
-    updateDeal(id, {
-      status: newStatus,
-      messages: [
-        ...deal.messages,
-        {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          text: note,
-          at: new Date().toISOString(),
-        },
-      ],
-    });
+
+    if (newStatus === "accepted") {
+      // Find the most recent offer bubble's backend id.
+      const lastOffer = [...(deal.messages || [])]
+        .reverse()
+        .find((m) => m.offerAmount && typeof m.id === "number");
+      const res = await acceptOfferAsync(id, lastOffer?.id ?? null);
+      if (!res.ok) {
+        console.warn("[DealRooms] acceptOffer failed:", res.error);
+        alert(
+          res.error?.message ||
+            (lang === "sw"
+              ? "Imeshindwa kukubali ofa. Jaribu tena."
+              : "Failed to accept offer. Try again.")
+        );
+      }
+      return;
+    }
+
+    if (newStatus === "declined") {
+      const res = await cancelDealAsync(id, "Offer declined");
+      if (!res.ok) {
+        console.warn("[DealRooms] cancelDeal failed:", res.error);
+        alert(
+          res.error?.message ||
+            (lang === "sw"
+              ? "Imeshindwa kukataa ofa. Jaribu tena."
+              : "Failed to decline offer. Try again.")
+        );
+      }
+      return;
+    }
   };
 
   // ⬇️ RESERVE CONFIRM — flat + credit pekee

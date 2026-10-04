@@ -284,6 +284,7 @@ const translations = {
     contact_submit: "Tuma Ujumbe",
     contact_success_heading: "Ujumbe Umetumwa!",
     contact_success_subtext: "Asante kwa kuwasiliana nasi. Tutakujibu haraka iwezekanavyo.",
+    nav_post_ad: "Weka Tangazo",
   },
   en: {
     // Navbar

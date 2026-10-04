@@ -88,11 +88,24 @@ function write(list) {
 function sortNewest(list) {
   return [...list].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 }
+// Notifications whose audience is "admin" by default (platform activity)
+const ADMIN_BY_DEFAULT = new Set([
+  "LISTING_CREATED", "LISTING_DELETED", "LISTING_RESTORED",
+  "ACCOUNT_DELETED", "ACCOUNT_RESTORED", "USER_DELETED",
+  "NEW_OFFER", "DISPUTE_RESOLVED",
+]);
+
+function inferAudience(raw) {
+  if (raw && typeof raw.audience === "string") return raw.audience;
+  const t = String(raw?.notification_type || "").toUpperCase();
+  return ADMIN_BY_DEFAULT.has(t) ? "admin" : "user";
+}
+
 function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
-    audience: "user",
+    audience: inferAudience(raw),
     type: raw.notification_type,
     title: raw.title,
     body: raw.message,

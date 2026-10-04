@@ -70,13 +70,13 @@ export const trashApi = {
   emptyByType: (type) => {
     if (!type)
       throw new Error("trashApi.emptyByType: type is required");
-    return api.post(`/trash/${type}/empty/`, { confirm: true });
+    return api.post(`/trash/${type}/empty/`, { confirm: "DELETE ALL" });
   },
 
   /**
    * Kufuta trash yote (types zote).
    */
-  emptyAll: () => api.post("/trash/empty/", { confirm: true }),
+  emptyAll: () => api.post("/trash/empty/", { confirm: "DELETE ALL" }),
 };
 
 // ============================================================
