@@ -1,135 +1,99 @@
 // ============================================================
-// src/pages/SimilarListingsSection.jsx
-// Buyer — mali nyingine zinazofanana na listing anayotazama.
+// src/utils/downloadImage.js
+// Download picha kutoka Cloudflare R2 / CDN
+// NO JSX — pure JS ili kuepuka vite:define error
 // ============================================================
 
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { MapPin, Eye, ArrowRight } from "lucide-react";
-import { COLORS } from "./dashboard/components/shared";
-import ListingImage from "../components/ListingImage.jsx";
-
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
-
-function formatTZS(amount) {
-  return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
+function ensureExtension(filename) {
+  if (!filename) return `sokomkononi-${Date.now()}.jpg`;
+  if (/\.(jpg|jpeg|png|webp)$/i.test(filename)) return filename;
+  return filename + ".jpg";
 }
 
-export default function SimilarListingsSection({ listingId, lang = "sw" }) {
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(true);
+function filenameFromUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    const parts = urlObj.pathname.split("/");
+    const last = parts[parts.length - 1];
+    if (last && last.includes(".")) return last;
+  } catch {
+    // ignore
+  }
+  return `sokomkononi-${Date.now()}.jpg`;
+}
 
-  const t = (sw, en) => (lang === "sw" ? sw : en);
+/**
+ * Download picha kutoka URL (Cloudflare R2 inasaidia CORS kama imesetiwa).
+ *
+ * @returns {Promise<boolean>}
+ */
+export async function downloadImage(url, filename = null) {
+  if (!url) return false;
 
-  useEffect(() => {
-    if (!listingId) return;
+  if (!filename) filename = filenameFromUrl(url);
+  filename = ensureExtension(filename);
 
-    let cancelled = false;
-    setLoading(true);
+  // ── Njia 1: fetch + blob ────────────────────────────────
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      mode: "cors",
+      credentials: "omit",
+      cache: "no-cache",
+    });
 
-    fetch(`${API_BASE}/listings/${listingId}/similar/`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) {
-          setListings(Array.isArray(data) ? data : []);
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setListings([]);
-          setLoading(false);
-        }
-      });
+    if (!res.ok) throw new Error("HTTP " + res.status);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [listingId]);
+    const blob = await res.blob();
 
-  if (loading || listings.length === 0) {
-    return null;
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    setTimeout(function () {
+      window.URL.revokeObjectURL(blobUrl);
+    }, 200);
+    return true;
+  } catch (err) {
+    console.warn("[downloadImage] fetch failed, trying fallback:", err);
   }
 
-  return (
-    <div className="mt-6">
-      <div className="bg-white rounded-2xl border border-gray-100 p-5">
-        <div className="text-center mb-4">
-          <h2 className="text-lg sm:text-xl font-bold text-primary">
-            {t("Mali Nyingine Zinazofanana", "Similar Properties")}
-          </h2>
-          <p className="text-sm text-secondary mt-1">
-            {t("Unaweza pia kupenda hizi", "You might also like these")}
-          </p>
-        </div>
+  // ── Njia 2: fallback — fungua kwenye tab mpya ───────────
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return true;
+  } catch (err) {
+    console.error("[downloadImage] fallback failed:", err);
+    return false;
+  }
+}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {listings.map((item) => {
-            const imageUrl =
-              item.primary_image ||
-              item.image ||
-              (Array.isArray(item.images) && item.images[0]) ||
-              null;
+/**
+ * Download picha zote kwa interval ndogo.
+ */
+export async function downloadAllImages(urls, prefix = "sokomkononi") {
+  if (!Array.isArray(urls) || urls.length === 0) return 0;
 
-            return (
-              <Link
-                key={item.id}
-                to={`/mali/${item.id}`}
-                className="rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col no-underline bg-white"
-              >
-                <div className="aspect-video bg-sand overflow-hidden">
-                  {imageUrl ? (
-                    <ListingImage
-                      src={imageUrl}
-                      alt={item.title}
-                      ratio="h-full w-full"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted text-xs">
-                      {t("Hakuna picha", "No image")}
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-3 flex flex-col gap-1.5 flex-1">
-                  <p className="text-primary text-sm font-semibold line-clamp-2">
-                    {item.title}
-                  </p>
-
-                  <p
-                    style={{ color: COLORS.gold }}
-                    className="font-bold text-sm"
-                  >
-                    {formatTZS(item.price)}
-                  </p>
-
-                  {item.location && (
-                    <p className="text-xs text-muted flex items-center gap-1">
-                      <MapPin size={10} />
-                      <span className="line-clamp-1">{item.location}</span>
-                    </p>
-                  )}
-
-                  {item.views_count != null && (
-                    <p className="text-xs text-muted flex items-center gap-1">
-                      <Eye size={10} />
-                      {item.views_count} {t("wameona", "views")}
-                    </p>
-                  )}
-
-                  <div
-                    style={{ color: COLORS.gold }}
-                    className="text-xs font-semibold flex items-center gap-1 mt-auto pt-1"
-                  >
-                    {t("Angalia", "View")}
-                    <ArrowRight size={10} />
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
+  let success = 0;
+  for (let i = 0; i < urls.length; i++) {
+    const ok = await downloadImage(urls[i], prefix + "-" + (i + 1) + ".jpg");
+    if (ok) success++;
+    await new Promise(function (r) {
+      setTimeout(r, 400);
+    });
+  }
+  return success;
 }
