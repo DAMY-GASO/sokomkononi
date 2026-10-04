@@ -249,6 +249,42 @@ export function calculateListingFee(categoryKey, priceInput) {
     };
   }
 
+  if (isFlat) {
+    const fee = Math.round(flatFee / 500) * 500;
+    return { price, rate: config.rate, rawFee: flatFee, fee, capped: null, mode: "FLAT" };
+  }
+
+  const rawFee = price * config.rate;
+  let fee = rawFee;
+  let capped = null;
+
+  if (rawFee < config.min) {
+    fee = config.min;
+    capped = "min";
+  } else if (rawFee > config.max) {
+    fee = config.max;
+    capped = "max";
+  }
+
+  fee = Math.round(fee / 500) * 500;
+
+  return { price, rate: config.rate, rawFee, fee, capped, mode: "PERCENTAGE" };
+}
+
+  const isFlat = String(config.feeMode || "PERCENTAGE").toUpperCase() === "FLAT";
+  const flatFee = Number(config.flatFee ?? config.flat_fee ?? 0) || 0;
+
+  if (!price) {
+    return {
+      price,
+      rate: config.rate,
+      rawFee: isFlat ? flatFee : 0,
+      fee: isFlat ? flatFee : 0,
+      capped: null,
+      mode: isFlat ? "FLAT" : "PERCENTAGE",
+    };
+  }
+
   // FLAT mode: ignore percentage, min, max; charge the flat fee.
   if (isFlat) {
     const fee = Math.round(flatFee / 500) * 500;

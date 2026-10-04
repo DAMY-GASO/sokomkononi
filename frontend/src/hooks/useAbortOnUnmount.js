@@ -1,29 +1,23 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 
 /**
  * Returns an AbortSignal tied to the component's lifetime.
- * The controller is recreated on every mount, so remounts
- * (React 18 StrictMode, Suspense, or shell remounts) get a
- * fresh, non-aborted signal.
+ * useMemo creates the controller during render so the consumer
+ * gets the same signal object across the component's lifetime.
+ * The effect cleanup aborts it on unmount.
  */
 export function useAbortOnUnmount() {
-  const controllerRef = useRef(null);
+  const controller = useMemo(() => new AbortController(), []);
 
   useEffect(() => {
-    controllerRef.current = new AbortController();
     return () => {
       try {
-        controllerRef.current?.abort();
+        controller.abort();
       } catch {
         /* noop */
       }
     };
-  }, []);
+  }, [controller]);
 
-  // Initial render (before the effect runs) — return a live signal
-  // so consumers calling fetch() on the first render still work.
-  if (!controllerRef.current) {
-    controllerRef.current = new AbortController();
-  }
-  return controllerRef.current.signal;
+  return controller.signal;
 }
