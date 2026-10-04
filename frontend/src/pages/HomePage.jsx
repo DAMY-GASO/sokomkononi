@@ -5,16 +5,14 @@ import { useAuth } from "../config/authStore.js";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import Navbar from "../components/Navbar.jsx";
+import ListingCard from "../components/ListingCard.jsx";
+import CategoryTile from "../components/CategoryTile.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
 import { useAppStoreLinks } from "../config/systemSettingsStore.js";
 import {
   usePopularCategories,
   getCategoryIcon,
 } from "../config/categoriesStore.js";
-
-function formatTZS(amount) {
-  return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
-}
 
 // ============================================================
 // TypewriterText — elegant with blinking cursor
@@ -46,7 +44,7 @@ function TypewriterText({ text, speed = 30 }) {
     <span className="inline">
       {displayed}
       <span
-        className={`inline-block w-[2px] h-[1em] align-middle ml-0.5 bg-[#E8A33D] ${
+        className={`inline-block w-[2px] h-[1em] align-middle ml-0.5 bg-gold ${
           done ? "animate-blink opacity-60" : "opacity-100"
         }`}
         aria-hidden="true"
@@ -134,16 +132,16 @@ function ViewAllTile({ to, label, itemCount, cols, delay = 0 }) {
     <Reveal delay={delay} className={fillSpan(itemCount, cols)}>
       <Link
         to={to}
-        className="group flex h-full min-h-[110px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-[#E8A33D]/50 bg-[#E8A33D]/10 px-4 py-6 text-center text-[#E8A33D] font-bold text-lg sm:text-xl leading-tight transition-all duration-300 hover:-translate-y-1 hover:bg-[#E8A33D] hover:text-[#101A2E] hover:border-[#E8A33D] hover:shadow-lg hover:shadow-black/[0.06]"
+        className="group flex h-full min-h-[110px] flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] border-gold bg-night px-4 py-5 text-center text-base font-semibold leading-tight text-gold transition-all duration-200 hover:-translate-y-0.5 hover:bg-gold hover:text-night hover:shadow-[0_12px_24px_-14px_rgba(254,164,6,0.7)] sm:text-lg"
       >
         <span>{label}</span>
         <svg
-          width="26"
-          height="26"
+          width="22"
+          height="22"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2.6"
+          strokeWidth="2.4"
           strokeLinecap="round"
           strokeLinejoin="round"
           className="transition-transform duration-300 group-hover:translate-x-1"
@@ -167,40 +165,40 @@ function AmbientBackground() {
     >
       {/* Very faint diagonal beams */}
       <div
-        className="absolute top-[8%] h-px w-[30%] bg-gradient-to-r from-transparent via-[#E8A33D] to-transparent animate-beam"
+        className="absolute top-[8%] h-px w-[30%] bg-gradient-to-r from-transparent via-gold to-transparent animate-beam"
         style={{ opacity: 0.12 }}
       />
       <div
-        className="absolute top-[38%] h-px w-[25%] bg-gradient-to-r from-transparent via-[#2F6D4F] to-transparent animate-beam"
+        className="absolute top-[38%] h-px w-[25%] bg-gradient-to-r from-transparent via-royal to-transparent animate-beam"
         style={{ animationDelay: "-8s", opacity: 0.1 }}
       />
       <div
-        className="absolute top-[72%] h-px w-[35%] bg-gradient-to-r from-transparent via-[#E8A33D] to-transparent animate-beam"
+        className="absolute top-[72%] h-px w-[35%] bg-gradient-to-r from-transparent via-gold to-transparent animate-beam"
         style={{ animationDelay: "-15s", opacity: 0.09 }}
       />
 
       {/* Barely-there drifting dots */}
       <span
-        className="absolute top-[14%] w-1 h-1 rounded-full bg-[#E8A33D] animate-drift-across"
+        className="absolute top-[14%] w-1 h-1 rounded-full bg-gold animate-drift-across"
         style={{ opacity: 0.22, animationDuration: "55s" }}
       />
       <span
-        className="absolute top-[48%] w-[3px] h-[3px] rounded-full bg-[#2F6D4F] animate-drift-across"
+        className="absolute top-[48%] w-[3px] h-[3px] rounded-full bg-royal animate-drift-across"
         style={{ opacity: 0.18, animationDuration: "68s", animationDelay: "-20s" }}
       />
       <span
-        className="absolute top-[76%] w-1 h-1 rounded-full bg-[#E8A33D] animate-drift-across"
+        className="absolute top-[76%] w-1 h-1 rounded-full bg-gold animate-drift-across"
         style={{ opacity: 0.2, animationDuration: "62s", animationDelay: "-38s" }}
       />
 
       {/* Very soft breathing glows */}
       <div
         className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full animate-glow-breathe"
-        style={{ background: "radial-gradient(circle, rgba(232,163,61,0.04) 0%, transparent 70%)" }}
+        style={{ background: "radial-gradient(circle, rgba(254,164,6,0.04) 0%, transparent 70%)" }}
       />
       <div
         className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full animate-glow-breathe"
-        style={{ background: "radial-gradient(circle, rgba(47,109,79,0.04) 0%, transparent 70%)", animationDelay: "-4s" }}
+        style={{ background: "radial-gradient(circle, rgba(0,98,253,0.04) 0%, transparent 70%)", animationDelay: "-4s" }}
       />
     </div>
   );
@@ -352,9 +350,9 @@ export default function HomePage() {
       desc: lang === "sw"
         ? "Linalowaunganisha wanunuzi na wauzaji kwa urahisi, uwazi na kuaminiana."
         : "Connecting buyers and sellers with ease, transparency and trust.",
-      accent: "#E8A33D",
+      accent: "#C97300",
       icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C97300" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5Z" />
         </svg>
       ),
@@ -364,9 +362,9 @@ export default function HomePage() {
       desc: lang === "sw"
         ? "Tafuta mali popote Tanzania — Web, iOS na Android."
         : "Find properties anywhere in Tanzania — Web, iOS and Android.",
-      accent: "#2F6D4F",
+      accent: "#0062FD",
       icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2F6D4F" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0062FD" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="11" cy="11" r="8" />
           <path d="m21 21-4.3-4.3" />
         </svg>
@@ -397,16 +395,16 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════ */}
         {/* HERO                                                */}
         {/* ═══════════════════════════════════════════════════ */}
-        <section className="relative dark-surface bg-[#0A1220] text-white px-4 py-14 sm:py-20 lg:py-24 overflow-hidden min-h-[92svh] sm:min-h-[88svh] flex items-center">
+        <section className="relative dark-surface bg-night-deep text-white px-4 py-14 sm:py-20 lg:py-24 overflow-hidden min-h-[92svh] sm:min-h-[88svh] flex items-center">
           {/* Aurora orbs */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div
               className="absolute -top-1/3 -left-1/4 w-[70%] h-[70%] rounded-full opacity-20 blur-[130px] animate-aurora"
-              style={{ background: "radial-gradient(circle, #E8A33D 0%, transparent 60%)" }}
+              style={{ background: "radial-gradient(circle, #FEA406 0%, transparent 60%)" }}
             />
             <div
-              className="absolute -bottom-1/3 -right-1/4 w-[70%] h-[70%] rounded-full opacity-[0.15] blur-[130px] animate-aurora"
-              style={{ background: "radial-gradient(circle, #2F6D4F 0%, transparent 60%)", animationDelay: "-6s" }}
+              className="absolute -bottom-1/3 -right-1/4 w-[70%] h-[70%] rounded-full opacity-[0.28] blur-[130px] animate-aurora"
+              style={{ background: "radial-gradient(circle, #0062FD 0%, transparent 60%)", animationDelay: "-6s" }}
             />
           </div>
 
@@ -424,21 +422,21 @@ export default function HomePage() {
 
           {/* Faint local beams */}
           <div
-            className="absolute top-[12%] h-px w-[30%] bg-gradient-to-r from-transparent via-[#E8A33D] to-transparent animate-beam"
+            className="absolute top-[12%] h-px w-[30%] bg-gradient-to-r from-transparent via-gold to-transparent animate-beam"
             style={{ opacity: 0.15 }}
           />
           <div
-            className="absolute bottom-[16%] h-px w-[25%] bg-gradient-to-r from-transparent via-[#2F6D4F] to-transparent animate-beam"
+            className="absolute bottom-[16%] h-px w-[25%] bg-gradient-to-r from-transparent via-royal to-transparent animate-beam"
             style={{ animationDelay: "-10s", opacity: 0.12 }}
           />
 
           {/* Barely-visible drifting dots (mobile + desktop) */}
           <span
-            className="absolute top-[22%] left-[10%] w-1 h-1 rounded-full bg-[#E8A33D] animate-drift-across"
+            className="absolute top-[22%] left-[10%] w-1 h-1 rounded-full bg-gold animate-drift-across"
             style={{ opacity: 0.2, animationDuration: "58s" }}
           />
           <span
-            className="absolute top-[68%] right-[12%] w-[3px] h-[3px] rounded-full bg-[#2F6D4F] animate-drift-across"
+            className="absolute top-[68%] right-[12%] w-[3px] h-[3px] rounded-full bg-royal animate-drift-across"
             style={{ opacity: 0.18, animationDuration: "72s", animationDelay: "-22s" }}
           />
 
@@ -447,10 +445,10 @@ export default function HomePage() {
             <HeroStatCard label="Mali Zinazopatikana" value="2,500+" delay={0} />
           </div>
           <div className="absolute top-[12%] right-[4%] hidden xl:block animate-float-slow" style={{ animationDelay: "-4s" }}>
-            <HeroStatCard label="Wauzaji Walioidhinishwa" value="1,200+" accent="rgba(232,163,61,0.55)" delay={0.4} />
+            <HeroStatCard label="Wauzaji Walioidhinishwa" value="1,200+" accent="rgba(254,164,6,0.55)" delay={0.4} />
           </div>
           <div className="absolute bottom-[16%] left-[5%] hidden xl:block animate-float-slow" style={{ animationDelay: "-6s" }}>
-            <HeroStatCard label="Malipo Salama" value="100%" accent="rgba(47,109,79,0.55)" delay={0.8} />
+            <HeroStatCard label="Malipo Salama" value="100%" accent="rgba(0,98,253,0.55)" delay={0.8} />
           </div>
           <div className="absolute bottom-[12%] right-[5%] hidden xl:block animate-float" style={{ animationDelay: "-3s" }}>
             <HeroStatCard label="Mikataba" value="850+" delay={1.2} />
@@ -461,8 +459,8 @@ export default function HomePage() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-full px-4 py-2 mb-7 animate-fade-in-up">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E8A33D] opacity-60" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E8A33D]" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-gold" />
               </span>
               <span className="text-xs sm:text-sm font-medium text-white/80 tracking-wider uppercase">
                 {lang === "sw" ? "Soko la Kidijitali la Mali" : "Digital Property Marketplace"}
@@ -477,7 +475,7 @@ export default function HomePage() {
               {lang === "sw" ? (
                 <>
                   Nunua na Uza{" "}
-                  <span className="bg-gradient-to-r from-[#E8A33D] via-[#F5C976] to-[#E8A33D] bg-clip-text text-transparent bg-[length:200%_auto] animate-shimmer">
+                  <span className="bg-gradient-to-r from-gold via-gold-light to-gold bg-clip-text text-transparent bg-[length:200%_auto] animate-shimmer">
                     Mali
                   </span>{" "}
                   kwa Urahisi
@@ -485,7 +483,7 @@ export default function HomePage() {
               ) : (
                 <>
                   Buy and Sell{" "}
-                  <span className="bg-gradient-to-r from-[#E8A33D] via-[#F5C976] to-[#E8A33D] bg-clip-text text-transparent bg-[length:200%_auto] animate-shimmer">
+                  <span className="bg-gradient-to-r from-gold via-gold-light to-gold bg-clip-text text-transparent bg-[length:200%_auto] animate-shimmer">
                     Property
                   </span>{" "}
                   Easily
@@ -528,16 +526,16 @@ export default function HomePage() {
               <button
                 onClick={handleBuyNow}
                 className="group relative overflow-hidden inline-flex items-center gap-3 rounded-full
-                  bg-gradient-to-r from-[#E8A33D] to-[#F5C976]
-                  hover:from-[#D99728] hover:to-[#E8A33D]
-                  text-[#101A2E] font-semibold
+                  bg-gradient-to-r from-gold to-gold-light
+                  hover:from-flame hover:to-gold
+                  text-night font-semibold
                   pl-2 pr-6 sm:pr-8 py-2.5
-                  shadow-[0_8px_30px_-8px_rgba(232,163,61,0.55)]
-                  hover:shadow-[0_14px_45px_-8px_rgba(232,163,61,0.75)]
+                  shadow-[0_8px_30px_-8px_rgba(254,164,6,0.55)]
+                  hover:shadow-[0_14px_45px_-8px_rgba(254,164,6,0.75)]
                   transition-all duration-300
                   hover:-translate-y-1 active:translate-y-0"
               >
-                <span className="w-12 h-12 rounded-full bg-[#101A2E]/10 group-hover:bg-[#101A2E]/[0.16] flex items-center justify-center shrink-0 transition-colors">
+                <span className="w-12 h-12 rounded-full bg-night/10 group-hover:bg-night/[0.16] flex items-center justify-center shrink-0 transition-colors">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8" />
                     <path d="m21 21-4.3-4.3" />
@@ -553,12 +551,12 @@ export default function HomePage() {
               <button
                 onClick={handleSellNow}
                 className="group relative overflow-hidden inline-flex items-center gap-3 rounded-full
-                  bg-gradient-to-r from-[#2F6D4F] to-[#3E8A66]
-                  hover:from-[#245a41] hover:to-[#2F6D4F]
+                  bg-gradient-to-r from-royal to-royal-dark
+                  hover:from-royal-dark hover:to-royal
                   text-white font-semibold
                   pl-2 pr-6 sm:pr-8 py-2.5
-                  shadow-[0_8px_30px_-8px_rgba(47,109,79,0.55)]
-                  hover:shadow-[0_14px_45px_-8px_rgba(47,109,79,0.75)]
+                  shadow-[0_8px_30px_-8px_rgba(0,98,253,0.55)]
+                  hover:shadow-[0_14px_45px_-8px_rgba(0,98,253,0.7)]
                   transition-all duration-300
                   hover:-translate-y-1 active:translate-y-0"
               >
@@ -580,12 +578,12 @@ export default function HomePage() {
               style={{ animationDelay: "0.5s" }}
             >
               <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#2F6D4F]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-royal" />
                 {lang === "sw" ? "Malipo Salama" : "Secure Payments"}
               </span>
               <span className="hidden sm:block w-px h-3 bg-white/10" aria-hidden="true" />
               <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#E8A33D]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-gold" />
                 {lang === "sw" ? "Wauzaji Walioidhinishwa" : "Verified Sellers"}
               </span>
               <span className="hidden sm:block w-px h-3 bg-white/10" aria-hidden="true" />
@@ -666,7 +664,7 @@ export default function HomePage() {
               {/* Left column — heading */}
               <Reveal>
                 <div className="lg:sticky lg:top-24">
-                  <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+                  <span className="text-[11px] font-semibold text-gold-ink uppercase tracking-[0.2em]">
                     {lang === "sw" ? "Kwa Nini SokoMkononi" : "Why SokoMkononi"}
                   </span>
                   <h2 className="text-[clamp(1.75rem,4vw,2.5rem)] font-bold text-primary mt-4 leading-[1.15] tracking-[-0.015em]">
@@ -681,7 +679,7 @@ export default function HomePage() {
                   </p>
                   <Link
                     to="/kuhusu"
-                    className="inline-flex items-center gap-2 mt-7 text-[#E8A33D] font-semibold text-sm hover:gap-3 transition-all duration-300 group"
+                    className="inline-flex items-center gap-2 mt-7 text-gold-ink font-semibold text-sm hover:gap-3 transition-all duration-300 group"
                   >
                     {lang === "sw" ? "Jifunze zaidi" : "Learn more"}
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -695,7 +693,7 @@ export default function HomePage() {
               <div className="flex flex-col gap-4">
                 {whyFeatures.map((f, i) => (
                   <Reveal key={i} delay={i * 120}>
-                    <div className="group flex items-start gap-4 sm:gap-5 p-5 sm:p-6 bg-white border border-gray-100 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:border-[#E8A33D]/25 hover:shadow-[0_20px_40px_-20px_rgba(0,0,0,0.1)]">
+                    <div className="group flex items-start gap-4 sm:gap-5 p-5 sm:p-6 bg-white border border-gray-100 rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:border-gold/40 hover:shadow-[0_20px_40px_-20px_rgba(0,0,0,0.1)]">
                       <div
                         className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105"
                         style={{ background: `${f.accent}10` }}
@@ -724,7 +722,7 @@ export default function HomePage() {
         <section id="matangazo" className="scroll-mt-16 py-14 px-4 max-w-7xl mx-auto">
           <Reveal>
             <div className="text-center mb-7">
-              <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+              <span className="text-[11px] font-semibold text-gold-ink uppercase tracking-[0.2em]">
                 {lang === "sw" ? "Trending" : "Trending"}
               </span>
               <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
@@ -741,57 +739,17 @@ export default function HomePage() {
               {lang === "sw" ? "Hakuna mali kwa sasa" : "No listings yet"}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:gap-x-4 sm:gap-y-8 md:grid-cols-3 lg:grid-cols-4">
               {trendingProperties.map((prop, i) => {
                 const cat = popularCategories.find((c) => c.key === prop.category);
                 const Icon = getCategoryIcon(cat?.iconKey);
-                const listingPhoto =
-                  prop.imageUrl ||
-                  (Array.isArray(prop.photos) && prop.photos[0]) ||
-                  null;
-                const img = listingPhoto || cat?.imageUrl || null;
                 return (
                   <Reveal
                     key={prop.id}
                     delay={Math.min(i * 70, 350)}
                     className="h-full"
                   >
-                    <Link
-                      to={`/mali/${prop.id}`}
-                      className="group block h-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/[0.08]"
-                    >
-                      <div className="relative aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
-                        {img ? (
-                          <img
-                            src={img}
-                            alt={prop.title}
-                            loading="lazy"
-                            className="absolute inset-0 block w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-                          />
-                        ) : (
-                          <Icon size={48} className="text-[#E8A33D]" />
-                        )}
-                        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 px-1.5 sm:px-2 py-0.5 rounded-full bg-[#2F6D4F] text-white text-[9px] sm:text-[10px] font-semibold flex items-center gap-1">
-                          <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-                          {lang === "sw" ? "Inapatikana" : "Available"}
-                        </div>
-                      </div>
-                      <div className="p-3 sm:p-4">
-                        <h3 className="font-semibold text-primary text-sm truncate group-hover:text-[#E8A33D] transition-colors">
-                          {prop.title}
-                        </h3>
-                        <p className="text-[#E8A33D] text-sm sm:text-base font-bold mt-1">
-                          {formatTZS(prop.price)}
-                        </p>
-                        <p className="text-secondary text-xs mt-1.5 truncate flex items-center gap-1">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                            <circle cx="12" cy="10" r="3" />
-                          </svg>
-                          {prop.region || prop.location}
-                        </p>
-                      </div>
-                    </Link>
+                    <ListingCard listing={prop} category={cat} Icon={Icon} lang={lang} />
                   </Reveal>
                 );
               })}
@@ -810,10 +768,10 @@ export default function HomePage() {
         {/* CATEGORIES                                          */}
         {/* ═══════════════════════════════════════════════════ */}
         <section id="kategoria" className="scroll-mt-16 py-14 px-4 max-w-7xl mx-auto">
-          <div className="bg-[#FAF9F5] rounded-3xl p-6 sm:p-10">
+          <div className="bg-sand rounded-3xl p-3.5 sm:p-8">
             <Reveal>
               <div className="text-center mb-7">
-                <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+                <span className="text-[11px] font-semibold text-gold-ink uppercase tracking-[0.2em]">
                   {lang === "sw" ? "Kategoria" : "Categories"}
                 </span>
                 <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
@@ -827,37 +785,20 @@ export default function HomePage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
               {categories.map((cat, i) => {
                 const Icon = getCategoryIcon(cat.iconKey);
-                const hasPhoto = Boolean(cat.imageUrl);
                 return (
-                  <Reveal key={cat.key} delay={Math.min(i * 60, 360)}>
-                    <Link
+                  <Reveal
+                    key={cat.key}
+                    delay={Math.min(i * 60, 360)}
+                    className="h-full"
+                  >
+                    <CategoryTile
                       to={`/kategoria/${cat.key}`}
-                      className="group block bg-white rounded-2xl overflow-hidden text-center border border-gray-100 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg hover:shadow-black/[0.06] hover:border-[#E8A33D]/30"
-                    >
-                      <div className="aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden relative">
-                        {hasPhoto ? (
-                          <img
-                            src={cat.imageUrl}
-                            alt={cat.label?.[lang] || cat.label?.sw}
-                            className="absolute inset-0 block w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-                          />
-                        ) : (
-                          <Icon
-                            size={44}
-                            className="text-[#E8A33D] transition-transform duration-300 group-hover:scale-110"
-                          />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                      <div className="p-3">
-                        <h3 className="font-semibold text-primary text-sm">
-                          {cat.label?.[lang] || cat.label?.sw}
-                        </h3>
-                        <p className="text-xs text-secondary mt-0.5">
-                          {cat.count} {lang === "sw" ? "mali" : "listings"}
-                        </p>
-                      </div>
-                    </Link>
+                      label={cat.label?.[lang] || cat.label?.sw}
+                      count={cat.count}
+                      countLabel={lang === "sw" ? "mali" : "listings"}
+                      imageUrl={cat.imageUrl}
+                      Icon={Icon}
+                    />
                   </Reveal>
                 );
               })}
@@ -878,7 +819,7 @@ export default function HomePage() {
         <section className="py-16 px-4 max-w-7xl mx-auto">
           <Reveal>
             <div className="text-center mb-10">
-              <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+              <span className="text-[11px] font-semibold text-gold-ink uppercase tracking-[0.2em]">
                 {lang === "sw" ? "Ushuhuda" : "Testimonials"}
               </span>
               <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
@@ -898,7 +839,7 @@ export default function HomePage() {
               <Reveal key={index} delay={index * 120}>
                 <div className="relative h-full bg-white border border-gray-100 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/[0.06]">
                   <svg
-                    className="absolute top-4 right-5 w-8 h-8 text-[#E8A33D]/20"
+                    className="absolute top-4 right-5 w-8 h-8 text-gold/30"
                     viewBox="0 0 24 24"
                     fill="currentColor"
                   >
@@ -915,7 +856,7 @@ export default function HomePage() {
                       className="w-10 h-10 rounded-full object-cover border-2 border-white shadow"
                     />
                     <div>
-                      <p className="text-[#E8A33D] font-semibold text-sm">
+                      <p className="text-gold-ink font-semibold text-sm">
                         {item.name}
                       </p>
                       <p className="text-xs text-secondary">{item.region}</p>
@@ -933,7 +874,7 @@ export default function HomePage() {
         <section id="faq" className="scroll-mt-16 py-16 px-4 max-w-3xl mx-auto">
           <Reveal>
             <div className="text-center mb-10">
-              <span className="text-[11px] font-semibold text-[#E8A33D] uppercase tracking-[0.2em]">
+              <span className="text-[11px] font-semibold text-gold-ink uppercase tracking-[0.2em]">
                 FAQ
               </span>
               <h2 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-primary mt-2 tracking-[-0.015em]">
@@ -953,17 +894,17 @@ export default function HomePage() {
               const isOpen = openFaq === index;
               return (
                 <Reveal key={index} delay={Math.min(index * 40, 400)}>
-                  <div className="border border-gray-200 rounded-xl overflow-hidden bg-white transition-all hover:border-[#E8A33D]/30">
+                  <div className="border border-gray-200 rounded-xl overflow-hidden bg-white transition-all hover:border-gold/40">
                     <button
                       onClick={() => toggleFaq(index)}
                       aria-expanded={isOpen}
-                      className="w-full flex items-start justify-between gap-4 p-4 text-left hover:bg-[#F5F3EC]/60 transition-colors"
+                      className="w-full flex items-start justify-between gap-4 p-4 text-left hover:bg-sand/60 transition-colors"
                     >
                       <h3 className="font-semibold text-primary flex-1">
                         {lang === "sw" ? faq.q.sw : faq.q.en}
                       </h3>
                       <svg
-                        className={`w-5 h-5 flex-shrink-0 text-[#E8A33D] transition-transform duration-300 mt-0.5 ${
+                        className={`w-5 h-5 flex-shrink-0 text-gold-ink transition-transform duration-300 mt-0.5 ${
                           isOpen ? "rotate-180" : ""
                         }`}
                         viewBox="0 0 24 24"
@@ -996,7 +937,7 @@ export default function HomePage() {
             <div className="text-center mt-8">
               <Link
                 to="/mawasiliano#faq"
-                className="group inline-flex items-center gap-2 border-2 border-[#E8A33D] text-[#E8A33D] hover:bg-[#E8A33D] hover:text-[#101A2E] font-semibold px-8 py-3 rounded-xl transition-all duration-300"
+                className="group inline-flex items-center gap-2 border-2 border-gold text-gold-ink hover:bg-gold hover:text-night font-semibold px-8 py-3 rounded-xl transition-all duration-300"
               >
                 {lang === "sw" ? "Ona Zaidi" : "Explore More"}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-1">

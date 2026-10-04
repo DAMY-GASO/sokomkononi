@@ -6,7 +6,7 @@ import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
-import { formatTZS } from "./dashboard/components/shared.js";
+import ListingCard from "../components/ListingCard.jsx";
 import {
   useActiveCategories,
   getCategoryIcon,
@@ -67,7 +67,7 @@ export default function AllListingsPage() {
 
         {/* GRID */}
         {liveListings.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-gray-200 p-10 sm:p-16 text-center bg-[#F5F3EC]">
+          <div className="rounded-2xl border-2 border-dashed border-gray-200 p-10 sm:p-16 text-center bg-sand">
             <HomeIcon size={44} className="mx-auto text-muted mb-3" />
             <p className="text-sm text-secondary">
               {t("Hakuna mali kwa sasa.", "No listings yet.")}
@@ -75,56 +75,18 @@ export default function AllListingsPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4">
               {visibleListings.map((l) => {
                 const cat = categories.find((c) => c.key === l.category);
                 const Icon = getCategoryIcon(cat?.iconKey || "Home");
-                // Prefer the listing's own photo; fall back to the
-                // category photo; then to the category icon.
-                const listingPhoto =
-                  l.imageUrl ||
-                  (Array.isArray(l.photos) && l.photos[0]) ||
-                  null;
-                const img = listingPhoto || cat?.imageUrl || null;
-                const region = l.region || l.location;
-
                 return (
-                  <Link
+                  <ListingCard
                     key={l.id}
-                    to={`/mali/${l.id}`}
-                    className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
-                  >
-                    <div className="relative aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
-                      {img ? (
-                        <img
-                          src={img}
-                          alt={l.title}
-                          className="absolute inset-0 block w-full h-full object-cover object-center"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <Icon size={40} className="text-[#E8A33D]" />
-                      )}
-                    </div>
-                    <div className="p-3">
-                      <h3 className="font-semibold text-primary text-sm truncate">
-                        {l.title}
-                      </h3>
-                      <p className="text-[#E8A33D] font-bold text-sm sm:text-base mt-0.5">
-                        {formatTZS(l.price)}
-                      </p>
-                      {region && (
-                        <p className="text-secondary text-xs mt-1 truncate">
-                          📍 {region}
-                        </p>
-                      )}
-                      {l.status === "reserved" && (
-                        <span className="inline-block mt-1.5 text-[10px] font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                          {t("Reserved", "Reserved")}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
+                    listing={l}
+                    category={cat}
+                    Icon={Icon}
+                    lang={lang}
+                  />
                 );
               })}
             </div>
@@ -136,7 +98,7 @@ export default function AllListingsPage() {
                   onClick={() =>
                     setVisibleCount((prev) => prev + PAGE_SIZE)
                   }
-                  className="px-6 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-primary hover:bg-[#F5F3EC] transition-colors"
+                  className="px-6 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-primary hover:bg-sand transition-colors"
                 >
                   {t("Onyesha Zaidi", "Load More")}
                 </button>

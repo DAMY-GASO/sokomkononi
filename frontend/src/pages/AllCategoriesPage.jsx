@@ -19,6 +19,7 @@ import {
   getCategoryIcon,
 } from "../config/categoriesStore.js";
 import { COLORS } from "./dashboard/components/shared";
+import CategoryTile from "../components/CategoryTile.jsx";
 
 function t(lang, sw, en) {
   return lang === "sw" ? sw : en;
@@ -40,14 +41,14 @@ export default function AllCategoriesPage() {
   }, [allCategories, allListings]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-sand">
       <Navbar />
 
       {/* ============================================================ */}
       {/* HEADER — CENTERED */}
       {/* ============================================================ */}
-      <section className="dark-surface bg-[#101A2E] text-white py-12 sm:py-16 px-4 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-[#E8A33D]/20 flex items-center justify-center mx-auto mb-4">
+      <section className="dark-surface bg-night text-white py-12 sm:py-16 px-4 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-gold/20 flex items-center justify-center mx-auto mb-4">
           <LayoutGrid size={28} color={COLORS.gold} />
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold">
@@ -71,40 +72,20 @@ export default function AllCategoriesPage() {
             {t(lang, "Hakuna kategoria kwa sasa", "No categories yet")}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
             {categoriesWithCount.map((cat) => {
               const Icon = getCategoryIcon(cat.iconKey);
-              const hasPhoto = Boolean(cat.imageUrl);
               const label = cat.label?.[lang] || cat.label?.sw || cat.key;
               return (
-                <Link
+                <CategoryTile
                   key={cat.key}
                   to={`/kategoria/${cat.key}`}
-                  className="bg-white rounded-xl overflow-hidden text-center border border-gray-100 hover:shadow-md transition-all hover:-translate-y-1 group"
-                >
-                  <div className="relative aspect-square bg-[#F5F3EC] flex items-center justify-center overflow-hidden">
-                    {hasPhoto ? (
-                      <img
-                        src={cat.imageUrl}
-                        alt={label}
-                        className="absolute inset-0 block w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <Icon
-                        size={40}
-                        className="text-[#E8A33D] group-hover:scale-105 transition-transform"
-                      />
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <h3 className="h-card">
-                      {label}
-                    </h3>
-                    <p className="text-body-sm text-secondary mt-0.5">
-                      {cat.count} {t(lang, "mali", "listings")}
-                    </p>
-                  </div>
-                </Link>
+                  label={label}
+                  count={cat.count}
+                  countLabel={t(lang, "mali", "listings")}
+                  imageUrl={cat.imageUrl}
+                  Icon={Icon}
+                />
               );
             })}
           </div>

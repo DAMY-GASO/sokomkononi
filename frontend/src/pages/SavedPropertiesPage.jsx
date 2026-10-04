@@ -29,12 +29,17 @@ import { usePublicListings } from "../config/listingsStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { getCategoryIcon } from "../config/categoriesStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import ListingImage from "../components/ListingImage.jsx";
 
 // ============================================================
 // CARD IMAGE RESOLVER
 // ============================================================
 function resolveCardImage(property, category) {
   if (property?.imageUrl) return property.imageUrl;
+  if (Array.isArray(property?.photos) && property.photos[0]) {
+    const p = property.photos[0];
+    return typeof p === "string" ? p : p?.image_url || p?.url || null;
+  }
   if (category?.imageUrl) return category.imageUrl;
   return null;
 }
@@ -70,25 +75,21 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
       >
         <Link
           to={`/mali/${property.id}`}
-          className="w-full sm:w-48 h-40 sm:h-auto bg-gray-100 flex items-center justify-center flex-shrink-0 relative overflow-hidden"
+          className="w-full sm:w-48 sm:self-start flex-shrink-0 relative overflow-hidden"
         >
-          {cardImage ? (
-            <img
-              src={cardImage}
-              alt={property.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <Icon size={32} className="text-muted" />
-          )}
+          <ListingImage
+            src={cardImage}
+            alt={property.title}
+            ratio="aspect-square"
+            fallback={<Icon size={32} />}
+          />
           {isReserved && (
-            <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+            <span className="absolute top-2 left-2 bg-gold text-night text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
               <Clock3 size={10} /> {t("IMEHIFADHIWA", "RESERVED")}
             </span>
           )}
           {isSold && (
-            <span className="absolute top-2 left-2 bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+            <span className="absolute top-2 left-2 bg-night text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
               <Ban size={10} /> {t("IMEUZWA", "SOLD")}
             </span>
           )}
@@ -96,7 +97,7 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
         <div className="flex-1 p-4 flex flex-col">
           <div className="flex items-start justify-between gap-2">
             <Link to={`/mali/${property.id}`} className="flex-1 min-w-0">
-              <h3 className="font-semibold text-primary text-sm hover:text-[#E8A33D] transition-colors">
+              <h3 className="font-semibold text-primary text-sm hover:text-gold-ink transition-colors">
                 {property.title}
               </h3>
             </Link>
@@ -109,7 +110,7 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
             </button>
           </div>
 
-          <span className="inline-block mt-1.5 text-[10px] font-medium text-[#E8A33D] bg-[#E8A33D]/10 px-2 py-0.5 rounded-full w-fit">
+          <span className="inline-block mt-1.5 text-[10px] font-medium text-gold-ink bg-gold/10 px-2 py-0.5 rounded-full w-fit">
             {categoryLabel}
           </span>
 
@@ -117,7 +118,7 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
             <MapPin size={12} />
             {property.location}
           </div>
-          <p className="text-[#C1502E] font-bold text-base mt-2">
+          <p className="text-night font-bold text-base mt-2">
             {formatTZS(property.price)}
           </p>
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
@@ -126,7 +127,7 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
             </span>
             <Link
               to={`/mali/${property.id}`}
-              className="text-xs font-semibold text-[#E8A33D] hover:underline"
+              className="text-xs font-semibold text-gold-ink hover:underline"
             >
               {t("Angalia", "View")} →
             </Link>
@@ -143,46 +144,37 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
       }`}
     >
       <Link to={`/mali/${property.id}`} className="block relative">
-        <div className="w-full h-44 bg-gray-100 flex items-center justify-center overflow-hidden">
-          {cardImage ? (
-            <img
-              src={cardImage}
-              alt={property.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-              loading="lazy"
-            />
-          ) : (
-            <Icon
-              size={40}
-              className="text-muted group-hover:scale-110 transition-transform"
-            />
-          )}
-        </div>
+        <ListingImage
+          src={cardImage}
+          alt={property.title}
+          ratio="aspect-square"
+          fallback={<Icon size={40} />}
+        />
         {isReserved && (
-          <span className="absolute top-2 left-2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+          <span className="absolute top-2 left-2 bg-gold text-night text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
             <Clock3 size={10} /> {t("IMEHIFADHIWA", "RESERVED")}
           </span>
         )}
         {isSold && (
-          <span className="absolute top-2 left-2 bg-[#101A2E] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+          <span className="absolute top-2 left-2 bg-night text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
             <Ban size={10} /> {t("IMEUZWA", "SOLD")}
           </span>
         )}
         {isVerified && (
-          <span className="absolute top-2 right-2 bg-[#2F6D4F] text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+          <span className="absolute top-2 right-2 bg-green text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
             <Shield size={10} /> {t("Imethibitishwa", "Verified")}
           </span>
         )}
         <button
           onClick={handleRemove}
-          className="absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center bg-white/90 text-[#C1502E] hover:bg-red-500 hover:text-white transition-colors"
+          className="absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center bg-white/90 text-rust hover:bg-red-500 hover:text-white transition-colors"
           aria-label={t("Ondoa", "Remove")}
         >
           <Trash2 size={16} />
         </button>
       </Link>
       <Link to={`/mali/${property.id}`} className="block p-4">
-        <span className="inline-block text-[10px] font-medium text-[#E8A33D] bg-[#E8A33D]/10 px-2 py-0.5 rounded-full mb-1">
+        <span className="inline-block text-[10px] font-medium text-gold-ink bg-gold/10 px-2 py-0.5 rounded-full mb-1">
           {categoryLabel}
         </span>
         <h3 className="font-semibold text-primary text-sm truncate">
@@ -192,7 +184,7 @@ function SavedCard({ property, viewMode, onRemove, lang }) {
           <MapPin size={12} />
           <span className="truncate">{property.location}</span>
         </div>
-        <p className="text-[#C1502E] font-bold text-base mt-2">
+        <p className="text-night font-bold text-base mt-2">
           {formatTZS(property.price)}
         </p>
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-xs text-muted">
@@ -274,9 +266,9 @@ export default function SavedPropertiesPage() {
         {/* ============================================================ */}
         <div
           style={{
-            background: "rgba(37,99,235,0.08)",
-            color: "#1E3A8A",
-            borderColor: "rgba(37,99,235,0.2)",
+            background: "rgba(0,98,253,0.08)",
+            color: "#011957",
+            borderColor: "rgba(0,98,253,0.25)",
           }}
           className="flex flex-col items-center text-center gap-2 text-xs rounded-lg border px-3 py-2.5 mb-5 max-w-2xl mx-auto"
         >
