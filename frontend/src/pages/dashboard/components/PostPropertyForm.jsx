@@ -11,7 +11,7 @@
 import React, { useState, useEffect } from "react";
 import {
   ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle,
-  Wallet, Package, Smartphone, CreditCard,
+  Wallet, Package,
 } from "lucide-react";
 import { COLORS, formatTZS, calculateListingFee } from "./shared";
 import {
@@ -25,11 +25,6 @@ import { getListingFeeConfig } from "../../../config/listingFeeStore.js";
 import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
-import {
-  normalizeTzPhone,
-  isValidTzPhone,
-  formatTzPhoneDisplay,
-} from "../../../api/payments.js";
 import ImageCropper from "../../../components/ImageCropper.jsx";
 import {
   getPostingConfig,
@@ -228,9 +223,6 @@ export default function PostPropertyForm({
     .filter(Boolean)
     .join(", ");
 
-  const [paymentMethodKey, setPaymentMethodKey] = useState(null);
-  const [paymentPhone, setPaymentPhone] = useState("");
-
   const creditInfo = checkCredit(user?.id, "listing");
   const hasCredit = creditInfo.hasCredit;
   const listingCreditRemaining = creditInfo.remaining || 0;
@@ -414,7 +406,7 @@ export default function PostPropertyForm({
 
     try {
       const created = await api.post("/listings/", {
-        category: categoryId,
+        category_id: categoryId,
         title: effectiveTitle,
         description: [base.description.trim(), buildSummary()]
           .filter(Boolean)
@@ -580,17 +572,8 @@ export default function PostPropertyForm({
 
       setCreatedListing(created);
       setFeeAmount(fee);
-      onSubmit?.(created);
-
-      if (!fee || fee <= 0) {
-        // Do NOT enter the payment flow when the backend has no fee rule
-        // for this category. The listing is saved as a draft; the seller
-        // needs an admin to configure the fee before publishing.
-        setStage("fee_missing");
-        return;
-      }
-
       setStage("review");
+      onSubmit?.(created);
     } catch (err) {
       setError(
         err?.data?.detail ||
@@ -735,73 +718,6 @@ export default function PostPropertyForm({
   // ═══════════════════════════════════════════════════════════
   // REVIEW STAGE
   // ═══════════════════════════════════════════════════════════
-  if (stage === "fee_missing") {
-    return (
-      <div
-        className="w-full flex items-center justify-center p-6"
-        style={{ background: COLORS.sand, minHeight: "600px" }}
-      >
-        <div
-          className="max-w-md w-full text-center bg-white rounded-2xl border p-8"
-          style={{ borderColor: COLORS.sandLine }}
-        >
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ background: "rgba(232,163,61,0.15)" }}
-          >
-            <AlertTriangle size={26} color={COLORS.gold} />
-          </div>
-          <h2 className="h-title mb-2">
-            {t("Ada ya Kuchapisha Haipo", "Listing Fee Not Configured")}
-          </h2>
-          <p className="text-secondary text-sm mb-4 leading-relaxed">
-            {t(
-              `Category "${categoryLabel}" bado haijasanidiwa ada ya kuchapisha. Listing yako imehifadhiwa kama draft — haitachapishwa hadi admin aongeze fee rule kwa category hii.`,
-              `The category "${categoryLabel}" has no listing fee configured yet. Your listing is saved as a draft — it will not be published until an admin adds a fee rule for this category.`
-            )}
-          </p>
-          <div
-            className="rounded-xl border p-3 mb-5 text-left"
-            style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-          >
-            <p className="text-[11px] font-semibold text-secondary uppercase mb-1">
-              {t("Nini kinafuata", "What happens next")}
-            </p>
-            <ul className="text-xs text-secondary space-y-1">
-              <li>
-                •{" "}
-                {t(
-                  "Wasiliana na admin na umwombe kuongeza fee rule kwa category hii.",
-                  "Contact an admin and ask them to add a fee rule for this category."
-                )}
-              </li>
-              <li>
-                •{" "}
-                {t(
-                  'Mara baada ya kuwekwa, nenda "Mali Zangu" na uchague kulipa ada ili kuchapisha listing.',
-                  'Once it is set, go to "My Listings" and choose to pay the fee to publish your listing.'
-                )}
-              </li>
-            </ul>
-          </div>
-          <button
-            onClick={onGoToListings}
-            style={{ background: COLORS.gold, color: COLORS.night }}
-            className="w-full py-3 rounded-xl font-semibold text-sm"
-          >
-            {t("Nenda Mali Zangu", "Go to My Listings")}
-          </button>
-          <a
-            href="mailto:support@sokomkononi.co.tz?subject=Listing%20Fee%20Missing"
-            className="block w-full py-2 mt-2 text-body-sm font-medium underline underline-offset-2 text-secondary"
-          >
-            {t("Wasiliana na Admin", "Contact Admin")}
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   if (stage === "review" || stage === "paying") {
     return (
       <div
