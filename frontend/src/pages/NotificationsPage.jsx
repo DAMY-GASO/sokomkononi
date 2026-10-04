@@ -186,15 +186,23 @@ export default function NotificationsPage() {
   const handleMarkAllRead = () => markAllRead();
   const handleRemove = (id) => remove(id);
 
-  const handleClearAll = () => {
-    const message =
-      lang === "sw"
-        ? "Una uhakika unataka kufuta taarifa zote?"
-        : "Are you sure you want to delete all notifications?";
-    if (window.confirm(message)) {
-      clearAll();
-    }
-  };
+  const handleClearAll = async () => {
+  const message =
+    lang === "sw"
+      ? "Una uhakika unataka kufuta taarifa zote? Hatua hii haiwezi kurudishwa."
+      : "Are you sure you want to delete all notifications? This cannot be undone.";
+  if (!window.confirm(message)) return;
+
+  const res = await clearAll();
+  if (!res?.ok) {
+    alert(
+      res?.error?.message ||
+        (lang === "sw"
+          ? "Imeshindwa kufuta taarifa."
+          : "Failed to delete notifications.")
+    );
+  }
+};
 
   return (
     <div

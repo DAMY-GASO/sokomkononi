@@ -1,6 +1,6 @@
 // ============================================================
 // notificationsStore.js — API-only via /api/notifications/
-// + Local notifications za admin (USER_DELETED, n.k.)
+// Backend ni single source of truth. Hakuna local simulations.
 // ============================================================
 import { useEffect, useState } from "react";
 import { notificationsApi } from "../api/notifications.js";
@@ -8,28 +8,8 @@ import { notificationsApi } from "../api/notifications.js";
 const KEY = "sokomkononi_notifications_v1";
 const EV = "sokomkononi:notifications-updated";
 
-export const NOTIFICATION_EVENTS = {
-  LISTING_APPROVED: "listing.approved",
-  LISTING_REJECTED: "listing.rejected",
-  LISTING_RELEASED: "listing.released",
-  LISTING_EXPIRED: "listing.expired",
-  LISTING_FEE_PAID: "listing_fee.paid",
-  BOOST_PURCHASED: "boost.purchased",
-  LEADING_PURCHASED: "leading.purchased",
-  ADVERTISEMENT_PURCHASED: "advertisement.purchased",
-  MESSAGE_RECEIVED: "message.received",
-  RESERVATION_CREATED: "reservation.created",
-  RESERVATION_EXPIRING: "reservation.expiring",
-  PAYMENT_PROOF_SUBMITTED: "payment.proof_submitted",
-  PAYMENT_CONFIRMED: "payment.confirmed",
-  DISPUTE_RESOLVED: "dispute.resolved",
-  BUNDLE_PURCHASED: "bundle.purchased",
-  // ⬇️ MPYA — Local admin notifications
-  USER_DELETED: "user.deleted",
-};
-
-// Map backend notification_type → admin section key (used by
-// AdminDashboard.openNotification to navigate somewhere sensible).
+// Map backend notification_type → admin section key
+// (used by AdminDashboard.openNotification to navigate somewhere sensible)
 const TYPE_TO_TARGET = {
   LISTING_CREATED: "moderation",
   LISTING_APPROVED: "moderation",
@@ -65,10 +45,12 @@ const TYPE_TO_TARGET = {
   MESSAGE_RECEIVED: "support",
   BUNDLE_PURCHASED: "revenue",
   DISPUTE_RESOLVED: "deals",
-  // ⬇️ MPYA — Local admin notifications
-  USER_DELETED: "trash",
+  VERIFICATION_REQUEST: "verification",
 };
 
+// ============================================================
+// STORAGE
+// ============================================================
 function read() {
   if (typeof window === "undefined") return [];
   try {
@@ -80,32 +62,27 @@ function read() {
     return [];
   }
 }
+
 function write(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(EV));
 }
+
 function sortNewest(list) {
-  return [...list].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-}
-// Notifications whose audience is "admin" by default (platform activity)
-const ADMIN_BY_DEFAULT = new Set([
-  "LISTING_CREATED", "LISTING_DELETED", "LISTING_RESTORED",
-  "ACCOUNT_DELETED", "ACCOUNT_RESTORED", "USER_DELETED",
-  "NEW_OFFER", "DISPUTE_RESOLVED",
-]);
-
-function inferAudience(raw) {
-  if (raw && typeof raw.audience === "string") return raw.audience;
-  const t = String(raw?.notification_type || "").toUpperCase();
-  return ADMIN_BY_DEFAULT.has(t) ? "admin" : "user";
+  return [...list].sort(
+    (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()
+  );
 }
 
+// ============================================================
+// NORMALIZER
+// ============================================================
 function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
-    audience: inferAudience(raw),
+    audience: raw.audience || "user",
     type: raw.notification_type,
     title: raw.title,
     body: raw.message,
@@ -122,54 +99,46 @@ function norm(raw) {
   };
 }
 
+// ============================================================
+// HYDRATE FROM API
+// ============================================================
 export async function hydrateNotificationsFromApi() {
   try {
     const data = await notificationsApi.list({ page_size: 100 });
     const rawList = Array.isArray(data) ? data : data?.results || [];
     const normalized = rawList.map(norm).filter(Boolean);
-
-    // ⬇️ MUHIMU: usifute local admin notifications wakati wa hydrate.
-    // Tunachukua zote zilizopo (local + api), kisha tunaunganisha.
-    const existing = read();
-    const localAdminNotifs = existing.filter(
-      (n) => n.audience === "admin" || n._local === true
-    );
-
-    // Dedupe: API notifs + local admin notifs
-    const apiIds = new Set(normalized.map((n) => String(n.id)));
-    const merged = [
-      ...normalized,
-      ...localAdminNotifs.filter((n) => !apiIds.has(String(n.id))),
-    ];
-
-    write(merged);
-    return { ok: true, count: merged.length };
+    write(sortNewest(normalized));
+    return { ok: true, count: normalized.length };
   } catch (err) {
     return { ok: false, error: err };
   }
 }
 
+// ============================================================
+// SYNCHRONOUS READS
+// ============================================================
 export function getNotifications(audience) {
   const all = sortNewest(read());
   if (audience === "admin") {
     return all.filter((n) => n.audience === "admin");
   }
-  if (!audience || audience === "user") {
+  if (audience === "user") {
     return all.filter((n) => n.audience === "user" || !n.audience);
   }
+  // undefined au "all" → zote
   return all;
 }
+
 export function getUnreadCount(audience) {
   return getNotifications(audience).filter((n) => !n.read).length;
 }
 
+// ============================================================
+// MARK AS READ
+// ============================================================
 export async function markNotificationReadAsync(id) {
   try {
-    // Kama ni local notification, usiite API
-    const target = read().find((n) => n.id === id);
-    if (!target?._local) {
-      await notificationsApi.markRead(id);
-    }
+    await notificationsApi.markRead(id);
     write(
       read().map((n) =>
         n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n
@@ -183,10 +152,7 @@ export async function markNotificationReadAsync(id) {
 
 export async function markAllNotificationsReadAsync(audience) {
   try {
-    // Kama audience ni "admin", usiite API (local pekee)
-    if (audience !== "admin") {
-      await notificationsApi.markAllRead();
-    }
+    await notificationsApi.markAllRead();
     write(
       read().map((n) =>
         !audience || audience === "user" || n.audience === audience
@@ -200,13 +166,12 @@ export async function markAllNotificationsReadAsync(audience) {
   }
 }
 
+// ============================================================
+// REMOVE — hard delete
+// ============================================================
 export async function removeNotificationAsync(id) {
   try {
-    // Kama ni local, usiite API
-    const target = read().find((n) => n.id === id);
-    if (!target?._local) {
-      await notificationsApi.remove(id);
-    }
+    await notificationsApi.hardRemove(id);
     write(read().filter((n) => n.id !== id));
     return { ok: true };
   } catch (err) {
@@ -214,13 +179,31 @@ export async function removeNotificationAsync(id) {
   }
 }
 
-export function clearNotifications(audience) {
-  write(read().filter((n) => n.audience !== audience));
-  return read();
+// ============================================================
+// CLEAR ALL — hard delete zote (audience husika)
+// ============================================================
+export async function clearNotificationsAsync(audience) {
+  try {
+    await notificationsApi.hardRemoveAll({ audience });
+    const remaining = read().filter((n) => {
+      if (!audience || audience === "user" || n.audience === audience) {
+        return false;
+      }
+      return true;
+    });
+    write(remaining);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
+// ============================================================
+// HOOK
+// ============================================================
 export function useNotifications(audience) {
   const [all, setAll] = useState(() => read());
+
   useEffect(() => {
     hydrateNotificationsFromApi();
     const sync = () => setAll(read());
@@ -245,147 +228,25 @@ export function useNotifications(audience) {
   }
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
   return {
     notifications,
     unreadCount,
     markRead: markNotificationReadAsync,
     markAllRead: () => markAllNotificationsReadAsync(audience),
     remove: removeNotificationAsync,
-    clearAll: () => clearNotifications(audience),
+    clearAll: () => clearNotificationsAsync(audience),
   };
 }
 
-// ✅ FIXED — was `field?.[lang] || field?.sw || ""`, which returned "" when
-// lang="sw" and only `en` was present (and vice versa).
+// ============================================================
+// HELPERS
+// ============================================================
 export function getLocalizedField(field, lang = "sw") {
   if (!field) return "";
   if (typeof field === "string") return field;
   return field?.[lang] || field?.sw || field?.en || "";
 }
-
-// ============================================================
-// LOCAL ADMIN NOTIFICATIONS
-// Hutumika wakati mtumiaji anafuta kitu. Backend inaweza pia
-// kutuma notification kwa admins (kupitia signal), lakini hii
-// inahakikisha admin anaona haraka bila kusubiri refresh.
-// ============================================================
-
-/**
- * Tuma notification kwa admin.
- */
-export function notifyAdmin({
-  type = "USER_DELETED",
-  title,
-  message,
-  meta = {},
-  itemType,
-  itemId,
-  itemTitle,
-  userId,
-  userName,
-} = {}) {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const all = read();
-    const adminNotification = {
-      id: `adm_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      audience: "admin",
-      type,
-      title: title || "Mtumiaji amefuta",
-      body: message || "",
-      at: new Date().toISOString(),
-      read: false,
-      readAt: null,
-      link: null,
-      target: "trash",
-      meta: {
-        ...meta,
-        userId,
-        userName,
-        itemType,
-        itemId,
-        itemTitle,
-        source: "user_delete",
-      },
-      priority: "HIGH",
-      _local: true,
-    };
-
-    write([adminNotification, ...all]);
-    return adminNotification;
-  } catch (err) {
-    console.warn("[notificationsStore] notifyAdmin failed:", err);
-    return null;
-  }
-}
-
-/**
- * Helper rahisi kwa kufuta kwa mtumiaji.
- */
-export function notifyAdminAboutDeletion({
-  itemType,
-  itemId,
-  itemTitle,
-  user,
-  reason = "",
-}) {
-  const userName = user?.name || user?.email || "Mtumiaji";
-  const typeLabel =
-    {
-      listing: { sw: "tangazo", en: "listing" },
-      message: { sw: "ujumbe", en: "message" },
-      deal: { sw: "deal", en: "deal" },
-      verification: { sw: "uthibitisho", en: "verification" },
-    }[itemType] || { sw: "kitu", en: "item" };
-
-  return notifyAdmin({
-    type: "USER_DELETED",
-    title: `${userName} amefuta ${typeLabel.sw}`,
-    message: reason
-      ? `${userName} amefuta ${typeLabel.sw}: "${itemTitle}". Sababu: ${reason}`
-      : `${userName} amefuta ${typeLabel.sw}: "${itemTitle}".`,
-    meta: {
-      actionUrl: `/smk-control-9x7k/trash`,
-    },
-    itemType,
-    itemId,
-    itemTitle,
-    userId: user?.id,
-    userName,
-  });
-}
-
-// ── Deprecated shims (backend emits notifications) ──────────
-export function pushNotification() {}
-export function notifyBoostPurchased() {}
-export function notifyLeadingPurchased() {}
-export function notifyAdvertisementPurchased() {}
-export function notifyListingFeePaid() {}
-export function notifyNewMessage() {}
-export function notifyReservationExpiringSoon() {}
-export function notifyListingReleased() {}
-export function notifyDisputeResolved() {}
-export function notifyPaymentProofSubmitted() {}
-export function notifyBundlePurchased() {}
-export function notifyListingApproved() {}
-export function notifyListingRejected() {}
-export function notifyListingSubmittedForReview() {}
-export function notifyListingExpiringSoon() {}
-export function notifyListingExpired() {}
-export function notifyPriceDrop() {}
-export function notifyNewLead() {}
-export function notifySearchMatch() {}
-export function notifyReservationCreated() {}
-export function notifyOfferAccepted() {}
-export function notifyDealCompleted() {}
-export function notifyAccountSuspended() {}
-export function notifyAccountReactivated() {}
-export function notifyVerificationSubmitted() {}
-export function notifyTicketCreated() {}
-export function notifyTicketReplied() {}
-export function notifyTicketResolved() {}
-export function notifyPaymentConfirmed() {}
 
 // ============================================================
 // NOTIFICATION ROUTE RESOLVER

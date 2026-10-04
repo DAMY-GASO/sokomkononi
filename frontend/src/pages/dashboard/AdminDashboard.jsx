@@ -243,7 +243,7 @@ export default function AdminDashboard() {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { notifications, unreadCount, markRead } = useNotifications("user");
+  const { notifications, unreadCount, markRead } = useNotifications("all");
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 

@@ -13,7 +13,12 @@ export const notificationsApi = {
   unreadCount: () => api.get("/notifications/unread-count/"),
   byPriority: (priority, params = {}) =>
     api.get(`/notifications/priority/${priority}/${toQuery(params)}`),
+
   markRead: (id) => api.post(`/notifications/${id}/read/`, {}),
   markAllRead: () => api.post("/notifications/read-all/", {}),
-  remove: (id) => api.delete(`/notifications/${id}/`),
+
+  // ⬇️ Hard delete (permanent)
+  hardRemove: (id) => api.delete(`/notifications/${id}/?hard=true`),
+  hardRemoveAll: (params = {}) =>
+    api.delete(`/notifications/clear-all/${toQuery(params)}`),
 };
