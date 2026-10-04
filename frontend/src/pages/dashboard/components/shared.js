@@ -235,23 +235,8 @@ export function calculateListingFee(categoryKey, priceInput) {
     };
   }
 
-  const isFlat = String(config.feeMode || "PERCENTAGE").toUpperCase() === "FLAT";
-  const flatFee = Number(config.flatFee ?? config.flat_fee ?? 0) || 0;
-
   if (!price) {
-    return {
-      price,
-      rate: config.rate,
-      rawFee: isFlat ? flatFee : 0,
-      fee: isFlat ? flatFee : 0,
-      capped: null,
-      mode: isFlat ? "FLAT" : "PERCENTAGE",
-    };
-  }
-
-  if (isFlat) {
-    const fee = Math.round(flatFee / 500) * 500;
-    return { price, rate: config.rate, rawFee: flatFee, fee, capped: null, mode: "FLAT" };
+    return { price, rate: config.rate, rawFee: 0, fee: 0, capped: null };
   }
 
   const rawFee = price * config.rate;
@@ -268,52 +253,7 @@ export function calculateListingFee(categoryKey, priceInput) {
 
   fee = Math.round(fee / 500) * 500;
 
-  return { price, rate: config.rate, rawFee, fee, capped, mode: "PERCENTAGE" };
-}
-
-  const isFlat = String(config.feeMode || "PERCENTAGE").toUpperCase() === "FLAT";
-  const flatFee = Number(config.flatFee ?? config.flat_fee ?? 0) || 0;
-
-  if (!price) {
-    return {
-      price,
-      rate: config.rate,
-      rawFee: isFlat ? flatFee : 0,
-      fee: isFlat ? flatFee : 0,
-      capped: null,
-      mode: isFlat ? "FLAT" : "PERCENTAGE",
-    };
-  }
-
-  // FLAT mode: ignore percentage, min, max; charge the flat fee.
-  if (isFlat) {
-    const fee = Math.round(flatFee / 500) * 500;
-    return {
-      price,
-      rate: config.rate,
-      rawFee: flatFee,
-      fee,
-      capped: null,
-      mode: "FLAT",
-    };
-  }
-
-  // PERCENTAGE mode: rate * price, clamped to [min, max], rounded to 500.
-  const rawFee = price * config.rate;
-  let fee = rawFee;
-  let capped = null;
-
-  if (rawFee < config.min) {
-    fee = config.min;
-    capped = "min";
-  } else if (rawFee > config.max) {
-    fee = config.max;
-    capped = "max";
-  }
-
-  fee = Math.round(fee / 500) * 500;
-
-  return { price, rate: config.rate, rawFee, fee, capped, mode: "PERCENTAGE" };
+  return { price, rate: config.rate, rawFee, fee, capped };
 }
 
 // ---- Listing status metadata ----
