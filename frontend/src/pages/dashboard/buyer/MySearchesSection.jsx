@@ -168,7 +168,7 @@ export default function MySearchesSection() {
                   "mfano: Toyota Harrier Dar",
                   "e.g. Toyota Harrier Dar"
                 )}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
               />
             </label>
 
@@ -181,7 +181,7 @@ export default function MySearchesSection() {
                 value={form.query}
                 onChange={(e) => setForm({ ...form, query: e.target.value })}
                 placeholder={t("mfano: Harrier", "e.g. Harrier")}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
               />
             </label>
 
@@ -195,7 +195,7 @@ export default function MySearchesSection() {
                 onChange={(e) =>
                   setForm({ ...form, category: e.target.value || null })
                 }
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
               >
                 <option value="">{t("Zote", "All")}</option>
                 {categories.map((cat) => (
@@ -216,7 +216,7 @@ export default function MySearchesSection() {
                 onChange={(e) =>
                   setForm({ ...form, region: e.target.value || null })
                 }
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
               >
                 <option value="">{t("Zote", "All")}</option>
                 {REGIONS.map((r) => (
@@ -239,7 +239,7 @@ export default function MySearchesSection() {
                     setForm({ ...form, minPrice: e.target.value })
                   }
                   placeholder="0"
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
                 />
               </label>
               <label className="flex flex-col gap-1.5 text-center">
@@ -252,7 +252,7 @@ export default function MySearchesSection() {
                     setForm({ ...form, maxPrice: e.target.value })
                   }
                   placeholder="100,000,000"
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] text-center"
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
                 />
               </label>
             </div>
@@ -265,7 +265,7 @@ export default function MySearchesSection() {
                 onChange={(e) =>
                   setForm({ ...form, verifiedOnly: e.target.checked })
                 }
-                className="w-4 h-4 rounded text-[#E8A33D] focus:ring-[#E8A33D]"
+                className="w-4 h-4 rounded text-gold-ink focus:ring-gold"
               />
               <span className="text-body-sm text-secondary">
                 {t("Zilizothibitishwa tu", "Verified only")}
@@ -284,7 +284,7 @@ export default function MySearchesSection() {
                 disabled={!canSave}
                 style={{
                   background: canSave ? COLORS.gold : COLORS.sandLine,
-                  color: canSave ? COLORS.night : "rgba(16,26,46,0.4)",
+                  color: canSave ? COLORS.night : "rgba(1,25,87,0.4)",
                 }}
                 className="flex-1 text-btn font-semibold px-3 py-2 rounded-lg"
               >
@@ -371,7 +371,7 @@ export default function MySearchesSection() {
                       background:
                         s.matchCount > 0
                           ? "rgba(47,109,79,0.12)"
-                          : "rgba(16,26,46,0.08)",
+                          : "rgba(1,25,87,0.08)",
                       color: s.matchCount > 0 ? COLORS.green : COLORS.night,
                     }}
                     className="text-body-sm font-bold px-2.5 py-1 rounded-full shrink-0"
@@ -403,7 +403,7 @@ export default function MySearchesSection() {
                         removeSearch(s.id);
                       }
                     }}
-                    className="ml-auto flex items-center gap-1 text-btn font-semibold px-2 py-2 rounded-lg text-muted hover:text-[#C1502E] transition-colors"
+                    className="ml-auto flex items-center gap-1 text-btn font-semibold px-2 py-2 rounded-lg text-muted hover:text-rust transition-colors"
                   >
                     <Trash2 size={12} />
                   </button>
