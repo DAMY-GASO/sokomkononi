@@ -2,11 +2,16 @@
 // PostPropertyForm.jsx (production + bundle support)
 // Category-specific posting + duplicate check + skip fee
 // + bundle option kwa listing fee
+//
+// SASISHO:
+//   - Kila listing inaenda PENDING_APPROVAL (admin approval)
+//   - Hata fee imezimwa au imewashwa, admin aidhinisha
+//   - Hakuna auto-publish — kila kitu kinapitia admin
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
   ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle,
-  Wallet, Package, Smartphone, CreditCard,
+  Wallet, Package,
 } from "lucide-react";
 import { COLORS, formatTZS, calculateListingFee } from "./shared";
 import {
@@ -20,11 +25,6 @@ import { getListingFeeConfig } from "../../../config/listingFeeStore.js";
 import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
-import {
-  normalizeTzPhone,
-  isValidTzPhone,
-  formatTzPhoneDisplay,
-} from "../../../api/payments.js";
 import ImageCropper from "../../../components/ImageCropper.jsx";
 import {
   getPostingConfig,
@@ -51,7 +51,7 @@ const inputStyle = {
 const inputCls =
   "rounded-xl border px-3 py-2.5 text-sm outline-none text-center w-full";
 
-// ── SchemaField (haijabadilika) ─────────────────────────────
+// ── SchemaField ─────────────────────────────────────────────
 function SchemaField({ f, value, onChange, lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const label = (f.label?.[lang] || f.label?.sw) + (f.required ? " *" : "");
@@ -222,9 +222,6 @@ export default function PostPropertyForm({
   const locationString = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa]
     .filter(Boolean)
     .join(", ");
-
-  const [paymentMethodKey, setPaymentMethodKey] = useState(null);
-  const [paymentPhone, setPaymentPhone] = useState("");
 
   const creditInfo = checkCredit(user?.id, "listing");
   const hasCredit = creditInfo.hasCredit;
@@ -409,7 +406,7 @@ export default function PostPropertyForm({
 
     try {
       const created = await api.post("/listings/", {
-        category: categoryId,
+        category_id: categoryId,
         title: effectiveTitle,
         description: [base.description.trim(), buildSummary()]
           .filter(Boolean)
@@ -518,11 +515,12 @@ export default function PostPropertyForm({
       }
 
       // ═══════════════════════════════════════════════════════════
-      // ⬇️ Kama listing fee imezimwa → publish moja kwa moja
+      // ⬇️ Kama listing fee imezimwa → wasilisha kwa admin approval
+      //    (HAKUNA auto-publish — kila kitu kinapitia admin)
       // ═══════════════════════════════════════════════════════════
       if (listingFeeDisabled) {
         console.info(
-          "[PostPropertyForm] Listing fee disabled — auto-publishing"
+          "[PostPropertyForm] Listing fee disabled — submitting for admin approval"
         );
         try {
           await api.post(`/listings/${listingId}/publish/`, {});
@@ -559,6 +557,14 @@ export default function PostPropertyForm({
         fee = Number(local?.fee) || 0;
       }
 
+      if (!fee && !listingFeeDisabled) {
+        const msg = t(
+          "Ada ya kuchapisha haijasanidiwa kwa category hii bado. Wasiliana na Admin.",
+          "The listing fee has not been configured for this category yet. Contact admin."
+        );
+        setWarnings((w) => (w.includes(msg) ? w : [...w, msg]));
+      }
+
       console.info("[PostPropertyForm] fee resolved:", {
         fee,
         source: feeSource,
@@ -567,17 +573,8 @@ export default function PostPropertyForm({
 
       setCreatedListing(created);
       setFeeAmount(fee);
-      onSubmit?.(created);
-
-      if (!fee || fee <= 0) {
-        // Do NOT enter the payment flow when the backend has no fee rule
-        // for this category. The listing is saved as a draft; the seller
-        // needs an admin to configure the fee before publishing.
-        setStage("fee_missing");
-        return;
-      }
-
       setStage("review");
+      onSubmit?.(created);
     } catch (err) {
       setError(
         err?.data?.detail ||
@@ -722,73 +719,6 @@ export default function PostPropertyForm({
   // ═══════════════════════════════════════════════════════════
   // REVIEW STAGE
   // ═══════════════════════════════════════════════════════════
-  if (stage === "fee_missing") {
-    return (
-      <div
-        className="w-full flex items-center justify-center p-6"
-        style={{ background: COLORS.sand, minHeight: "600px" }}
-      >
-        <div
-          className="max-w-md w-full text-center bg-white rounded-2xl border p-8"
-          style={{ borderColor: COLORS.sandLine }}
-        >
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ background: "rgba(232,163,61,0.15)" }}
-          >
-            <AlertTriangle size={26} color={COLORS.gold} />
-          </div>
-          <h2 className="h-title mb-2">
-            {t("Ada ya Kuchapisha Haipo", "Listing Fee Not Configured")}
-          </h2>
-          <p className="text-secondary text-sm mb-4 leading-relaxed">
-            {t(
-              `Category "${categoryLabel}" bado haijasanidiwa ada ya kuchapisha. Listing yako imehifadhiwa kama draft — haitachapishwa hadi admin aongeze fee rule kwa category hii.`,
-              `The category "${categoryLabel}" has no listing fee configured yet. Your listing is saved as a draft — it will not be published until an admin adds a fee rule for this category.`
-            )}
-          </p>
-          <div
-            className="rounded-xl border p-3 mb-5 text-left"
-            style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-          >
-            <p className="text-[11px] font-semibold text-secondary uppercase mb-1">
-              {t("Nini kinafuata", "What happens next")}
-            </p>
-            <ul className="text-xs text-secondary space-y-1">
-              <li>
-                •{" "}
-                {t(
-                  "Wasiliana na admin na umwombe kuongeza fee rule kwa category hii.",
-                  "Contact an admin and ask them to add a fee rule for this category."
-                )}
-              </li>
-              <li>
-                •{" "}
-                {t(
-                  'Mara baada ya kuwekwa, nenda "Mali Zangu" na uchague kulipa ada ili kuchapisha listing.',
-                  'Once it is set, go to "My Listings" and choose to pay the fee to publish your listing.'
-                )}
-              </li>
-            </ul>
-          </div>
-          <button
-            onClick={onGoToListings}
-            style={{ background: COLORS.gold, color: COLORS.night }}
-            className="w-full py-3 rounded-xl font-semibold text-sm"
-          >
-            {t("Nenda Mali Zangu", "Go to My Listings")}
-          </button>
-          <a
-            href="mailto:support@sokomkononi.co.tz?subject=Listing%20Fee%20Missing"
-            className="block w-full py-2 mt-2 text-body-sm font-medium underline underline-offset-2 text-secondary"
-          >
-            {t("Wasiliana na Admin", "Contact Admin")}
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   if (stage === "review" || stage === "paying") {
     return (
       <div
@@ -812,8 +742,8 @@ export default function PostPropertyForm({
               </h2>
               <p className="text-secondary text-sm mb-5">
                 {t(
-                  "Lipa ada ili listing ichapishwe na kuanza kuonekana kwa wanunuzi.",
-                  "Pay the fee so the listing is published and visible to buyers."
+                  "Lipa ada ili listing iwasilishwe kwa admin kuidhinisha.",
+                  "Pay the fee so the listing is submitted to admin for approval."
                 )}
               </p>
 
@@ -1007,7 +937,7 @@ export default function PostPropertyForm({
   }
 
   // ═══════════════════════════════════════════════════════════
-  // DONE STAGE
+  // DONE STAGE — kila listing inasubiri admin approval
   // ═══════════════════════════════════════════════════════════
   if (stage === "done") {
     return (
@@ -1026,20 +956,13 @@ export default function PostPropertyForm({
             <Check color={COLORS.sand} size={26} />
           </div>
           <h2 className="h-title mb-2">
-            {listingFeeDisabled
-              ? t("Listing imechapishwa!", "Listing Published!")
-              : t("Listing imewasilishwa!", "Listing Submitted!")}
+            {t("Listing imewasilishwa!", "Listing Submitted!")}
           </h2>
           <p className="text-secondary text-sm mb-6">
-            {listingFeeDisabled
-              ? t(
-                  "Ada ya kuchapisha imezimwa — listing yako imechapishwa moja kwa moja.",
-                  "Listing fee is disabled — your listing has been published directly."
-                )
-              : t(
-                  "Listing yako inasubiri idhini ya Admin. Utapata taarifa mara itakapoidhinishwa.",
-                  "Your listing awaits admin approval. You'll be notified once it's approved."
-                )}
+            {t(
+              "Listing yako inasubiri idhini ya Admin. Utapata taarifa mara itakapoidhinishwa.",
+              "Your listing awaits admin approval. You'll be notified once it's approved."
+            )}
           </p>
           <button
             onClick={onGoToListings}
@@ -1060,7 +983,7 @@ export default function PostPropertyForm({
   }
 
   // ═══════════════════════════════════════════════════════════
-  // FORM STAGE (haijabadilika sana)
+  // FORM STAGE
   // ═══════════════════════════════════════════════════════════
   return (
     <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full p-4 sm:p-6">
@@ -1127,8 +1050,8 @@ export default function PostPropertyForm({
             >
               <Check size={14} />
               {t(
-                "Ada ya kuchapisha imezimwa — unaweka bure!",
-                "Listing fee is disabled — post for free!"
+                "Ada ya kuchapisha imezimwa — unaweka bure. Lakini listing bado itapitia idhini ya Admin.",
+                "Listing fee is disabled — post for free. But the listing still requires admin approval."
               )}
             </div>
           )}
