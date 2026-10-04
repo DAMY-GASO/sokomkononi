@@ -64,6 +64,44 @@ export function invalidateAuthCache() {
 const PRESERVE_AFTER_LOGOUT = new Set([]);
 
 /** Clears user state, wipes JWT tokens, and purges user-scoped caches. */
+/**
+ * Wipe every user-scoped localStorage key on logout / 401.
+ * Prevents the next user on a shared device from seeing the
+ * previous user's saved listings, messages, deals, etc.
+ */
+const USER_SCOPED_KEYS = [
+  "sokomkononi_current_user_v1",
+  "sokomkononi_access",
+  "sokomkononi_refresh",
+  "sokomkononi_listings_mine_v1",
+  "sokomkononi_listings_public_v1",
+  "sokomkononi_saved_v1",
+  "sokomkononi_saved_snapshots_v1",
+  "sokomkononi_messages_v2",
+  "sokomkononi_leads_v1",
+  "sokomkononi_searches_v1",
+  "sokomkononi_waiting_list_v1",
+  "sokomkononi_notifications_v1",
+  "sokomkononi_deals_v1",
+  "sokomkononi_transactions_v1",
+  "sokomkononi_transactions_lifecycle_v1",
+  "sokomkononi_user_credits_v1",
+  "sokomkononi_recently_viewed_v1",
+  "sokomkononi_dashboard_side_v1",
+  "sokomkononi_undo_v1",
+  "sokomkononi_moderation_queue_v1",
+  "sokomkononi_moderation_decisions_v1",
+];
+
+function wipeUserScopedCaches() {
+  if (typeof window === "undefined") return;
+  try {
+    USER_SCOPED_KEYS.forEach((k) => {
+      try { window.localStorage.removeItem(k); } catch { /* noop */ }
+    });
+  } catch { /* noop */ }
+}
+
 function hardReset() {
   saveUser(null);
   clearJWT();
@@ -72,16 +110,7 @@ function hardReset() {
   // Only wipe AUTH-scoped keys. Do NOT wipe the user's saved listings,
   // searches, messages, dashboard-side preference, admin avatar, etc.
   // A transient 401 must never destroy their data.
-  const AUTH_KEYS = [
-    "sokomkononi_current_user_v1",
-    "sokomkononi_access",
-    "sokomkononi_refresh",
-  ];
-  try {
-    AUTH_KEYS.forEach((k) => {
-      try { window.localStorage.removeItem(k); } catch { /* noop */ }
-    });
-  } catch { /* noop */ }
+  wipeUserScopedCaches();
 }
 
 function computeIsAdmin(user) {

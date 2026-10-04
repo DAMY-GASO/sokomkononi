@@ -29,16 +29,22 @@ import {
 } from "../../../api/payments.js";
 
 // ── Session keys (spec Section 8) ──────────────────────────
-const SS_ORDER_ID = "pending_order_id";
-const SS_AMOUNT   = "pending_order_amount";
-const SS_METHOD   = "pending_order_method";
+const SS_ORDER_ID  = "pending_order_id";
+const SS_AMOUNT    = "pending_order_amount";
+const SS_METHOD    = "pending_order_method";
+const SS_CONTEXT   = "pending_order_context";
+
+function contextKey(title, amount) {
+  return `${title || ""}::${amount ?? ""}`;
+}
 
 const session = {
-  save(orderId, amount, methodKey) {
+  save(orderId, amount, methodKey, ctxKey) {
     try {
       sessionStorage.setItem(SS_ORDER_ID, String(orderId || ""));
       sessionStorage.setItem(SS_AMOUNT, String(amount ?? ""));
       sessionStorage.setItem(SS_METHOD, String(methodKey || ""));
+      sessionStorage.setItem(SS_CONTEXT, String(ctxKey || ""));
     } catch { /* noop */ }
   },
   read() {
@@ -47,9 +53,10 @@ const session = {
         orderId: sessionStorage.getItem(SS_ORDER_ID),
         amount: sessionStorage.getItem(SS_AMOUNT),
         method: sessionStorage.getItem(SS_METHOD),
+        context: sessionStorage.getItem(SS_CONTEXT),
       };
     } catch {
-      return { orderId: null, amount: null, method: null };
+      return { orderId: null, amount: null, method: null, context: null };
     }
   },
   clear() {
@@ -57,6 +64,7 @@ const session = {
       sessionStorage.removeItem(SS_ORDER_ID);
       sessionStorage.removeItem(SS_AMOUNT);
       sessionStorage.removeItem(SS_METHOD);
+      sessionStorage.removeItem(SS_CONTEXT);
     } catch { /* noop */ }
   },
 };
@@ -183,11 +191,20 @@ export default function PaymentGateway({
   }, []);
 
   // ── Resume polling after refresh (spec Section 11.9) ────
+  // Resume-poll ONLY if the stored context matches this mount's context.
+  // Prevents "payment successful" from showing for the wrong flow when
+  // two different features happen to share the same amount.
   useEffect(() => {
     const saved = session.read();
     if (!saved.orderId) return;
-    // Only resume if the parent prop amount matches what we stored
+
+    const myKey = contextKey(title, amount);
+    if (saved.context && saved.context !== myKey) {
+      session.clear();
+      return;
+    }
     if (saved.amount && Number(saved.amount) !== Number(amount)) return;
+
     if (saved.method) setMethodKey(saved.method);
     setOrderId(saved.orderId);
     setStage("POLLING");
@@ -285,7 +302,7 @@ export default function PaymentGateway({
 
     // ── Card / Bank → redirect ─────────────────────────
     if (res.gatewayUrl) {
-      session.save(oid, amount, method.key);
+      session.save(oid, amount, method.key, contextKey(title, amount));
       setStage("REDIRECTING");
       setTimeout(() => {
         window.location.href = res.gatewayUrl;
@@ -320,7 +337,7 @@ export default function PaymentGateway({
     }
 
     // ── Mobile → poll ──────────────────────────────────
-    session.save(oid, amount, method.key);
+    session.save(oid, amount, method.key, contextKey(title, amount));
     setStage("POLLING");
     runPoll(oid);
   };

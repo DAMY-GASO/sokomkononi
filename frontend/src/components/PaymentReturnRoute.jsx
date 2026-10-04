@@ -60,9 +60,12 @@ export default function PaymentReturnRoute() {
       return;
     }
 
+    const controller = new AbortController();
+
     (async () => {
       const result = await pollOrderStatus(orderId, {
         onProgress: (n) => { if (!cancelled) setAttempt(n); },
+        signal: controller.signal,
       });
       if (cancelled) return;
 
@@ -101,7 +104,10 @@ export default function PaymentReturnRoute() {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      try { controller.abort(); } catch { /* noop */ }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

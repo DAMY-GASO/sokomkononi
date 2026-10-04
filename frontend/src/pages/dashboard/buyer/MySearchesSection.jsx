@@ -71,9 +71,12 @@ export default function MySearchesSection() {
 
   const canSave = form.name.trim().length > 0;
 
-  const handleSave = () => {
+  const [saveError, setSaveError] = useState("");
+
+  const handleSave = async () => {
     if (!canSave) return;
-    addSearch({
+    setSaveError("");
+    const res = await addSearch({
       name: form.name.trim(),
       query: form.query.trim(),
       category: form.category,
@@ -82,6 +85,15 @@ export default function MySearchesSection() {
       region: form.region,
       verifiedOnly: form.verifiedOnly,
     });
+    if (!res || res.ok === false) {
+      setSaveError(
+        res?.error?.message ||
+          (lang === "sw"
+            ? "Imeshindwa kuhifadhi utafutaji. Jaribu tena."
+            : "Failed to save search. Try again.")
+      );
+      return; // do NOT clear the form on failure
+    }
     setForm({
       name: "",
       query: "",

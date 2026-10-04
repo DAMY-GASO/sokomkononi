@@ -41,8 +41,6 @@ import { useAuth, logoutAsync } from "../../../config/authStore.js";
 import { ADMIN_PATH } from "../../../config/adminPath.js";
 import {
   useMyListings,
-  checkListingExpiry,
-  checkListingExpiringSoon,
   fetchMyListingsFromApi,
   createListingAsync,
   removeListingAsync,
@@ -54,7 +52,6 @@ import {
 } from "../../../config/listingsStore.js";
 import { useSentAnnouncements } from "../../../config/announcementsStore.js";
 import { useNotifications } from "../../../config/notificationsStore.js";
-import { checkReservationReminders } from "../../../config/dealsStore.js";
 import { setDashboardSide } from "../../../config/dashboardSideStore.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
 import { useNewLeadsCount } from "../../../config/leadsStore.js";
@@ -289,17 +286,10 @@ export default function DashboardShell() {
     setDashboardSide(side);
   }, [side]);
 
-  useEffect(() => {
-    checkReservationReminders();
-    checkListingExpiry();
-    checkListingExpiringSoon();
-    const interval = setInterval(() => {
-      checkReservationReminders();
-      checkListingExpiry();
-      checkListingExpiringSoon();
-    }, 2 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  // NOTE: reservation/listing-expiry reminders are scheduled server-side
+  // and delivered via /notifications/. The previous client-side no-op
+  // interval was removed. If you need client-side hints, replace this
+  // effect with an actual implementation (compare expiresAt, emit toasts).
 
   useEffect(() => {
     if (announcements.length === 0) return;
