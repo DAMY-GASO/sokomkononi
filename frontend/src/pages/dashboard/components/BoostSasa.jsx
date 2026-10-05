@@ -1,12 +1,6 @@
 // ============================================================
 // BoostSasa.jsx (production + bundle + credits support)
-// Flow:
-//   A. Flat fee  → POST /boosting/ → /pay/ → /activate/
-//   B. Bundle    → POST /bundles/purchases/ → /pay/ (credits added)
-//                  kisha POST /boosting/ → /pay/ {payment_reference:"credits"}
-//                  → /activate/
-//   C. Credit    → POST /boosting/ → /pay/ {payment_reference:"credits"}
-//                  → /activate/
+// SASISHO: fee hydrate kila mount + loading state + logging
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -16,8 +10,8 @@ import {
 import {
   COLORS, getCategory, formatTZS, isBoostActive, boostDaysRemaining,
 } from "./shared";
-import { useActiveBoostPackages } from "../../../config/boostPackagesStore.js";
-import { useBoostFee } from "../../../config/boostFeeStore.js";
+import { useActiveBoostPackages, hydrateBoostPackagesFromApi } from "../../../config/boostPackagesStore.js";
+import { useBoostFee, hydrateBoostFeeFromApi } from "../../../config/boostFeeStore.js";
 import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -229,9 +223,26 @@ export default function BoostSasa({
   const liveListings = listings.filter((l) => l.status === "live");
   const boostPackages = useActiveBoostPackages();
   const { loaded: feeLoaded, enabled: feeEnabled } = useBoostFee();
-  // Admin switched the boost fee off -> boosting is free.
   const feeFree = feeLoaded && !feeEnabled;
   const boostBundles = useActiveBundles().filter((b) => b.type === "boost");
+
+  // ⬇️ MPYA — Hydrate fee + packages kila mount
+  useEffect(() => {
+    hydrateBoostFeeFromApi();
+    hydrateBoostPackagesFromApi();
+  }, []);
+
+  // ⬇️ MPYA — Diagnostiki
+  useEffect(() => {
+    console.info("[BoostSasa] state:", {
+      feeLoaded,
+      feeEnabled,
+      feeFree,
+      packagesCount: boostPackages.length,
+      bundlesCount: boostBundles.length,
+      liveListingsCount: liveListings.length,
+    });
+  }, [feeLoaded, feeEnabled, feeFree, boostPackages.length, boostBundles.length, liveListings.length]);
 
   const [selectedId, setSelectedId] = useState(
     initialListingId && liveListings.some((l) => l.id === initialListingId)
@@ -239,12 +250,11 @@ export default function BoostSasa({
       : liveListings[0]?.id ?? null
   );
 
-  // paymentMode: "flat" | "bundle"
   const [paymentMode, setPaymentMode] = useState("flat");
   const [flatPackageId, setFlatPackageId] = useState(null);
   const [bundleId, setBundleId] = useState(null);
 
-  const [stage, setStage] = useState("select"); // select | paying | done
+  const [stage, setStage] = useState("select");
   const [done, setDone] = useState(null);
   const [creating, setCreating] = useState(false);
   const [pendingBoost, setPendingBoost] = useState(null);
@@ -253,7 +263,7 @@ export default function BoostSasa({
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // Keep the selection valid: drop a package that was switched off.
+  // Keep the selection valid.
   useEffect(() => {
     if (!boostPackages.length) {
       if (flatPackageId !== null) setFlatPackageId(null);
@@ -264,7 +274,6 @@ export default function BoostSasa({
     }
   }, [boostPackages, flatPackageId]);
 
-  // Bundles only make sense when the fee is on.
   useEffect(() => {
     if (feeFree && paymentMode !== "flat") setPaymentMode("flat");
   }, [feeFree, paymentMode]);
@@ -297,7 +306,7 @@ export default function BoostSasa({
       : (paymentMode === "flat" && Boolean(flatPackage)) ||
         (paymentMode === "bundle" && Boolean(selectedBundle)));
 
-  // ── Create boost on backend (used by all paths) ────────────
+  // ── Create boost on backend ────────────────────────────────
   const createBoostOnBackend = async () => {
     if (!flatPackage?.id) {
       throw new Error(
@@ -314,9 +323,7 @@ export default function BoostSasa({
     return raw;
   };
 
-  // ══════════════════════════════════════════════════════════
   // PATH A: FLAT FEE
-  // ══════════════════════════════════════════════════════════
   const handleBeginFlatPayment = async () => {
     if (!selectedListing || !flatPackage || creating) return;
     setCreating(true);
@@ -336,9 +343,7 @@ export default function BoostSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
   // PATH B: BUNDLE PURCHASE
-  // ══════════════════════════════════════════════════════════
   const handleBeginBundlePayment = async () => {
     if (!selectedBundle || creating) return;
     setCreating(true);
@@ -362,21 +367,15 @@ export default function BoostSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PATH C: USE CREDIT (moja kwa moja)
-  // ══════════════════════════════════════════════════════════
+  // PATH C: USE CREDIT
   const handleUseCredit = async () => {
     if (!selectedListing || !user) return;
     setCreating(true);
     setError("");
     try {
-      // Unda boost, kisha lipa kwa credits (backend ina-consume credit)
       const raw = await createBoostOnBackend();
       const paid = await boostingApi.pay(raw.id, { payment_reference: "credits" });
-      
-      // Backend ina-activate tayari kwenye pay() — kama haipo, ita-activate hapa
       const activated = paid?.boost || (await boostingApi.activate(raw.id).catch(() => null));
-      
       setDone({
         listing: selectedListing,
         pkg: flatPackage,
@@ -399,11 +398,8 @@ export default function BoostSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
   // PAYMENT GATEWAY INITIATE
-  // ══════════════════════════════════════════════════════════
   const handlePaymentInitiate = async ({ methodKey, phone } = {}) => {
-    // Path A: Flat fee
     if (paymentMode === "flat" && pendingBoost) {
       try {
         const res = await boostingApi.pay(pendingBoost.id, {
@@ -426,7 +422,6 @@ export default function BoostSasa({
       }
     }
 
-    // Path B: Bundle purchase
     if (paymentMode === "bundle" && pendingBundlePurchase) {
       try {
         const paid = await api.post(
@@ -452,12 +447,9 @@ export default function BoostSasa({
     return { ok: false, error: new Error("invalid payment mode") };
   };
 
-  // ══════════════════════════════════════════════════════════
   // PAYMENT SUCCESS
-  // ══════════════════════════════════════════════════════════
   const handlePaymentSuccess = async () => {
     if (paymentMode === "flat" && pendingBoost) {
-      // Activate boost
       try {
         const activated = await boostingApi.activate(pendingBoost.id);
         setDone({ listing: pendingBoost.listing, pkg: pendingBoost.package, boost: activated, mode: "flat" });
@@ -476,7 +468,6 @@ export default function BoostSasa({
     }
 
     if (paymentMode === "bundle" && pendingBundlePurchase) {
-      // Bundle credits zinaingizwa na backend. Sasa create boost + use credit.
       try {
         const raw = await createBoostOnBackend();
         const paid = await boostingApi.pay(raw.id, { payment_reference: "credits" });
@@ -496,17 +487,13 @@ export default function BoostSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PATH D: FREE (admin disabled the boost fee)
-  // ══════════════════════════════════════════════════════════
+  // PATH D: FREE
   const handleFreeBoost = async () => {
     if (!selectedListing || !flatPackage || creating) return;
     setCreating(true);
     setError("");
     try {
       const raw = await createBoostOnBackend();
-      // Backend ignores the reference while the fee is off, takes no
-      // payment and consumes no credit, then activates the boost.
       const paid = await boostingApi.pay(raw.id, { payment_reference: "free" });
       const activated =
         paid?.boost || (await boostingApi.activate(raw.id).catch(() => null));
@@ -540,9 +527,7 @@ export default function BoostSasa({
     setError("");
   };
 
-  // ══════════════════════════════════════════════════════════
   // DONE SCREEN
-  // ══════════════════════════════════════════════════════════
   if (stage === "done" && done) {
     const doneTitle =
       done.mode === "bundle-only"
@@ -576,9 +561,21 @@ export default function BoostSasa({
     );
   }
 
-  // ══════════════════════════════════════════════════════════
+  // LOADING
+  if (!feeLoaded) {
+    return (
+      <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 size={28} className="animate-spin" color={COLORS.gold} />
+          <p className="text-secondary text-sm">
+            {t("Inapakia mipangilio...", "Loading settings...")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // MAIN RENDER
-  // ══════════════════════════════════════════════════════════
   return (
     <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full p-4 sm:p-6">
       <div className="max-w-2xl mx-auto">
