@@ -364,28 +364,30 @@ export default function RevenueSection() {
   );
 
   const handleAddFeeConfig = (cat) =>
-    withBusy(`add-fee-${cat.key}`, async () => {
-      const nameForApi =
-        cat?.label?.en || cat?.label?.sw || cat?.key || "New Category";
-      const res = await addFeeConfigAsync({
-        name: nameForApi,
-        percentage: 1.0,
-        min_price: 10000,
-        max_price: 100000,
-        flat_fee: 5000,
-        fee_mode: "PERCENTAGE",
-        priority: 0,
-      });
-      if (res.ok) {
-        showFlash(
-          t(
-            `Fee config ya "${cat.key}" imeongezwa.`,
-            `Fee config for "${cat.key}" added.`
-          )
-        );
-      }
-      return res;
+  withBusy(`add-fee-${cat.key}`, async () => {
+    const nameForApi =
+      cat?.label?.en || cat?.label?.sw || cat?.key || "New Category";
+    const res = await addFeeConfigAsync({
+      name: nameForApi,
+      fee_mode: "FLAT",              // ⬅️ BADILISHA kutoka "PERCENTAGE"
+      flat_fee: 3000,                // ⬅️ BADILISHA kutoka 5000
+      percentage: 1.0,               // fallback (kama admin anabadilisha)
+      min_price: 10000,
+      max_price: 100000,
+      priority: 0,
     });
+    if (res.ok) {
+      showFlash(
+        t(
+          `Fee config ya "${cat.key}" imeongezwa. Bofya kiasi kuhariri.`,
+          `Fee config for "${cat.key}" added. Click amount to edit.`
+        )
+      );
+      // ⬇️ MPYA — refresh ili fee rule ionekane papo hapo
+      await hydrateListingFeeConfigsFromApi();
+    }
+    return res;
+  });
 
   const orphanCount = listingFeeConfigs.filter((c) => c.orphan).length;
 

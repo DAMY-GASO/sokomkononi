@@ -1,6 +1,7 @@
 // ============================================================
 // listingFeeStore.js — API-only via /api/listings/fee-rules/
 // Sasa ina: fee_mode (PERCENTAGE|FLAT), flat_fee, is_enabled.
+// DEDUPE: kila seedKey ina rule moja pekee (active > Title Case > id ndogo).
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
@@ -72,10 +73,10 @@ function norm(raw) {
     backendKey: rawSlug,
     name: raw.name,
     orphan,
-    feeMode: raw.fee_mode || "PERCENTAGE",       // ⬅️ MPYA
+    feeMode: raw.fee_mode || "PERCENTAGE",
     percentage: pct,
     rate: pct / 100,
-    flatFee: Number(raw.flat_fee) || 0,          // ⬅️ MPYA
+    flatFee: Number(raw.flat_fee) || 0,
     min: Number(raw.min_price) || 0,
     max: raw.max_price != null ? Number(raw.max_price) : 999999999,
     isActive: raw.is_active !== false,
@@ -84,16 +85,54 @@ function norm(raw) {
 }
 
 // ------------------------------------------------------------
-// Hydrate
+// Hydrate na dedupe kwa seedKey
+// Chagua rule moja pekee kwa kila seedKey:
+//   active > Title Case > ina nafasi > id ndogo
 // ------------------------------------------------------------
 export async function hydrateListingFeeConfigsFromApi() {
   try {
     const data = await api.get("/listings/fee-rules/?page_size=200");
     const list = Array.isArray(data) ? data : data?.results || [];
     const normalized = list.map(norm).filter(Boolean);
-    write(normalized);
-    return { ok: true, count: normalized.length };
+
+    // ⬇️ DEDUPE kwa `key` (seedKey)
+    const byKey = new Map();
+    for (const rule of normalized) {
+      const existing = byKey.get(rule.key);
+      if (!existing) {
+        byKey.set(rule.key, rule);
+        continue;
+      }
+
+      const existingScore =
+        (existing.isActive ? 10 : 0) +
+        (existing.name?.[0]?.toUpperCase() === existing.name?.[0] ? 5 : 0) +
+        (existing.name?.includes(" ") ? 3 : 0) -
+        (existing.id || 0) / 1_000_000;
+
+      const ruleScore =
+        (rule.isActive ? 10 : 0) +
+        (rule.name?.[0]?.toUpperCase() === rule.name?.[0] ? 5 : 0) +
+        (rule.name?.includes(" ") ? 3 : 0) -
+        (rule.id || 0) / 1_000_000;
+
+      if (ruleScore > existingScore) {
+        byKey.set(rule.key, rule);
+      }
+    }
+
+    const deduped = Array.from(byKey.values());
+
+    console.info("[listingFeeStore] hydrated:", {
+      raw: normalized.length,
+      deduped: deduped.length,
+      removed: normalized.length - deduped.length,
+    });
+
+    write(deduped);
+    return { ok: true, count: deduped.length };
   } catch (err) {
+    console.error("[listingFeeStore] hydrate failed:", err);
     return { ok: false, error: err };
   }
 }
@@ -129,7 +168,6 @@ export async function updateListingFeeConfigAsync(key, patch) {
   }
 }
 
-// ⬇️ MPYA — Update flat_fee
 export async function updateListingFeeFlatAsync(key, flatFee) {
   const num = Number(flatFee);
   if (!Number.isFinite(num) || num < 0) {
@@ -138,7 +176,6 @@ export async function updateListingFeeFlatAsync(key, flatFee) {
   return updateListingFeeConfigAsync(key, { flat_fee: num });
 }
 
-// ⬇️ MPYA — Update fee_mode
 export async function updateListingFeeModeAsync(key, mode) {
   if (!["PERCENTAGE", "FLAT"].includes(mode)) {
     return { ok: false, error: new Error("fee_mode must be PERCENTAGE or FLAT") };
@@ -146,7 +183,6 @@ export async function updateListingFeeModeAsync(key, mode) {
   return updateListingFeeConfigAsync(key, { fee_mode: mode });
 }
 
-// ⬇️ MPYA — Toggle is_active
 export async function toggleListingFeeActiveAsync(key) {
   const target = getListingFeeConfig(key);
   if (!target) return { ok: false, error: new Error("Fee config not found") };
@@ -158,8 +194,8 @@ export async function addFeeConfigAsync({
   percentage = 1.0,
   min_price = 10000,
   max_price = 100000,
-  flat_fee = 5000,
-  fee_mode = "PERCENTAGE",
+  flat_fee = 3000,
+  fee_mode = "FLAT",
   priority = 0,
 }) {
   if (!name) return { ok: false, error: new Error("name required") };
