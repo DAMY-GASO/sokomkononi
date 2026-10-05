@@ -1,13 +1,13 @@
 // ============================================================
 // SystemSettingsSection.jsx
-// Mipangilio ya mfumo — panels 5 (Categories imeondolewa).
+// Mipangilio ya mfumo — panels 4 (SubAdmins imeondolewa).
+// SubAdmins: tumia RBACSection (Roles & Staff) badala yake.
 // Bilingual.
 // ============================================================
 
 import React from "react";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import WebhooksPanel from "../components/SystemSettings/WebhooksPanel.jsx";
-import SubAdminsPanel from "../components/SystemSettings/SubAdminsPanel.jsx";
 import AppStoreLinksPanel from "../components/SystemSettings/AppStoreLinksPanel.jsx";
 import PlatformPolicyPanel from "../components/SystemSettings/PlatformPolicyPanel.jsx";
 import AnnouncementsPanel from "../components/SystemSettings/AnnouncementsPanel.jsx";
@@ -27,7 +27,6 @@ export default function SystemSettingsSection() {
       />
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
         <WebhooksPanel />
-        <SubAdminsPanel />
         <AppStoreLinksPanel />
         <PlatformPolicyPanel />
         <AnnouncementsPanel />

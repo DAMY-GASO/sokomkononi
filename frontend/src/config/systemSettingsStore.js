@@ -1,6 +1,12 @@
 // ============================================================
 // systemSettingsStore.js — API-only via /api/system-settings/
 // No seeds, no local fallback. Every mutation surfaces errors.
+//
+// SASISHO:
+//   - Sub-admins zimeondolewa kutoka store (tumia RBACSection).
+//     Backend still supports /system-settings/sub-admins/ (alias to
+//     RBAC StaffViewSet) lakini frontend haitumi.
+//   - Webhooks, AppStoreLinks, PlatformPolicy zimebaki.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -22,7 +28,9 @@ function makeSlice(key, event, initial) {
       if (parsed == null) return initial;
       if (Array.isArray(initial) && !Array.isArray(parsed)) return initial;
       return parsed;
-    } catch { return initial; }
+    } catch {
+      return initial;
+    }
   }
   function save(v) {
     if (typeof window === "undefined") return;
@@ -46,12 +54,18 @@ function makeSlice(key, event, initial) {
   return { read, save, useSlice };
 }
 
-// ══════════════════════════════════════════════════════════════
+// ============================================================
 // WEBHOOKS
-// ══════════════════════════════════════════════════════════════
-const webhooks = makeSlice("sokomkononi_webhooks_v1", "sokomkononi:webhooks-updated", []);
+// ============================================================
+const webhooks = makeSlice(
+  "sokomkononi_webhooks_v1",
+  "sokomkononi:webhooks-updated",
+  []
+);
 
-export function getWebhooks() { return webhooks.read(); }
+export function getWebhooks() {
+  return webhooks.read();
+}
 
 export async function hydrateWebhooksFromApi() {
   try {
@@ -59,16 +73,26 @@ export async function hydrateWebhooksFromApi() {
     const list = Array.isArray(d) ? d : d?.results || [];
     webhooks.save(list);
     return { ok: true, count: list.length };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function addWebhookAsync({ event, url, active = true }) {
-  if (!event || !url) return { ok: false, error: new Error("event + url required") };
+  if (!event || !url) {
+    return { ok: false, error: new Error("event + url required") };
+  }
   try {
-    const raw = await api.post("/system-settings/webhooks/", { event, url, active });
+    const raw = await api.post("/system-settings/webhooks/", {
+      event,
+      url,
+      active,
+    });
     webhooks.save([raw, ...getWebhooks()]);
     return { ok: true, webhook: raw };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function removeWebhookAsync(id) {
@@ -76,7 +100,9 @@ export async function removeWebhookAsync(id) {
     await api.delete(`/system-settings/webhooks/${id}/`);
     webhooks.save(getWebhooks().filter((w) => w.id !== id));
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function toggleWebhookAsync(id) {
@@ -88,67 +114,36 @@ export async function toggleWebhookAsync(id) {
     const updated = raw && raw.id ? raw : { ...cur, active: nextActive };
     webhooks.save(getWebhooks().map((w) => (w.id === id ? updated : w)));
     return { ok: true, active: updated.active };
-  } catch (err) { return { ok: false, error: err }; }
-}
-
-export function useWebhooks() { return webhooks.useSlice(hydrateWebhooksFromApi); }
-
-// ══════════════════════════════════════════════════════════════
-// SUB-ADMINS  (StaffAssignment: { user, role, active })
-// ══════════════════════════════════════════════════════════════
-const subAdmins = makeSlice("sokomkononi_subadmins_v1", "sokomkononi:subadmins-updated", []);
-
-export function getSubAdmins() { return subAdmins.read(); }
-
-export async function hydrateSubAdminsFromApi() {
-  try {
-    const d = await api.get("/system-settings/sub-admins/?page_size=200");
-    const list = Array.isArray(d) ? d : d?.results || [];
-    subAdmins.save(list);
-    return { ok: true, count: list.length };
-  } catch (err) { return { ok: false, error: err }; }
-}
-
-export async function addSubAdminAsync({ userId, roleId, active = true }) {
-  if (!userId || !roleId) {
-    return { ok: false, error: new Error("userId + roleId (numeric) required") };
+  } catch (err) {
+    return { ok: false, error: err };
   }
-  try {
-    const raw = await api.post("/system-settings/sub-admins/", {
-      user: userId, role: roleId, active,
-    });
-    subAdmins.save([raw, ...getSubAdmins()]);
-    return { ok: true, subAdmin: raw };
-  } catch (err) { return { ok: false, error: err }; }
 }
 
-export async function removeSubAdminAsync(id) {
-  try {
-    await api.delete(`/system-settings/sub-admins/${id}/`);
-    subAdmins.save(getSubAdmins().filter((s) => s.id !== id));
-    return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+export function useWebhooks() {
+  return webhooks.useSlice(hydrateWebhooksFromApi);
 }
 
-export function useSubAdmins() { return subAdmins.useSlice(hydrateSubAdminsFromApi); }
-
-// ══════════════════════════════════════════════════════════════
+// ============================================================
 // APP STORE LINKS
-// ══════════════════════════════════════════════════════════════
+// ============================================================
 const appStoreLinks = makeSlice(
   "sokomkononi_app_store_links_v1",
   "sokomkononi:app-store-links-updated",
   { play: "", appstore: "" }
 );
 
-export function getAppStoreLinks() { return appStoreLinks.read(); }
+export function getAppStoreLinks() {
+  return appStoreLinks.read();
+}
 
 export async function hydrateAppStoreLinksFromApi() {
   try {
     const d = await api.get("/system-settings/app-store-links/");
     appStoreLinks.save({ play: d?.play || "", appstore: d?.appstore || "" });
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function saveAppStoreLinksAsync(links) {
@@ -157,59 +152,78 @@ export async function saveAppStoreLinksAsync(links) {
     await api.post("/system-settings/app-store-links/", payload);
     appStoreLinks.save(payload);
     return { ok: true, links: payload };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
-export function useAppStoreLinks() { return appStoreLinks.useSlice(hydrateAppStoreLinksFromApi); }
+export function useAppStoreLinks() {
+  return appStoreLinks.useSlice(hydrateAppStoreLinksFromApi);
+}
 
-// ══════════════════════════════════════════════════════════════
+// ============================================================
 // PLATFORM POLICY
-// ══════════════════════════════════════════════════════════════
+// ============================================================
 const platformPolicy = makeSlice(
   "sokomkononi_platform_policy_v1",
   "sokomkononi:platform-policy-updated",
   { listingLifetimeDays: 60 }
 );
 
-export function getPlatformPolicy() { return platformPolicy.read(); }
+export function getPlatformPolicy() {
+  return platformPolicy.read();
+}
 
 export async function hydratePlatformPolicyFromApi() {
   try {
     const d = await api.get("/system-settings/platform-policy/");
-    platformPolicy.save({ listingLifetimeDays: d?.listing_lifetime_days ?? 60 });
+    platformPolicy.save({
+      listingLifetimeDays: d?.listing_lifetime_days ?? 60,
+    });
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function updatePlatformPolicyAsync({ listingLifetimeDays }) {
   const days = Number(listingLifetimeDays);
   if (!Number.isFinite(days) || days < 1 || days > 365) {
-    return { ok: false, error: new Error("listingLifetimeDays must be 1..365") };
+    return {
+      ok: false,
+      error: new Error("listingLifetimeDays must be 1..365"),
+    };
   }
   try {
-    await api.post("/system-settings/platform-policy/", { listing_lifetime_days: days });
+    await api.post("/system-settings/platform-policy/", {
+      listing_lifetime_days: days,
+    });
     platformPolicy.save({ listingLifetimeDays: days });
     return { ok: true, policy: { listingLifetimeDays: days } };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
-export function usePlatformPolicy() { return platformPolicy.useSlice(hydratePlatformPolicyFromApi); }
+export function usePlatformPolicy() {
+  return platformPolicy.useSlice(hydratePlatformPolicyFromApi);
+}
 
-// ══════════════════════════════════════════════════════════════
-// BULK
-// ══════════════════════════════════════════════════════════════
+// ============================================================
+// BULK HYDRATE
+// ============================================================
 export async function hydrateAllSystemSettings() {
-  const [w, a, p, s] = await Promise.all([
+  const [w, a, p] = await Promise.all([
     hydrateWebhooksFromApi(),
     hydrateAppStoreLinksFromApi(),
     hydratePlatformPolicyFromApi(),
-    hydrateSubAdminsFromApi(),
   ]);
-  return { webhooks: w, appStore: a, policy: p, subAdmins: s };
+  return { webhooks: w, appStore: a, policy: p };
 }
 
-// Re-export the fields App.jsx uses
+// ============================================================
+// LEGACY EXPORTS
+// ============================================================
 export function savePlatformPolicy() {}
 export const SEED_APP_STORE_LINKS = { play: "", appstore: "" };
 export const SEED_PLATFORM_POLICY = { listingLifetimeDays: 60 };
-

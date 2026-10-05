@@ -2,13 +2,18 @@
 // WebhooksPanel.jsx
 // Webhooks management — add/remove/toggle.
 // Bilingual + mobile-responsive + Async actions na rollback.
+//
+// Backend: apps/system_settings/views.py → WebhookViewSet
+//   GET    /api/system-settings/webhooks/           → list
+//   POST   /api/system-settings/webhooks/           → create
+//   POST   /api/system-settings/webhooks/{id}/toggle/ → toggle
+//   DELETE /api/system-settings/webhooks/{id}/      → destroy
 // ============================================================
 
 import React, { useState } from "react";
 import { Webhook, Plus, Trash2, Loader2 } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
-// ⬇️ MABADILIKO: tumia async variants
 import {
   useWebhooks,
   addWebhookAsync,
@@ -21,7 +26,6 @@ export default function WebhooksPanel() {
   const { lang } = useLanguage();
   const [webhooks] = useWebhooks();
   const [form, setForm] = useState({ event: "Payment Success", url: "" });
-  // ⬇️ MPYA: busy + error
   const [busy, setBusy] = useState({}); // { [id]: true, adding: true }
   const [error, setError] = useState("");
 
