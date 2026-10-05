@@ -7,6 +7,7 @@
 //   - Password change: logout baada ya kubadilisha (backend blacklists tokens)
 //   - Password min: 8 (kutoka backend min_length=8)
 //   - Email input: readOnly (haiwezi kubadilishwa)
+//   - Import: ADMIN_LOGIN_PATH (sio getAdminLoginPath — haipo)
 // ============================================================
 import React, { useState, useRef, useEffect } from "react";
 import {
@@ -17,7 +18,7 @@ import {
   removeAvatarAsync,
   logoutAsync,
 } from "../../../../config/authStore.js";
-import { getAdminLoginPath } from "../../../../config/adminPath.js";
+import { ADMIN_LOGIN_PATH } from "../../../../config/adminPath.js";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
   Camera,
@@ -212,8 +213,7 @@ export default function AdminProfile() {
       // Force logout + redirect baada ya sekunde 2.
       setTimeout(async () => {
         await logoutAsync();
-        const loginPath = getAdminLoginPath?.() || "/admin/login";
-        window.location.href = loginPath;
+        window.location.href = ADMIN_LOGIN_PATH;
       }, 2000);
     } else {
       showToast("error", res.error?.message || "Failed");
