@@ -4,15 +4,14 @@
 // + Bundle purchase flow + Credits support + Free download.
 //
 // SASISHO:
-// - handleFeeInitiate: ongeza `amount` (inahitajika na backend).
-// - performDownload: tumia fetch + Authorization header (JWT),
-//   kisha blob → browser download (inasaidia 401/402 errors).
+//   - Inasoma fee fresh kutoka useSuccessFeeStatus() (sio successFee.min_fee stale)
+//   - Bundle purchase ina-poll credits baada ya malipo
+//   - Loading + error handling bora
 // ============================================================
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Receipt,
   Search,
-  Filter,
   Download,
   FileText,
   FileSpreadsheet,
@@ -21,7 +20,6 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  AlertTriangle,
   CreditCard,
   Wallet,
   Package,
@@ -38,7 +36,11 @@ import {
 import { useActiveBundles } from "../config/bundlesStore.js";
 import { api } from "../api/client.js";
 import PaymentGateway from "./dashboard/components/PaymentGateway";
-import { useSuccessFeeConfig } from "../config/successFeeStore.js";
+import {
+  useSuccessFeeConfig,
+  useSuccessFeeStatus,
+  hydrateSuccessFeeStatusFromApi,
+} from "../config/successFeeStore.js";
 
 // ============================================================
 // CONSTANTS
@@ -106,6 +108,20 @@ const STATUS_META = {
 };
 
 // ============================================================
+// HELPER — poll credits
+// ============================================================
+async function pollForCredit(userId, service, { attempts = 8, intervalMs = 2000 } = {}) {
+  for (let i = 0; i < attempts; i++) {
+    const info = checkCredit(userId, service);
+    if (info.hasCredit) {
+      return { ok: true, remaining: info.remaining };
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return { ok: false };
+}
+
+// ============================================================
 // MAIN COMPONENT
 // ============================================================
 export default function MyTransactionsPage() {
@@ -130,48 +146,40 @@ export default function MyTransactionsPage() {
   const [bundleError, setBundleError] = useState("");
   const [bundleLoading, setBundleLoading] = useState(false);
 
+  // ⬇️ SASISHO: Config + status tofauti
   const successFee = useSuccessFeeConfig();
+  const status = useSuccessFeeStatus();
+
   const successBundles = useActiveBundles().filter((b) => b.type === "success");
 
   const creditInfo = checkCredit(user?.id, "success");
   const hasCredit = creditInfo.hasCredit;
   const creditRemaining = creditInfo.remaining || 0;
 
-  const status = {
-    is_free: !successFee.is_enabled,
-    fee: String(successFee.min_fee || 0),
-    requires_payment: successFee.is_enabled,
-    formats: ["pdf", "csv", "doc"],
-    success_fee_enabled: successFee.is_enabled,
-  };
-
+  // ⬇️ SASISHO: Fee inatoka `status` (fresh kutoka backend)
+  const feeAmount = Number(status.fee) || 0;
   const requiresPayment = status.requires_payment;
+  const isFree = status.is_free;
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const filters = [
     { key: "all", label: lang === "sw" ? "Zote" : "All" },
-    {
-      key: "listing_fee",
-      label: lang === "sw" ? "Ada ya Kuchapisha" : "Listing Fee",
-    },
-    { key: "boost", label: lang === "sw" ? "Kukuza" : "Boost" },
-    { key: "leading", label: lang === "sw" ? "Kuongoza" : "Leading" },
-    { key: "advertisement", label: lang === "sw" ? "Matangazo" : "Ads" },
-    { key: "reservation", label: lang === "sw" ? "Uhifadhi" : "Reservation" },
-    { key: "sale", label: lang === "sw" ? "Mauzo" : "Sales" },
-    {
-      key: "bundle_purchase",
-      label: lang === "sw" ? "Vifurushi" : "Bundles",
-    },
+    { key: "listing_fee", label: t("Ada ya Kuchapisha", "Listing Fee") },
+    { key: "boost", label: t("Kukuza", "Boost") },
+    { key: "leading", label: t("Kuongoza", "Leading") },
+    { key: "advertisement", label: t("Matangazo", "Ads") },
+    { key: "reservation", label: t("Uhifadhi", "Reservation") },
+    { key: "sale", label: t("Mauzo", "Sales") },
+    { key: "bundle_purchase", label: t("Vifurushi", "Bundles") },
   ];
 
   const filtered = transactions.filter((tr) => {
     const matchesFilter = filter === "all" || tr.type === filter;
     const matchesSearch =
       !searchQuery ||
-      tr.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tr.ref.toLowerCase().includes(searchQuery.toLowerCase());
+      tr.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tr.ref?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
@@ -189,14 +197,16 @@ export default function MyTransactionsPage() {
   // ============================================================
   // DOWNLOAD FLOW
   // ============================================================
-  const handleDownloadClick = () => {
+  const handleDownloadClick = async () => {
     if (filtered.length === 0) return;
     setFeeError("");
     setBundleError("");
+    // Sasisha fee fresh kabla ya kuonyesha modal
+    await hydrateSuccessFeeStatusFromApi();
     setShowFeeFlow(true);
   };
 
-  // ── Download file kwa fetch + JWT ───────────────────────
+  // ── Download file kwa fetch + JWT ────────────────────────
   const performDownload = async () => {
     setDownloading(true);
     setFeeError("");
@@ -204,7 +214,6 @@ export default function MyTransactionsPage() {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
       const url = `${baseUrl}/finance/success-fee/download/?format=${format}`;
 
-      // Chukua JWT token kutoka localStorage
       const token = localStorage.getItem("sokomkononi_access");
 
       const response = await fetch(url, {
@@ -212,7 +221,16 @@ export default function MyTransactionsPage() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
-      // 402 Payment Required — inahitaji malipo
+      // 204 = no transactions
+      if (response.status === 204) {
+        setFeeError(
+          t("Hakuna miamala ya kupakua.", "No transactions to download.")
+        );
+        setDownloading(false);
+        return;
+      }
+
+      // 402 = payment required
       if (response.status === 402) {
         const errorData = await response.json().catch(() => ({}));
         setFeeError(
@@ -226,7 +244,7 @@ export default function MyTransactionsPage() {
         return;
       }
 
-      // 401 Unauthorized — token expired
+      // 401 = session expired
       if (response.status === 401) {
         setFeeError(
           t(
@@ -253,13 +271,13 @@ export default function MyTransactionsPage() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = `miamala_${new Date().toISOString().slice(0, 10)}.${format}`;
+      const ext = format === "doc" ? "docx" : format;
+      a.download = `miamala_${new Date().toISOString().slice(0, 10)}.${ext}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(downloadUrl);
 
-      // Funga modals
       setShowFeeFlow(false);
       setShowBundleModal(false);
       setPendingBundlePurchase(null);
@@ -267,23 +285,24 @@ export default function MyTransactionsPage() {
     } catch (err) {
       setFeeError(
         err?.message ||
-          t("Download imeshindikana. Jaribu tena.", "Download failed. Try again.")
+          t(
+            "Download imeshindikana. Jaribu tena.",
+            "Download failed. Try again."
+          )
       );
       setDownloading(false);
     }
   };
 
   // ============================================================
-  // PAYMENT FLOW — success fee (flat)
+  // PAYMENT FLOW — success fee (FimiPay)
   // ============================================================
   const handleFeeInitiate = async ({ methodKey, phone } = {}) => {
     setFeeError("");
     try {
-      const feeAmount = Number(status.fee) || 0;
-
+      // Backend inahesabu fee mwenyewe — tunatuma metadata tu
       const feeRes = await api.post("/finance/success-fee/", {
         purpose: "transactions",
-        amount: feeAmount,                  // ⬅️ LAZIMA!
         format,
         payment_method: methodKey || "",
         phone: phone || "",
@@ -317,11 +336,22 @@ export default function MyTransactionsPage() {
   };
 
   const handleFeeSuccess = async () => {
+    // Baada ya FimiPay success, poll kwa fee kuwa PAID kwenye backend
+    setDownloading(true);
+    const maxAttempts = 10;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const res = await hydrateSuccessFeeStatusFromApi();
+      if (res.ok && res.status && !res.status.requires_payment) {
+        break;
+      }
+    }
+    setDownloading(false);
     await performDownload();
   };
 
   const handleModalConfirm = () => {
-    if (status?.is_free) {
+    if (isFree) {
       performDownload();
       return;
     }
@@ -329,17 +359,18 @@ export default function MyTransactionsPage() {
       handleCreditDownload();
       return;
     }
+    // Nenda kwa FimiPay flow
     setShowFeeFlow(false);
     setShowBundleModal(true);
   };
 
-  // ── Credit download ────────────────────────────────────
+  // ── Credit download ──────────────────────────────────────
   const handleCreditDownload = async () => {
     setDownloading(true);
     setFeeError("");
     try {
       const res = await consumeCreditAsync(user?.id, "success");
-      if (!res.success) {
+      if (!res.success && !res.ok) {
         setFeeError(
           t(
             "Hakuna success credit ya kutosha.",
@@ -351,10 +382,7 @@ export default function MyTransactionsPage() {
       }
       await performDownload();
     } catch (err) {
-      setFeeError(
-        err?.message ||
-          t("Imeshindikana.", "Failed.")
-      );
+      setFeeError(err?.message || t("Imeshindikana.", "Failed."));
       setDownloading(false);
     }
   };
@@ -401,12 +429,31 @@ export default function MyTransactionsPage() {
     }
   };
 
+  // ⬇️ SASISHO: Poll kwa credits kabla ya kutuma download
   const handleBundleSuccess = async () => {
-    // Bundle credits zinaingizwa. Tumia credit kwa download.
     setBundleLoading(true);
+    setBundleError("");
     try {
+      // Subiri webhook iingize credits
+      const pollRes = await pollForCredit(user?.id, "success", {
+        attempts: 10,
+        intervalMs: 2000,
+      });
+
+      if (!pollRes.ok) {
+        setBundleError(
+          t(
+            "Malipo yamefanyika lakini credits bado hazijaingia. Subiri sekunde chache na ujaribu tena.",
+            "Payment went through but credits haven't arrived yet. Wait a moment and try again."
+          )
+        );
+        setBundleLoading(false);
+        return;
+      }
+
+      // Sasa tumia credit
       const res = await consumeCreditAsync(user?.id, "success");
-      if (res.success) {
+      if (res.success || res.ok) {
         await performDownload();
       } else {
         setBundleError(
@@ -447,8 +494,10 @@ export default function MyTransactionsPage() {
           onClick={handleDownloadClick}
           disabled={filtered.length === 0}
           style={{
-            background: filtered.length > 0 ? COLORS.gold : COLORS.sandLine,
-            color: filtered.length > 0 ? COLORS.night : "var(--text-muted)",
+            background:
+              filtered.length > 0 ? COLORS.gold : COLORS.sandLine,
+            color:
+              filtered.length > 0 ? COLORS.night : "var(--text-muted)",
           }}
           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 disabled:cursor-not-allowed"
         >
@@ -505,7 +554,7 @@ export default function MyTransactionsPage() {
         </div>
       </div>
 
-      {/* ── Filters + Search ─────────────────────────────── */}
+      {/* ── Search ───────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <div
           className="flex items-center gap-2 bg-white border rounded-lg px-3 py-2 flex-1 min-w-0"
@@ -522,6 +571,7 @@ export default function MyTransactionsPage() {
         </div>
       </div>
 
+      {/* ── Filters ──────────────────────────────────────── */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
         {filters.map((f) => (
           <button
@@ -529,7 +579,8 @@ export default function MyTransactionsPage() {
             onClick={() => setFilter(f.key)}
             style={{
               background: filter === f.key ? COLORS.night : "white",
-              color: filter === f.key ? COLORS.sand : "var(--text-primary)",
+              color:
+                filter === f.key ? COLORS.sand : "var(--text-primary)",
               borderColor: COLORS.sandLine,
             }}
             className="text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
@@ -569,7 +620,10 @@ export default function MyTransactionsPage() {
             return (
               <div
                 key={tr.id}
-                style={{ borderColor: COLORS.sandLine, background: "white" }}
+                style={{
+                  borderColor: COLORS.sandLine,
+                  background: "white",
+                }}
                 className="rounded-xl border p-3 sm:p-4 flex items-start gap-3"
               >
                 <div
@@ -582,7 +636,10 @@ export default function MyTransactionsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span
-                      style={{ background: `${meta.color}15`, color: meta.color }}
+                      style={{
+                        background: `${meta.color}15`,
+                        color: meta.color,
+                      }}
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                     >
                       {meta.label[lang]}
@@ -612,7 +669,8 @@ export default function MyTransactionsPage() {
                 <div className="text-right shrink-0">
                   <p
                     style={{
-                      color: tr.type === "sale" ? COLORS.green : COLORS.rust,
+                      color:
+                        tr.type === "sale" ? COLORS.green : COLORS.rust,
                     }}
                     className="text-sm font-bold"
                   >
@@ -627,7 +685,7 @@ export default function MyTransactionsPage() {
       )}
 
       {/* ============================================================ */}
-      {/* FORMAT SELECTOR MODAL — Free download */}
+      {/* FORMAT SELECTOR MODAL */}
       {/* ============================================================ */}
       {showFeeFlow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -638,7 +696,7 @@ export default function MyTransactionsPage() {
                   {t("Pakua Ripoti", "Download Report")}
                 </h3>
                 <p className="text-xs text-secondary mt-0.5">
-                  {status.is_free
+                  {isFree
                     ? t(
                         "Chagua format. Download ni bure.",
                         "Choose format. Download is free."
@@ -668,10 +726,12 @@ export default function MyTransactionsPage() {
                   key={key}
                   onClick={() => setFormat(key)}
                   style={{
-                    borderColor: format === key ? COLORS.gold : COLORS.sandLine,
+                    borderColor:
+                      format === key ? COLORS.gold : COLORS.sandLine,
                     background:
                       format === key ? `${COLORS.gold}15` : "white",
-                    color: format === key ? "#8A5A16" : "var(--text-primary)",
+                    color:
+                      format === key ? "#8A5A16" : "var(--text-primary)",
                   }}
                   className="flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-colors"
                 >
@@ -682,7 +742,7 @@ export default function MyTransactionsPage() {
             </div>
 
             {/* Fee summary */}
-            {!status.is_free && (
+            {!isFree && (
               <div
                 style={{
                   background: `${COLORS.gold}10`,
@@ -698,7 +758,7 @@ export default function MyTransactionsPage() {
                     style={{ color: "#8A5A16" }}
                     className="text-sm font-bold"
                   >
-                    {formatTZS(Number(status.fee))}
+                    {formatTZS(feeAmount)}
                   </span>
                 </div>
                 {hasCredit && (
@@ -749,7 +809,7 @@ export default function MyTransactionsPage() {
                     <Loader2 size={14} className="animate-spin" />
                     {t("Inapakia...", "Loading...")}
                   </>
-                ) : status.is_free ? (
+                ) : isFree ? (
                   <>
                     <Download size={14} />
                     {t("Pakua", "Download")}
@@ -775,7 +835,7 @@ export default function MyTransactionsPage() {
       )}
 
       {/* ============================================================ */}
-      {/* BUNDLE MODAL — purchase bundle kwa success fee */}
+      {/* BUNDLE MODAL */}
       {/* ============================================================ */}
       {showBundleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -812,8 +872,12 @@ export default function MyTransactionsPage() {
                     onClick={() => setPendingBundlePurchase(b)}
                     disabled={bundleLoading}
                     style={{
-                      borderColor: isSelected ? COLORS.gold : COLORS.sandLine,
-                      background: isSelected ? `${COLORS.gold}10` : "white",
+                      borderColor: isSelected
+                        ? COLORS.gold
+                        : COLORS.sandLine,
+                      background: isSelected
+                        ? `${COLORS.gold}10`
+                        : "white",
                     }}
                     className="flex items-center gap-3 border-2 rounded-xl p-3 text-left transition-colors disabled:opacity-50"
                   >
@@ -869,8 +933,7 @@ export default function MyTransactionsPage() {
               <button
                 onClick={() => {
                   if (!pendingBundlePurchase) return;
-                  // Pass bundle modal flow to PaymentGateway
-                  // (handled by parent render logic)
+                  // Pay inafanyika kupitia PaymentGateway (haipo kwenye scope hii)
                 }}
                 disabled={!pendingBundlePurchase || bundleLoading}
                 style={{
@@ -903,11 +966,11 @@ export default function MyTransactionsPage() {
       )}
 
       {/* ============================================================ */}
-      {/* PAYMENT GATEWAY — inaruhusu FimiPay order */}
+      {/* PAYMENT GATEWAY */}
       {/* ============================================================ */}
-      {showFeeFlow && !status.is_free && !hasCredit && (
+      {showFeeFlow && !isFree && !hasCredit && (
         <PaymentGateway
-          amount={Number(status.fee)}
+          amount={feeAmount}
           onInitiate={handleFeeInitiate}
           onSuccess={handleFeeSuccess}
           onClose={() => setShowFeeFlow(false)}
