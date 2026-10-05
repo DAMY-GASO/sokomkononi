@@ -1,5 +1,6 @@
 // ============================================================
 // messagesStore.js — API-only via /api/messaging/
+// Stubs zimeondolewa. Tumia Async versions pekee.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -185,7 +186,7 @@ export function useConversations(currentUserId) {
   return state;
 }
 
-// Reactive unread count (was previously a one-shot read).
+// Reactive unread count.
 export function useUnreadMessagesCount() {
   const [count, setCount] = useState(() =>
     read().reduce((sum, c) => sum + (c.unreadCount || 0), 0)
@@ -203,15 +204,14 @@ export function useUnreadMessagesCount() {
   return count;
 }
 
-export function sendMessage() {
-  return [];
-}
-export function markConversationRead() {
-  return [];
-}
-export function receiveMessage() {
-  return [];
-}
+// ============================================================
+// STUBS ZILIZOONDOLEWA
+// Kama component yoyote inaita hizi, itapata ReferenceError.
+// Badilisha kwenda Async versions.
+// ============================================================
+// export function sendMessage() { ... }              → sendMessageAsync()
+// export function markConversationRead() { ... }     → markConversationReadAsync()
+// export function receiveMessage() { ... }           → (WebSocket inahitajika)
 
 export async function createConversationAsync({ listingId, initialMessage = "" }) {
   if (!listingId) return { ok: false, error: new Error("listingId is required") };
@@ -226,9 +226,9 @@ export async function createConversationAsync({ listingId, initialMessage = "" }
     return { ok: false, error: err };
   }
 }
+
 // ============================================================
 // FETCH CONVERSATION DETAIL — inarudisha messages kamili
-// Backend inarudisha ConversationSerializer (na messages field).
 // ============================================================
 export async function fetchConversationDetailAsync(conversationId, currentUserId) {
   if (!conversationId) {
@@ -237,7 +237,6 @@ export async function fetchConversationDetailAsync(conversationId, currentUserId
   try {
     const raw = await api.get(`/messaging/conversations/${conversationId}/`);
     
-    // Update conversation kwenye store na messages kamili
     const normalized = norm(raw, currentUserId);
     if (normalized) {
       const current = getConversations();
