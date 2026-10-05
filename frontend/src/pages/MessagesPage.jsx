@@ -21,8 +21,9 @@
 // - `fetchConversationDetailAsync` inaitwa.
 // ============================================================
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
-  MessageSquare, Search, Send, ArrowLeft, Phone, MoreVertical,
+  MessageSquare, Search, Send, ArrowLeft, MoreVertical, ExternalLink,
   Check, CheckCheck, Loader2, AlertCircle,
 } from "lucide-react";
 import { COLORS, timeAgo } from "./dashboard/components/shared";
@@ -165,6 +166,27 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang, loading }) {
   const { name, avatar } = getCounterparty(convo, currentUserId);
   const scrollRef = useRef(null);
   const endRef = useRef(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  const listingId =
+    convo.listingId ?? convo.listing_id ?? convo.listing?.id ?? null;
+
+  // Funga menu ukibonyeza nje yake au Escape
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onDown = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    const onKey = (e) => e.key === "Escape" && setMenuOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   const grouped = useMemo(
     () => groupMessages(convo.messages || [], lang),
@@ -241,18 +263,47 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang, loading }) {
             {convo.online ? ` · ${t(lang, "mtandaoni", "online")}` : ""}
           </p>
         </div>
-        <button
-          className="p-2 text-muted hover:text-secondary rounded-lg hover:bg-gray-100 transition-colors shrink-0"
-          aria-label={t(lang, "Piga simu", "Call")}
-        >
-          <Phone size={18} />
-        </button>
-        <button
-          className="p-2 text-muted hover:text-secondary rounded-lg hover:bg-gray-100 transition-colors shrink-0"
-          aria-label={t(lang, "Zaidi", "More")}
-        >
-          <MoreVertical size={18} />
-        </button>
+        {/* Menu ya vidoti vitatu — vitendo halisi tu.
+            (Kitufe cha simu kimeondolewa: mawasiliano yote yanapitia
+            SokoMkononi, hakuna kushiriki namba za simu.) */}
+        <div className="relative shrink-0" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="p-2 text-muted hover:text-secondary rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label={t(lang, "Zaidi", "More")}
+          >
+            <MoreVertical size={18} />
+          </button>
+          {menuOpen && (
+            <div
+              role="menu"
+              style={{ borderColor: COLORS.sandLine }}
+              className="absolute right-0 top-full mt-1 z-20 min-w-[190px] rounded-xl border bg-white py-1 shadow-lg"
+            >
+              {listingId ? (
+                <Link
+                  role="menuitem"
+                  to={`/mali/${listingId}`}
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2.5 text-sm text-primary hover:bg-sand"
+                >
+                  <ExternalLink size={14} className="text-muted" />
+                  {t(lang, "Angalia tangazo", "View listing")}
+                </Link>
+              ) : (
+                <p
+                  style={{ color: "var(--text-muted)" }}
+                  className="px-3 py-2.5 text-xs"
+                >
+                  {t(lang, "Hakuna vitendo vingine.", "No other actions.")}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Messages */}
@@ -325,7 +376,10 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang, loading }) {
                     }}
                     className="border rounded-2xl px-3.5 py-2 max-w-[78%] sm:max-w-[70%]"
                   >
-                    <p className="text-sm whitespace-pre-wrap break-words leading-snug">
+                    <p
+                      className="text-sm whitespace-pre-wrap break-words leading-snug"
+                      style={{ color: "inherit" }}
+                    >
                       {m.text}
                     </p>
                     <div

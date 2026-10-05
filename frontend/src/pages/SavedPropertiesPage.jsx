@@ -8,195 +8,20 @@ import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Heart,
-  MapPin,
-  Eye,
-  Trash2,
   Grid3x3,
   List,
   Search,
   Bell,
-  Clock3,
-  Ban,
-  Shield,
 } from "lucide-react";
 import {
   COLORS,
-  formatTZS,
-  timeAgo,
   getCategory,
 } from "./dashboard/components/shared";
 import { usePublicListings } from "../config/listingsStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { getCategoryIcon } from "../config/categoriesStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import ListingImage from "../components/ListingImage.jsx";
-
-// ============================================================
-// CARD IMAGE RESOLVER
-// ============================================================
-function resolveCardImage(property, category) {
-  if (property?.imageUrl) return property.imageUrl;
-  if (Array.isArray(property?.photos) && property.photos[0]) {
-    const p = property.photos[0];
-    return typeof p === "string" ? p : p?.image_url || p?.url || null;
-  }
-  if (category?.imageUrl) return category.imageUrl;
-  return null;
-}
-
-// ============================================================
-// SAVED CARD — imeachwa (kadi zina data nyingi)
-// ============================================================
-function SavedCard({ property, viewMode, onRemove, lang }) {
-  const category = getCategory(property.category);
-  const Icon = getCategoryIcon(category?.iconKey);
-  const categoryLabel =
-    category?.label?.[lang] || category?.label?.sw || property.category;
-  const cardImage = resolveCardImage(property, category);
-
-  const isReserved = property.status === "reserved";
-  const isSold = property.status === "sold";
-  const isVerified = Boolean(property.verified);
-
-  const t = (sw, en) => (lang === "sw" ? sw : en);
-
-  const handleRemove = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onRemove(property.id);
-  };
-
-  if (viewMode === "list") {
-    return (
-      <div
-        className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-shadow flex flex-col sm:flex-row ${
-          isSold ? "border-gray-200 opacity-75" : "border-gray-100"
-        }`}
-      >
-        <Link
-          to={`/mali/${property.id}`}
-          className="w-full sm:w-48 sm:self-start flex-shrink-0 relative overflow-hidden"
-        >
-          <ListingImage
-            src={cardImage}
-            alt={property.title}
-            ratio="aspect-square"
-            fallback={<Icon size={32} />}
-          />
-          {isReserved && (
-            <span className="absolute top-2 left-2 bg-gold text-night text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Clock3 size={10} /> {t("IMEHIFADHIWA", "RESERVED")}
-            </span>
-          )}
-          {isSold && (
-            <span className="absolute top-2 left-2 bg-night text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Ban size={10} /> {t("IMEUZWA", "SOLD")}
-            </span>
-          )}
-        </Link>
-        <div className="flex-1 p-4 flex flex-col">
-          <div className="flex items-start justify-between gap-2">
-            <Link to={`/mali/${property.id}`} className="flex-1 min-w-0">
-              <h3 className="font-semibold text-primary text-sm hover:text-gold-ink transition-colors">
-                {property.title}
-              </h3>
-            </Link>
-            <button
-              onClick={handleRemove}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
-              aria-label={t("Ondoa", "Remove")}
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-
-          <span className="inline-block mt-1.5 text-[10px] font-medium text-gold-ink bg-gold/10 px-2 py-0.5 rounded-full w-fit">
-            {categoryLabel}
-          </span>
-
-          <div className="flex items-center gap-1 mt-1.5 text-xs text-secondary">
-            <MapPin size={12} />
-            {property.location}
-          </div>
-          <p className="text-night font-bold text-base mt-2">
-            {formatTZS(property.price)}
-          </p>
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-            <span className="text-xs text-muted">
-              {timeAgo(property.postedAt, lang)}
-            </span>
-            <Link
-              to={`/mali/${property.id}`}
-              className="text-xs font-semibold text-gold-ink hover:underline"
-            >
-              {t("Angalia", "View")} →
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-all group ${
-        isSold ? "border-gray-200 opacity-75" : "border-gray-100"
-      }`}
-    >
-      <Link to={`/mali/${property.id}`} className="block relative">
-        <ListingImage
-          src={cardImage}
-          alt={property.title}
-          ratio="aspect-square"
-          fallback={<Icon size={40} />}
-        />
-        {isReserved && (
-          <span className="absolute top-2 left-2 bg-gold text-night text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Clock3 size={10} /> {t("IMEHIFADHIWA", "RESERVED")}
-          </span>
-        )}
-        {isSold && (
-          <span className="absolute top-2 left-2 bg-night text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Ban size={10} /> {t("IMEUZWA", "SOLD")}
-          </span>
-        )}
-        {isVerified && (
-          <span className="absolute top-2 right-2 bg-green text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Shield size={10} /> {t("Imethibitishwa", "Verified")}
-          </span>
-        )}
-        <button
-          onClick={handleRemove}
-          className="absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center bg-white/90 text-rust hover:bg-red-500 hover:text-white transition-colors"
-          aria-label={t("Ondoa", "Remove")}
-        >
-          <Trash2 size={16} />
-        </button>
-      </Link>
-      <Link to={`/mali/${property.id}`} className="block p-4">
-        <span className="inline-block text-[10px] font-medium text-gold-ink bg-gold/10 px-2 py-0.5 rounded-full mb-1">
-          {categoryLabel}
-        </span>
-        <h3 className="font-semibold text-primary text-sm truncate">
-          {property.title}
-        </h3>
-        <div className="flex items-center gap-1 mt-1 text-xs text-secondary">
-          <MapPin size={12} />
-          <span className="truncate">{property.location}</span>
-        </div>
-        <p className="text-night font-bold text-base mt-2">
-          {formatTZS(property.price)}
-        </p>
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-xs text-muted">
-          <span className="flex items-center gap-1">
-            <Eye size={12} /> {property.views || 0}
-          </span>
-          <span>{timeAgo(property.postedAt, lang)}</span>
-        </div>
-      </Link>
-    </div>
-  );
-}
+import ListingCard from "../components/ListingCard.jsx";
 
 // ============================================================
 // MAIN COMPONENT
@@ -216,8 +41,8 @@ export default function SavedPropertiesPage() {
 
   const filtered = saved.filter(
     (p) =>
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.location.toLowerCase().includes(searchQuery.toLowerCase())
+      (p.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.location || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleRemove = (id) => toggleSaved(id);
@@ -382,19 +207,25 @@ export default function SavedPropertiesPage() {
           <div
             className={
               viewMode === "grid"
-                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+                ? "grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4"
                 : "flex flex-col gap-3"
             }
           >
-            {filtered.map((p) => (
-              <SavedCard
-                key={p.id}
-                property={p}
-                viewMode={viewMode}
-                onRemove={handleRemove}
-                lang={lang}
-              />
-            ))}
+            {filtered.map((p) => {
+              const cat = getCategory(p.category);
+              return (
+                <ListingCard
+                  key={p.id}
+                  listing={p}
+                  category={cat}
+                  Icon={getCategoryIcon(cat?.iconKey)}
+                  lang={lang}
+                  viewMode={viewMode}
+                  isSaved
+                  onToggleSave={handleRemove}
+                />
+              );
+            })}
           </div>
         )}
       </div>

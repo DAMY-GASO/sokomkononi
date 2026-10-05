@@ -10,7 +10,7 @@ import {
   MapPin, Bed, Bath, Maximize, Calendar, Heart, Share2, Phone,
   MessageSquare, ChevronLeft, ChevronRight, CheckCircle, Shield,
   Eye, Flag, Star, Camera, Car, Settings, Trees, Home as HomeIcon,
-  Briefcase, Wrench, Clock3, BellRing, Ban, Download,
+  Briefcase, Wrench, Clock3, BellRing, Ban, Pencil,
 } from "lucide-react";
 import {
   useListings,
@@ -30,8 +30,10 @@ import {
   isBoostActive,
   isLeadingActive,
 } from "./dashboard/components/shared";
-import SimilarListingsSection from "./SimilarListingsSection.jsx";
-import { downloadImage, downloadAllImages } from "../utils/downloadImage.js";
+
+// Mmiliki wa tangazo anapelekwa hapa kuhariri. BADILISHA njia hii kulingana
+// na route ya "Mali Zangu" ya muuzaji kwenye app yako.
+const ownerEditPath = (id) => `/dashboard/seller/listings?edit=${id}`;
 
 const CATEGORY_ICONS = {
   nyumba: HomeIcon,
@@ -77,7 +79,6 @@ function reservationCountdown(reservedUntil, lang) {
 
 function ImageGallery({ property, lang }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [downloading, setDownloading] = useState(false);
 
   const rawList = [
     ...(Array.isArray(property.images) ? property.images : []),
@@ -119,33 +120,6 @@ function ImageGallery({ property, lang }) {
   const nextImage = () => setCurrentIndex((prev) => (prev + 1) % images.length);
   const prevImage = () => setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
 
-  const handleDownloadCurrent = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (downloading) return;
-    setDownloading(true);
-    try {
-      await downloadImage(
-        images[currentIndex],
-        `sokomkononi-${property.id}-${currentIndex + 1}.jpg`
-      );
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  const handleDownloadAll = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (downloading) return;
-    setDownloading(true);
-    try {
-      await downloadAllImages(images, `sokomkononi-${property.id}`);
-    } finally {
-      setDownloading(false);
-    }
-  };
-
   return (
     <>
       <div className="relative w-full aspect-square max-w-[640px] mx-auto rounded-2xl overflow-hidden bg-sand">
@@ -176,38 +150,10 @@ function ImageGallery({ property, lang }) {
             </button>
           </>
         )}
-
-        {/* Download buttons - chini kushoto */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-2 z-10">
-          <button
-            onClick={handleDownloadCurrent}
-            disabled={downloading}
-            className="bg-black/60 hover:bg-black/80 text-white text-body-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors disabled:opacity-60"
-            title={t(lang, "Download picha hii", "Download this image")}
-          >
-            <Download size={14} />
-            {t(lang, "Download", "Download")}
-          </button>
-
-          {images.length > 1 && (
-            <button
-              onClick={handleDownloadAll}
-              disabled={downloading}
-              className="bg-black/60 hover:bg-black/80 text-white text-body-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors disabled:opacity-60"
-              title={t(lang, "Download zote", "Download all")}
-            >
-              <Download size={14} />
-              {t(lang, "Zote", "All")}
-            </button>
-          )}
-        </div>
-
-        {/* Counter - chini kulia */}
         <div className="absolute bottom-3 right-3 bg-black/60 text-white text-body-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10">
           <Camera size={14} />
           {currentIndex + 1} / {images.length}
         </div>
-
         {isFeatured && (
           <div className="absolute top-3 left-3 bg-gold text-night text-body-sm font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Star size={12} fill="#011957" />
@@ -225,36 +171,15 @@ function ImageGallery({ property, lang }) {
       {images.length > 1 && (
         <div className="flex gap-2 mt-3 overflow-x-auto pb-2 max-w-[640px] mx-auto">
           {images.map((img, idx) => (
-            <div key={idx} className="relative flex-shrink-0">
-              <button
-                onClick={() => setCurrentIndex(idx)}
-                className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                  idx === currentIndex
-                    ? "border-gold opacity-100"
-                    : "border-transparent opacity-60 hover:opacity-100"
-                }`}
-              >
-                <img
-                  src={img}
-                  alt=""
-                  loading="lazy"
-                  className="w-full h-full object-cover object-center block"
-                />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  downloadImage(
-                    img,
-                    `sokomkononi-${property.id}-${idx + 1}.jpg`
-                  );
-                }}
-                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center z-10"
-                title={t(lang, "Download", "Download")}
-              >
-                <Download size={10} />
-              </button>
-            </div>
+            <button
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all ${
+                idx === currentIndex ? "border-gold opacity-100" : "border-transparent opacity-60 hover:opacity-100"
+              }`}
+            >
+              <img src={img} alt="" loading="lazy" className="w-full h-full object-cover object-center block" />
+            </button>
           ))}
         </div>
       )}
@@ -298,6 +223,10 @@ function FeaturesSection({ property, lang }) {
   );
 }
 
+// ============================================================
+// ATTRIBUTES TABLE — inaonyesha fields zote za kategoria kama jedwali
+// Inasoma property.attributes (JSONField) + CATEGORY_EXTRA + mode fields
+// ============================================================
 function AttributesTable({ property, lang }) {
   const rows = useMemo(() => {
     const out = [];
@@ -306,6 +235,7 @@ function AttributesTable({ property, lang }) {
     const cfg = getPostingConfig(categoryKey);
     const attrs = property.attributes || {};
 
+    // Helper: rudisha thamani inayoonekana kwa field
     const resolveValue = (f, raw) => {
       if (raw === undefined || raw === null) return null;
       const str = String(raw).trim();
@@ -314,6 +244,7 @@ function AttributesTable({ property, lang }) {
       return opt ? (opt.label?.[lang] || opt.label?.sw || str) : str;
     };
 
+    // 1. Mode (kwa Jobs/Huduma)
     if (cfg.modes && attrs.mode) {
       const mode = cfg.modes.find((m) => m.key === attrs.mode);
       if (mode) {
@@ -321,6 +252,7 @@ function AttributesTable({ property, lang }) {
           label: t(lang, "Aina", "Type"),
           value: mode.label?.[lang] || mode.label?.sw || attrs.mode,
         });
+        // Fields za mode
         (mode.extra || []).forEach((f) => {
           const v = resolveValue(f, attrs[f.key]);
           if (v !== null) {
@@ -333,7 +265,9 @@ function AttributesTable({ property, lang }) {
       }
     }
 
+    // 2. Fields za kategoria (kutoka CATEGORY_EXTRA)
     baseFields.forEach((f) => {
+      // Ruka field ikiwa ni ya mode tu (tayari imeshughulikiwa)
       if (cfg.modes && cfg.modes.some((m) => (m.extra || []).some((mf) => mf.key === f.key))) {
         return;
       }
@@ -346,6 +280,7 @@ function AttributesTable({ property, lang }) {
       }
     });
 
+    // 3. Eneo (Mkoa, Wilaya, Eneo)
     if (attrs.region) {
       out.push({ label: t(lang, "Mkoa", "Region"), value: attrs.region });
     }
@@ -390,7 +325,7 @@ function AttributesTable({ property, lang }) {
   );
 }
 
-function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onContact, lang }) {
+function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onContact, lang, isOwner = false, editTo }) {
   const isReserved = status === "reserved";
   const isSold = status === "sold";
   const isUnavailable = isReserved || isSold;
@@ -414,7 +349,22 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
         </div>
       </div>
 
-      {isUnavailable ? (
+      {isOwner ? (
+        <>
+          <div className="mb-3 p-3 rounded-xl bg-sand border border-sandline">
+            <p className="text-body-sm text-secondary text-center">
+              {t(lang, "Hili ni tangazo lako. Wanunuzi ndio wanaokuwasiliana nawe.", "This is your listing. Buyers will contact you.")}
+            </p>
+          </div>
+          <Link
+            to={editTo}
+            className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+          >
+            <Pencil size={16} />
+            {t(lang, "Hariri Tangazo", "Edit Listing")}
+          </Link>
+        </>
+      ) : isUnavailable ? (
         <>
           <div className="mb-3 p-3 rounded-xl bg-gold/10 border border-gold/30">
             <p className="text-body-sm font-semibold text-gold-ink flex items-center gap-1.5">
@@ -502,12 +452,25 @@ export default function PropertyDetailPage() {
     [allListings, id]
   );
 
+  // Je, mtumiaji ni mmiliki wa tangazo hili?
+  const ownerId =
+    property?.sellerId ??
+    property?.seller_id ??
+    property?.seller?.id ??
+    (typeof property?.seller === "number" || typeof property?.seller === "string"
+      ? property.seller
+      : null);
+  const isOwner = Boolean(user && ownerId != null && String(ownerId) === String(user.id));
+
   const savedIds = useSavedIds();
   const isSaved = property ? savedIds.includes(property.id) : false;
   const [showContactModal, setShowContactModal] = useState(false);
   const [contactLoading, setContactLoading] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
 
+  // ============================================================
+  // IMAGE PIPELINE
+  // ============================================================
   const [fetchedImages, setFetchedImages] = useState([]);
 
   useEffect(() => {
@@ -533,6 +496,7 @@ export default function PropertyDetailPage() {
     };
 
     (async () => {
+      // ---- Step 1: refresh the listing detail ----
       try {
         const detailRes = await fetchListingDetailAsync(property.id);
         if (cancelled) return;
@@ -544,6 +508,7 @@ export default function PropertyDetailPage() {
             l.imageUrl,
           ].filter(Boolean);
           if (urls.length > 0) {
+            console.log("[PropertyDetail] images from detail endpoint:", urls);
             setFetchedImages(urls);
             return;
           }
@@ -552,12 +517,14 @@ export default function PropertyDetailPage() {
         console.warn("[PropertyDetail] detail fetch failed:", err);
       }
 
+      // ---- Step 2: fall back to the images endpoint ----
       try {
         const imagesRes = await fetchListingImagesAsync(property.id);
         if (cancelled) return;
         if (imagesRes?.ok) {
           const urls = extractUrls(imagesRes.images);
           if (urls.length > 0) {
+            console.log("[PropertyDetail] images from /images/ endpoint:", urls);
             setFetchedImages(urls);
             return;
           }
@@ -565,6 +532,12 @@ export default function PropertyDetailPage() {
       } catch (err) {
         console.warn("[PropertyDetail] images fetch failed:", err);
       }
+
+      console.warn(
+        "[PropertyDetail] no images found for listing",
+        property.id,
+        "— check backend /listings/ and /listings/{id}/images/"
+      );
     })();
 
     return () => {
@@ -587,7 +560,7 @@ export default function PropertyDetailPage() {
   );
 
   useEffect(() => {
-    if (!user || !property || !location.state) return;
+    if (!user || !property || isOwner || !location.state) return;
     const { openContactModal, autoJoinWaitlist } = location.state;
 
     if (openContactModal) setShowContactModal(true);
@@ -606,6 +579,7 @@ export default function PropertyDetailPage() {
   if (!property) return <ListingNotFound lang={lang} />;
 
   const handleJoinWaitlist = () => {
+    if (isOwner) return;
     if (!user) {
       navigate("/login", {
         state: { from: `${location.pathname}${location.search}`, autoJoinWaitlist: true },
@@ -633,6 +607,7 @@ export default function PropertyDetailPage() {
   };
 
   const handleContact = () => {
+    if (isOwner) return;
     if (!user) {
       navigate("/login", {
         state: { from: `${location.pathname}${location.search}`, openContactModal: true },
@@ -643,7 +618,7 @@ export default function PropertyDetailPage() {
   };
 
   const handleStartDealRoom = async () => {
-    if (contactLoading) return;
+    if (isOwner || contactLoading) return;
     if (!user) {
       navigate("/login", {
         state: { from: `${location.pathname}${location.search}`, openContactModal: true },
@@ -680,7 +655,7 @@ export default function PropertyDetailPage() {
   };
 
   const handleStartConversation = async () => {
-    if (contactLoading) return;
+    if (isOwner || contactLoading) return;
     if (!user) {
       navigate("/login", {
         state: { from: `${location.pathname}${location.search}`, openContactModal: true },
@@ -856,6 +831,7 @@ export default function PropertyDetailPage() {
                       </p>
                     </div>
 
+                    {/* JEDWALI LA TAARIFA ZA KATEGORIA */}
                     <div>
                       <h3 className="font-semibold text-primary mb-3">
                         {t(lang, "Taarifa za Kategoria", "Category Details")}
@@ -863,6 +839,7 @@ export default function PropertyDetailPage() {
                       <AttributesTable property={property} lang={lang} />
                     </div>
 
+                    {/* Sifa za haraka */}
                     <div>
                       <h3 className="font-semibold text-primary mb-3">
                         {t(lang, "Sifa za Haraka", "Quick Features")}
@@ -895,6 +872,8 @@ export default function PropertyDetailPage() {
               onJoinWaitlist={handleJoinWaitlist}
               onContact={handleContact}
               lang={lang}
+              isOwner={isOwner}
+              editTo={ownerEditPath(property.id)}
             />
 
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
@@ -932,14 +911,9 @@ export default function PropertyDetailPage() {
             </div>
           </div>
         </div>
-
-        {/* Similar Listings */}
-        {property && property.id && (
-          <SimilarListingsSection listingId={property.id} lang={lang} />
-        )}
       </div>
 
-      {showContactModal && (
+      {showContactModal && !isOwner && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 text-center">
             <h3 className="text-primary mb-2">
