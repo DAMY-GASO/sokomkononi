@@ -1,5 +1,8 @@
 // ============================================================
 // dealsStore.js — Backend: /api/deals/
+// CHAGUO A: buyer + seller wote wanaweza kutuma offers na kukubali.
+// Ulinzi wa store unalingana na backend (NegotiationOfferCreateSerializer
+// + DealRoomAcceptOfferSerializer).
 // ============================================================
 import { useEffect, useState, useMemo } from "react";
 import { dealsApi } from "../api/deals.js";
@@ -67,11 +70,7 @@ export function getDealByListing(listingId) {
   return getDeals().find((d) => sameId(d.listingId, listingId)) || null;
 }
 
-
 // ── Price resolution ────────────────────────────────────────
-// The /deals/ endpoint does not always serialize listing.price,
-// agreed_price, or the latest offer. Try every field, then fall
-// back to the listings cache (already hydrated from /listings/).
 function resolveAskingPrice(raw, listing, listingId) {
   const candidates = [
     listing?.price,
@@ -95,7 +94,6 @@ function resolveAskingPrice(raw, listing, listingId) {
 }
 
 function resolveCurrentOffer(raw, offers) {
-  // Latest offer wins
   const arr = Array.isArray(offers) ? offers : (raw?.offers || []);
   if (arr.length > 0) {
     const sorted = [...arr].sort(
@@ -104,12 +102,10 @@ function resolveCurrentOffer(raw, offers) {
     const n = Number(sorted[0]?.amount);
     if (Number.isFinite(n) && n > 0) return n;
   }
-  // Then any explicitly agreed price
   for (const c of [raw?.agreed_price, raw?.current_offer, raw?.offer_amount]) {
     const n = Number(c);
     if (Number.isFinite(n) && n > 0) return n;
   }
-  // Genuinely no offer yet — 0 is correct here.
   return 0;
 }
 
@@ -156,8 +152,6 @@ function normalizeDealFromApi(raw, currentUserId) {
     buyerName: buyer.name || raw.buyer_name || "",
     sellerId: seller.id ?? null,
     sellerName: seller.name || raw.seller_name || "",
-    // Namba ya muuzaji: BACKEND inatuma tu baada ya Reservation Fee kulipwa.
-    // Hapa tunasoma tu kile kilichotumwa — hatuiamui kwenye frontend.
     sellerPhone:
       seller.phone ??
       seller.phone_number ??
@@ -216,7 +210,6 @@ function normalizeDealFromApi(raw, currentUserId) {
     updatedAt: raw.updated_at,
 
     messages: [
-      // Real chat messages (if the backend ever returns them).
       ...((raw.messages || []).map((m) => ({
         id: m.id,
         sender: sameId(m.sender_id ?? m.sender, currentUserId) ? "me" : "them",
@@ -225,7 +218,6 @@ function normalizeDealFromApi(raw, currentUserId) {
         at: m.created_at,
         status: m.status || null,
       }))),
-      // Offers appear as their own bubbles.
       ...((raw.offers || []).map((o) => ({
         id: o.id,
         sender: sameId(o.offered_by, currentUserId) ? "me" : "them",
@@ -302,8 +294,11 @@ export async function getOrCreateDealAsync({
   }
 }
 
-// currentUserId (hiari lakini inashauriwa): kama ipo, ni mnunuzi pekee
-// anayeruhusiwa kutoa ofa. Backend lazima nayo ilinde sheria hii.
+// ============================================================
+// SEND OFFER — CHAGUO A
+// Buyer NA seller wote wanaweza kutuma offers (counter-offers).
+// Ulinzi: mtumiaji LAZIMA awe mshiriki wa deal hii.
+// ============================================================
 export async function sendOfferAsync(
   dealId,
   amount,
@@ -314,12 +309,17 @@ export async function sendOfferAsync(
   const previous = getDeals();
   const deal = previous.find((d) => sameId(d.id, dealId));
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
-  if (
-    currentUserId != null &&
-    deal.buyerId != null &&
-    !sameId(deal.buyerId, currentUserId)
-  ) {
-    return { ok: false, error: new Error("Mnunuzi pekee ndiye anaweza kutoa ofa.") };
+
+  // Ulinzi: mtumiaji lazima awe buyer au seller wa deal hii.
+  if (currentUserId != null) {
+    const isBuyer = deal.buyerId != null && sameId(deal.buyerId, currentUserId);
+    const isSeller = deal.sellerId != null && sameId(deal.sellerId, currentUserId);
+    if (!isBuyer && !isSeller) {
+      return {
+        ok: false,
+        error: new Error("Huruhusiwi kutuma ofa kwenye Deal Room hii."),
+      };
+    }
   }
 
   const tempMsgId = `temp_${Date.now()}`;
@@ -378,18 +378,40 @@ export async function sendOfferAsync(
   }
 }
 
-// currentUserId (hiari lakini inashauriwa): kama ipo, ni muuzaji pekee
-// anayeruhusiwa kukubali ofa — mnunuzi hawezi kukubali ofa yake mwenyewe.
+// ============================================================
+// ACCEPT OFFER — CHAGUO A
+// Yeyote aliye UPANDE WA PILI wa offer ya mwisho anaweza kukubali.
+// - Mnunuzi anatuma offer → muuzaji anaweza kukubali
+// - Muuzaji anatuma counter → mnunuzi anaweza kukubali
+// Ulinzi: mtumiaji LAZIMA awe mshiriki, na ASIWE mwenyekiti wa offer.
+// ============================================================
 export async function acceptOfferAsync(dealId, offerId, currentUserId = null) {
   const previous = getDeals();
   const deal = previous.find((d) => sameId(d.id, dealId));
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
-  if (
-    currentUserId != null &&
-    deal.sellerId != null &&
-    !sameId(deal.sellerId, currentUserId)
-  ) {
-    return { ok: false, error: new Error("Muuzaji pekee ndiye anaweza kukubali ofa.") };
+
+  if (currentUserId != null) {
+    // 1. Lazima awe mshiriki wa deal
+    const isBuyer = deal.buyerId != null && sameId(deal.buyerId, currentUserId);
+    const isSeller = deal.sellerId != null && sameId(deal.sellerId, currentUserId);
+    if (!isBuyer && !isSeller) {
+      return {
+        ok: false,
+        error: new Error("Huruhusiwi kukubali ofa kwenye Deal Room hii."),
+      };
+    }
+
+    // 2. Hauwezi kukubali ofa yako mwenyewe
+    //    (offerId ni id ya offer; kwenye store, offers zina `sender` = "me" au "them")
+    const targetOffer = (deal.messages || []).find(
+      (m) => m.offerAmount && sameId(m.id, offerId)
+    );
+    if (targetOffer && targetOffer.sender === "me") {
+      return {
+        ok: false,
+        error: new Error("Huwezi kukubali ofa yako mwenyewe."),
+      };
+    }
   }
 
   saveDeals(
@@ -526,7 +548,6 @@ export function checkReservationReminders() {
 
 export function useDeals(currentUserId) {
   const [deals, setDeals] = useState(() => getDeals());
-  // Reactive listings cache — triggers a re-render when listings hydrate.
   const listings = useListings();
 
   useEffect(() => {
@@ -540,7 +561,6 @@ export function useDeals(currentUserId) {
     };
   }, [currentUserId]);
 
-  // Merge price/category/location from the listings cache when missing.
   return useMemo(() => {
     return deals.map((d) => {
       const needsPrice = !d.askingPrice || d.askingPrice <= 0;
