@@ -123,8 +123,8 @@ function fillSpan(itemCount, cols) {
 }
 
 // Idadi ya mali zinazotrend kwenye grid; kitufe cha "Tazama Zote" ni nafasi ya mwisho
-// (mali 19 + kitufe 1 = nafasi 20).
-const TRENDING_LIMIT = 19;
+// (mali 24 + kitufe 1 = nafasi 25).
+const TRENDING_LIMIT = 24;
 const TRENDING_COLS = { base: 2, md: 3, lg: 4 };
 const CATEGORY_COLS = { base: 2, sm: 3, md: 4, lg: 6 };
 
