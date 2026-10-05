@@ -21,4 +21,11 @@ export const notificationsApi = {
   hardRemove: (id) => api.delete(`/notifications/${id}/?hard=true`),
   hardRemoveAll: (params = {}) =>
     api.delete(`/notifications/clear-all/${toQuery(params)}`),
+
+  // ⬇️ Create a notification (used to notify admin about deletions, etc.)
+  create: (payload = {}) => api.post("/notifications/", payload),
+
+  // ⬇️ Convenience: notify the admin team about an event
+  notifyAdmin: (payload = {}) =>
+    api.post("/notifications/", { ...payload, audience: "admin" }),
 };

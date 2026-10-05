@@ -199,6 +199,46 @@ export async function clearNotificationsAsync(audience) {
 }
 
 // ============================================================
+// NOTIFY ADMIN ABOUT DELETION
+// (called from MyListings.jsx when a seller deletes a listing)
+// ============================================================
+export async function notifyAdminAboutDeletion(listing) {
+  try {
+    const deleter =
+      listing?.deleted_by?.name ||
+      listing?.deleted_by?.username ||
+      listing?.deleted_by?.email ||
+      null;
+
+    const baseMessage =
+      listing?.title ||
+      listing?.name ||
+      `Listing #${listing?.id ?? "unknown"} has been deleted.`;
+
+    const payload = {
+      notification_type: "LISTING_DELETED",
+      audience: "admin",
+      title: "Listing deleted by seller",
+      message: deleter
+        ? `${baseMessage} — deleted by ${deleter}`
+        : baseMessage,
+      related_object_type: "listing",
+      related_object_id: listing?.id ?? null,
+      action_url: listing?.id
+        ? `/admin/trash?listing=${listing.id}`
+        : "/admin/trash",
+      priority: "normal",
+    };
+
+    const res = await notificationsApi.notifyAdmin(payload);
+    await hydrateNotificationsFromApi();
+    return { ok: true, data: res };
+  } catch (err) {
+    console.error("[notifyAdminAboutDeletion] failed:", err);
+    return { ok: false, error: err };
+  }
+}
+// ============================================================
 // HOOK
 // ============================================================
 export function useNotifications(audience) {

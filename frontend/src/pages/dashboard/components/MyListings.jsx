@@ -279,57 +279,59 @@ export default function MyListings({
   ];
 
   // ============================================================
-  // HANDLE REMOVE — undo window + admin notification
-  // ============================================================
-  const handleRemove = async (id) => {
-    if (busy[id]) return;
-    const listing = listings.find((l) => String(l.id) === String(id));
-    if (!listing) return;
+// HANDLE REMOVE — undo window + admin notification
+// ============================================================
+const handleRemove = async (id) => {
+  if (busy[id]) return;
+  const listing = listings.find((l) => String(l.id) === String(id));
+  if (!listing) return;
 
-    setBusy((b) => ({ ...b, [id]: "delete" }));
+  setBusy((b) => ({ ...b, [id]: "delete" }));
 
-    // 1. Futa (soft delete) kwa API
-    const res = await onRemove(id);
-    setBusy((b) => {
-      const n = { ...b };
-      delete n[id];
-      return n;
-    });
+  // 1. Futa (soft delete) kwa API
+  const res = await onRemove(id);
+  setBusy((b) => {
+    const n = { ...b };
+    delete n[id];
+    return n;
+  });
 
-    if (!res?.ok) {
-      toast.error(
-        res?.error?.message || t("Imeshindikana kufuta", "Failed to delete")
-      );
-      return;
-    }
+  if (!res?.ok) {
+    toast.error(
+      res?.error?.message || t("Imeshindikana kufuta", "Failed to delete")
+    );
+    return;
+  }
 
-    // 2. Anzisha undo window
-    startUndo({
-      type: "listing",
-      id,
-      title: listing.title,
-      message: t(
-        `"${listing.title}" imefutwa. Unaweza kuirejesha.`,
-        `"${listing.title}" deleted. You can undo.`
-      ),
-      onRestore: async () => {
-        await restoreListingAsync(id);
-      },
-    });
+  // 2. Anzisha undo window
+  startUndo({
+    type: "listing",
+    id,
+    title: listing.title,
+    message: t(
+      `"${listing.title}" imefutwa. Unaweza kuirejesha.`,
+      `"${listing.title}" deleted. You can undo.`
+    ),
+    onRestore: async () => {
+      await restoreListingAsync(id);
+    },
+  });
 
-    // 3. Tuma notification kwa admin
-    notifyAdminAboutDeletion({
-      itemType: "listing",
-      itemId: id,
-      itemTitle: listing.title,
-      user,
-    });
+  // 3. Tuma notification kwa admin (fire-and-forget, lakini inaonekana kwenye console)
+  //    ⬇️ TUNA TUMA `listing` YENYEWE, sio object mpya
+  notifyAdminAboutDeletion({
+    ...listing,
+    id, // hakikisha id ni ile halisi (String vs Number)
+    deleted_by: user, // hiari — kama unataka kumjulisha admin ni nani alifuta
+  }).catch((err) => {
+    console.warn("[handleRemove] Admin notification failed:", err);
+  });
 
-    // 4. Toast ya kawaida (badala ya undo toast inayojitokeza)
-    toast.success(t("Tangazo limefutwa", "Listing deleted"), {
-      duration: 2000,
-    });
-  };
+  // 4. Toast ya kawaida
+  toast.success(t("Tangazo limefutwa", "Listing deleted"), {
+    duration: 2000,
+  });
+};
 
   // ============================================================
   // RENDER
