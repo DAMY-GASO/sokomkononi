@@ -69,7 +69,19 @@ export async function hydrateConversationsFromApi(currentUserId) {
   try {
     const data = await api.get("/messaging/conversations/?page_size=100");
     const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map((c) => norm(c, currentUserId)).filter(Boolean);
+    const previous = read();
+    const normalized = list
+      .map((c) => {
+        const n = norm(c, currentUserId);
+        if (!n) return null;
+        // Orodha haina `messages` — usifute zilizokwisha kupakuliwa.
+        if (!n.messages.length) {
+          const old = previous.find((p) => sameId(p.id, n.id));
+          if (old?.messages?.length) return { ...n, messages: old.messages };
+        }
+        return n;
+      })
+      .filter(Boolean);
     write(normalized);
     return { ok: true, count: normalized.length };
   } catch (err) {

@@ -427,7 +427,11 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     imageUrl: primaryPhoto,
     seller: sellerName || raw.seller,
     seller_name: sellerName,
-    sellerId: raw.seller?.id ?? raw.seller_id ?? null,
+    // `seller` inaweza kuwa object ({id,...}), au namba (id) tu kutoka DRF.
+    sellerId:
+      raw.seller?.id ??
+      raw.seller_id ??
+      (typeof raw.seller === "number" ? raw.seller : null),
     postedAt: raw.created_at || raw.postedAt || new Date().toISOString(),
     expiresAt: raw.expires_at || raw.expiresAt || null,
     listingFee: Number(raw.listing_fee) || 0,

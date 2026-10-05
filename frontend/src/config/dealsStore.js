@@ -156,6 +156,14 @@ function normalizeDealFromApi(raw, currentUserId) {
     buyerName: buyer.name || raw.buyer_name || "",
     sellerId: seller.id ?? null,
     sellerName: seller.name || raw.seller_name || "",
+    // Namba ya muuzaji: BACKEND inatuma tu baada ya Reservation Fee kulipwa.
+    // Hapa tunasoma tu kile kilichotumwa — hatuiamui kwenye frontend.
+    sellerPhone:
+      seller.phone ??
+      seller.phone_number ??
+      raw.seller_phone ??
+      raw.seller_contact?.phone ??
+      null,
     status: (() => {
       const upper = String(raw.status || "OPEN").toUpperCase();
       return API_TO_FRONTEND_DEAL_STATUS[upper] || upper.toLowerCase();
@@ -252,6 +260,17 @@ export async function getOrCreateDealAsync({
   buyerName,
   initialMessage,
 }) {
+  // Mmiliki hawezi kuanzisha deal kwenye tangazo lake mwenyewe.
+  try {
+    const own = getListings().find((l) => sameId(l.id, listingId));
+    if (own && currentUserId != null && own.sellerId != null && sameId(own.sellerId, currentUserId)) {
+      return {
+        ok: false,
+        error: new Error("Huwezi kuanzisha deal kwenye tangazo lako mwenyewe."),
+      };
+    }
+  } catch { /* noop */ }
+
   try {
     const raw = await dealsApi.create(listingId);
     const deal = normalizeDealFromApi(raw, currentUserId);
@@ -283,10 +302,25 @@ export async function getOrCreateDealAsync({
   }
 }
 
-export async function sendOfferAsync(dealId, amount, message = "", respondedTo = null) {
+// currentUserId (hiari lakini inashauriwa): kama ipo, ni mnunuzi pekee
+// anayeruhusiwa kutoa ofa. Backend lazima nayo ilinde sheria hii.
+export async function sendOfferAsync(
+  dealId,
+  amount,
+  message = "",
+  respondedTo = null,
+  currentUserId = null
+) {
   const previous = getDeals();
   const deal = previous.find((d) => sameId(d.id, dealId));
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
+  if (
+    currentUserId != null &&
+    deal.buyerId != null &&
+    !sameId(deal.buyerId, currentUserId)
+  ) {
+    return { ok: false, error: new Error("Mnunuzi pekee ndiye anaweza kutoa ofa.") };
+  }
 
   const tempMsgId = `temp_${Date.now()}`;
   const optimisticDeal = {
@@ -344,10 +378,19 @@ export async function sendOfferAsync(dealId, amount, message = "", respondedTo =
   }
 }
 
-export async function acceptOfferAsync(dealId, offerId) {
+// currentUserId (hiari lakini inashauriwa): kama ipo, ni muuzaji pekee
+// anayeruhusiwa kukubali ofa — mnunuzi hawezi kukubali ofa yake mwenyewe.
+export async function acceptOfferAsync(dealId, offerId, currentUserId = null) {
   const previous = getDeals();
   const deal = previous.find((d) => sameId(d.id, dealId));
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
+  if (
+    currentUserId != null &&
+    deal.sellerId != null &&
+    !sameId(deal.sellerId, currentUserId)
+  ) {
+    return { ok: false, error: new Error("Muuzaji pekee ndiye anaweza kukubali ofa.") };
+  }
 
   saveDeals(
     previous.map((d) =>
