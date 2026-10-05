@@ -75,8 +75,10 @@ p, li, span, label, div {
   font-family: var(--font-sans);
 }
 
+/* SIKU ZOTE: usiweke `color` hapa. <p> inarithi rangi kutoka kwa mzazi
+   (body ina text-primary tayari). Ukiiweka hapa, maandishi ndani ya
+   bubble ya navy yanakuwa meusi na hayaonekani. */
 p {
-  color: var(--text-primary);
   font-size: 1rem;     /* 16px */
   font-weight: 400;
   line-height: 1.55;
