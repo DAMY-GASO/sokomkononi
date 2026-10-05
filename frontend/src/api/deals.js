@@ -20,7 +20,9 @@ export const dealsApi = {
   // ── Offers ───────────────────────────────────────────────
   sendOffer: (dealRoomId, { amount, message = "", responded_to = null }) =>
     api.post(`/deals/${dealRoomId}/offers/`, {
-      amount, message, responded_to,
+      amount,
+      message,
+      responded_to,
     }),
   acceptOffer: (dealRoomId, offerId) =>
     api.post(`/deals/${dealRoomId}/accept-offer/`, { offer_id: offerId }),
@@ -29,18 +31,18 @@ export const dealsApi = {
   cancel: (dealRoomId, reason = "") =>
     api.post(`/deals/${dealRoomId}/cancel/`, { reason }),
 
-  // ⬇️ MPYA — Messages
+  // ── Messages ─────────────────────────────────────────────
   messages: (dealRoomId, params = {}) =>
     api.get(`/deals/${dealRoomId}/messages/${toQuery(params)}`),
 
-  sendMessage: (dealRoomId, { text }) =>
+  // ⬇️ MPYA — Tuma ujumbe (POST)
+  sendDealMessage: (dealRoomId, { text }) =>
     api.post(`/deals/${dealRoomId}/messages/`, { text }),
 
-  // ⬇️ MPYA — Offers list (kwa admin view)
-  offers: (dealRoomId) =>
-    api.get(`/deals/${dealRoomId}/offers/`),
+  // ── Offers list (kwa admin view) ─────────────────────────
+  offers: (dealRoomId) => api.get(`/deals/${dealRoomId}/offers/`),
 
-  // ⬇️ MPYA — Payment proof (kwa admin view)
+  // ── Payment proof (kwa admin view) ───────────────────────
   paymentProof: (dealRoomId) =>
     api.get(`/deals/${dealRoomId}/payment-proof/`),
 };

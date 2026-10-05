@@ -1,8 +1,10 @@
 // ============================================================
 // DealRooms.jsx — Vyumba vya Majadiliano
-// API-backed kwa transactions, na local fallback kama backend haipo.
-// ReservationPanel: flat fee + credit pekee (bundle imeondolewa).
-// Bundle purchase inafanyika kwenye BundlesPage.
+// API-backed kwa transactions (hakuna simulations).
+// CHAGUO A: buyer + seller wote wanaweza kutuma offers na kukubali.
+// - handleSendMessage → POST /deals/{id}/messages/
+// - offlineMode → log tu (hakuna local fallback)
+// - REQUEST_NEGOTIATION → submitDecisionAsync
 // ============================================================
 
 import React, { useState, useRef, useEffect } from "react";
@@ -36,6 +38,7 @@ import { COLORS, getCategory, formatTZS, timeAgo } from "./shared";
 import {
   useReservationRates,
   calcReservationFee,
+  useReservationFeeConfig,
 } from "../../../config/feePolicy.js";
 import {
   useDeals,
@@ -47,18 +50,16 @@ import {
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
-import {
-  checkCredit,
-  consumeCreditAsync,
-} from "../../../config/userCreditsStore.js";
+import { checkCredit } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
-import PaymentGateway from "./PaymentGateway";
+import { dealsApi } from "../../../api/deals.js";
 
 // ⬇️ Transaction lifecycle (API + fallback)
 import {
   createTransactionAsync,
   createReservationAsync,
   payReservationAsync,
+  pollReservationStatusAsync,
   startInspectionAsync,
   submitDecisionAsync,
   uploadFinalPaymentAsync,
@@ -88,27 +89,7 @@ function cleanMoneyInput(value) {
 }
 
 // ============================================================
-// TX → DEAL STATUS MAPPER
-// ============================================================
-function txStatusToDealStatus(txStatus) {
-  const map = {
-    [TX_STATUS.PENDING]: "accepted",
-    [TX_STATUS.RESERVED]: "reserved",
-    [TX_STATUS.RESERVED_PAID]: "reserved",
-    [TX_STATUS.INSPECTING]: "reserved",
-    [TX_STATUS.DECIDED_ACCEPT]: "awaiting_final_payment",
-    [TX_STATUS.DECIDED_REJECT]: "disputed",
-    [TX_STATUS.AWAITING_CONFIRMATION]: "payment_proof_submitted",
-    [TX_STATUS.COMPLETED]: "completed",
-    [TX_STATUS.CANCELLED]: "cancelled",
-    [TX_STATUS.DISPUTED]: "disputed",
-    [TX_STATUS.EXPIRED]: "cancelled",
-  };
-  return map[txStatus] || "negotiating";
-}
-
-// ============================================================
-// API FALLBACK HELPER
+// API FALLBACK — LOG TU (hakuna local fallback)
 // ============================================================
 async function callApiOrFallback(apiCall) {
   try {
@@ -117,7 +98,10 @@ async function callApiOrFallback(apiCall) {
   } catch (err) {
     const status = err?.status;
     if (status === 404 || status === 501) {
-      console.warn("[DealRooms] backend haipo — local fallback:", status);
+      console.error(
+        "[DealRooms] Backend endpoint haipo (404/501). Hakuna local fallback.",
+        err
+      );
       return { ok: false, error: err, offline: true };
     }
     return { ok: false, error: err, offline: false };
@@ -127,7 +111,9 @@ async function callApiOrFallback(apiCall) {
 const FALLBACK_DEAL_STATUS = (lang, key) => ({
   label: key
     ? String(key).replace(/_/g, " ")
-    : (lang === "sw" ? "Inaendelea" : "In Progress"),
+    : lang === "sw"
+      ? "Inaendelea"
+      : "In Progress",
   bg: "rgba(47,109,79,0.12)",
   fg: COLORS.green,
 });
@@ -187,7 +173,10 @@ const getDealStatus = (lang) => ({
     fg: COLORS.green,
   },
   disputed: {
-    label: lang === "sw" ? "Mgogoro — Chini ya Ukaguzi" : "Dispute — Under Review",
+    label:
+      lang === "sw"
+        ? "Mgogoro — Chini ya Ukaguzi"
+        : "Dispute — Under Review",
     bg: "rgba(193,80,46,0.16)",
     fg: COLORS.rust,
   },
@@ -334,7 +323,10 @@ function InspectionPanel({ deal, onResolve, lang }) {
               <button
                 key={opt.key}
                 onClick={() => handleChoose(opt.key)}
-                style={{ borderColor: opt?.tone?.border || "#E5E1D5", background: opt?.tone?.bg || "#FFFFFF" }}
+                style={{
+                  borderColor: opt?.tone?.border || "#E5E1D5",
+                  background: opt?.tone?.bg || "#FFFFFF",
+                }}
                 className="flex flex-col items-center text-center gap-2 rounded-xl border px-3 py-3"
               >
                 <opt.icon size={16} color={opt.tone.fg} />
@@ -386,7 +378,10 @@ function InspectionPanel({ deal, onResolve, lang }) {
           />
 
           {pendingKey === "NOT_AS_DESCRIBED" && !note.trim() && (
-            <p style={{ color: COLORS.rust }} className="text-body-sm text-center">
+            <p
+              style={{ color: COLORS.rust }}
+              className="text-body-sm text-center"
+            >
               {lang === "sw"
                 ? "Tafadhali eleza tofauti kabla ya kuendelea, ili timu ya SokoMkononi iweze kusaidia."
                 : "Please describe the discrepancies before continuing so our team can assist."}
@@ -444,19 +439,18 @@ function PaymentProofPanel({ deal, onSubmit, lang }) {
   const [reference, setReference] = useState("");
   const [method, setMethod] = useState(PAYMENT_METHODS[0]);
   const [submitting, setSubmitting] = useState(false);
+  const [file, setFile] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setFileName(file.name);
-    setFile(file);
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFileName(f.name);
+    setFile(f);
     const reader = new FileReader();
     reader.onload = () => setPreview(reader.result);
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(f);
   };
-
-  const [file, setFile] = useState(null);
 
   const canSubmit = !!file && reference.trim().length > 0 && !submitting;
 
@@ -781,10 +775,13 @@ function DealListItem({ deal, active, onSelect, lang }) {
           {deal.listingTitle}
         </p>
         <span
-          style={{ background: status?.bg || "#F5F3EC", color: status?.fg || "#101A2E" }}
+          style={{
+            background: status?.bg || "#F5F3EC",
+            color: status?.fg || "#101A2E",
+          }}
           className="inline-block text-body-sm font-semibold px-2 py-0.5 rounded-full"
         >
-          {status?.label || deal.status || '—'}
+          {status?.label || deal.status || "—"}
         </span>
       </div>
     </button>
@@ -823,7 +820,7 @@ function OfferBubble({ amount, mine, lang }) {
 }
 
 // ============================================================
-// RESERVATION PANEL — flat fee + credit pekee (bundle imeondolewa)
+// RESERVATION PANEL
 // ============================================================
 function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
   const [step, setStep] = useState("choose");
@@ -831,41 +828,43 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
   const [customHours, setCustomHours] = useState(96);
   const [method, setMethod] = useState(PAYMENT_METHODS[0]);
   const [paying, setPaying] = useState(false);
-  const [paymentMode, setPaymentMode] = useState("flat"); // "flat" | "credit"
+  const [paymentMode, setPaymentMode] = useState("flat");
   const [error, setError] = useState("");
+
+  const feeCfg = useReservationFeeConfig();
+  const isFeeDisabled = feeCfg?.is_enabled === false;
 
   const reservationRates = useReservationRates();
   const reservationOptions = reservationRates.filter((r) => r.hours != null);
 
   const hours = selected === "custom" ? customHours : selected;
-  const fee = calcReservationFee(Number(hours));
+  const fee = isFeeDisabled ? 0 : calcReservationFee(Number(hours));
   const validCustom =
     selected !== "custom" ||
     (Number(customHours) >= CUSTOM_MIN_HOURS &&
       Number(customHours) <= CUSTOM_MAX_HOURS);
 
   const creditInfo = checkCredit(user?.id, "reservation");
-  const hasCredit = creditInfo.hasCredit;
+  const hasCredit = creditInfo.hasCredit && !isFeeDisabled;
   const reservationCreditRemaining = creditInfo.remaining || 0;
 
   const handlePay = async () => {
     if (!validCustom) return;
 
-    // Credit path
+    if (isFeeDisabled && paymentMode !== "credit") {
+      setPaying(true);
+      try {
+        await onConfirm({ hours, fee: 0, method: "free" });
+      } finally {
+        setPaying(false);
+      }
+      return;
+    }
+
     if (paymentMode === "credit") {
       setPaying(true);
       setError("");
       try {
-        const res = await consumeCreditAsync(user.id, "reservation");
-        if (!res.success) {
-          setError(
-            lang === "sw"
-              ? "Hakuna reservation credit ya kutosha."
-              : "No reservation credit available."
-          );
-          setPaying(false);
-          return;
-        }
         await onConfirm({ hours, fee: 0, method: "credits" });
       } finally {
         setPaying(false);
@@ -873,7 +872,6 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
       return;
     }
 
-    // Flat
     setPaying(true);
     try {
       await onConfirm({ hours, fee, method });
@@ -898,11 +896,27 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
             </p>
           </div>
 
-          <p className="text-secondary text-body-sm text-center">
-            {lang === "sw"
-              ? "Ukilipa Reservation Fee utaona namba ya simu ya muuzaji ili muwasiliane."
-              : "Once you pay the Reservation Fee you'll see the seller's phone number so you can get in touch."}
-          </p>
+          {isFeeDisabled && (
+            <p
+              className="text-xs text-center rounded-lg px-3 py-2"
+              style={{
+                background: "rgba(47,109,79,0.10)",
+                color: COLORS.green,
+              }}
+            >
+              {lang === "sw"
+                ? "Reservation ni BURE kwa sasa. Weka reservation moja kwa moja."
+                : "Reservation is FREE right now. Place your reservation directly."}
+            </p>
+          )}
+
+          {!isFeeDisabled && (
+            <p className="text-secondary text-body-sm text-center">
+              {lang === "sw"
+                ? "Ukilipa Reservation Fee utaona namba ya simu ya muuzaji ili muwasiliane."
+                : "Once you pay the Reservation Fee you'll see the seller's phone number so you can get in touch."}
+            </p>
+          )}
 
           <div className="grid grid-cols-3 gap-2">
             {reservationOptions.map((opt) => (
@@ -927,7 +941,11 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
                   style={{ color: COLORS.green }}
                   className="text-body-sm font-semibold"
                 >
-                  {formatTZS(opt.fee)}
+                  {isFeeDisabled
+                    ? lang === "sw"
+                      ? "BURE"
+                      : "FREE"
+                    : formatTZS(opt.fee)}
                 </p>
               </button>
             ))}
@@ -976,7 +994,10 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
           </button>
 
           {selected === "custom" && !validCustom && (
-            <p style={{ color: COLORS.rust }} className="text-body-sm text-center">
+            <p
+              style={{ color: COLORS.rust }}
+              className="text-body-sm text-center"
+            >
               {lang === "sw"
                 ? `Weka saa kati ya ${CUSTOM_MIN_HOURS} na ${CUSTOM_MAX_HOURS}.`
                 : `Enter hours between ${CUSTOM_MIN_HOURS} and ${CUSTOM_MAX_HOURS}.`}
@@ -988,7 +1009,11 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
               {formatHours(Number(customHours), lang)} →{" "}
               {lang === "sw" ? "Reservation Fee:" : "Reservation Fee:"}{" "}
               <span style={{ color: COLORS.green }} className="font-semibold">
-                {formatTZS(fee)}
+                {isFeeDisabled
+                  ? lang === "sw"
+                    ? "BURE"
+                    : "FREE"
+                  : formatTZS(fee)}
               </span>
             </p>
           )}
@@ -1001,7 +1026,8 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
                 style={{
                   background: paymentMode === "flat" ? COLORS.night : "white",
                   color: paymentMode === "flat" ? COLORS.sand : COLORS.night,
-                  borderColor: paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
+                  borderColor:
+                    paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
                 }}
               >
                 {lang === "sw" ? "Lipa Fedha" : "Pay Cash"}
@@ -1012,7 +1038,8 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
                 style={{
                   background: paymentMode === "credit" ? COLORS.green : "white",
                   color: paymentMode === "credit" ? "white" : COLORS.night,
-                  borderColor: paymentMode === "credit" ? COLORS.green : COLORS.sandLine,
+                  borderColor:
+                    paymentMode === "credit" ? COLORS.green : COLORS.sandLine,
                 }}
               >
                 {lang === "sw"
@@ -1023,7 +1050,10 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
           )}
 
           {error && (
-            <p style={{ color: COLORS.rust }} className="text-body-sm text-center">
+            <p
+              style={{ color: COLORS.rust }}
+              className="text-body-sm text-center"
+            >
               {error}
             </p>
           )}
@@ -1037,7 +1067,13 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
               {lang === "sw" ? "Ghairi" : "Cancel"}
             </button>
             <button
-              onClick={() => validCustom && setStep("pay")}
+              onClick={() => {
+                if (isFeeDisabled && paymentMode !== "credit") {
+                  handlePay();
+                } else {
+                  setStep("pay");
+                }
+              }}
               disabled={!validCustom}
               style={{
                 background: validCustom ? COLORS.green : COLORS.sandLine,
@@ -1045,13 +1081,21 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
               }}
               className="flex-1 text-body-sm font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
             >
-              {lang === "sw"
-                ? `Endelea — ${
-                    paymentMode === "credit" ? "Tumia Credit" : `Lipa ${formatTZS(fee)}`
-                  }`
-                : `Continue — ${
-                    paymentMode === "credit" ? "Use Credit" : `Pay ${formatTZS(fee)}`
-                  }`}
+              {isFeeDisabled && paymentMode !== "credit"
+                ? lang === "sw"
+                  ? "Weka Reservation — BURE"
+                  : "Place Reservation — FREE"
+                : lang === "sw"
+                  ? `Endelea — ${
+                      paymentMode === "credit"
+                        ? "Tumia Credit"
+                        : `Lipa ${formatTZS(fee)}`
+                    }`
+                  : `Continue — ${
+                      paymentMode === "credit"
+                        ? "Use Credit"
+                        : `Pay ${formatTZS(fee)}`
+                    }`}
             </button>
           </div>
         </>
@@ -1063,8 +1107,12 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
             <CreditCard size={14} color={COLORS.night} />
             <p className="text-primary text-body-sm font-semibold">
               {paymentMode === "credit"
-                ? (lang === "sw" ? "Tumia Credit" : "Use Credit")
-                : (lang === "sw" ? "Lipa Reservation Fee" : "Pay Reservation Fee")}
+                ? lang === "sw"
+                  ? "Tumia Credit"
+                  : "Use Credit"
+                : lang === "sw"
+                  ? "Lipa Reservation Fee"
+                  : "Pay Reservation Fee"}
             </p>
           </div>
 
@@ -1077,7 +1125,9 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
             </p>
             <p className="text-primary text-base font-bold">
               {paymentMode === "credit"
-                ? (lang === "sw" ? "1 Reservation Credit" : "1 Reservation Credit")
+                ? lang === "sw"
+                  ? "1 Reservation Credit"
+                  : "1 Reservation Credit"
                 : formatTZS(fee)}
             </p>
             <ShieldCheck size={20} color={COLORS.green} />
@@ -1086,7 +1136,9 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
           {paymentMode === "flat" && (
             <>
               <p className="text-secondary text-body-sm text-center">
-                {lang === "sw" ? "Chagua njia ya malipo" : "Choose payment method"}
+                {lang === "sw"
+                  ? "Chagua njia ya malipo"
+                  : "Choose payment method"}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {PAYMENT_METHODS.map((m) => (
@@ -1094,8 +1146,10 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
                     key={m}
                     onClick={() => setMethod(m)}
                     style={{
-                      borderColor: method === m ? COLORS.green : COLORS.sandLine,
-                      background: method === m ? "rgba(47,109,79,0.08)" : "white",
+                      borderColor:
+                        method === m ? COLORS.green : COLORS.sandLine,
+                      background:
+                        method === m ? "rgba(47,109,79,0.08)" : "white",
                       color: COLORS.night,
                     }}
                     className="rounded-lg border px-2.5 py-2 text-body-sm font-medium text-center"
@@ -1104,11 +1158,19 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
                   </button>
                 ))}
               </div>
+              <p className="text-muted text-body-sm text-center">
+                {lang === "sw"
+                  ? "Utapokea ombi la malipo kwenye simu yako (FimiPay)."
+                  : "You'll receive a payment prompt on your phone (FimiPay)."}
+              </p>
             </>
           )}
 
           {error && (
-            <p style={{ color: COLORS.rust }} className="text-body-sm text-center">
+            <p
+              style={{ color: COLORS.rust }}
+              className="text-body-sm text-center"
+            >
               {error}
             </p>
           )}
@@ -1136,7 +1198,9 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
               ) : paymentMode === "credit" ? (
                 lang === "sw" ? "Tumia Credit" : "Use Credit"
               ) : (
-                lang === "sw" ? `Thibitisha Malipo — ${formatTZS(fee)}` : `Confirm Payment — ${formatTZS(fee)}`
+                lang === "sw"
+                  ? `Thibitisha Malipo — ${formatTZS(fee)}`
+                  : `Confirm Payment — ${formatTZS(fee)}`
               )}
             </button>
           </div>
@@ -1182,31 +1246,39 @@ function DealDetail({
         ? "Muuzaji"
         : "Seller";
 
-  // ── Nani anaweza kufanya nini ───────────────────────────
-  // Mnunuzi PEKEE ndiye anatoa ofa. Muuzaji PEKEE ndiye anakubali/anakataa.
+  // ═══════════════════════════════════════════════════════════
+  // CHAGUO A: buyer NA seller wote wanaweza kutuma offers na kukubali
+  // ═══════════════════════════════════════════════════════════
   const isBuyer = side === "buyer";
   const isSeller = side === "seller";
   const lastOffer = [...(deal.messages || [])]
     .reverse()
     .find((m) => m.offerAmount);
   const iMadeLastOffer = lastOffer?.sender === "me";
-  const canRespond = isSeller && deal.currentOffer > 0 && !iMadeLastOffer;
 
-  const waitingText = isBuyer
-    ? deal.currentOffer > 0
+  // Yeyote aliye upande wa pili wa offer ya mwisho anaweza kukubali/kukataa
+  const canRespond = deal.currentOffer > 0 && !iMadeLastOffer;
+
+  const waitingText = iMadeLastOffer
+    ? lang === "sw"
+      ? `Ofa yako ya ${formatTZS(
+          deal.currentOffer
+        )} imetumwa — unasubiri upande wa pili ukubali au ukatae.`
+      : `Your offer of ${formatTZS(
+          deal.currentOffer
+        )} was sent — waiting for the other party to accept or decline.`
+    : deal.currentOffer > 0
       ? lang === "sw"
-        ? `Ofa yako ya ${formatTZS(deal.currentOffer)} imetumwa — unasubiri muuzaji akubali au akatae.`
-        : `Your offer of ${formatTZS(deal.currentOffer)} was sent — waiting for the seller to accept or decline.`
+        ? `Ofa ya ${formatTZS(
+            deal.currentOffer
+          )} imepokelewa — unaweza kukubali au kukataa.`
+        : `Offer of ${formatTZS(
+            deal.currentOffer
+          )} received — you can accept or decline.`
       : lang === "sw"
         ? "Hakuna ofa bado — toa ofa yako ya kwanza."
-        : "No offer yet — make your first offer."
-    : lang === "sw"
-      ? "Hakuna ofa kutoka kwa mnunuzi bado — subiri atoe ofa."
-      : "No offer from the buyer yet — wait for them to make one.";
+        : "No offer yet — make your first offer.";
 
-  // ── Namba ya simu ya muuzaji ────────────────────────────
-  // UI HAIAMUI nani aone namba: inaonyesha tu kile backend ilichotuma.
-  // Backend inatuma namba baada ya Reservation Fee kulipwa tu.
   const sellerPhone =
     deal.sellerPhone ?? deal.seller_phone ?? deal.counterpartyPhone ?? null;
   const phoneLocked =
@@ -1271,10 +1343,13 @@ function DealDetail({
           )}
         </div>
         <span
-          style={{ background: status?.bg || "#F5F3EC", color: status?.fg || "#101A2E" }}
+          style={{
+            background: status?.bg || "#F5F3EC",
+            color: status?.fg || "#101A2E",
+          }}
           className="text-body-sm font-semibold px-2.5 py-1 rounded-full shrink-0"
         >
-          {status?.label || deal.status || '—'}
+          {status?.label || deal.status || "—"}
         </span>
       </div>
 
@@ -1293,10 +1368,13 @@ function DealDetail({
         </span>
       </div>
 
-      {/* Namba ya muuzaji — inafunguka baada ya Reservation Fee */}
+      {/* Seller phone */}
       {isBuyer && sellerPhone && (
         <div
-          style={{ background: "rgba(47,109,79,0.08)", borderColor: COLORS.sandLine }}
+          style={{
+            background: "rgba(47,109,79,0.08)",
+            borderColor: COLORS.sandLine,
+          }}
           className="flex items-center justify-between gap-2 px-4 py-2 border-b text-body-sm"
         >
           <span
@@ -1320,7 +1398,10 @@ function DealDetail({
       )}
       {phoneLocked && (
         <div
-          style={{ background: "rgba(16,26,46,0.04)", borderColor: COLORS.sandLine }}
+          style={{
+            background: "rgba(16,26,46,0.04)",
+            borderColor: COLORS.sandLine,
+          }}
           className="flex items-center justify-center gap-2 px-4 py-2 border-b text-body-sm text-center"
         >
           <Lock size={13} className="shrink-0" color={COLORS.night} />
@@ -1385,7 +1466,7 @@ function DealDetail({
         })}
       </div>
 
-      {/* Accept / decline (muuzaji) + Toa ofa (mnunuzi) */}
+      {/* Negotiation actions — CHAGUO A */}
       {(deal.status === "negotiating" || deal.status === "offer_sent") && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -1405,7 +1486,10 @@ function DealDetail({
               </button>
               <button
                 onClick={() => onRespond(deal.id, "declined")}
-                style={{ borderColor: "rgba(193,80,46,0.35)", color: COLORS.rust }}
+                style={{
+                  borderColor: "rgba(193,80,46,0.35)",
+                  color: COLORS.rust,
+                }}
                 className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border"
               >
                 <X size={13} /> {lang === "sw" ? "Kataa" : "Decline"}
@@ -1419,7 +1503,8 @@ function DealDetail({
               {waitingText}
             </span>
           )}
-          {isBuyer && (
+          {/* CHAGUO A: wote wanaweza kutuma offers (buyer NA seller) */}
+          {(isBuyer || isSeller) && (
             <button
               onClick={() => setOfferOpen((v) => !v)}
               style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
@@ -1427,8 +1512,12 @@ function DealDetail({
             >
               <HandCoins size={13} />{" "}
               {deal.currentOffer > 0
-                ? (lang === "sw" ? "Toa Ofa Nyingine" : "Make Another Offer")
-                : (lang === "sw" ? "Toa Ofa" : "Make an Offer")}
+                ? lang === "sw"
+                  ? "Toa Ofa Nyingine"
+                  : "Make Another Offer"
+                : lang === "sw"
+                  ? "Toa Ofa"
+                  : "Make an Offer"}
               <ChevronDown
                 size={12}
                 style={{ transform: offerOpen ? "rotate(180deg)" : "none" }}
@@ -1438,7 +1527,8 @@ function DealDetail({
         </div>
       )}
 
-      {isBuyer && offerOpen && (
+      {/* Offer input — CHAGUO A: buyer NA seller */}
+      {(isBuyer || isSeller) && offerOpen && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-t"
@@ -1642,8 +1732,8 @@ function DealDetail({
             className="text-body-sm font-medium max-w-md"
           >
             {lang === "sw"
-              ? `Mnunuzi ameripoti "sio kama ilivyoelezwa". Timu ya SokoMkononi itaingilia kati kusaidia kutatua mgogoro huu.`
-              : `Buyer reported "not as described". SokoMkononi team will step in to help resolve this dispute.`}
+              ? `Mgogoro umeripotiwa. Timu ya SokoMkononi itaingilia kati kusaidia kutatua.`
+              : `A dispute has been reported. SokoMkononi team will step in to help resolve it.`}
           </span>
         </div>
       )}
@@ -1678,7 +1768,9 @@ function DealDetail({
               color: COLORS.night,
             }}
             className="flex-1 rounded-full border px-4 py-2.5 text-sm outline-none"
-            placeholder={lang === "sw" ? "Andika ujumbe..." : "Type a message..."}
+            placeholder={
+              lang === "sw" ? "Andika ujumbe..." : "Type a message..."
+            }
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
@@ -1698,7 +1790,7 @@ function DealDetail({
 }
 
 // ============================================================
-// DEAL ROOMS — main component (API + local fallback)
+// DEAL ROOMS — main component
 // ============================================================
 export default function DealRooms({
   side = "seller",
@@ -1741,11 +1833,12 @@ export default function DealRooms({
 
     if (res.offline) {
       setOfflineMode(true);
+      console.error("[DealRooms] Backend haipo — hakuna fallback");
       return null;
     }
 
     if (!res.ok) {
-      console.warn("[DealRooms] createTransaction failed:", res.error);
+      console.error("[DealRooms] createTransaction failed:", res.error);
       return null;
     }
 
@@ -1756,29 +1849,62 @@ export default function DealRooms({
     return txId;
   };
 
-  const handleSendMessage = (id, text) => {
-    // NOTE: deal-scoped messaging endpoint (/deals/{id}/messages/) is
-    // pending on the backend. Until it lands, this updates local state
-    // only. See report §B-2.
+  // ⬇️ handleSendMessage — POST /deals/{id}/messages/
+  const handleSendMessage = async (id, text) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
+
+    // Optimistic update
+    const tempId = `m_${Date.now()}`;
     updateDeal(id, {
       messages: [
         ...deal.messages,
         {
-          id: `m_${Date.now()}`,
+          id: tempId,
           sender: "me",
           text,
           at: new Date().toISOString(),
         },
       ],
     });
+
+    try {
+      const res = await dealsApi.sendDealMessage(deal.dealRoomId || deal.id, {
+        text,
+      });
+      const current = deals.find((d) => d.id === id);
+      if (current && res?.id) {
+        updateDeal(id, {
+          messages: current.messages.map((m) =>
+            m.id === tempId
+              ? {
+                  ...m,
+                  id: res.id,
+                  at: res.created_at || m.at,
+                }
+              : m
+          ),
+        });
+      }
+    } catch (err) {
+      console.error("[DealRooms] sendDealMessage failed:", err);
+      const current = deals.find((d) => d.id === id);
+      if (current) {
+        updateDeal(id, {
+          messages: current.messages.filter((m) => m.id !== tempId),
+        });
+      }
+      alert(
+        err?.message ||
+          (lang === "sw"
+            ? "Imeshindwa kutuma ujumbe."
+            : "Failed to send message.")
+      );
+    }
   };
 
+  // ⬇️ CHAGUO A: buyer NA seller wote wanaweza kutuma offers
   const handleSendOffer = async (id, amount) => {
-    // Mnunuzi pekee ndiye anatoa ofa.
-    if (side !== "buyer") return;
-    // dealsStore.sendOfferAsync performs optimistic update + rollback.
     const res = await sendOfferAsync(id, amount, "", null, user?.id);
     if (!res.ok) {
       console.warn("[DealRooms] sendOffer failed:", res.error);
@@ -1791,18 +1917,21 @@ export default function DealRooms({
     }
   };
 
+  // ⬇️ CHAGUO A: yeyote aliye upande wa pili anaweza kukubali
   const handleRespond = async (id, newStatus) => {
-    // Muuzaji pekee ndiye anakubali/anakataa ofa.
-    if (side !== "seller") return;
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
 
+    const lastOffer = [...(deal.messages || [])]
+      .reverse()
+      .find((m) => m.offerAmount);
+    if (!lastOffer) return;
+
+    // Kama ofa ya mwisho ilitoka upande wako, hauwezi kukubali
+    if (lastOffer.sender === "me") return;
+
     if (newStatus === "accepted") {
-      // Find the most recent offer bubble's backend id.
-      const lastOffer = [...(deal.messages || [])]
-        .reverse()
-        .find((m) => m.offerAmount && typeof m.id === "number");
-      const res = await acceptOfferAsync(id, lastOffer?.id ?? null, user?.id);
+      const res = await acceptOfferAsync(id, lastOffer.id, user?.id);
       if (!res.ok) {
         console.warn("[DealRooms] acceptOffer failed:", res.error);
         alert(
@@ -1830,67 +1959,37 @@ export default function DealRooms({
     }
   };
 
-  // ⬇️ RESERVE CONFIRM — flat + credit pekee
-  const handleReserveConfirm = async (id, { hours, fee, method }) => {
-    const deal = deals.find((d) => d.id === id);
-    if (!deal) return;
+  // ── finalizeLocalReservation ────────────────────────────
+  const finalizeLocalReservation = (
+    id,
+    deal,
+    { hours, fee, method, expiresAt }
+  ) => {
+    const nowExpiresAt =
+      expiresAt ||
+      new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
 
-    // Unda transaction (kama haipo)
-    const txId = await ensureTransactionId(deal);
-
-    if (txId && !offlineMode) {
-      const reserveRes = await callApiOrFallback(() =>
-        createReservationAsync(txId, hours)
-      );
-      if (!reserveRes.offline && !reserveRes.ok) {
-        alert(
-          reserveRes.error?.message ||
-            (lang === "sw"
-              ? "Imeshindwa kuweka reservation."
-              : "Failed to create reservation.")
-        );
-        return;
-      }
-
-      // Credit vs flat
-      const payBody =
-        method === "credits"
-          ? { payment_reference: "credits" }
-          : { payment_method: method };
-
-      const payRes = await callApiOrFallback(() =>
-        payReservationAsync(txId, method, payBody)
-      );
-      if (!payRes.offline && !payRes.ok) {
-        alert(
-          payRes.error?.message ||
-            (lang === "sw"
-              ? "Imeshindwa kulipa reservation."
-              : "Failed to pay reservation.")
-        );
-        return;
-      }
-    }
-
-    const expiresAt = new Date(
-      Date.now() + hours * 60 * 60 * 1000
-    ).toISOString();
     const note =
-      method === "credits"
+      method === "free"
         ? lang === "sw"
-          ? `Reservation Deposit imelipwa kwa CREDITS — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(expiresAt).toLocaleString("sw-TZ")}.`
-          : `Reservation Deposit paid with CREDITS — duration: ${formatHours(hours, lang)}. Ends ${new Date(expiresAt).toLocaleString("en-US")}.`
-        : lang === "sw"
-          ? `Reservation Deposit ya ${formatTZS(fee)} imelipwa (${method}) — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(expiresAt).toLocaleString("sw-TZ")}.`
-          : `Reservation Deposit of ${formatTZS(fee)} paid (${method}) — duration: ${formatHours(hours, lang)}. Ends ${new Date(expiresAt).toLocaleString("en-US")}.`;
+          ? `Reservation imewekwa BURE — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.`
+          : `Reservation placed for FREE — duration: ${formatHours(hours, lang)}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`
+        : method === "credits"
+          ? lang === "sw"
+            ? `Reservation Deposit imelipwa kwa CREDITS — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.`
+            : `Reservation Deposit paid with CREDITS — duration: ${formatHours(hours, lang)}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`
+          : lang === "sw"
+            ? `Reservation Deposit ya ${formatTZS(fee)} imelipwa (${method}) — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.`
+            : `Reservation Deposit of ${formatTZS(fee)} paid (${method}) — duration: ${formatHours(hours, lang)}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`;
 
     updateDeal(id, {
       status: "reserved",
-      transactionId: txId || deal.transactionId || null,
+      transactionId: deal.transactionId || null,
       reservationHours: hours,
       reservationFee: fee,
       reservationMethod: method,
-      reservationExpiresAt: expiresAt,
+      reservationExpiresAt: nowExpiresAt,
+      pendingPayment: null,
       messages: [
         ...deal.messages,
         {
@@ -1902,7 +2001,131 @@ export default function DealRooms({
       ],
     });
 
-    onReservationPaid?.(deal, { hours, fee, method, expiresAt });
+    onReservationPaid?.(deal, { hours, fee, method, expiresAt: nowExpiresAt });
+  };
+
+  // ⬇️ RESERVE CONFIRM
+  const handleReserveConfirm = async (id, { hours, fee, method }) => {
+    const deal = deals.find((d) => d.id === id);
+    if (!deal) return;
+
+    const txId = await ensureTransactionId(deal);
+    if (!txId) {
+      alert(
+        lang === "sw"
+          ? "Imeshindwa kuunda transaction. Jaribu tena."
+          : "Failed to create transaction. Please try again."
+      );
+      return;
+    }
+
+    const reserveRes = await callApiOrFallback(() =>
+      createReservationAsync(txId, hours)
+    );
+    if (!reserveRes.offline && !reserveRes.ok) {
+      alert(
+        reserveRes.error?.message ||
+          (lang === "sw"
+            ? "Imeshindwa kuweka reservation."
+            : "Failed to create reservation.")
+      );
+      return;
+    }
+
+    // Free activation
+    const activatedStatus = reserveRes.transaction?.status;
+    if (activatedStatus === TX_STATUS.RESERVED_PAID) {
+      const expiresAt =
+        reserveRes.transaction.reservationExpiresAt ||
+        new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+      return finalizeLocalReservation(id, deal, {
+        hours,
+        fee: 0,
+        method: "free",
+        expiresAt,
+      });
+    }
+
+    // PENDING_PAYMENT → lipa
+    const payRes = await callApiOrFallback(() =>
+      payReservationAsync(txId, {
+        paymentReference: method === "credits" ? "credits" : null,
+      })
+    );
+
+    if (!payRes.offline && !payRes.ok) {
+      alert(
+        payRes.error?.message ||
+          (lang === "sw"
+            ? "Imeshindwa kulipa reservation."
+            : "Failed to pay reservation.")
+      );
+      return;
+    }
+
+    // FimiPay
+    if (payRes.pending) {
+      updateDeal(id, {
+        status: "accepted",
+        pendingPayment: {
+          orderId: payRes.orderId,
+          reference: payRes.reference,
+          checkoutUrl: payRes.checkoutUrl,
+          amount: fee,
+          method,
+        },
+        messages: [
+          ...deal.messages,
+          {
+            id: `m_${Date.now()}`,
+            sender: "me",
+            text:
+              lang === "sw"
+                ? `Malipo ya Reservation yameanzishwa (${method}). Kumbukumbu: ${payRes.reference}. Tafadhali kamilisha malipo ili reservation iwashwe.`
+                : `Reservation payment initiated (${method}). Reference: ${payRes.reference}. Please complete payment to activate the reservation.`,
+            at: new Date().toISOString(),
+          },
+        ],
+      });
+
+      if (payRes.checkoutUrl) {
+        try {
+          window.open(payRes.checkoutUrl, "_blank", "noopener,noreferrer");
+        } catch {
+          /* noop */
+        }
+      }
+
+      alert(
+        lang === "sw"
+          ? `Malipo yameanzishwa.\n\nKumbukumbu: ${payRes.reference}\nKiasi: ${formatTZS(fee)}\n\nTafadhali kamilisha malipo. Reservation itawashwa mara moja baada ya malipo kuthibitishwa.`
+          : `Payment initiated.\n\nReference: ${payRes.reference}\nAmount: ${formatTZS(fee)}\n\nPlease complete the payment. The reservation will activate as soon as payment is confirmed.`
+      );
+
+      const pollRes = await pollReservationStatusAsync(txId, {
+        attempts: 15,
+        intervalMs: 4000,
+      });
+
+      if (pollRes.ok) {
+        const expiresAt = pollRes.transaction.reservationExpiresAt || null;
+        finalizeLocalReservation(id, deal, { hours, fee, method, expiresAt });
+      } else {
+        alert(
+          lang === "sw"
+            ? "Malipo bado hayajathibitishwa. Tafadhali angalia 'My Transactions' baadaye."
+            : "Payment is not yet confirmed. Please check 'My Transactions' shortly."
+        );
+      }
+      return;
+    }
+
+    // Credits au free
+    const expiresAt =
+      payRes.transaction?.reservationExpiresAt ||
+      new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+
+    finalizeLocalReservation(id, deal, { hours, fee, method, expiresAt });
   };
 
   const handleInspectionResolve = async (id, outcome, note) => {
@@ -1910,55 +2133,50 @@ export default function DealRooms({
     if (!deal) return;
     const txId = transactionIds[id] || deal.transactionId;
 
-    if (outcome === "REQUEST_NEGOTIATION") {
-      const baseNote =
+    if (!txId) {
+      alert(
         lang === "sw"
-          ? "Mnunuzi ameomba negotiation nyingine baada ya ukaguzi."
-          : "Buyer requested another negotiation after inspection.";
-      updateDeal(id, {
-        status: "negotiating",
-        messages: [
-          ...deal.messages,
-          {
-            id: `m_${Date.now()}`,
-            sender: "me",
-            text: baseNote,
-            at: new Date().toISOString(),
-          },
-        ],
-      });
+          ? "Transaction haipatikani kwa deal hii."
+          : "Transaction not found for this deal."
+      );
       return;
     }
 
-    if (txId && !offlineMode) {
-      let apiRes;
-      if (outcome === "READY_FOR_FINAL_PAYMENT") {
-        apiRes = await callApiOrFallback(() =>
-          submitDecisionAsync(txId, {
-            buyerDecision: "ACCEPT",
-            buyerDecisionNote: note || "",
-          })
-        );
-      } else if (outcome === "NOT_AS_DESCRIBED") {
-        apiRes = await callApiOrFallback(() =>
-          submitDecisionAsync(txId, {
-            buyerDecision: "REJECT",
-            buyerDecisionNote: note || "",
-          })
-        );
-      } else if (outcome === "CANCEL") {
-        apiRes = await callApiOrFallback(() =>
-          cancelTransactionAsync(txId, note || "")
-        );
-      }
+    let apiRes;
+    if (outcome === "READY_FOR_FINAL_PAYMENT") {
+      apiRes = await callApiOrFallback(() =>
+        submitDecisionAsync(txId, {
+          buyerDecision: "ACCEPT",
+          buyerDecisionNote: note || "",
+        })
+      );
+    } else if (outcome === "REQUEST_NEGOTIATION") {
+      // Backend itaweka status DISPUTED (kulingana na transaction.py)
+      apiRes = await callApiOrFallback(() =>
+        submitDecisionAsync(txId, {
+          buyerDecision: "REQUEST_NEGOTIATION",
+          buyerDecisionNote: note || "",
+        })
+      );
+    } else if (outcome === "NOT_AS_DESCRIBED") {
+      apiRes = await callApiOrFallback(() =>
+        submitDecisionAsync(txId, {
+          buyerDecision: "REJECT",
+          buyerDecisionNote: note || "",
+        })
+      );
+    } else if (outcome === "CANCEL") {
+      apiRes = await callApiOrFallback(() =>
+        cancelTransactionAsync(txId, note || "")
+      );
+    }
 
-      if (apiRes && !apiRes.offline && !apiRes.ok) {
-        alert(
-          apiRes.error?.message ||
-            (lang === "sw" ? "Imeshindwa kusasisha." : "Failed to update.")
-        );
-        return;
-      }
+    if (apiRes && !apiRes.offline && !apiRes.ok) {
+      alert(
+        apiRes.error?.message ||
+          (lang === "sw" ? "Imeshindwa kusasisha." : "Failed to update.")
+      );
+      return;
     }
 
     const baseNote =
@@ -1967,6 +2185,10 @@ export default function DealRooms({
           lang === "sw"
             ? "Mnunuzi ameridhika na ukaguzi — tayari kwa malipo ya mwisho."
             : "Buyer is satisfied with the inspection — ready for final payment.",
+        REQUEST_NEGOTIATION:
+          lang === "sw"
+            ? "Mnunuzi ameomba negotiation nyingine baada ya ukaguzi."
+            : "Buyer requested another negotiation after inspection.",
         NOT_AS_DESCRIBED:
           lang === "sw"
             ? "Mnunuzi ameripoti: bidhaa/mali sio kama ilivyoelezwa."
@@ -1996,6 +2218,12 @@ export default function DealRooms({
         status: "awaiting_final_payment",
         messages: newMessages,
       });
+    } else if (outcome === "REQUEST_NEGOTIATION") {
+      updateDeal(id, {
+        status: "disputed",
+        disputeNote: note,
+        messages: newMessages,
+      });
     } else if (outcome === "NOT_AS_DESCRIBED") {
       updateDeal(id, {
         status: "disputed",
@@ -2012,11 +2240,19 @@ export default function DealRooms({
   };
 
   const handleProofSubmit = async (id, proof) => {
-  const deal = deals.find((d) => d.id === id);
-  if (!deal) return;
-  const txId = transactionIds[id] || deal.transactionId;
+    const deal = deals.find((d) => d.id === id);
+    if (!deal) return;
+    const txId = transactionIds[id] || deal.transactionId;
 
-  if (txId && !offlineMode) {
+    if (!txId) {
+      alert(
+        lang === "sw"
+          ? "Transaction haipatikani kwa deal hii."
+          : "Transaction not found for this deal."
+      );
+      return;
+    }
+
     try {
       const apiRes = await uploadFinalPaymentAsync(txId, {
         finalPaymentProof: proof.file,
@@ -2040,45 +2276,52 @@ export default function DealRooms({
       );
       return;
     }
-  }
 
-  const note =
-    lang === "sw"
-      ? `Uthibitisho wa malipo umetumwa (${proof.method}, Ref: ${proof.reference}).`
-      : `Payment proof submitted (${proof.method}, Ref: ${proof.reference}).`;
+    const note =
+      lang === "sw"
+        ? `Uthibitisho wa malipo umetumwa (${proof.method}, Ref: ${proof.reference}).`
+        : `Payment proof submitted (${proof.method}, Ref: ${proof.reference}).`;
 
-  updateDeal(id, {
-    status: "payment_proof_submitted",
-    paymentProof: { ...proof, submittedAt: new Date().toISOString() },
-    messages: [
-      ...deal.messages,
-      {
-        id: `m_${Date.now()}`,
-        sender: "me",
-        text: note,
-        at: new Date().toISOString(),
-      },
-    ],
-  });
-};
+    updateDeal(id, {
+      status: "payment_proof_submitted",
+      paymentProof: { ...proof, submittedAt: new Date().toISOString() },
+      messages: [
+        ...deal.messages,
+        {
+          id: `m_${Date.now()}`,
+          sender: "me",
+          text: note,
+          at: new Date().toISOString(),
+        },
+      ],
+    });
+  };
+
   const handleProofConfirm = async (id) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
     const txId = transactionIds[id] || deal.transactionId;
 
-    if (txId && !offlineMode) {
-      const apiRes = await callApiOrFallback(() =>
-        confirmPaymentAsync(txId, "")
+    if (!txId) {
+      alert(
+        lang === "sw"
+          ? "Transaction haipatikani kwa deal hii."
+          : "Transaction not found for this deal."
       );
-      if (!apiRes.offline && !apiRes.ok) {
-        alert(
-          apiRes.error?.message ||
-            (lang === "sw"
-              ? "Imeshindwa kuthibitisha malipo."
-              : "Failed to confirm payment.")
-        );
-        return;
-      }
+      return;
+    }
+
+    const apiRes = await callApiOrFallback(() =>
+      confirmPaymentAsync(txId, "")
+    );
+    if (!apiRes.offline && !apiRes.ok) {
+      alert(
+        apiRes.error?.message ||
+          (lang === "sw"
+            ? "Imeshindwa kuthibitisha malipo."
+            : "Failed to confirm payment.")
+      );
+      return;
     }
 
     const note =
@@ -2110,20 +2353,27 @@ export default function DealRooms({
     if (!deal) return;
     const txId = transactionIds[id] || deal.transactionId;
 
-    if (txId && !offlineMode) {
-      const apiRes = await callApiOrFallback(() =>
-        submitDecisionAsync(txId, {
-          buyerDecision: "REJECT",
-          buyerDecisionNote: reason || "",
-        })
+    if (!txId) {
+      alert(
+        lang === "sw"
+          ? "Transaction haipatikani kwa deal hii."
+          : "Transaction not found for this deal."
       );
-      if (!apiRes.offline && !apiRes.ok) {
-        alert(
-          apiRes.error?.message ||
-            (lang === "sw" ? "Imeshindwa kutuma." : "Failed to send.")
-        );
-        return;
-      }
+      return;
+    }
+
+    const apiRes = await callApiOrFallback(() =>
+      submitDecisionAsync(txId, {
+        buyerDecision: "REJECT",
+        buyerDecisionNote: reason || "",
+      })
+    );
+    if (!apiRes.offline && !apiRes.ok) {
+      alert(
+        apiRes.error?.message ||
+          (lang === "sw" ? "Imeshindwa kutuma." : "Failed to send.")
+      );
+      return;
     }
 
     const note = reason
@@ -2176,8 +2426,8 @@ export default function DealRooms({
             className="text-body-sm mt-2 max-w-xl mx-auto"
           >
             {lang === "sw"
-              ? "⚠️ Backend haipo — mabadiliko yanahifadhiwa local pekee."
-              : "⚠️ Backend unavailable — changes saved locally only."}
+              ? "⚠️ Backend haipatikani. Baadhi ya vitendo havitafanya kazi."
+              : "⚠️ Backend unavailable. Some actions will fail."}
           </p>
         )}
       </div>

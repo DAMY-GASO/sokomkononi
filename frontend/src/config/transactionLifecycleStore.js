@@ -1,4 +1,8 @@
-
+// ============================================================
+// transactionLifecycleStore.js
+// Backend: /api/transactions/
+// Reservation flow: create → pay (FimiPay au credits au free) → activate
+// ============================================================
 import { useEffect, useState } from "react";
 import { transactionsApi } from "../api/transactions.js";
 
@@ -230,7 +234,12 @@ export async function createTransactionAsync(dealRoomId) {
 }
 
 // ============================================================
-// 2. RESERVATION
+// 2a. CREATE RESERVATION
+// Backend inaamua:
+//   - Kama fee imezimwa → reservation ina-activate papo hapo
+//     (status: RESERVED_PAID, fee: 0)
+//   - Kama fee imewashwa → reservation ipo PENDING_PAYMENT
+//     inasubiri payReservationAsync
 // ============================================================
 export async function createReservationAsync(id, durationHours = 48) {
   return mutateWithRollback({
@@ -243,20 +252,144 @@ export async function createReservationAsync(id, durationHours = 48) {
   });
 }
 
-export async function payReservationAsync(id, paymentReference) {
-  if (!paymentReference) {
-    return { ok: false, error: new Error("paymentReference is required") };
+// ============================================================
+// 2b. PAY RESERVATION
+// Backend (reservation.py confirm_reservation_payment):
+//   - payment_reference: "credits"   → consume credit, activate papo hapo
+//   - payment_reference: <staff>     → staff manual confirmation
+//   - hakuna ref + fee enabled       → FimiPay order (inaunda order)
+//   - fee imezimwa                   → tayari ime-activate kwenye create
+//
+// FimiPay response (kutoka fimipay.py create_order):
+//   data.order_id    — IPO (obligatory)
+//   data.payment_url — URL ya kulipia (kama ipo)
+//   data.status      — "PENDING", n.k.
+//
+// Backend inarudisha `data` moja kwa moja (sio { fimipay: data }).
+// ============================================================
+export async function payReservationAsync(id, { paymentReference = null } = {}) {
+  if (!id) {
+    return { ok: false, error: new Error("Transaction id is required") };
   }
-  return mutateWithRollback({
-    id,
-    patch: {
+
+  // Ulinzi wa mteja: ruhusu "credits" au undefined pekee
+  if (
+    paymentReference != null &&
+    paymentReference !== "credits" &&
+    String(paymentReference).trim() !== ""
+  ) {
+    return {
+      ok: false,
+      error: new Error(
+        'payment_reference inaweza kuwa "credits" pekee. Malipo ya kawaida hupitia FimiPay.'
+      ),
+    };
+  }
+
+  const previous = getTransactions();
+  const current = previous.find((t) => t.id === id);
+  if (!current) return { ok: false, error: new Error("Transaction not found") };
+
+  const isCredits = paymentReference === "credits";
+
+  // Credits: tunaweza kuashiria optimistic "reserved_paid"
+  // Cash (FimiPay): tunaacha status kama ilivyo — webhook itabadilisha
+  if (isCredits) {
+    const optimistic = {
+      ...current,
       status: TX_STATUS.RESERVED_PAID,
       reservationPaidAt: new Date().toISOString(),
-    },
-    apiCall: () => transactionsApi.payReservation(id, paymentReference),
-  });
+      updatedAt: new Date().toISOString(),
+    };
+    upsertLocal(optimistic);
+  }
+
+  try {
+    const payload = {};
+    if (paymentReference != null) {
+      payload.payment_reference = paymentReference;
+    }
+    const raw = await transactionsApi.payReservation(id, payload);
+
+    // ── Kesi A: FimiPay order ─────────────────────────────
+    // Backend inarudisha data moja kwa moja, ina `order_id`.
+    const fimipayOrderId = raw?.order_id;
+    const fimipayUrl =
+      raw?.payment_url ||
+      raw?.checkout_url ||
+      raw?.redirect_url ||
+      raw?.url ||
+      null;
+
+    if (fimipayOrderId && !isCredits) {
+      return {
+        ok: true,
+        pending: true,
+        fimipay: raw,
+        orderId: fimipayOrderId,
+        reference: raw.reference || raw.ref || fimipayOrderId,
+        checkoutUrl: fimipayUrl,
+        transaction: current,
+      };
+    }
+
+    // ── Kesi B: Reservation imewashwa papo hapo (credits/free) ─
+    const serverTx = normalizeTransactionFromApi(raw);
+    if (serverTx) upsertLocal(serverTx);
+    return {
+      ok: true,
+      pending: false,
+      transaction: serverTx || current,
+    };
+  } catch (err) {
+    if (isCredits) saveAll(previous);
+    console.warn("[transactionLifecycleStore] payReservation failed:", err);
+    return { ok: false, error: err };
+  }
 }
 
+// ============================================================
+// 2c. POLL RESERVATION STATUS (baada ya FimiPay)
+// Webhook RSV inasasisha backend; frontend inaangalia kila baada ya X sekunde.
+// ============================================================
+export async function pollReservationStatusAsync(
+  id,
+  { attempts = 15, intervalMs = 4000 } = {}
+) {
+  for (let i = 0; i < attempts; i++) {
+    await new Promise((r) => setTimeout(r, intervalMs));
+    const res = await fetchTransactionDetailAsync(id);
+    if (res.ok && res.transaction) {
+      const st = res.transaction.status;
+      // Ime-activate
+      if (
+        st === TX_STATUS.RESERVED_PAID ||
+        st === TX_STATUS.INSPECTING ||
+        st === TX_STATUS.DECIDED_ACCEPT ||
+        st === TX_STATUS.AWAITING_CONFIRMATION ||
+        st === TX_STATUS.COMPLETED
+      ) {
+        return { ok: true, transaction: res.transaction };
+      }
+      // Imekwisha / imeghairiwa
+      if (st === TX_STATUS.CANCELLED || st === TX_STATUS.EXPIRED) {
+        return {
+          ok: false,
+          transaction: res.transaction,
+          error: new Error("Reservation expired/cancelled"),
+        };
+      }
+    }
+  }
+  return {
+    ok: false,
+    error: new Error("Reservation haijawashwa baada ya kusubiri"),
+  };
+}
+
+// ============================================================
+// 2d. EXPIRE RESERVATION
+// ============================================================
 export async function expireReservationAsync(id) {
   return mutateWithRollback({
     id,
@@ -377,9 +510,6 @@ export async function resolveDisputeAsync(id, { resolution, note = "" }) {
   if (!resolution) {
     return { ok: false, error: new Error("resolution is required") };
   }
-  // Refund / cancel → CANCELLED. Continue → back to the negotiation
-  // stage (the backend will handle the exact status; we just make the
-  // local optimistic value sane).
   const lower = String(resolution).toLowerCase();
   const newStatus =
     lower.includes("refund") || lower.includes("cancel")
@@ -456,15 +586,16 @@ export function useActiveTransactionsCount() {
   return useTransactions().filter((t) => ACTIVE.includes(t.status)).length;
 }
 
-export function useDealTransactions() { return useTransactions(); }
-
-
+export function useDealTransactions() {
+  return useTransactions();
+}
 
 // ============================================================
 // DEAL ROOM DETAIL — fetch messages, offers, payment proof
 // Inatumika na admin (DealsSection) kuona kilichojiri.
 // ============================================================
 import { dealsApi } from "../api/deals.js";
+
 export async function fetchDealRoomDetailAsync(dealRoomId) {
   if (!dealRoomId) {
     return { ok: false, error: new Error("dealRoomId is required") };
@@ -475,7 +606,7 @@ export async function fetchDealRoomDetailAsync(dealRoomId) {
 
     return {
       ok: true,
-      dealRoom: data,                              
+      dealRoom: data,
       messages: data?.messages || [],
       paymentProof: data?.paymentProof || null,
       reservation: {

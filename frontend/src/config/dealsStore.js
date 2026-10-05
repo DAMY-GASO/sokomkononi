@@ -1,8 +1,10 @@
 // ============================================================
 // dealsStore.js — Backend: /api/deals/
+//
 // CHAGUO A: buyer + seller wote wanaweza kutuma offers na kukubali.
-// Ulinzi wa store unalingana na backend (NegotiationOfferCreateSerializer
-// + DealRoomAcceptOfferSerializer).
+// Ulinzi wa store unalingana na backend:
+//   - NegotiationOfferCreateSerializer (buyer + seller)
+//   - DealRoomAcceptOfferSerializer (yeyote aliye upande wa pili)
 // ============================================================
 import { useEffect, useState, useMemo } from "react";
 import { dealsApi } from "../api/deals.js";
@@ -33,8 +35,7 @@ function saveDeals(deals) {
 }
 const sameId = (a, b) => String(a) === String(b);
 
-// Backend statuses → frontend slugs. Anything unmapped falls through
-// lowercased so the display layer's fallback kicks in.
+// Backend statuses → frontend slugs.
 const API_TO_FRONTEND_DEAL_STATUS = {
   OPEN: "negotiating",
   PENDING: "negotiating",
@@ -88,13 +89,15 @@ function resolveAskingPrice(raw, listing, listingId) {
       const cached = getListings().find((l) => String(l.id) === String(id));
       const n = Number(cached?.price);
       if (Number.isFinite(n) && n > 0) return n;
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   }
   return 0;
 }
 
 function resolveCurrentOffer(raw, offers) {
-  const arr = Array.isArray(offers) ? offers : (raw?.offers || []);
+  const arr = Array.isArray(offers) ? offers : raw?.offers || [];
   if (arr.length > 0) {
     const sorted = [...arr].sort(
       (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
@@ -106,11 +109,13 @@ function resolveCurrentOffer(raw, offers) {
     const n = Number(c);
     if (Number.isFinite(n) && n > 0) return n;
   }
+  // Hakuna offer bado — 0 ni sahihi.
   return 0;
 }
 
 function resolveMeta(raw, listing, listingId) {
-  let category = listing?.category_name || listing?.category || raw?.category || null;
+  let category =
+    listing?.category_name || listing?.category || raw?.category || null;
   let location = listing?.location || raw?.location || "";
   let listingTitle = listing?.title || raw?.listing_title || "";
   if (!category || !location || !listingTitle) {
@@ -123,7 +128,9 @@ function resolveMeta(raw, listing, listingId) {
           location = location || cached.location || "";
           listingTitle = listingTitle || cached.title || "";
         }
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
     }
   }
   return { category, location, listingTitle };
@@ -145,13 +152,18 @@ function normalizeDealFromApi(raw, currentUserId) {
     transactionId: raw.transaction?.id ?? raw.transaction ?? null,
     listingId: listing.id ?? raw.listing ?? null,
     ...resolveMeta(raw, listing, raw?.listing_id ?? raw?.listing),
-    askingPrice: resolveAskingPrice(raw, listing, raw?.listing_id ?? raw?.listing),
+    askingPrice: resolveAskingPrice(
+      raw,
+      listing,
+      raw?.listing_id ?? raw?.listing
+    ),
     currentOffer: resolveCurrentOffer(raw, raw?.offers),
     counterpartyName: counterparty?.name || "",
     buyerId: buyer.id ?? buyerId,
     buyerName: buyer.name || raw.buyer_name || "",
     sellerId: seller.id ?? null,
     sellerName: seller.name || raw.seller_name || "",
+    // Namba ya muuzaji: BACKEND inatuma tu baada ya Reservation Fee kulipwa.
     sellerPhone:
       seller.phone ??
       seller.phone_number ??
@@ -210,22 +222,24 @@ function normalizeDealFromApi(raw, currentUserId) {
     updatedAt: raw.updated_at,
 
     messages: [
-      ...((raw.messages || []).map((m) => ({
+      // Real chat messages (kama backend itazirudisha).
+      ...(raw.messages || []).map((m) => ({
         id: m.id,
         sender: sameId(m.sender_id ?? m.sender, currentUserId) ? "me" : "them",
         text: m.text || "",
         offerAmount: null,
         at: m.created_at,
         status: m.status || null,
-      }))),
-      ...((raw.offers || []).map((o) => ({
+      })),
+      // Offers zinaonekana kama bubbles zao wenyewe.
+      ...(raw.offers || []).map((o) => ({
         id: o.id,
         sender: sameId(o.offered_by, currentUserId) ? "me" : "them",
         text: o.message || "",
         offerAmount: Number(o.amount) || null,
         at: o.created_at,
         status: o.status,
-      }))),
+      })),
     ].sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0)),
   };
 }
@@ -255,13 +269,20 @@ export async function getOrCreateDealAsync({
   // Mmiliki hawezi kuanzisha deal kwenye tangazo lake mwenyewe.
   try {
     const own = getListings().find((l) => sameId(l.id, listingId));
-    if (own && currentUserId != null && own.sellerId != null && sameId(own.sellerId, currentUserId)) {
+    if (
+      own &&
+      currentUserId != null &&
+      own.sellerId != null &&
+      sameId(own.sellerId, currentUserId)
+    ) {
       return {
         ok: false,
         error: new Error("Huwezi kuanzisha deal kwenye tangazo lako mwenyewe."),
       };
     }
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
 
   try {
     const raw = await dealsApi.create(listingId);
@@ -312,8 +333,10 @@ export async function sendOfferAsync(
 
   // Ulinzi: mtumiaji lazima awe buyer au seller wa deal hii.
   if (currentUserId != null) {
-    const isBuyer = deal.buyerId != null && sameId(deal.buyerId, currentUserId);
-    const isSeller = deal.sellerId != null && sameId(deal.sellerId, currentUserId);
+    const isBuyer =
+      deal.buyerId != null && sameId(deal.buyerId, currentUserId);
+    const isSeller =
+      deal.sellerId != null && sameId(deal.sellerId, currentUserId);
     if (!isBuyer && !isSeller) {
       return {
         ok: false,
@@ -381,8 +404,8 @@ export async function sendOfferAsync(
 // ============================================================
 // ACCEPT OFFER — CHAGUO A
 // Yeyote aliye UPANDE WA PILI wa offer ya mwisho anaweza kukubali.
-// - Mnunuzi anatuma offer → muuzaji anaweza kukubali
-// - Muuzaji anatuma counter → mnunuzi anaweza kukubali
+//   - Mnunuzi anatuma offer → muuzaji anaweza kukubali
+//   - Muuzaji anatuma counter → mnunuzi anaweza kukubali
 // Ulinzi: mtumiaji LAZIMA awe mshiriki, na ASIWE mwenyekiti wa offer.
 // ============================================================
 export async function acceptOfferAsync(dealId, offerId, currentUserId = null) {
@@ -392,8 +415,10 @@ export async function acceptOfferAsync(dealId, offerId, currentUserId = null) {
 
   if (currentUserId != null) {
     // 1. Lazima awe mshiriki wa deal
-    const isBuyer = deal.buyerId != null && sameId(deal.buyerId, currentUserId);
-    const isSeller = deal.sellerId != null && sameId(deal.sellerId, currentUserId);
+    const isBuyer =
+      deal.buyerId != null && sameId(deal.buyerId, currentUserId);
+    const isSeller =
+      deal.sellerId != null && sameId(deal.sellerId, currentUserId);
     if (!isBuyer && !isSeller) {
       return {
         ok: false,
@@ -402,7 +427,6 @@ export async function acceptOfferAsync(dealId, offerId, currentUserId = null) {
     }
 
     // 2. Hauwezi kukubali ofa yako mwenyewe
-    //    (offerId ni id ya offer; kwenye store, offers zina `sender` = "me" au "them")
     const targetOffer = (deal.messages || []).find(
       (m) => m.offerAmount && sameId(m.id, offerId)
     );
@@ -567,12 +591,14 @@ export function useDeals(currentUserId) {
       const needsMeta = !d.category || !d.location || !d.listingTitle;
       if (!needsPrice && !needsMeta) return d;
 
-      const cached = listings.find((l) => String(l.id) === String(d.listingId));
+      const cached = listings.find(
+        (l) => String(l.id) === String(d.listingId)
+      );
       if (!cached) return d;
 
       return {
         ...d,
-        askingPrice: needsPrice ? (Number(cached.price) || 0) : d.askingPrice,
+        askingPrice: needsPrice ? Number(cached.price) || 0 : d.askingPrice,
         category: d.category || cached.category || null,
         location: d.location || cached.location || "",
         listingTitle: d.listingTitle || cached.title || "",
