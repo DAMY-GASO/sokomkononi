@@ -301,7 +301,9 @@ function TicketCard({ ticket, lang }) {
                       >
                         {msg.senderName}
                       </p>
-                      <p className="leading-relaxed break-words">{msg.text}</p>
+                      <p className="leading-relaxed break-words" style={{ color: "inherit" }}>
+                        {msg.text}
+                      </p>
                       <p
                         className="text-[10px] mt-1"
                         style={{
