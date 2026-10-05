@@ -29,6 +29,8 @@ import {
   PartyPopper,
   Paperclip,
   Loader2,
+  Phone,
+  Lock,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS, timeAgo } from "./shared";
 import {
@@ -896,6 +898,12 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
             </p>
           </div>
 
+          <p className="text-secondary text-body-sm text-center">
+            {lang === "sw"
+              ? "Ukilipa Reservation Fee utaona namba ya simu ya muuzaji ili muwasiliane."
+              : "Once you pay the Reservation Fee you'll see the seller's phone number so you can get in touch."}
+          </p>
+
           <div className="grid grid-cols-3 gap-2">
             {reservationOptions.map((opt) => (
               <button
@@ -1174,6 +1182,40 @@ function DealDetail({
         ? "Muuzaji"
         : "Seller";
 
+  // ── Nani anaweza kufanya nini ───────────────────────────
+  // Mnunuzi PEKEE ndiye anatoa ofa. Muuzaji PEKEE ndiye anakubali/anakataa.
+  const isBuyer = side === "buyer";
+  const isSeller = side === "seller";
+  const lastOffer = [...(deal.messages || [])]
+    .reverse()
+    .find((m) => m.offerAmount);
+  const iMadeLastOffer = lastOffer?.sender === "me";
+  const canRespond = isSeller && deal.currentOffer > 0 && !iMadeLastOffer;
+
+  const waitingText = isBuyer
+    ? deal.currentOffer > 0
+      ? lang === "sw"
+        ? `Ofa yako ya ${formatTZS(deal.currentOffer)} imetumwa — unasubiri muuzaji akubali au akatae.`
+        : `Your offer of ${formatTZS(deal.currentOffer)} was sent — waiting for the seller to accept or decline.`
+      : lang === "sw"
+        ? "Hakuna ofa bado — toa ofa yako ya kwanza."
+        : "No offer yet — make your first offer."
+    : lang === "sw"
+      ? "Hakuna ofa kutoka kwa mnunuzi bado — subiri atoe ofa."
+      : "No offer from the buyer yet — wait for them to make one.";
+
+  // ── Namba ya simu ya muuzaji ────────────────────────────
+  // UI HAIAMUI nani aone namba: inaonyesha tu kile backend ilichotuma.
+  // Backend inatuma namba baada ya Reservation Fee kulipwa tu.
+  const sellerPhone =
+    deal.sellerPhone ?? deal.seller_phone ?? deal.counterpartyPhone ?? null;
+  const phoneLocked =
+    isBuyer &&
+    !sellerPhone &&
+    ["open", "pending", "negotiating", "offer_sent", "accepted"].includes(
+      deal.status
+    );
+
   const handleSend = () => {
     if (!text.trim()) return;
     onSendMessage(deal.id, text.trim());
@@ -1251,6 +1293,45 @@ function DealDetail({
         </span>
       </div>
 
+      {/* Namba ya muuzaji — inafunguka baada ya Reservation Fee */}
+      {isBuyer && sellerPhone && (
+        <div
+          style={{ background: "rgba(47,109,79,0.08)", borderColor: COLORS.sandLine }}
+          className="flex items-center justify-between gap-2 px-4 py-2 border-b text-body-sm"
+        >
+          <span
+            style={{ color: COLORS.green }}
+            className="flex items-center gap-1.5 min-w-0"
+          >
+            <Phone size={13} className="shrink-0" />
+            <span className="font-semibold shrink-0">
+              {lang === "sw" ? "Namba ya muuzaji" : "Seller phone"}:
+            </span>
+            <span className="font-mono truncate">{sellerPhone}</span>
+          </span>
+          <a
+            href={`tel:${sellerPhone}`}
+            style={{ background: COLORS.green, color: "white" }}
+            className="shrink-0 rounded-lg px-3 py-1.5 text-body-sm font-semibold"
+          >
+            {lang === "sw" ? "Piga Simu" : "Call"}
+          </a>
+        </div>
+      )}
+      {phoneLocked && (
+        <div
+          style={{ background: "rgba(16,26,46,0.04)", borderColor: COLORS.sandLine }}
+          className="flex items-center justify-center gap-2 px-4 py-2 border-b text-body-sm text-center"
+        >
+          <Lock size={13} className="shrink-0" color={COLORS.night} />
+          <span className="text-secondary">
+            {lang === "sw"
+              ? "Namba ya simu ya muuzaji itaonekana baada ya kulipa Reservation Fee."
+              : "The seller's phone number unlocks after you pay the Reservation Fee."}
+          </span>
+        </div>
+      )}
+
       {/* Messages */}
       <div
         className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-2.5"
@@ -1304,13 +1385,13 @@ function DealDetail({
         })}
       </div>
 
-      {/* Accept / decline row */}
+      {/* Accept / decline (muuzaji) + Toa ofa (mnunuzi) */}
       {(deal.status === "negotiating" || deal.status === "offer_sent") && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-t flex-wrap"
         >
-          {deal.currentOffer > 0 ? (
+          {canRespond ? (
             <>
               <button
                 onClick={() => onRespond(deal.id, "accepted")}
@@ -1335,29 +1416,29 @@ function DealDetail({
               style={{ color: "var(--text-muted)" }}
               className="text-body-sm italic flex-1"
             >
-              {lang === "sw"
-                ? "Hakuna ofa bado — toa ofa yako ya kwanza hapa chini."
-                : "No offer yet — make the first offer below."}
+              {waitingText}
             </span>
           )}
-          <button
-            onClick={() => setOfferOpen((v) => !v)}
-            style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-            className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border ml-auto"
-          >
-            <HandCoins size={13} />{" "}
-            {deal.currentOffer > 0
-              ? (lang === "sw" ? "Toa Ofa Nyingine" : "Make Another Offer")
-              : (lang === "sw" ? "Toa Ofa" : "Make an Offer")}
-            <ChevronDown
-              size={12}
-              style={{ transform: offerOpen ? "rotate(180deg)" : "none" }}
-            />
-          </button>
+          {isBuyer && (
+            <button
+              onClick={() => setOfferOpen((v) => !v)}
+              style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
+              className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border ml-auto"
+            >
+              <HandCoins size={13} />{" "}
+              {deal.currentOffer > 0
+                ? (lang === "sw" ? "Toa Ofa Nyingine" : "Make Another Offer")
+                : (lang === "sw" ? "Toa Ofa" : "Make an Offer")}
+              <ChevronDown
+                size={12}
+                style={{ transform: offerOpen ? "rotate(180deg)" : "none" }}
+              />
+            </button>
+          )}
         </div>
       )}
 
-      {offerOpen && (
+      {isBuyer && offerOpen && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-t"
@@ -1695,8 +1776,10 @@ export default function DealRooms({
   };
 
   const handleSendOffer = async (id, amount) => {
+    // Mnunuzi pekee ndiye anatoa ofa.
+    if (side !== "buyer") return;
     // dealsStore.sendOfferAsync performs optimistic update + rollback.
-    const res = await sendOfferAsync(id, amount);
+    const res = await sendOfferAsync(id, amount, "", null, user?.id);
     if (!res.ok) {
       console.warn("[DealRooms] sendOffer failed:", res.error);
       alert(
@@ -1709,6 +1792,8 @@ export default function DealRooms({
   };
 
   const handleRespond = async (id, newStatus) => {
+    // Muuzaji pekee ndiye anakubali/anakataa ofa.
+    if (side !== "seller") return;
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
 
@@ -1717,7 +1802,7 @@ export default function DealRooms({
       const lastOffer = [...(deal.messages || [])]
         .reverse()
         .find((m) => m.offerAmount && typeof m.id === "number");
-      const res = await acceptOfferAsync(id, lastOffer?.id ?? null);
+      const res = await acceptOfferAsync(id, lastOffer?.id ?? null, user?.id);
       if (!res.ok) {
         console.warn("[DealRooms] acceptOffer failed:", res.error);
         alert(

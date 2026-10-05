@@ -23,7 +23,15 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
-import { COLORS, formatTZS, timeAgo, getCategory } from "./shared.js";
+import {
+  COLORS,
+  formatTZS,
+  timeAgo,
+  getCategory,
+  isBoostActive,
+  isLeadingActive,
+} from "./shared.js";
+import { Link } from "react-router-dom";
 import StatusBadge from "../admin/shared/StatusBadge";
 import ListingImage from "../../../components/ListingImage.jsx";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
@@ -31,10 +39,35 @@ import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { useToast } from "../../../components/Toast.jsx";
 import { startUndo } from "../../../config/undoStore.js";
+import { notifyAdminAboutDeletion } from "../../../config/notificationsStore.js";
 import { restoreListingAsync } from "../../../config/listingsStore.js";
 
 // ============================================================
-// LISTING CARD
+// ACTION BUTTON — kitufe kidogo chenye icon, kina ukubwa mmoja kila mahali
+// ============================================================
+function ActionBtn({ icon: Icon, label, color, onClick, disabled, danger, className = "" }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex items-center gap-1.5 rounded-lg border bg-white px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+        danger ? "hover:bg-red-50" : "hover:bg-sand"
+      } ${className}`}
+      style={{
+        borderColor: danger ? "rgba(193,80,46,0.3)" : COLORS.sandLine,
+        color,
+      }}
+    >
+      <Icon size={12} className="shrink-0" />
+      {label}
+    </button>
+  );
+}
+
+// ============================================================
+// LISTING CARD — frame ile ile ya ListingCard ya umma:
+// border nyembamba, gold kwenye hover, gold ya kudumu kwa Featured.
 // ============================================================
 function ListingCard({
   listing,
@@ -50,7 +83,7 @@ function ListingCard({
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const category = getCategory(listing.category);
-  const CategoryIcon = getCategoryIcon(category?.iconKey);
+  const CategoryIcon = getCategoryIcon(category?.iconKey) || Tag;
   const catLabel =
     category?.label?.[lang] || category?.label?.sw || listing.category || "—";
   const isBusy = busy === "delete";
@@ -60,75 +93,91 @@ function ListingCard({
     (listing.photos && listing.photos[0]) ||
     null;
 
+  const isLiveOrReserved =
+    listing.status === "live" || listing.status === "reserved";
+  const featured = isBoostActive(listing);
+  const leading = isLeadingActive(listing);
+  const viewable = ["live", "reserved", "paused", "sold"].includes(listing.status);
+  const detailTo = `/mali/${listing.id}`;
+
+  const Thumb = (
+    <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl sm:h-28 sm:w-28">
+      <ListingImage
+        src={imageUrl}
+        alt={listing.title}
+        ratio="aspect-square"
+        fallback={<CategoryIcon size={24} color={COLORS.night} />}
+      />
+    </div>
+  );
+
+  const Title = (
+    <p className="line-clamp-2 break-words text-sm font-semibold leading-snug text-primary">
+      {listing.title}
+    </p>
+  );
+
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border overflow-hidden w-full max-w-full min-w-0"
+      className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl border-[1.5px] bg-white p-2 shadow-[0_1px_2px_rgba(1,25,87,0.04)] transition-all duration-200 hover:border-gold sm:p-2.5 ${
+        featured ? "border-gold" : "border-sandline"
+      } ${listing.status === "sold" ? "opacity-80" : ""}`}
     >
-      <div className="flex items-start gap-3 p-3 sm:p-4 min-w-0">
-        {/* Picha ya mraba */}
-        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden shrink-0">
-          <ListingImage
-            src={imageUrl}
-            alt={listing.title}
-            ratio="aspect-square"
-            fallback={
-              CategoryIcon ? (
-                <CategoryIcon size={22} color={COLORS.night} />
-              ) : (
-                <Tag size={22} color={COLORS.night} />
-              )
-            }
-          />
-        </div>
+      <div className="flex min-w-0 items-start gap-3">
+        {viewable ? <Link to={detailTo} className="shrink-0">{Thumb}</Link> : Thumb}
 
-        {/* Info */}
-        <div className="flex-1 min-w-0 overflow-hidden">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <p className="text-sm font-semibold text-primary line-clamp-2 break-words">
-              {listing.title}
-            </p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            {viewable ? (
+              <Link to={detailTo} className="min-w-0 flex-1 hover:text-gold-ink">
+                {Title}
+              </Link>
+            ) : (
+              <div className="min-w-0 flex-1">{Title}</div>
+            )}
             <StatusBadge status={listing.status} lang={lang} />
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-secondary mt-0.5 flex-wrap">
-            {category && (
-              <>
-                <span className="flex items-center gap-1 min-w-0">
-                  <CategoryIcon size={11} className="shrink-0" />
-                  <span className="truncate">{catLabel}</span>
-                </span>
-                <span className="text-muted shrink-0">•</span>
-              </>
-            )}
+          <p className="mt-1 text-base font-bold leading-tight text-night">
+            {formatTZS(listing.price)}
+          </p>
+
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-secondary">
+            <span className="flex min-w-0 items-center gap-1">
+              <CategoryIcon size={11} className="shrink-0" />
+              <span className="truncate">{catLabel}</span>
+            </span>
             {listing.location && (
-              <span className="flex items-center gap-1 min-w-0 truncate">
+              <span className="flex min-w-0 items-center gap-1">
                 <MapPin size={11} className="shrink-0" />
                 <span className="truncate">{listing.location}</span>
               </span>
             )}
           </div>
 
-          <p
-            style={{ color: COLORS.rust }}
-            className="text-sm font-bold mt-1.5 truncate"
-          >
-            {formatTZS(listing.price)}
-          </p>
-
-          <div className="flex items-center gap-2 text-[11px] text-muted mt-1 flex-wrap">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
             <span className="flex items-center gap-1">
               <Eye size={10} />
               {listing.views || 0}
             </span>
-            <span className="text-muted">•</span>
+            <span>•</span>
             <span>{timeAgo(listing.postedAt, lang)}</span>
+            {featured && (
+              <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-semibold text-night">
+                {t("Imeangaziwa", "Featured")}
+              </span>
+            )}
+            {leading && (
+              <span className="rounded-full bg-green px-2 py-0.5 text-[10px] font-semibold text-white">
+                {t("Kipaumbele", "Priority")}
+              </span>
+            )}
           </div>
 
           {listing.status === "rejected" && listing.rejectionReason && (
             <p
               style={{ color: COLORS.rust }}
-              className="text-[11px] mt-1 line-clamp-2"
+              className="mt-1.5 line-clamp-2 rounded-lg bg-red-50 px-2 py-1 text-[11px]"
             >
               {listing.rejectionReason}
             </p>
@@ -137,94 +186,34 @@ function ListingCard({
       </div>
 
       {/* Actions */}
-      <div
-        style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-        className="border-t px-3 sm:px-4 py-2 flex items-center gap-1.5 flex-wrap"
-      >
-        {/* Boost / Leading / Advertise — kwa live/available */}
-        {(listing.status === "live" || listing.status === "reserved") && (
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-sandline pt-2.5">
+        {isLiveOrReserved && (
           <>
-            <button
-              onClick={() => onBoost(listing.id)}
-              disabled={isBusy}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg border transition-colors disabled:opacity-50 hover:bg-white"
-              style={{ borderColor: COLORS.sandLine, color: COLORS.goldInk }}
-            >
-              <Rocket size={11} />
-              {t("Boost", "Boost")}
-            </button>
-            <button
-              onClick={() => onLeading(listing.id)}
-              disabled={isBusy}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg border transition-colors disabled:opacity-50 hover:bg-white"
-              style={{ borderColor: COLORS.sandLine, color: COLORS.green }}
-            >
-              <TrendingUp size={11} />
-              {t("Leading", "Leading")}
-            </button>
-            <button
-              onClick={() => onAdvertise(listing.id)}
-              disabled={isBusy}
-              className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg border transition-colors disabled:opacity-50 hover:bg-white"
-              style={{ borderColor: COLORS.sandLine, color: COLORS.rust }}
-            >
-              <Megaphone size={11} />
-              {t("Advertise", "Advertise")}
-            </button>
+            <ActionBtn icon={Rocket} label={t("Angaza", "Boost")} color={COLORS.goldInk} onClick={() => onBoost(listing.id)} disabled={isBusy} />
+            <ActionBtn icon={TrendingUp} label={t("Kipaumbele", "Priority")} color={COLORS.green} onClick={() => onLeading(listing.id)} disabled={isBusy} />
+            <ActionBtn icon={Megaphone} label={t("Tangaza", "Advertise")} color={COLORS.rust} onClick={() => onAdvertise(listing.id)} disabled={isBusy} />
           </>
         )}
 
-        {/* Pause/Resume */}
         {listing.status === "live" && (
-          <button
-            onClick={() => onPause(listing.id)}
-            disabled={isBusy}
-            className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg border transition-colors disabled:opacity-50 hover:bg-white"
-            style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-          >
-            <Pause size={11} />
-            {t("Pause", "Pause")}
-          </button>
+          <ActionBtn icon={Pause} label={t("Simamisha", "Pause")} color={COLORS.night} onClick={() => onPause(listing.id)} disabled={isBusy} />
         )}
         {listing.status === "paused" && (
-          <button
-            onClick={() => onResume(listing.id)}
-            disabled={isBusy}
-            className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg border transition-colors disabled:opacity-50 hover:bg-white"
-            style={{ borderColor: COLORS.sandLine, color: COLORS.green }}
-          >
-            <Play size={11} />
-            {t("Resume", "Resume")}
-          </button>
+          <ActionBtn icon={Play} label={t("Endelea", "Resume")} color={COLORS.green} onClick={() => onResume(listing.id)} disabled={isBusy} />
+        )}
+        {isLiveOrReserved && (
+          <ActionBtn icon={CheckCircle2} label={t("Imeuzwa", "Sold")} color={COLORS.green} onClick={() => onMarkSold(listing.id)} disabled={isBusy} />
         )}
 
-        {/* Mark Sold */}
-        {(listing.status === "live" || listing.status === "reserved") && (
-          <button
-            onClick={() => onMarkSold(listing.id)}
-            disabled={isBusy}
-            className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg border transition-colors disabled:opacity-50 hover:bg-white"
-            style={{ borderColor: COLORS.sandLine, color: COLORS.green }}
-          >
-            <CheckCircle2 size={11} />
-            {t("Sold", "Sold")}
-          </button>
-        )}
-
-        {/* Delete */}
-        <button
+        <ActionBtn
+          icon={isBusy ? Loader2 : Trash2}
+          label={t("Futa", "Delete")}
+          color={COLORS.rust}
           onClick={() => onRemove(listing.id)}
           disabled={isBusy}
-          className="ml-auto flex items-center gap-1 text-[11px] font-semibold px-2 py-1.5 rounded-lg border transition-colors disabled:opacity-50 hover:bg-red-50 shrink-0"
-          style={{ borderColor: "rgba(193,80,46,0.3)", color: COLORS.rust }}
-        >
-          {isBusy ? (
-            <Loader2 size={11} className="animate-spin" />
-          ) : (
-            <Trash2 size={11} />
-          )}
-          {t("Futa", "Delete")}
-        </button>
+          danger
+          className="ml-auto"
+        />
       </div>
     </div>
   );
@@ -328,7 +317,15 @@ export default function MyListings({
       },
     });
 
-    // 3. Toast ya kawaida (badala ya undo toast inayojitokeza)
+    // 3. Tuma notification kwa admin
+    notifyAdminAboutDeletion({
+      itemType: "listing",
+      itemId: id,
+      itemTitle: listing.title,
+      user,
+    });
+
+    // 4. Toast ya kawaida (badala ya undo toast inayojitokeza)
     toast.success(t("Tangazo limefutwa", "Listing deleted"), {
       duration: 2000,
     });
@@ -439,7 +436,7 @@ export default function MyListings({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {filtered.map((l) => (
             <ListingCard
               key={l.id}

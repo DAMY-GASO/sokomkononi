@@ -1112,7 +1112,10 @@ export default function PostPropertyForm({
         )}
 
         {category && !needsMode && (
-          <form onSubmit={handleFormSubmit} className="max-w-md mx-auto flex flex-col gap-5">
+          <form
+            onSubmit={handleFormSubmit}
+            className="mx-auto flex max-w-xl flex-col gap-5 rounded-3xl border-[1.5px] border-gold/60 bg-white p-4 shadow-[0_12px_32px_-18px_rgba(1,25,87,0.3)] sm:p-6"
+          >
             <Field
               label={
                 photosOptional

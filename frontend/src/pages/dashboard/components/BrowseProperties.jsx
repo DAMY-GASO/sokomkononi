@@ -1,34 +1,24 @@
 import React, { useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
-  MapPin,
-  Heart,
   Grid3x3,
   List,
   SlidersHorizontal,
   X,
   ChevronDown,
   Home as HomeIcon,
-  Star,
-  Shield,
-  Eye,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
-  Clock3,
-  Ban,
 } from "lucide-react";
 import {
   COLORS,
   getCategory,
-  formatTZS,
-  timeAgo,
   isBoostActive,
   isLeadingActive,
 } from "./shared";
 import { usePublicListings } from "../../../config/listingsStore.js";
-import ListingImage from "../../../components/ListingImage.jsx";
+import ListingCard from "../../../components/ListingCard.jsx";
 import {
   useSavedIds,
   toggleSaved,
@@ -47,271 +37,6 @@ const REGIONS = [
   "Kaskazini Pemba", "Kusini Pemba", "Kaskazini Unguja", "Kusini Unguja",
   "Mjini Magharibi",
 ];
-
-// ============================================================
-// RESERVATION COUNTDOWN
-// ============================================================
-function reservationCountdown(reservedUntil, lang) {
-  if (!reservedUntil) return "";
-  const ms = new Date(reservedUntil).getTime() - Date.now();
-  if (ms <= 0) return lang === "sw" ? "Inaisha hivi karibuni" : "Ending soon";
-  const hours = Math.floor(ms / 3600000);
-  if (hours < 24)
-    return lang === "sw" ? `Inaisha baada ya saa ${hours}` : `Ends in ${hours}hrs`;
-  const days = Math.floor(hours / 24);
-  const remainingHours = hours % 24;
-  if (remainingHours === 0)
-    return lang === "sw"
-      ? `Inaisha baada ya siku ${days}`
-      : `Ends in ${days} days`;
-  return lang === "sw"
-    ? `Inaisha baada ya siku ${days} ${remainingHours}saa`
-    : `Ends in ${days}d ${remainingHours}h`;
-}
-
-// ============================================================
-// CARD IMAGE RESOLVER
-// ============================================================
-function resolveCardImage(property, category) {
-  if (property?.imageUrl) return property.imageUrl;
-  if (Array.isArray(property?.photos) && property.photos[0]) {
-    const p = property.photos[0];
-    return typeof p === "string" ? p : p?.image_url || p?.url || null;
-  }
-  if (Array.isArray(property?.images) && property.images[0]) {
-    const p = property.images[0];
-    return typeof p === "string" ? p : p?.image_url || p?.url || null;
-  }
-  if (category?.imageUrl) return category.imageUrl;
-  return null;
-}
-
-// ============================================================
-// PROPERTY CARD
-// ============================================================
-function PropertyCard({ property, viewMode, isSaved, onToggleSave, lang }) {
-  const category = getCategory(property.category);
-  const Icon = getCategoryIcon(category?.iconKey);
-  const categoryLabel =
-    category?.label?.[lang] || category?.label?.sw || property.category;
-  const cardImage = resolveCardImage(property, category);
-
-  const isFeatured = isBoostActive(property);
-  const isLeading = isLeadingActive(property);
-  const isVerified = Boolean(property.verified);
-  const isReserved = property.status === "reserved";
-  const isSold = property.status === "sold";
-
-  const handleSave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onToggleSave(property.id, property);
-  };
-
-  if (viewMode === "list") {
-    return (
-      <Link
-        to={`/mali/${property.id}`}
-        className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-shadow flex flex-col sm:flex-row ${
-          isSold ? "border-gray-200 opacity-75" : "border-gray-100"
-        }`}
-      >
-        <div className="w-full sm:w-48 sm:self-start flex-shrink-0 relative overflow-hidden">
-          <ListingImage
-            src={cardImage}
-            alt={property.title}
-            ratio="aspect-square"
-            fallback={<Icon size={32} />}
-          />
-          {isReserved && (
-            <span className="absolute top-2 left-2 bg-gold text-night text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Clock3 size={10} />
-              RESERVED
-            </span>
-          )}
-          {isSold && (
-            <span className="absolute top-2 left-2 bg-night text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Ban size={10} />
-              SOLD
-            </span>
-          )}
-        </div>
-        <div className="flex-1 p-4">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h3 className="font-semibold text-primary text-sm truncate">
-                  {property.title}
-                </h3>
-                {isLeading && (
-                  <span className="shrink-0 bg-green/10 text-green text-body-sm font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                    <TrendingUp size={9} />
-                    Priority
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1 mt-1 text-body-sm text-secondary">
-                <MapPin size={12} />
-                {property.location}
-              </div>
-            </div>
-            <button
-              onClick={handleSave}
-              className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-                isSaved
-                  ? "bg-rust text-white"
-                  : "text-muted hover:text-rust"
-              }`}
-            >
-              <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
-            </button>
-          </div>
-          <p className="text-night font-bold text-base mt-2">
-            {formatTZS(property.price)}
-          </p>
-          {isReserved && property.reservedUntil && (
-            <p className="text-body-sm font-medium text-gold-ink mt-1 flex items-center gap-1">
-              <Clock3 size={11} />
-              {reservationCountdown(property.reservedUntil, lang)}
-            </p>
-          )}
-          <div className="flex items-center gap-3 mt-2 text-body-sm text-secondary flex-wrap">
-            {property.bedrooms && (
-              <span>
-                🛏 {property.bedrooms} {lang === "sw" ? "vyumba" : "bed"}
-              </span>
-            )}
-            {property.bathrooms && (
-              <span>
-                🚿 {property.bathrooms} {lang === "sw" ? "bafu" : "bath"}
-              </span>
-            )}
-            {property.area && <span>📐 {property.area}</span>}
-            {property.make && (
-              <span>
-                🚗 {property.make} {property.model}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-            <div className="flex items-center gap-2 text-body-sm text-muted">
-              <span className="flex items-center gap-1">
-                <Eye size={12} /> {property.views}
-              </span>
-              <span>•</span>
-              <span>{timeAgo(property.postedAt, lang)}</span>
-            </div>
-            {isVerified && (
-              <span className="flex items-center gap-1 text-body-sm text-green font-medium">
-                <Shield size={12} />
-                Verified
-              </span>
-            )}
-          </div>
-        </div>
-      </Link>
-    );
-  }
-
-  return (
-    <Link
-      to={`/mali/${property.id}`}
-      className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-all group block ${
-        isSold ? "border-gray-200 opacity-75" : "border-gray-100"
-      }`}
-    >
-      <div className="relative">
-        <ListingImage
-          src={cardImage}
-          alt={property.title}
-          ratio="aspect-square"
-          fallback={<Icon size={40} />}
-        />
-
-        <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
-          {isLeading && (
-            <span className="bg-green text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <TrendingUp size={10} />
-              Search Priority
-            </span>
-          )}
-          {isFeatured && (
-            <span className="bg-gold text-night text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
-              <Star size={10} fill="#011957" />
-              Featured
-            </span>
-          )}
-          {isReserved && (
-            <span className="bg-gold text-night text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
-              <Clock3 size={10} />
-              RESERVED
-            </span>
-          )}
-          {isSold && (
-            <span className="bg-night text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
-              <Ban size={10} />
-              SOLD
-            </span>
-          )}
-        </div>
-
-        {isVerified && (
-          <span className="absolute top-2 right-2 bg-green text-white text-body-sm font-bold px-2 py-1 rounded-full flex items-center gap-1">
-            <Shield size={10} />
-            Verified
-          </span>
-        )}
-        <button
-          onClick={handleSave}
-          className={`absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-            isSaved
-              ? "bg-rust text-white"
-              : "bg-white/90 text-muted hover:text-rust"
-          }`}
-        >
-          <Heart size={16} fill={isSaved ? "currentColor" : "none"} />
-        </button>
-      </div>
-      <div className="p-4">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-body-sm font-medium text-gold-ink bg-gold/10 px-2 py-0.5 rounded-full">
-            {categoryLabel}
-          </span>
-        </div>
-        <h3 className="font-semibold text-primary text-sm truncate">
-          {property.title}
-        </h3>
-        <div className="flex items-center gap-1 mt-1 text-body-sm text-secondary">
-          <MapPin size={12} />
-          <span className="truncate">{property.location}</span>
-        </div>
-        <p className="text-night font-bold text-base mt-2">
-          {formatTZS(property.price)}
-        </p>
-
-        {isReserved && property.reservedUntil && (
-          <p className="text-body-sm font-medium text-gold-ink mt-1 flex items-center gap-1">
-            <Clock3 size={11} />
-            {reservationCountdown(property.reservedUntil, lang)}
-          </p>
-        )}
-
-        <div className="flex items-center gap-3 mt-2 text-body-sm text-secondary flex-wrap">
-          {property.bedrooms && <span>🛏 {property.bedrooms}</span>}
-          {property.bathrooms && <span>🚿 {property.bathrooms}</span>}
-          {property.area && <span>📐 {property.area}</span>}
-          {property.make && <span>🚗 {property.year}</span>}
-        </div>
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 text-body-sm text-muted">
-          <span className="flex items-center gap-1">
-            <Eye size={12} /> {property.views}
-          </span>
-          <span>{timeAgo(property.postedAt, lang)}</span>
-        </div>
-      </div>
-    </Link>
-  );
-}
 
 // ============================================================
 // FILTER SIDEBAR
@@ -862,16 +587,21 @@ export default function BrowseProperties({
                       : "flex flex-col gap-3"
                   }
                 >
-                  {paginatedProperties.map((property) => (
-                    <PropertyCard
-                      key={property.id}
-                      property={property}
-                      viewMode={viewMode}
-                      isSaved={savedIds.includes(property.id)}
-                      onToggleSave={toggleSave}
-                      lang={lang}
-                    />
-                  ))}
+                  {paginatedProperties.map((property) => {
+                    const cat = getCategory(property.category);
+                    return (
+                      <ListingCard
+                        key={property.id}
+                        listing={property}
+                        category={cat}
+                        Icon={getCategoryIcon(cat?.iconKey)}
+                        lang={lang}
+                        viewMode={viewMode}
+                        isSaved={savedIds.includes(property.id)}
+                        onToggleSave={toggleSave}
+                      />
+                    );
+                  })}
                 </div>
 
                 {totalPages > 1 && (
