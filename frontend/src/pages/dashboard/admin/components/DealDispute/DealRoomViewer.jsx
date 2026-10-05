@@ -3,8 +3,10 @@
 // Admin — Anaona kilichojiri kwenye deal room yoyote.
 // Bilingual + mobile-responsive.
 //
-// SASISHO: Inapokea `roomData` (messages, offers, paymentProof)
-// kutoka backend (DealsSection.handleViewRoom) na `loading` prop.
+// SASISHO:
+//   - currentOffer: check ya > 0 (sio ?? tu)
+//   - reservationFee: onyesha tu kama > 0 au reservationPaidAt ipo
+//   - resolveSender: inategemea shared.js (inashughulikia IDs pia)
 // ============================================================
 
 import React from "react";
@@ -16,14 +18,18 @@ import {
   DollarSign,
   FileText,
   Paperclip,
-  CheckCircle,
   AlertTriangle,
   HandCoins,
   Calendar,
   CreditCard,
   Loader2,
 } from "lucide-react";
-import { COLORS, formatTZS, timeAgo, resolveSender } from "../../shared/constants.js";
+import {
+  COLORS,
+  formatTZS,
+  timeAgo,
+  resolveSender,
+} from "../../shared/constants.js";
 
 // ============================================================
 // HELPER — message text
@@ -54,7 +60,11 @@ function MessageBubble({ message, deal, lang }) {
         : "Buyer";
 
   const initial = who.charAt(0).toUpperCase();
-  const tone = isAdmin ? COLORS.rust : isSeller ? COLORS.gold : COLORS.green;
+  const tone = isAdmin
+    ? COLORS.rust
+    : isSeller
+      ? COLORS.gold
+      : COLORS.green;
 
   const text =
     getMessageText(message, lang) ||
@@ -65,12 +75,15 @@ function MessageBubble({ message, deal, lang }) {
       : "");
 
   const timeLabel = message.at
-    ? new Date(message.at).toLocaleString(lang === "sw" ? "sw-TZ" : "en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        day: "2-digit",
-        month: "short",
-      })
+    ? new Date(message.at).toLocaleString(
+        lang === "sw" ? "sw-TZ" : "en-US",
+        {
+          hour: "2-digit",
+          minute: "2-digit",
+          day: "2-digit",
+          month: "short",
+        }
+      )
     : null;
 
   return (
@@ -150,19 +163,33 @@ function InfoRow({ icon: Icon, label, value, color = COLORS.night }) {
 // ============================================================
 export default function DealRoomViewer({
   deal,
-  roomData,          // ⬅️ MPYA — { messages, offers, paymentProof }
-  loading,           // ⬅️ MPYA — bool
+  roomData,
+  loading,
   onClose,
   lang,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   if (!deal) return null;
 
-  // ⬇️ Tumia roomData kama ipo, la sivyo deal.messages (fallback)
+  // Tumia roomData kama ipo, la sivyo deal.messages (fallback)
   const messages = roomData?.messages ?? deal.messages ?? [];
   const messageCount = messages.length;
   const isDisputed = deal.status === "disputed";
   const paymentProof = roomData?.paymentProof ?? deal.paymentProof ?? null;
+
+  // ─────────────────────────────────────────────────────────
+  // Compute current offer safely
+  // ─────────────────────────────────────────────────────────
+  const currentOffer =
+    deal.currentOffer && deal.currentOffer > 0
+      ? deal.currentOffer
+      : deal.askingPrice || 0;
+
+  // ─────────────────────────────────────────────────────────
+  // Reservation visibility
+  // ─────────────────────────────────────────────────────────
+  const hasReservation =
+    (deal.reservationFee ?? 0) > 0 || Boolean(deal.reservationPaidAt);
 
   // ============================================================
   // LOADING STATE
@@ -256,21 +283,21 @@ export default function DealRoomViewer({
         <InfoRow
           icon={DollarSign}
           label={t("Bei ya Awali", "Asking Price")}
-          value={formatTZS(deal.askingPrice)}
+          value={formatTZS(deal.askingPrice || 0)}
           color={COLORS.night}
         />
         <InfoRow
           icon={HandCoins}
           label={t("Ofa ya Sasa", "Current Offer")}
-          value={formatTZS(deal.currentOffer ?? deal.askingPrice)}
+          value={formatTZS(currentOffer)}
           color={COLORS.rust}
         />
-        {deal.reservationFee != null && (
+        {hasReservation && (
           <>
             <InfoRow
               icon={CreditCard}
               label={t("Reservation Fee", "Reservation Fee")}
-              value={formatTZS(deal.reservationFee)}
+              value={formatTZS(deal.reservationFee || 0)}
               color={COLORS.gold}
             />
             <InfoRow
@@ -301,7 +328,7 @@ export default function DealRoomViewer({
         )}
       </div>
 
-           {/* Payment Proof */}
+      {/* Payment Proof */}
       {paymentProof && (
         <div className="min-w-0">
           <p className="text-[11px] font-semibold text-secondary uppercase mb-1.5">
@@ -394,7 +421,7 @@ export default function DealRoomViewer({
         </div>
       </div>
 
-      {/* Footer — info */}
+      {/* Footer */}
       <p className="text-[10px] text-muted text-center">
         {t(
           "Hii ni admin view — read-only. Admin hawezi kutuma ujumbe kama mnunuzi/muuzaji.",

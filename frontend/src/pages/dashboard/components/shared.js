@@ -1,5 +1,3 @@
-
-
 import { getBoostPackage as getBoostPackageFromStore } from "../../../config/boostPackagesStore.js";
 import { getListingFeeConfig } from "../../../config/listingFeeStore.js";
 import { getLeadingFeeConfig } from "../../../config/leadingFeeStore.js";
@@ -41,15 +39,10 @@ export const COLORS = {
 export const FONTS = {
   display: "'Inter', system-ui, -apple-system, sans-serif",
   body: "'Inter', system-ui, -apple-system, sans-serif",
-}
+};
 
 // ============================================================
 // IMAGE URL RESOLVER
-// Backends often return absolute URLs using the internal Docker
-// hostname (e.g. http://sokomkononi-...-rcnbg2:8000/media/...).
-// Browsers cannot resolve those names — we rewrite them to a
-// relative path so the frontend nginx proxies /media/ correctly.
-// Also handles many field-name variants and nested objects.
 // ============================================================
 const INTERNAL_HOST_PATTERNS = [
   /^https?:\/\/[^/]*rcnbg2[^/]*/i,
@@ -59,7 +52,6 @@ const INTERNAL_HOST_PATTERNS = [
   /^https?:\/\/10\.\d+\.\d+\.\d+(?::\d+)?/i,
   /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+(?::\d+)?/i,
   /^https?:\/\/192\.168\.\d+\.\d+(?::\d+)?/i,
-  // docker-style hostname:8000 (any host ending in :8000 without a domain)
   /^https?:\/\/[a-z0-9_-]+(?::8000)(?![a-z\.])/i,
 ];
 
@@ -78,10 +70,6 @@ function stripInternalHost(url) {
   return url;
 }
 
-/**
- * Extract the first image URL from a listing/category-ish object.
- * Tries every common field name so we don't miss anything.
- */
 export function pickImageUrl(entity) {
   if (!entity) return null;
   if (typeof entity === "string") return stripInternalHost(entity);
@@ -101,95 +89,68 @@ export function pickImageUrl(entity) {
     entity.src,
   ];
   for (const c of candidates) {
-    const v = typeof c === "object" && c !== null ? c.url || c.image_url || c.image : c;
+    const v =
+      typeof c === "object" && c !== null
+        ? c.url || c.image_url || c.image
+        : c;
     if (v && typeof v === "string") return stripInternalHost(v);
   }
-  // Arrays
   const arr = entity.photos || entity.images || entity.gallery;
   if (Array.isArray(arr) && arr.length > 0) {
     const first = arr[0];
-    const v = typeof first === "string" ? first
-      : first?.url || first?.image_url || first?.image || first?.src;
+    const v =
+      typeof first === "string"
+        ? first
+        : first?.url || first?.image_url || first?.image || first?.src;
     if (v) return stripInternalHost(v);
   }
   return null;
 }
 
-/**
- * Resolve a possibly-relative path to a full URL usable in <img src>.
- * Returns "" (empty string) when there is no valid URL — callers
- * should fall back to an icon in that case.
- */
 export function resolveImageUrl(value) {
   const url = pickImageUrl(value);
   if (!url) return "";
-  // (logging removed for production)
   if (url.startsWith("data:")) return url;
-  if (/^https?:\/\//i.test(url)) return url;   // already absolute
-  if (url.startsWith("/")) return url;            // relative — same origin
-  return `/${url}`;                               // no leading slash
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith("/")) return url;
+  return `/${url}`;
 }
-;
 
 // ============================================================
-// CATEGORIES — sasa zinatoka categoriesStore.js
+// CATEGORIES
 // ============================================================
-// Muundo wa category: { key, label: {sw,en}, description: {sw,en},
-//                       iconKey, isPopular, active, extra[] }
-// ============================================================
-
-/**
- * getCategory(key) — rudisha category object kutoka store.
- */
 export function getCategory(key) {
   return getCategoryFromStore(key);
 }
 
-/**
- * getCategoryIconByKey(iconKey) — rudisha lucide-react component.
- */
 export function getCategoryIconByKey(iconKey) {
   return getCategoryIcon(iconKey);
 }
 
-/**
- * getCategoryLabel(key, lang) — shortcut ya label moja kwa moja.
- */
 export function getCategoryLabel(key, lang = "sw") {
   const cat = getCategory(key);
   if (!cat) return key;
   return cat.label?.[lang] || cat.label?.sw || key;
 }
 
-/**
- * Re-export ya getActiveCategories kutoka store.
- */
 export { getActiveCategories };
 
 // ============================================================
 // MONEY HELPERS
 // ============================================================
-
-/**
- * parsePrice(value) — toa non-digits na rudisha integer.
- */
 export function parsePrice(value) {
   if (!value) return 0;
   const digitsOnly = String(value).replace(/[^0-9]/g, "");
   return digitsOnly ? parseInt(digitsOnly, 10) : 0;
 }
 
-/**
- * formatTZS(amount) — onyesha kama "TZS 85,000,000".
- */
 export function formatTZS(amount) {
   return "TZS " + Math.round(amount).toLocaleString("en-US");
 }
 
 // ============================================================
-// INPUT FORMATTING HELPERS (comma auto-format)
+// INPUT FORMATTING HELPERS
 // ============================================================
-
 export function formatNumberInput(value) {
   if (value === "" || value === null || value === undefined) return "";
   const digits = String(value).replace(/[^0-9]/g, "");
@@ -256,47 +217,84 @@ export function calculateListingFee(categoryKey, priceInput) {
   return { price, rate: config.rate, rawFee, fee, capped };
 }
 
-// ---- Listing status metadata ----
+// ============================================================
+// Listing status metadata
+// ============================================================
 export const STATUS = {
   live: { label: "Live", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
-  reserved: { label: "Ina Reservation", bg: "rgba(254,164,6,0.16)", fg: COLORS.goldInk },
+  reserved: {
+    label: "Ina Reservation",
+    bg: "rgba(254,164,6,0.16)",
+    fg: COLORS.goldInk,
+  },
   sold: { label: "Imeuzwa", bg: "rgba(1,25,87,0.08)", fg: COLORS.night },
-  pending_payment: { label: "Inasubiri Malipo", bg: "rgba(254,164,6,0.16)", fg: COLORS.goldInk },
-  in_review: { label: "Inakaguliwa", bg: "rgba(1,25,87,0.08)", fg: COLORS.night },
-  expired: { label: "Imeisha Muda", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
-  rejected: { label: "Imekataliwa", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
+  pending_payment: {
+    label: "Inasubiri Malipo",
+    bg: "rgba(254,164,6,0.16)",
+    fg: COLORS.goldInk,
+  },
+  in_review: {
+    label: "Inakaguliwa",
+    bg: "rgba(1,25,87,0.08)",
+    fg: COLORS.night,
+  },
+  expired: {
+    label: "Imeisha Muda",
+    bg: "rgba(193,80,46,0.12)",
+    fg: COLORS.rust,
+  },
+  rejected: {
+    label: "Imekataliwa",
+    bg: "rgba(193,80,46,0.12)",
+    fg: COLORS.rust,
+  },
 };
 
 export function timeAgo(dateStr, lang = "sw") {
-  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  const days = Math.floor(
+    (Date.now() - new Date(dateStr).getTime()) / 86400000
+  );
   if (days <= 0) return lang === "sw" ? "Leo" : "Today";
   if (days === 1) return lang === "sw" ? "Jana" : "Yesterday";
-  if (days < 30) return lang === "sw" ? `Siku ${days} zilizopita` : `${days} days ago`;
+  if (days < 30)
+    return lang === "sw" ? `Siku ${days} zilizopita` : `${days} days ago`;
   const months = Math.floor(days / 30);
-  if (lang === "sw") return months === 1 ? "Mwezi 1 uliopita" : `Miezi ${months} iliyopita`;
+  if (lang === "sw")
+    return months === 1 ? "Mwezi 1 uliopita" : `Miezi ${months} iliyopita`;
   return months === 1 ? "1 month ago" : `${months} months ago`;
 }
 
-// ---- Payment methods ----
+// ============================================================
+// Payment methods
+// ============================================================
 export const PAYMENT_METHODS = [
   { key: "mpesa", label: "M-Pesa", type: "mobile" },
   { key: "tigopesa", label: "Mixx by Yas", type: "mobile" },
   { key: "airtelmoney", label: "Airtel Money", type: "mobile" },
   { key: "halopesa", label: "HaloPesa", type: "mobile" },
-  { key: "card", label: "Kadi ya Benki (Visa/Mastercard)", type: "card" },
+  {
+    key: "card",
+    label: "Kadi ya Benki (Visa/Mastercard)",
+    type: "card",
+  },
 ];
 
 export function getPaymentMethod(key) {
   return PAYMENT_METHODS.find((m) => m.key === key);
 }
 
-// ---- Boost packages ----
+// ============================================================
+// Boost packages
+// ============================================================
 export function getBoostPackage(key) {
   return getBoostPackageFromStore(key);
 }
 
 export function isBoostActive(listing) {
-  return Boolean(listing.boostExpiresAt && new Date(listing.boostExpiresAt).getTime() > Date.now());
+  return Boolean(
+    listing.boostExpiresAt &&
+      new Date(listing.boostExpiresAt).getTime() > Date.now()
+  );
 }
 
 export function boostDaysRemaining(listing) {
@@ -308,14 +306,23 @@ export function boostDaysRemaining(listing) {
 export function applyBoost(listing, packageKey) {
   const pkg = getBoostPackage(packageKey);
   if (!pkg) return {};
-  const base = isBoostActive(listing) ? new Date(listing.boostExpiresAt).getTime() : Date.now();
-  const boostExpiresAt = new Date(base + pkg.days * 86400000).toISOString();
+  const base = isBoostActive(listing)
+    ? new Date(listing.boostExpiresAt).getTime()
+    : Date.now();
+  const boostExpiresAt = new Date(
+    base + pkg.days * 86400000
+  ).toISOString();
   return { boostTier: pkg.key, boostExpiresAt };
 }
 
-// ---- Leading Fee ----
+// ============================================================
+// Leading Fee
+// ============================================================
 export function isLeadingActive(listing) {
-  return Boolean(listing.leadingExpiresAt && new Date(listing.leadingExpiresAt).getTime() > Date.now());
+  return Boolean(
+    listing.leadingExpiresAt &&
+      new Date(listing.leadingExpiresAt).getTime() > Date.now()
+  );
 }
 
 export function leadingDaysRemaining(listing) {
@@ -327,26 +334,33 @@ export function leadingDaysRemaining(listing) {
 export function applyLeading(listing) {
   const config = getLeadingFeeConfig();
   if (!config) return {};
-  const base = isLeadingActive(listing) ? new Date(listing.leadingExpiresAt).getTime() : Date.now();
-  const leadingExpiresAt = new Date(base + config.days * 86400000).toISOString();
+  const base = isLeadingActive(listing)
+    ? new Date(listing.leadingExpiresAt).getTime()
+    : Date.now();
+  const leadingExpiresAt = new Date(
+    base + config.days * 86400000
+  ).toISOString();
   return { leadingExpiresAt };
 }
 
 // ============================================================
 // buildListingFromSubmission
 // ============================================================
-export function buildListingFromSubmission({ categoryKey, base, extra, photoCount }) {
+export function buildListingFromSubmission({
+  categoryKey,
+  base,
+  extra,
+  photoCount,
+}) {
   const feeInfo = calculateListingFee(categoryKey, base.price);
 
   const hoisted = {};
 
-  // Common (nyumba, viwanja)
   if (extra?.title) hoisted.titleStatus = extra.title;
   if (extra?.ukubwa) hoisted.area = extra.ukubwa;
   if (extra?.vyumba) hoisted.bedrooms = Number(extra.vyumba);
   if (extra?.bafu) hoisted.bathrooms = Number(extra.bafu);
 
-  // Magari
   if (extra?.make_model) {
     const parts = String(extra.make_model).trim().split(/\s+/);
     hoisted.make = parts[0];
@@ -354,11 +368,11 @@ export function buildListingFromSubmission({ categoryKey, base, extra, photoCoun
   }
   if (extra?.mileage) hoisted.mileage = `${extra.mileage} km`;
 
-  // Biashara & Mashine
   if (extra?.aina) hoisted.type = extra.aina;
   if (extra?.hours) hoisted.hours = `${extra.hours} hrs`;
 
-  const lifetimeDays = Number(getPlatformPolicy()?.listingLifetimeDays) || 60;
+  const lifetimeDays =
+    Number(getPlatformPolicy()?.listingLifetimeDays) || 60;
 
   return {
     id: `l_${Date.now()}`,
@@ -374,24 +388,52 @@ export function buildListingFromSubmission({ categoryKey, base, extra, photoCoun
     photoCount,
     status: "pending_payment",
     postedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + lifetimeDays * 86400000).toISOString(),
+    expiresAt: new Date(
+      Date.now() + lifetimeDays * 86400000
+    ).toISOString(),
     listingFee: feeInfo.fee,
     views: 0,
     inquiries: 0,
   };
 }
+
 // ============================================================
-// RESOLVE SENDER — inabadilisha "me"/"them" kuwa "buyer"/"seller"
-// Inatumika kwenye DealRoomViewer na DisputeReviewPanel
+// RESOLVE SENDER
+// Inashughulikia aina zote za sender:
+//   - "admin" / "buyer" / "seller" → rudisha moja kwa moja
+//   - "me" / "them" → hutumika kwenye deal room chat
+//   - ID (namba au string) → linganisha na buyerId/sellerId
+//   - Fallback → "buyer" (kama haijulikani kabisa)
 // ============================================================
 export function resolveSender(sender, deal) {
+  // 1. String za moja kwa moja
   if (sender === "admin") return "admin";
-  if (sender === "buyer" || sender === "seller") return sender;
+  if (sender === "buyer") return "buyer";
+  if (sender === "seller") return "seller";
 
+  // 2. "me" / "them" — kwa mtazamo wa mtumiaji aliyeingia
+  if (sender === "me" || sender === "them") {
+    // Kama deal ina counterpartyName (mtumiaji aliyeingia ni buyer/seller)
+    if (deal?.counterpartyName) {
+      const themIsBuyer = deal.counterpartyName === deal.buyerName;
+      if (sender === "them") return themIsBuyer ? "buyer" : "seller";
+      if (sender === "me") return themIsBuyer ? "seller" : "buyer";
+    }
+    // Fallback kwa admin au mtumiaji bila counterpartyName
+    return sender === "them" ? "buyer" : "seller";
+  }
 
-  const themIsBuyer = deal?.counterpartyName === deal?.buyerName;
+  // 3. ID (namba au string) — linganisha na buyerId/sellerId
+  if (sender != null) {
+    const senderId = String(sender);
+    if (deal?.buyerId != null && String(deal.buyerId) === senderId) {
+      return "buyer";
+    }
+    if (deal?.sellerId != null && String(deal.sellerId) === senderId) {
+      return "seller";
+    }
+  }
 
-  if (sender === "them") return themIsBuyer ? "buyer" : "seller";
-  if (sender === "me") return themIsBuyer ? "seller" : "buyer";
-  return "buyer"; 
+  // 4. Fallback — haijulikani
+  return "buyer";
 }

@@ -3,90 +3,121 @@
 // Deal Rooms & Dispute Resolution — Admin.
 // Bilingual + mobile-responsive + Async actions na rollback.
 //
-// SASISHO: handleViewRoom inafetch messages, offers, paymentProof
-// kutoka backend (fetchDealRoomDetailAsync) ili admin aone data halisi.
+// SASISHO:
+//   - useDeals(user?.id) — pitisha currentUserId ili counterpartyName ifanye kazi
+//   - handleResolve — fetchTransactionDetailAsync (si createTransactionAsync)
+//   - Refresh button — kusasisha deals + kufuta cache ya room
 // ============================================================
 
 import React, { useState } from "react";
-import { MoreVertical, Eye, AlertTriangle, Loader2 } from "lucide-react";
+import {
+  MoreVertical,
+  Eye,
+  AlertTriangle,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 import { COLORS, formatTZS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
 import DisputeReviewPanel from "../components/DealDispute/DisputeReviewPanel.jsx";
 import DealRoomViewer from "../components/DealDispute/DealRoomViewer.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
-// ⬇️ MABADILIKO: tumia resolveDisputeAsync
+import { useAuth } from "../../../../config/authStore.js";
 import {
   useDeals,
+  hydrateDealsFromApi,
   resolveDisputeAsync,
 } from "../../../../config/dealsStore.js";
 import {
   getTransactionByDealRoom,
   fetchTransactionDetailAsync,
-  createTransactionAsync,
-  fetchDealRoomDetailAsync,        // ⬅️ MPYA
+  fetchDealRoomDetailAsync,
 } from "../../../../config/transactionLifecycleStore.js";
 
 export default function DealsSection() {
   const { lang } = useLanguage();
-  const deals = useDeals();
+  const { user } = useAuth();
+  const deals = useDeals(user?.id);
+
   const [expandedId, setExpandedId] = useState(null);
   const [disputeId, setDisputeId] = useState(null);
-  // ⬇️ MPYA: busy + error state
   const [busy, setBusy] = useState({}); // { [dealId]: true }
   const [error, setError] = useState("");
-  // ⬇️ MPYA: deal room cache + loading state
   const [dealRooms, setDealRooms] = useState({}); // { [dealId]: { messages, offers, paymentProof } }
   const [loadingRoom, setLoadingRoom] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
- // ============================================================
-// HANDLE VIEW ROOM — fetch deal room detail kutoka backend
-// Backend inarudisha AdminDealRoomSerializer kwa admin —
-// ina messages, paymentProof, reservation details, disputeNote.
-// ============================================================
-const handleViewRoom = async (deal) => {
-  const dealId = deal.id;
+  // ============================================================
+  // REFRESH — sasisha deals + futa cache ya room
+  // ============================================================
+  const handleRefresh = async () => {
+    if (!user?.id || refreshing) return;
+    setRefreshing(true);
+    setError("");
+    try {
+      await hydrateDealsFromApi(user.id);
+      // Futa cache ya room ili kila "View Room" ipakue upya
+      setDealRooms({});
+    } catch (err) {
+      console.warn("[DealsSection] refresh failed:", err);
+      setError(
+        t("Imeshindwa kusasisha deals.", "Failed to refresh deals.")
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
-  // Toggle — kama ipo wazi, funga
-  if (expandedId === dealId) {
-    setExpandedId(null);
-    return;
-  }
+  // ============================================================
+  // HANDLE VIEW ROOM — fetch deal room detail kutoka backend
+  // Backend inarudisha AdminDealRoomSerializer kwa admin —
+  // ina messages, paymentProof, reservation details, disputeNote.
+  // ============================================================
+  const handleViewRoom = async (deal) => {
+    const dealId = deal.id;
 
-  setExpandedId(dealId);
-  setDisputeId(null);
-  setError("");
+    // Toggle — kama ipo wazi, funga
+    if (expandedId === dealId) {
+      setExpandedId(null);
+      return;
+    }
 
-  // Kama tayari tuna data, usirudie fetch
-  if (dealRooms[dealId]) return;
+    setExpandedId(dealId);
+    setDisputeId(null);
+    setError("");
 
-  setLoadingRoom(true);
+    // Kama tayari tuna data, usirudie fetch
+    if (dealRooms[dealId]) return;
 
-  const res = await fetchDealRoomDetailAsync(dealId);
-  setLoadingRoom(false);
+    setLoadingRoom(true);
 
-  if (res.ok) {
-    // Hifadhi deal room kamili — messages, paymentProof, n.k.
-    setDealRooms((prev) => ({
-      ...prev,
-      [dealId]: {
-        messages: res.messages || [],
-        paymentProof: res.paymentProof || null,
-        reservation: res.reservation || null,
-        disputeNote: res.disputeNote || "",
-      },
-    }));
-  } else {
-    setError(
-      res.error?.message ||
-        t("Imeshindwa kupakia deal room.", "Failed to load deal room.")
-    );
-  }
-};
+    const res = await fetchDealRoomDetailAsync(dealId);
+    setLoadingRoom(false);
+
+    if (res.ok) {
+      setDealRooms((prev) => ({
+        ...prev,
+        [dealId]: {
+          messages: res.messages || [],
+          paymentProof: res.paymentProof || null,
+          reservation: res.reservation || null,
+          disputeNote: res.disputeNote || "",
+        },
+      }));
+    } else {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kupakia deal room.", "Failed to load deal room.")
+      );
+    }
+  };
+
   // ============================================================
   // HANDLE RESOLVE — async + rollback
+  // Admin hana ruhusa kuunda transaction — anatumia iliyopo.
   // ============================================================
   const handleResolve = async (dealId, payload) => {
     if (busy[dealId]) return;
@@ -94,22 +125,22 @@ const handleViewRoom = async (deal) => {
     setBusy((b) => ({ ...b, [dealId]: true }));
     setError("");
 
-    // Try the local cache first; if empty, ask the backend.
+    // ── 1. Angalia local cache kwanza ────────────────────────
     let tx = getTransactionByDealRoom(dealId);
+
+    // ── 2. Kama haipo, fetch kutoka backend ──────────────────
     if (!tx?.id) {
       try {
-        const created = await createTransactionAsync(dealId);
-        if (created?.ok && created.transaction?.id) {
-          tx = created.transaction;
-        } else if (created?.error) {
-          await fetchTransactionDetailAsync(dealId).catch(() => {});
-          tx = getTransactionByDealRoom(dealId);
+        const fetched = await fetchTransactionDetailAsync(dealId);
+        if (fetched?.ok && fetched.transaction?.id) {
+          tx = fetched.transaction;
         }
       } catch (err) {
-        console.warn("[DealsSection] tx lookup failed:", err);
+        console.warn("[DealsSection] tx fetch failed:", err);
       }
     }
 
+    // ── 3. Kama bado haipo → mwambie admin ───────────────────
     if (!tx?.id) {
       setBusy((b) => {
         const n = { ...b };
@@ -125,6 +156,7 @@ const handleViewRoom = async (deal) => {
       return;
     }
 
+    // ── 4. Tuma resolve kwa backend ──────────────────────────
     const res = await resolveDisputeAsync(dealId, {
       resolution: payload.action,
       note: payload.adminNote || "",
@@ -163,7 +195,11 @@ const handleViewRoom = async (deal) => {
 
     if (isDisputed) {
       return (
-        <div className={`flex gap-2 ${fullWidth ? "w-full" : "justify-end"} flex-wrap`}>
+        <div
+          className={`flex gap-2 ${
+            fullWidth ? "w-full" : "justify-end"
+          } flex-wrap`}
+        >
           <button
             onClick={() => handleViewRoom(deal)}
             disabled={isBusy || isLoading}
@@ -223,9 +259,7 @@ const handleViewRoom = async (deal) => {
           ) : (
             <Eye size={13} />
           )}
-          {isRoomOpen
-            ? t("Funga", "Close")
-            : t("Angalia Room", "View Room")}
+          {isRoomOpen ? t("Funga", "Close") : t("Angalia Room", "View Room")}
         </button>
       </div>
     );
@@ -233,16 +267,39 @@ const handleViewRoom = async (deal) => {
 
   return (
     <>
-      <SectionHeader
-        title={t(
-          "Deal Rooms & Utatuzi wa Migogoro",
-          "Deal Rooms & Dispute Resolution"
-        )}
-        subtitle={t(
-          "Fuatilia deals na utatue migogoro. Bofya 'Angalia Room' kuona kilichojiri.",
-          "Monitor deals and resolve disputes. Click 'View Room' to see what happened."
-        )}
-      />
+      {/* Header + Refresh */}
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="min-w-0 flex-1">
+          <SectionHeader
+            title={t(
+              "Deal Rooms & Utatuzi wa Migogoro",
+              "Deal Rooms & Dispute Resolution"
+            )}
+            subtitle={t(
+              "Fuatilia deals na utatue migogoro. Bofya 'Angalia Room' kuona kilichojiri.",
+              "Monitor deals and resolve disputes. Click 'View Room' to see what happened."
+            )}
+          />
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={!user?.id || refreshing}
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{
+            borderColor: COLORS.sandLine,
+            color: "var(--text-primary)",
+            background: "white",
+          }}
+        >
+          <RefreshCw
+            size={13}
+            className={refreshing ? "animate-spin" : ""}
+          />
+          <span className="hidden sm:inline">
+            {refreshing ? t("Inasasisha...", "Refreshing...") : t("Sasisha", "Refresh")}
+          </span>
+        </button>
+      </div>
 
       {/* Error banner */}
       {error && (
@@ -310,16 +367,16 @@ const handleViewRoom = async (deal) => {
                         </div>
                       </td>
                       <td className="px-5 py-3 text-sm text-secondary">
-                        {d.buyerName}
+                        {d.buyerName || "—"}
                       </td>
                       <td className="px-5 py-3 text-sm text-secondary">
-                        {d.sellerName}
+                        {d.sellerName || "—"}
                       </td>
                       <td
                         className="px-5 py-3 text-sm font-semibold"
                         style={{ color: COLORS.rust }}
                       >
-                        {formatTZS(d.currentOffer ?? d.askingPrice)}
+                        {formatTZS(d.currentOffer ?? d.askingPrice ?? 0)}
                       </td>
                       <td className="px-5 py-3">
                         <StatusBadge status={d.status} lang={lang} />
@@ -346,6 +403,7 @@ const handleViewRoom = async (deal) => {
                         <td colSpan={6} className="p-0">
                           <DisputeReviewPanel
                             deal={d}
+                            roomData={dealRooms[d.id]}
                             onResolve={handleResolve}
                             onClose={() => setDisputeId(null)}
                             lang={lang}
@@ -411,13 +469,13 @@ const handleViewRoom = async (deal) => {
                   <span className="truncate">
                     {t("Mnunuzi", "Buyer")}:{" "}
                     <span className="font-medium text-primary">
-                      {d.buyerName}
+                      {d.buyerName || "—"}
                     </span>
                   </span>
                   <span className="truncate">
                     {t("Muuzaji", "Seller")}:{" "}
                     <span className="font-medium text-primary">
-                      {d.sellerName}
+                      {d.sellerName || "—"}
                     </span>
                   </span>
                 </div>
@@ -426,7 +484,7 @@ const handleViewRoom = async (deal) => {
                   className="text-sm font-bold mb-3"
                   style={{ color: COLORS.rust }}
                 >
-                  {formatTZS(d.currentOffer ?? d.askingPrice)}
+                  {formatTZS(d.currentOffer ?? d.askingPrice ?? 0)}
                 </p>
 
                 <ActionButtons deal={d} fullWidth />
@@ -448,6 +506,7 @@ const handleViewRoom = async (deal) => {
                 <div className="border-t border-gray-100">
                   <DisputeReviewPanel
                     deal={d}
+                    roomData={dealRooms[d.id]}
                     onResolve={handleResolve}
                     onClose={() => setDisputeId(null)}
                     lang={lang}

@@ -1,18 +1,16 @@
 // ============================================================
 // DisputeReviewPanel.jsx
 // Panel ya kutatua mgogoro — Admin anachagua action.
-// Bilingual + responsive + message history iliyoboreshwa.
-// Ina-support sender: "me" | "them" | "buyer" | "seller" | "admin"
+// SASISHO: Inapokea `roomData` prop ili kupata messages kamili.
 // ============================================================
 
 import React, { useState } from "react";
+import { RotateCcw, CheckCircle, XCircle, Shield } from "lucide-react";
 import {
-  RotateCcw,
-  CheckCircle,
-  XCircle,
-  Shield,
-} from "lucide-react";
-import { COLORS, formatTZS, resolveSender } from "../../shared/constants.js";
+  COLORS,
+  formatTZS,
+  resolveSender,
+} from "../../shared/constants.js";
 
 // ============================================================
 // MESSAGE BUBBLE
@@ -34,11 +32,12 @@ function MessageBubble({ message, deal, lang }) {
         : "Buyer";
 
   const initial = who.charAt(0).toUpperCase();
+  const tone = isAdmin
+    ? COLORS.rust
+    : isSeller
+      ? COLORS.gold
+      : COLORS.green;
 
-  // Rangi
-  const tone = isAdmin ? COLORS.rust : isSeller ? COLORS.gold : COLORS.green;
-
-  // Text
   const text =
     message.text ||
     (message.offerAmount
@@ -47,19 +46,20 @@ function MessageBubble({ message, deal, lang }) {
         : `Offer of ${formatTZS(message.offerAmount)}`
       : "");
 
-  // Timestamp
   const timeLabel = message.at
-    ? new Date(message.at).toLocaleString(lang === "sw" ? "sw-TZ" : "en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        day: "2-digit",
-        month: "short",
-      })
+    ? new Date(message.at).toLocaleString(
+        lang === "sw" ? "sw-TZ" : "en-US",
+        {
+          hour: "2-digit",
+          minute: "2-digit",
+          day: "2-digit",
+          month: "short",
+        }
+      )
     : null;
 
   return (
     <div className={`flex gap-2 ${isSeller ? "flex-row-reverse" : ""}`}>
-      {/* Avatar */}
       <div
         className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
         style={{ background: `${tone}20`, color: tone }}
@@ -67,7 +67,6 @@ function MessageBubble({ message, deal, lang }) {
         {isAdmin ? <Shield size={11} /> : initial}
       </div>
 
-      {/* Bubble */}
       <div
         className={`flex-1 min-w-0 max-w-[85%] rounded-lg px-2.5 py-1.5 ${
           isSeller ? "ml-auto" : ""
@@ -119,7 +118,13 @@ function MessageBubble({ message, deal, lang }) {
 // ============================================================
 // DISPUTE REVIEW PANEL
 // ============================================================
-export default function DisputeReviewPanel({ deal, onResolve, onClose, lang }) {
+export default function DisputeReviewPanel({
+  deal,
+  roomData,
+  onResolve,
+  onClose,
+  lang,
+}) {
   const [action, setAction] = useState(null);
   const [note, setNote] = useState("");
 
@@ -172,8 +177,13 @@ export default function DisputeReviewPanel({ deal, onResolve, onClose, lang }) {
     setNote("");
   };
 
-  const messages = deal.messages || [];
+  // Tumia roomData kama ipo, la sivyo deal.messages
+  const messages = roomData?.messages ?? deal.messages ?? [];
   const messageCount = messages.length;
+
+  // Angalia kama reservation ipo
+  const hasReservation =
+    (deal.reservationFee ?? 0) > 0 || Boolean(deal.reservationPaidAt);
 
   return (
     <div
@@ -205,11 +215,15 @@ export default function DisputeReviewPanel({ deal, onResolve, onClose, lang }) {
       >
         <span className="text-secondary">
           {lang === "sw" ? "Mnunuzi:" : "Buyer:"}{" "}
-          <span className="font-semibold text-primary">{deal.buyerName}</span>
+          <span className="font-semibold text-primary">
+            {deal.buyerName || "—"}
+          </span>
         </span>
         <span className="text-secondary">
           {lang === "sw" ? "Muuzaji:" : "Seller:"}{" "}
-          <span className="font-semibold text-primary">{deal.sellerName}</span>
+          <span className="font-semibold text-primary">
+            {deal.sellerName || "—"}
+          </span>
         </span>
       </div>
 
@@ -220,7 +234,7 @@ export default function DisputeReviewPanel({ deal, onResolve, onClose, lang }) {
         </p>
         <p
           style={{ borderColor: COLORS.sandLine }}
-          className="text-sm text-primary bg-white border rounded-lg px-3 py-2.5"
+          className="text-sm text-primary bg-white border rounded-lg px-3 py-2.5 break-words"
         >
           {deal.disputeNote ||
             (lang === "sw"
@@ -230,7 +244,7 @@ export default function DisputeReviewPanel({ deal, onResolve, onClose, lang }) {
       </div>
 
       {/* Reservation fee */}
-      {deal.reservationFee != null && (
+      {hasReservation && (
         <div>
           <p className="text-[11px] font-semibold text-secondary uppercase mb-1.5">
             Reservation Fee
@@ -247,7 +261,7 @@ export default function DisputeReviewPanel({ deal, onResolve, onClose, lang }) {
             </span>
             <span>
               {lang === "sw" ? "Kiasi" : "Amount"}:{" "}
-              {formatTZS(deal.reservationFee)}
+              {formatTZS(deal.reservationFee || 0)}
             </span>
             <span>
               {lang === "sw" ? "Njia" : "Method"}:{" "}
@@ -280,8 +294,13 @@ export default function DisputeReviewPanel({ deal, onResolve, onClose, lang }) {
                 : "No messages in this deal."}
             </p>
           ) : (
-            messages.map((m) => (
-              <MessageBubble key={m.id} message={m} deal={deal} lang={lang} />
+            messages.map((m, idx) => (
+              <MessageBubble
+                key={m.id || `msg-${idx}`}
+                message={m}
+                deal={deal}
+                lang={lang}
+              />
             ))
           )}
         </div>
@@ -308,7 +327,10 @@ export default function DisputeReviewPanel({ deal, onResolve, onClose, lang }) {
               >
                 <Icon size={16} color={a.tone} className="mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <p style={{ color: a.tone }} className="text-xs font-semibold">
+                  <p
+                    style={{ color: a.tone }}
+                    className="text-xs font-semibold"
+                  >
                     {a.label[lang]}
                   </p>
                   <p className="text-[11px] text-secondary mt-0.5">
@@ -328,7 +350,9 @@ export default function DisputeReviewPanel({ deal, onResolve, onClose, lang }) {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder={
-              lang === "sw" ? "Maelezo ya uamuzi..." : "Decision note..."
+              lang === "sw"
+                ? "Maelezo ya uamuzi..."
+                : "Decision note..."
             }
             rows={2}
             style={{ borderColor: COLORS.sandLine }}
