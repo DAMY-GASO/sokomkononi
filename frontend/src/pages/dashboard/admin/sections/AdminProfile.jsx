@@ -2,6 +2,11 @@
 // AdminProfile.jsx — SECTION ndani ya AdminDashboard
 // Inaonyeshwa kama `case "profile"` kwenye renderSection().
 // Inatumia authStore moja kwa moja.
+//
+// SASISHO:
+//   - Password change: logout baada ya kubadilisha (backend blacklists tokens)
+//   - Password min: 8 (kutoka backend min_length=8)
+//   - Email input: readOnly (haiwezi kubadilishwa)
 // ============================================================
 import React, { useState, useRef, useEffect } from "react";
 import {
@@ -10,9 +15,20 @@ import {
   updatePasswordAsync,
   updateAvatarAsync,
   removeAvatarAsync,
+  logoutAsync,
 } from "../../../../config/authStore.js";
+import { getAdminLoginPath } from "../../../../config/adminPath.js";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
-import { Camera, Trash2, Save, Lock, User, Mail, Phone } from "lucide-react";
+import {
+  Camera,
+  Trash2,
+  Save,
+  Lock,
+  User,
+  Mail,
+  Phone,
+  Info,
+} from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 
@@ -93,7 +109,10 @@ export default function AdminProfile() {
     const res = await updateAvatarAsync(file);
     setUploadingAvatar(false);
     if (res.ok) {
-      showToast("success", lang === "sw" ? "Picha imehifadhiwa!" : "Photo saved!");
+      showToast(
+        "success",
+        lang === "sw" ? "Picha imehifadhiwa!" : "Photo saved!"
+      );
     } else {
       showToast(
         "error",
@@ -104,12 +123,16 @@ export default function AdminProfile() {
   };
 
   const handleAvatarRemove = async () => {
-    if (!window.confirm(lang === "sw" ? "Ondoa picha?" : "Remove photo?")) return;
+    if (!window.confirm(lang === "sw" ? "Ondoa picha?" : "Remove photo?"))
+      return;
     setUploadingAvatar(true);
     const res = await removeAvatarAsync();
     setUploadingAvatar(false);
     if (res.ok) {
-      showToast("success", lang === "sw" ? "Picha imeondolewa" : "Photo removed");
+      showToast(
+        "success",
+        lang === "sw" ? "Picha imeondolewa" : "Photo removed"
+      );
     } else {
       showToast("error", res.error?.message || "Failed");
     }
@@ -117,22 +140,25 @@ export default function AdminProfile() {
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    if (!profileForm.name.trim() || !profileForm.email.trim()) {
+    if (!profileForm.name.trim()) {
       showToast(
         "error",
-        lang === "sw" ? "Jaza jina na email" : "Name and email required"
+        lang === "sw" ? "Jaza jina" : "Name required"
       );
       return;
     }
     setSavingProfile(true);
-    // email ni readOnly kwenye PatchedProfile — hatuipeleki
+    // Email haitumwi — ni readOnly
     const res = await updateProfileAsync({
       name: profileForm.name.trim(),
       phone: profileForm.phone.trim(),
     });
     setSavingProfile(false);
     if (res.ok) {
-      showToast("success", lang === "sw" ? "Taarifa zimehifadhiwa!" : "Profile saved!");
+      showToast(
+        "success",
+        lang === "sw" ? "Taarifa zimehifadhiwa!" : "Profile saved!"
+      );
     } else {
       showToast("error", res.error?.message || "Failed");
     }
@@ -141,18 +167,26 @@ export default function AdminProfile() {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (!passwordForm.currentPassword || !passwordForm.newPassword) {
-      showToast("error", lang === "sw" ? "Jaza sehemu zote" : "Fill all fields");
-      return;
-    }
-    if (passwordForm.newPassword.length < 6) {
       showToast(
         "error",
-        lang === "sw" ? "Nenosiri fupi (min 6)" : "Password too short (min 6)"
+        lang === "sw" ? "Jaza sehemu zote" : "Fill all fields"
+      );
+      return;
+    }
+    if (passwordForm.newPassword.length < 8) {
+      showToast(
+        "error",
+        lang === "sw"
+          ? "Nenosiri fupi (min 8 herufi)"
+          : "Password too short (min 8 chars)"
       );
       return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      showToast("error", lang === "sw" ? "Nenosiri hazifanani" : "Passwords don't match");
+      showToast(
+        "error",
+        lang === "sw" ? "Nenosiri hazifanani" : "Passwords don't match"
+      );
       return;
     }
     setSavingPassword(true);
@@ -162,8 +196,25 @@ export default function AdminProfile() {
     });
     setSavingPassword(false);
     if (res.ok) {
-      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      showToast("success", lang === "sw" ? "Nenosiri limebadilishwa!" : "Password changed!");
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      showToast(
+        "success",
+        lang === "sw"
+          ? "Nenosiri limebadilishwa! Utabadilishwa kwenda login..."
+          : "Password changed! Redirecting to login..."
+      );
+
+      // Backend blacklists all outstanding tokens.
+      // Force logout + redirect baada ya sekunde 2.
+      setTimeout(async () => {
+        await logoutAsync();
+        const loginPath = getAdminLoginPath?.() || "/admin/login";
+        window.location.href = loginPath;
+      }, 2000);
     } else {
       showToast("error", res.error?.message || "Failed");
     }
@@ -251,7 +302,10 @@ export default function AdminProfile() {
         style={{ borderColor: COLORS.sandLine }}
         className="bg-white rounded-2xl border p-6 mb-4"
       >
-        <h2 style={{ color: "var(--text-primary)" }} className="text-sm font-semibold mb-4">
+        <h2
+          style={{ color: "var(--text-primary)" }}
+          className="text-sm font-semibold mb-4"
+        >
           {t("Taarifa za Msingi", "Basic Info")}
         </h2>
 
@@ -280,12 +334,20 @@ export default function AdminProfile() {
             <input
               type="email"
               value={profileForm.email}
-              onChange={(e) =>
-                setProfileForm({ ...profileForm, email: e.target.value })
-              }
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+              readOnly
+              disabled
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none bg-gray-50 text-muted cursor-not-allowed"
               placeholder="admin@sokomkononi.co.tz"
             />
+            <span className="text-[10px] text-muted flex items-start gap-1">
+              <Info size={10} className="shrink-0 mt-0.5" />
+              <span>
+                {t(
+                  "Barua pepe haiwezi kubadilishwa.",
+                  "Email cannot be changed."
+                )}
+              </span>
+            </span>
           </label>
 
           <label className="flex flex-col gap-1.5">
@@ -342,7 +404,10 @@ export default function AdminProfile() {
               type="password"
               value={passwordForm.currentPassword}
               onChange={(e) =>
-                setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                setPasswordForm({
+                  ...passwordForm,
+                  currentPassword: e.target.value,
+                })
               }
               className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
               autoComplete="current-password"
@@ -357,13 +422,16 @@ export default function AdminProfile() {
               type="password"
               value={passwordForm.newPassword}
               onChange={(e) =>
-                setPasswordForm({ ...passwordForm, newPassword: e.target.value })
+                setPasswordForm({
+                  ...passwordForm,
+                  newPassword: e.target.value,
+                })
               }
               className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
               autoComplete="new-password"
             />
             <span className="text-[10px] text-muted">
-              {t("Angalau herufi 6", "At least 6 characters")}
+              {t("Angalau herufi 8", "At least 8 characters")}
             </span>
           </label>
 
@@ -375,7 +443,10 @@ export default function AdminProfile() {
               type="password"
               value={passwordForm.confirmPassword}
               onChange={(e) =>
-                setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                setPasswordForm({
+                  ...passwordForm,
+                  confirmPassword: e.target.value,
+                })
               }
               className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
               autoComplete="new-password"
@@ -383,11 +454,20 @@ export default function AdminProfile() {
           </label>
         </div>
 
-        <div className="flex justify-end mt-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-5">
+          <p className="text-[10px] text-muted flex items-start gap-1 max-w-md">
+            <Info size={11} className="shrink-0 mt-0.5" />
+            <span>
+              {t(
+                "Baada ya kubadilisha nenosiri, utatolewa kwenye akaunti na kutakiwa kuingia tena.",
+                "After changing your password, you will be logged out and required to log in again."
+              )}
+            </span>
+          </p>
           <button
             type="submit"
             disabled={savingPassword}
-            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-lg bg-[#101A2E] text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-lg bg-[#101A2E] text-white hover:opacity-90 disabled:opacity-50 transition-opacity shrink-0"
           >
             <Lock size={14} />
             {savingPassword

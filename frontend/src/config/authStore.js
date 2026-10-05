@@ -1,6 +1,7 @@
 // ============================================================
 // authStore.js — API-backed via /api/auth/
 // FIX: clears BOTH user and JWT tokens when login/me() fails.
+// FIX: updateProfileAsync reads raw.profile (backend returns {message, profile})
 // ============================================================
 import { useEffect, useState } from "react";
 import { authApi, setUnauthorizedHandler } from "../api/index.js";
@@ -21,9 +22,6 @@ const AVATAR_KEY_PREFIX = "admin_avatar_";
 
 // ============================================================
 // /auth/me/ dedupe + short TTL cache
-// Multiple components calling useAuth() will share the same
-// request instead of firing one per mount. A fresh call after
-// HYDRATE_TTL_MS still refreshes to keep the data current.
 // ============================================================
 let inflightHydrate = null;
 let lastHydrateAt = 0;
@@ -40,7 +38,9 @@ function attachStoredAvatar(user) {
   try {
     const stored = localStorage.getItem(AVATAR_KEY_PREFIX + user.id);
     return stored ? { ...user, avatarUrl: stored } : user;
-  } catch { return user; }
+  } catch {
+    return user;
+  }
 }
 
 function readFromStorage() {
@@ -50,7 +50,9 @@ function readFromStorage() {
     if (!raw) return SEED_USER;
     const parsed = JSON.parse(raw);
     return parsed ? attachStoredAvatar(parsed) : SEED_USER;
-  } catch { return SEED_USER; }
+  } catch {
+    return SEED_USER;
+  }
 }
 
 function saveUser(user) {
@@ -68,16 +70,6 @@ export function invalidateAuthCache() {
   resetHydrateCache();
 }
 
-// Keys we deliberately keep after logout (language preference, admin path,
-// etc. are stored elsewhere so nothing to keep here).
-const PRESERVE_AFTER_LOGOUT = new Set([]);
-
-/** Clears user state, wipes JWT tokens, and purges user-scoped caches. */
-/**
- * Wipe every user-scoped localStorage key on logout / 401.
- * Prevents the next user on a shared device from seeing the
- * previous user's saved listings, messages, deals, etc.
- */
 const USER_SCOPED_KEYS = [
   "sokomkononi_current_user_v1",
   "sokomkononi_access",
@@ -106,9 +98,15 @@ function wipeUserScopedCaches() {
   if (typeof window === "undefined") return;
   try {
     USER_SCOPED_KEYS.forEach((k) => {
-      try { window.localStorage.removeItem(k); } catch { /* noop */ }
+      try {
+        window.localStorage.removeItem(k);
+      } catch {
+        /* noop */
+      }
     });
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
 }
 
 function hardReset() {
@@ -116,19 +114,29 @@ function hardReset() {
   clearJWT();
   resetHydrateCache();
   if (typeof window === "undefined") return;
-  // Only wipe AUTH-scoped keys. Do NOT wipe the user's saved listings,
-  // searches, messages, dashboard-side preference, admin avatar, etc.
-  // A transient 401 must never destroy their data.
-  // Scope ya sasa tu — kutoka kwenye admin hakumtoi mtumiaji (na kinyume chake).
   const AUTH_KEYS =
     getSessionScope() === "admin"
-      ? ["sokomkononi_admin_user_v1", "sokomkononi_admin_access", "sokomkononi_admin_refresh"]
-      : ["sokomkononi_current_user_v1", "sokomkononi_access", "sokomkononi_refresh"];
+      ? [
+          "sokomkononi_admin_user_v1",
+          "sokomkononi_admin_access",
+          "sokomkononi_admin_refresh",
+        ]
+      : [
+          "sokomkononi_current_user_v1",
+          "sokomkononi_access",
+          "sokomkononi_refresh",
+        ];
   try {
     AUTH_KEYS.forEach((k) => {
-      try { window.localStorage.removeItem(k); } catch { /* noop */ }
+      try {
+        window.localStorage.removeItem(k);
+      } catch {
+        /* noop */
+      }
     });
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
 }
 
 function computeIsAdmin(user) {
@@ -157,9 +165,12 @@ function normalizeUserFromApi(raw) {
     is_seller: !!(raw.is_seller || raw.account_type === "BUSINESS"),
     account_type: raw.account_type || "PERSONAL",
     accountType: raw.account_type || "PERSONAL",
-    role: raw.is_staff || raw.is_superuser
-      ? "Admin"
-      : (raw.account_type === "BUSINESS" || raw.is_seller ? "Seller" : "Buyer"),
+    role:
+      raw.is_staff || raw.is_superuser
+        ? "Admin"
+        : raw.account_type === "BUSINESS" || raw.is_seller
+          ? "Seller"
+          : "Buyer",
     isVerified: !!(raw.is_verified ?? raw.isVerified),
     emailVerified: !!(raw.email_verified ?? raw.emailVerified),
     phoneVerified: !!(raw.phone_verified ?? raw.phoneVerified),
@@ -178,16 +189,24 @@ function normalizeUserFromApi(raw) {
   };
 }
 
-export function getCurrentUser() { return readFromStorage(); }
-export function isAuthenticated() { return Boolean(getCurrentUser()?.id); }
-export function isAdmin() { return computeIsAdmin(getCurrentUser()); }
+export function getCurrentUser() {
+  return readFromStorage();
+}
+export function isAuthenticated() {
+  return Boolean(getCurrentUser()?.id);
+}
+export function isAdmin() {
+  return computeIsAdmin(getCurrentUser());
+}
 export function hasRole(role) {
   const user = getCurrentUser();
   if (!user) return false;
   if (Array.isArray(role)) return role.includes(user.role);
   return user.role === role;
 }
-export function isSeller() { return hasRole("Seller"); }
+export function isSeller() {
+  return hasRole("Seller");
+}
 
 let lastScope = null;
 export function hydrateCurrentUserFromApi() {
@@ -199,7 +218,6 @@ export function hydrateCurrentUserFromApi() {
     return Promise.resolve({ ok: false, source: "no-token" });
   }
 
-  // Fresh cache hit — return immediately.
   const now = Date.now();
   if (lastHydrateAt && now - lastHydrateAt < HYDRATE_TTL_MS) {
     return Promise.resolve({
@@ -209,13 +227,11 @@ export function hydrateCurrentUserFromApi() {
     });
   }
 
-  // Dedupe concurrent calls — return the same in-flight promise.
   if (inflightHydrate) return inflightHydrate;
 
   inflightHydrate = (async () => {
     try {
       const raw = await authApi.me();
-      // Session ya scope hii lazima iwe ya aina sahihi (legacy/stale tokens)
       if (getSessionScope() === "user" && computeIsAdmin(raw)) {
         hardReset();
         return { ok: false, source: "admin-blocked" };
@@ -241,15 +257,21 @@ export function hydrateCurrentUserFromApi() {
 
 export async function loginAsync({ identifier, password }) {
   if (!identifier || !password) {
-    return { ok: false, error: new Error("identifier na password zinahitajika") };
+    return {
+      ok: false,
+      error: new Error("identifier na password zinahitajika"),
+    };
   }
   try {
     const data = await authApi.login({ identifier, password });
     const me = data?.user ?? (await authApi.me());
-    // Admin hawezi kuingia dashboard za watumiaji — tokens zinafutwa mara moja.
     if (getSessionScope() === "user" && computeIsAdmin(me)) {
       hardReset();
-      return { ok: false, code: "ADMIN_BLOCKED", error: new Error(ADMIN_BLOCKED_MESSAGE) };
+      return {
+        ok: false,
+        code: "ADMIN_BLOCKED",
+        error: new Error(ADMIN_BLOCKED_MESSAGE),
+      };
     }
     const user = normalizeUserFromApi(me);
     saveUser(user);
@@ -265,7 +287,10 @@ export async function loginAsync({ identifier, password }) {
 
 export async function adminLoginAsync({ identifier, password }) {
   if (!identifier || !password) {
-    return { ok: false, error: new Error("identifier na password zinahitajika") };
+    return {
+      ok: false,
+      error: new Error("identifier na password zinahitajika"),
+    };
   }
   try {
     await authApi.login({ identifier, password });
@@ -273,7 +298,10 @@ export async function adminLoginAsync({ identifier, password }) {
     if (!computeIsAdmin(me)) {
       await authApi.logout().catch(() => {});
       hardReset();
-      return { ok: false, error: new Error("Huna ruhusa ya kuingia kama admin") };
+      return {
+        ok: false,
+        error: new Error("Huna ruhusa ya kuingia kama admin"),
+      };
     }
     const user = normalizeUserFromApi(me);
     saveUser(user);
@@ -289,7 +317,10 @@ export async function adminLoginAsync({ identifier, password }) {
 
 export async function registerAsync(payload) {
   if (!payload?.email || !payload?.password) {
-    return { ok: false, error: new Error("email na password zinahitajika") };
+    return {
+      ok: false,
+      error: new Error("email na password zinahitajika"),
+    };
   }
   try {
     const account_type =
@@ -309,14 +340,24 @@ export async function registerAsync(payload) {
   }
 }
 
-export async function verifyOtpAsync({ identifier, otpCode, verificationType }) {
+export async function verifyOtpAsync({
+  identifier,
+  otpCode,
+  verificationType,
+}) {
   if (!identifier || !otpCode) {
-    return { ok: false, error: new Error("identifier na otpCode zinahitajika") };
+    return {
+      ok: false,
+      error: new Error("identifier na otpCode zinahitajika"),
+    };
   }
-  const type = verificationType || (identifier.includes("@") ? "EMAIL" : "PHONE");
+  const type =
+    verificationType || (identifier.includes("@") ? "EMAIL" : "PHONE");
   try {
     const data = await authApi.verifyOtp({
-      identifier, otp_code: otpCode, verification_type: type,
+      identifier,
+      otp_code: otpCode,
+      verification_type: type,
     });
     const me = data?.user ?? (await authApi.me());
     const user = normalizeUserFromApi(me);
@@ -332,9 +373,13 @@ export async function verifyOtpAsync({ identifier, otpCode, verificationType }) 
 }
 
 export async function logoutAsync() {
-  try { await authApi.logout(); }
-  catch (err) { console.warn("[authStore] logout API error:", err); }
-  finally { hardReset(); }
+  try {
+    await authApi.logout();
+  } catch (err) {
+    console.warn("[authStore] logout API error:", err);
+  } finally {
+    hardReset();
+  }
   return { ok: true };
 }
 
@@ -342,15 +387,27 @@ export async function sendOtpAsync(_email) {
   return { ok: true, note: "OTP imetumwa na register" };
 }
 
+// ============================================================
+// UPDATE PROFILE
+// SASISHO: Backend inarudisha { message, profile }
+// Hivyo tunasoma raw.profile kabla ya normalize.
+// ============================================================
 export async function updateProfileAsync(patch) {
   const previous = getCurrentUser();
-  if (!previous) return { ok: false, error: new Error("Hakuna mtumiaji aliyeingia") };
+  if (!previous) {
+    return { ok: false, error: new Error("Hakuna mtumiaji aliyeingia") };
+  }
   const optimistic = { ...previous, ...patch };
   saveUser(optimistic);
   try {
     const raw = await authApi.updateProfile(patch);
-    const updated = normalizeUserFromApi(raw);
-    if (updated) { saveUser(updated); return { ok: true, user: updated }; }
+    // ⬇️ Backend inarudisha { message, profile: {...} }
+    const data = raw?.profile || raw;
+    const updated = normalizeUserFromApi(data);
+    if (updated?.id) {
+      saveUser(updated);
+      return { ok: true, user: updated };
+    }
     return { ok: true, user: optimistic };
   } catch (err) {
     saveUser(previous);
@@ -370,9 +427,15 @@ export async function refreshProfileAsync() {
     return { ok: false, error: err };
   }
 }
-export async function refreshUserAsync() { return refreshProfileAsync(); }
+export async function refreshUserAsync() {
+  return refreshProfileAsync();
+}
 
-export async function changePasswordAsync({ currentPassword, newPassword, confirmPassword }) {
+export async function changePasswordAsync({
+  currentPassword,
+  newPassword,
+  confirmPassword,
+}) {
   if (!currentPassword || !newPassword || !confirmPassword) {
     return { ok: false, error: new Error("Sehemu zote zinahitajika") };
   }
@@ -401,27 +464,47 @@ export async function updatePasswordAsync(args) {
 }
 
 export async function forgotPasswordAsync(identifier) {
-  if (!identifier) return { ok: false, error: new Error("identifier inahitajika") };
+  if (!identifier) {
+    return { ok: false, error: new Error("identifier inahitajika") };
+  }
   try {
     const data = await authApi.forgotPassword(identifier);
     return { ok: true, data };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
-export async function verifyPasswordResetOtpAsync({ identifier, otpCode, verificationType }) {
+export async function verifyPasswordResetOtpAsync({
+  identifier,
+  otpCode,
+  verificationType,
+}) {
   if (!identifier || !otpCode) {
-    return { ok: false, error: new Error("identifier na otpCode zinahitajika") };
+    return {
+      ok: false,
+      error: new Error("identifier na otpCode zinahitajika"),
+    };
   }
-  const type = verificationType || (identifier.includes("@") ? "EMAIL" : "PHONE");
+  const type =
+    verificationType || (identifier.includes("@") ? "EMAIL" : "PHONE");
   try {
     const data = await authApi.verifyPasswordResetOtp({
-      identifier, otp_code: otpCode, verification_type: type,
+      identifier,
+      otp_code: otpCode,
+      verification_type: type,
     });
     return { ok: true, data };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
-export async function resetPasswordAsync({ resetToken, newPassword, confirmPassword }) {
+export async function resetPasswordAsync({
+  resetToken,
+  newPassword,
+  confirmPassword,
+}) {
   if (!resetToken || !newPassword || !confirmPassword) {
     return { ok: false, error: new Error("Sehemu zote zinahitajika") };
   }
@@ -435,7 +518,9 @@ export async function resetPasswordAsync({ resetToken, newPassword, confirmPassw
       confirm_password: confirmPassword,
     });
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 async function resizeImageFile(file, maxDim = 512, quality = 0.85) {
@@ -469,11 +554,15 @@ export async function updateAvatarAsync(file) {
   const user = getCurrentUser();
   if (!user) return { ok: false, error: new Error("Hakuna mtumiaji") };
   if (!file) return { ok: false, error: new Error("No file") };
-  if (!file.type.startsWith("image/")) return { ok: false, error: new Error("Si picha") };
+  if (!file.type.startsWith("image/"))
+    return { ok: false, error: new Error("Si picha") };
   try {
     const toUpload = await resizeImageFile(file);
     if (toUpload.size > 2 * 1024 * 1024) {
-      return { ok: false, error: new Error("Picha ni kubwa mno — chagua nyingine (max 2MB)") };
+      return {
+        ok: false,
+        error: new Error("Picha ni kubwa mno — chagua nyingine (max 2MB)"),
+      };
     }
     const fd = new FormData();
     fd.append("avatar", toUpload);
@@ -483,7 +572,9 @@ export async function updateAvatarAsync(file) {
     const fresh = normalizeUserFromApi(me);
     if (fresh) saveUser(fresh);
     return { ok: true, avatarUrl: fresh?.avatarUrl || null };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function removeAvatarAsync() {
@@ -494,23 +585,31 @@ export async function removeAvatarAsync() {
     await api.delete("/auth/profile/avatar/");
     saveUser({ ...user, avatarUrl: null });
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function deleteAccountAsync(reason = "") {
   const previous = getCurrentUser();
-  if (!previous) return { ok: false, error: new Error("Hakuna mtumiaji aliyeingia") };
+  if (!previous) {
+    return { ok: false, error: new Error("Hakuna mtumiaji aliyeingia") };
+  }
   if (computeIsAdmin(previous)) {
     return {
       ok: false,
-      error: new Error("Akaunti za Admin haziwezi kufutwa kupitia UI. Wasiliana na Super Admin mwingine."),
+      error: new Error(
+        "Akaunti za Admin haziwezi kufutwa kupitia UI. Wasiliana na Super Admin mwingine."
+      ),
     };
   }
   try {
     await authApi.deleteAccount(reason);
     hardReset();
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export function installUnauthorizedHandler() {
@@ -550,7 +649,9 @@ export function useAuth() {
   };
 }
 
-export function useCurrentUser() { return useAuth().user; }
+export function useCurrentUser() {
+  return useAuth().user;
+}
 export function useIsAuthenticated() {
   const { isAuthenticated, isLoading } = useAuth();
   return { isAuthenticated, isLoading };
@@ -562,9 +663,17 @@ export function useHasRole(role) {
   return user.role === role;
 }
 
-export async function socialLoginAsync({ provider, idToken, code, user: socialUser }) {
+export async function socialLoginAsync({
+  provider,
+  idToken,
+  code,
+  user: socialUser,
+}) {
   if (!provider || !idToken) {
-    return { ok: false, error: new Error("provider na idToken zinahitajika") };
+    return {
+      ok: false,
+      error: new Error("provider na idToken zinahitajika"),
+    };
   }
   try {
     const { api } = await import("../api/client.js");
@@ -574,13 +683,16 @@ export async function socialLoginAsync({ provider, idToken, code, user: socialUs
       code: code || null,
       ...(socialUser ? { user: socialUser } : {}),
     });
-    // MUHIMU: hifadhi JWT kama authApi.login inavyofanya. Bila hii,
-    // authApi.me() inarudi 401 na hardReset() inamtoa mtumiaji nje.
-    if (data?.access) setTokens({ access: data.access, refresh: data.refresh });
+    if (data?.access)
+      setTokens({ access: data.access, refresh: data.refresh });
     const me = data?.user ?? (await authApi.me());
     if (getSessionScope() === "user" && computeIsAdmin(me)) {
       hardReset();
-      return { ok: false, code: "ADMIN_BLOCKED", error: new Error(ADMIN_BLOCKED_MESSAGE) };
+      return {
+        ok: false,
+        code: "ADMIN_BLOCKED",
+        error: new Error(ADMIN_BLOCKED_MESSAGE),
+      };
     }
     const user = normalizeUserFromApi(me);
     saveUser(user);
