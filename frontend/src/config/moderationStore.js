@@ -14,6 +14,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { moderationApi } from "../api/moderation.js";
+import { listingsApi } from "../api/listings.js";
 import {
   normalizeListingFromApi,
   decideListing,
@@ -196,7 +197,6 @@ export async function disapproveListingAsync(
         "[moderationStore] /disapprove/ haipo — tumia PATCH /listings/{id}/"
       );
       try {
-        const { listingsApi } = await import("../api/listings.js");
         await listingsApi.update(listingId, {
           status: "REJECTED",              // backend inatarajia uppercase
           rejection_reason: cleanReason,
@@ -277,7 +277,6 @@ export async function deleteListingFromModerationAsync(
         "[moderationStore] /delete/ haipo — tumia listingsApi.remove"
       );
       try {
-        const { listingsApi } = await import("../api/listings.js");
         await listingsApi.remove(listingId, {
           hard: true,
           reason: cleanReason,

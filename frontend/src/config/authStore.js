@@ -5,7 +5,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { authApi, setUnauthorizedHandler } from "../api/index.js";
-import { clearTokens as clearJWT, setTokens } from "../api/client.js";
+import { clearTokens as clearJWT, setTokens, api as apiClient } from "../api/client.js";
 import { getSessionScope } from "./adminPath.js";
 
 // User wa admin na wa kawaida wanahifadhiwa kwenye keys tofauti (angalia adminPath.getSessionScope)
@@ -566,8 +566,7 @@ export async function updateAvatarAsync(file) {
     }
     const fd = new FormData();
     fd.append("avatar", toUpload);
-    const { api } = await import("../api/client.js");
-    await api.upload("/auth/profile/avatar/", fd);
+    await apiClient.upload("/auth/profile/avatar/", fd);
     const me = await authApi.me();
     const fresh = normalizeUserFromApi(me);
     if (fresh) saveUser(fresh);
@@ -581,8 +580,7 @@ export async function removeAvatarAsync() {
   const user = getCurrentUser();
   if (!user) return { ok: false, error: new Error("Hakuna mtumiaji") };
   try {
-    const { api } = await import("../api/client.js");
-    await api.delete("/auth/profile/avatar/");
+    await apiClient.delete("/auth/profile/avatar/");
     saveUser({ ...user, avatarUrl: null });
     return { ok: true };
   } catch (err) {
@@ -676,8 +674,7 @@ export async function socialLoginAsync({
     };
   }
   try {
-    const { api } = await import("../api/client.js");
-    const data = await api.post("/auth/social/", {
+    const data = await apiClient.post("/auth/social/", {
       provider,
       id_token: idToken,
       code: code || null,

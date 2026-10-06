@@ -19,3 +19,4 @@ export { reportsApi } from "./reports";
 export { promotionsApi } from "./promotions";
 export { bundlesApi } from "./bundles";
 export { listingFeeRulesApi } from "./listingFeeRules";
+export { paymentsApi } from "./payments";

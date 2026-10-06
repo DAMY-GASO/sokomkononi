@@ -3,31 +3,73 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#011957" />
+    <meta name="robots" content="index,follow" />
 
-    <!-- ============================================================ -->
-    <!-- FAVICON -->
-    <!-- ============================================================ -->
+    <!-- FAVICON — uses the SokoMkononi logo mark (SVG) + apple touch + webp fallback -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-     <meta name="theme-color" content="#011957" />
-     <link rel="preload" as="image" href="/logo.webp" />
+    <link rel="icon" type="image/webp" href="/logo.webp" />
+    <link rel="apple-touch-icon" href="/logo.webp" />
+    <link rel="mask-icon" href="/favicon.svg" color="#011957" />
 
+    <!-- PRELOADS -->
+    <link rel="preload" as="image" href="/logo.webp" type="image/webp" />
 
-    <!-- ============================================================ -->
     <!-- FONTS -->
-    <!-- ============================================================ -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
 
-    <!-- ============================================================ -->
-    <!-- SEO / SOCIAL -->
-    <!-- ============================================================ -->
-    <title>SokoMkononi — Soko la Kidijitali la Mali</title>
-    <meta name="description" content="Soko la kidijitali la kununua na kuuza mali Tanzania — nyumba, viwanja, magari, na biashara." />
+    <!-- SEO -->
+    <title>SokoMkononi — Soko la Kidijitali la Mali Tanzania</title>
+    <meta name="description" content="Soko la kidijitali la kununua na kuuza mali Tanzania — nyumba, viwanja, magari, biashara, na zaidi." />
+    <meta name="keywords" content="SokoMkononi, Tanzania, nyumba, viwanja, magari, biashara, marketplace, soko" />
+    <link rel="canonical" href="https://sokomkononi.co.tz/" />
+
+    <!-- OPEN GRAPH -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SokoMkononi" />
+    <meta property="og:title" content="SokoMkononi — Soko la Kidijitali la Mali" />
+    <meta property="og:description" content="Nunua na uza nyumba, viwanja, magari na biashara Tanzania kwa urahisi na usalama." />
+    <meta property="og:url" content="https://sokomkononi.co.tz/" />
+    <meta property="og:image" content="https://sokomkononi.co.tz/logo.webp" />
+    <meta property="og:locale" content="sw_TZ" />
+    <meta property="og:locale:alternate" content="en_TZ" />
+
+    <!-- TWITTER -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SokoMkononi — Soko la Kidijitali la Mali" />
+    <meta name="twitter:description" content="Nunua na uza mali Tanzania kwa urahisi na usalama." />
+    <meta name="twitter:image" content="https://sokomkononi.co.tz/logo.webp" />
+
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "SokoMkononi",
+        "url": "https://sokomkononi.co.tz/",
+        "logo": "https://sokomkononi.co.tz/logo.webp",
+        "sameAs": []
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "SokoMkononi",
+        "url": "https://sokomkononi.co.tz/",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://sokomkononi.co.tz/tafuta?tafuta={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

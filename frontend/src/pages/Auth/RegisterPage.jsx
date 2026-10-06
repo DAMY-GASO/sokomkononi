@@ -5,41 +5,12 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
 
 const icons = {
-  user: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21v-1a7 7 0 0 1 14 0v1" />
-    </svg>
-  ),
-  mail: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m3 7 9 6 9-6" />
-    </svg>
-  ),
-  phone: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 2 .6 2.9a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.5 2.9.6a2 2 0 0 1 1.8 2.1Z" />
-    </svg>
-  ),
-  lock: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="10" width="16" height="10" rx="2" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-    </svg>
-  ),
-  eye: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ),
-  eyeOff: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-      <path d="M1 1l22 22" />
-    </svg>
-  ),
+  user: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a7 7 0 0 1 14 0v1" /></svg>),
+  mail: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>),
+  phone: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 2 .6 2.9a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.5 2.9.6a2 2 0 0 1 1.8 2.1Z" /></svg>),
+  lock: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>),
+  eye: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>),
+  eyeOff: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><path d="M1 1l22 22" /></svg>),
 };
 
 function SkylineDecoration() {
@@ -61,7 +32,6 @@ function SkylineDecoration() {
 function FieldInput({ icon, type = "text", value, onChange, label, inputMode, required }) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
-
   return (
     <div>
       <label className="block text-body-sm font-semibold text-secondary mb-1.5">{label}</label>
@@ -90,10 +60,9 @@ function FieldInput({ icon, type = "text", value, onChange, label, inputMode, re
   );
 }
 
-// Kuchukua field error kutoka DRF response
 function extractError(err, fallback) {
   if (err?.data && typeof err.data === "object") {
-    if (err.data.detail) return err.data.detail;
+    if (err.data.detail && typeof err.data.detail === "string") return err.data.detail;
     const first = Object.values(err.data).flat().find((v) => typeof v === "string");
     if (first) return first;
   }
@@ -104,7 +73,6 @@ export default function RegisterPage() {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
   const intent = searchParams.get("intent");
 
   const [step, setStep] = useState("form");
@@ -114,25 +82,27 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownRef = useRef(null);
+
+  function postAuthPath() {
+    return intent === "buy" ? "/dashboard/buyer" : "/dashboard/post";
+  }
 
   function leftHeading() {
     if (intent === "buy") return t("register_panel_heading_buy");
     if (intent === "sell") return t("register_panel_heading_sell");
     return t("register_panel_heading_default");
   }
-
   function leftSubtext() {
     if (intent === "buy") return t("register_panel_subtext_buy");
     if (intent === "sell") return t("register_panel_subtext_sell");
     return t("register_panel_subtext_default");
   }
-
   function formHeading() {
     if (intent === "buy") return t("register_form_heading_buy");
     if (intent === "sell") return t("register_form_heading_sell");
     return t("register_form_heading_default");
   }
-
   function formSubtext() {
     if (intent === "buy") return t("register_form_subtext_buy");
     if (intent === "sell") return t("register_form_subtext_sell");
@@ -149,13 +119,29 @@ export default function RegisterPage() {
     return "";
   }
 
+  useEffect(() => () => {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+  }, []);
+
+  function startResendCooldown() {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+    setResendCooldown(30);
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current);
+          cooldownRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+
   async function handleRegister(e) {
     e.preventDefault();
     const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+    if (validationError) { setError(validationError); return; }
     setError("");
     setLoading(true);
 
@@ -167,7 +153,6 @@ export default function RegisterPage() {
       setError(extractError(res.error, t("register_error_default")));
       return;
     }
-
     setStep("otp");
     startResendCooldown();
   }
@@ -180,43 +165,17 @@ export default function RegisterPage() {
     }
     setError("");
     setLoading(true);
-
     const res = await verifyOtpAsync({
       identifier: form.email,
       otpCode: otp.trim(),
       verificationType: "EMAIL",
     });
     setLoading(false);
-
     if (!res.ok) {
       setError(extractError(res.error, t("register_error_otp_invalid")));
       return;
     }
-
-    navigate("/dashboard/post");
-  }
-
-  const cooldownRef = useRef(null);
-
-  useEffect(() => () => {
-    if (cooldownRef.current) clearInterval(cooldownRef.current);
-  }, []);
-
-  function startResendCooldown() {
-    if (cooldownRef.current) clearInterval(cooldownRef.current);
-    setResendCooldown(30);
-    cooldownRef.current = setInterval(() => {
-      setResendCooldown((prev) => {
-        if (prev <= 1) {
-          if (cooldownRef.current) {
-            clearInterval(cooldownRef.current);
-            cooldownRef.current = null;
-          }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    navigate(postAuthPath());
   }
 
   async function handleResend() {
@@ -236,7 +195,6 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
-        {/* LEFT PANEL */}
         <div className="dark-surface flex relative bg-night text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <img src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full" />
@@ -244,21 +202,16 @@ export default function RegisterPage() {
           </Link>
 
           <div className="relative z-10 max-w-sm mx-auto text-center py-8 md:py-0">
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
-              {leftHeading()}
-            </h2>
-            <p className="text-white/60 text-sm mt-3 leading-relaxed">
-              {leftSubtext()}
-            </p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">{leftHeading()}</h2>
+            <p className="text-white/60 text-sm mt-3 leading-relaxed">{leftSubtext()}</p>
           </div>
 
           <div className="relative z-10" />
           <SkylineDecoration />
         </div>
 
-        {/* RIGHT PANEL */}
         <div className="flex items-center justify-center px-5 sm:px-10 py-10 md:py-12 bg-white">
-          <div className="w-full max-w-sm animate-[fadeIn_0.4s_ease-out]">
+          <div className="w-full max-w-sm">
             {step === "form" && (
               <>
                 <h1 className="h-title mb-1 text-center">{formHeading()}</h1>
@@ -267,45 +220,15 @@ export default function RegisterPage() {
                 <SocialAuthButtons
                   lang={lang}
                   showTerms
-                  onSuccess={() => navigate("/dashboard/post")}
+                  onSuccess={() => navigate(postAuthPath())}
                 />
 
                 <form onSubmit={handleRegister} className="space-y-4">
-                  <FieldInput
-                    icon={icons.user}
-                    label={t("register_name_placeholder")}
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  />
-                  <FieldInput
-                    icon={icons.mail}
-                    type="email"
-                    required
-                    label={t("register_email_placeholder")}
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  />
-                  <FieldInput
-                    icon={icons.phone}
-                    type="tel"
-                    label={t("register_phone_placeholder")}
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  />
-                  <FieldInput
-                    icon={icons.lock}
-                    type="password"
-                    label={t("register_password_placeholder")}
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  />
-                  <FieldInput
-                    icon={icons.lock}
-                    type="password"
-                    label={t("register_confirm_password_placeholder")}
-                    value={form.confirmPassword}
-                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                  />
+                  <FieldInput icon={icons.user} label={t("register_name_placeholder")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                  <FieldInput icon={icons.mail} type="email" required label={t("register_email_placeholder")} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  <FieldInput icon={icons.phone} type="tel" label={t("register_phone_placeholder")} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                  <FieldInput icon={icons.lock} type="password" label={t("register_password_placeholder")} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                  <FieldInput icon={icons.lock} type="password" label={t("register_confirm_password_placeholder")} value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} />
 
                   <label className="flex items-start gap-2.5 text-body-sm text-secondary leading-relaxed cursor-pointer">
                     <input
@@ -346,7 +269,6 @@ export default function RegisterPage() {
                 <div className="w-12 h-12 rounded-full bg-gold/15 flex items-center justify-center mb-5 mx-auto">
                   <span className="text-gold-ink">{icons.mail}</span>
                 </div>
-
                 <h1 className="h-title mb-1 text-center">{t("register_otp_heading")}</h1>
                 <p className="text-secondary text-body-sm mb-7 text-center">
                   {t("register_otp_subtext")} <span className="font-semibold text-primary">{form.email}</span>
@@ -356,14 +278,13 @@ export default function RegisterPage() {
                   <input
                     inputMode="numeric"
                     maxLength={6}
+                    autoFocus
                     className="w-full border border-gray-300 rounded-lg px-3 py-3 text-lg tracking-[0.5em] text-center font-semibold focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
                     placeholder="••••••"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                   />
-
                   {error && <p className="text-rust text-body-sm">{error}</p>}
-
                   <button
                     disabled={loading}
                     className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-lg font-semibold text-btn transition-colors disabled:opacity-60"
@@ -374,8 +295,9 @@ export default function RegisterPage() {
 
                 <div className="mt-6 text-body-sm text-secondary text-center space-y-2">
                   <button
+                    type="button"
                     onClick={handleResend}
-                    disabled={resendCooldown > 0}
+                    disabled={resendCooldown > 0 || loading}
                     className="text-royal font-semibold disabled:text-muted disabled:cursor-not-allowed"
                   >
                     {resendCooldown > 0
@@ -384,6 +306,7 @@ export default function RegisterPage() {
                   </button>
                   <div>
                     <button
+                      type="button"
                       onClick={() => { setStep("form"); setOtp(""); setError(""); }}
                       className="text-secondary underline"
                     >

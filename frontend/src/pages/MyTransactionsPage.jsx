@@ -145,10 +145,15 @@ export default function MyTransactionsPage() {
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
   const [bundleError, setBundleError] = useState("");
   const [bundleLoading, setBundleLoading] = useState(false);
+  const [bundleStage, setBundleStage] = useState("select");
 
   // ⬇️ SASISHO: Config + status tofauti
   const successFee = useSuccessFeeConfig();
   const status = useSuccessFeeStatus();
+
+  useEffect(() => {
+    if (!showBundleModal) setBundleStage("select");
+  }, [showBundleModal]);
 
   const successBundles = useActiveBundles().filter((b) => b.type === "success");
 
@@ -840,6 +845,21 @@ export default function MyTransactionsPage() {
       {showBundleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
+            {bundleStage === "pay" && pendingBundlePurchase ? (
+              <PaymentGateway
+                amount={pendingBundlePurchase.price}
+                title={
+                  pendingBundlePurchase.name?.[lang] ||
+                  pendingBundlePurchase.name?.sw ||
+                  t("Kifurushi", "Bundle")
+                }
+                onInitiate={handleBundlePurchaseInitiate}
+                onSuccess={handleBundleSuccess}
+                onCancel={() => setBundleStage("select")}
+                lang={lang}
+              />
+            ) : (
+              <>
             <div className="flex items-start justify-between gap-3 mb-4">
               <div className="min-w-0">
                 <h3 className="text-base font-bold text-primary">
@@ -933,7 +953,7 @@ export default function MyTransactionsPage() {
               <button
                 onClick={() => {
                   if (!pendingBundlePurchase) return;
-                  // Pay inafanyika kupitia PaymentGateway (haipo kwenye scope hii)
+                  setBundleStage("pay");
                 }}
                 disabled={!pendingBundlePurchase || bundleLoading}
                 style={{
@@ -961,6 +981,8 @@ export default function MyTransactionsPage() {
                 )}
               </button>
             </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -978,18 +1000,6 @@ export default function MyTransactionsPage() {
         />
       )}
 
-      {showBundleModal && pendingBundlePurchase && (
-        <PaymentGateway
-          amount={pendingBundlePurchase.price}
-          onInitiate={handleBundlePurchaseInitiate}
-          onSuccess={handleBundleSuccess}
-          onClose={() => {
-            setShowBundleModal(false);
-            setPendingBundlePurchase(null);
-          }}
-          lang={lang}
-        />
-      )}
     </div>
   );
 }

@@ -5,35 +5,11 @@ import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const icons = {
-  mail: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m3 7 9 6 9-6" />
-    </svg>
-  ),
-  lock: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="10" width="16" height="10" rx="2" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-    </svg>
-  ),
-  check: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FEA406" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  ),
-  eye: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ),
-  eyeOff: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-      <path d="M1 1l22 22" />
-    </svg>
-  ),
+  mail: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>),
+  lock: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>),
+  check: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FEA406" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>),
+  eye: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>),
+  eyeOff: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><path d="M1 1l22 22" /></svg>),
 };
 
 function SkylineDecoration() {
@@ -89,17 +65,13 @@ export default function LoginPage() {
       setError(t("login_error_required"));
       return;
     }
-
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.identifier.trim())) {
-      setError(
-        tx("Weka barua pepe sahihi.", "Please enter a valid email address.")
-      );
+      setError(tx("Weka barua pepe sahihi.", "Please enter a valid email address."));
       return;
     }
 
     setError("");
     setLoading(true);
-
     const res = await loginAsync({
       identifier: form.identifier.trim(),
       password: form.password,
@@ -107,39 +79,38 @@ export default function LoginPage() {
     setLoading(false);
 
     if (!res.ok) {
-      // ✅ FIX #21: Ondoa redundant `|| "Barua pepe..."` — `t()` inarudisha string kila wakati
-      setError(
-        getErrorMessage(
-          res.error,
-          t("login_error_default")
-        )
-      );
+      setError(getErrorMessage(res.error, t("login_error_default")));
       return;
     }
-
     finishLogin();
   }
 
-  const trustPoints = [
-    t("login_trust1"),
-    t("login_trust2"),
-    t("login_trust3"),
-  ].filter(Boolean);
+  const trustPoints = [t("login_trust1"), t("login_trust2"), t("login_trust3")].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
-        {/* LEFT PANEL */}
         <div className="dark-surface flex relative bg-night text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
-          <div className="relative z-10 w-full flex items-center justify-between gap-2"><button type="button" onClick={() => navigate("/")} aria-label={lang === "sw" ? "Rudi nyumbani" : "Back to home"} className="flex items-center gap-1.5 text-white/60 hover:text-white text-xs sm:text-sm font-medium transition-colors rounded-full px-2 sm:px-3 py-1.5 hover:bg-white/[0.08]"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg><span>{lang === "sw" ? "Nyumbani" : "Home"}</span></button><Link to="/" className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2"><img src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full" /><span className="font-bold tracking-tight">SokoMkononi</span></Link><span className="w-16 sm:w-20" aria-hidden="true" /></div>
+          <div className="relative z-10 w-full flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              aria-label={lang === "sw" ? "Rudi nyumbani" : "Back to home"}
+              className="flex items-center gap-1.5 text-white/60 hover:text-white text-xs sm:text-sm font-medium transition-colors rounded-full px-2 sm:px-3 py-1.5 hover:bg-white/[0.08]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+              <span>{lang === "sw" ? "Nyumbani" : "Home"}</span>
+            </button>
+            <Link to="/" className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
+              <img src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full" />
+              <span className="font-bold tracking-tight">SokoMkononi</span>
+            </Link>
+            <span className="w-16 sm:w-20" aria-hidden="true" />
+          </div>
 
           <div className="relative z-10 max-w-sm mx-auto text-center py-8 md:py-0">
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">
-              {t("login_panel_heading")}
-            </h2>
-            <p className="text-white/60 text-sm mt-3 leading-relaxed">
-              {t("login_panel_subtext")}
-            </p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight">{t("login_panel_heading")}</h2>
+            <p className="text-white/60 text-sm mt-3 leading-relaxed">{t("login_panel_subtext")}</p>
 
             {trustPoints.length > 0 && (
               <ul className="mt-8 space-y-3 inline-flex flex-col items-start mx-auto">
@@ -154,19 +125,13 @@ export default function LoginPage() {
           </div>
 
           <div className="relative z-10 hidden md:block" />
-
           <SkylineDecoration />
         </div>
 
-        {/* RIGHT PANEL */}
         <div className="flex items-center justify-center px-5 sm:px-10 py-10 md:py-12 bg-white">
           <div className="w-full max-w-sm">
-            <h1 className="h-title mb-1 text-center">
-              {t("login_heading")}
-            </h1>
-            <p className="text-secondary text-body-sm mb-7 text-center">
-              {t("login_subtext")}
-            </p>
+            <h1 className="h-title mb-1 text-center">{t("login_heading")}</h1>
+            <p className="text-secondary text-body-sm mb-7 text-center">{t("login_subtext")}</p>
 
             <SocialAuthButtons lang={lang} onSuccess={finishLogin} />
 
@@ -176,9 +141,7 @@ export default function LoginPage() {
                   {tx("Barua pepe", "Email")}
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
-                    {icons.mail}
-                  </span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">{icons.mail}</span>
                   <input
                     type="email"
                     inputMode="email"
@@ -195,9 +158,7 @@ export default function LoginPage() {
                   {t("login_password_placeholder")}
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
-                    {icons.lock}
-                  </span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">{icons.lock}</span>
                   <input
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
@@ -217,10 +178,7 @@ export default function LoginPage() {
               </div>
 
               <div className="text-right">
-                <Link
-                  to="/forgot-password"
-                  className="text-royal text-body-sm font-semibold hover:underline"
-                >
+                <Link to="/forgot-password" className="text-royal text-body-sm font-semibold hover:underline">
                   {t("login_forgot_password")}
                 </Link>
               </div>
@@ -238,10 +196,7 @@ export default function LoginPage() {
 
             <p className="mt-6 text-body-sm text-secondary text-center">
               {t("login_no_account")}{" "}
-              <Link
-                to="/register"
-                className="text-royal font-semibold hover:underline"
-              >
+              <Link to="/register" className="text-royal font-semibold hover:underline">
                 {t("login_register_link")}
               </Link>
             </p>

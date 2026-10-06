@@ -30,6 +30,7 @@ import { api } from "../../../api/client.js";
 import {
   useTickets,
   addTicketMessageAsync,
+  hydrateTicketsFromApi,
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
@@ -369,9 +370,6 @@ export default function SafetySupportSection() {
       });
 
       // Refresh tickets
-      const { hydrateTicketsFromApi } = await import(
-        "../../../config/ticketsStore.js"
-      );
       await hydrateTicketsFromApi();
 
       setReportSent(true);

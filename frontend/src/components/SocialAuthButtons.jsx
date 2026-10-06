@@ -35,15 +35,6 @@ const AppleLogo = () => (
   </svg>
 );
 
-/**
- * SocialAuthButtons — "Endelea na Google / Apple" kwa Login na Register.
- *
- * - Inaonekana JUU ya fomu (inaonekana mara moja), kisha kigawanyaji "au kwa barua pepe".
- * - Mtoa huduma asiyewekwa (isGoogleEnabled/isAppleEnabled = false):
- *     • production → imefichwa (kitufe kisichofanya kazi ni mbaya kwa mtumiaji)
- *     • development → inaonekana ikiwa imezimwa + ujumbe wa kukuambia kwa nini
- * - Haionyeshi chochote ikiwa hakuna mtoa huduma na tuko production.
- */
 export default function SocialAuthButtons({
   lang = "sw",
   onSuccess,
@@ -52,6 +43,7 @@ export default function SocialAuthButtons({
   const tx = (sw, en) => (lang === "sw" ? sw : en);
   const googleRef = useRef(null);
   const handlerRef = useRef(null);
+  const busyRef = useRef(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
@@ -59,6 +51,8 @@ export default function SocialAuthButtons({
   const showApple = isAppleEnabled || IS_DEV;
 
   async function finish(provider, identity) {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setError("");
     setBusy(provider);
     const res = await socialLoginAsync({
@@ -67,6 +61,7 @@ export default function SocialAuthButtons({
       code: identity.code || null,
       user: identity.user || null,
     });
+    busyRef.current = false;
     setBusy("");
     if (!res.ok) {
       setError(
@@ -79,19 +74,23 @@ export default function SocialAuthButtons({
   handlerRef.current = finish;
 
   async function handleApple() {
-    if (busy) return;
+    if (busyRef.current) return;
     setError("");
+    busyRef.current = true;
     setBusy("apple");
     let identity;
     try {
       identity = await getAppleIdentity();
     } catch (err) {
+      busyRef.current = false;
       setBusy("");
       if (!isSocialCancel(err)) {
         setError(err?.message || tx("Imeshindwa kuingia na Apple.", "Could not sign in with Apple."));
       }
       return;
     }
+    busyRef.current = false;
+    setBusy("");
     await finish("apple", identity);
   }
 
@@ -114,9 +113,7 @@ export default function SocialAuthButtons({
 
   return (
     <div className="mb-6">
-      <div
-        className={`space-y-3 transition-opacity ${busy ? "opacity-60 pointer-events-none" : ""}`}
-      >
+      <div className={`space-y-3 transition-opacity ${busy ? "opacity-60 pointer-events-none" : ""}`}>
         {showGoogle &&
           (isGoogleEnabled ? (
             <div ref={googleRef} className="flex w-full min-h-[40px] justify-center" />

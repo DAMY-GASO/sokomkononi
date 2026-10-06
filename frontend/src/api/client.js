@@ -1,26 +1,39 @@
 // ============================================================
 // client.js — API Client
-// - AbortController timeout on every request
-// - Precise public-endpoint detection
-// - No local fallbacks
-// - DELETE inakubali body (kwa hard delete na reason)
+// - Lazy BASE_URL validation (no top-level throw)
+// - 5xx / 408 / 429 retry with exponential backoff
+// - AbortController timeout
+// - DELETE supports body
 // ============================================================
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-if (!BASE_URL) throw new Error("[api] VITE_API_BASE_URL is required");
 
 import { getSessionScope } from "../config/adminPath.js";
 
-// Session mbili zilizotenganishwa: "user" na "admin".
 const TOKEN_KEYS = {
   user: { access: "sokomkononi_access", refresh: "sokomkononi_refresh" },
   admin: { access: "sokomkononi_admin_access", refresh: "sokomkononi_admin_refresh" },
 };
 const keys = () => TOKEN_KEYS[getSessionScope()];
+
 const DEFAULT_TIMEOUT_MS = 20000;
 const UPLOAD_TIMEOUT_MS = 60000;
 
 let onUnauthorized = null;
+let baseUrlWarned = false;
+
+function getBaseUrl() {
+  const raw = import.meta.env.VITE_API_BASE_URL;
+  if (!raw) {
+    if (!baseUrlWarned) {
+      console.error(
+        "[api/client] VITE_API_BASE_URL is not set — falling back to same-origin /api. " +
+          "Set it in .env (dev) or your hosting env (prod)."
+      );
+      baseUrlWarned = true;
+    }
+    return "/api";
+  }
+  return raw.replace(/\/+$/, "");
+}
 
 const PUBLIC_POST_PREFIX = [
   "/auth/login/",
@@ -30,8 +43,8 @@ const PUBLIC_POST_PREFIX = [
   "/auth/password/verify-otp/",
   "/auth/password/reset/",
   "/auth/token/refresh/",
-  "/contact/",
   "/auth/social/",
+  "/contact/",
 ];
 
 const PUBLIC_GET_PATTERNS = [
@@ -72,8 +85,6 @@ export function setTokens({ access, refresh } = {}) {
     refresh ? localStorage.setItem(k.refresh, refresh) : localStorage.removeItem(k.refresh);
   }
 }
-// Zinasomwa moja kwa moja kutoka localStorage ya scope husika (hakuna cache
-// ya kumbukumbu inayoweza kupitwa na tab nyingine).
 export function getAccessToken() { return localStorage.getItem(keys().access); }
 export function getRefreshToken() { return localStorage.getItem(keys().refresh); }
 export function clearTokens() { setTokens({ access: null, refresh: null }); }
@@ -81,7 +92,6 @@ export function setUnauthorizedHandler(fn) { onUnauthorized = fn; }
 
 function extractFieldMessage(data) {
   if (!data || typeof data !== "object") return "";
-  // DRF field errors: { "phone": ["..."], "payment_method": ["..."] }
   for (const value of Object.values(data)) {
     if (Array.isArray(value) && typeof value[0] === "string") return value[0];
     if (typeof value === "string") return value;
@@ -96,7 +106,7 @@ export class ApiError extends Error {
       (typeof detail === "string" && detail) ||
       (typeof data?.message === "string" && data.message) ||
       (typeof data?.error === "string" && data.error) ||
-      (typeof detail === "object" && JSON.stringify(detail)) ||
+      (typeof detail === "object" && detail && JSON.stringify(detail)) ||
       extractFieldMessage(data) ||
       (typeof data === "string" ? data : "") ||
       `API error ${status}`;
@@ -123,33 +133,50 @@ async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
 }
 
 // ------------------------------------------------------------
-// Retry: transient network / 5xx failures only. Never retries 4xx,
-// never retries POSTs that mutate money (see RETRYABLE_METHODS).
+// Retry for transient errors (5xx / 408 / 429 / network).
+// Only for GET/HEAD — mutations may not be idempotent.
 // ------------------------------------------------------------
 const RETRYABLE_METHODS = new Set(["GET", "HEAD"]);
 const RETRY_MAX = 3;
 const RETRY_BASE_MS = 600;
 
-function isRetryableError(err) {
-  if (!err) return false;
-  if (err.status === 0) return true;              // network / timeout
-  if (err.status === 408 || err.status === 429) return true;
-  if (err.status >= 500 && err.status < 600) return true;
-  return false;
+async function parseResponse(res) {
+  const ct = res.headers.get("content-type") || "";
+  if (res.status === 204) return null;
+  if (ct.includes("application/json")) {
+    try { return await res.json(); }
+    catch { return { detail: `Invalid JSON response (${res.status})` }; }
+  }
+  if (ct.includes("text/html")) {
+    const html = await res.text();
+    let detail = `Server returned HTML (${res.status})`;
+    if (/DisallowedHost/i.test(html)) {
+      detail = "Backend rejected the request: DisallowedHost. Add this domain to Django ALLOWED_HOSTS.";
+    } else if (/CSRF/i.test(html)) {
+      detail = "CSRF verification failed. Add this origin to Django CSRF_TRUSTED_ORIGINS.";
+    } else {
+      const m = html.match(/<title>([^<]+)<\/title>/i);
+      if (m) detail = m[1].trim();
+    }
+    return { detail, htmlLength: html.length };
+  }
+  return await res.text();
 }
 
 async function withRetry(fn, method) {
-  if (!RETRYABLE_METHODS.has(String(method || "GET").toUpperCase())) {
-    return fn();
-  }
+  const m = String(method || "GET").toUpperCase();
+  if (!RETRYABLE_METHODS.has(m)) return fn();
   let lastErr;
   for (let attempt = 0; attempt < RETRY_MAX; attempt++) {
     try {
       return await fn();
     } catch (err) {
       lastErr = err;
-      if (!isRetryableError(err) || attempt === RETRY_MAX - 1) throw err;
-      const wait = RETRY_BASE_MS * Math.pow(2, attempt);
+      const s = err?.status;
+      const retryable =
+        s === 0 || s === 408 || s === 429 || (s >= 500 && s < 600);
+      if (!retryable || attempt === RETRY_MAX - 1) throw err;
+      const wait = RETRY_BASE_MS * Math.pow(2, attempt) + Math.random() * 200;
       await new Promise((r) => setTimeout(r, wait));
     }
   }
@@ -161,7 +188,7 @@ async function refreshAccessToken() {
   if (!getRefreshToken()) throw new ApiError(401, { detail: "No refresh token" });
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
-    const res = await fetchWithTimeout(`${BASE_URL}/auth/token/refresh/`, {
+    const res = await fetchWithTimeout(`${getBaseUrl()}/auth/token/refresh/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh: getRefreshToken() }),
@@ -181,7 +208,6 @@ async function request(path, {
   method = "GET", body, headers = {}, retry = true, isFormData = false, timeoutMs,
 } = {}) {
   const isPublic = isPublicEndpoint(path, method);
-
   const finalHeaders = {
     ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
     ...(!isPublic && getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
@@ -189,12 +215,20 @@ async function request(path, {
   };
 
   const res = await withRetry(
-    () =>
-      fetchWithTimeout(`${BASE_URL}${path}`, {
+    async () => {
+      const r = await fetchWithTimeout(`${getBaseUrl()}${path}`, {
         method,
         headers: finalHeaders,
         body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
-      }, timeoutMs),
+      }, timeoutMs);
+      // 401 handling happens below (needs the response, not an error).
+      // Throw here ONLY for retryable statuses so withRetry can act on them.
+      if (RETRYABLE_METHODS.has(method.toUpperCase()) && (r.status === 408 || r.status === 429 || (r.status >= 500 && r.status < 600))) {
+        const data = await parseResponse(r);
+        throw new ApiError(r.status, data);
+      }
+      return r;
+    },
     method
   );
 
@@ -208,71 +242,23 @@ async function request(path, {
     }
   }
 
-  const ct = res.headers.get("content-type") || "";
-  let data;
-  if (res.status === 204) data = null;
-  else if (ct.includes("application/json")) {
-    try {
-      data = await res.json();
-    } catch (parseErr) {
-      // Server claimed JSON but the body wasn't parseable
-      data = { detail: `Invalid JSON response (${res.status})` };
-    }
-  } else if (ct.includes("text/html")) {
-    // Django error pages arrive as HTML. Detect the common ones and
-    // surface a clean message so the console isn't flooded with markup.
-    const html = await res.text();
-    let detail = `Server returned HTML (${res.status})`;
-    if (/DisallowedHost/i.test(html)) {
-      detail =
-        "Backend rejected the request: DisallowedHost. " +
-        "Add this domain to Django ALLOWED_HOSTS and restart the backend.";
-    } else if (/CSRF/i.test(html)) {
-      detail =
-        "CSRF verification failed. Add this origin to Django CSRF_TRUSTED_ORIGINS.";
-    } else if (/<title>([^<]+)<\/title>/i.test(html)) {
-      const m = html.match(/<title>([^<]+)<\/title>/i);
-      detail = m ? m[1].trim() : detail;
-    }
-    data = { detail, htmlLength: html.length };
-  } else {
-    data = await res.text();
-  }
-
+  const data = await parseResponse(res);
   if (!res.ok) throw new ApiError(res.status, data);
   return data;
 }
 
-// ------------------------------------------------------------
-// Convenience helpers
-// ------------------------------------------------------------
 function normalizeBody(body) {
-  // Kama body ni tupu au null → undefined
   if (body === undefined || body === null) return undefined;
-  if (typeof body === "object" && Object.keys(body).length === 0) return undefined;
+  if (typeof body === "object" && !Array.isArray(body) && Object.keys(body).length === 0) return undefined;
   return body;
 }
 
 export const api = {
   get:    (path, opts) => request(path, { ...opts, method: "GET" }),
-
-  post:   (path, body, opts) =>
-    request(path, { ...opts, method: "POST", body: normalizeBody(body) }),
-
-  patch:  (path, body, opts) =>
-    request(path, { ...opts, method: "PATCH", body: normalizeBody(body) }),
-
-  put:    (path, body, opts) =>
-    request(path, { ...opts, method: "PUT", body: normalizeBody(body) }),
-
-  // ⬇️ DELETE sasa inakubali body (kwa hard delete + reason)
-  delete: (path, body = {}, opts) =>
-    request(path, {
-      ...opts,
-      method: "DELETE",
-      body: normalizeBody(body),
-    }),
-
+  post:   (path, body, opts) => request(path, { ...opts, method: "POST", body: normalizeBody(body) }),
+  patch:  (path, body, opts) => request(path, { ...opts, method: "PATCH", body: normalizeBody(body) }),
+  put:    (path, body, opts) => request(path, { ...opts, method: "PUT", body: normalizeBody(body) }),
+  delete: (path, body = {}, opts) => request(path, { ...opts, method: "DELETE", body: normalizeBody(body) }),
   upload: (path, formData, opts) =>
     request(path, { ...opts, method: "POST", body: formData, isFormData: true, timeoutMs: UPLOAD_TIMEOUT_MS }),
 };

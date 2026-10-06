@@ -5,6 +5,7 @@ import ScrollToHash from "./components/ScrollToHash.jsx";
 import { ToastProvider } from "./components/Toast.jsx";
 import { ConfirmProvider } from "./components/ConfirmDialog.jsx";
 import PaymentReturnRoute from "./components/PaymentReturnRoute.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 import { installUnauthorizedHandler } from "./config/authStore.js";
 import UndoToast from "./components/UndoToast.jsx";
@@ -13,7 +14,6 @@ import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
 import { initializeCategories, hydrateCategoriesFromApi } from "./config/categoriesStore.js";
 import { hydrateListingsFromApi } from "./config/listingsStore.js";
 
-// Public pages
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
@@ -23,13 +23,11 @@ import JinsiYaKununuaNaKuuza from "./pages/JinsiYaKununuaNaKuuza.jsx";
 import InviteFriendsPage from "./pages/InviteFriendsPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 
-// Auth
 import LoginPage from "./pages/Auth/LoginPage.jsx";
 import RegisterPage from "./pages/Auth/RegisterPage.jsx";
 import ForgotpasswordPage from "./pages/Auth/ForgotpasswordPage.jsx";
 import AdminLoginPage from "./pages/AdminLoginPage.jsx";
 
-// Property & search
 import PropertyDetailPage from "./pages/PropertyDetailPage.jsx";
 import AllCategoriesPage from "./pages/AllCategoriesPage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
@@ -59,9 +57,7 @@ function BrowseRoute() {
 function App() {
   useEffect(() => {
     installUnauthorizedHandler();
-
     initializeCategories();
-
     (async () => {
       await Promise.allSettled([
         hydrateCategoriesFromApi(),
@@ -75,89 +71,88 @@ function App() {
       <ToastProvider>
         <UndoToast />
         <ConfirmProvider>
-      <Router>
-        <ScrollToHash />
-        <Routes>
-          {/* PUBLIC */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/kuhusu" element={<AboutPage />} />
-          <Route path="/mawasiliano" element={<ContactPage />} />
-          <Route path="/sheria" element={<TermsPage />} />
-          <Route path="/faragha" element={<PrivacyPage />} />
-          <Route path="/jinsi-ya-kununua" element={<JinsiYaKununuaNaKuuza />} />
+          <Router>
+            <ScrollToHash />
+            <Routes>
+              {/* PUBLIC */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/kuhusu" element={<AboutPage />} />
+              <Route path="/mawasiliano" element={<ContactPage />} />
+              <Route path="/sheria" element={<TermsPage />} />
+              <Route path="/faragha" element={<PrivacyPage />} />
+              <Route path="/jinsi-ya-kununua" element={<JinsiYaKununuaNaKuuza />} />
 
-          {/* AUTH */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotpasswordPage />} />
+              {/* AUTH */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotpasswordPage />} />
 
-          {/* PROPERTY & SEARCH */}
-          <Route path="/mali/:id" element={<PropertyDetailPage />} />
-          <Route path="/property/:id" element={<PropertyDetailPage />} />
-          <Route path="/kategoria" element={<AllCategoriesPage />} />
-          <Route path="/kategoria/:slug" element={<CategoryPage />} />
-          <Route path="/tafuta" element={<BrowseRoute />} />
-          <Route path="/mali-zote" element={<AllListingsPage />} />
+              {/* PAYMENT RETURN — after FimiPay card redirect */}
+              <Route path="/payments/return" element={<PaymentReturnRoute />} />
 
-          <Route path="/bundles" element={<BundlesPage />} />
+              {/* PROPERTY & SEARCH */}
+              <Route path="/mali/:id" element={<PropertyDetailPage />} />
+              <Route path="/property/:id" element={<PropertyDetailPage />} />
+              <Route path="/kategoria" element={<AllCategoriesPage />} />
+              <Route path="/kategoria/:slug" element={<CategoryPage />} />
+              <Route path="/tafuta" element={<BrowseRoute />} />
+              <Route path="/mali-zote" element={<AllListingsPage />} />
+              <Route path="/bundles" element={<BundlesPage />} />
 
-          {/* DASHBOARD — SELLER */}
-          <Route path="/dashboard" element={<DashboardShell />} />
-          <Route path="/dashboard/seller" element={<DashboardShell />} />
-          <Route path="/dashboard/overview" element={<DashboardShell />} />
-          <Route path="/dashboard/post" element={<DashboardShell />} />
-          <Route path="/dashboard/listings" element={<DashboardShell />} />
-          <Route path="/dashboard/leads" element={<DashboardShell />} />
-          <Route path="/dashboard/saved" element={<DashboardShell />} />
-          <Route path="/dashboard/boost" element={<DashboardShell />} />
-          <Route path="/dashboard/leading" element={<DashboardShell />} />
-          <Route path="/dashboard/advertise" element={<DashboardShell />} />
-          <Route path="/dashboard/bundles" element={<DashboardShell />} />
-          <Route path="/dashboard/deals" element={<DashboardShell />} />
-          <Route path="/dashboard/messages" element={<DashboardShell />} />
-          <Route path="/dashboard/notifications" element={<DashboardShell />} />
-          <Route path="/dashboard/transactions" element={<DashboardShell />} />
-          <Route path="/dashboard/activity" element={<DashboardShell />} />
-          <Route path="/dashboard/verification" element={<DashboardShell />} />
+              {/* DASHBOARD — SELLER */}
+              <Route path="/dashboard" element={<DashboardShell />} />
+              <Route path="/dashboard/seller" element={<DashboardShell />} />
+              <Route path="/dashboard/overview" element={<DashboardShell />} />
+              <Route path="/dashboard/post" element={<DashboardShell />} />
+              <Route path="/dashboard/listings" element={<DashboardShell />} />
+              <Route path="/dashboard/leads" element={<DashboardShell />} />
+              <Route path="/dashboard/saved" element={<DashboardShell />} />
+              <Route path="/dashboard/boost" element={<DashboardShell />} />
+              <Route path="/dashboard/leading" element={<DashboardShell />} />
+              <Route path="/dashboard/advertise" element={<DashboardShell />} />
+              <Route path="/dashboard/bundles" element={<DashboardShell />} />
+              <Route path="/dashboard/deals" element={<DashboardShell />} />
+              <Route path="/dashboard/messages" element={<DashboardShell />} />
+              <Route path="/dashboard/notifications" element={<DashboardShell />} />
+              <Route path="/dashboard/transactions" element={<DashboardShell />} />
+              <Route path="/dashboard/activity" element={<DashboardShell />} />
+              <Route path="/dashboard/verification" element={<DashboardShell />} />
 
-          {/* DASHBOARD — BUYER */}
-          <Route path="/dashboard/buyer" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/overview" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/browse" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/saved" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/searches" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/bundles" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/deals" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/messages" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/notifications" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/waiting" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/transactions" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/safety" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/activity" element={<DashboardShell />} />
-          <Route path="/dashboard/buyer/verification" element={<DashboardShell />} />
+              {/* DASHBOARD — BUYER */}
+              <Route path="/dashboard/buyer" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/overview" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/browse" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/saved" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/searches" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/bundles" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/deals" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/messages" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/notifications" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/waiting" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/transactions" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/safety" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/activity" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/verification" element={<DashboardShell />} />
 
-          {/* ADMIN — SECRET PATHS */}
-          {/* ADMIN_LOGIN_PATH pekee (mfano /admin-login-xyz) */}
-          <Route path={ADMIN_LOGIN_PATH} element={<AdminLoginPage />} />
-          {/* ADMIN_PATH yenyewe (mfano /admin-xyz) */}
-          <Route path={ADMIN_PATH} element={<AdminDashboard />} />
-          {/* ADMIN_PATH/ + kitu chochote (mfano /admin-xyz/categories) */}
-          <Route path={`${ADMIN_PATH}/*`} element={<AdminDashboard />} />
+              {/* ADMIN */}
+              <Route path={ADMIN_LOGIN_PATH} element={<AdminLoginPage />} />
+              <Route path={ADMIN_PATH} element={
+                <ErrorBoundary><AdminDashboard /></ErrorBoundary>
+              } />
+              <Route path={`${ADMIN_PATH}/*`} element={
+                <ErrorBoundary><AdminDashboard /></ErrorBoundary>
+              } />
+              <Route path="/admin/*" element={<NotFoundPage />} />
+              <Route path="/admin" element={<NotFoundPage />} />
 
-          {/* LEGACY /admin/* — render 404 so the secret path stays secret */}
-          <Route path="/admin/*" element={<NotFoundPage />} />
-          <Route path="/admin" element={<NotFoundPage />} />
+              {/* PROFILE */}
+              <Route path="/wasifu" element={<ProfilePage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/alika-marafiki" element={<InviteFriendsPage />} />
 
-          {/* PROFILE */}
-          <Route path="/wasifu" element={<ProfilePage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-
-          <Route path="/alika-marafiki" element={<InviteFriendsPage />} />
-
-          {/* REAL 404 */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Router>
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Router>
         </ConfirmProvider>
       </ToastProvider>
     </LanguageProvider>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { COLORS, formatTZS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { api } from "../../../api/client.js";
 import {
   MOBILE_METHODS,
   CARD_METHODS,
@@ -225,7 +226,7 @@ export default function PaymentGateway({
 
       let data;
       try {
-        data = await (await import("../../../api/client.js")).api.post(
+        data = await api.post(
           "/payments/order-status/",
           { order_id: oid }
         );

@@ -46,6 +46,7 @@ import {
   sendOfferAsync,
   acceptOfferAsync,
   cancelDealAsync,
+  getDeals,
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -1816,7 +1817,15 @@ export default function DealRooms({
   }, [initialDealId]);
 
   const selectedDeal = deals.find((d) => d.id === selectedId) || deals[0];
-  const updateDeal = (id, patch) => updateDealInStore(id, patch);
+  const updateDeal = (id, patchOrUpdater) => {
+    if (typeof patchOrUpdater === "function") {
+      const current = (getDeals() || []).find((d) => String(d.id) === String(id));
+      if (!current) return;
+      updateDealInStore(id, patchOrUpdater(current));
+    } else {
+      updateDealInStore(id, patchOrUpdater);
+    }
+  };
 
   const handleSelect = (id) => {
     setSelectedId(id);
@@ -1851,54 +1860,41 @@ export default function DealRooms({
 
   // ⬇️ handleSendMessage — POST /deals/{id}/messages/
   const handleSendMessage = async (id, text) => {
-    const deal = deals.find((d) => d.id === id);
+    const deal = deals.find((d) => String(d.id) === String(id));
     if (!deal) return;
 
-    // Optimistic update
     const tempId = `m_${Date.now()}`;
-    updateDeal(id, {
-      messages: [
-        ...deal.messages,
-        {
-          id: tempId,
-          sender: "me",
-          text,
-          at: new Date().toISOString(),
-        },
-      ],
-    });
+    const optimisticMsg = {
+      id: tempId,
+      sender: "me",
+      text,
+      at: new Date().toISOString(),
+    };
+    // Optimistic append using functional update against current store.
+    updateDeal(id, (prev) => ({
+      ...prev,
+      messages: [...(prev.messages || []), optimisticMsg],
+    }));
 
     try {
-      const res = await dealsApi.sendDealMessage(deal.dealRoomId || deal.id, {
-        text,
-      });
-      const current = deals.find((d) => d.id === id);
-      if (current && res?.id) {
-        updateDeal(id, {
-          messages: current.messages.map((m) =>
-            m.id === tempId
-              ? {
-                  ...m,
-                  id: res.id,
-                  at: res.created_at || m.at,
-                }
-              : m
-          ),
-        });
-      }
+      const res = await dealsApi.sendDealMessage(deal.dealRoomId || deal.id, { text });
+      updateDeal(id, (prev) => ({
+        ...prev,
+        messages: (prev.messages || []).map((m) =>
+          m.id === tempId
+            ? { ...m, id: res?.id ?? m.id, at: res?.created_at || m.at }
+            : m
+        ),
+      }));
     } catch (err) {
       console.error("[DealRooms] sendDealMessage failed:", err);
-      const current = deals.find((d) => d.id === id);
-      if (current) {
-        updateDeal(id, {
-          messages: current.messages.filter((m) => m.id !== tempId),
-        });
-      }
+      updateDeal(id, (prev) => ({
+        ...prev,
+        messages: (prev.messages || []).filter((m) => m.id !== tempId),
+      }));
       alert(
         err?.message ||
-          (lang === "sw"
-            ? "Imeshindwa kutuma ujumbe."
-            : "Failed to send message.")
+          (lang === "sw" ? "Imeshindwa kutuma ujumbe." : "Failed to send message.")
       );
     }
   };

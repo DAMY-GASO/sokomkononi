@@ -1,9 +1,5 @@
 // ============================================================
 // PaymentReturnRoute.jsx — /payments/return
-//
-// After FimiPay's hosted card checkout, the user lands here.
-// Read sessionStorage.pending_order_id, resume polling until a
-// terminal status, then show success/failure.
 // ============================================================
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -13,10 +9,11 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 import {
   pollOrderStatus,
   TERMINAL_FAILURE,
+  MAX_POLL_ATTEMPTS,
 } from "../api/payments.js";
 
 const SS_ORDER_ID = "pending_order_id";
-const SS_AMOUNT   = "pending_order_amount";
+const SS_AMOUNT = "pending_order_amount";
 
 export default function PaymentReturnRoute() {
   const { lang } = useLanguage();
@@ -94,12 +91,13 @@ export default function PaymentReturnRoute() {
             : "Payment did not go through. Please try again."
         );
       } else {
+        const detail = result?.data?.detail;
+        const detailStr = typeof detail === "string" ? detail : "";
         setError(
-          result?.data?.detail && typeof result.data.detail === "string"
-            ? result.data.detail
-            : (sw
-                ? "Malipo hayajakamilika. Jaribu tena."
-                : "Payment was not completed. Try again.")
+          detailStr ||
+            (sw
+              ? "Malipo hayajakamilika. Jaribu tena."
+              : "Payment was not completed. Try again.")
         );
       }
     })();
@@ -125,18 +123,12 @@ export default function PaymentReturnRoute() {
           <>
             <Loader2 size={32} className="animate-spin mx-auto mb-4" color={COLORS.gold} />
             <h1 className="text-lg font-bold text-primary mb-2">
-              {sw
-                ? "Tunathibitisha malipo..."
-                : "Confirming your payment..."}
+              {sw ? "Tunathibitisha malipo..." : "Confirming your payment..."}
             </h1>
             <p className="text-sm text-secondary mb-3">
-              {sw
-                ? "Tafadhali usifunge ukurasa huu."
-                : "Please don't close this page."}
+              {sw ? "Tafadhali usifunge ukurasa huu." : "Please don't close this page."}
             </p>
-            <p className="text-[11px] text-muted">
-              {attempt}/30
-            </p>
+            <p className="text-[11px] text-muted">{attempt}/{MAX_POLL_ATTEMPTS}</p>
           </>
         )}
 
@@ -152,9 +144,7 @@ export default function PaymentReturnRoute() {
               {sw ? "Malipo Yamefanikiwa!" : "Payment Successful!"}
             </h1>
             <p className="text-sm text-secondary mb-3">
-              {sw
-                ? "Asante. Unaweza kuendelea kutumia SokoMkononi."
-                : "Thank you. You can keep using SokoMkononi."}
+              {sw ? "Asante. Unaweza kuendelea kutumia SokoMkononi." : "Thank you. You can keep using SokoMkononi."}
             </p>
             {channel && (
               <p className="text-xs text-secondary mb-2">
