@@ -366,6 +366,34 @@ function BannersTab({ lang }) {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  const handleAdd = () => {
+    setForm({
+      title: { sw: "", en: "" },
+      subtitle: { sw: "", en: "" },
+      ctaText: { sw: "", en: "" },
+      ctaLink: "",
+      imageUrl: "",
+      active: true,
+    });
+    setAdding(true);
+    setEditing(null);
+    setError("");
+  };
+
+  const handleEdit = (banner) => {
+    setForm({ ...banner });
+    setEditing(banner.id);
+    setAdding(false);
+    setError("");
+  };
+
+  const handleCancel = () => {
+    setAdding(false);
+    setEditing(null);
+    setForm({});
+    setError("");
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError("");
@@ -499,6 +527,34 @@ function TestimonialsTab({ lang }) {
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  const handleAdd = () => {
+    setForm({
+      name: "",
+      location: "",
+      quote: { sw: "", en: "" },
+      rating: 5,
+      avatarUrl: "",
+      active: true,
+    });
+    setAdding(true);
+    setEditing(null);
+    setError("");
+  };
+
+  const handleEdit = (item) => {
+    setForm({ ...item });
+    setEditing(item.id);
+    setAdding(false);
+    setError("");
+  };
+
+  const handleCancel = () => {
+    setAdding(false);
+    setEditing(null);
+    setForm({});
+    setError("");
+  };
 
   const handleSave = async () => {
     setSaving(true);
