@@ -4,7 +4,8 @@
 // ============================================================
 import React, { useState, useEffect, useRef } from "react";
 import { MoreVertical, Eye, AlertTriangle, Loader2, RefreshCw } from "lucide-react";
-import { COLORS, formatTZS } from "../shared/constants.js";
+import { COLORS, formatTZS, timeAgo } from "../shared/constants.js";
+import { getCategory } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
 import DisputeReviewPanel from "../components/DealDispute/DisputeReviewPanel.jsx";
@@ -64,6 +65,11 @@ export default function DealsSection() {
   const displayDealName = (name, id) => name || (id ? `#${id}` : "—");
   const displayListing = (d) =>
     d?.listingTitle || (d?.listingId ? `#${d.listingId}` : `#${d.id}`);
+  const displayCategory = (d) => {
+    if (!d?.category) return "—";
+    const cat = getCategory(d.category);
+    return cat?.label?.[lang] || cat?.label?.sw || d.category;
+  };
 
   const handleRefresh = async () => {
     if (!user?.id || refreshing) return;
@@ -249,10 +255,13 @@ export default function DealsSection() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">{t("Mali", "Listing")}</th>
+                <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">{t("Kategoria", "Category")}</th>
+                <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">{t("Mahali", "Location")}</th>
                 <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">{t("Mnunuzi", "Buyer")}</th>
                 <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">{t("Muuzaji", "Seller")}</th>
-                <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">{t("Kiasi", "Amount")}</th>
+                <th className="px-5 py-2.5 text-right text-xs font-medium text-secondary uppercase">{t("Bei / Ofa", "Price / Offer")}</th>
                 <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">Status</th>
+                <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">{t("Ilianzishwa", "Created")}</th>
                 <th className="px-5 py-2.5 text-right text-xs font-medium text-secondary uppercase">{t("Kitendo", "Action")}</th>
               </tr>
             </thead>
@@ -275,12 +284,35 @@ export default function DealsSection() {
                           )}
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-sm text-secondary">{displayDealName(d.buyerName, d.buyerId)}</td>
-                      <td className="px-5 py-3 text-sm text-secondary">{displayDealName(d.sellerName, d.sellerId)}</td>
-                      <td className="px-5 py-3 text-sm font-semibold" style={{ color: COLORS.rust }}>
+                      <td className="px-5 py-3 text-sm text-secondary">
+                        {displayCategory(d)}
+                      </td>
+                      <td className="px-5 py-3 text-sm text-secondary truncate max-w-[180px]" title={d.location || ""}>
+                        {d.location || "—"}
+                      </td>
+                      <td className="px-5 py-3 text-sm text-secondary">
+                        <div className="min-w-0">
+                          <div>{displayDealName(d.buyerName, d.buyerId)}</div>
+                          {d.buyerEmail && (
+                            <div className="text-[11px] text-muted truncate">{d.buyerEmail}</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-secondary">
+                        <div className="min-w-0">
+                          <div>{displayDealName(d.sellerName, d.sellerId)}</div>
+                          {d.sellerEmail && (
+                            <div className="text-[11px] text-muted truncate">{d.sellerEmail}</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-sm font-semibold text-right" style={{ color: COLORS.rust }}>
                         {displayDealAmount(d)}
                       </td>
                       <td className="px-5 py-3"><StatusBadge status={d.status} lang={lang} /></td>
+                      <td className="px-5 py-3 text-[11px] text-muted whitespace-nowrap">
+                        {d.createdAt ? timeAgo(d.createdAt, lang) : "—"}
+                      </td>
                       <td className="px-5 py-3 text-right"><ActionButtons deal={d} /></td>
                     </tr>
                     {isExpanded && (
@@ -305,7 +337,7 @@ export default function DealsSection() {
                 );
               })}
               {deals.length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-8 text-center text-sm text-muted">{t("Hakuna deals", "No deals")}</td></tr>
+                <tr><td colSpan={9} className="px-5 py-8 text-center text-sm text-muted">{t("Hakuna deals", "No deals")}</td></tr>
               )}
             </tbody>
           </table>
@@ -332,9 +364,36 @@ export default function DealsSection() {
                   </div>
                   <div className="shrink-0"><StatusBadge status={d.status} lang={lang} /></div>
                 </div>
-                <div className="flex flex-col gap-0.5 text-xs text-secondary mb-2">
-                  <span className="truncate">{t("Mnunuzi", "Buyer")}: <span className="font-medium text-primary">{displayDealName(d.buyerName, d.buyerId)}</span></span>
-                  <span className="truncate">{t("Muuzaji", "Seller")}: <span className="font-medium text-primary">{displayDealName(d.sellerName, d.sellerId)}</span></span>
+                <div className="flex flex-col gap-1 text-xs text-secondary mb-2">
+                  <span className="truncate">
+                    {t("Kategoria", "Category")}:{" "}
+                    <span className="font-medium text-primary">{displayCategory(d)}</span>
+                  </span>
+                  {d.location && (
+                    <span className="truncate">
+                      {t("Mahali", "Location")}:{" "}
+                      <span className="font-medium text-primary">{d.location}</span>
+                    </span>
+                  )}
+                  <span className="truncate">
+                    {t("Mnunuzi", "Buyer")}:{" "}
+                    <span className="font-medium text-primary">{displayDealName(d.buyerName, d.buyerId)}</span>
+                    {d.buyerEmail && (
+                      <span className="text-muted"> · {d.buyerEmail}</span>
+                    )}
+                  </span>
+                  <span className="truncate">
+                    {t("Muuzaji", "Seller")}:{" "}
+                    <span className="font-medium text-primary">{displayDealName(d.sellerName, d.sellerId)}</span>
+                    {d.sellerEmail && (
+                      <span className="text-muted"> · {d.sellerEmail}</span>
+                    )}
+                  </span>
+                  {d.createdAt && (
+                    <span className="text-[11px] text-muted">
+                      {t("Ilianzishwa", "Created")}: {timeAgo(d.createdAt, lang)}
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm font-bold mb-3" style={{ color: COLORS.rust }}>
                   {displayDealAmount(d)}

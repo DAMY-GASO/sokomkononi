@@ -49,7 +49,8 @@ import {
   getDeals,
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
-import { markSoldAsync } from "../../../config/listingsStore.js";
+import { markSoldAsync, getListings as _getListingsCache } from "../../../config/listingsStore.js";
+import { getUser as _getUserCache } from "../../../config/usersStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";
@@ -73,6 +74,41 @@ import {
 // ============================================================
 // HELPERS
 // ============================================================
+// ─── Cache-backed enrichment for deal rows ────────────────────────
+// The backend sometimes returns only IDs. Backfill from the local caches
+// so the deal list always shows the counterparty name, listing title,
+// category, location, and prices.
+function _enrichDealFromCaches(deal) {
+  if (!deal) return deal;
+  const out = { ...deal };
+
+  // Listing
+  if (out.listingId != null && (!out.listingTitle || !out.askingPrice)) {
+    try {
+      const l = (_getListingsCache?.() || []).find(
+        (x) => String(x.id) === String(out.listingId)
+      );
+      if (l) {
+        if (!out.listingTitle) out.listingTitle = l.title || "";
+        if (!out.askingPrice) out.askingPrice = Number(l.price) || 0;
+        if (!out.location) out.location = l.location || l.region || "";
+        if (!out.category) out.category = l.category || null;
+      }
+    } catch { /* noop */ }
+  }
+
+  // Counterparty
+  const counterpartyId =
+    out.side === "seller" ? out.buyerId : out.sellerId;
+  if (!out.counterpartyName && counterpartyId != null) {
+    try {
+      const u = _getUserCache?.(counterpartyId);
+      if (u?.name) out.counterpartyName = u.name;
+    } catch { /* noop */ }
+  }
+  return out;
+}
+
 function getMessageText(m, lang) {
   if (!m.text) return "";
   if (typeof m.text === "string") return m.text;
@@ -741,7 +777,8 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
 // ============================================================
 // DEAL LIST ITEM
 // ============================================================
-function DealListItem({ deal, active, onSelect, lang }) {
+function DealListItem({ deal: rawDeal, active, onSelect, lang }) {
+  const deal = _enrichDealFromCaches(rawDeal);
   const category = getCategory(deal.category);
   const Icon = getCategoryIcon(category?.iconKey);
   const status =
