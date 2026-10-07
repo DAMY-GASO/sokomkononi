@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { X, ZoomIn, ZoomOut, Check } from "lucide-react";
 
@@ -26,7 +25,7 @@ export default function ImageCropper({
 
   const boxRef = useRef(null);
   const imgRef = useRef(null);
-  const dragRef = useRef(null); // { id, startX, startY, ox, oy }
+  const dragRef = useRef(null); // { startX, startY, ox, oy }
   const pointersRef = useRef(new Map()); // kwa pinch
   const pinchRef = useRef(null);
 
@@ -44,6 +43,7 @@ export default function ImageCropper({
     const url = URL.createObjectURL(file);
     setSrc(url);
     setLoadError(false);
+    setNat({ w: 0, h: 0 });
     setZoom(1);
     setOffset({ x: 0, y: 0 });
     return () => URL.revokeObjectURL(url);
@@ -80,12 +80,16 @@ export default function ImageCropper({
     };
   }, []);
 
-  // scale ya msingi: upande mfupi wa picha ujaze kisanduku (cover)
+  // scale ya msingi: upande mfupi wa picha ujaze kisanduku (cover / "Jaza")
   const baseScale = nat.w && nat.h ? view / Math.min(nat.w, nat.h) : 1;
+  // zoom ya chini kabisa: picha nzima ionekane (fit / "Nzima")
+  const minZoom =
+    nat.w && nat.h ? Math.min(nat.w, nat.h) / Math.max(nat.w, nat.h) : 1;
   const scale = baseScale * zoom;
 
   const clampOffset = useCallback(
     (x, y, sc = scale) => {
+      // Picha ikiwa ndogo kuliko kisanduku kwa upande fulani, inakaa katikati
       const maxX = Math.max(0, (nat.w * sc - view) / 2);
       const maxY = Math.max(0, (nat.h * sc - view) / 2);
       return { x: clamp(x, -maxX, maxX), y: clamp(y, -maxY, maxY) };
@@ -99,9 +103,10 @@ export default function ImageCropper({
   }, [clampOffset]);
 
   const changeZoom = (next) => {
-    const z = clamp(next, 1, MAX_ZOOM);
-    setZoom(z);
+    setZoom(clamp(next, minZoom, MAX_ZOOM));
   };
+
+  const resetOffset = () => setOffset({ x: 0, y: 0 });
 
   // ── Pointer: buruta + pinch ────────────────────────────
   const onPointerDown = (e) => {
@@ -164,6 +169,7 @@ export default function ImageCropper({
     setBusy(true);
     try {
       // Eneo la picha asilia linaloonekana kwenye kisanduku
+      // (linaweza kutoka nje ya picha pale zoom ikiwa chini ya "Jaza")
       const sSize = view / scale;
       const sx = nat.w / 2 + (-view / 2 - offset.x) / scale;
       const sy = nat.h / 2 + (-view / 2 - offset.y) / scale;
@@ -174,10 +180,30 @@ export default function ImageCropper({
       canvas.width = out;
       canvas.height = out;
       const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#ffffff"; // PNG zenye uwazi → mandharinyuma meupe
+      ctx.fillStyle = "#ffffff"; // maeneo wazi + PNG zenye uwazi → meupe
       ctx.fillRect(0, 0, out, out);
       ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(img, sx, sy, sSize, sSize, 0, 0, out, out);
+
+      // Kata eneo la chanzo ndani ya picha tu, kisha liweke mahali sahihi
+      const ratio = out / sSize;
+      const ix0 = Math.max(0, sx);
+      const iy0 = Math.max(0, sy);
+      const ix1 = Math.min(nat.w, sx + sSize);
+      const iy1 = Math.min(nat.h, sy + sSize);
+
+      if (ix1 > ix0 && iy1 > iy0) {
+        ctx.drawImage(
+          img,
+          ix0,
+          iy0,
+          ix1 - ix0,
+          iy1 - iy0, // chanzo (ndani ya picha tu)
+          (ix0 - sx) * ratio,
+          (iy0 - sy) * ratio, // mahali kwenye canvas
+          (ix1 - ix0) * ratio,
+          (iy1 - iy0) * ratio
+        );
+      }
 
       // Punguza quality hadi ukubwa uwe chini ya kikomo
       let blob = null;
@@ -219,8 +245,8 @@ export default function ImageCropper({
             </h3>
             <p className="text-xs text-secondary">
               {t(
-                "Buruta kusogeza, tumia slider kuvuta.",
-                "Drag to move, use the slider to zoom."
+                "Buruta kusogeza, tumia slider kuvuta ndani au nje.",
+                "Drag to move, use the slider to zoom in or out."
               )}
             </p>
           </div>
@@ -237,7 +263,7 @@ export default function ImageCropper({
         {/* Eneo la kukata */}
         <div
           ref={boxRef}
-          className="relative mx-auto aspect-square w-full touch-none select-none overflow-hidden rounded-xl bg-[#101A2E] cursor-grab active:cursor-grabbing"
+          className="relative mx-auto aspect-square w-full touch-none select-none overflow-hidden rounded-xl border border-gray-200 bg-white cursor-grab active:cursor-grabbing"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -250,12 +276,14 @@ export default function ImageCropper({
               src={src}
               alt=""
               draggable={false}
-              onLoad={(e) =>
-                setNat({
-                  w: e.currentTarget.naturalWidth,
-                  h: e.currentTarget.naturalHeight,
-                })
-              }
+              onLoad={(e) => {
+                const w = e.currentTarget.naturalWidth;
+                const h = e.currentTarget.naturalHeight;
+                setNat({ w, h });
+                // Anza na picha nzima ionekane (hakuna kinachokatwa mwanzoni)
+                setZoom(Math.min(w, h) / Math.max(w, h));
+                setOffset({ x: 0, y: 0 });
+              }}
               onError={() => setLoadError(true)}
               style={{
                 position: "absolute",
@@ -271,9 +299,9 @@ export default function ImageCropper({
             />
           )}
 
-          {/* Gridi ya theluthi tatu */}
+          {/* Gridi ya theluthi tatu (inaonekana kwenye nyeupe na nyeusi) */}
           {nat.w > 0 && !loadError && (
-            <div className="pointer-events-none absolute inset-0">
+            <div className="pointer-events-none absolute inset-0 mix-blend-difference">
               <div className="absolute inset-0 border border-white/70" />
               <div className="absolute left-1/3 top-0 h-full w-px bg-white/30" />
               <div className="absolute left-2/3 top-0 h-full w-px bg-white/30" />
@@ -283,7 +311,7 @@ export default function ImageCropper({
           )}
 
           {loadError && (
-            <div className="absolute inset-0 flex items-center justify-center p-5 text-center text-sm text-white/80">
+            <div className="absolute inset-0 flex items-center justify-center bg-[#101A2E] p-5 text-center text-sm text-white/80">
               {t(
                 "Picha hii haiwezi kusomwa. Jaribu picha ya JPG au PNG.",
                 "This image can't be read. Try a JPG or PNG photo."
@@ -297,7 +325,7 @@ export default function ImageCropper({
           <ZoomOut size={16} className="shrink-0 text-secondary" />
           <input
             type="range"
-            min={1}
+            min={minZoom}
             max={MAX_ZOOM}
             step={0.01}
             value={zoom}
@@ -307,6 +335,32 @@ export default function ImageCropper({
             className="h-1.5 w-full cursor-pointer accent-[#E8A33D]"
           />
           <ZoomIn size={16} className="shrink-0 text-secondary" />
+        </div>
+
+        {/* Vitufe vya haraka: Nzima / Jaza */}
+        <div className="mt-2 flex justify-center gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => {
+              changeZoom(minZoom);
+              resetOffset();
+            }}
+            disabled={!nat.w || loadError}
+            className="rounded-full border border-gray-200 px-3 py-1 text-primary hover:bg-gray-50 disabled:opacity-50"
+          >
+            {t("Picha nzima", "Fit")}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              changeZoom(1);
+              resetOffset();
+            }}
+            disabled={!nat.w || loadError}
+            className="rounded-full border border-gray-200 px-3 py-1 text-primary hover:bg-gray-50 disabled:opacity-50"
+          >
+            {t("Jaza mraba", "Fill")}
+          </button>
         </div>
 
         {/* Vitendo */}
