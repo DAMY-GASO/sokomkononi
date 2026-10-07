@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle,
-  Wallet, Package,
+  Wallet, Package, Receipt, Info,
 } from "lucide-react";
 import { COLORS, formatTZS, calculateListingFee } from "./shared";
 import {
@@ -1052,15 +1052,6 @@ export default function PostPropertyForm({
         />
       )}
       <div className="max-w-2xl mx-auto">
-        {error && (
-          <div
-            className="rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm"
-            style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
-          >
-            <AlertTriangle size={14} />
-            {error}
-          </div>
-        )}
 
         {category && (
           <div className="flex justify-center mb-3">
@@ -1092,23 +1083,107 @@ export default function PostPropertyForm({
                   "Choose the category of the property you want to list"
                 )}
           </p>
-          {/* Onyesha kama listing fee imezimwa */}
-          {category && listingFeeDisabled && (
-            <div
-              className="mt-3 rounded-xl border px-4 py-2.5 inline-flex items-center gap-2 text-xs"
-              style={{
-                background: "rgba(47,109,79,0.10)",
-                borderColor: "rgba(47,109,79,0.35)",
-                color: COLORS.green,
-              }}
-            >
-              <Check size={14} />
-              {t(
-                "Ada ya kuchapisha imezimwa — unaweka bure. Lakini listing bado itapitia idhini ya Admin.",
-                "Listing fee is disabled — post for free. But the listing still requires admin approval."
-              )}
-            </div>
-          )}
+          {/* ─────────────────────────────────────────────── */}
+          {/* FEE PREVIEW — pulled from the admin-set backend rule.  */}
+          {/* Shown as soon as a category is selected.                */}
+          {/* ─────────────────────────────────────────────── */}
+          {category && (() => {
+            const cfg = getListingFeeConfig(categoryKey);
+
+            if (!cfg) {
+              return (
+                <div
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs"
+                  style={{
+                    background: "rgba(193,80,46,0.08)",
+                    borderColor: "rgba(193,80,46,0.3)",
+                    color: COLORS.rust,
+                  }}
+                >
+                  <AlertTriangle size={14} />
+                  {t(
+                    "Ada ya kuchapisha haijawekwa kwa kategoria hii bado. Wasiliana na Admin.",
+                    "No listing fee is configured for this category yet. Contact Admin."
+                  )}
+                </div>
+              );
+            }
+
+            if (cfg.isActive === false) {
+              return (
+                <div
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs"
+                  style={{
+                    background: "rgba(47,109,79,0.10)",
+                    borderColor: "rgba(47,109,79,0.35)",
+                    color: COLORS.green,
+                  }}
+                >
+                  <Check size={14} />
+                  {t(
+                    "Ada ya kuchapisha imezimwa — unaweka bure. Listing bado itapitia idhini ya Admin.",
+                    "Listing fee is disabled — post for free. Listing still requires admin approval."
+                  )}
+                </div>
+              );
+            }
+
+            const isFlat = String(cfg.feeMode || "PERCENTAGE").toUpperCase() === "FLAT";
+            const flat = Number(cfg.flatFee) || 0;
+            const rate = Number(cfg.rate) || 0;
+            const price = Number(cleanPriceInput(base.price)) || 0;
+
+            let amount = 0;
+            let basis = "";
+            let amountKnown = false;
+
+            if (isFlat) {
+              amount = flat;
+              amountKnown = true;
+              basis = t("Ada ya moja kwa moja", "Flat fee");
+            } else {
+              basis = t(
+                `${(rate * 100).toFixed(2).replace(/\.?0+$/, "")}% ya bei ya mali`,
+                `${(rate * 100).toFixed(2).replace(/\.?0+$/, "")}% of the listing price`
+              );
+              if (price > 0) {
+                let f = price * rate;
+                if (f < cfg.min) f = cfg.min;
+                else if (f > cfg.max) f = cfg.max;
+                f = Math.round(f / 500) * 500;
+                amount = f;
+                amountKnown = true;
+              }
+            }
+
+            const noFee = amountKnown && amount === 0;
+
+            return (
+              <div
+                className="mt-4 inline-flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm"
+                style={{
+                  background: noFee ? "rgba(47,109,79,0.10)" : "rgba(232,163,61,0.10)",
+                  borderColor: noFee ? "rgba(47,109,79,0.35)" : "rgba(232,163,61,0.4)",
+                  color: noFee ? COLORS.green : "#8A5A16",
+                }}
+              >
+                {noFee ? <Check size={15} /> : <Receipt size={15} />}
+                <span>
+                  {t("Ada ya Kuchapisha:", "Listing Fee:")}{" "}
+                  <b className="ml-0.5">
+                    {noFee
+                      ? t("Bure", "Free")
+                      : amountKnown
+                        ? formatTZS(amount)
+                        : t("Itakokotolewa ukiweka bei", "Calculated after you enter a price")}
+                  </b>
+                  <span className="ml-1.5 text-[11px] opacity-70">
+                    ({basis})
+                  </span>
+                </span>
+              </div>
+            );
+          })()}
         </div>
 
         {!category && (
@@ -1416,6 +1491,23 @@ export default function PostPropertyForm({
                   "All contact happens through the Deal Room — no need to add a phone number."
                 )}
               </p>
+            )}
+
+            {/* ─────────────────────────────────────────────── */}
+            {/* INFORMATIONAL / ERROR BAR — sits right above the   */}
+            {/* submit button so users see it next to the action. */}
+            {/* ─────────────────────────────────────────────── */}
+            {error && (
+              <div
+                className="rounded-xl px-4 py-3 flex items-start gap-2 text-sm"
+                style={{
+                  background: "rgba(193,80,46,0.1)",
+                  color: COLORS.rust,
+                }}
+              >
+                <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                <span className="min-w-0 break-words">{error}</span>
+              </div>
             )}
 
             <button
