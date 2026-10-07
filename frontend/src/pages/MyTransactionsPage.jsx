@@ -223,6 +223,7 @@ export default function MyTransactionsPage() {
 
       const response = await fetch(url, {
         method: "GET",
+        credentials: "omit",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 

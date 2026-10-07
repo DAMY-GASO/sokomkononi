@@ -64,9 +64,10 @@ export default function ModerationSection() {
           return next;
         });
       }
-      const anyOk = results.some((r) => r?.ok);
-      const hasLocalData = fetched.length > 0;
-      if (!anyOk && !hasLocalData && statusFilter !== "in_review") {
+      // Only surface the error banner if EVERY task failed. A single
+      // 200-with-empty result is a valid success and must not trigger it.
+      const allFailed = results.length > 0 && results.every((r) => !r?.ok);
+      if (allFailed) {
         setError(
           t("Imeshindwa kupakia orodha kwa kichujio hiki.",
             "Could not load listings for this filter.")

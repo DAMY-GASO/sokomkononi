@@ -564,27 +564,35 @@ export async function fetchListingsByStatusAsync(frontendStatus, params = {}) {
     API_STATUS_FOR_FILTER[frontendStatus] ||
     [LISTING_STATUS_MAP[frontendStatus] || frontendStatus];
 
+  // NOTE: an empty response (200 + `results: []`) is a VALID success.
+  // Only 4xx/5xx/network failures should fall through to the next
+  // candidate or the local cache. Treating empty as failure was
+  // blanking the "Rejected" tab whenever no listing was rejected yet.
   let lastErr = null;
   for (const apiStatus of candidates) {
     try {
       const listings = await tryOneStatus(apiStatus, frontendStatus, params);
-      if (listings.length > 0) {
-        return { ok: true, listings, statusUsed: apiStatus };
-      }
-      lastErr = null;
+      return { ok: true, listings, statusUsed: apiStatus, source: "api" };
     } catch (err) {
       lastErr = err;
+      // 400/404/405 mean the backend doesn't recognize this status
+      // string; try the next candidate. Anything else is fatal for this
+      // fetch — break out and let the caller decide.
       if ([400, 404, 405].includes(err?.status)) continue;
       break;
     }
   }
 
+  // Every candidate errored. Fall back to whatever the local cache has.
   const local = getListings().filter((l) => l.status === frontendStatus);
-  if (local.length > 0) return { ok: true, listings: local, source: "cache" };
+  if (local.length > 0) {
+    return { ok: true, listings: local, source: "cache" };
+  }
 
+  // Still nothing — report the last real error (or a generic message).
   return {
     ok: false,
-    error: lastErr || new Error("Empty result"),
+    error: lastErr || new Error("Failed to load listings"),
     listings: [],
   };
 }

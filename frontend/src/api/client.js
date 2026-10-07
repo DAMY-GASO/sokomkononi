@@ -123,7 +123,13 @@ async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    // SokoMkononi is API-token based; cookies are never needed and would
+    // cause Django's SessionAuthentication to require a CSRF token.
+    return await fetch(url, {
+      credentials: "omit",
+      ...options,
+      signal: controller.signal,
+    });
   } catch (err) {
     if (err.name === "AbortError") {
       throw new ApiError(408, { detail: "Request timed out. Please try again." });
@@ -155,7 +161,10 @@ async function parseResponse(res) {
     if (/DisallowedHost/i.test(html)) {
       detail = "Backend rejected the request: DisallowedHost. Add this domain to Django ALLOWED_HOSTS.";
     } else if (/CSRF/i.test(html)) {
-      detail = "CSRF verification failed. Add this origin to Django CSRF_TRUSTED_ORIGINS.";
+      detail =
+        "CSRF verification failed. On the backend, add this origin to " +
+        "Django's CSRF_TRUSTED_ORIGINS or remove SessionAuthentication " +
+        "from REST_FRAMEWORK.DEFAULT_AUTHENTICATION_CLASSES (JWT-only).";
     } else {
       const m = html.match(/<title>([^<]+)<\/title>/i);
       if (m) detail = m[1].trim();
