@@ -104,6 +104,7 @@ function App() {
               <Route path="/dashboard/seller" element={<DashboardShell />} />
               <Route path="/dashboard/overview" element={<DashboardShell />} />
               <Route path="/dashboard/post" element={<DashboardShell />} />
+              <Route path="/dashboard/pay-listing" element={<DashboardShell />} />
               <Route path="/dashboard/listings" element={<DashboardShell />} />
               <Route path="/dashboard/leads" element={<DashboardShell />} />
               <Route path="/dashboard/saved" element={<DashboardShell />} />
