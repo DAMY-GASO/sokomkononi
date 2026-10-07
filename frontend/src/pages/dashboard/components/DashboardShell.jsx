@@ -57,6 +57,7 @@ import { addTransaction } from "../../../config/transactionsStore.js";
 import { useNewLeadsCount } from "../../../config/leadsStore.js";
 import { useSearchesCount } from "../../../config/searchesStore.js";
 import PostPropertyForm from "./PostPropertyForm.jsx";
+import PayListingFee from "./PayListingFee.jsx";
 import MyListings from "./MyListings.jsx";
 import LeadsSection from "../seller/LeadsSection.jsx";
 import BoostSasa from "./BoostSasa.jsx";
@@ -146,6 +147,7 @@ const URL_TO_STATE = {
   "/dashboard/bundles": { side: "seller", key: "bundles" },
   "/dashboard/verification": { side: "seller", key: "verification" },
   "/dashboard/activity": { side: "seller", key: "activity" },
+  "/dashboard/pay-listing": { side: "seller", key: "pay_listing" },
 
   "/dashboard/buyer": { side: "buyer", key: "overview" },
   "/dashboard/buyer/overview": { side: "buyer", key: "overview" },
@@ -180,6 +182,7 @@ const STATE_TO_URL = {
     bundles: "/dashboard/bundles",
     verification: "/dashboard/verification",
     activity: "/dashboard/activity",
+    pay_listing: "/dashboard/pay-listing",
   },
   buyer: {
     overview: "/dashboard/buyer",
@@ -555,6 +558,9 @@ export default function DashboardShell() {
     }
     if (activeKey === "activity") {
       return <RecentActivityPage side={side} onNavigate={handleNavClick} />;
+    }
+    if (activeKey === "pay_listing") {
+      return <PayListingFee />;
     }
     return (
       <main className="flex-1 p-4 sm:p-6 text-center">

@@ -287,7 +287,7 @@ export default function MyListings({
   const navigate = useNavigate();
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const goToPayment = (id) => navigate(`/dashboard/post?pay=${id}`);
+  const goToPayment = (id) => navigate(`/dashboard/pay-listing?id=${id}`);
 
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
