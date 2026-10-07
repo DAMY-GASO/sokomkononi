@@ -49,6 +49,8 @@ import {
   getDeals,
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
+import { markSoldAsync } from "../../../config/listingsStore.js";
+import { markSoldAsync } from "../../../config/listingsStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";
@@ -1941,15 +1943,22 @@ export default function DealRooms({
     }
 
     if (newStatus === "declined") {
-      const res = await cancelDealAsync(id, "Offer declined");
-      if (!res.ok) {
-        console.warn("[DealRooms] cancelDeal failed:", res.error);
-        alert(
-          res.error?.message ||
-            (lang === "sw"
-              ? "Imeshindwa kukataa ofa. Jaribu tena."
-              : "Failed to decline offer. Try again.")
+      // Sending a counter-offer of 0 would be semantically wrong; the
+      // backend has no "reject-offer-only" endpoint. We instead post a
+      // system message and stop here, leaving the deal OPEN for a
+      // renegotiation. Cancelling the whole deal was destroying it.
+      try {
+        await dealsApi.sendDealMessage(
+          deal.dealRoomId || deal.id,
+          {
+            text:
+              lang === "sw"
+                ? `Ofa ya ${formatTZS(lastOffer.offerAmount)} ilikataliwa. Tafadhali toa ofa nyingine.`
+                : `The offer of ${formatTZS(lastOffer.offerAmount)} was declined. Please make another offer.`,
+          }
         );
+      } catch (msgErr) {
+        console.warn("[DealRooms] decline message failed:", msgErr);
       }
       return;
     }
@@ -2280,7 +2289,13 @@ export default function DealRooms({
 
     updateDeal(id, {
       status: "payment_proof_submitted",
-      paymentProof: { ...proof, submittedAt: new Date().toISOString() },
+      // Store only metadata — the file itself lives on the backend.
+      // Keeping a base64 dataUrl bloats localStorage across many deals.
+      paymentProof: {
+        method: proof.method,
+        reference: proof.reference,
+        submittedAt: new Date().toISOString(),
+      },
       messages: [
         ...deal.messages,
         {
@@ -2318,6 +2333,16 @@ export default function DealRooms({
             : "Failed to confirm payment.")
       );
       return;
+    }
+
+    // Auto-transition the listing to SOLD. Without this, the listing
+    // stays LIVE forever and other buyers can keep opening deals on it.
+    if (deal.listingId) {
+      try {
+        await markSoldAsync(deal.listingId);
+      } catch (soldErr) {
+        console.warn("[DealRooms] markSold after completion failed:", soldErr);
+      }
     }
 
     const note =

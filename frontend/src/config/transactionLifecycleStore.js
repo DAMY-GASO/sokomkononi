@@ -425,25 +425,44 @@ export async function expireInspectionAsync(id) {
 // ============================================================
 // 4. DECISION
 // ============================================================
+// Backend API accepts these exact strings for `buyer_decision`:
+//   READY_FOR_FINAL_PAYMENT | NOT_AS_DESCRIBED | REQUEST_NEGOTIATION | CANCEL_TRANSACTION
+// Never send "ACCEPT"/"REJECT" — the backend rejects them with 400.
+const DECISION_TO_API = {
+  READY_FOR_FINAL_PAYMENT: "READY_FOR_FINAL_PAYMENT",
+  NOT_AS_DESCRIBED: "NOT_AS_DESCRIBED",
+  REQUEST_NEGOTIATION: "REQUEST_NEGOTIATION",
+  CANCEL_TRANSACTION: "CANCEL_TRANSACTION",
+  // Legacy aliases accepted from any old caller:
+  ACCEPT: "READY_FOR_FINAL_PAYMENT",
+  REJECT: "NOT_AS_DESCRIBED",
+  CANCEL: "CANCEL_TRANSACTION",
+};
+
 export async function submitDecisionAsync(id, { buyerDecision, buyerDecisionNote = "" }) {
   if (!buyerDecision) {
     return { ok: false, error: new Error("buyerDecision is required") };
   }
+  const apiValue = DECISION_TO_API[String(buyerDecision).toUpperCase()] || buyerDecision;
+
+  // Local status mapping must align with the four real backend values.
   const newStatus =
-    buyerDecision === "ACCEPT" || buyerDecision === "accept"
+    apiValue === "READY_FOR_FINAL_PAYMENT"
       ? TX_STATUS.DECIDED_ACCEPT
-      : TX_STATUS.DECIDED_REJECT;
+      : apiValue === "REQUEST_NEGOTIATION" || apiValue === "NOT_AS_DESCRIBED"
+        ? TX_STATUS.DISPUTED
+        : TX_STATUS.CANCELLED;
 
   return mutateWithRollback({
     id,
     patch: {
       status: newStatus,
-      buyerDecision,
+      buyerDecision: apiValue,
       buyerDecisionNote,
     },
     apiCall: () =>
       transactionsApi.submitDecision(id, {
-        buyer_decision: buyerDecision,
+        buyer_decision: apiValue,
         buyer_decision_note: buyerDecisionNote,
       }),
   });

@@ -21,6 +21,7 @@ import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { useWaitingList, joinWaitingListAsync } from "../config/waitingListStore.js";
 import { getOrCreateDealAsync } from "../config/dealsStore.js";
 import { trackViewed } from "../config/recentlyViewedStore.js";
+import { trackViewed } from "../config/recentlyViewedStore.js";
 import { createConversationAsync } from "../config/messagesStore.js";
 import {
   CATEGORY_EXTRA,
@@ -548,6 +549,10 @@ export default function PropertyDetailPage() {
   }, [property?.id]);
 
   // Record in "Recently Viewed" once we know the listing is real.
+  useEffect(() => {
+    if (property?.id) trackViewed(property.id);
+  }, [property?.id]);
+
   useEffect(() => {
     if (property?.id) trackViewed(property.id);
   }, [property?.id]);

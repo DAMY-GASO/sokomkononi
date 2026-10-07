@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { notificationsApi } from "../api/notifications.js";
 import { ADMIN_PATH } from "./adminPath.js";
+import { ADMIN_PATH } from "./adminPath.js";
 
 const KEY = "sokomkononi_notifications_v1";
 const EV = "sokomkononi:notifications-updated";

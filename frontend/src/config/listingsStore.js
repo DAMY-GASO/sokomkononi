@@ -23,8 +23,8 @@ const UPDATE_EVENT = "sokomkononi:listings-updated";
 export const LISTING_LIFETIME_DAYS_FALLBACK = 60;
 
 export const LISTING_STATUS_MAP = {
-  live: "AVAILABLE",
-  paused: "ARCHIVED",
+  live: "LIVE",
+  paused: "PAUSED",
   reserved: "RESERVED",
   sold: "SOLD",
   expired: "ARCHIVED",
