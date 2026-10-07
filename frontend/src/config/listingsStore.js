@@ -597,6 +597,27 @@ export async function fetchListingsByStatusAsync(frontendStatus, params = {}) {
   };
 }
 
+/**
+ * Save a listing that was just created via a direct `api.post("/listings/")`
+ * call. `PostPropertyForm` uses this so the new listing immediately shows
+ * up in My Listings, the unpaid banner, and any local lookup by id.
+ *
+ * Returns the normalized listing (or null when the payload is unusable).
+ */
+export function saveFreshlyCreatedListing(raw) {
+  if (!raw) return null;
+  const normalized = normalizeListingFromApi(raw, "pending_payment");
+  if (!normalized || normalized.id == null) return null;
+
+  const current = readKey(MINE_KEY);
+  const next = [
+    normalized,
+    ...current.filter((l) => String(l.id) !== String(normalized.id)),
+  ];
+  writeKey(MINE_KEY, next);
+  return normalized;
+}
+
 export async function createListingAsync(payload) {
   const tempId = `temp_${Date.now()}`;
   const optimistic = {

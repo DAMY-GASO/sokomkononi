@@ -15,6 +15,7 @@ import {
   getListingFeeConfig,
   hydrateListingFeeConfigsFromApi,
 } from "../../../config/listingFeeStore.js";
+import { saveFreshlyCreatedListing } from "../../../config/listingsStore.js";
 import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
@@ -423,6 +424,11 @@ export default function PostPropertyForm({
           area: loc.eneo.trim(),
         },
       });
+      // Save immediately so the listing shows up in My Listings, the
+      // seller's unpaid banner, and any local lookup by id — even if the
+      // user aborts before paying.
+      saveFreshlyCreatedListing(created);
+
       // Pull the fee from the create response so the "Listing imeundwa"
       // screen never flashes 0 while waiting for a second call.
       const inlineFee = Number(created?.fee_amount ?? 0);
