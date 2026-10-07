@@ -196,8 +196,25 @@ export function calculateListingFee(categoryKey, priceInput) {
     };
   }
 
+  // Fee mode determines the formula. FLAT ignores price entirely —
+  // PERCENTAGE computes `price × rate` and applies min/max caps.
+  const isFlat = String(config.feeMode || "PERCENTAGE").toUpperCase() === "FLAT";
+  const flatFee = Number(config.flatFee) || 0;
+
+  if (isFlat) {
+    const fee = flatFee > 0 ? Math.round(flatFee / 500) * 500 : 0;
+    return { price, rate: 0, rawFee: fee, fee, capped: null, mode: "FLAT" };
+  }
+
   if (!price) {
-    return { price, rate: config.rate, rawFee: 0, fee: 0, capped: null };
+    return {
+      price,
+      rate: config.rate,
+      rawFee: 0,
+      fee: 0,
+      capped: null,
+      mode: "PERCENTAGE",
+    };
   }
 
   const rawFee = price * config.rate;
@@ -214,7 +231,7 @@ export function calculateListingFee(categoryKey, priceInput) {
 
   fee = Math.round(fee / 500) * 500;
 
-  return { price, rate: config.rate, rawFee, fee, capped };
+  return { price, rate: config.rate, rawFee, fee, capped, mode: "PERCENTAGE" };
 }
 
 // ============================================================

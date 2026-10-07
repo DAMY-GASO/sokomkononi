@@ -11,7 +11,10 @@ import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
 import { checkDuplicateListingAsync } from "../../../config/listingsStore.js";
-import { getListingFeeConfig } from "../../../config/listingFeeStore.js";
+import {
+  getListingFeeConfig,
+  hydrateListingFeeConfigsFromApi,
+} from "../../../config/listingFeeStore.js";
 import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
@@ -217,6 +220,14 @@ export default function PostPropertyForm({
   const creditInfo = checkCredit(user?.id, "listing");
   const hasCredit = creditInfo.hasCredit;
   const listingCreditRemaining = creditInfo.remaining || 0;
+
+  // Refresh the fee-rules cache on mount so the local fallback used by
+  // the review screen is never stale.
+  useEffect(() => {
+    hydrateListingFeeConfigsFromApi().catch((err) => {
+      console.warn("[PostPropertyForm] fee hydrate failed:", err);
+    });
+  }, []);
 
   // ⬇️ Angalia kama listing fee imezimwa kwa category hii
   const categoryFeeConfig = categoryKey ? getListingFeeConfig(categoryKey) : null;
@@ -785,7 +796,7 @@ export default function PostPropertyForm({
                   <span className="font-bold" style={{ color: COLORS.rust }}>
                     {feeAmount > 0
                       ? formatTZS(feeAmount)
-                      : isFreeCategory || listingFeeDisabled
+                      : isFreeCategory
                         ? t("Bure", "Free")
                         : t("Inahesabiwa...", "Calculating...")}
                   </span>
@@ -907,7 +918,7 @@ export default function PostPropertyForm({
               {/* Main CTA */}
               <button
                 onClick={
-                  feeAmount === 0 && (isFreeCategory || listingFeeDisabled)
+                  feeAmount === 0 && isFreeCategory
                     ? () => {
                         onPaid?.(createdListing.id, { alreadyPaid: true });
                         setStage("done");
@@ -916,18 +927,24 @@ export default function PostPropertyForm({
                       ? () => setStage("paying")
                       : handleBeginBundlePurchase
                 }
-                disabled={submitting || (paymentMode === "bundle" && !selectedBundle)}
+                disabled={
+                  submitting ||
+                  (paymentMode === "bundle" && !selectedBundle) ||
+                  (feeAmount === 0 && !isFreeCategory)
+                }
                 style={{
                   background: COLORS.gold,
                   color: COLORS.night,
                 }}
                 className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50"
               >
-                {feeAmount === 0 && (isFreeCategory || listingFeeDisabled)
+                {feeAmount === 0 && isFreeCategory
                   ? t("Tuma kwa Admin", "Submit to Admin")
-                  : paymentMode === "flat"
-                    ? t(`Lipa ${formatTZS(feeAmount)}`, `Pay ${formatTZS(feeAmount)}`)
-                    : t("Nunua Kifurushi", "Buy Bundle")}
+                  : feeAmount === 0
+                    ? t("Inahesabiwa...", "Calculating...")
+                    : paymentMode === "flat"
+                      ? t(`Lipa ${formatTZS(feeAmount)}`, `Pay ${formatTZS(feeAmount)}`)
+                      : t("Nunua Kifurushi", "Buy Bundle")}
               </button>
               <button
                 onClick={onGoToListings}
