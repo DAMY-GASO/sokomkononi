@@ -2,7 +2,7 @@
 // DealsSection.jsx — FIX: dispute panel loads messages;
 // handleResolve passes transactionId correctly.
 // ============================================================
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MoreVertical, Eye, AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 import { COLORS, formatTZS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -15,6 +15,7 @@ import {
   useDeals,
   hydrateDealsFromApi,
   resolveDisputeAsync,
+  fetchDealDetailAsync,
 } from "../../../../config/dealsStore.js";
 import {
   getTransactionByDealRoom,
@@ -27,6 +28,23 @@ export default function DealsSection() {
   const { user } = useAuth();
   const deals = useDeals(user?.id);
 
+  const enrichedRef = useRef(new Set());
+  useEffect(() => {
+    if (!user?.id) return;
+    deals.forEach((d) => {
+      const needsEnrich =
+        !d.buyerName || !d.sellerName || !d.listingTitle ||
+        (d.currentOffer === 0 && d.askingPrice === 0);
+      if (!needsEnrich) return;
+      if (enrichedRef.current.has(d.id)) return;
+      enrichedRef.current.add(d.id);
+      fetchDealDetailAsync(d.id).catch((err) => {
+        console.warn("[DealsSection] enrich failed for", d.id, err);
+        enrichedRef.current.delete(d.id);
+      });
+    });
+  }, [deals, user?.id]);
+
   const [expandedId, setExpandedId] = useState(null);
   const [disputeId, setDisputeId] = useState(null);
   const [busy, setBusy] = useState({});
@@ -37,6 +55,15 @@ export default function DealsSection() {
   const inflightRoomRef = React.useRef(new Map());
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+  const displayDealAmount = (d) => {
+    const amt =
+      d?.currentOffer > 0 ? d.currentOffer :
+      d?.askingPrice > 0 ? d.askingPrice : 0;
+    return amt > 0 ? "TZS " + Math.round(amt).toLocaleString("en-US") : "—";
+  };
+  const displayDealName = (name, id) => name || (id ? `#${id}` : "—");
+  const displayListing = (d) =>
+    d?.listingTitle || (d?.listingId ? `#${d.listingId}` : `#${d.id}`);
 
   const handleRefresh = async () => {
     if (!user?.id || refreshing) return;
@@ -239,7 +266,7 @@ export default function DealsSection() {
                     <tr className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-5 py-3 text-sm font-medium text-primary">
                         <div className="flex items-center gap-2">
-                          <span className="truncate">{d.listingTitle}</span>
+                          <span className="truncate">{displayListing(d)}</span>
                           {isDisputed && (
                             <span style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
                               className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
@@ -248,10 +275,10 @@ export default function DealsSection() {
                           )}
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-sm text-secondary">{d.buyerName || "—"}</td>
-                      <td className="px-5 py-3 text-sm text-secondary">{d.sellerName || "—"}</td>
+                      <td className="px-5 py-3 text-sm text-secondary">{displayDealName(d.buyerName, d.buyerId)}</td>
+                      <td className="px-5 py-3 text-sm text-secondary">{displayDealName(d.sellerName, d.sellerId)}</td>
                       <td className="px-5 py-3 text-sm font-semibold" style={{ color: COLORS.rust }}>
-                        {formatTZS(d.currentOffer ?? d.askingPrice ?? 0)}
+                        {displayDealAmount(d)}
                       </td>
                       <td className="px-5 py-3"><StatusBadge status={d.status} lang={lang} /></td>
                       <td className="px-5 py-3 text-right"><ActionButtons deal={d} /></td>
@@ -295,7 +322,7 @@ export default function DealsSection() {
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-primary line-clamp-2">{d.listingTitle}</p>
+                    <p className="text-sm font-semibold text-primary line-clamp-2">{displayListing(d)}</p>
                     {isDisputed && (
                       <span style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
                         className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1">
@@ -306,11 +333,11 @@ export default function DealsSection() {
                   <div className="shrink-0"><StatusBadge status={d.status} lang={lang} /></div>
                 </div>
                 <div className="flex flex-col gap-0.5 text-xs text-secondary mb-2">
-                  <span className="truncate">{t("Mnunuzi", "Buyer")}: <span className="font-medium text-primary">{d.buyerName || "—"}</span></span>
-                  <span className="truncate">{t("Muuzaji", "Seller")}: <span className="font-medium text-primary">{d.sellerName || "—"}</span></span>
+                  <span className="truncate">{t("Mnunuzi", "Buyer")}: <span className="font-medium text-primary">{displayDealName(d.buyerName, d.buyerId)}</span></span>
+                  <span className="truncate">{t("Muuzaji", "Seller")}: <span className="font-medium text-primary">{displayDealName(d.sellerName, d.sellerId)}</span></span>
                 </div>
                 <p className="text-sm font-bold mb-3" style={{ color: COLORS.rust }}>
-                  {formatTZS(d.currentOffer ?? d.askingPrice ?? 0)}
+                  {displayDealAmount(d)}
                 </p>
                 <ActionButtons deal={d} fullWidth />
               </div>

@@ -21,7 +21,6 @@ import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { useWaitingList, joinWaitingListAsync } from "../config/waitingListStore.js";
 import { getOrCreateDealAsync } from "../config/dealsStore.js";
 import { trackViewed } from "../config/recentlyViewedStore.js";
-import { trackViewed } from "../config/recentlyViewedStore.js";
 import { createConversationAsync } from "../config/messagesStore.js";
 import {
   CATEGORY_EXTRA,

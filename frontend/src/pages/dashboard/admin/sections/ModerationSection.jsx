@@ -64,10 +64,15 @@ export default function ModerationSection() {
           return next;
         });
       }
-      if (results.length && results.every((r) => !r?.ok)) {
+      const anyOk = results.some((r) => r?.ok);
+      const hasLocalData = fetched.length > 0;
+      if (!anyOk && !hasLocalData && statusFilter !== "in_review") {
         setError(
-          t("Imeshindwa kupakia listings.", "Failed to load listings.")
+          t("Imeshindwa kupakia orodha kwa kichujio hiki.",
+            "Could not load listings for this filter.")
         );
+      } else {
+        setError("");
       }
       setLoading(false);
     });

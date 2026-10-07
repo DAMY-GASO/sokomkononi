@@ -11,6 +11,7 @@ import { dealsApi } from "../api/deals.js";
 import { transactionsApi } from "../api/transactions.js";
 import { getTransactionByDealRoom } from "./transactionLifecycleStore.js";
 import { getListings, useListings } from "./listingsStore.js";
+import { getUser as getUserById } from "./usersStore.js";
 
 const STORAGE_KEY = "sokomkononi_deals_v1";
 const UPDATE_EVENT = "sokomkononi:deals-updated";
@@ -47,11 +48,20 @@ const API_TO_FRONTEND_DEAL_STATUS = {
   REJECTED: "declined",
   RESERVED: "reserved",
   RESERVATION_PAID: "reserved",
+  RESERVATION_PENDING: "reserved",
+  RESERVATION_CONFIRMED: "reserved",
+  INSPECTION: "inspecting",
+  INSPECTING: "inspecting",
+  READY_FOR_FINAL_PAYMENT: "awaiting_final_payment",
   AWAITING_FINAL_PAYMENT: "awaiting_final_payment",
   PAYMENT_PROOF_SUBMITTED: "payment_proof_submitted",
+  FINAL_PAYMENT_SUBMITTED: "payment_proof_submitted",
   COMPLETED: "completed",
+  DONE: "completed",
   DISPUTED: "disputed",
+  DISPUTE: "disputed",
   CANCELLED: "cancelled",
+  CANCELED: "cancelled",
   EXPIRED: "cancelled",
 };
 
@@ -100,80 +110,138 @@ function resolveCurrentOffer(raw, offers) {
   const arr = Array.isArray(offers) ? offers : raw?.offers || [];
   if (arr.length > 0) {
     const sorted = [...arr].sort(
-      (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+      (a, b) =>
+        new Date(b.created_at || b.createdAt || 0) -
+        new Date(a.created_at || a.createdAt || 0)
     );
-    const n = Number(sorted[0]?.amount);
+    const latest = sorted[0];
+    const n = Number(latest?.amount ?? latest?.offer_amount ?? latest?.value);
     if (Number.isFinite(n) && n > 0) return n;
   }
-  for (const c of [raw?.agreed_price, raw?.current_offer, raw?.offer_amount]) {
+  const candidates = [
+    raw?.latest_offer?.amount,
+    raw?.latest_offer_amount,
+    raw?.best_offer?.amount,
+    raw?.agreed_price,
+    raw?.current_offer,
+    raw?.offer_amount,
+  ];
+  for (const c of candidates) {
     const n = Number(c);
     if (Number.isFinite(n) && n > 0) return n;
   }
-  // Hakuna offer bado — 0 ni sahihi.
   return 0;
 }
 
 function resolveMeta(raw, listing, listingId) {
   let category =
-    listing?.category_name || listing?.category || raw?.category || null;
-  let location = listing?.location || raw?.location || "";
-  let listingTitle = listing?.title || raw?.listing_title || "";
+    listing?.category_name ||
+    listing?.category?.name ||
+    listing?.category?.slug ||
+    (typeof listing?.category === "string" ? listing.category : null) ||
+    raw?.category_name ||
+    raw?.category?.slug ||
+    raw?.category ||
+    null;
+  let location =
+    listing?.location || listing?.region || listing?.address ||
+    raw?.location || raw?.listing_location || "";
+  let listingTitle =
+    listing?.title || listing?.name ||
+    raw?.listing_title || raw?.listing_name || "";
   if (!category || !location || !listingTitle) {
-    const id = listing?.id ?? raw?.listing_id ?? raw?.listing ?? listingId;
+    const id =
+      (listing && typeof listing === "object" && listing.id) ??
+      raw?.listing_id ??
+      (typeof raw?.listing === "object" ? raw.listing?.id : raw?.listing) ??
+      listingId;
     if (id != null) {
       try {
         const cached = getListings().find((l) => String(l.id) === String(id));
         if (cached) {
           category = category || cached.category || null;
-          location = location || cached.location || "";
-          listingTitle = listingTitle || cached.title || "";
+          location = location || cached.location || cached.region || "";
+          listingTitle = listingTitle || cached.title || cached.name || "";
         }
-      } catch {
-        /* noop */
-      }
+      } catch { /* noop */ }
     }
   }
   return { category, location, listingTitle };
 }
 
+function _asObject(v) {
+  return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+}
+function _asId(v) {
+  if (v == null) return null;
+  if (typeof v === "object") return v.id ?? v.pk ?? null;
+  return v;
+}
+function _nameOf(...objs) {
+  for (const o of objs) {
+    if (!o || typeof o !== "object") continue;
+    const n = o.name || o.full_name || o.username || o.display_name;
+    if (n) return n;
+  }
+  return "";
+}
+
 function normalizeDealFromApi(raw, currentUserId) {
   if (!raw) return null;
-  const buyerId = raw.buyer?.id ?? raw.buyer_id ?? null;
+
+  const buyer = _asObject(raw.buyer);
+  const seller = _asObject(raw.seller);
+  const listing = _asObject(raw.listing);
+  const dealRoom = _asObject(raw.deal_room);
+  const transaction = _asObject(raw.transaction);
+
+  const buyerId = buyer.id ?? raw.buyer_id ?? _asId(raw.buyer);
+  const sellerId = seller.id ?? raw.seller_id ?? _asId(raw.seller);
+  const listingId = listing.id ?? raw.listing_id ?? _asId(raw.listing);
+
   const isBuyer = sameId(buyerId, currentUserId);
-  const counterparty = isBuyer ? raw.seller : raw.buyer;
-  const buyer = raw.buyer || {};
-  const seller = raw.seller || {};
-  const listing = raw.listing || {};
-  const dealRoom = raw.deal_room || {};
+  const counterparty = isBuyer ? seller : buyer;
+
+  let buyerName =
+    _nameOf(buyer) || raw.buyer_name || raw.buyer_display_name || "";
+  let sellerName =
+    _nameOf(seller) || raw.seller_name || raw.seller_display_name || "";
+
+  if (!buyerName && buyerId != null) {
+    const u = getUserById(buyerId);
+    if (u?.name) buyerName = u.name;
+  }
+  if (!sellerName && sellerId != null) {
+    const u = getUserById(sellerId);
+    if (u?.name) sellerName = u.name;
+  }
+
+  const statusRaw = String(raw.status || "OPEN").toUpperCase();
+  const status =
+    API_TO_FRONTEND_DEAL_STATUS[statusRaw] || statusRaw.toLowerCase();
 
   return {
     id: raw.id,
     dealRoomId: dealRoom.id ?? raw.deal_room ?? null,
-    transactionId: raw.transaction?.id ?? raw.transaction ?? null,
-    listingId: listing.id ?? raw.listing ?? null,
-    ...resolveMeta(raw, listing, raw?.listing_id ?? raw?.listing),
+    transactionId: transaction.id ?? raw.transaction ?? null,
+    listingId,
+    ...resolveMeta(raw, listing, listingId ?? raw?.listing_id ?? raw?.listing),
     askingPrice: resolveAskingPrice(
       raw,
       listing,
-      raw?.listing_id ?? raw?.listing
+      listingId ?? raw?.listing_id ?? raw?.listing
     ),
     currentOffer: resolveCurrentOffer(raw, raw?.offers),
-    counterpartyName: counterparty?.name || "",
-    buyerId: buyer.id ?? buyerId,
-    buyerName: buyer.name || raw.buyer_name || "",
-    sellerId: seller.id ?? null,
-    sellerName: seller.name || raw.seller_name || "",
-    // Namba ya muuzaji: BACKEND inatuma tu baada ya Reservation Fee kulipwa.
+    counterpartyName:
+      counterparty?.name || counterparty?.full_name || "",
+    buyerId,
+    buyerName,
+    sellerId,
+    sellerName,
     sellerPhone:
-      seller.phone ??
-      seller.phone_number ??
-      raw.seller_phone ??
-      raw.seller_contact?.phone ??
-      null,
-    status: (() => {
-      const upper = String(raw.status || "OPEN").toUpperCase();
-      return API_TO_FRONTEND_DEAL_STATUS[upper] || upper.toLowerCase();
-    })(),
+      seller.phone ?? seller.phone_number ??
+      raw.seller_phone ?? raw.seller_contact?.phone ?? null,
+    status,
     agreedPrice: raw.agreed_price != null ? Number(raw.agreed_price) : null,
     agreedAt: raw.agreed_at,
 
@@ -244,18 +312,51 @@ function normalizeDealFromApi(raw, currentUserId) {
   };
 }
 
+let _dealsUserId = null;
+
 export async function hydrateDealsFromApi(currentUserId) {
+  _dealsUserId = currentUserId ?? _dealsUserId;
   try {
-    const data = await dealsApi.list({ page_size: 100 });
+    const data = await dealsApi.list({ page_size: 200 });
     const rawList = Array.isArray(data) ? data : data?.results || [];
     const normalized = rawList
-      .map((raw) => normalizeDealFromApi(raw, currentUserId))
+      .map((raw) => normalizeDealFromApi(raw, _dealsUserId))
       .filter(Boolean);
     saveDeals(normalized);
     return { source: "api", count: normalized.length };
   } catch (err) {
     console.warn("[dealsStore] hydrate failed:", err);
     return { source: "error", count: getDeals().length };
+  }
+}
+
+export async function fetchDealDetailAsync(dealId) {
+  if (!dealId) return { ok: false, error: new Error("dealId is required") };
+  try {
+    const raw = await dealsApi.detail(dealId);
+    const deal = normalizeDealFromApi(raw, _dealsUserId);
+    if (!deal) return { ok: false, error: new Error("Invalid deal response") };
+    const current = getDeals();
+    const existing = current.find((d) => sameId(d.id, dealId));
+    const merged = existing
+      ? {
+          ...existing,
+          ...deal,
+          messages:
+            (deal.messages?.length || 0) >= (existing.messages?.length || 0)
+              ? deal.messages
+              : existing.messages,
+        }
+      : deal;
+    saveDeals(
+      existing
+        ? current.map((d) => (sameId(d.id, dealId) ? merged : d))
+        : [deal, ...current]
+    );
+    return { ok: true, deal: merged };
+  } catch (err) {
+    console.warn("[dealsStore] fetchDealDetail failed:", err);
+    return { ok: false, error: err };
   }
 }
 

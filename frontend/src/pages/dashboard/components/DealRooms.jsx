@@ -50,7 +50,6 @@ import {
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { markSoldAsync } from "../../../config/listingsStore.js";
-import { markSoldAsync } from "../../../config/listingsStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";

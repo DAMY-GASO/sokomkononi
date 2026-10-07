@@ -78,11 +78,6 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
     }
   );
 
-  const getCreditsForType = (type) => {
-    const c = form.credits;
-    if (c && typeof c === "object") return c[type] ?? 1;
-    return Number(c) || 1;
-  };
   const [localError, setLocalError] = useState("");
 
   const getCreditsForType = (type) => {

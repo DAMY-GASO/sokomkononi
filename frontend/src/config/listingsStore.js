@@ -539,18 +539,54 @@ export async function fetchPendingListingsAsync() {
   }
 }
 
+const API_STATUS_FOR_FILTER = {
+  live: ["LIVE"],
+  rejected: ["REJECTED"],
+  in_review: ["PENDING_APPROVAL", "IN_REVIEW"],
+  pending_payment: ["PENDING_PAYMENT", "DRAFT"],
+  paused: ["PAUSED", "ARCHIVED"],
+  sold: ["SOLD"],
+  reserved: ["RESERVED"],
+  expired: ["EXPIRED"],
+};
+
+async function tryOneStatus(apiStatus, frontendStatus, params) {
+  const data = await listingsApi.list({
+    status: apiStatus, page_size: 200, ...params,
+  });
+  return extractList(data)
+    .map((r) => normalizeListingFromApi(r, frontendStatus))
+    .filter(Boolean);
+}
+
 export async function fetchListingsByStatusAsync(frontendStatus, params = {}) {
-  try {
-    const apiStatus = LISTING_STATUS_MAP[frontendStatus] || frontendStatus;
-    const data = await listingsApi.list({ status: apiStatus, page_size: 100, ...params });
-    const listings = extractList(data)
-      .map((r) => normalizeListingFromApi(r, frontendStatus))
-      .filter(Boolean);
-    return { ok: true, listings };
-  } catch (err) {
-    console.warn("[listingsStore] fetchByStatus failed:", err);
-    return { ok: false, error: err, listings: [] };
+  const candidates =
+    API_STATUS_FOR_FILTER[frontendStatus] ||
+    [LISTING_STATUS_MAP[frontendStatus] || frontendStatus];
+
+  let lastErr = null;
+  for (const apiStatus of candidates) {
+    try {
+      const listings = await tryOneStatus(apiStatus, frontendStatus, params);
+      if (listings.length > 0) {
+        return { ok: true, listings, statusUsed: apiStatus };
+      }
+      lastErr = null;
+    } catch (err) {
+      lastErr = err;
+      if ([400, 404, 405].includes(err?.status)) continue;
+      break;
+    }
   }
+
+  const local = getListings().filter((l) => l.status === frontendStatus);
+  if (local.length > 0) return { ok: true, listings: local, source: "cache" };
+
+  return {
+    ok: false,
+    error: lastErr || new Error("Empty result"),
+    listings: [],
+  };
 }
 
 export async function createListingAsync(payload) {
