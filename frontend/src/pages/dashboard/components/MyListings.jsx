@@ -46,6 +46,20 @@ import { notifyAdminAboutDeletion } from "../../../config/notificationsStore.js"
 import { restoreListingAsync } from "../../../config/listingsStore.js";
 
 // ============================================================
+// isUnpaid — module-scope helper so both ListingCard and MyListings
+// can use it. A listing is "unpaid" when it's still in a pre-payment
+// state OR the backend explicitly says is_paid === false.
+// ============================================================
+function isUnpaid(listing) {
+  if (!listing) return false;
+  if (listing.status === "PENDING_PAYMENT" || listing.status === "DRAFT") {
+    return true;
+  }
+  if (listing.isPaid === false) return true;
+  return false;
+}
+
+// ============================================================
 // ACTION BUTTON — kitufe kidogo chenye icon, kina ukubwa mmoja kila mahali
 // ============================================================
 function ActionBtn({ icon: Icon, label, color, onClick, disabled, danger, className = "" }) {
@@ -82,6 +96,7 @@ function ListingCard({
   onPause,
   onResume,
   onMarkSold,
+  onPay,
   busy,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -209,7 +224,7 @@ function ListingCard({
         {isUnpaid(listing) && (
           <button
             type="button"
-            onClick={() => goToPayment(listing.id)}
+            onClick={() => onPay?.(listing.id)}
             disabled={isBusy}
             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
             style={{ background: COLORS.rust, color: "white" }}
@@ -271,11 +286,6 @@ export default function MyListings({
   const toast = useToast();
   const navigate = useNavigate();
   const t = (sw, en) => (lang === "sw" ? sw : en);
-
-  const isUnpaid = (l) =>
-    l.status === "PENDING_PAYMENT" ||
-    l.status === "DRAFT" ||
-    l.isPaid === false;
 
   const goToPayment = (id) => navigate(`/dashboard/post?pay=${id}`);
 
@@ -491,6 +501,7 @@ const handleRemove = async (id) => {
               onPause={onPause}
               onResume={onResume}
               onMarkSold={onMarkSold}
+              onPay={goToPayment}
               busy={busy[l.id]}
             />
           ))}
