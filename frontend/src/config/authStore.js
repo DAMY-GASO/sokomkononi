@@ -18,7 +18,7 @@ const storageKey = () => USER_KEYS[getSessionScope()];
 export const ADMIN_BLOCKED_MESSAGE =
   "Akaunti ya Admin haiwezi kuingia dashboard ya watumiaji. Tumia ukurasa wa admin, au ingia kwa akaunti yako ya kawaida ya mtumiaji.";
 const UPDATE_EVENT = "sokomkononi:auth-updated";
-const AVATAR_KEY_PREFIX = "admin_avatar_";
+const AVATAR_KEY_PREFIX = "user_avatar_";
 
 // ============================================================
 // /auth/me/ dedupe + short TTL cache

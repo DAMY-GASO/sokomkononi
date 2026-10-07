@@ -18,7 +18,11 @@ export default {
         bold: "700",
       },
       colors: {
-        // Text
+        // Text (new keys — use these going forward)
+        primary: "#111827",
+        secondary: "#6B7280",
+        muted: "#9CA3AF",
+        // Legacy aliases kept for backward compatibility.
         "text-primary": "#111827",
         "text-secondary": "#6B7280",
         "text-muted": "#9CA3AF",

@@ -146,13 +146,20 @@ export default function ModerationSection() {
 
   const handleApprove = async (listingId) => {
     if (busy[listingId]) return;
+    const snapshot = queue.find((q) => String(q.id) === String(listingId));
     setBusy((b) => ({ ...b, [listingId]: "approve" }));
     setError("");
     const res = await approveListingFromQueueAsync(listingId);
     clearBusy(listingId);
     if (res.ok) {
       markDecided(listingId, "live");
-      addToHistory(res.listing);
+      addToHistory({
+        ...(snapshot || {}),
+        ...(res.listing || {}),
+        id: listingId,
+        status: "live",
+        approvedAt: new Date().toISOString(),
+      });
     } else {
       setError(res.error?.message || t("Imeshindwa kuidhinisha listing.", "Failed to approve listing."));
     }
@@ -173,12 +180,20 @@ export default function ModerationSection() {
     const { listingId } = rejectModal;
     setBusy((b) => ({ ...b, [listingId]: "reject" }));
     setError("");
+    const snapshot = queue.find((q) => String(q.id) === String(listingId));
     const res = await rejectListingFromQueueAsync(listingId, reason);
     clearBusy(listingId);
     setRejectModal(null);
     if (res.ok) {
       markDecided(listingId, "rejected");
-      addToHistory(res.listing);
+      addToHistory({
+        ...(snapshot || {}),
+        ...(res.listing || {}),
+        id: listingId,
+        status: "rejected",
+        rejectionReason: reason,
+        rejectedAt: new Date().toISOString(),
+      });
     } else {
       setError(res.error?.message || t("Imeshindwa kukataa listing.", "Failed to reject listing."));
     }

@@ -16,47 +16,24 @@ export default function AppStoreLinksPanel() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [savedSnapshot, setSavedSnapshot] = useState({
-    play: links.play || "",
-    appstore: links.appstore || "",
-  });
+  const [dirty, setDirty] = useState(false);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // Sync snapshot whenever links hydrate from the backend (but only when
-  // the user hasn't started typing an unsaved draft).
-  useEffect(() => {
-    const cur = { play: links.play || "", appstore: links.appstore || "" };
-    const isSameAsSnapshot =
-      cur.play === savedSnapshot.play && cur.appstore === savedSnapshot.appstore;
-    if (isSameAsSnapshot) return;
-    // Only re-sync when nothing local is unsaved (i.e. snapshot matches
-    // the state at last save OR store just hydrated and user hasn't typed).
-    // Heuristic: if the user has no in-flight edits, snapshot := current.
-    setSavedSnapshot((prev) => {
-      const userTyped =
-        (links.play || "") !== prev.play || (links.appstore || "") !== prev.appstore;
-      // If the local links differ from snapshot, we can't tell if it's a
-      // hydrate or a user edit. Prefer hydrate (only if links looks like it
-      // came from the backend — has at least one non-empty value).
-      if (!userTyped) return prev;
-      if (!links.play && !links.appstore && !prev.play && !prev.appstore) return prev;
-      // Otherwise it's likely a hydrate — adopt as the new snapshot ONLY
-      // when we haven't' recorded an explicit save yet.
-      return saved ? prev : cur;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [links.play, links.appstore]);
+  const setField = (patch) => {
+    setLinksLocal({ ...links, ...patch });
+    setDirty(true);
+  };
 
   const handleSave = async () => {
-    if (saving) return;
+    if (saving || !dirty) return;
     setSaving(true);
     setError("");
     setSaved(false);
     const res = await saveAppStoreLinksAsync(links);
     setSaving(false);
     if (res.ok) {
-      setSavedSnapshot({ play: links.play || "", appstore: links.appstore || "" });
+      setDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
     } else {
@@ -64,9 +41,7 @@ export default function AppStoreLinksPanel() {
     }
   };
 
-  const hasChanges =
-    (links.play || "") !== savedSnapshot.play ||
-    (links.appstore || "") !== savedSnapshot.appstore;
+  const hasChanges = dirty;
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-4 min-w-0">
@@ -88,7 +63,7 @@ export default function AppStoreLinksPanel() {
         <span className="text-xs font-medium text-secondary flex items-center gap-1">
           <Link2 size={12} className="shrink-0" /> Google Play Store
         </span>
-        <input value={links.play} onChange={(e) => setLinksLocal({ ...links, play: e.target.value })}
+        <input value={links.play} onChange={(e) => setField({ play: e.target.value })}
           placeholder="https://play.google.com/store/apps/details?id=..." disabled={saving}
           className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#E8A33D] min-w-0 disabled:opacity-50"
           type="url" />
@@ -98,7 +73,7 @@ export default function AppStoreLinksPanel() {
         <span className="text-xs font-medium text-secondary flex items-center gap-1">
           <Link2 size={12} className="shrink-0" /> Apple App Store
         </span>
-        <input value={links.appstore} onChange={(e) => setLinksLocal({ ...links, appstore: e.target.value })}
+        <input value={links.appstore} onChange={(e) => setField({ appstore: e.target.value })}
           placeholder="https://apps.apple.com/app/..." disabled={saving}
           className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#E8A33D] min-w-0 disabled:opacity-50"
           type="url" />

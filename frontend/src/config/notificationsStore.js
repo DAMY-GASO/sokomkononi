@@ -4,6 +4,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { notificationsApi } from "../api/notifications.js";
+import { ADMIN_PATH } from "./adminPath.js";
 
 const KEY = "sokomkononi_notifications_v1";
 const EV = "sokomkononi:notifications-updated";
@@ -183,13 +184,21 @@ export async function removeNotificationAsync(id) {
 // CLEAR ALL — hard delete zote (audience husika)
 // ============================================================
 export async function clearNotificationsAsync(audience) {
+  // Never clear the OTHER scope's cache — an admin tab and a user tab
+  // share the same browser and would lose each other's notifications.
+  const target = audience || "user";
   try {
-    await notificationsApi.hardRemoveAll({ audience });
+    await notificationsApi.hardRemoveAll({ audience: target });
     const remaining = read().filter((n) => {
-      if (!audience || audience === "user" || n.audience === audience) {
-        return false;
+      if (target === "user") {
+        // Keep admin entries.
+        return n.audience === "admin";
       }
-      return true;
+      if (target === "admin") {
+        // Keep user entries.
+        return n.audience !== "admin";
+      }
+      return n.audience !== target;
     });
     write(remaining);
     return { ok: true };
@@ -225,8 +234,8 @@ export async function notifyAdminAboutDeletion(listing) {
       related_object_type: "listing",
       related_object_id: listing?.id ?? null,
       action_url: listing?.id
-        ? `/admin/trash?listing=${listing.id}`
-        : "/admin/trash",
+        ? `${ADMIN_PATH}/trash?listing=${listing.id}`
+        : `${ADMIN_PATH}/trash`,
       priority: "normal",
     };
 
@@ -241,11 +250,20 @@ export async function notifyAdminAboutDeletion(listing) {
 // ============================================================
 // HOOK
 // ============================================================
+let _notificationsHydratePromise = null;
+function _dedupedHydrate() {
+  if (_notificationsHydratePromise) return _notificationsHydratePromise;
+  _notificationsHydratePromise = hydrateNotificationsFromApi().finally(() => {
+    _notificationsHydratePromise = null;
+  });
+  return _notificationsHydratePromise;
+}
+
 export function useNotifications(audience) {
   const [all, setAll] = useState(() => read());
 
   useEffect(() => {
-    hydrateNotificationsFromApi();
+    _dedupedHydrate();
     const sync = () => setAll(read());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);

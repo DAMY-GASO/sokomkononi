@@ -221,9 +221,3 @@ export async function hydrateAllSystemSettings() {
   return { webhooks: w, appStore: a, policy: p };
 }
 
-// ============================================================
-// LEGACY EXPORTS
-// ============================================================
-export function savePlatformPolicy() {}
-export const SEED_APP_STORE_LINKS = { play: "", appstore: "" };
-export const SEED_PLATFORM_POLICY = { listingLifetimeDays: 60 };

@@ -140,10 +140,19 @@ export async function removeTicketAsync(id) {
   } catch (err) { return { ok: false, error: err }; }
 }
 
+let _ticketsHydratePromise = null;
+function _dedupedTicketsHydrate() {
+  if (_ticketsHydratePromise) return _ticketsHydratePromise;
+  _ticketsHydratePromise = hydrateTicketsFromApi().finally(() => {
+    _ticketsHydratePromise = null;
+  });
+  return _ticketsHydratePromise;
+}
+
 export function useTickets() {
   const [list, setList] = useState(() => read());
   useEffect(() => {
-    hydrateTicketsFromApi();
+    _dedupedTicketsHydrate();
     const sync = () => setList(read());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);

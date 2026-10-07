@@ -71,19 +71,13 @@ export async function hydrateSavedFromApi() {
         savedAt: item.saved_at,
       };
     }
-    // Merge, don't overwrite: any locally-saved id that the server
-    // doesn't know about yet (offline save) is preserved so we can
-    // re-sync it on the next toggle.
-    const localIds = readIds();
-    const mergedIds = Array.from(new Set([...serverIds, ...localIds]));
+    // Server is the source of truth. Locally-saved ids that the server
+    // doesn't know about are almost always from another device where the
+    // user already removed the save — do NOT resurrect them.
     const mergedSnaps = { ...snaps };
-    const localSnaps = readSnaps();
-    for (const id of localIds) {
-      if (!mergedSnaps[id] && localSnaps[id]) mergedSnaps[id] = localSnaps[id];
-    }
-    writeIds(mergedIds);
+    writeIds(serverIds);
     writeSnaps(mergedSnaps);
-    return { ok: true, count: mergedIds.length };
+    return { ok: true, count: serverIds.length };
   } catch (err) {
     return { ok: false, error: err };
   }

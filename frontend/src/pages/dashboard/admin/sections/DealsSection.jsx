@@ -34,6 +34,7 @@ export default function DealsSection() {
   const [dealRooms, setDealRooms] = useState({});
   const [loadingRoom, setLoadingRoom] = useState({}); // { [id]: true }
   const [refreshing, setRefreshing] = useState(false);
+  const inflightRoomRef = React.useRef(new Map());
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -53,28 +54,36 @@ export default function DealsSection() {
 
   const ensureRoomData = async (dealId, { force = false } = {}) => {
     if (!force && dealRooms[dealId]) return dealRooms[dealId];
-    if (loadingRoom[dealId]) return null;
+    if (inflightRoomRef.current.has(dealId)) {
+      return inflightRoomRef.current.get(dealId);
+    }
 
     setLoadingRoom((prev) => ({ ...prev, [dealId]: true }));
-    const res = await fetchDealRoomDetailAsync(dealId);
-    setLoadingRoom((prev) => {
-      const next = { ...prev };
-      delete next[dealId];
-      return next;
-    });
+    const promise = (async () => {
+      const res = await fetchDealRoomDetailAsync(dealId);
+      if (res.ok) {
+        const entry = {
+          messages: res.messages || [],
+          paymentProof: res.paymentProof || null,
+          reservation: res.reservation || null,
+          disputeNote: res.disputeNote || "",
+        };
+        setDealRooms((prev) => ({ ...prev, [dealId]: entry }));
+        return entry;
+      }
+      setError(res.error?.message || t("Imeshindwa kupakia deal room.", "Failed to load deal room."));
+      return null;
+    })();
 
-    if (res.ok) {
-      const entry = {
-        messages: res.messages || [],
-        paymentProof: res.paymentProof || null,
-        reservation: res.reservation || null,
-        disputeNote: res.disputeNote || "",
-      };
-      setDealRooms((prev) => ({ ...prev, [dealId]: entry }));
-      return entry;
+    inflightRoomRef.current.set(dealId, promise);
+    try { return await promise; } finally {
+      inflightRoomRef.current.delete(dealId);
+      setLoadingRoom((prev) => {
+        const next = { ...prev };
+        delete next[dealId];
+        return next;
+      });
     }
-    setError(res.error?.message || t("Imeshindwa kupakia deal room.", "Failed to load deal room."));
-    return null;
   };
 
   const handleViewRoom = async (deal) => {
@@ -116,15 +125,16 @@ export default function DealsSection() {
     }
 
     if (!tx?.id) {
-      // No transaction exists — resolve locally via the store (backend
-      // will accept a dealId-based resolve for pre-transaction disputes).
-      const res = await resolveDisputeAsync(dealId, {
-        resolution: payload.action,
-        note: payload.adminNote || "",
-      });
+      // No transaction exists for this deal yet. There is no backend route
+      // to resolve a dispute without a transaction — ask an admin to have
+      // the participants create one first.
       setBusy((b) => { const n = { ...b }; delete n[dealId]; return n; });
-      if (res.ok) { setDisputeId(null); setExpandedId(null); }
-      else setError(res.error?.message || t("Imeshindwa kutatua mgogoro.", "Failed to resolve dispute."));
+      setError(
+        t(
+          "Hakuna transaction iliyounganishwa na deal hii bado. Waombe wanunuzi/wauzaji kuanzisha transaction kwanza.",
+          "There is no transaction linked to this deal yet. Have the participants create one first."
+        )
+      );
       return;
     }
 

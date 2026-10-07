@@ -2,7 +2,7 @@
 // Toast.jsx — Global toast system
 // ============================================================
 import React, {
-  createContext, useContext, useState, useCallback, useEffect, useRef,
+  createContext, useContext, useState, useCallback, useEffect, useRef, useMemo,
 } from "react";
 import { CheckCircle, AlertTriangle, Info, X, Loader2 } from "lucide-react";
 import { COLORS } from "../pages/dashboard/components/shared";
@@ -58,7 +58,7 @@ export function ToastProvider({ children }) {
     return id;
   }, [dismiss]);
 
-  const api = {
+  const api = useMemo(() => ({
     push,
     dismiss,
     success: (m, o) => push(m, { ...o, type: "success" }),
@@ -66,7 +66,7 @@ export function ToastProvider({ children }) {
     warning: (m, o) => push(m, { ...o, type: "warning" }),
     info:    (m, o) => push(m, { ...o, type: "info" }),
     loading: (m, o) => push(m, { ...o, type: "loading", duration: 0 }),
-  };
+  }), [push, dismiss]);
 
   useEffect(() => () => {
     Object.values(timersRef.current).forEach(clearTimeout);

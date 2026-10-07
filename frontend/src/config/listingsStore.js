@@ -454,8 +454,8 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     isPaid: Boolean(
       raw.is_paid ??
       raw.isPaid ??
-      (raw.payment_status === "PAID") ??
-      (raw.listing_fee?.payment_status === "PAID")
+      (raw.payment_status === "PAID" ||
+       raw.listing_fee?.payment_status === "PAID")
     ),
     listingFee: Number(raw.listing_fee) || 0,
     rejectionReason: raw.rejection_reason || raw.rejectionReason || "",
@@ -470,7 +470,7 @@ function extractList(data) {
 
 export async function hydrateListingsFromApi() {
   try {
-    const data = await listingsApi.list({ page_size: 100 });
+    const data = await listingsApi.list({ page_size: 200 });
     const normalized = extractList(data).map((r) => normalizeListingFromApi(r)).filter(Boolean);
     savePublicListings(normalized);
     return { source: normalized.length ? "api" : "empty", count: normalized.length };
@@ -480,11 +480,16 @@ export async function hydrateListingsFromApi() {
   }
 }
 
-export async function fetchMyListingsFromApi() {
+let _myListingsUserId = null;
+
+export async function fetchMyListingsFromApi({ refreshUser = false } = {}) {
   try {
-    const me = await authApi.me();
-    if (!me?.id) return { source: "empty", count: 0 };
-    const data = await listingsApi.mine(me.id, { page_size: 100 });
+    if (refreshUser || _myListingsUserId == null) {
+      const me = await authApi.me();
+      _myListingsUserId = me?.id ?? null;
+    }
+    if (!_myListingsUserId) return { source: "empty", count: 0 };
+    const data = await listingsApi.mine(_myListingsUserId, { page_size: 200 });
     const normalized = extractList(data).map((r) => normalizeListingFromApi(r)).filter(Boolean);
     const temps = readKey(MINE_KEY).filter((l) => String(l.id).startsWith("temp_"));
     saveMyListings([...temps, ...normalized]);
@@ -666,6 +671,10 @@ export async function markSoldAsync(id) {
   return updateListingAsync(id, { status: "sold", soldAt: new Date().toISOString() });
 }
 
+export function resetMyListingsUserCache() {
+  _myListingsUserId = null;
+}
+
 export async function payListingFeeAsync(id, payload) {
   if (String(id).startsWith("temp_")) {
     return {
@@ -833,7 +842,10 @@ export function useUnpaidListings() {
   return mine.filter(
     (l) =>
       !l.isPaid &&
-      (l.status === "PENDING_PAYMENT" || l.status === "DRAFT")
+      (l.status === "pending_payment" ||
+       l.status === "PENDING_PAYMENT" ||
+       l.status === "draft" ||
+       l.status === "DRAFT")
   );
 }
 

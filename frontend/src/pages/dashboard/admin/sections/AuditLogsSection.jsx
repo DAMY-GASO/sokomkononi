@@ -97,8 +97,7 @@ export default function AuditLogsSection() {
           l.target?.toLowerCase().includes(q) ||
           l.details?.toLowerCase().includes(q) ||
           AUDIT_ACTIONS.find((a) => a.key === l.action)
-            ?.label?.[lang]?.toLowerCase()
-            .includes(q)
+            ?.label?.[lang]?.toLowerCase()?.includes(q)
       );
     }
 

@@ -61,7 +61,7 @@ const TABS = [
 function BilingualField({ label, value, onChange, multiline = false, rows = 3, disabled = false }) {
   const swVal = value?.sw || "";
   const enVal = value?.en || "";
-  const Input = multiline ? "textarea" : "input";
+  const cls = "w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1 disabled:opacity-50";
 
   return (
     <div className="flex flex-col gap-2 w-full min-w-0">
@@ -70,28 +70,20 @@ function BilingualField({ label, value, onChange, multiline = false, rows = 3, d
       </span>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <div className="min-w-0 w-full">
-          <span className="text-[10px] font-semibold text-muted uppercase">
-            Kiswahili
-          </span>
-          <Input
-            value={swVal}
-            onChange={(e) => onChange({ ...value, sw: e.target.value })}
-            rows={multiline ? rows : undefined}
-            disabled={disabled}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1 disabled:opacity-50"
-          />
+          <span className="text-[10px] font-semibold text-muted uppercase">Kiswahili</span>
+          {multiline ? (
+            <textarea value={swVal} onChange={(e) => onChange({ ...value, sw: e.target.value })} rows={rows} disabled={disabled} className={cls} />
+          ) : (
+            <input value={swVal} onChange={(e) => onChange({ ...value, sw: e.target.value })} disabled={disabled} className={cls} />
+          )}
         </div>
         <div className="min-w-0 w-full">
-          <span className="text-[10px] font-semibold text-muted uppercase">
-            English
-          </span>
-          <Input
-            value={enVal}
-            onChange={(e) => onChange({ ...value, en: e.target.value })}
-            rows={multiline ? rows : undefined}
-            disabled={disabled}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1 disabled:opacity-50"
-          />
+          <span className="text-[10px] font-semibold text-muted uppercase">English</span>
+          {multiline ? (
+            <textarea value={enVal} onChange={(e) => onChange({ ...value, en: e.target.value })} rows={rows} disabled={disabled} className={cls} />
+          ) : (
+            <input value={enVal} onChange={(e) => onChange({ ...value, en: e.target.value })} disabled={disabled} className={cls} />
+          )}
         </div>
       </div>
     </div>

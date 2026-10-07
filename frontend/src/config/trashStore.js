@@ -55,6 +55,22 @@ function writeItems(items) {
 
 function normOverview(raw) {
   if (!raw || typeof raw !== "object") return EMPTY_OVERVIEW;
+
+  // New backend shape: { totals: [{ type, count, protected }, ...] }
+  if (Array.isArray(raw.totals)) {
+    const o = { ...EMPTY_OVERVIEW, lastUpdated: new Date().toISOString() };
+    for (const t of raw.totals) {
+      const key = t?.type;
+      if (!key) continue;
+      if (Object.prototype.hasOwnProperty.call(EMPTY_OVERVIEW, key)) {
+        o[key] = Number(t.count) || 0;
+      }
+    }
+    o.total = raw.totals.reduce((sum, t) => sum + (Number(t?.count) || 0), 0);
+    return o;
+  }
+
+  // Legacy shapes (counts | flat)
   const src = raw.counts && typeof raw.counts === "object" ? raw.counts : raw;
   const o = {
     listings: Number(src.listings) || 0,
@@ -66,7 +82,8 @@ function normOverview(raw) {
     deals: Number(src.deals) || 0,
     lastUpdated: new Date().toISOString(),
   };
-  o.total = Number(src.total) || o.listings + o.users + o.verifications + o.tickets + o.banners + o.announcements + o.deals;
+  o.total = Number(src.total) ||
+    o.listings + o.users + o.verifications + o.tickets + o.banners + o.announcements + o.deals;
   return o;
 }
 function normItem(raw) {

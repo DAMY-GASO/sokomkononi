@@ -20,7 +20,10 @@ export function getBoostFee() {
   return state;
 }
 
+let _boostFeeHydratePromise = null;
 export async function hydrateBoostFeeFromApi() {
+  if (_boostFeeHydratePromise) return _boostFeeHydratePromise;
+  _boostFeeHydratePromise = (async () => {
   try {
     const data = await boostingApi.feeConfig();
     const enabled = data?.is_active !== false;
@@ -32,6 +35,8 @@ export async function hydrateBoostFeeFromApi() {
     set({ loaded: true });
     return { ok: false, error: err };
   }
+  })().finally(() => { _boostFeeHydratePromise = null; });
+  return _boostFeeHydratePromise;
 }
 
 export async function toggleBoostFeeAsync() {

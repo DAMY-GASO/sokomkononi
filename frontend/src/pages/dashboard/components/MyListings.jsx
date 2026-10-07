@@ -52,9 +52,8 @@ import { restoreListingAsync } from "../../../config/listingsStore.js";
 // ============================================================
 function isUnpaid(listing) {
   if (!listing) return false;
-  if (listing.status === "PENDING_PAYMENT" || listing.status === "DRAFT") {
-    return true;
-  }
+  const s = String(listing.status || "").toLowerCase();
+  if (s === "pending_payment" || s === "draft") return true;
   if (listing.isPaid === false) return true;
   return false;
 }
@@ -339,7 +338,12 @@ const handleRemove = async (id) => {
   setBusy((b) => ({ ...b, [id]: "delete" }));
 
   // 1. Futa (soft delete) kwa API
-  const res = await onRemove(id);
+  let res;
+  try {
+    res = await onRemove(id);
+  } catch (err) {
+    res = { ok: false, error: err };
+  }
   setBusy((b) => {
     const n = { ...b };
     delete n[id];

@@ -4,6 +4,7 @@
 // Inasoma kutoka contentStore (backend) kwa fallback kwenye code.
 // ============================================================
 
+import { COLORS } from "./dashboard/components/shared.js";
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
@@ -29,14 +30,6 @@ import {
 import PageLoader from "../components/PageLoader.jsx";
 import { usePrivacy } from "../config/contentStore.js";
 
-const COLORS = {
-  night: "#101A2E",
-  sand: "#F5F3EC",
-  gold: "#E8A33D",
-  green: "#2F6D4F",
-  rust: "#C1502E",
-  sandLine: "#E6E2D6",
-};
 
 // ============================================================
 // ICON MAP — jina la icon (string) → lucide component

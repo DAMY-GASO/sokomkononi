@@ -32,7 +32,7 @@ function norm(raw) {
     role: raw.is_staff || raw.is_superuser
       ? "Admin"
       : (raw.account_type === "BUSINESS" || raw.is_seller ? "Seller" : "Buyer"),
-    status: raw.is_deleted ? "suspended" : (raw.is_active === false ? "suspended" : "active"),
+    status: raw.is_active === false ? "suspended" : "active",
     joined: raw.date_joined || raw.created_at,
     isStaff: !!raw.is_staff,
     isVerified: !!raw.is_verified,
@@ -129,10 +129,19 @@ export async function permanentDeleteUserAsync(id) {
   }
 }
 
+let _usersHydratePromise = null;
+function _dedupedUsersHydrate() {
+  if (_usersHydratePromise) return _usersHydratePromise;
+  _usersHydratePromise = hydrateUsersFromApi().finally(() => {
+    _usersHydratePromise = null;
+  });
+  return _usersHydratePromise;
+}
+
 export function useUsers() {
   const [list, setList] = useState(() => read());
   useEffect(() => {
-    hydrateUsersFromApi();
+    _dedupedUsersHydrate();
     const sync = () => setList(read());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);

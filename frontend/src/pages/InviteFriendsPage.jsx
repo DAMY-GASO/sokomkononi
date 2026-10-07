@@ -117,7 +117,20 @@ export default function InviteFriendsPage() {
       return;
     }
     if (isMobileDevice()) {
-      window.location.href = `fb-messenger://share?link=${enc(link)}`;
+      try {
+        window.location.href = `fb-messenger://share?link=${enc(link)}`;
+      } catch (err) {
+        console.warn("[InviteFriends] fb-messenger scheme failed:", err);
+        const ok = await copyLink();
+        if (ok) {
+          setNotice(
+            t(
+              "Kiungo kimenakiliwa. Kibandike kwenye Messenger.",
+              "Link copied. Paste it into Messenger."
+            )
+          );
+        }
+      }
       return;
     }
     // Desktop bila App ID: nakili kiungo, kisha fungua Messenger

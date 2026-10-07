@@ -206,10 +206,19 @@ export async function uploadVerificationDocumentAsync(id, file) {
   }
 }
 
+let _verificationsHydratePromise = null;
+function _dedupedVerificationsHydrate() {
+  if (_verificationsHydratePromise) return _verificationsHydratePromise;
+  _verificationsHydratePromise = hydrateVerificationsFromApi().finally(() => {
+    _verificationsHydratePromise = null;
+  });
+  return _verificationsHydratePromise;
+}
+
 export function useVerifications() {
   const [list, setList] = useState(() => read());
   useEffect(() => {
-    hydrateVerificationsFromApi();
+    _dedupedVerificationsHydrate();
     const sync = () => setList(read());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);

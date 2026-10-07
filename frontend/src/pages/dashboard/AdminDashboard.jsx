@@ -308,6 +308,7 @@ export default function AdminDashboard() {
   };
 
   const visibleNav = useMemo(() => {
+    if (!rolesReady) return [];
     return NAV.filter((item) => canAccess(item.key));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffRole, rolesReady]);

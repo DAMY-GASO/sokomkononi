@@ -158,7 +158,13 @@ export default function PaymentReturnRoute() {
             )}
             <div className="flex flex-col sm:flex-row gap-2">
               <button
-                onClick={() => navigate("/dashboard/transactions")}
+                onClick={() =>
+                  navigate(
+                    getDashboardSide() === "buyer"
+                      ? "/dashboard/buyer/transactions"
+                      : "/dashboard/transactions"
+                  )
+                }
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
                 style={{ background: COLORS.gold, color: COLORS.night }}
               >
@@ -190,7 +196,13 @@ export default function PaymentReturnRoute() {
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
               <button
-                onClick={() => navigate("/dashboard/transactions")}
+                onClick={() =>
+                  navigate(
+                    getDashboardSide() === "buyer"
+                      ? "/dashboard/buyer/transactions"
+                      : "/dashboard/transactions"
+                  )
+                }
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-primary"
               >
                 {sw ? "Miamala Yangu" : "My Transactions"}

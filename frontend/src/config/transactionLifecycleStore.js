@@ -267,21 +267,22 @@ export async function createReservationAsync(id, durationHours = 48) {
 //
 // Backend inarudisha `data` moja kwa moja (sio { fimipay: data }).
 // ============================================================
-export async function payReservationAsync(id, { paymentReference = null } = {}) {
+export async function payReservationAsync(
+  id,
+  { paymentReference = null, paymentMethod = "", phone = "" } = {}
+) {
   if (!id) {
     return { ok: false, error: new Error("Transaction id is required") };
   }
 
-  // Ulinzi wa mteja: ruhusu "credits" au undefined pekee
-  if (
-    paymentReference != null &&
-    paymentReference !== "credits" &&
-    String(paymentReference).trim() !== ""
-  ) {
+  const isCredits = paymentReference === "credits";
+  const isFimiPay = Boolean(paymentMethod && String(paymentMethod).trim());
+
+  if (!isCredits && !isFimiPay) {
     return {
       ok: false,
       error: new Error(
-        'payment_reference inaweza kuwa "credits" pekee. Malipo ya kawaida hupitia FimiPay.'
+        "Chagua njia ya malipo: credits au mobile (payment_method + phone)."
       ),
     };
   }
@@ -289,8 +290,6 @@ export async function payReservationAsync(id, { paymentReference = null } = {}) 
   const previous = getTransactions();
   const current = previous.find((t) => t.id === id);
   if (!current) return { ok: false, error: new Error("Transaction not found") };
-
-  const isCredits = paymentReference === "credits";
 
   // Credits: tunaweza kuashiria optimistic "reserved_paid"
   // Cash (FimiPay): tunaacha status kama ilivyo — webhook itabadilisha
@@ -306,8 +305,10 @@ export async function payReservationAsync(id, { paymentReference = null } = {}) 
 
   try {
     const payload = {};
-    if (paymentReference != null) {
-      payload.payment_reference = paymentReference;
+    if (paymentReference) payload.payment_reference = paymentReference;
+    if (isFimiPay) {
+      payload.payment_method = paymentMethod;
+      payload.phone = phone;
     }
     const raw = await transactionsApi.payReservation(id, payload);
 

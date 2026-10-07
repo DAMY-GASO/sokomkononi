@@ -1,3 +1,4 @@
+import { COLORS } from "./dashboard/components/shared.js";
 import React, { useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Lock } from "lucide-react";

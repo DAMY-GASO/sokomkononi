@@ -294,17 +294,17 @@ export async function getOrCreateDealAsync({
 
     if (initialMessage) {
       try {
-        await dealsApi.sendOffer(deal.id, {
-          amount: deal.askingPrice,
-          message: initialMessage,
-        });
-      } catch (offerErr) {
-        console.warn("[dealsStore] initial offer failed:", offerErr);
+        // Send as a plain chat message — do NOT auto-create an offer at
+        // the asking price. That was a bug: every "ask a question" turned
+        // into a full-price offer.
+        await dealsApi.sendDealMessage(deal.id, { text: initialMessage });
+      } catch (msgErr) {
+        console.warn("[dealsStore] initial message failed:", msgErr);
         return {
           ok: true,
           deal,
-          warning: "initial_offer_failed",
-          warningError: offerErr,
+          warning: "initial_message_failed",
+          warningError: msgErr,
         };
       }
     }
@@ -527,14 +527,13 @@ export async function resolveDisputeAsync(
   }
 }
 
-export function resolveDispute(id, { action, adminNote = "" } = {}) {
-  updateDeal(id, {
-    disputeResolvedAt: new Date().toISOString(),
-    disputeResolutionAction: action,
-    adminNote,
-  });
-  console.warn("[dealsStore] resolveDispute (sync) deprecated — local only");
-  return getDeals();
+export function resolveDispute(_id, _opts = {}) {
+  // Removed: this used to write to localStorage without calling the API,
+  // making disputes look resolved when they were not. Use
+  // `resolveDisputeAsync` instead.
+  throw new Error(
+    "resolveDispute() is deprecated. Use resolveDisputeAsync() instead."
+  );
 }
 
 export function getOrCreateDeal(payload) {
@@ -575,6 +574,7 @@ export function useDeals(currentUserId) {
   const listings = useListings();
 
   useEffect(() => {
+    if (currentUserId == null) return;
     hydrateDealsFromApi(currentUserId);
     const sync = () => setDeals(getDeals());
     window.addEventListener("storage", sync);

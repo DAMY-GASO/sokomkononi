@@ -57,7 +57,10 @@ export function getBoostPackage(key) {
   return read().find((p) => p.key === key);
 }
 
+let _boostPkgsHydratePromise = null;
 export async function hydrateBoostPackagesFromApi() {
+  if (_boostPkgsHydratePromise) return _boostPkgsHydratePromise;
+  _boostPkgsHydratePromise = (async () => {
   try {
     const data = await boostingApi.packages({ page_size: 200 });
     const list = Array.isArray(data) ? data : data?.results || [];
@@ -67,6 +70,8 @@ export async function hydrateBoostPackagesFromApi() {
   } catch (err) {
     return { ok: false, error: err };
   }
+  })().finally(() => { _boostPkgsHydratePromise = null; });
+  return _boostPkgsHydratePromise;
 }
 
 export async function updateBoostPackagePriceAsync(key, price) {

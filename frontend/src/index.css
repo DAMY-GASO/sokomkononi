@@ -71,7 +71,7 @@ h5 { font-size: 1rem;    font-weight: 600; line-height: 1.4; }  /* 16px */
 h6 { font-size: 0.875rem;font-weight: 600; line-height: 1.4; }  /* 14px */
 
 /* Body */
-p, li, span, label, div {
+p, li, label {
   font-family: var(--font-sans);
 }
 

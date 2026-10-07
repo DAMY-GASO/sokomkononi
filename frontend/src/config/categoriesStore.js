@@ -738,11 +738,20 @@ export async function hydrateCategoriesFromApi() {
   }
 }
 
+let _categoriesHydratePromise = null;
+function _dedupedCategoriesHydrate() {
+  if (_categoriesHydratePromise) return _categoriesHydratePromise;
+  _categoriesHydratePromise = hydrateCategoriesFromApi().finally(() => {
+    _categoriesHydratePromise = null;
+  });
+  return _categoriesHydratePromise;
+}
+
 export function useCategories() {
   const [list, setList] = useState(() => getCategories());
   useEffect(() => {
     if (getCategories().length === 0) initializeCategories();
-    hydrateCategoriesFromApi();
+    _dedupedCategoriesHydrate();
     const sync = () => setList(getCategories());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);

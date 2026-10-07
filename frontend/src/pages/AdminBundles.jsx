@@ -5,7 +5,7 @@
 // Types: listing, leading, boost, reservation, success, ads,
 //        premium, package
 // ============================================================
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Plus,
   Pencil,
@@ -59,12 +59,6 @@ const pickLang = (obj, lang) =>
 function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const getCreditsForType = (type) => {
-    const c = form.credits;
-    if (c && typeof c === "object") return c[type] ?? 1;
-    return Number(c) || 1;
-  };
-
   const [form, setForm] = useState(
     bundle || {
       id: "",
@@ -83,6 +77,12 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
       color: "night",
     }
   );
+
+  const getCreditsForType = (type) => {
+    const c = form.credits;
+    if (c && typeof c === "object") return c[type] ?? 1;
+    return Number(c) || 1;
+  };
   const [localError, setLocalError] = useState("");
 
   const handleSubmit = (e) => {
@@ -371,13 +371,15 @@ export default function AdminBundles() {
   const [filterType, setFilterType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
+  const inflightRef = React.useRef(new Set());
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const handleSave = async (bundle) => {
-    if (saving) return;
+    if (saving || inflightRef.current.has("save")) return;
+    inflightRef.current.add("save");
     setSaving(true);
     setError("");
 
@@ -386,6 +388,7 @@ export default function AdminBundles() {
       : await createBundleAsync(bundle);
 
     setSaving(false);
+    inflightRef.current.delete("save");
 
     if (res.ok) {
       setEditing(null);

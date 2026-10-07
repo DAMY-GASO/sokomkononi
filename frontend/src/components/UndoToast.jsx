@@ -4,7 +4,7 @@
 // Inasikiliza `undoStore` na kuonyesha toast yenye "Rejesha"
 // button kwa dakika 5 (au kadri ya muda uliowekwa).
 // ============================================================
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useToast } from "./Toast.jsx";
 import {
   useUndo,
@@ -17,14 +17,19 @@ export default function UndoToast() {
   const { lang } = useLanguage();
   const toast = useToast();
   const { items } = useUndo();
-  const [shown, setShown] = useState({});
+  const shownRef = useRef(new Set());
+  const shown = shownRef.current;
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   // Onyesha toast kwa kila undo item mpya
   useEffect(() => {
+    // Drop refs to undo items that are no longer in the list.
+    const live = new Set(items.map((i) => i.undoId));
+    for (const k of Array.from(shown)) if (!live.has(k)) shown.delete(k);
+
     items.forEach((item) => {
-      if (shown[item.undoId]) return;
+      if (shown.has(item.undoId)) return;
 
       const seconds = secondsRemaining(item.expiresAt);
       const message =
@@ -56,9 +61,10 @@ export default function UndoToast() {
         },
       });
 
-      setShown((prev) => ({ ...prev, [item.undoId]: true }));
+      shown.add(item.undoId);
     });
-  }, [items, lang, toast, shown, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, lang]);
 
   return null;
 }

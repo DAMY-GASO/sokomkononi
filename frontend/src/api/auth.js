@@ -6,7 +6,7 @@
 // `authStore.js` (it needs access to `saveUser` and other
 // authStore internals). Do NOT duplicate it here.
 // ============================================================
-import { api, setTokens, clearTokens, getAccessToken } from "./client";
+import { api, setTokens, clearTokens, getAccessToken, getRefreshToken } from "./client";
 
 export const authApi = {
   // ----- Register / Login / Logout -----
@@ -29,8 +29,9 @@ export const authApi = {
   },
 
   logout: async () => {
+    const refresh = getRefreshToken();
     try {
-      await api.post("/auth/logout/", {});
+      await api.post("/auth/logout/", refresh ? { refresh } : {});
     } catch {
       // ignore — token may already be invalid
     } finally {

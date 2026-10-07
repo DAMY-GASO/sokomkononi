@@ -6,6 +6,7 @@
 // + Guard: Admin hawezi kujifuta
 // ============================================================
 
+import { COLORS } from "./dashboard/components/shared.js";
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -33,14 +34,6 @@ import {
 
 import PageLoader from "../components/PageLoader.jsx";
 
-const COLORS = {
-  night: "#101A2E",
-  sand: "#F5F3EC",
-  gold: "#E8A33D",
-  green: "#2F6D4F",
-  rust: "#C1502E",
-  sandLine: "#E6E2D6",
-};
 
 const REGIONS = [
   "Arusha", "Dar es Salaam", "Dodoma", "Geita", "Iringa", "Kagera", "Katavi",
@@ -73,216 +66,6 @@ function StatCard({ icon: Icon, value, label, color }) {
           <p className="text-xl font-bold text-primary">{value}</p>
           <p className="text-body-sm text-secondary">{label}</p>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// 2FA MODAL
-// ============================================================
-function TwoFactorModal({ mode, onClose, onEnable, onDisable, lang }) {
-  const [step, setStep] = useState(mode === "enable" ? "intro" : "disable");
-  const [code, setCode] = useState("");
-  const [password, setPassword] = useState("");
-  const [backupCodes] = useState(() =>
-    Array.from({ length: 8 }, () =>
-      Math.random().toString(36).substring(2, 10).toUpperCase()
-    )
-  );
-  const [error, setError] = useState("");
-
-  const t = (sw, en) => (lang === "sw" ? sw : en);
-
-  const handleEnable = () => {
-    if (!code.trim() || code.length !== 6) {
-      setError(t("Weka code ya herufi 6", "Enter 6-digit code"));
-      return;
-    }
-    onEnable();
-    setStep("done"); // show backup codes screen
-  };
-
-  const handleDisable = () => {
-    if (!password) {
-      setError(t("Weka nenosiri lako", "Enter your password"));
-      return;
-    }
-    onDisable();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-        {step === "intro" && mode === "enable" && (
-          <>
-            <div className="text-center mb-5">
-              <div className="w-14 h-14 rounded-full bg-[#2F6D4F]/15 flex items-center justify-center mx-auto mb-3">
-                <Shield size={26} className="text-[#2F6D4F]" />
-              </div>
-              <h3 className="text-primary">
-                {t("Washa 2FA", "Enable 2FA")}
-              </h3>
-              <p className="text-sm text-secondary mt-2">
-                {t(
-                  "Ongeza usalama wa akaunti yako kwa kutumia app ya authenticator.",
-                  "Add extra security using an authenticator app."
-                )}
-              </p>
-            </div>
-            <div className="bg-[#F5F3EC] rounded-xl p-4 mb-4 text-center">
-              <p className="text-body-sm text-secondary mb-2">
-                {t("Skana QR hii na Google Authenticator", "Scan this QR with Google Authenticator")}
-              </p>
-              <div className="w-32 h-32 mx-auto bg-white rounded-lg border-2 border-gray-200 flex items-center justify-center">
-                <KeyRound size={48} className="text-muted" />
-              </div>
-              <p className="text-body-sm text-muted mt-2">
-                {t("(QR itaonekana hapa baada ya backend)", "(QR will appear here once backend is ready)")}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={onClose}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
-              >
-                {t("Ghairi", "Cancel")}
-              </button>
-              <button
-                onClick={() => setStep("verify")}
-                className="flex-1 py-2.5 bg-[#E8A33D] text-[#101A2E] rounded-lg text-sm font-semibold"
-              >
-                {t("Endelea", "Continue")}
-              </button>
-            </div>
-          </>
-        )}
-
-        {step === "verify" && mode === "enable" && (
-          <>
-            <div className="text-center mb-5">
-              <h3 className="text-primary">
-                {t("Weka Code", "Enter Code")}
-              </h3>
-              <p className="text-sm text-secondary mt-2">
-                {t("Weka code ya herufi 6 kutoka app", "Enter 6-digit code from app")}
-              </p>
-            </div>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-              placeholder="••••••"
-              className="w-full text-center text-2xl tracking-[0.5em] font-semibold border border-gray-300 rounded-lg px-3 py-3 outline-none focus:border-[#E8A33D]"
-            />
-            {error && (
-              <p className="text-sm text-[#C1502E] mt-2 text-center">{error}</p>
-            )}
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => setStep("intro")}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
-              >
-                {t("Nyuma", "Back")}
-              </button>
-              <button
-                onClick={handleEnable}
-                className="flex-1 py-2.5 bg-[#2F6D4F] text-white rounded-lg text-sm font-semibold"
-              >
-                {t("Washa 2FA", "Enable 2FA")}
-              </button>
-            </div>
-          </>
-        )}
-
-        {mode === "disable" && (
-          <>
-            <div className="text-center mb-5">
-              <div className="w-14 h-14 rounded-full bg-[#C1502E]/15 flex items-center justify-center mx-auto mb-3">
-                <AlertTriangle size={26} className="text-[#C1502E]" />
-              </div>
-              <h3 className="text-primary">
-                {t("Zima 2FA", "Disable 2FA")}
-              </h3>
-              <p className="text-sm text-secondary mt-2">
-                {t(
-                  "Akaunti yako itakuwa salama kidogo. Weka nenosiri lako kuthibitisha.",
-                  "Your account will be less secure. Enter your password to confirm."
-                )}
-              </p>
-            </div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={t("Nenosiri lako", "Your password")}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#E8A33D] text-center"
-            />
-            {error && (
-              <p className="text-sm text-[#C1502E] mt-2 text-center">{error}</p>
-            )}
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={onClose}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
-              >
-                {t("Ghairi", "Cancel")}
-              </button>
-              <button
-                onClick={handleDisable}
-                className="flex-1 py-2.5 bg-[#C1502E] text-white rounded-lg text-sm font-semibold"
-              >
-                {t("Zima", "Disable")}
-              </button>
-            </div>
-          </>
-        )}
-
-        {step === "done" && (
-          <>
-            <div className="text-center mb-5">
-              <div className="w-14 h-14 rounded-full bg-[#2F6D4F]/15 flex items-center justify-center mx-auto mb-3">
-                <Check size={26} className="text-[#2F6D4F]" />
-              </div>
-              <h3 className="text-primary">
-                {t("2FA Imewashwa!", "2FA Enabled!")}
-              </h3>
-              <p className="text-sm text-secondary mt-2">
-                {t(
-                  "Hifadhi backup codes hizi mahali salama.",
-                  "Save these backup codes somewhere safe."
-                )}
-              </p>
-            </div>
-            <div className="bg-[#F5F3EC] rounded-xl p-4 mb-4">
-              <div className="grid grid-cols-2 gap-2">
-                {backupCodes.map((c, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded px-2 py-1.5 text-body-sm font-mono text-center text-primary"
-                  >
-                    {c}
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={() => navigator.clipboard?.writeText(backupCodes.join("\n"))}
-                className="w-full mt-3 flex items-center justify-center gap-1.5 text-body-sm font-semibold text-[#2F6D4F]"
-              >
-                <Copy size={12} />
-                {t("Nakili codes", "Copy codes")}
-              </button>
-            </div>
-            <button
-              onClick={onClose}
-              className="w-full py-2.5 bg-[#E8A33D] text-[#101A2E] rounded-lg text-sm font-semibold"
-            >
-              {t("Nimemaliza", "Done")}
-            </button>
-          </>
-        )}
       </div>
     </div>
   );
@@ -770,9 +553,6 @@ function SecurityTab({ lang, user }) {
   const [error, setError] = useState("");
 
   // ⬇️ 2FA state (mock — kwa sasa)
-  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
-  const [show2FAModal, setShow2FAModal] = useState(null);
-
   // ⬇️ Delete Account state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -825,16 +605,6 @@ function SecurityTab({ lang, user }) {
   // ============================================================
   // 2FA HANDLERS — mock
   // ============================================================
-  const handleEnable2FA = () => {
-    setTwoFAEnabled(true);
-    setShow2FAModal("done");
-  };
-
-  const handleDisable2FA = () => {
-    setTwoFAEnabled(false);
-    setShow2FAModal(null);
-  };
-
   // ============================================================
   // DELETE ACCOUNT HANDLER
   // ============================================================
@@ -966,21 +736,21 @@ function SecurityTab({ lang, user }) {
         <div className="flex flex-col items-center text-center gap-2">
           <div
             className="w-10 h-10 rounded-lg flex items-center justify-center"
-            style={{ background: twoFAEnabled ? `${COLORS.green}15` : `${COLORS.rust}15` }}
+            style={{ background: false ? `${COLORS.green}15` : `${COLORS.rust}15` }}
           >
-            <Shield size={18} color={twoFAEnabled ? COLORS.green : COLORS.rust} />
+            <Shield size={18} color={false ? COLORS.green : COLORS.rust} />
           </div>
           <div>
             <h3 className="h-card flex items-center gap-1.5 justify-center">
               {lang === "sw" ? "Uthibitishaji wa Hatua Mbili" : "Two-Factor Authentication"}
               <span
                 style={{
-                  background: twoFAEnabled ? `${COLORS.green}20` : `${COLORS.rust}20`,
-                  color: twoFAEnabled ? COLORS.green : COLORS.rust,
+                  background: false ? `${COLORS.green}20` : `${COLORS.rust}20`,
+                  color: false ? COLORS.green : COLORS.rust,
                 }}
                 className="text-body-sm font-bold px-2 py-0.5 rounded-full"
               >
-                {twoFAEnabled
+                {false
                   ? (lang === "sw" ? "IMEWASHWA" : "ENABLED")
                   : (lang === "sw" ? "IMEZIMWA" : "DISABLED")}
               </span>
@@ -1096,17 +866,6 @@ function SecurityTab({ lang, user }) {
           </div>
         );
       })()}
-
-      {/* MODALS — single render, modal drives its own step */}
-      {show2FAModal && (
-        <TwoFactorModal
-          mode={show2FAModal === "disable" ? "disable" : "enable"}
-          lang={lang}
-          onClose={() => setShow2FAModal(null)}
-          onEnable={handleEnable2FA}
-          onDisable={handleDisable2FA}
-        />
-      )}
 
       {showDeleteModal && (
         <DeleteAccountModal
@@ -1347,6 +1106,8 @@ export default function ProfilePage() {
   const setViewMode = (mode) => {
     setViewModeState(mode);
     setDashboardSide(mode);
+    // Also send the user to that dashboard so the toggle has an effect.
+    navigate(mode === "buyer" ? "/dashboard/buyer" : "/dashboard/overview");
   };
 
   const handleLogout = async () => {

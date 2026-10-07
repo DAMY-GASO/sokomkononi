@@ -3,6 +3,7 @@
 // Wasiliana Nasi — bilingual kamili + PageLoader + API submit.
 // ============================================================
 
+import { COLORS } from "./dashboard/components/shared.js";
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Footer from "../components/Footer.jsx";

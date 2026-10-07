@@ -270,12 +270,7 @@ export default function SellerOverview({ onNavigate }) {
           na headers zake. Kama unataka ziwe centered pia,
           niambie nirekebishe RecentActivity.jsx.
           ============================================================ */}
-      <RecentActivity
-        listings={listings}
-        deals={deals}
-        onNavigate={onNavigate}
-        lang={lang}
-      />
+      <RecentActivity onNavigate={onNavigate} side="seller" />
     </div>
   );
 }

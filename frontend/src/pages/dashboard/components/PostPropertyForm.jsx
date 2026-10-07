@@ -444,14 +444,29 @@ export default function PostPropertyForm({
 
       created.id = listingId;
 
-      // Upload images
-      for (const p of photos) {
+      // Upload images — each in its own try/catch so a single failure
+      // doesn't abort the whole submission.
+      const failedUploads = [];
+      for (let idx = 0; idx < photos.length; idx++) {
+        const p = photos[idx];
         const fd = new FormData();
         fd.append("image", p.file);
-        fd.append("is_primary", photos.indexOf(p) === 0 ? "true" : "false");
-        fd.append("ordering", String(photos.indexOf(p)));
-        // eslint-disable-next-line no-await-in-loop
-        await api.upload(`/listings/${listingId}/images/`, fd);
+        fd.append("is_primary", idx === 0 ? "true" : "false");
+        fd.append("ordering", String(idx));
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await api.upload(`/listings/${listingId}/images/`, fd);
+        } catch (imgErr) {
+          console.warn("[PostPropertyForm] image upload failed:", imgErr);
+          failedUploads.push(idx + 1);
+        }
+      }
+      if (failedUploads.length > 0) {
+        const msg = t(
+          `Picha ${failedUploads.join(", ")} hazikupakiwa. Unaweza kuziongeza kwenye Mali Zangu.`,
+          `Photos ${failedUploads.join(", ")} failed to upload. You can add them later from My Listings.`
+        );
+        setWarnings((w) => (w.includes(msg) ? w : [...w, msg]));
       }
 
       // Category details
@@ -542,18 +557,20 @@ export default function PostPropertyForm({
 
       // Treat "free" categories (no rule, or admin set 0) distinctly so we
       // never show a misleading "TZS 0" on the review screen.
-      const isFreeCategory =
+      let isFreeCategory =
         created?.payment?.is_free === true ||
         (created?.payment?.required === false && fee === 0);
 
-      if (!fee && !isFreeCategory) {
+      if (!fee && !isFreeCategory && !listingFeeDisabled) {
         try {
           const feeRes = await api.get(`/listings/${listingId}/fee/`);
-          fee =
-            Number(feeRes?.amount) ||
-            Number(feeRes?.fee_amount) ||
-            0;
-          if (!fee) throw new Error("Backend returned zero fee");
+          const backendFree =
+            feeRes?.is_disabled === true ||
+            feeRes?.payment_status === "FREE" ||
+            feeRes?.amount === "0.00";
+          fee = Number(feeRes?.amount) || Number(feeRes?.fee_amount) || 0;
+          if (backendFree && fee === 0) isFreeCategory = true;
+          if (!fee && !backendFree) throw new Error("Backend returned zero fee");
         } catch (feeErr) {
           feeSource = "local";
           console.warn(
@@ -567,6 +584,10 @@ export default function PostPropertyForm({
           fee = Number(local?.fee) || 0;
         }
       }
+
+      // If we still don't have a fee but the fee is disabled for this
+      // listing, treat it as free so the UI shows "Bure".
+      if (!fee && listingFeeDisabled) isFreeCategory = true;
 
 
       console.info("[PostPropertyForm] fee resolved:", {

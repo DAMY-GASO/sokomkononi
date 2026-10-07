@@ -4,7 +4,7 @@
 // Boost packages: price + toggle.
 // Packages (bundles) zipo kwenye ukurasa tofauti (AdminBundles).
 // ============================================================
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Home, Clock, Rocket, Search, Smartphone, Plus, AlertTriangle,
   Pencil, Info, Loader2, RefreshCw, Trash2, Wallet, Power, PowerOff,
@@ -169,8 +169,11 @@ export default function RevenueSection() {
     }
   };
 
+  const inflightRef = useRef(new Set());
+
   const withBusy = async (key, fn) => {
-    if (busy[key]) return;
+    if (inflightRef.current.has(key)) return;
+    inflightRef.current.add(key);
     setBusy((b) => ({ ...b, [key]: true }));
     setError("");
     try {
@@ -190,6 +193,7 @@ export default function RevenueSection() {
       );
       return { ok: false, error: e };
     } finally {
+      inflightRef.current.delete(key);
       setBusy((b) => {
         const n = { ...b };
         delete n[key];
@@ -368,10 +372,11 @@ export default function RevenueSection() {
     const nameForApi =
       cat?.label?.en || cat?.label?.sw || cat?.key || "New Category";
     const res = await addFeeConfigAsync({
+      category_key: cat.key,
       name: nameForApi,
-      fee_mode: "FLAT",              // ⬅️ BADILISHA kutoka "PERCENTAGE"
-      flat_fee: 3000,                // ⬅️ BADILISHA kutoka 5000
-      percentage: 1.0,               // fallback (kama admin anabadilisha)
+      fee_mode: "FLAT",
+      flat_fee: 3000,
+      percentage: 0,
       min_price: 10000,
       max_price: 100000,
       priority: 0,

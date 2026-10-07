@@ -15,8 +15,12 @@ export const moderationApi = {
       rejection_reason: reason,
     }),
 
-  // ⬇️ MPYA: delete (hard delete kwa scam)
-  // Inatumia ListingViewSet.destroy na ?hard=true
+  // Hard delete kwa scam. Tunatuma reason tu kama ipo (baadhi ya proxies
+  // hupoteza DELETE bodies, na backend inaweza kuchukulia `{reason:""}`
+  // kama valid payload).
   delete: (listingId, reason = "") =>
-    api.delete(`/listings/${listingId}/?hard=true`, { reason }),
+    api.delete(
+      `/listings/${listingId}/?hard=true`,
+      reason ? { reason } : undefined
+    ),
 };

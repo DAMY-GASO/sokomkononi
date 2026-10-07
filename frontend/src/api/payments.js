@@ -104,7 +104,15 @@ export async function pollOrderStatus(orderId, { onProgress, signal } = {}) {
     let data;
     try {
       data = await api.post("/payments/order-status/", { order_id: orderId });
-    } catch {
+    } catch (err) {
+      // Auth expired mid-poll — surface immediately, don't burn 30 retries.
+      if (err?.status === 401) {
+        return {
+          ok: false,
+          status: "UNAUTHORIZED",
+          data: { detail: "Session expired. Please log in again." },
+        };
+      }
       continue; // network blip — retry next interval
     }
 

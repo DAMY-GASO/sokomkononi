@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/((?!api/|media/|static/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|media/|static/|django-admin/).*)", "destination": "/index.html" }
   ]
 }

@@ -64,9 +64,16 @@ export function checkCredit(userId, service, amount = 1) {
  * the caller's balance from the server.
  * @returns {Promise<{success:boolean, remaining:number, data?:any, error?:any}>}
  */
+// Backend: /credits/consume/ is documented as admin-gated. If your backend
+// exposes a user-scoped self-consume endpoint, set VITE_CREDITS_CONSUME_PATH.
+// Otherwise, ensure backend allows the self-service consume call.
+const CONSUME_PATH =
+  (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_CREDITS_CONSUME_PATH) ||
+  "/credits/consume/";
+
 export async function consumeCreditAsync(userId, service, amount = 1) {
   try {
-    const res = await api.post("/credits/consume/", {
+    const res = await api.post(CONSUME_PATH, {
       service_key: service,
       amount,
     });

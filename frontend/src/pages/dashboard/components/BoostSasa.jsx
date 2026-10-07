@@ -226,10 +226,15 @@ export default function BoostSasa({
   const feeFree = feeLoaded && !feeEnabled;
   const boostBundles = useActiveBundles().filter((b) => b.type === "boost");
 
-  // ⬇️ MPYA — Hydrate fee + packages kila mount
+  // Hydrate once per app session (idempotent thanks to in-flight dedupe
+  // in the stores). StrictMode double-mount is a no-op now.
   useEffect(() => {
-    hydrateBoostFeeFromApi();
-    hydrateBoostPackagesFromApi();
+    let cancelled = false;
+    Promise.allSettled([
+      hydrateBoostFeeFromApi(),
+      hydrateBoostPackagesFromApi(),
+    ]).then(() => { if (cancelled) return; });
+    return () => { cancelled = true; };
   }, []);
 
   // ⬇️ MPYA — Diagnostiki

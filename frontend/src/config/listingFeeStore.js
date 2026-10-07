@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import { listingFeeRulesApi } from "../api/listingFeeRules.js";
-import { getSeedKeyFromSlug, isKnownCategoryKey } from "./categoriesStore.js";
+import { getSeedKeyFromSlug, isKnownCategoryKey, getCategoryIdByKey } from "./categoriesStore.js";
 
 const KEY = "sokomkononi_listing_fee_config_v2";
 const EV = "sokomkononi:listing-fee-config-updated";
@@ -190,8 +190,9 @@ export async function toggleListingFeeActiveAsync(key) {
 }
 
 export async function addFeeConfigAsync({
+  category_key,
   name,
-  percentage = 1.0,
+  percentage = 0,
   min_price = 10000,
   max_price = 100000,
   flat_fee = 3000,
@@ -199,7 +200,7 @@ export async function addFeeConfigAsync({
   priority = 0,
 }) {
   if (!name) return { ok: false, error: new Error("name required") };
-  const slug = toSlug(name);
+  const slug = toSlug(category_key || name);
   const seedKey = getSeedKeyFromSlug(slug);
   if (hasFeeConfig(seedKey)) {
     return {
@@ -207,8 +208,18 @@ export async function addFeeConfigAsync({
       error: new Error(`Fee config for "${seedKey}" already exists`),
     };
   }
+  const categoryId = getCategoryIdByKey(seedKey);
+  if (!categoryId) {
+    return {
+      ok: false,
+      error: new Error(
+        `Category "${seedKey}" haina backend id. Hydrate categories kwanza.`
+      ),
+    };
+  }
   try {
     const raw = await listingFeeRulesApi.create({
+      category: categoryId,
       name,
       percentage,
       min_price,

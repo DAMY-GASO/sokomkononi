@@ -35,8 +35,11 @@ const SS_AMOUNT    = "pending_order_amount";
 const SS_METHOD    = "pending_order_method";
 const SS_CONTEXT   = "pending_order_context";
 
-function contextKey(title, amount) {
-  return `${title || ""}::${amount ?? ""}`;
+function contextKey(title, amount, scope) {
+  // `scope` disambiguates two features that happen to share a title+amount
+  // (e.g. Boost vs. Leading at the same price). Callers should pass a short
+  // feature key like "boost", "leading", "listing-fee", "reservation".
+  return `${scope || "default"}::${title || ""}::${amount ?? ""}`;
 }
 
 const session = {
@@ -150,6 +153,7 @@ export default function PaymentGateway({
   onInitiate,
   onSuccess,
   onCancel,
+  scope = "default",
 }) {
   const { lang } = useLanguage();
   const sw = lang === "sw";
@@ -199,7 +203,7 @@ export default function PaymentGateway({
     const saved = session.read();
     if (!saved.orderId) return;
 
-    const myKey = contextKey(title, amount);
+    const myKey = contextKey(title, amount, scope);
     if (saved.context && saved.context !== myKey) {
       session.clear();
       return;
@@ -303,7 +307,7 @@ export default function PaymentGateway({
 
     // ── Card / Bank → redirect ─────────────────────────
     if (res.gatewayUrl) {
-      session.save(oid, amount, method.key, contextKey(title, amount));
+      session.save(oid, amount, method.key, contextKey(title, amount, scope));
       setStage("REDIRECTING");
       setTimeout(() => {
         window.location.href = res.gatewayUrl;
@@ -338,7 +342,7 @@ export default function PaymentGateway({
     }
 
     // ── Mobile → poll ──────────────────────────────────
-    session.save(oid, amount, method.key, contextKey(title, amount));
+    session.save(oid, amount, method.key, contextKey(title, amount, scope));
     setStage("POLLING");
     runPoll(oid);
   };

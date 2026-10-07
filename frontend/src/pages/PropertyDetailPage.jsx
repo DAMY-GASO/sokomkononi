@@ -20,6 +20,7 @@ import {
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { useWaitingList, joinWaitingListAsync } from "../config/waitingListStore.js";
 import { getOrCreateDealAsync } from "../config/dealsStore.js";
+import { trackViewed } from "../config/recentlyViewedStore.js";
 import { createConversationAsync } from "../config/messagesStore.js";
 import {
   CATEGORY_EXTRA,
@@ -546,6 +547,11 @@ export default function PropertyDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [property?.id]);
 
+  // Record in "Recently Viewed" once we know the listing is real.
+  useEffect(() => {
+    if (property?.id) trackViewed(property.id);
+  }, [property?.id]);
+
   const waitingListEntries = useWaitingList();
   const alreadyOnWaitlist = useMemo(
     () =>
@@ -839,13 +845,8 @@ export default function PropertyDetailPage() {
                       <AttributesTable property={property} lang={lang} />
                     </div>
 
-                    {/* Sifa za haraka */}
-                    <div>
-                      <h3 className="font-semibold text-primary mb-3">
-                        {t(lang, "Sifa za Haraka", "Quick Features")}
-                      </h3>
-                      <FeaturesSection property={property} lang={lang} />
-                    </div>
+                    {/* Quick-feature tiles were removed — they duplicated
+                        the "Category Details" table above. */}
                   </div>
                 )}
                 {activeTab === "location" && (

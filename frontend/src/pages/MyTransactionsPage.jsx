@@ -34,7 +34,7 @@ import {
   consumeCreditAsync,
 } from "../config/userCreditsStore.js";
 import { useActiveBundles } from "../config/bundlesStore.js";
-import { api } from "../api/client.js";
+import { api, getAccessToken } from "../api/client.js";
 import PaymentGateway from "./dashboard/components/PaymentGateway";
 import {
   useSuccessFeeConfig,
@@ -219,7 +219,7 @@ export default function MyTransactionsPage() {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
       const url = `${baseUrl}/finance/success-fee/download/?format=${format}`;
 
-      const token = localStorage.getItem("sokomkononi_access");
+      const token = getAccessToken();
 
       const response = await fetch(url, {
         method: "GET",
@@ -297,62 +297,6 @@ export default function MyTransactionsPage() {
       );
       setDownloading(false);
     }
-  };
-
-  // ============================================================
-  // PAYMENT FLOW — success fee (FimiPay)
-  // ============================================================
-  const handleFeeInitiate = async ({ methodKey, phone } = {}) => {
-    setFeeError("");
-    try {
-      // Backend inahesabu fee mwenyewe — tunatuma metadata tu
-      const feeRes = await api.post("/finance/success-fee/", {
-        purpose: "transactions",
-        format,
-        payment_method: methodKey || "",
-        phone: phone || "",
-      });
-      const candidates = [
-        feeRes?.fimipay,
-        feeRes?.data?.fimipay,
-        feeRes?.data,
-        feeRes,
-      ].filter(Boolean);
-      const payload =
-        candidates.find((c) => c && (c.order_id || c.payment_status)) || {};
-      return {
-        ok: true,
-        orderId: payload.order_id || null,
-        paymentStatus: (payload.payment_status || "").toUpperCase() || null,
-        transid: payload.transid || null,
-        gatewayUrl: payload.payment_gateway_url || null,
-        simulated: !!payload.simulated,
-        environment: payload.environment || "live",
-      };
-    } catch (err) {
-      const msg =
-        err?.data?.detail ||
-        err?.data?.message ||
-        err?.message ||
-        t("Malipo yameshindikana. Jaribu tena.", "Payment failed. Try again.");
-      setFeeError(msg);
-      return { ok: false, error: err };
-    }
-  };
-
-  const handleFeeSuccess = async () => {
-    // Baada ya FimiPay success, poll kwa fee kuwa PAID kwenye backend
-    setDownloading(true);
-    const maxAttempts = 10;
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((r) => setTimeout(r, 2000));
-      const res = await hydrateSuccessFeeStatusFromApi();
-      if (res.ok && res.status && !res.status.requires_payment) {
-        break;
-      }
-    }
-    setDownloading(false);
-    await performDownload();
   };
 
   const handleModalConfirm = () => {
@@ -829,8 +773,8 @@ export default function MyTransactionsPage() {
                   </>
                 ) : (
                   <>
-                    <CreditCard size={14} />
-                    {t("Lipa kwa FimiPay", "Pay with FimiPay")}
+                    <Package size={14} />
+                    {t("Nunua Kifurushi", "Buy a Bundle")}
                   </>
                 )}
               </button>
@@ -985,19 +929,6 @@ export default function MyTransactionsPage() {
             )}
           </div>
         </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* PAYMENT GATEWAY */}
-      {/* ============================================================ */}
-      {showFeeFlow && !isFree && !hasCredit && (
-        <PaymentGateway
-          amount={feeAmount}
-          onInitiate={handleFeeInitiate}
-          onSuccess={handleFeeSuccess}
-          onClose={() => setShowFeeFlow(false)}
-          lang={lang}
-        />
       )}
 
     </div>

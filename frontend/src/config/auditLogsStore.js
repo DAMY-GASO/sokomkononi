@@ -60,12 +60,17 @@ export async function hydrateAuditLogsFromApi() {
   } catch (err) { return { ok: false, error: err }; }
 }
 
-export async function removeAuditLogAsync(id) {
-  try {
-    await api.delete(`/audit/${id}/`);
-    write(read().filter((l) => l.id !== id));
-    return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+export async function removeAuditLogAsync(_id) {
+  // Audit logs are read-only for compliance (backend exposes GET only).
+  // This function is intentionally disabled; do not re-enable without a
+  // backend endpoint that is explicitly designed for it.
+  return {
+    ok: false,
+    unsupported: true,
+    error: new Error(
+      "Audit logs are read-only for compliance and cannot be deleted."
+    ),
+  };
 }
 
 export async function clearAuditLogsAsync() {

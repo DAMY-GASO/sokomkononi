@@ -113,6 +113,11 @@ export function useBannerAds() {
   }, []);
   return list;
 }
+// Module-level interval keeps a single timer alive regardless of how many
+// components subscribe to this hook.
+let _bannerSyncSubscribers = 0;
+let _bannerSyncInterval = null;
+
 export function useActiveBannerAds() {
   const [list, setList] = useState(() => getActiveBannerAds());
   useEffect(() => {
@@ -120,11 +125,23 @@ export function useActiveBannerAds() {
     const sync = () => setList(getActiveBannerAds());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);
-    const t = setInterval(sync, 60000);
+
+    _bannerSyncSubscribers++;
+    if (_bannerSyncInterval == null) {
+      _bannerSyncInterval = setInterval(() => {
+        // Emitting EV re-triggers every subscriber's sync.
+        window.dispatchEvent(new Event(EV));
+      }, 60000);
+    }
+
     return () => {
       window.removeEventListener("storage", sync);
       window.removeEventListener(EV, sync);
-      clearInterval(t);
+      _bannerSyncSubscribers--;
+      if (_bannerSyncSubscribers <= 0 && _bannerSyncInterval != null) {
+        clearInterval(_bannerSyncInterval);
+        _bannerSyncInterval = null;
+      }
     };
   }, []);
   return list;

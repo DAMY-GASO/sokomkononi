@@ -73,7 +73,9 @@ const PUBLIC_GET_PATTERNS = [
 function isPublicEndpoint(path, method) {
   const m = (method || "GET").toUpperCase();
   if (m === "GET") return PUBLIC_GET_PATTERNS.some((re) => re.test(path));
-  return PUBLIC_POST_PREFIX.some((p) => path.startsWith(p));
+  if (m === "POST") return PUBLIC_POST_PREFIX.some((p) => path.startsWith(p));
+  // Only GET and POST have public prefixes; everything else is private.
+  return false;
 }
 
 export function setTokens({ access, refresh } = {}) {
