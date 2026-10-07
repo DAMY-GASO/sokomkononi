@@ -123,13 +123,7 @@ async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    // SokoMkononi is API-token based; cookies are never needed and would
-    // cause Django's SessionAuthentication to require a CSRF token.
-    return await fetch(url, {
-      credentials: "omit",
-      ...options,
-      signal: controller.signal,
-    });
+    return await fetch(url, { ...options, signal: controller.signal });
   } catch (err) {
     if (err.name === "AbortError") {
       throw new ApiError(408, { detail: "Request timed out. Please try again." });
@@ -222,6 +216,9 @@ async function request(path, {
   const finalHeaders = {
     ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
     ...(!isPublic && getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
+    // Marks the request as XHR. Some Django middleware/settings skip CSRF
+    // enforcement for XHR requests — harmless either way for a JWT API.
+    "X-Requested-With": "XMLHttpRequest",
     ...headers,
   };
 
