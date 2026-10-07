@@ -23,7 +23,7 @@ import { COLORS } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 // ⬇️ MABADILIKO: useAuth kutoka authStore
 import { useAuth } from "../../../config/authStore.js";
-import { useMyListings } from "../../../config/listingsStore.js";
+import { useMyListings, useUnpaidListings } from "../../../config/listingsStore.js";
 import { useDeals } from "../../../config/dealsStore.js";
 import StatTile from "./StatTile.jsx";
 import RecentActivity from "../components/RecentActivity.jsx";
@@ -32,6 +32,7 @@ export default function SellerOverview({ onNavigate }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
   const listings = useMyListings();
+  const unpaidListings = useUnpaidListings();
   const deals = useDeals(user?.id);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -124,6 +125,53 @@ export default function SellerOverview({ onNavigate }) {
       {/* JINSI YA KUUZA — onboarding guide, inaonekana mara ya kwanza */}
       {/* ============================================================ */}
       <HowToSellGuide lang={lang} />
+
+      {/* ============================================================ */}
+      {/* UNPAID LISTINGS BANNER */}
+      {/* ============================================================ */}
+      {unpaidListings.length > 0 && (
+        <div
+          className="mb-5 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border px-4 py-3"
+          style={{
+            background: "rgba(193,80,46,0.06)",
+            borderColor: "rgba(193,80,46,0.3)",
+          }}
+        >
+          <div className="flex items-center gap-2.5 text-center sm:text-left">
+            <AlertCircle
+              size={18}
+              color={COLORS.rust}
+              className="shrink-0 hidden sm:block"
+            />
+            <div>
+              <p
+                className="text-sm font-semibold"
+                style={{ color: COLORS.rust }}
+              >
+                {t(
+                  `Una listing ${unpaidListings.length} zisizolipwa ada`,
+                  `You have ${unpaidListings.length} unpaid listing${
+                    unpaidListings.length === 1 ? "" : "s"
+                  }`
+                )}
+              </p>
+              <p className="text-[11px] text-secondary mt-0.5">
+                {t(
+                  "Listing hazitaonekana kwa admin mpaka ada ilipwe.",
+                  "Listings are not shown to admin until the fee is paid."
+                )}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate("listings")}
+            style={{ background: COLORS.rust, color: "white" }}
+            className="shrink-0 rounded-lg px-3.5 py-2 text-xs font-semibold"
+          >
+            {t("Zilipie Sasa", "Pay Now")}
+          </button>
+        </div>
+      )}
 
       {/* ============================================================ */}
       {/* STATS GRID */}

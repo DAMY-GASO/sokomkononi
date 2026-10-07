@@ -22,7 +22,10 @@ import {
   Search,
   Loader2,
   AlertTriangle,
+  Wallet,
+  AlertCircle,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   COLORS,
   formatTZS,
@@ -142,6 +145,22 @@ function ListingCard({
             {formatTZS(listing.price)}
           </p>
 
+          {isUnpaid(listing) && listing.feeAmount > 0 && (
+            <div
+              className="mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+              style={{
+                background: "rgba(193,80,46,0.10)",
+                color: COLORS.rust,
+              }}
+            >
+              <AlertCircle size={12} className="shrink-0" />
+              <span className="text-[11px] font-semibold leading-tight">
+                {t("Haijalipwa", "Unpaid")} ·{" "}
+                {formatTZS(listing.feeAmount)}
+              </span>
+            </div>
+          )}
+
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-secondary">
             <span className="flex min-w-0 items-center gap-1">
               <CategoryIcon size={11} className="shrink-0" />
@@ -187,6 +206,19 @@ function ListingCard({
 
       {/* Actions */}
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-sandline pt-2.5">
+        {isUnpaid(listing) && (
+          <button
+            type="button"
+            onClick={() => goToPayment(listing.id)}
+            disabled={isBusy}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
+            style={{ background: COLORS.rust, color: "white" }}
+          >
+            <Wallet size={12} />
+            {t("Lipa Sasa", "Pay Now")}
+          </button>
+        )}
+
         {isLiveOrReserved && (
           <>
             <ActionBtn icon={Rocket} label={t("Angaza", "Boost")} color={COLORS.goldInk} onClick={() => onBoost(listing.id)} disabled={isBusy} />
@@ -237,7 +269,15 @@ export default function MyListings({
   const { lang } = useLanguage();
   const { user } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  const isUnpaid = (l) =>
+    l.status === "PENDING_PAYMENT" ||
+    l.status === "DRAFT" ||
+    l.isPaid === false;
+
+  const goToPayment = (id) => navigate(`/dashboard/post?pay=${id}`);
 
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");

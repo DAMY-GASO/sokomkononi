@@ -10,7 +10,11 @@ export function formatTZS(amount) {
 
 const STATUS_CHIP = {
   reserved: { sw: "Imehifadhiwa", en: "Reserved", cls: "bg-gold text-night" },
-  pending_payment: { sw: "Inasubiri malipo", en: "Pending payment", cls: "bg-gold text-night" },
+  pending_payment: {
+    sw: "Haijalipwa",
+    en: "Unpaid",
+    cls: "bg-rust text-white",
+  },
   sold: { sw: "Imeuzwa", en: "Sold", cls: "bg-night text-white" },
 };
 

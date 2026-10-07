@@ -434,6 +434,29 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
       (typeof raw.seller === "number" ? raw.seller : null),
     postedAt: raw.created_at || raw.postedAt || new Date().toISOString(),
     expiresAt: raw.expires_at || raw.expiresAt || null,
+    // ── Payment / status labels (new backend fields) ────────
+    statusLabel: raw.status_label || raw.statusLabel || "",
+    paymentStatus:
+      raw.payment_status ||
+      raw.paymentStatus ||
+      (raw.listing_fee?.payment_status) ||
+      "PENDING",
+    paymentLabel:
+      raw.payment_label ||
+      raw.paymentLabel ||
+      (raw.payment_status === "PAID" ? "Imelipwa" : "Haijalipwa"),
+    feeAmount: Number(
+      raw.fee_amount ??
+      raw.feeAmount ??
+      raw.listing_fee?.amount ??
+      0
+    ),
+    isPaid: Boolean(
+      raw.is_paid ??
+      raw.isPaid ??
+      (raw.payment_status === "PAID") ??
+      (raw.listing_fee?.payment_status === "PAID")
+    ),
     listingFee: Number(raw.listing_fee) || 0,
     rejectionReason: raw.rejection_reason || raw.rejectionReason || "",
     approvedAt: raw.approved_at || null,
@@ -800,4 +823,78 @@ export async function createBusinessDetailsAsync(id, payload) {
 export async function createEquipmentDetailsAsync(id, payload) {
   try { const data = await listingsApi.createEquipmentDetails(id, payload); return { ok: true, data }; }
   catch (err) { return { ok: false, error: err }; }
+}
+
+// ============================================================
+// UNPAID LISTINGS — seller dashboard
+// ============================================================
+export function useUnpaidListings() {
+  const mine = useMyListings();
+  return mine.filter(
+    (l) =>
+      !l.isPaid &&
+      (l.status === "PENDING_PAYMENT" || l.status === "DRAFT")
+  );
+}
+
+export function useUnpaidListingsCount() {
+  return useUnpaidListings().length;
+}
+
+export async function fetchMyUnpaidListingsAsync() {
+  try {
+    const data = await api.get("/listings/mine/unpaid/?page_size=100");
+    const list = Array.isArray(data) ? data : data?.results || [];
+    return {
+      ok: true,
+      count: Number(data?.count ?? list.length) || 0,
+      listings: list.map((r) => normalizeListingFromApi(r)).filter(Boolean),
+    };
+  } catch (err) {
+    console.warn("[listingsStore] fetchMyUnpaidListings failed:", err);
+    return { ok: false, error: err, count: 0, listings: [] };
+  }
+}
+
+
+// ============================================================
+// Pay listing fee (FimiPay flow) — returns order_id for polling.
+// ============================================================
+export async function payListingFeeWithFimiPayAsync(
+  id,
+  { payment_method = "", phone = "" } = {}
+) {
+  if (String(id).startsWith("temp_")) {
+    return {
+      ok: false,
+      error: new Error(
+        "Listing bado haijathibitishwa na backend (temp id). Subiri sync."
+      ),
+    };
+  }
+  try {
+    const res = await api.post(`/listings/${id}/fee/pay/`, {
+      payment_method,
+      phone,
+    });
+    const candidates = [
+      res?.fimipay,
+      res?.data?.fimipay,
+      res?.data,
+      res,
+    ].filter(Boolean);
+    const payload =
+      candidates.find((c) => c && (c.order_id || c.payment_status)) || {};
+    return {
+      ok: true,
+      orderId: payload.order_id || null,
+      paymentStatus: (payload.payment_status || "").toUpperCase() || null,
+      transid: payload.transid || null,
+      gatewayUrl: payload.payment_gateway_url || null,
+      simulated: !!payload.simulated,
+      raw: payload,
+    };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }

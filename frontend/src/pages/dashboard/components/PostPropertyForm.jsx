@@ -166,6 +166,7 @@ export default function PostPropertyForm({
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState([]);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [isFreeCategory, setIsFreeCategory] = useState(false);
 
   // ⬇️ Payment mode kwa listing fee
   const [paymentMode, setPaymentMode] = useState("flat"); // "flat" | "bundle"
@@ -531,11 +532,21 @@ export default function PostPropertyForm({
       // ═══════════════════════════════════════════════════════════
       // Listing fee ipo active → review (flat au bundle)
       // ═══════════════════════════════════════════════════════════
-      // Resolve fee: prefer inline → backend endpoint → local fallback.
-      let fee = inlineFee;
-      let feeSource = inlineFee > 0 ? "inline" : "backend";
+      // Resolve fee: prefer inline → nested payment → backend → local.
+      const inlineFeeFromPayment = Number(
+        created?.payment?.amount ?? created?.payment?.fee_amount ?? 0
+      );
+      let fee = inlineFee || inlineFeeFromPayment;
+      let feeSource =
+        fee > 0 ? "inline" : "backend";
 
-      if (!fee) {
+      // Treat "free" categories (no rule, or admin set 0) distinctly so we
+      // never show a misleading "TZS 0" on the review screen.
+      const isFreeCategory =
+        created?.payment?.is_free === true ||
+        (created?.payment?.required === false && fee === 0);
+
+      if (!fee && !isFreeCategory) {
         try {
           const feeRes = await api.get(`/listings/${listingId}/fee/`);
           fee =
@@ -566,6 +577,7 @@ export default function PostPropertyForm({
 
       setCreatedListing(created);
       setFeeAmount(fee);
+      setIsFreeCategory(Boolean(isFreeCategory));
       setStage("review");
       onSubmit?.(created);
     } catch (err) {
@@ -752,7 +764,7 @@ export default function PostPropertyForm({
                   <span className="font-bold" style={{ color: COLORS.rust }}>
                     {feeAmount > 0
                       ? formatTZS(feeAmount)
-                      : listingFeeDisabled
+                      : isFreeCategory || listingFeeDisabled
                         ? t("Bure", "Free")
                         : t("Inahesabiwa...", "Calculating...")}
                   </span>
@@ -874,9 +886,14 @@ export default function PostPropertyForm({
               {/* Main CTA */}
               <button
                 onClick={
-                  paymentMode === "flat"
-                    ? () => setStage("paying")
-                    : handleBeginBundlePurchase
+                  feeAmount === 0 && (isFreeCategory || listingFeeDisabled)
+                    ? () => {
+                        onPaid?.(createdListing.id, { alreadyPaid: true });
+                        setStage("done");
+                      }
+                    : paymentMode === "flat"
+                      ? () => setStage("paying")
+                      : handleBeginBundlePurchase
                 }
                 disabled={submitting || (paymentMode === "bundle" && !selectedBundle)}
                 style={{
@@ -885,9 +902,11 @@ export default function PostPropertyForm({
                 }}
                 className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50"
               >
-                {paymentMode === "flat"
-                  ? t(`Lipa ${formatTZS(feeAmount)}`, `Pay ${formatTZS(feeAmount)}`)
-                  : t("Nunua Kifurushi", "Buy Bundle")}
+                {feeAmount === 0 && (isFreeCategory || listingFeeDisabled)
+                  ? t("Tuma kwa Admin", "Submit to Admin")
+                  : paymentMode === "flat"
+                    ? t(`Lipa ${formatTZS(feeAmount)}`, `Pay ${formatTZS(feeAmount)}`)
+                    : t("Nunua Kifurushi", "Buy Bundle")}
               </button>
               <button
                 onClick={onGoToListings}
