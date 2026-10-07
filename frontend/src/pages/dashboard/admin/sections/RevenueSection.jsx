@@ -727,7 +727,7 @@ export default function RevenueSection() {
                     {isFlat ? (
                       <div className="flex flex-col items-start min-w-0 sm:col-span-3">
                         <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                          {t("Flat Fee (TZS)", "Flat Fee (TZS)")}
+                          {t("Ada Maalum (TZS)", "Flat Fee (TZS)")}
                         </span>
                         <div className="w-full min-w-0">
                           <EditableAmount
@@ -740,7 +740,7 @@ export default function RevenueSection() {
                       <>
                         <div className="flex flex-col items-start min-w-0">
                           <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                            {t("Kiwango", "Rate")}
+                            {t("Kiwango (%)", "Rate (%)")}
                           </span>
                           <div className="w-full min-w-0">
                             <EditablePercent
@@ -753,7 +753,7 @@ export default function RevenueSection() {
                         </div>
                         <div className="flex flex-col items-start min-w-0">
                           <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                            {t("Chini", "Min")}
+                            {t("Kiwango cha Chini (TZS)", "Min Fee (TZS)")}
                           </span>
                           <div className="w-full min-w-0">
                             <EditableAmount
@@ -764,7 +764,7 @@ export default function RevenueSection() {
                         </div>
                         <div className="flex flex-col items-start min-w-0">
                           <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                            {t("Juu", "Max")}
+                            {t("Kiwango cha Juu (TZS)", "Max Fee (TZS)")}
                           </span>
                           <div className="w-full min-w-0">
                             <EditableAmount
@@ -774,6 +774,46 @@ export default function RevenueSection() {
                           </div>
                         </div>
                       </>
+                    )}
+                  </div>
+                  {/* ─────────────────────────────────────────────── */}
+                  {/* Buyer preview — what a seller sees on /dashboard/post */}
+                  {/* ─────────────────────────────────────────────── */}
+                  <div
+                    className="mt-2 rounded-lg border px-3 py-2 text-[11px] leading-relaxed"
+                    style={{
+                      background: "rgba(232,163,61,0.05)",
+                      borderColor: "rgba(232,163,61,0.3)",
+                      color: "#8A5A16",
+                    }}
+                  >
+                    <span className="font-semibold">
+                      {t("Wauzaji wataona:", "Sellers will see:")}
+                    </span>{" "}
+                    {c.isActive === false ? (
+                      <span style={{ color: COLORS.green }} className="font-semibold">
+                        {t("Bure (ada imezimwa)", "Free (fee disabled)")}
+                      </span>
+                    ) : String(c.feeMode || "PERCENTAGE").toUpperCase() === "FLAT" ? (
+                      Number(c.flatFee) > 0 ? (
+                        <span className="font-semibold">
+                          {Number(c.flatFee).toLocaleString("en-US")} TZS{" "}
+                          {t("kwa kila listing", "per listing")}
+                        </span>
+                      ) : (
+                        <span style={{ color: COLORS.rust }} className="font-semibold">
+                          {t("Bure — kiasi ni 0. Weka kiasi zaidi ya 0!",
+                             "Free — amount is 0. Set an amount above 0!")}
+                        </span>
+                      )
+                    ) : (
+                      <span className="font-semibold">
+                        {((Number(c.rate) || 0) * 100).toFixed(2).replace(/\.?0+$/, "")}%{" "}
+                        {t("ya bei ya mali", "of the listing price")}
+                        {" "}({t("chini", "min")}: {Number(c.min || 0).toLocaleString("en-US")} TZS
+                        {" · "}
+                        {t("juu", "max")}: {Number(c.max || 0).toLocaleString("en-US")} TZS)
+                      </span>
                     )}
                   </div>
                 </div>

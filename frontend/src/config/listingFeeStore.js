@@ -180,7 +180,20 @@ export async function updateListingFeeModeAsync(key, mode) {
   if (!["PERCENTAGE", "FLAT"].includes(mode)) {
     return { ok: false, error: new Error("fee_mode must be PERCENTAGE or FLAT") };
   }
-  return updateListingFeeConfigAsync(key, { fee_mode: mode });
+  const target = getListingFeeConfig(key);
+  if (!target) return { ok: false, error: new Error("Fee config not found") };
+
+  // Seed a sensible default when the target mode has no value yet.
+  // Otherwise switching modes could silently make every listing free
+  // (e.g. FLAT with flat_fee=0, or PERCENTAGE with percentage=0).
+  const patch = { fee_mode: mode };
+  if (mode === "FLAT" && !(Number(target.flatFee) > 0)) {
+    patch.flat_fee = 3000;
+  }
+  if (mode === "PERCENTAGE" && !(Number(target.rate) > 0)) {
+    patch.percentage = 1.0;
+  }
+  return updateListingFeeConfigAsync(key, patch);
 }
 
 export async function toggleListingFeeActiveAsync(key) {
