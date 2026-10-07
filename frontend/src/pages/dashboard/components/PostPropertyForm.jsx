@@ -411,6 +411,9 @@ export default function PostPropertyForm({
           area: loc.eneo.trim(),
         },
       });
+      // Pull the fee from the create response so the "Listing imeundwa"
+      // screen never flashes 0 while waiting for a second call.
+      const inlineFee = Number(created?.fee_amount ?? 0);
 
       let listingId =
         created?.id ?? created?.pk ?? created?.listing_id ?? created?.listingId;
@@ -528,40 +531,33 @@ export default function PostPropertyForm({
       // ═══════════════════════════════════════════════════════════
       // Listing fee ipo active → review (flat au bundle)
       // ═══════════════════════════════════════════════════════════
-      let fee = 0;
-      let feeSource = "backend";
-      try {
-        const feeRes = await api.get(`/listings/${listingId}/fee/`);
-        fee = Number(feeRes?.amount) || 0;
-        if (!fee) throw new Error("Backend returned no fee");
-      } catch (feeErr) {
-        feeSource = "local";
-        console.warn(
-          "[PostPropertyForm] backend fee missing, falling back to local:",
-          feeErr?.status || feeErr?.message
-        );
-        const local = calculateListingFee(
-          categoryKey,
-          cleanPriceInput(base.price)
-        );
-        fee = Number(local?.fee) || 0;
+      // Resolve fee: prefer inline → backend endpoint → local fallback.
+      let fee = inlineFee;
+      let feeSource = inlineFee > 0 ? "inline" : "backend";
+
+      if (!fee) {
+        try {
+          const feeRes = await api.get(`/listings/${listingId}/fee/`);
+          fee =
+            Number(feeRes?.amount) ||
+            Number(feeRes?.fee_amount) ||
+            0;
+          if (!fee) throw new Error("Backend returned zero fee");
+        } catch (feeErr) {
+          feeSource = "local";
+          console.warn(
+            "[PostPropertyForm] backend fee missing, falling back to local:",
+            feeErr?.status || feeErr?.message
+          );
+          const local = calculateListingFee(
+            categoryKey,
+            cleanPriceInput(base.price)
+          );
+          fee = Number(local?.fee) || 0;
+        }
       }
 
-      if (!fee && !listingFeeDisabled) {
-        const msg = t(
-          "Ada ya kuchapisha haijasanidiwa kwa category hii bado. Wasiliana na Admin.",
-          "The listing fee has not been configured for this category yet. Contact admin."
-        );
-        setWarnings((w) => (w.includes(msg) ? w : [...w, msg]));
-      }
 
-      if (!fee && !listingFeeDisabled) {
-        const msg = t(
-          "Ada ya kuchapisha haijasanidiwa kwa category hii bado. Wasiliana na Admin.",
-          "The listing fee has not been configured for this category yet. Contact admin."
-        );
-        setWarnings((w) => (w.includes(msg) ? w : [...w, msg]));
-      }
       console.info("[PostPropertyForm] fee resolved:", {
         fee,
         source: feeSource,
@@ -754,7 +750,11 @@ export default function PostPropertyForm({
                     {t("Ada ya Kuchapisha", "Listing Fee")}
                   </span>
                   <span className="font-bold" style={{ color: COLORS.rust }}>
-                    {formatTZS(feeAmount)}
+                    {feeAmount > 0
+                      ? formatTZS(feeAmount)
+                      : listingFeeDisabled
+                        ? t("Bure", "Free")
+                        : t("Inahesabiwa...", "Calculating...")}
                   </span>
                 </div>
               </div>
