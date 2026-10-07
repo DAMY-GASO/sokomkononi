@@ -664,6 +664,10 @@ export default function PostPropertyForm({
 
   const handleFeeSuccess = () => {
     if (!createdListing) return;
+    // Payment succeeded → mark in_review (awaiting admin approval).
+    // If the payment had failed, we would never reach here, so the
+    // listing correctly stays in `pending_payment` and is visible as
+    // "Haijalipwa" in My Listings.
     onPaid?.(createdListing.id, { alreadyPaid: true });
     setStage("done");
   };
@@ -784,7 +788,7 @@ export default function PostPropertyForm({
                 )}
               </p>
 
-              {/* Fee amount */}
+              {/* Fee amount — always the actual money, never "Bure" */}
               <div
                 className="rounded-xl border p-4 mb-4"
                 style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
@@ -796,11 +800,21 @@ export default function PostPropertyForm({
                   <span className="font-bold" style={{ color: COLORS.rust }}>
                     {feeAmount > 0
                       ? formatTZS(feeAmount)
-                      : isFreeCategory
-                        ? t("Bure", "Free")
-                        : t("Inahesabiwa...", "Calculating...")}
+                      : t("Haijawekwa", "Not set")}
                   </span>
                 </div>
+
+                {feeAmount === 0 && (
+                  <p
+                    className="mt-2 text-[11px] leading-snug"
+                    style={{ color: COLORS.rust }}
+                  >
+                    {t(
+                      "Ada ya kuchapisha haijawekwa kwa kategoria hii. Wasiliana na Admin ili kuweka kiasi kabla ya kuendelea.",
+                      "No listing fee is configured for this category. Contact Admin to set an amount before continuing."
+                    )}
+                  </p>
+                )}
               </div>
 
               {/* Credit banner */}
@@ -918,19 +932,14 @@ export default function PostPropertyForm({
               {/* Main CTA */}
               <button
                 onClick={
-                  feeAmount === 0 && isFreeCategory
-                    ? () => {
-                        onPaid?.(createdListing.id, { alreadyPaid: true });
-                        setStage("done");
-                      }
-                    : paymentMode === "flat"
-                      ? () => setStage("paying")
-                      : handleBeginBundlePurchase
+                  paymentMode === "flat"
+                    ? () => setStage("paying")
+                    : handleBeginBundlePurchase
                 }
                 disabled={
                   submitting ||
-                  (paymentMode === "bundle" && !selectedBundle) ||
-                  (feeAmount === 0 && !isFreeCategory)
+                  feeAmount === 0 ||
+                  (paymentMode === "bundle" && !selectedBundle)
                 }
                 style={{
                   background: COLORS.gold,
@@ -938,13 +947,11 @@ export default function PostPropertyForm({
                 }}
                 className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50"
               >
-                {feeAmount === 0 && isFreeCategory
-                  ? t("Tuma kwa Admin", "Submit to Admin")
-                  : feeAmount === 0
-                    ? t("Inahesabiwa...", "Calculating...")
-                    : paymentMode === "flat"
-                      ? t(`Lipa ${formatTZS(feeAmount)}`, `Pay ${formatTZS(feeAmount)}`)
-                      : t("Nunua Kifurushi", "Buy Bundle")}
+                {feeAmount === 0
+                  ? t("Ada haijawekwa", "Fee not set")
+                  : paymentMode === "flat"
+                    ? t(`Lipa ${formatTZS(feeAmount)}`, `Pay ${formatTZS(feeAmount)}`)
+                    : t("Nunua Kifurushi", "Buy Bundle")}
               </button>
               <button
                 onClick={onGoToListings}
@@ -965,7 +972,12 @@ export default function PostPropertyForm({
               )}
               onInitiate={handleFeeInitiate}
               onSuccess={handleFeeSuccess}
-              onCancel={() => setStage("review")}
+              onCancel={() => {
+                // Payment aborted → back to review. The listing stays in
+                // `pending_payment` in the local store so it shows up in
+                // "My Listings" as unpaid / not live.
+                setStage("review");
+              }}
             />
           )}
 
