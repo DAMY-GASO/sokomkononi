@@ -106,7 +106,7 @@ function ToggleSwitch({ enabled, onToggle, disabled, lang, compact = false }) {
           className="text-[10px] font-bold uppercase tracking-wide"
           style={{ color: enabled ? COLORS.green : COLORS.rust }}
         >
-          {enabled ? t("WAZI", "ON") : t("ZIMA", "OFF")}
+          {enabled ? t("IMEWASHWA", "ON") : t("IMEZIMWA", "OFF")}
         </span>
       )}
       <button
