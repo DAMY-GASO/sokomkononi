@@ -110,6 +110,9 @@ if (typeof window !== "undefined") {
   try { window.localStorage.removeItem(LEGACY_KEY); } catch { /* noop */ }
 }
 
+// PUBLIC_KEY and MINE_KEY are intentionally separate: hydrating the
+// public list must never overwrite the seller's own listings
+// (which include drafts / pending payments the public endpoint hides).
 function snapshot() { return { pub: readKey(PUBLIC_KEY), mine: readKey(MINE_KEY) }; }
 function restore(snap) {
   writeKey(PUBLIC_KEY, snap.pub, true);
@@ -482,6 +485,16 @@ export async function hydrateListingsFromApi() {
 
 let _myListingsUserId = null;
 
+// Statuses the seller's own dashboard must always show. The public
+// /listings/ endpoint only returns LIVE-ish statuses, so we also hit
+// the seller-specific helpers and merge the results by id.
+const _SELLER_STATUS_CANDIDATES = [
+  "PENDING_APPROVAL",
+  "IN_REVIEW",
+  "REJECTED",
+  "PAUSED",
+];
+
 export async function fetchMyListingsFromApi({ refreshUser = false } = {}) {
   try {
     if (refreshUser || _myListingsUserId == null) {
@@ -489,11 +502,54 @@ export async function fetchMyListingsFromApi({ refreshUser = false } = {}) {
       _myListingsUserId = me?.id ?? null;
     }
     if (!_myListingsUserId) return { source: "empty", count: 0 };
-    const data = await listingsApi.mine(_myListingsUserId, { page_size: 200 });
-    const normalized = extractList(data).map((r) => normalizeListingFromApi(r)).filter(Boolean);
-    const temps = readKey(MINE_KEY).filter((l) => String(l.id).startsWith("temp_"));
-    saveMyListings([...temps, ...normalized]);
-    return { source: normalized.length ? "api" : "empty", count: normalized.length };
+
+    // Fire all fetches in parallel; each is allowed to fail silently.
+    const tasks = [
+      listingsApi.mine(_myListingsUserId, { page_size: 200 }),
+      api.get("/listings/mine/unpaid/?page_size=200").catch(() => null),
+      ..._SELLER_STATUS_CANDIDATES.map((status) =>
+        listingsApi
+          .mine(_myListingsUserId, { status, page_size: 200 })
+          .catch(() => null)
+      ),
+    ];
+
+    const results = await Promise.all(tasks);
+
+    // Merge every returned list, dedupe by id, keep the freshest copy.
+    const byId = new Map();
+    for (const data of results) {
+      if (!data) continue;
+      const list = extractList(data);
+      for (const raw of list) {
+        const id = raw?.id ?? raw?.pk ?? raw?.listing_id ?? raw?.listingId;
+        if (id == null) continue;
+        byId.set(String(id), raw);
+      }
+    }
+
+    const normalized = Array.from(byId.values())
+      .map((r) => normalizeListingFromApi(r))
+      .filter(Boolean);
+
+    // Preserve locally-created entries the backend hasn't returned yet
+    // (either `temp_…` placeholders or real ids the fetch above missed,
+    // e.g. right after POST /listings/ before a backend refresh). This
+    // stops a page refresh from wiping the just-created listing.
+    const localExisting = readKey(MINE_KEY);
+    const fetchedIds = new Set(normalized.map((l) => String(l.id)));
+    const localOnly = localExisting.filter(
+      (l) =>
+        String(l.id).startsWith("temp_") ||
+        !fetchedIds.has(String(l.id))
+    );
+
+    saveMyListings([...normalized, ...localOnly]);
+    return {
+      source: normalized.length ? "api" : "empty",
+      count: normalized.length,
+      localOnly: localOnly.length,
+    };
   } catch (err) {
     console.warn("[listingsStore] fetchMyListings failed:", err);
     return { source: "error", count: getMyListings().length };
@@ -595,6 +651,27 @@ export async function fetchListingsByStatusAsync(frontendStatus, params = {}) {
     error: lastErr || new Error("Failed to load listings"),
     listings: [],
   };
+}
+
+/**
+ * Save a listing that was just created via a direct `api.post("/listings/")`
+ * call. `PostPropertyForm` uses this so the new listing immediately shows
+ * up in My Listings, the unpaid banner, and any local lookup by id.
+ *
+ * Returns the normalized listing (or null when the payload is unusable).
+ */
+export function saveFreshlyCreatedListing(raw) {
+  if (!raw) return null;
+  const normalized = normalizeListingFromApi(raw, "pending_payment");
+  if (!normalized || normalized.id == null) return null;
+
+  const current = readKey(MINE_KEY);
+  const next = [
+    normalized,
+    ...current.filter((l) => String(l.id) !== String(normalized.id)),
+  ];
+  writeKey(MINE_KEY, next);
+  return normalized;
 }
 
 export async function createListingAsync(payload) {

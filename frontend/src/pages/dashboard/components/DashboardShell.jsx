@@ -41,6 +41,7 @@ import { useAuth, logoutAsync } from "../../../config/authStore.js";
 import { ADMIN_PATH } from "../../../config/adminPath.js";
 import {
   useMyListings,
+  getMyListings,
   fetchMyListingsFromApi,
   createListingAsync,
   removeListingAsync,
@@ -49,6 +50,8 @@ import {
   unpauseListingAsync,
   markSoldAsync,
   payListingFeeAsync,
+  normalizeListingFromApi,
+  saveMyListings,
 } from "../../../config/listingsStore.js";
 import { useSentAnnouncements } from "../../../config/announcementsStore.js";
 import { useNotifications } from "../../../config/notificationsStore.js";
@@ -311,7 +314,17 @@ export default function DashboardShell() {
   // LISTING HELPERS — API-backed
   // ============================================================
   const addListing = (listing) => {
+    // A create-response (has id) must still be saved to the local store;
+    // otherwise it never appears in My Listings / unpaid banner.
     if (listing && (listing.id || listing.pk)) {
+      const normalized = normalizeListingFromApi(listing, "pending_payment");
+      if (normalized && normalized.id != null) {
+        const current = getMyListings();
+        saveMyListings([
+          normalized,
+          ...current.filter((l) => String(l.id) !== String(normalized.id)),
+        ]);
+      }
       return { ok: true, listing };
     }
     return createListingAsync(listing);
@@ -408,23 +421,26 @@ export default function DashboardShell() {
   );
 
   const markListingPaid = async (id, { alreadyPaid = false } = {}) => {
-    const listing = listings.find((l) => String(l.id) === String(id));
-    if (listing) {
-      updateListing(id, {
-        status: "in_review",
-        paidAt: new Date().toISOString(),
+    // Look up from the local store directly so we do not depend on the
+    // React `listings` array (which may not have rendered the new entry yet).
+    const all = getMyListings();
+    const listing = all.find((l) => String(l.id) === String(id));
+
+    updateListing(id, {
+      status: "in_review",
+      paidAt: new Date().toISOString(),
+    });
+
+    if (!alreadyPaid && listing) {
+      addTransaction({
+        type: "listing_fee",
+        title: `Listing Fee — ${listing.title}`,
+        property: listing.title,
+        amount: listing.listingFee || listing.feeAmount,
+        status: "completed",
+        method: "M-Pesa",
+        listingId: id,
       });
-      if (!alreadyPaid) {
-        addTransaction({
-          type: "listing_fee",
-          title: `Listing Fee — ${listing.title}`,
-          property: listing.title,
-          amount: listing.listingFee,
-          status: "completed",
-          method: "M-Pesa",
-          listingId: id,
-        });
-      }
     }
     return { ok: true };
   };

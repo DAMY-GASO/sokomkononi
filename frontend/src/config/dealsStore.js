@@ -220,12 +220,69 @@ function normalizeDealFromApi(raw, currentUserId) {
   const status =
     API_TO_FRONTEND_DEAL_STATUS[statusRaw] || statusRaw.toLowerCase();
 
+  // ── Cache-backed backfills (ids but no names/emails/phones) ────────
+  let buyerEmail = buyer.email || raw.buyer_email || "";
+  let sellerEmail = seller.email || raw.seller_email || "";
+  let buyerPhone =
+    buyer.phone ?? buyer.phone_number ?? raw.buyer_phone ?? null;
+  let sellerPhone =
+    seller.phone ?? seller.phone_number ??
+    raw.seller_phone ?? raw.seller_contact?.phone ?? null;
+
+  if ((!buyerName || !buyerEmail || !buyerPhone) && buyerId != null) {
+    const u = getUserById(buyerId);
+    if (u) {
+      buyerName = buyerName || u.name || "";
+      buyerEmail = buyerEmail || u.email || "";
+      buyerPhone = buyerPhone ?? u.phone ?? null;
+    }
+  }
+  if ((!sellerName || !sellerEmail || !sellerPhone) && sellerId != null) {
+    const u = getUserById(sellerId);
+    if (u) {
+      sellerName = sellerName || u.name || "";
+      sellerEmail = sellerEmail || u.email || "";
+      sellerPhone = sellerPhone ?? u.phone ?? null;
+    }
+  }
+
+  const meta = resolveMeta(
+    raw,
+    listing,
+    listingId ?? raw?.listing_id ?? raw?.listing
+  );
+
+  // Listing details (may come from the nested object, the local cache,
+  // or the deal row itself — but never trusted alone).
+  const listingCached =
+    listingId != null
+      ? getListings().find((l) => String(l.id) === String(listingId))
+      : null;
+  const listingPrice =
+    Number(listing?.price) ||
+    Number(raw?.listing_price) ||
+    Number(listingCached?.price) ||
+    0;
+  const listingStatus =
+    listing?.status ||
+    raw?.listing_status ||
+    listingCached?.status ||
+    null;
+  const listingImages =
+    (Array.isArray(listing?.photos) && listing.photos) ||
+    (Array.isArray(listing?.images) && listing.images) ||
+    (Array.isArray(listingCached?.photos) && listingCached.photos) ||
+    [];
+
   return {
     id: raw.id,
     dealRoomId: dealRoom.id ?? raw.deal_room ?? null,
     transactionId: transaction.id ?? raw.transaction ?? null,
     listingId,
-    ...resolveMeta(raw, listing, listingId ?? raw?.listing_id ?? raw?.listing),
+    ...meta,
+    listingPrice,
+    listingStatus,
+    listingImages,
     askingPrice: resolveAskingPrice(
       raw,
       listing,
@@ -233,14 +290,19 @@ function normalizeDealFromApi(raw, currentUserId) {
     ),
     currentOffer: resolveCurrentOffer(raw, raw?.offers),
     counterpartyName:
-      counterparty?.name || counterparty?.full_name || "",
+      counterparty?.name ||
+      counterparty?.full_name ||
+      (isBuyer ? sellerName : buyerName) ||
+      "",
+    // Parties
     buyerId,
     buyerName,
+    buyerEmail,
+    buyerPhone,
     sellerId,
     sellerName,
-    sellerPhone:
-      seller.phone ?? seller.phone_number ??
-      raw.seller_phone ?? raw.seller_contact?.phone ?? null,
+    sellerEmail,
+    sellerPhone,
     status,
     agreedPrice: raw.agreed_price != null ? Number(raw.agreed_price) : null,
     agreedAt: raw.agreed_at,
@@ -285,9 +347,35 @@ function normalizeDealFromApi(raw, currentUserId) {
       raw.dispute_reason ||
       "",
     cancelNote: raw.cancellation_reason || raw.cancel_note || "",
+    disputeReason: raw.dispute_reason || raw.dispute_note || "",
+    disputeResolution: raw.resolution || raw.dispute_resolution || "",
+    disputeResolutionNote:
+      raw.resolution_note || raw.dispute_resolution_note || "",
+    disputeResolvedAt: raw.resolved_at || raw.dispute_resolved_at || null,
+    adminNote: raw.admin_note || raw.resolution_note || "",
 
-    createdAt: raw.created_at,
-    updatedAt: raw.updated_at,
+    // ── Money ──────────────────────────────────────────────
+    agreedPrice:
+      raw.agreed_price != null
+        ? Number(raw.agreed_price)
+        : raw.agreedPrice != null
+          ? Number(raw.agreedPrice)
+          : null,
+    agreedAt: raw.agreed_at || null,
+    commission:
+      raw.commission != null ? Number(raw.commission) : null,
+    currency: raw.currency || "TZS",
+
+    // ── Timestamps ─────────────────────────────────────────
+    createdAt: raw.created_at || raw.createdAt || null,
+    updatedAt: raw.updated_at || raw.updatedAt || null,
+    completedAt: raw.completed_at || raw.confirmed_at || null,
+    cancelledAt: raw.cancelled_at || null,
+    lastMessageAt:
+      raw.last_message_at || raw.updated_at || raw.created_at || null,
+
+    // ── Raw fallbacks so the UI never shows "—" for a real value ──
+    _rawStatus: statusRaw,
 
     messages: [
       // Real chat messages (kama backend itazirudisha).
@@ -336,6 +424,38 @@ export async function fetchDealDetailAsync(dealId) {
     const raw = await dealsApi.detail(dealId);
     const deal = normalizeDealFromApi(raw, _dealsUserId);
     if (!deal) return { ok: false, error: new Error("Invalid deal response") };
+
+    // Belt-and-braces: if the backend omitted names/emails/phones, backfill
+    // them from usersStore. If the listing metadata is missing, backfill
+    // from listingsStore. This makes the admin table always render.
+    if (deal.buyerId != null && (!deal.buyerName || !deal.buyerEmail)) {
+      const u = getUserById(deal.buyerId);
+      if (u) {
+        if (!deal.buyerName) deal.buyerName = u.name || "";
+        if (!deal.buyerEmail) deal.buyerEmail = u.email || "";
+        if (!deal.buyerPhone) deal.buyerPhone = u.phone || null;
+      }
+    }
+    if (deal.sellerId != null && (!deal.sellerName || !deal.sellerEmail)) {
+      const u = getUserById(deal.sellerId);
+      if (u) {
+        if (!deal.sellerName) deal.sellerName = u.name || "";
+        if (!deal.sellerEmail) deal.sellerEmail = u.email || "";
+        if (!deal.sellerPhone) deal.sellerPhone = u.phone || null;
+      }
+    }
+    if (deal.listingId != null && (!deal.listingTitle || !deal.listingPrice)) {
+      const l = getListings().find(
+        (x) => String(x.id) === String(deal.listingId)
+      );
+      if (l) {
+        if (!deal.listingTitle) deal.listingTitle = l.title || "";
+        if (!deal.listingPrice) deal.listingPrice = Number(l.price) || 0;
+        if (!deal.location) deal.location = l.location || l.region || "";
+        if (!deal.category) deal.category = l.category || null;
+        if (!deal.listingStatus) deal.listingStatus = l.status || null;
+      }
+    }
     const current = getDeals();
     const existing = current.find((d) => sameId(d.id, dealId));
     const merged = existing

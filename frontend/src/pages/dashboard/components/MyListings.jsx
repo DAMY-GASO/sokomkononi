@@ -296,7 +296,9 @@ export default function MyListings({
   const filtered = useMemo(() => {
     let list = [...listings];
 
-    if (filter !== "all") {
+    if (filter === "unpaid") {
+      list = list.filter((l) => isUnpaid(l));
+    } else if (filter !== "all") {
       list = list.filter((l) => l.status === filter);
     }
 
@@ -319,8 +321,9 @@ export default function MyListings({
 
   const filters = [
     { key: "all", label: { sw: "Zote", en: "All" } },
-    { key: "live", label: { sw: "Hai", en: "Live" } },
+    { key: "unpaid", label: { sw: "Haijalipwa", en: "Unpaid" } },
     { key: "in_review", label: { sw: "Inasubiri", en: "In Review" } },
+    { key: "live", label: { sw: "Hai", en: "Live" } },
     { key: "reserved", label: { sw: "Imehifadhiwa", en: "Reserved" } },
     { key: "sold", label: { sw: "Imeuzwa", en: "Sold" } },
     { key: "paused", label: { sw: "Imesimama", en: "Paused" } },
@@ -434,9 +437,11 @@ const handleRemove = async (id) => {
 
           <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
             {filters.map((f) => {
-              const count = listings.filter((l) =>
-                f.key === "all" ? true : l.status === f.key
-              ).length;
+              const count = listings.filter((l) => {
+                if (f.key === "all") return true;
+                if (f.key === "unpaid") return isUnpaid(l);
+                return l.status === f.key;
+              }).length;
               return (
                 <button
                   key={f.key}
