@@ -79,7 +79,7 @@ const NOTIFICATION_TYPES = {
 };
 
 // ============================================================
-// NOTIFICATION ITEM — kadi zimeachwa kushoto (data nyingi)
+// NOTIFICATION ITEM
 // ============================================================
 function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
   const config = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.system;
@@ -87,6 +87,12 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
 
   const title = getLocalizedField(notif.title, lang);
   const body = getLocalizedField(notif.body, lang);
+
+  // ✅ Tumia resolveNotificationRoute — inajenga route sahihi
+  // kutoka notification_type + related_object_id + side.
+  // Hii inashughulikia kesi zote: notif.link null, link isiyo sahihi,
+  // n.k. Na daima inarudisha route inayojulikana (haipo null).
+  const target = resolveNotificationRoute(notif, side);
 
   return (
     <div
@@ -135,15 +141,18 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
           >
             {timeAgo(notif.at, lang)}
           </span>
-          {notif.link && (
-            <Link
-              to={notif.link}
-              className="text-[11px] font-semibold hover:underline"
-              style={{ color: COLORS.gold }}
-            >
-              {lang === "sw" ? "Angalia" : "View"} →
-            </Link>
-          )}
+
+          {/* ✅ Link daima inaonyeshwa — target haipo null kamwe */}
+          <Link
+            to={target}
+            onClick={() => {
+              if (!notif.read) onMarkRead(notif.id);
+            }}
+            className="text-[11px] font-semibold hover:underline"
+            style={{ color: COLORS.gold }}
+          >
+            {lang === "sw" ? "Angalia" : "View"} →
+          </Link>
         </div>
       </div>
 
@@ -187,22 +196,22 @@ export default function NotificationsPage() {
   const handleRemove = (id) => remove(id);
 
   const handleClearAll = async () => {
-  const message =
-    lang === "sw"
-      ? "Una uhakika unataka kufuta taarifa zote? Hatua hii haiwezi kurudishwa."
-      : "Are you sure you want to delete all notifications? This cannot be undone.";
-  if (!window.confirm(message)) return;
+    const message =
+      lang === "sw"
+        ? "Una uhakika unataka kufuta taarifa zote? Hatua hii haiwezi kurudishwa."
+        : "Are you sure you want to delete all notifications? This cannot be undone.";
+    if (!window.confirm(message)) return;
 
-  const res = await clearAll();
-  if (!res?.ok) {
-    alert(
-      res?.error?.message ||
-        (lang === "sw"
-          ? "Imeshindwa kufuta taarifa."
-          : "Failed to delete notifications.")
-    );
-  }
-};
+    const res = await clearAll();
+    if (!res?.ok) {
+      alert(
+        res?.error?.message ||
+          (lang === "sw"
+            ? "Imeshindwa kufuta taarifa."
+            : "Failed to delete notifications.")
+      );
+    }
+  };
 
   return (
     <div
@@ -212,7 +221,6 @@ export default function NotificationsPage() {
       }}
       className="w-full p-4 sm:p-6"
     >
-
       <div className="max-w-3xl mx-auto">
         {/* ============================================================ */}
         {/* HEADER — CENTERED */}
