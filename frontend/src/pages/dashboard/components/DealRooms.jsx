@@ -3,7 +3,7 @@
 // API-backed kwa transactions (hakuna simulations).
 // CHAGUO A: buyer + seller wote wanaweza kutuma offers na kukubali.
 // - handleSendMessage → POST /deals/{id}/messages/
-// - offlineMode → log tu (hakuna local fallback)
+// - Block phone numbers kwenye chat hadi reservation ilipwe
 // - REQUEST_NEGOTIATION → submitDecisionAsync
 // ============================================================
 
@@ -32,13 +32,14 @@ import {
   Paperclip,
   Loader2,
   Phone,
+  Mail,
   Lock,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS, timeAgo } from "./shared";
 import {
-  useReservationRates,
+  useActiveReservationTiers,
+  useReservationSettings,
   calcReservationFee,
-  useReservationFeeConfig,
 } from "../../../config/feePolicy.js";
 import {
   useDeals,
@@ -49,8 +50,7 @@ import {
   getDeals,
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
-import { markSoldAsync, getListings as _getListingsCache } from "../../../config/listingsStore.js";
-import { getUser as _getUserCache } from "../../../config/usersStore.js";
+import { markSoldAsync } from "../../../config/listingsStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";
@@ -74,41 +74,6 @@ import {
 // ============================================================
 // HELPERS
 // ============================================================
-// ─── Cache-backed enrichment for deal rows ────────────────────────
-// The backend sometimes returns only IDs. Backfill from the local caches
-// so the deal list always shows the counterparty name, listing title,
-// category, location, and prices.
-function _enrichDealFromCaches(deal) {
-  if (!deal) return deal;
-  const out = { ...deal };
-
-  // Listing
-  if (out.listingId != null && (!out.listingTitle || !out.askingPrice)) {
-    try {
-      const l = (_getListingsCache?.() || []).find(
-        (x) => String(x.id) === String(out.listingId)
-      );
-      if (l) {
-        if (!out.listingTitle) out.listingTitle = l.title || "";
-        if (!out.askingPrice) out.askingPrice = Number(l.price) || 0;
-        if (!out.location) out.location = l.location || l.region || "";
-        if (!out.category) out.category = l.category || null;
-      }
-    } catch { /* noop */ }
-  }
-
-  // Counterparty
-  const counterpartyId =
-    out.side === "seller" ? out.buyerId : out.sellerId;
-  if (!out.counterpartyName && counterpartyId != null) {
-    try {
-      const u = _getUserCache?.(counterpartyId);
-      if (u?.name) out.counterpartyName = u.name;
-    } catch { /* noop */ }
-  }
-  return out;
-}
-
 function getMessageText(m, lang) {
   if (!m.text) return "";
   if (typeof m.text === "string") return m.text;
@@ -124,6 +89,40 @@ function formatMoneyInput(value) {
 
 function cleanMoneyInput(value) {
   return String(value).replace(/[^0-9]/g, "");
+}
+
+// ============================================================
+// PHONE NUMBER DETECTION
+// Block messages containing phone-like numbers (local + international).
+// Buyer must pay reservation fee before sharing contact details.
+// ============================================================
+const PHONE_PATTERNS = [
+  // Tanzania local mobile: 07XXXXXXXX, 06XXXXXXXX, 05XXXXXXXX, 04XXXXXXXX
+  /\b0[4-9]\d{7,8}\b/,
+  // Tanzania international with +: +255 XXXXXXXXX (8-9 digits after)
+  /\+255\d{7,9}\b/,
+  // Tanzania international without +: 255 XXXXXXXXX
+  /\b255\d{7,9}\b/,
+  // Kenya: +254 / 254 / 07XX
+  /\+254\d{7,9}\b/,
+  /\b254\d{7,9}\b/,
+  /\b07\d{8}\b/,
+  // Uganda: +256 / 256
+  /\+256\d{7,9}\b/,
+  /\b256\d{7,9}\b/,
+  // Generic international: + followed by 8-15 digits
+  /\+\d{8,15}\b/,
+  // Generic long digit sequences (8+ digits) — likely phone / account numbers
+  /\b\d{9,15}\b/,
+  // Email addresses
+  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
+];
+
+function containsContactInfo(text) {
+  if (!text) return false;
+  const t = String(text).trim();
+  if (!t) return false;
+  return PHONE_PATTERNS.some((re) => re.test(t));
 }
 
 // ============================================================
@@ -224,9 +223,6 @@ const getDealStatus = (lang) => ({
     fg: COLORS.night,
   },
 });
-
-const CUSTOM_MIN_HOURS = 1;
-const CUSTOM_MAX_HOURS = 336;
 
 const PAYMENT_METHODS = [
   "M-Pesa",
@@ -683,11 +679,13 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
           style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
           className="rounded-xl border p-3 flex items-center gap-3"
         >
-          <img
-            src={proof.dataUrl}
-            alt="Payment receipt"
-            className="w-16 h-16 rounded-lg object-cover shrink-0"
-          />
+          {proof.dataUrl && (
+            <img
+              src={proof.dataUrl}
+              alt="Payment receipt"
+              className="w-16 h-16 rounded-lg object-cover shrink-0"
+            />
+          )}
           <div className="min-w-0 text-body-sm">
             <p className="text-primary font-semibold">
               {formatTZS(deal.currentOffer)} · {proof.method}
@@ -777,8 +775,7 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
 // ============================================================
 // DEAL LIST ITEM
 // ============================================================
-function DealListItem({ deal: rawDeal, active, onSelect, lang }) {
-  const deal = _enrichDealFromCaches(rawDeal);
+function DealListItem({ deal, active, onSelect, lang }) {
   const category = getCategory(deal.category);
   const Icon = getCategoryIcon(category?.iconKey);
   const status =
@@ -859,36 +856,38 @@ function OfferBubble({ amount, mine, lang }) {
 }
 
 // ============================================================
-// RESERVATION PANEL
+// RESERVATION PANEL — tiers-based
 // ============================================================
 function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
   const [step, setStep] = useState("choose");
-  const [selected, setSelected] = useState(24);
-  const [customHours, setCustomHours] = useState(96);
+  const [selectedHours, setSelectedHours] = useState(null);
   const [method, setMethod] = useState(PAYMENT_METHODS[0]);
   const [paying, setPaying] = useState(false);
   const [paymentMode, setPaymentMode] = useState("flat");
   const [error, setError] = useState("");
 
-  const feeCfg = useReservationFeeConfig();
-  const isFeeDisabled = feeCfg?.is_enabled === false;
+  const settings = useReservationSettings();
+  const tiers = useActiveReservationTiers();
+  const isFeeDisabled = settings?.is_enabled === false;
 
-  const reservationRates = useReservationRates();
-  const reservationOptions = reservationRates.filter((r) => r.hours != null);
+  // Default: chagua tier ya kwanza ikiwa hakuna
+  useEffect(() => {
+    if (selectedHours == null && tiers.length > 0) {
+      setSelectedHours(tiers[0].hours);
+    }
+  }, [tiers, selectedHours]);
 
-  const hours = selected === "custom" ? customHours : selected;
-  const fee = isFeeDisabled ? 0 : calcReservationFee(Number(hours));
-  const validCustom =
-    selected !== "custom" ||
-    (Number(customHours) >= CUSTOM_MIN_HOURS &&
-      Number(customHours) <= CUSTOM_MAX_HOURS);
+  const selectedTier = tiers.find((t) => t.hours === selectedHours);
+  const hours = selectedTier?.hours ?? 0;
+  const fee = isFeeDisabled ? 0 : calcReservationFee(hours);
+  const validSelection = !!selectedTier;
 
   const creditInfo = checkCredit(user?.id, "reservation");
   const hasCredit = creditInfo.hasCredit && !isFeeDisabled;
   const reservationCreditRemaining = creditInfo.remaining || 0;
 
   const handlePay = async () => {
-    if (!validCustom) return;
+    if (!validSelection) return;
 
     if (isFeeDisabled && paymentMode !== "credit") {
       setPaying(true);
@@ -957,95 +956,61 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
             </p>
           )}
 
-          <div className="grid grid-cols-3 gap-2">
-            {reservationOptions.map((opt) => (
-              <button
-                key={opt.hours}
-                onClick={() => setSelected(opt.hours)}
-                style={{
-                  borderColor:
-                    selected === opt.hours ? COLORS.green : COLORS.sandLine,
-                  background:
-                    selected === opt.hours ? "rgba(47,109,79,0.08)" : "white",
-                }}
-                className="rounded-xl border px-2 py-2.5 text-center"
-              >
-                <p className="text-primary text-sm font-bold">
-                  {opt.label?.[lang] || opt.label?.sw}
-                </p>
-                <p className="text-secondary text-body-sm mb-1">
-                  {opt.sub?.[lang] || opt.sub?.sw}
-                </p>
-                <p
-                  style={{ color: COLORS.green }}
-                  className="text-body-sm font-semibold"
-                >
-                  {isFeeDisabled
-                    ? lang === "sw"
-                      ? "BURE"
-                      : "FREE"
-                    : formatTZS(opt.fee)}
-                </p>
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setSelected("custom")}
-            style={{
-              borderColor:
-                selected === "custom" ? COLORS.green : COLORS.sandLine,
-              background:
-                selected === "custom" ? "rgba(47,109,79,0.08)" : "white",
-            }}
-            className="rounded-xl border px-3 py-2.5 flex flex-col items-center text-center gap-1"
-          >
-            <span className="text-primary text-body-sm font-semibold">
+          {tiers.length === 0 ? (
+            <p className="text-body-sm text-muted text-center py-3">
               {lang === "sw"
-                ? "Muda Mwingine (Custom)"
-                : "Other Duration (Custom)"}
-            </span>
-            {selected === "custom" ? (
-              <span
-                className="flex items-center gap-1.5"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <input
-                  type="number"
-                  min={CUSTOM_MIN_HOURS}
-                  max={CUSTOM_MAX_HOURS}
-                  value={customHours}
-                  onChange={(e) =>
-                    setCustomHours(e.target.value.replace(/\D/g, ""))
-                  }
-                  style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-                  className="w-16 rounded-md border px-2 py-1 text-body-sm outline-none text-center"
-                />
-                <span className="text-secondary text-body-sm">
-                  {lang === "sw" ? "saa" : "hrs"}
-                </span>
-              </span>
-            ) : (
-              <span className="text-muted text-body-sm">
-                {lang === "sw" ? "weka saa mwenyewe" : "enter hours"}
-              </span>
-            )}
-          </button>
-
-          {selected === "custom" && !validCustom && (
-            <p
-              style={{ color: COLORS.rust }}
-              className="text-body-sm text-center"
-            >
-              {lang === "sw"
-                ? `Weka saa kati ya ${CUSTOM_MIN_HOURS} na ${CUSTOM_MAX_HOURS}.`
-                : `Enter hours between ${CUSTOM_MIN_HOURS} and ${CUSTOM_MAX_HOURS}.`}
+                ? "Hakuna tiers zilizo hai kwa sasa."
+                : "No active tiers available."}
             </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {tiers.map((tier) => {
+                const isSelected = selectedHours === tier.hours;
+                const days =
+                  tier.hours % 24 === 0 ? tier.hours / 24 : null;
+                const label = days
+                  ? lang === "sw"
+                    ? `Siku ${days}`
+                    : `${days} ${days === 1 ? "Day" : "Days"}`
+                  : lang === "sw"
+                    ? `Saa ${tier.hours}`
+                    : `${tier.hours} hrs`;
+                const sub = `${tier.hours}h`;
+                return (
+                  <button
+                    key={tier.id}
+                    onClick={() => setSelectedHours(tier.hours)}
+                    style={{
+                      borderColor: isSelected
+                        ? COLORS.green
+                        : COLORS.sandLine,
+                      background: isSelected
+                        ? "rgba(47,109,79,0.08)"
+                        : "white",
+                    }}
+                    className="rounded-xl border px-2 py-2.5 text-center"
+                  >
+                    <p className="text-primary text-sm font-bold">{label}</p>
+                    <p className="text-secondary text-body-sm mb-1">{sub}</p>
+                    <p
+                      style={{ color: COLORS.green }}
+                      className="text-body-sm font-semibold"
+                    >
+                      {isFeeDisabled
+                        ? lang === "sw"
+                          ? "BURE"
+                          : "FREE"
+                        : formatTZS(tier.fee)}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           )}
 
-          {selected === "custom" && validCustom && (
+          {selectedTier && (
             <p className="text-secondary text-body-sm text-center">
-              {formatHours(Number(customHours), lang)} →{" "}
+              {formatHours(hours, lang)} ·{" "}
               {lang === "sw" ? "Reservation Fee:" : "Reservation Fee:"}{" "}
               <span style={{ color: COLORS.green }} className="font-semibold">
                 {isFeeDisabled
@@ -1113,10 +1078,10 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
                   setStep("pay");
                 }
               }}
-              disabled={!validCustom}
+              disabled={!validSelection}
               style={{
-                background: validCustom ? COLORS.green : COLORS.sandLine,
-                color: validCustom ? "white" : "rgba(16,26,46,0.4)",
+                background: validSelection ? COLORS.green : COLORS.sandLine,
+                color: validSelection ? "white" : "rgba(16,26,46,0.4)",
               }}
               className="flex-1 text-body-sm font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
             >
@@ -1271,6 +1236,7 @@ function DealDetail({
   const [offerOpen, setOfferOpen] = useState(false);
   const [offerAmount, setOfferAmount] = useState("");
   const [reserveOpen, setReserveOpen] = useState(false);
+  const [chatError, setChatError] = useState("");
   const category = getCategory(deal.category);
   const CategoryIcon = getCategoryIcon(category?.iconKey);
   const status =
@@ -1318,18 +1284,52 @@ function DealDetail({
         ? "Hakuna ofa bado — toa ofa yako ya kwanza."
         : "No offer yet — make your first offer.";
 
+  // ═══════════════════════════════════════════════════════════
+  // SELLER CONTACT VISIBILITY
+  // Inaonekana tu kama:
+  //   - ni seller mwenyewe, AU
+  //   - ni buyer NA reservation imelipwa (status ipo kwenye
+  //     reserved/awaiting_final_payment/payment_proof_submitted/completed)
+  //   - AU deal.status ni completed
+  // ═══════════════════════════════════════════════════════════
   const sellerPhone =
     deal.sellerPhone ?? deal.seller_phone ?? deal.counterpartyPhone ?? null;
-  const phoneLocked =
-    isBuyer &&
-    !sellerPhone &&
-    ["open", "pending", "negotiating", "offer_sent", "accepted"].includes(
-      deal.status
-    );
+  const sellerEmail =
+    deal.sellerEmail ?? deal.seller_email ?? deal.counterpartyEmail ?? null;
+
+  const reservationPaidStatuses = [
+    "reserved",
+    "awaiting_final_payment",
+    "payment_proof_submitted",
+    "completed",
+  ];
+  const reservationPaid = reservationPaidStatuses.includes(deal.status);
+
+  // Seller anaweza kuona contact yake mwenyewe; buyer anaiona tu baada ya
+  // kulipia reservation.
+  const showSellerContact = isSeller || (isBuyer && reservationPaid);
+
+  // Phone lock: buyer haioni mpaka reservation ilipwe
+  const phoneLocked = isBuyer && !reservationPaid;
 
   const handleSend = () => {
-    if (!text.trim()) return;
-    onSendMessage(deal.id, text.trim());
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    // Block contact info (phone / email) kama reservation haijalipwa
+    if (!isSeller && !reservationPaid) {
+      if (containsContactInfo(trimmed)) {
+        setChatError(
+          lang === "sw"
+            ? "Hairuhusiwi kutuma namba ya simu, email, au taarifa za mawasiliano kwenye chat. Tafadhali lipia Reservation Fee kwanza ili kuona taarifa za muuzaji."
+            : "You can't share phone numbers, emails, or contact info in chat. Please pay the Reservation Fee first to see the seller's contact details."
+        );
+        return;
+      }
+    }
+
+    setChatError("");
+    onSendMessage(deal.id, trimmed);
     setText("");
   };
 
@@ -1407,32 +1407,50 @@ function DealDetail({
         </span>
       </div>
 
-      {/* Seller phone */}
-      {isBuyer && sellerPhone && (
+      {/* Seller contact strip — inaonekana tu kama reservation imelipwa */}
+      {showSellerContact && (sellerPhone || sellerEmail) && (
         <div
           style={{
             background: "rgba(47,109,79,0.08)",
             borderColor: COLORS.sandLine,
           }}
-          className="flex items-center justify-between gap-2 px-4 py-2 border-b text-body-sm"
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-2 border-b text-body-sm"
         >
-          <span
-            style={{ color: COLORS.green }}
-            className="flex items-center gap-1.5 min-w-0"
-          >
-            <Phone size={13} className="shrink-0" />
-            <span className="font-semibold shrink-0">
-              {lang === "sw" ? "Namba ya muuzaji" : "Seller phone"}:
-            </span>
-            <span className="font-mono truncate">{sellerPhone}</span>
-          </span>
-          <a
-            href={`tel:${sellerPhone}`}
-            style={{ background: COLORS.green, color: "white" }}
-            className="shrink-0 rounded-lg px-3 py-1.5 text-body-sm font-semibold"
-          >
-            {lang === "sw" ? "Piga Simu" : "Call"}
-          </a>
+          <div className="flex flex-col gap-1 min-w-0">
+            {sellerPhone && (
+              <span
+                style={{ color: COLORS.green }}
+                className="flex items-center gap-1.5 min-w-0"
+              >
+                <Phone size={13} className="shrink-0" />
+                <span className="font-semibold shrink-0">
+                  {lang === "sw" ? "Simu" : "Phone"}:
+                </span>
+                <span className="font-mono truncate">{sellerPhone}</span>
+              </span>
+            )}
+            {sellerEmail && (
+              <span
+                style={{ color: COLORS.green }}
+                className="flex items-center gap-1.5 min-w-0"
+              >
+                <Mail size={13} className="shrink-0" />
+                <span className="font-semibold shrink-0">
+                  {lang === "sw" ? "Barua pepe" : "Email"}:
+                </span>
+                <span className="truncate">{sellerEmail}</span>
+              </span>
+            )}
+          </div>
+          {sellerPhone && (
+            <a
+              href={`tel:${sellerPhone}`}
+              style={{ background: COLORS.green, color: "white" }}
+              className="shrink-0 rounded-lg px-3 py-1.5 text-body-sm font-semibold text-center"
+            >
+              {lang === "sw" ? "Piga Simu" : "Call"}
+            </a>
+          )}
         </div>
       )}
       {phoneLocked && (
@@ -1794,6 +1812,20 @@ function DealDetail({
         </div>
       )}
 
+      {/* Chat error — phone / email blocked */}
+      {chatError && (
+        <div
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+            borderColor: COLORS.sandLine,
+          }}
+          className="border-t px-3 sm:px-4 py-2 text-body-sm font-medium text-center"
+        >
+          {chatError}
+        </div>
+      )}
+
       {/* Composer */}
       {deal.status !== "declined" && deal.status !== "cancelled" && (
         <div
@@ -1811,7 +1843,10 @@ function DealDetail({
               lang === "sw" ? "Andika ujumbe..." : "Type a message..."
             }
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              if (chatError) setChatError("");
+            }}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
           />
           <button

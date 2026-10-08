@@ -5,6 +5,8 @@
 // Ulinzi wa store unalingana na backend:
 //   - NegotiationOfferCreateSerializer (buyer + seller)
 //   - DealRoomAcceptOfferSerializer (yeyote aliye upande wa pili)
+//
+// HAKUNA simulation / SEED data. Kila kitu kinatoka API.
 // ============================================================
 import { useEffect, useState, useMemo } from "react";
 import { dealsApi } from "../api/deals.js";
@@ -16,24 +18,24 @@ import { getUser as getUserById } from "./usersStore.js";
 const STORAGE_KEY = "sokomkononi_deals_v1";
 const UPDATE_EVENT = "sokomkononi:deals-updated";
 
-export const SEED_DEALS = [];
-
 function readFromStorage() {
-  if (typeof window === "undefined") return SEED_DEALS;
+  if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return SEED_DEALS;
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : SEED_DEALS;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return SEED_DEALS;
+    return [];
   }
 }
+
 function saveDeals(deals) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(deals));
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
+
 const sameId = (a, b) => String(a) === String(b);
 
 // Backend statuses → frontend slugs.
@@ -65,23 +67,31 @@ const API_TO_FRONTEND_DEAL_STATUS = {
   EXPIRED: "cancelled",
 };
 
+// ============================================================
+// SYNC READS
+// ============================================================
 export function getDeals() {
   return readFromStorage();
 }
+
 export function updateDeal(id, patch) {
   const current = getDeals();
   const next = current.map((d) => (sameId(d.id, id) ? { ...d, ...patch } : d));
   saveDeals(next);
   return next;
 }
+
 export function getDeal(id) {
   return getDeals().find((d) => sameId(d.id, id)) || null;
 }
+
 export function getDealByListing(listingId) {
   return getDeals().find((d) => sameId(d.listingId, listingId)) || null;
 }
 
-// ── Price resolution ────────────────────────────────────────
+// ============================================================
+// HELPERS
+// ============================================================
 function resolveAskingPrice(raw, listing, listingId) {
   const candidates = [
     listing?.price,
@@ -186,6 +196,9 @@ function _nameOf(...objs) {
   return "";
 }
 
+// ============================================================
+// NORMALIZE — API → frontend shape
+// ============================================================
 function normalizeDealFromApi(raw, currentUserId) {
   if (!raw) return null;
 
@@ -220,31 +233,15 @@ function normalizeDealFromApi(raw, currentUserId) {
   const status =
     API_TO_FRONTEND_DEAL_STATUS[statusRaw] || statusRaw.toLowerCase();
 
-  // ── Cache-backed backfills (ids but no names/emails/phones) ────────
-  let buyerEmail = buyer.email || raw.buyer_email || "";
-  let sellerEmail = seller.email || raw.seller_email || "";
-  let buyerPhone =
-    buyer.phone ?? buyer.phone_number ?? raw.buyer_phone ?? null;
-  let sellerPhone =
-    seller.phone ?? seller.phone_number ??
-    raw.seller_phone ?? raw.seller_contact?.phone ?? null;
-
-  if ((!buyerName || !buyerEmail || !buyerPhone) && buyerId != null) {
-    const u = getUserById(buyerId);
-    if (u) {
-      buyerName = buyerName || u.name || "";
-      buyerEmail = buyerEmail || u.email || "";
-      buyerPhone = buyerPhone ?? u.phone ?? null;
-    }
-  }
-  if ((!sellerName || !sellerEmail || !sellerPhone) && sellerId != null) {
-    const u = getUserById(sellerId);
-    if (u) {
-      sellerName = sellerName || u.name || "";
-      sellerEmail = sellerEmail || u.email || "";
-      sellerPhone = sellerPhone ?? u.phone ?? null;
-    }
-  }
+  // ── Contact info — ONLY what backend returns ────────────────
+  // Backend (DealUserSerializer) ina-handle visibility: inarudisha
+  // phone/email TU kama reservation imelipwa. Store HAIINGIZI chochote
+  // kutoka cache kwa phone/email za upande wa pili — hiyo inaepusha
+  // kuonyesha namba kwa bahati mbaya.
+  let buyerEmail = buyer.email || "";
+  let sellerEmail = seller.email || "";
+  let buyerPhone = buyer.phone ?? buyer.phone_number ?? null;
+  let sellerPhone = seller.phone ?? seller.phone_number ?? null;
 
   const meta = resolveMeta(
     raw,
@@ -252,8 +249,6 @@ function normalizeDealFromApi(raw, currentUserId) {
     listingId ?? raw?.listing_id ?? raw?.listing
   );
 
-  // Listing details (may come from the nested object, the local cache,
-  // or the deal row itself — but never trusted alone).
   const listingCached =
     listingId != null
       ? getListings().find((l) => String(l.id) === String(listingId))
@@ -355,13 +350,6 @@ function normalizeDealFromApi(raw, currentUserId) {
     adminNote: raw.admin_note || raw.resolution_note || "",
 
     // ── Money ──────────────────────────────────────────────
-    agreedPrice:
-      raw.agreed_price != null
-        ? Number(raw.agreed_price)
-        : raw.agreedPrice != null
-          ? Number(raw.agreedPrice)
-          : null,
-    agreedAt: raw.agreed_at || null,
     commission:
       raw.commission != null ? Number(raw.commission) : null,
     currency: raw.currency || "TZS",
@@ -374,11 +362,11 @@ function normalizeDealFromApi(raw, currentUserId) {
     lastMessageAt:
       raw.last_message_at || raw.updated_at || raw.created_at || null,
 
-    // ── Raw fallbacks so the UI never shows "—" for a real value ──
+    // ── Raw status for debugging ──────────────────────────
     _rawStatus: statusRaw,
 
+    // ── Messages = real chat + offers ──────────────────────
     messages: [
-      // Real chat messages (kama backend itazirudisha).
       ...(raw.messages || []).map((m) => ({
         id: m.id,
         sender: sameId(m.sender_id ?? m.sender, currentUserId) ? "me" : "them",
@@ -387,7 +375,6 @@ function normalizeDealFromApi(raw, currentUserId) {
         at: m.created_at,
         status: m.status || null,
       })),
-      // Offers zinaonekana kama bubbles zao wenyewe.
       ...(raw.offers || []).map((o) => ({
         id: o.id,
         sender: sameId(o.offered_by, currentUserId) ? "me" : "them",
@@ -400,6 +387,9 @@ function normalizeDealFromApi(raw, currentUserId) {
   };
 }
 
+// ============================================================
+// HYDRATE FROM API
+// ============================================================
 let _dealsUserId = null;
 
 export async function hydrateDealsFromApi(currentUserId) {
@@ -425,24 +415,14 @@ export async function fetchDealDetailAsync(dealId) {
     const deal = normalizeDealFromApi(raw, _dealsUserId);
     if (!deal) return { ok: false, error: new Error("Invalid deal response") };
 
-    // Belt-and-braces: if the backend omitted names/emails/phones, backfill
-    // them from usersStore. If the listing metadata is missing, backfill
-    // from listingsStore. This makes the admin table always render.
-    if (deal.buyerId != null && (!deal.buyerName || !deal.buyerEmail)) {
+    // Backfill names/listing meta from local caches (NEVER phone/email).
+    if (deal.buyerId != null && !deal.buyerName) {
       const u = getUserById(deal.buyerId);
-      if (u) {
-        if (!deal.buyerName) deal.buyerName = u.name || "";
-        if (!deal.buyerEmail) deal.buyerEmail = u.email || "";
-        if (!deal.buyerPhone) deal.buyerPhone = u.phone || null;
-      }
+      if (u) deal.buyerName = u.name || "";
     }
-    if (deal.sellerId != null && (!deal.sellerName || !deal.sellerEmail)) {
+    if (deal.sellerId != null && !deal.sellerName) {
       const u = getUserById(deal.sellerId);
-      if (u) {
-        if (!deal.sellerName) deal.sellerName = u.name || "";
-        if (!deal.sellerEmail) deal.sellerEmail = u.email || "";
-        if (!deal.sellerPhone) deal.sellerPhone = u.phone || null;
-      }
+      if (u) deal.sellerName = u.name || "";
     }
     if (deal.listingId != null && (!deal.listingTitle || !deal.listingPrice)) {
       const l = getListings().find(
@@ -456,6 +436,7 @@ export async function fetchDealDetailAsync(dealId) {
         if (!deal.listingStatus) deal.listingStatus = l.status || null;
       }
     }
+
     const current = getDeals();
     const existing = current.find((d) => sameId(d.id, dealId));
     const merged = existing
@@ -480,6 +461,9 @@ export async function fetchDealDetailAsync(dealId) {
   }
 }
 
+// ============================================================
+// CREATE / GET DEAL
+// ============================================================
 export async function getOrCreateDealAsync({
   listingId,
   currentUserId,
@@ -515,9 +499,6 @@ export async function getOrCreateDealAsync({
 
     if (initialMessage) {
       try {
-        // Send as a plain chat message — do NOT auto-create an offer at
-        // the asking price. That was a bug: every "ask a question" turned
-        // into a full-price offer.
         await dealsApi.sendDealMessage(deal.id, { text: initialMessage });
       } catch (msgErr) {
         console.warn("[dealsStore] initial message failed:", msgErr);
@@ -538,8 +519,6 @@ export async function getOrCreateDealAsync({
 
 // ============================================================
 // SEND OFFER — CHAGUO A
-// Buyer NA seller wote wanaweza kutuma offers (counter-offers).
-// Ulinzi: mtumiaji LAZIMA awe mshiriki wa deal hii.
 // ============================================================
 export async function sendOfferAsync(
   dealId,
@@ -552,7 +531,6 @@ export async function sendOfferAsync(
   const deal = previous.find((d) => sameId(d.id, dealId));
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
 
-  // Ulinzi: mtumiaji lazima awe buyer au seller wa deal hii.
   if (currentUserId != null) {
     const isBuyer =
       deal.buyerId != null && sameId(deal.buyerId, currentUserId);
@@ -624,10 +602,6 @@ export async function sendOfferAsync(
 
 // ============================================================
 // ACCEPT OFFER — CHAGUO A
-// Yeyote aliye UPANDE WA PILI wa offer ya mwisho anaweza kukubali.
-//   - Mnunuzi anatuma offer → muuzaji anaweza kukubali
-//   - Muuzaji anatuma counter → mnunuzi anaweza kukubali
-// Ulinzi: mtumiaji LAZIMA awe mshiriki, na ASIWE mwenyekiti wa offer.
 // ============================================================
 export async function acceptOfferAsync(dealId, offerId, currentUserId = null) {
   const previous = getDeals();
@@ -635,7 +609,6 @@ export async function acceptOfferAsync(dealId, offerId, currentUserId = null) {
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
 
   if (currentUserId != null) {
-    // 1. Lazima awe mshiriki wa deal
     const isBuyer =
       deal.buyerId != null && sameId(deal.buyerId, currentUserId);
     const isSeller =
@@ -647,7 +620,6 @@ export async function acceptOfferAsync(dealId, offerId, currentUserId = null) {
       };
     }
 
-    // 2. Hauwezi kukubali ofa yako mwenyewe
     const targetOffer = (deal.messages || []).find(
       (m) => m.offerAmount && sameId(m.id, offerId)
     );
@@ -676,6 +648,9 @@ export async function acceptOfferAsync(dealId, offerId, currentUserId = null) {
   }
 }
 
+// ============================================================
+// CANCEL DEAL
+// ============================================================
 export async function cancelDealAsync(dealId, reason = "") {
   const previous = getDeals();
   const deal = previous.find((d) => sameId(d.id, dealId));
@@ -698,6 +673,9 @@ export async function cancelDealAsync(dealId, reason = "") {
   }
 }
 
+// ============================================================
+// RESOLVE DISPUTE (admin)
+// ============================================================
 export async function resolveDisputeAsync(
   dealId,
   { resolution, note = "", transactionId = null }
@@ -748,48 +726,9 @@ export async function resolveDisputeAsync(
   }
 }
 
-export function resolveDispute(_id, _opts = {}) {
-  // Removed: this used to write to localStorage without calling the API,
-  // making disputes look resolved when they were not. Use
-  // `resolveDisputeAsync` instead.
-  throw new Error(
-    "resolveDispute() is deprecated. Use resolveDisputeAsync() instead."
-  );
-}
-
-export function getOrCreateDeal(payload) {
-  const current = getDeals();
-  const existing = current.find(
-    (d) =>
-      (payload?.listingId && sameId(d.listingId, payload.listingId)) ||
-      (payload?.listingTitle && d.listingTitle === payload.listingTitle)
-  );
-  if (existing) return existing;
-
-  const now = new Date().toISOString();
-  const deal = {
-    id: `deal_${Date.now()}`,
-    listingId: payload?.listingId || null,
-    listingTitle: payload?.listingTitle || "",
-    category: payload?.category || null,
-    location: payload?.location || null,
-    askingPrice: payload?.askingPrice ?? null,
-    currentOffer: payload?.askingPrice ?? null,
-    counterpartyName: payload?.sellerName || "",
-    buyerName: payload?.buyerName || "",
-    sellerName: payload?.sellerName || "",
-    status: "negotiating",
-    createdAt: now,
-    messages: [],
-  };
-  saveDeals([...current, deal]);
-  return deal;
-}
-
-export function checkReservationReminders() {
-  return getDeals();
-}
-
+// ============================================================
+// HOOKS
+// ============================================================
 export function useDeals(currentUserId) {
   const [deals, setDeals] = useState(() => getDeals());
   const listings = useListings();

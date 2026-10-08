@@ -1,6 +1,6 @@
 // ============================================================
 // RevenueSection.jsx — fully backend-synced
-// Flat fees: listing, reservation, success, leading, advertisement.
+// Flat fees: listing, reservation (tiers), success, leading, advertisement.
 // Boost packages: price + toggle.
 // Packages (bundles) zipo kwenye ukurasa tofauti (AdminBundles).
 // ============================================================
@@ -16,11 +16,14 @@ import EditableAmount from "../components/Revenue/EditableAmount.jsx";
 import EditablePercent from "../components/Revenue/EditablePercent.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
-  useReservationFeeConfig,
-  updateReservationFeeAsync,
-  updateReservationDaysAsync,
+  useReservationSettings,
+  useReservationTiers,
   toggleReservationFeeAsync,
-  hydrateReservationFeeFromApi,
+  addReservationTierAsync,
+  updateReservationTierAsync,
+  removeReservationTierAsync,
+  toggleReservationTierAsync,
+  hydrateReservationFromApi,
 } from "../../../../config/feePolicy.js";
 import {
   useListingFeeConfigs, updateListingFeeConfigAsync, addFeeConfigAsync,
@@ -86,30 +89,51 @@ function EditHint({ lang, accentColor = COLORS.gold }) {
   );
 }
 
-// ── Toggle Button ─────────────────────────────────────────
-function ToggleButton({ enabled, onToggle, disabled, lang }) {
+// ── Toggle Switch (ON = kulia, OFF = kushoto) ────────────
+function ToggleSwitch({ enabled, onToggle, disabled, lang, compact = false }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
+  const w = compact ? "w-9" : "w-11";
+  const h = compact ? "h-5" : "h-6";
+  const knob = compact ? "h-3.5 w-3.5" : "h-4 w-4";
+  const travel = compact ? "translateX(18px)" : "translateX(24px)";
+  const rest = compact ? "translateX(3px)" : "translateX(4px)";
+
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      disabled={disabled}
-      className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-      style={{
-        background: enabled ? `${COLORS.green}15` : `${COLORS.rust}15`,
-        color: enabled ? COLORS.green : COLORS.rust,
-      }}
-    >
-      {enabled ? <Power size={11} /> : <PowerOff size={11} />}
-      {enabled ? t("Imezimwa", "Disable") : t("Imewashwa", "Enable")}
-    </button>
+    <div className="flex items-center gap-2 shrink-0">
+      {!compact && (
+        <span
+          className="text-[10px] font-bold uppercase tracking-wide"
+          style={{ color: enabled ? COLORS.green : COLORS.rust }}
+        >
+          {enabled ? t("WAZI", "ON") : t("ZIMA", "OFF")}
+        </span>
+      )}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label={enabled ? "Disable" : "Enable"}
+        onClick={onToggle}
+        disabled={disabled}
+        className={`relative inline-flex items-center ${h} ${w} rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0`}
+        style={{ background: enabled ? COLORS.green : "#D1D5DB" }}
+      >
+        <span
+          className={`inline-block ${knob} rounded-full bg-white shadow transform transition-transform`}
+          style={{
+            transform: enabled ? travel : rest,
+          }}
+        />
+      </button>
+    </div>
   );
 }
 
 export default function RevenueSection() {
   const { lang } = useLanguage();
   const listingFeeConfigs = useListingFeeConfigs();
-  const reservationFee = useReservationFeeConfig();
+  const reservationSettings = useReservationSettings();
+  const reservationTiers = useReservationTiers();
   const leadingFee = useLeadingFeeConfig();
   const adFee = useAdvertisementFeeConfig();
   const successFee = useSuccessFeeConfig();
@@ -136,7 +160,7 @@ export default function RevenueSection() {
     setError("");
     try {
       const results = await Promise.allSettled([
-        hydrateReservationFeeFromApi(),
+        hydrateReservationFromApi(),
         hydrateListingFeeConfigsFromApi(),
         hydrateLeadingFeeFromApi(),
         hydrateAdvertisementFeeFromApi(),
@@ -250,28 +274,74 @@ export default function RevenueSection() {
     });
 
   // ═══════════════════════════════════════════════════════════
-  // RESERVATION — Singleton
+  // RESERVATION — Settings (toggle) + Tiers CRUD
   // ═══════════════════════════════════════════════════════════
-  const updateReservationFlat = (fee) =>
-    withBusy("res-flat", async () => {
-      const res = await updateReservationFeeAsync(fee);
-      if (res.ok) flashSaved();
-      return res;
-    });
-
-  const updateReservationDays = (days) =>
-    withBusy("res-days", async () => {
-      const res = await updateReservationDaysAsync(days);
-      if (res.ok) flashSaved();
-      return res;
-    });
-
   const toggleReservation = () =>
     withBusy("res-toggle", async () => {
       const res = await toggleReservationFeeAsync();
       if (res.ok) flashSaved();
       return res;
     });
+
+  const handleAddTier = () =>
+    withBusy("res-add-tier", async () => {
+      const nextOrder =
+        reservationTiers.length > 0
+          ? Math.max(...reservationTiers.map((t) => t.order || 0)) + 1
+          : 1;
+      const nextHours =
+        reservationTiers.length > 0
+          ? Math.max(...reservationTiers.map((t) => t.hours || 0)) + 12
+          : 12;
+      const res = await addReservationTierAsync({
+        hours: nextHours,
+        fee: 1000,
+        is_active: true,
+        order: nextOrder,
+      });
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const updateTierHours = (id, hours) =>
+    withBusy(`res-tier-h-${id}`, async () => {
+      const res = await updateReservationTierAsync(id, { hours });
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const updateTierFee = (id, fee) =>
+    withBusy(`res-tier-f-${id}`, async () => {
+      const res = await updateReservationTierAsync(id, { fee });
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const toggleTier = (id) =>
+    withBusy(`res-tier-t-${id}`, async () => {
+      const res = await toggleReservationTierAsync(id);
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const handleDeleteTier = (tier) => {
+    if (
+      !window.confirm(
+        t(
+          `Futa tier ya saa ${tier.hours}?`,
+          `Delete tier for ${tier.hours} hours?`
+        )
+      )
+    )
+      return;
+    withBusy(`res-tier-d-${tier.id}`, async () => {
+      const res = await removeReservationTierAsync(tier.id);
+      if (res.ok) {
+        showFlash(t("Tier imefutwa.", "Tier deleted."));
+      }
+      return res;
+    });
+  };
 
   // ═══════════════════════════════════════════════════════════
   // SUCCESS FEE — Singleton
@@ -368,31 +438,30 @@ export default function RevenueSection() {
   );
 
   const handleAddFeeConfig = (cat) =>
-  withBusy(`add-fee-${cat.key}`, async () => {
-    const nameForApi =
-      cat?.label?.en || cat?.label?.sw || cat?.key || "New Category";
-    const res = await addFeeConfigAsync({
-      category_key: cat.key,
-      name: nameForApi,
-      fee_mode: "FLAT",
-      flat_fee: 3000,
-      percentage: 0,
-      min_price: 10000,
-      max_price: 100000,
-      priority: 0,
+    withBusy(`add-fee-${cat.key}`, async () => {
+      const nameForApi =
+        cat?.label?.en || cat?.label?.sw || cat?.key || "New Category";
+      const res = await addFeeConfigAsync({
+        category_key: cat.key,
+        name: nameForApi,
+        fee_mode: "FLAT",
+        flat_fee: 3000,
+        percentage: 0,
+        min_price: 10000,
+        max_price: 100000,
+        priority: 0,
+      });
+      if (res.ok) {
+        showFlash(
+          t(
+            `Fee config ya "${cat.key}" imeongezwa. Bofya kiasi kuhariri.`,
+            `Fee config for "${cat.key}" added. Click amount to edit.`
+          )
+        );
+        await hydrateListingFeeConfigsFromApi();
+      }
+      return res;
     });
-    if (res.ok) {
-      showFlash(
-        t(
-          `Fee config ya "${cat.key}" imeongezwa. Bofya kiasi kuhariri.`,
-          `Fee config for "${cat.key}" added. Click amount to edit.`
-        )
-      );
-      // ⬇️ MPYA — refresh ili fee rule ionekane papo hapo
-      await hydrateListingFeeConfigsFromApi();
-    }
-    return res;
-  });
 
   const orphanCount = listingFeeConfigs.filter((c) => c.orphan).length;
 
@@ -667,7 +736,7 @@ export default function RevenueSection() {
                       </span>
                     )}
                     <div className="ml-auto flex items-center gap-1.5">
-                      <ToggleButton
+                      <ToggleSwitch
                         enabled={c.isActive}
                         onToggle={() => toggleListingFee(c.key)}
                         disabled={isToggling || busy.saving}
@@ -727,7 +796,7 @@ export default function RevenueSection() {
                     {isFlat ? (
                       <div className="flex flex-col items-start min-w-0 sm:col-span-3">
                         <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                          {t("Ada Maalum (TZS)", "Flat Fee (TZS)")}
+                          {t("Flat Fee (TZS)", "Flat Fee (TZS)")}
                         </span>
                         <div className="w-full min-w-0">
                           <EditableAmount
@@ -740,7 +809,7 @@ export default function RevenueSection() {
                       <>
                         <div className="flex flex-col items-start min-w-0">
                           <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                            {t("Kiwango (%)", "Rate (%)")}
+                            {t("Kiwango", "Rate")}
                           </span>
                           <div className="w-full min-w-0">
                             <EditablePercent
@@ -753,7 +822,7 @@ export default function RevenueSection() {
                         </div>
                         <div className="flex flex-col items-start min-w-0">
                           <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                            {t("Kiwango cha Chini (TZS)", "Min Fee (TZS)")}
+                            {t("Chini", "Min")}
                           </span>
                           <div className="w-full min-w-0">
                             <EditableAmount
@@ -764,7 +833,7 @@ export default function RevenueSection() {
                         </div>
                         <div className="flex flex-col items-start min-w-0">
                           <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                            {t("Kiwango cha Juu (TZS)", "Max Fee (TZS)")}
+                            {t("Juu", "Max")}
                           </span>
                           <div className="w-full min-w-0">
                             <EditableAmount
@@ -776,46 +845,6 @@ export default function RevenueSection() {
                       </>
                     )}
                   </div>
-                  {/* ─────────────────────────────────────────────── */}
-                  {/* Buyer preview — what a seller sees on /dashboard/post */}
-                  {/* ─────────────────────────────────────────────── */}
-                  <div
-                    className="mt-2 rounded-lg border px-3 py-2 text-[11px] leading-relaxed"
-                    style={{
-                      background: "rgba(232,163,61,0.05)",
-                      borderColor: "rgba(232,163,61,0.3)",
-                      color: "#8A5A16",
-                    }}
-                  >
-                    <span className="font-semibold">
-                      {t("Wauzaji wataona:", "Sellers will see:")}
-                    </span>{" "}
-                    {c.isActive === false ? (
-                      <span style={{ color: COLORS.green }} className="font-semibold">
-                        {t("Bure (ada imezimwa)", "Free (fee disabled)")}
-                      </span>
-                    ) : String(c.feeMode || "PERCENTAGE").toUpperCase() === "FLAT" ? (
-                      Number(c.flatFee) > 0 ? (
-                        <span className="font-semibold">
-                          {Number(c.flatFee).toLocaleString("en-US")} TZS{" "}
-                          {t("kwa kila listing", "per listing")}
-                        </span>
-                      ) : (
-                        <span style={{ color: COLORS.rust }} className="font-semibold">
-                          {t("Bure — kiasi ni 0. Weka kiasi zaidi ya 0!",
-                             "Free — amount is 0. Set an amount above 0!")}
-                        </span>
-                      )
-                    ) : (
-                      <span className="font-semibold">
-                        {((Number(c.rate) || 0) * 100).toFixed(2).replace(/\.?0+$/, "")}%{" "}
-                        {t("ya bei ya mali", "of the listing price")}
-                        {" "}({t("chini", "min")}: {Number(c.min || 0).toLocaleString("en-US")} TZS
-                        {" · "}
-                        {t("juu", "max")}: {Number(c.max || 0).toLocaleString("en-US")} TZS)
-                      </span>
-                    )}
-                  </div>
                 </div>
               );
             })}
@@ -823,7 +852,7 @@ export default function RevenueSection() {
         </RevenueCard>
 
         {/* ═══════════════════════════════════════════════════════ */}
-        {/* 2. RESERVATION — Singleton */}
+        {/* 2. RESERVATION — Settings + Tiers */}
         {/* ═══════════════════════════════════════════════════════ */}
         <RevenueCard accentColor={COLORS.green}>
           <div className="flex items-center gap-3 mb-1">
@@ -838,41 +867,141 @@ export default function RevenueSection() {
                 {t("Ada ya Reservation", "Reservation Fee")}
               </p>
               <p className="text-xs text-secondary mt-0.5">
-                {t("Flat fee kwa mfumo wote", "Flat fee system-wide")}
+                {t(
+                  "Tiers kwa muda tofauti — admin anaweza kuongeza/kufuta",
+                  "Tiers for different durations — admin can add/remove"
+                )}
               </p>
             </div>
-            <ToggleButton
-              enabled={reservationFee.is_enabled}
+            <ToggleSwitch
+              enabled={reservationSettings.is_enabled}
               onToggle={toggleReservation}
               disabled={!!busy["res-toggle"]}
               lang={lang}
             />
           </div>
+
+          {!reservationSettings.is_enabled && (
+            <p
+              className="text-xs text-center rounded-lg px-3 py-2 mb-3"
+              style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+            >
+              {t(
+                "Reservation Fee imezimwa — tiers zote ni BURE kwa watumiaji.",
+                "Reservation Fee is disabled — all tiers are FREE for users."
+              )}
+            </p>
+          )}
+
           <EditHint lang={lang} accentColor={COLORS.green} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="flex flex-col items-start min-w-0">
-              <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                {t("Flat Fee (TZS)", "Flat Fee (TZS)")}
-              </span>
-              <div className="w-full min-w-0">
-                <EditableAmount
-                  value={reservationFee.flat_fee}
-                  onSave={updateReservationFlat}
-                />
-              </div>
-            </div>
-            <div className="flex flex-col items-start min-w-0">
-              <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                {t("Siku", "Days")}
-              </span>
-              <div className="w-full min-w-0">
-                <EditableAmount
-                  value={reservationFee.days}
-                  onSave={updateReservationDays}
-                />
-              </div>
-            </div>
+
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <span className="text-[11px] font-semibold text-secondary">
+              {t("Tiers", "Tiers")} ({reservationTiers.length})
+            </span>
+            <button
+              type="button"
+              onClick={handleAddTier}
+              disabled={!!busy["res-add-tier"]}
+              style={{ background: COLORS.gold, color: COLORS.night }}
+              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+            >
+              {busy["res-add-tier"] ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Plus size={12} />
+              )}
+              {t("Ongeza Tier", "Add Tier")}
+            </button>
           </div>
+
+          {reservationTiers.length === 0 ? (
+            <p className="text-xs text-muted text-center py-3">
+              {t(
+                "Hakuna tiers. Bofya 'Ongeza Tier' kuanza.",
+                "No tiers yet. Click 'Add Tier' to start."
+              )}
+            </p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {reservationTiers.map((tier) => {
+                const isToggling = !!busy[`res-tier-t-${tier.id}`];
+                const isDeleting = !!busy[`res-tier-d-${tier.id}`];
+                const days = tier.hours % 24 === 0 ? tier.hours / 24 : null;
+                const label = days
+                  ? t(
+                      `Siku ${days}`,
+                      `${days} ${days === 1 ? "Day" : "Days"}`
+                    )
+                  : t(`Saa ${tier.hours}`, `${tier.hours} hrs`);
+                return (
+                  <div key={tier.id} className="py-3">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <p className="text-sm font-semibold text-primary">
+                        {label}
+                      </p>
+                      {!tier.is_active && (
+                        <span
+                          style={{
+                            background: "rgba(16,26,46,0.08)",
+                            color: COLORS.night,
+                          }}
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                        >
+                          {t("IMEZIMWA", "INACTIVE")}
+                        </span>
+                      )}
+                      <div className="ml-auto flex items-center gap-1.5">
+                        <ToggleSwitch
+                          enabled={tier.is_active}
+                          onToggle={() => toggleTier(tier.id)}
+                          disabled={isToggling}
+                          lang={lang}
+                          compact
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTier(tier)}
+                          disabled={isDeleting}
+                          className="p-1.5 text-muted hover:text-[#C1502E] rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                        >
+                          {isDeleting ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={12} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex flex-col items-start min-w-0">
+                        <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                          {t("Muda (Saa)", "Duration (Hours)")}
+                        </span>
+                        <div className="w-full min-w-0">
+                          <EditableAmount
+                            value={tier.hours}
+                            onSave={(v) => updateTierHours(tier.id, v)}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-start min-w-0">
+                        <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                          {t("Bei (TZS)", "Fee (TZS)")}
+                        </span>
+                        <div className="w-full min-w-0">
+                          <EditableAmount
+                            value={tier.fee}
+                            onSave={(v) => updateTierFee(tier.id, v)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </RevenueCard>
 
         {/* ═══════════════════════════════════════════════════════ */}
@@ -904,7 +1033,7 @@ export default function RevenueSection() {
                   )}
               </p>
             </div>
-            <ToggleButton
+            <ToggleSwitch
               enabled={successFee.is_enabled}
               onToggle={toggleSuccess}
               disabled={!!busy["success-toggle"]}
@@ -971,7 +1100,7 @@ export default function RevenueSection() {
                 )}
               </p>
             </div>
-            <ToggleButton
+            <ToggleSwitch
               enabled={boostFee.enabled}
               onToggle={toggleBoostFee}
               disabled={!boostFee.loaded || !!busy["boost-fee-toggle"]}
@@ -1019,7 +1148,7 @@ export default function RevenueSection() {
                         value={pkg.price}
                         onSave={(v) => updateBoostPrice(pkg.key, v)}
                       />
-                      <ToggleButton
+                      <ToggleSwitch
                         enabled={pkg.isActive}
                         onToggle={() => toggleBoost(pkg.key)}
                         disabled={isToggling || busy.saving}
@@ -1053,7 +1182,7 @@ export default function RevenueSection() {
                   {getLocalized(leadingFee.desc, lang) || ""}
                 </p>
               </div>
-              <ToggleButton
+              <ToggleSwitch
                 enabled={leadingFee.is_enabled}
                 onToggle={toggleLeading}
                 disabled={!!busy["leading-toggle"]}
@@ -1086,7 +1215,7 @@ export default function RevenueSection() {
                   {getLocalized(adFee.desc, lang) || ""}
                 </p>
               </div>
-              <ToggleButton
+              <ToggleSwitch
                 enabled={adFee.is_enabled}
                 onToggle={toggleAdvertisement}
                 disabled={!!busy["advertisement-toggle"]}
