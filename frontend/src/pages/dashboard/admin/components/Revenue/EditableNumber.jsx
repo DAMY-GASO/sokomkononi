@@ -5,7 +5,7 @@
 // ============================================================
 import React, { useState, useEffect, useRef } from "react";
 import { Check, X, Pencil, Loader2 } from "lucide-react";
-import { COLORS } from "../../dashboard/components/shared.js";
+import { COLORS } from "../../shared/constants.js";
 
 export default function EditableNumber({
   value,
