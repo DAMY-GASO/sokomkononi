@@ -91,11 +91,11 @@ function normItem(raw) {
   return {
     id: raw.id,
     type: raw.type,
-    name: raw.name || raw.title || raw.subject || `#${raw.id}`,
+    name: raw.name || raw.title || raw.subject || raw.repr || `#${raw.id}`,
     subtitle: raw.subtitle || raw.description || "",
     deletedAt: raw.deleted_at || raw.created_at,
-    deletedBy: raw.deleted_by || raw.deleted_by_name || "—",
-    details: raw.details || "",
+    deletedBy: raw.deleted_by_name || raw.deleted_by || "—",
+    details: raw.details || raw.reason || "",
     thumbnail: raw.thumbnail || raw.image_url || null,
   };
 }
