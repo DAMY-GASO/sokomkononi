@@ -17,17 +17,16 @@ export const REVENUE_STREAMS = [
   { key: "leading", label: "Leading", field: "leading_revenue" },
   { key: "advertise", label: "Ads", field: "advertisement_revenue" },
   { key: "bundle", label: "Bundles", field: "bundle_revenue" },
-  { key: "success", label: "Success Fee", field: "success_fee_revenue", optional: true },
+  { key: "success", label: "Success Fee", field: "success_fee_revenue" },
 ];
 
-const DEFAULT_STREAMS = REVENUE_STREAMS.filter((s) => !s.optional);
+const DEFAULT_STREAMS = REVENUE_STREAMS;
 
 export function parsePlatformRevenue(raw) {
   const num = (v) => Number(v) || 0;
   const byType = {};
   const streams = [];
   REVENUE_STREAMS.forEach((s) => {
-    if (s.optional && raw?.[s.field] == null) return;
     byType[s.key] = num(raw?.[s.field]);
     streams.push(s);
   });

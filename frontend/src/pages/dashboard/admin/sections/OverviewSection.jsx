@@ -1,8 +1,7 @@
 // ============================================================
 // OverviewSection.jsx
 // Muhtasari wa mfumo — stats + live transactions.
-// Mapato ya Jumla = jumla ya njia zote 6 za mapato (shared/revenue.js).
-// Rangi: maandishi yote yanaonekana kwenye dark background.
+// Mapato ya Jumla = jumla ya njia zote 7 za mapato.
 // ============================================================
 import React, { useMemo, useEffect, useState } from "react";
 import {
@@ -20,6 +19,7 @@ import {
   UserPlus,
   CreditCard,
   TrendingUp,
+  User,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import StatCard from "../shared/StatCard.jsx";
@@ -66,6 +66,8 @@ export default function OverviewSection({ onNavigate }) {
     totalUsers: 0,
     totalSellers: 0,
     totalBuyers: 0,
+    sellersOnly: 0,
+    buyersOnly: 0,
     bothRoles: 0,
     neitherRole: 0,
     totalAdmins: 0,
@@ -85,17 +87,17 @@ export default function OverviewSection({ onNavigate }) {
         const data = await api.get("/finance/user-stats/");
         if (!cancelled) setUserStats(data);
       } catch {
-        /* noop — fallback inatumika */
+        /* noop */
       }
     })();
     return () => { cancelled = true; };
   }, []);
 
-  // Tumia userStats kutoka API; fallback kwa local counts
   const totalUsers = userStats.totalUsers || users.length;
-  const activeSellers = userStats.totalSellers || 0;
-  const activeBuyers = userStats.totalBuyers || 0;
+  const sellersOnly = userStats.sellersOnly || 0;
+  const buyersOnly = userStats.buyersOnly || 0;
   const bothRoles = userStats.bothRoles || 0;
+  const neitherRole = userStats.neitherRole || 0;
 
   const newRegistrations = useMemo(() => {
     const cutoff = Date.now() - NEW_REGISTRATION_WINDOW_DAYS * 86400000;
@@ -166,7 +168,8 @@ export default function OverviewSection({ onNavigate }) {
 
   const maxDayRevenue = Math.max(...revenueByDay.map((d) => d.total), 1);
 
-  const stats = [
+  // Kikundi cha kwanza — user breakdown
+  const userStats_grid = [
     {
       id: "users",
       label: lang === "sw" ? "Watumiaji Wote" : "Total Users",
@@ -175,26 +178,37 @@ export default function OverviewSection({ onNavigate }) {
       color: COLORS.gold,
     },
     {
-      id: "activeBuyers",
-      label: lang === "sw" ? "Wanunuzi Hai" : "Active Buyers",
-      value: activeBuyers.toLocaleString(),
-      icon: UserCheck,
-      color: COLORS.green,
-    },
-    {
-      id: "activeSellers",
-      label: lang === "sw" ? "Wauzaji Hai" : "Active Sellers",
-      value: activeSellers.toLocaleString(),
+      id: "sellersOnly",
+      label: lang === "sw" ? "Wauzaji Pekee" : "Sellers Only",
+      value: sellersOnly.toLocaleString(),
       icon: Store,
       color: "#2563EB",
+    },
+    {
+      id: "buyersOnly",
+      label: lang === "sw" ? "Wanunuzi Pekee" : "Buyers Only",
+      value: buyersOnly.toLocaleString(),
+      icon: UserCheck,
+      color: COLORS.green,
     },
     {
       id: "bothRoles",
       label: lang === "sw" ? "Wote Wawili" : "Both Roles",
       value: bothRoles.toLocaleString(),
-      icon: Users,
+      icon: User,
       color: "#7C3AED",
     },
+    {
+      id: "neitherRole",
+      label: lang === "sw" ? "Hawana (Wapya)" : "Neither (New)",
+      value: neitherRole.toLocaleString(),
+      icon: UserPlus,
+      color: "#D97706",
+    },
+  ];
+
+  // Kikundi cha pili — shughuli
+  const activityStats = [
     {
       id: "listings",
       label: lang === "sw" ? "Mali Zote" : "Total Listings",
@@ -262,14 +276,31 @@ export default function OverviewSection({ onNavigate }) {
         }
       />
 
-      {/* Grid ya stats za kawaida */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4">
-        {stats.map((stat) => (
-          <StatCard key={stat.id} {...stat} />
-        ))}
+      {/* Kikundi 1 — User Breakdown */}
+      <div className="mb-4">
+        <h3 className="text-xs font-semibold text-secondary uppercase tracking-wide mb-2">
+          {lang === "sw" ? "Watumiaji" : "Users"}
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+          {userStats_grid.map((stat) => (
+            <StatCard key={stat.id} {...stat} />
+          ))}
+        </div>
       </div>
 
-      {/* Total Revenue — kadi kubwa chini ya grid */}
+      {/* Kikundi 2 — Shughuli */}
+      <div className="mb-6">
+        <h3 className="text-xs font-semibold text-secondary uppercase tracking-wide mb-2">
+          {lang === "sw" ? "Shughuli" : "Activity"}
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+          {activityStats.map((stat) => (
+            <StatCard key={stat.id} {...stat} />
+          ))}
+        </div>
+      </div>
+
+      {/* Total Revenue — kadi kubwa */}
       <div
         className="rounded-2xl p-5 sm:p-7 lg:p-8 mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 lg:gap-8"
         style={{
@@ -319,8 +350,7 @@ export default function OverviewSection({ onNavigate }) {
           </div>
         </div>
 
-        {/* Breakdown ya mapato kwa aina */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 w-full lg:w-auto shrink-0">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 w-full lg:w-auto shrink-0">
           {revenue.streams.map(({ key, label }) => (
             <RevenueBreakdown
               key={key}
