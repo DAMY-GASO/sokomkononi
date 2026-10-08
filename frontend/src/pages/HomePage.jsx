@@ -8,6 +8,7 @@ import Navbar from "../components/Navbar.jsx";
 import PageLoader from "../components/PageLoader.jsx";
 import ListingCard from "../components/ListingCard.jsx";
 import CategoryTile from "../components/CategoryTile.jsx";
+import BannerHero from "../components/BannerHero.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
 import { useAppStoreLinks } from "../config/systemSettingsStore.js";
 import {
@@ -101,9 +102,6 @@ function Reveal({ children, delay = 0, direction = "up", className = "" }) {
 
 // ============================================================
 // ViewAllTile — kitufe cha "Tazama Zote" kinachokaa ndani ya grid.
-// Kinajaza nafasi iliyobaki ya safu ya mwisho kwa kila breakpoint,
-// ili grid ikamilike kwa usawa (mf. kategoria 11 → kitufe ni ya 12).
-// `cols` = idadi ya nguzo kwa kila breakpoint, mf. { base: 2, md: 3, lg: 4 }
 // ============================================================
 const SPAN_CLASSES = {
   base: { 1: "col-span-1", 2: "col-span-2" },
@@ -122,8 +120,6 @@ function fillSpan(itemCount, cols) {
     .join(" ");
 }
 
-// Idadi ya mali zinazotrend kwenye grid; kitufe cha "Tazama Zote" ni nafasi ya mwisho
-// (mali 24 + kitufe 1 = nafasi 25).
 const TRENDING_LIMIT = 24;
 const TRENDING_COLS = { base: 2, md: 3, lg: 4 };
 const CATEGORY_COLS = { base: 2, sm: 3, md: 4, lg: 6 };
@@ -164,7 +160,6 @@ function AmbientBackground() {
       className="fixed inset-0 pointer-events-none overflow-hidden"
       style={{ zIndex: 0 }}
     >
-      {/* Very faint diagonal beams */}
       <div
         className="absolute top-[8%] h-px w-[30%] bg-gradient-to-r from-transparent via-gold to-transparent animate-beam"
         style={{ opacity: 0.12 }}
@@ -178,7 +173,6 @@ function AmbientBackground() {
         style={{ animationDelay: "-15s", opacity: 0.09 }}
       />
 
-      {/* Barely-there drifting dots */}
       <span
         className="absolute top-[14%] w-1 h-1 rounded-full bg-gold animate-drift-across"
         style={{ opacity: 0.22, animationDuration: "55s" }}
@@ -192,7 +186,6 @@ function AmbientBackground() {
         style={{ opacity: 0.2, animationDuration: "62s", animationDelay: "-38s" }}
       />
 
-      {/* Very soft breathing glows */}
       <div
         className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full animate-glow-breathe"
         style={{ background: "radial-gradient(circle, rgba(254,164,6,0.04) 0%, transparent 70%)" }}
@@ -205,8 +198,6 @@ function AmbientBackground() {
   );
 }
 
-// Loader inaonekana mara moja kila ukurasa unapofunguliwa upya (si kila
-// unaporudi Home kupitia navigation ndani ya app).
 let homeLoaderShown = false;
 
 // ============================================================
@@ -221,7 +212,6 @@ export default function HomePage() {
 
   const [openFaq, setOpenFaq] = useState(null);
 
-  // Page loader — inaonekana kwa muda mfupi kabla ya Home kuonyeshwa
   const [ready, setReady] = useState(homeLoaderShown);
   useEffect(() => {
     if (ready) return undefined;
@@ -232,7 +222,6 @@ export default function HomePage() {
     return () => clearTimeout(id);
   }, [ready]);
 
-  // Links za apps zinatoka kwenye system settings (admin anaziweka/kuzibadilisha)
   const [appLinks] = useAppStoreLinks();
   const playUrl = (appLinks?.play || "").trim();
   const appStoreUrl = (appLinks?.appstore || "").trim();
@@ -381,10 +370,14 @@ export default function HomePage() {
         <Navbar lang={lang} setLang={setLang} categories={categories} />
 
         {/* ═══════════════════════════════════════════════════ */}
+        {/* BANNER HERO — banners kutoka Content Management      */}
+        {/* ═══════════════════════════════════════════════════ */}
+        <BannerHero />
+
+        {/* ═══════════════════════════════════════════════════ */}
         {/* HERO                                                */}
         {/* ═══════════════════════════════════════════════════ */}
         <section className="relative dark-surface bg-night-deep text-white px-4 py-14 sm:py-20 lg:py-24 overflow-hidden min-h-[92svh] sm:min-h-[88svh] flex items-center">
-          {/* Aurora orbs */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div
               className="absolute -top-1/3 -left-1/4 w-[70%] h-[70%] rounded-full opacity-20 blur-[130px] animate-aurora"
@@ -396,7 +389,6 @@ export default function HomePage() {
             />
           </div>
 
-          {/* Grid overlay */}
           <div
             className="absolute inset-0 opacity-[0.04] pointer-events-none"
             style={{
@@ -408,7 +400,6 @@ export default function HomePage() {
             }}
           />
 
-          {/* Faint local beams */}
           <div
             className="absolute top-[12%] h-px w-[30%] bg-gradient-to-r from-transparent via-gold to-transparent animate-beam"
             style={{ opacity: 0.15 }}
@@ -418,7 +409,6 @@ export default function HomePage() {
             style={{ animationDelay: "-10s", opacity: 0.12 }}
           />
 
-          {/* Barely-visible drifting dots (mobile + desktop) */}
           <span
             className="absolute top-[22%] left-[10%] w-1 h-1 rounded-full bg-gold animate-drift-across"
             style={{ opacity: 0.2, animationDuration: "58s" }}
@@ -428,9 +418,7 @@ export default function HomePage() {
             style={{ opacity: 0.18, animationDuration: "72s", animationDelay: "-22s" }}
           />
 
-          {/* Content */}
           <div className="relative w-full max-w-4xl mx-auto text-center">
-            {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-full px-4 py-2 mb-7 animate-fade-in-up">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-60" />
@@ -441,7 +429,6 @@ export default function HomePage() {
               </span>
             </div>
 
-            {/* Headline */}
             <h1
               className="font-bold leading-[1.05] tracking-[-0.02em] animate-fade-in-up text-[clamp(2.25rem,9.5vw,4.5rem)]"
               style={{ animationDelay: "0.1s" }}
@@ -465,7 +452,6 @@ export default function HomePage() {
               )}
             </h1>
 
-            {/* ── Elegant typewriter subtitle ───────────────── */}
             <div
               className="mt-7 max-w-3xl mx-auto animate-fade-in-up"
               style={{ animationDelay: "0.2s" }}
@@ -491,12 +477,10 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* ── Premium CTA buttons ───────────────────────── */}
             <div
               className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center mt-10 max-w-md sm:max-w-none mx-auto animate-fade-in-up px-2"
               style={{ animationDelay: "0.35s" }}
             >
-              {/* Buy Now — primary gold */}
               <button
                 onClick={handleBuyNow}
                 className="group relative overflow-hidden inline-flex items-center gap-3 rounded-full
@@ -521,7 +505,6 @@ export default function HomePage() {
                 <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
               </button>
 
-              {/* Sell Now — secondary green */}
               <button
                 onClick={handleSellNow}
                 className="group relative overflow-hidden inline-flex items-center gap-3 rounded-full
@@ -546,7 +529,6 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* ── Elegant trust row ─────────────────────────── */}
             <div
               className="mt-8 flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-5 gap-y-2 text-xs sm:text-sm text-white/70 animate-fade-in-up"
               style={{ animationDelay: "0.5s" }}
@@ -567,7 +549,6 @@ export default function HomePage() {
               </span>
             </div>
 
-            {/* App badges */}
             <div
               className="flex flex-wrap gap-2 sm:gap-3 justify-center mt-8 sm:mt-10 animate-fade-in-up"
               style={{ animationDelay: "0.6s" }}
@@ -618,7 +599,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Scroll hint */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 hidden md:flex flex-col items-center gap-1 text-white/25 animate-bounce-subtle pointer-events-none">
             <span className="text-[9px] uppercase tracking-[0.25em]">
               {lang === "sw" ? "Sogeza" : "Scroll"}
@@ -629,13 +609,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ═══════════════════════════════════════════════════ */}
-        {/* WHY — editorial two-column layout                   */}
-        {/* ═══════════════════════════════════════════════════ */}
+        {/* WHY */}
         <section className="relative py-16 sm:py-24 px-4">
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
-              {/* Left column — heading */}
               <Reveal>
                 <div className="lg:sticky lg:top-24">
                   <span className="text-[11px] font-semibold text-gold-ink uppercase tracking-[0.2em]">
@@ -663,7 +640,6 @@ export default function HomePage() {
                 </div>
               </Reveal>
 
-              {/* Right column — stacked features */}
               <div className="flex flex-col gap-4">
                 {whyFeatures.map((f, i) => (
                   <Reveal key={i} delay={i * 120}>
@@ -690,9 +666,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ═══════════════════════════════════════════════════ */}
-        {/* TRENDING                                            */}
-        {/* ═══════════════════════════════════════════════════ */}
+        {/* TRENDING */}
         <section id="matangazo" className="scroll-mt-16 py-14 px-4 max-w-7xl mx-auto">
           <Reveal>
             <div className="text-center mb-7">
@@ -738,9 +712,7 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* ═══════════════════════════════════════════════════ */}
-        {/* CATEGORIES                                          */}
-        {/* ═══════════════════════════════════════════════════ */}
+        {/* CATEGORIES */}
         <section id="kategoria" className="scroll-mt-16 py-14 px-4 max-w-7xl mx-auto">
           <div className="bg-sand rounded-3xl p-3.5 sm:p-8">
             <Reveal>
@@ -787,9 +759,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ═══════════════════════════════════════════════════ */}
-        {/* TESTIMONIALS                                        */}
-        {/* ═══════════════════════════════════════════════════ */}
+        {/* TESTIMONIALS */}
         <section className="py-16 px-4 max-w-7xl mx-auto">
           <Reveal>
             <div className="text-center mb-10">
@@ -842,9 +812,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ═══════════════════════════════════════════════════ */}
-        {/* FAQ                                                 */}
-        {/* ═══════════════════════════════════════════════════ */}
+        {/* FAQ */}
         <section id="faq" className="scroll-mt-16 py-16 px-4 max-w-3xl mx-auto">
           <Reveal>
             <div className="text-center mb-10">
