@@ -1,8 +1,5 @@
 // ============================================================
 // profileApi.js  →  weka kwenye src/config/
-// Inatumia `api` ya src/api/client.js (token, refresh, retry,
-// timeout vyote vinashughulikiwa huko).
-// Njia zote ziko chini ya /auth/ (accounts app).
 // ============================================================
 import { api } from "../api/client.js";
 
@@ -12,7 +9,6 @@ const PATHS = {
   notificationPrefs: "/auth/me/notification-preferences/",
 };
 
-// Rudisha { ok, data } au { ok:false, error }
 async function safe(promise, signal) {
   try {
     const data = await promise;
@@ -75,7 +71,6 @@ export const savePreferences = (p) =>
 
 // ============================================================
 // NOTIFICATION PREFERENCES
-// Backend inarudisha flat keys — tuna-consume moja kwa moja.
 // ============================================================
 export const fetchNotificationPrefs = async (signal) => {
   const r = await safe(api.get(PATHS.notificationPrefs), signal);
