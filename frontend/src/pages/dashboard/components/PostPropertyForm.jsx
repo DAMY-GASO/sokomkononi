@@ -146,11 +146,15 @@ const CATEGORY_DETAIL_ENDPOINT = {
 // MAIN COMPONENT
 // ============================================================
 export default function PostPropertyForm({
+  mode = "create",           // "create" | "edit"
+  initialData = null,        // listing ya kuhariri (edit mode)
   onSubmit = () => {},
   onGoToListings = () => {},
   onPaid = () => {},
   onGoToBoost = () => {},
 }) {
+  const isEdit = mode === "edit" && !!initialData;
+
   const { lang } = useLanguage();
   const { user } = useAuth();
   const categories = useActiveCategories();
@@ -158,10 +162,32 @@ export default function PostPropertyForm({
     (b) => b.type === "listing"
   );
 
-  const [categoryKey, setCategoryKey] = useState(null);
-  const [mode, setMode] = useState(null);
-  const [loc, setLoc] = useState({ mkoa: "", wilaya: "", eneo: "" });
-  const [photos, setPhotos] = useState([]);
+  const [categoryKey, setCategoryKey] = useState(
+    isEdit ? initialData.category : null
+  );
+  // ⚠️ jina `categoryMode` (sio `mode`) ili kutopatana na prop `mode`
+  const [categoryMode, setCategoryMode] = useState(
+    isEdit ? initialData.attributes?.mode || null : null
+  );
+  const [loc, setLoc] = useState(() => {
+    if (isEdit && initialData) {
+      const attrs = initialData.attributes || {};
+      return {
+        mkoa: attrs.region || initialData.region || "",
+        wilaya: attrs.district || "",
+        eneo: attrs.area || "",
+      };
+    }
+    return { mkoa: "", wilaya: "", eneo: "" };
+  });
+  const [photos, setPhotos] = useState(() => {
+    if (!isEdit || !initialData) return [];
+    const urls = Array.isArray(initialData.photos) ? initialData.photos : [];
+    return urls
+      .map((u) => (typeof u === "string" ? u : u?.url || u?.image_url))
+      .filter(Boolean)
+      .map((url) => ({ file: null, url, existing: true }));
+  });
   const [cropQueue, setCropQueue] = useState([]);
   const [stage, setStage] = useState("form");
   const [createdListing, setCreatedListing] = useState(null);
@@ -172,20 +198,37 @@ export default function PostPropertyForm({
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [isFreeCategory, setIsFreeCategory] = useState(false);
 
-  // ⬇️ Payment mode kwa listing fee
-  const [paymentMode, setPaymentMode] = useState("flat"); // "flat" | "bundle"
+  const [paymentMode, setPaymentMode] = useState("flat");
   const [bundleId, setBundleId] = useState(null);
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
 
-  const [base, setBase] = useState({
-    title: "",
-    price: "",
-    location: "",
-    description: "",
-    seller_name: "",
-    contact_pref: lang === "sw" ? "Simu" : "Phone",
+  const [base, setBase] = useState(() => {
+    if (isEdit && initialData) {
+      return {
+        title: initialData.title || "",
+        price: initialData.price ? String(initialData.price) : "",
+        location: initialData.location || "",
+        description: initialData.description || "",
+        seller_name: initialData.seller_name || "",
+        contact_pref: lang === "sw" ? "Simu" : "Phone",
+      };
+    }
+    return {
+      title: "",
+      price: "",
+      location: "",
+      description: "",
+      seller_name: "",
+      contact_pref: lang === "sw" ? "Simu" : "Phone",
+    };
   });
-  const [extra, setExtra] = useState({});
+
+  const [extra, setExtra] = useState(() => {
+    if (!isEdit || !initialData?.attributes) return {};
+    const { region, district, area, mode: _m, ...rest } =
+      initialData.attributes || {};
+    return rest;
+  });
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -194,10 +237,10 @@ export default function PostPropertyForm({
     category?.label?.[lang] || category?.label?.sw || "";
 
   const cfg = getPostingConfig(categoryKey);
-  const activeMode = cfg.modes?.find((m) => m.key === mode) || null;
-  const needsMode = Boolean(cfg.modes) && !activeMode;
-  const visibleFields = getVisibleFields(category?.extra, cfg, mode, extra);
-  const priceMeta = getPriceMeta(cfg, mode, extra);
+  const activeMode = cfg.modes?.find((m) => m.key === categoryMode) || null;
+  const needsMode = Boolean(cfg.modes) && !activeMode && !isEdit;
+  const visibleFields = getVisibleFields(category?.extra, cfg, categoryMode, extra);
+  const priceMeta = getPriceMeta(cfg, categoryMode, extra);
   const titleLabel =
     activeMode?.titleLabel || cfg.titleLabel || { sw: "Jina la Mali", en: "Property Title" };
   const titlePlaceholder =
@@ -222,15 +265,12 @@ export default function PostPropertyForm({
   const hasCredit = creditInfo.hasCredit;
   const listingCreditRemaining = creditInfo.remaining || 0;
 
-  // Refresh the fee-rules cache on mount so the local fallback used by
-  // the review screen is never stale.
   useEffect(() => {
     hydrateListingFeeConfigsFromApi().catch((err) => {
       console.warn("[PostPropertyForm] fee hydrate failed:", err);
     });
   }, []);
 
-  // ⬇️ Angalia kama listing fee imezimwa kwa category hii
   const categoryFeeConfig = categoryKey ? getListingFeeConfig(categoryKey) : null;
   const listingFeeDisabled = categoryFeeConfig
     ? categoryFeeConfig.isActive === false
@@ -245,9 +285,10 @@ export default function PostPropertyForm({
   }, [listingBundles, bundleId]);
 
   // ============================================================
-  // REAL-TIME DUPLICATE CHECK (debounced)
+  // REAL-TIME DUPLICATE CHECK (debounced) — ruka kwa edit mode
   // ============================================================
   useEffect(() => {
+    if (isEdit) return;
     if (!categoryKey || !effectiveTitle || !base.price || !loc.eneo) {
       setDuplicateWarning(null);
       return;
@@ -275,7 +316,7 @@ export default function PostPropertyForm({
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveTitle, base.price, loc.mkoa, loc.wilaya, loc.eneo, categoryKey]);
+  }, [effectiveTitle, base.price, loc.mkoa, loc.wilaya, loc.eneo, categoryKey, isEdit]);
 
   const handlePhotoAdd = (e) => {
     const files = Array.from(e.target.files || []).slice(0, 8 - photos.length);
@@ -310,15 +351,19 @@ export default function PostPropertyForm({
     !duplicateWarning;
 
   const chooseCategory = (key) => {
+    if (isEdit) return; // hairuhusiwi kubadilisha category kwenye edit
     setCategoryKey(key);
-    setMode(null);
+    setCategoryMode(null);
     setExtra({});
     setError("");
     setDuplicateWarning(null);
   };
-  const clearCategory = () => chooseCategory(null);
+  const clearCategory = () => {
+    if (isEdit) return;
+    chooseCategory(null);
+  };
   const chooseMode = (m) => {
-    setMode(m);
+    setCategoryMode(m);
     setExtra({});
   };
 
@@ -340,7 +385,7 @@ export default function PostPropertyForm({
     setStage("form");
     setCreatedListing(null);
     setCategoryKey(null);
-    setMode(null);
+    setCategoryMode(null);
     setLoc({ mkoa: "", wilaya: "", eneo: "" });
     setPhotos([]);
     setBase({
@@ -360,14 +405,54 @@ export default function PostPropertyForm({
     setPendingBundlePurchase(null);
   };
 
-  // ── Step 1: create the listing on backend ────────────────
+  // ── Step 1: submit (create au edit) ──────────────────────
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!canSubmit) return;
     setSubmitting(true);
     setError("");
 
-    // Final duplicate check
+    // ═══════════════════════════════════════════════════════════
+    // EDIT MODE — rudisha payload kwa DashboardShell
+    // ═══════════════════════════════════════════════════════════
+    if (isEdit) {
+      const payload = {
+        title: effectiveTitle,
+        description: base.description.trim(),
+        price: Number(cleanPriceInput(base.price)) || 0,
+        location: locationString,
+        attributes: {
+          ...extra,
+          ...(categoryMode ? { mode: categoryMode } : {}),
+          region: loc.mkoa,
+          district: loc.wilaya.trim(),
+          area: loc.eneo.trim(),
+        },
+      };
+
+      try {
+        const res = await onSubmit(payload);
+        if (!res?.ok) {
+          setError(
+            res?.error?.data?.detail ||
+              res?.error?.message ||
+              t("Imeshindwa kuhifadhi.", "Failed to save.")
+          );
+        }
+        // Mafanikio: DashboardShell inaita handleNavClick("listings")
+      } catch (err) {
+        setError(
+          err?.message || t("Hitilafu imetokea.", "Something went wrong.")
+        );
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CREATE MODE (code yako ya awali)
+    // ═══════════════════════════════════════════════════════════
     try {
       const finalCheck = await checkDuplicateListingAsync({
         title: effectiveTitle,
@@ -418,21 +503,15 @@ export default function PostPropertyForm({
         location: locationString,
         attributes: {
           ...extra,
-          ...(mode ? { mode } : {}),
+          ...(categoryMode ? { mode: categoryMode } : {}),
           region: loc.mkoa,
           district: loc.wilaya.trim(),
           area: loc.eneo.trim(),
         },
       });
-      // Save immediately so the listing shows up in My Listings, the
-      // seller's unpaid banner, and any local lookup by id — even if the
-      // user aborts before paying.
       saveFreshlyCreatedListing(created);
 
-      // Pull the fee from the create response so the "Listing imeundwa"
-      // screen never flashes 0 while waiting for a second call.
       const inlineFee = Number(created?.fee_amount ?? 0);
-
       let listingId =
         created?.id ?? created?.pk ?? created?.listing_id ?? created?.listingId;
 
@@ -461,11 +540,11 @@ export default function PostPropertyForm({
 
       created.id = listingId;
 
-      // Upload images — each in its own try/catch so a single failure
-      // doesn't abort the whole submission.
+      // Upload picha — kila moja kwenye try/catch yake
       const failedUploads = [];
       for (let idx = 0; idx < photos.length; idx++) {
         const p = photos[idx];
+        if (p.existing || !p.file) continue; // ruka zilizopo
         const fd = new FormData();
         fd.append("image", p.file);
         fd.append("is_primary", idx === 0 ? "true" : "false");
@@ -540,10 +619,7 @@ export default function PostPropertyForm({
         }
       }
 
-      // ═══════════════════════════════════════════════════════════
-      // ⬇️ Kama listing fee imezimwa → wasilisha kwa admin approval
-      //    (HAKUNA auto-publish — kila kitu kinapitia admin)
-      // ═══════════════════════════════════════════════════════════
+      // Kama listing fee imezimwa → wasilisha kwa admin approval
       if (listingFeeDisabled) {
         console.info(
           "[PostPropertyForm] Listing fee disabled — submitting for admin approval"
@@ -561,24 +637,18 @@ export default function PostPropertyForm({
         return;
       }
 
-      // ═══════════════════════════════════════════════════════════
-      // Listing fee ipo active → review (flat au bundle)
-      // ═══════════════════════════════════════════════════════════
-      // Resolve fee: prefer inline → nested payment → backend → local.
+      // Resolve fee
       const inlineFeeFromPayment = Number(
         created?.payment?.amount ?? created?.payment?.fee_amount ?? 0
       );
       let fee = inlineFee || inlineFeeFromPayment;
-      let feeSource =
-        fee > 0 ? "inline" : "backend";
+      let feeSource = fee > 0 ? "inline" : "backend";
 
-      // Treat "free" categories (no rule, or admin set 0) distinctly so we
-      // never show a misleading "TZS 0" on the review screen.
-      let isFreeCategory =
+      let isFreeCategoryLocal =
         created?.payment?.is_free === true ||
         (created?.payment?.required === false && fee === 0);
 
-      if (!fee && !isFreeCategory && !listingFeeDisabled) {
+      if (!fee && !isFreeCategoryLocal && !listingFeeDisabled) {
         try {
           const feeRes = await api.get(`/listings/${listingId}/fee/`);
           const backendFree =
@@ -586,7 +656,7 @@ export default function PostPropertyForm({
             feeRes?.payment_status === "FREE" ||
             feeRes?.amount === "0.00";
           fee = Number(feeRes?.amount) || Number(feeRes?.fee_amount) || 0;
-          if (backendFree && fee === 0) isFreeCategory = true;
+          if (backendFree && fee === 0) isFreeCategoryLocal = true;
           if (!fee && !backendFree) throw new Error("Backend returned zero fee");
         } catch (feeErr) {
           feeSource = "local";
@@ -602,10 +672,7 @@ export default function PostPropertyForm({
         }
       }
 
-      // If we still don't have a fee but the fee is disabled for this
-      // listing, treat it as free so the UI shows "Bure".
-      if (!fee && listingFeeDisabled) isFreeCategory = true;
-
+      if (!fee && listingFeeDisabled) isFreeCategoryLocal = true;
 
       console.info("[PostPropertyForm] fee resolved:", {
         fee,
@@ -615,7 +682,7 @@ export default function PostPropertyForm({
 
       setCreatedListing(created);
       setFeeAmount(fee);
-      setIsFreeCategory(Boolean(isFreeCategory));
+      setIsFreeCategory(Boolean(isFreeCategoryLocal));
       setStage("review");
       onSubmit?.(created);
     } catch (err) {
@@ -645,12 +712,7 @@ export default function PostPropertyForm({
           phone: phone || "",
         }
       );
-      const candidates = [
-        res?.fimipay,
-        res?.data?.fimipay,
-        res?.data,
-        res,
-      ].filter(Boolean);
+      const candidates = [res?.fimipay, res?.data?.fimipay, res?.data, res].filter(Boolean);
       const payload =
         candidates.find((c) => c && (c.order_id || c.payment_status)) || {};
 
@@ -670,15 +732,10 @@ export default function PostPropertyForm({
 
   const handleFeeSuccess = () => {
     if (!createdListing) return;
-    // Payment succeeded → mark in_review (awaiting admin approval).
-    // If the payment had failed, we would never reach here, so the
-    // listing correctly stays in `pending_payment` and is visible as
-    // "Haijalipwa" in My Listings.
     onPaid?.(createdListing.id, { alreadyPaid: true });
     setStage("done");
   };
 
-  // ── Credit path ─────────────────────────────────────────
   const handleUseCredit = async () => {
     if (!createdListing || !user) return;
     setError("");
@@ -697,7 +754,6 @@ export default function PostPropertyForm({
     }
   };
 
-  // ── Bundle purchase path ────────────────────────────────
   const handleBeginBundlePurchase = async () => {
     if (!selectedBundle) return;
     setSubmitting(true);
@@ -749,7 +805,6 @@ export default function PostPropertyForm({
   };
 
   const handleBundlePaymentSuccess = async () => {
-    // Bundle credits zinaingizwa. Sasa tumia credit kwa listing hii.
     if (!createdListing) return;
     try {
       await api.post(`/listings/${createdListing.id}/fee/pay/`, {
@@ -764,9 +819,9 @@ export default function PostPropertyForm({
   };
 
   // ═══════════════════════════════════════════════════════════
-  // REVIEW STAGE
+  // REVIEW STAGE (create mode pekee)
   // ═══════════════════════════════════════════════════════════
-  if (stage === "review" || stage === "paying") {
+  if (!isEdit && (stage === "review" || stage === "paying")) {
     return (
       <div
         className="w-full flex items-center justify-center p-6"
@@ -794,7 +849,6 @@ export default function PostPropertyForm({
                 )}
               </p>
 
-              {/* Fee amount — always the actual money, never "Bure" */}
               <div
                 className="rounded-xl border p-4 mb-4"
                 style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
@@ -823,7 +877,6 @@ export default function PostPropertyForm({
                 )}
               </div>
 
-              {/* Credit banner */}
               {hasCredit && (
                 <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col items-center gap-2 text-center">
                   <div className="flex items-center gap-2">
@@ -844,17 +897,14 @@ export default function PostPropertyForm({
                 </div>
               )}
 
-              {/* Bundle vs Flat toggle */}
               {listingBundles.length > 0 && (
                 <div className="flex justify-center gap-2 mb-4">
                   <button
                     onClick={() => setPaymentMode("flat")}
                     className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border transition-colors"
                     style={{
-                      background:
-                        paymentMode === "flat" ? COLORS.night : "white",
-                      color:
-                        paymentMode === "flat" ? COLORS.sand : COLORS.night,
+                      background: paymentMode === "flat" ? COLORS.night : "white",
+                      color: paymentMode === "flat" ? COLORS.sand : COLORS.night,
                       borderColor:
                         paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
                     }}
@@ -878,7 +928,6 @@ export default function PostPropertyForm({
                 </div>
               )}
 
-              {/* Bundle selector */}
               {paymentMode === "bundle" && listingBundles.length > 0 && (
                 <div className="flex flex-col gap-2 mb-4">
                   {listingBundles.map((b) => {
@@ -935,7 +984,6 @@ export default function PostPropertyForm({
                 </div>
               )}
 
-              {/* Main CTA */}
               <button
                 onClick={
                   paymentMode === "flat"
@@ -978,12 +1026,7 @@ export default function PostPropertyForm({
               )}
               onInitiate={handleFeeInitiate}
               onSuccess={handleFeeSuccess}
-              onCancel={() => {
-                // Payment aborted → back to review. The listing stays in
-                // `pending_payment` in the local store so it shows up in
-                // "My Listings" as unpaid / not live.
-                setStage("review");
-              }}
+              onCancel={() => setStage("review")}
             />
           )}
 
@@ -1009,9 +1052,9 @@ export default function PostPropertyForm({
   }
 
   // ═══════════════════════════════════════════════════════════
-  // DONE STAGE — kila listing inasubiri admin approval
+  // DONE STAGE
   // ═══════════════════════════════════════════════════════════
-  if (stage === "done") {
+  if (!isEdit && stage === "done") {
     return (
       <div
         className="w-full flex items-center justify-center p-6"
@@ -1071,11 +1114,11 @@ export default function PostPropertyForm({
       )}
       <div className="max-w-2xl mx-auto">
 
-        {category && (
+        {category && !isEdit && (
           <div className="flex justify-center mb-3">
             <button
               onClick={() =>
-                activeMode ? setMode(null) : clearCategory()
+                activeMode ? setCategoryMode(null) : clearCategory()
               }
               className="text-primary flex items-center gap-1 text-sm font-medium opacity-70"
             >
@@ -1089,26 +1132,27 @@ export default function PostPropertyForm({
 
         <div className="mb-6 text-center">
           <h1 className="h-title">
-            {t("Weka Mali Yako", "Post Your Property")}
+            {isEdit
+              ? t("Hariri Tangazo", "Edit Listing")
+              : t("Weka Mali Yako", "Post Your Property")}
           </h1>
           <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
-            {category
-              ? `${t("Category", "Category")}: ${categoryLabel}${
-                  activeMode ? ` — ${activeMode.label[lang]}` : ""
-                }`
-              : t(
-                  "Chagua category ya mali unayotaka kuiweka",
-                  "Choose the category of the property you want to list"
-                )}
+            {isEdit
+              ? `${t("Category", "Category")}: ${categoryLabel}`
+              : category
+                ? `${t("Category", "Category")}: ${categoryLabel}${
+                    activeMode ? ` — ${activeMode.label[lang]}` : ""
+                  }`
+                : t(
+                    "Chagua category ya mali unayotaka kuiweka",
+                    "Choose the category of the property you want to list"
+                  )}
           </p>
-          {/* ─────────────────────────────────────────────── */}
-          {/* FEE PREVIEW — pulled from the admin-set backend rule.  */}
-          {/* Shown as soon as a category is selected.                */}
-          {/* ─────────────────────────────────────────────── */}
-          {category && (() => {
-            const cfg = getListingFeeConfig(categoryKey);
+          {/* FEE PREVIEW — create mode pekee */}
+          {!isEdit && category && (() => {
+            const cfgFee = getListingFeeConfig(categoryKey);
 
-            if (!cfg) {
+            if (!cfgFee) {
               return (
                 <div
                   className="mt-4 inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs"
@@ -1127,7 +1171,7 @@ export default function PostPropertyForm({
               );
             }
 
-            if (cfg.isActive === false) {
+            if (cfgFee.isActive === false) {
               return (
                 <div
                   className="mt-4 inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs"
@@ -1146,9 +1190,9 @@ export default function PostPropertyForm({
               );
             }
 
-            const isFlat = String(cfg.feeMode || "PERCENTAGE").toUpperCase() === "FLAT";
-            const flat = Number(cfg.flatFee) || 0;
-            const rate = Number(cfg.rate) || 0;
+            const isFlat = String(cfgFee.feeMode || "PERCENTAGE").toUpperCase() === "FLAT";
+            const flat = Number(cfgFee.flatFee) || 0;
+            const rate = Number(cfgFee.rate) || 0;
             const price = Number(cleanPriceInput(base.price)) || 0;
 
             let amount = 0;
@@ -1166,8 +1210,8 @@ export default function PostPropertyForm({
               );
               if (price > 0) {
                 let f = price * rate;
-                if (f < cfg.min) f = cfg.min;
-                else if (f > cfg.max) f = cfg.max;
+                if (f < cfgFee.min) f = cfgFee.min;
+                else if (f > cfgFee.max) f = cfgFee.max;
                 f = Math.round(f / 500) * 500;
                 amount = f;
                 amountKnown = true;
@@ -1204,7 +1248,8 @@ export default function PostPropertyForm({
           })()}
         </div>
 
-        {!category && (
+        {/* Category picker — create mode pekee */}
+        {!isEdit && !category && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {categories.map((cat) => {
               const Icon = getCategoryIcon(cat.iconKey);
@@ -1240,7 +1285,8 @@ export default function PostPropertyForm({
           </div>
         )}
 
-        {category && needsMode && (
+        {/* Mode picker — create mode pekee */}
+        {!isEdit && category && needsMode && (
           <div className="max-w-md mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
             {cfg.modes.map((m) => (
               <button
@@ -1261,7 +1307,8 @@ export default function PostPropertyForm({
           </div>
         )}
 
-        {category && !needsMode && (
+        {/* FORM */}
+        {category && (!needsMode || isEdit) && (
           <form
             onSubmit={handleFormSubmit}
             className="mx-auto flex max-w-xl flex-col gap-5 rounded-3xl border-[1.5px] border-gold/60 bg-white p-4 shadow-[0_12px_32px_-18px_rgba(1,25,87,0.3)] sm:p-6"
@@ -1468,7 +1515,7 @@ export default function PostPropertyForm({
               />
             </Field>
 
-            {duplicateWarning && (
+            {!isEdit && duplicateWarning && (
               <div
                 style={{
                   background: "rgba(232,163,61,0.15)",
@@ -1496,7 +1543,7 @@ export default function PostPropertyForm({
               </div>
             )}
 
-            {cfg.modes && (
+            {cfg.modes && !isEdit && (
               <p
                 className="text-center text-xs text-secondary rounded-xl px-3 py-2"
                 style={{
@@ -1511,10 +1558,6 @@ export default function PostPropertyForm({
               </p>
             )}
 
-            {/* ─────────────────────────────────────────────── */}
-            {/* INFORMATIONAL / ERROR BAR — sits right above the   */}
-            {/* submit button so users see it next to the action. */}
-            {/* ─────────────────────────────────────────────── */}
             {error && (
               <div
                 className="rounded-xl px-4 py-3 flex items-start gap-2 text-sm"
@@ -1530,7 +1573,7 @@ export default function PostPropertyForm({
 
             <button
               type="submit"
-              disabled={!canSubmit}
+              disabled={!canSubmit || submitting}
               style={{
                 background: canSubmit ? COLORS.gold : COLORS.sandLine,
                 color: canSubmit ? COLORS.night : "rgba(16,26,46,0.4)",
@@ -1540,12 +1583,27 @@ export default function PostPropertyForm({
               {submitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />{" "}
-                  {t("Inawasilisha...", "Submitting...")}
+                  {isEdit
+                    ? t("Inahifadhi...", "Saving...")
+                    : t("Inawasilisha...", "Submitting...")}
                 </>
+              ) : isEdit ? (
+                t("Hifadhi Mabadiliko", "Save Changes")
               ) : (
                 t("Wasilisha", "Submit")
               )}
             </button>
+
+            {isEdit && (
+              <button
+                type="button"
+                onClick={onGoToListings}
+                className="w-full py-2.5 rounded-xl text-sm font-medium border"
+                style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
+              >
+                {t("Ghairi", "Cancel")}
+              </button>
+            )}
           </form>
         )}
       </div>

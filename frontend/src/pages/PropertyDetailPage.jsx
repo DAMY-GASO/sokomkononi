@@ -32,9 +32,9 @@ import {
   isLeadingActive,
 } from "./dashboard/components/shared";
 
-// Mmiliki wa tangazo anapelekwa hapa kuhariri. BADILISHA njia hii kulingana
-// na route ya "Mali Zangu" ya muuzaji kwenye app yako.
-const ownerEditPath = (id) => `/dashboard/seller/listings?edit=${id}`;
+// Mmiliki wa tangazo anapelekwa hapa kuhariri.
+// Route hii inashughulikiwa na DashboardShell.
+const ownerEditPath = (id) => `/dashboard/listings/edit/${id}`;
 
 const CATEGORY_ICONS = {
   nyumba: HomeIcon,
@@ -225,8 +225,7 @@ function FeaturesSection({ property, lang }) {
 }
 
 // ============================================================
-// ATTRIBUTES TABLE — inaonyesha fields zote za kategoria kama jedwali
-// Inasoma property.attributes (JSONField) + CATEGORY_EXTRA + mode fields
+// ATTRIBUTES TABLE
 // ============================================================
 function AttributesTable({ property, lang }) {
   const rows = useMemo(() => {
@@ -236,7 +235,6 @@ function AttributesTable({ property, lang }) {
     const cfg = getPostingConfig(categoryKey);
     const attrs = property.attributes || {};
 
-    // Helper: rudisha thamani inayoonekana kwa field
     const resolveValue = (f, raw) => {
       if (raw === undefined || raw === null) return null;
       const str = String(raw).trim();
@@ -245,7 +243,6 @@ function AttributesTable({ property, lang }) {
       return opt ? (opt.label?.[lang] || opt.label?.sw || str) : str;
     };
 
-    // 1. Mode (kwa Jobs/Huduma)
     if (cfg.modes && attrs.mode) {
       const mode = cfg.modes.find((m) => m.key === attrs.mode);
       if (mode) {
@@ -253,7 +250,6 @@ function AttributesTable({ property, lang }) {
           label: t(lang, "Aina", "Type"),
           value: mode.label?.[lang] || mode.label?.sw || attrs.mode,
         });
-        // Fields za mode
         (mode.extra || []).forEach((f) => {
           const v = resolveValue(f, attrs[f.key]);
           if (v !== null) {
@@ -266,9 +262,7 @@ function AttributesTable({ property, lang }) {
       }
     }
 
-    // 2. Fields za kategoria (kutoka CATEGORY_EXTRA)
     baseFields.forEach((f) => {
-      // Ruka field ikiwa ni ya mode tu (tayari imeshughulikiwa)
       if (cfg.modes && cfg.modes.some((m) => (m.extra || []).some((mf) => mf.key === f.key))) {
         return;
       }
@@ -281,7 +275,6 @@ function AttributesTable({ property, lang }) {
       }
     });
 
-    // 3. Eneo (Mkoa, Wilaya, Eneo)
     if (attrs.region) {
       out.push({ label: t(lang, "Mkoa", "Region"), value: attrs.region });
     }
@@ -497,7 +490,6 @@ export default function PropertyDetailPage() {
     };
 
     (async () => {
-      // ---- Step 1: refresh the listing detail ----
       try {
         const detailRes = await fetchListingDetailAsync(property.id);
         if (cancelled) return;
@@ -518,7 +510,6 @@ export default function PropertyDetailPage() {
         console.warn("[PropertyDetail] detail fetch failed:", err);
       }
 
-      // ---- Step 2: fall back to the images endpoint ----
       try {
         const imagesRes = await fetchListingImagesAsync(property.id);
         if (cancelled) return;
@@ -547,11 +538,7 @@ export default function PropertyDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [property?.id]);
 
-  // Record in "Recently Viewed" once we know the listing is real.
-  useEffect(() => {
-    if (property?.id) trackViewed(property.id);
-  }, [property?.id]);
-
+  // Record in "Recently Viewed"
   useEffect(() => {
     if (property?.id) trackViewed(property.id);
   }, [property?.id]);
@@ -841,16 +828,12 @@ export default function PropertyDetailPage() {
                       </p>
                     </div>
 
-                    {/* JEDWALI LA TAARIFA ZA KATEGORIA */}
                     <div>
                       <h3 className="font-semibold text-primary mb-3">
                         {t(lang, "Taarifa za Kategoria", "Category Details")}
                       </h3>
                       <AttributesTable property={property} lang={lang} />
                     </div>
-
-                    {/* Quick-feature tiles were removed — they duplicated
-                        the "Category Details" table above. */}
                   </div>
                 )}
                 {activeTab === "location" && (

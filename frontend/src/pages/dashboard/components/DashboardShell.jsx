@@ -230,8 +230,6 @@ export default function DashboardShell() {
   }, []);
 
   // ⬇️ ZUIA ADMIN kuingia dashboard za watumiaji
-  // Admin ana dashboard yake (/smk-control-9x7k).
-  // Kama anataka kuingia dashboard za watumiaji, atengeneze account nyingine.
   const isAdminUser =
     user?.role === "Admin" ||
     user?.role === "admin" ||
@@ -241,8 +239,6 @@ export default function DashboardShell() {
     user?.isSuperuser === true ||
     user?.is_superuser === true;
 
-  // Hakuna redirect ya moja kwa moja: admin anazuiwa na anapewa chaguo
-  // (angalia skrini ya kuzuia chini). Pia hatuletei data za watumiaji kwa admin.
   useEffect(() => {
     if (!user?.id || isAdminUser) return;
     fetchMyListingsFromApi();
@@ -250,6 +246,8 @@ export default function DashboardShell() {
 
   const [side, setSide] = useState("seller");
   const [activeKey, setActiveKey] = useState("overview");
+  // ⬇️ EDIT — listing id inayohaririwa (null kama hakuna)
+  const [editListingId, setEditListingId] = useState(null);
   const [tickerIndex, setTickerIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -275,23 +273,32 @@ export default function DashboardShell() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  // ============================================================
+  // ROUTE → STATE (pamoja na /dashboard/listings/edit/:id)
+  // ============================================================
   useEffect(() => {
     const path = location.pathname;
+
+    // Handle /dashboard/listings/edit/:id
+    const editMatch = path.match(/^\/dashboard\/listings\/edit\/([^/]+)\/?$/);
+    if (editMatch) {
+      setSide("seller");
+      setActiveKey("listings");
+      setEditListingId(editMatch[1]);
+      return;
+    }
+
     const match = URL_TO_STATE[path];
     if (match) {
       setSide(match.side);
       setActiveKey(match.key);
+      setEditListingId(null);
     }
   }, [location.pathname]);
 
   useEffect(() => {
     setDashboardSide(side);
   }, [side]);
-
-  // NOTE: reservation/listing-expiry reminders are scheduled server-side
-  // and delivered via /notifications/. The previous client-side no-op
-  // interval was removed. If you need client-side hints, replace this
-  // effect with an actual implementation (compare expiresAt, emit toasts).
 
   useEffect(() => {
     if (announcements.length === 0) return;
@@ -314,8 +321,6 @@ export default function DashboardShell() {
   // LISTING HELPERS — API-backed
   // ============================================================
   const addListing = (listing) => {
-    // A create-response (has id) must still be saved to the local store;
-    // otherwise it never appears in My Listings / unpaid banner.
     if (listing && (listing.id || listing.pk)) {
       const normalized = normalizeListingFromApi(listing, "pending_payment");
       if (normalized && normalized.id != null) {
@@ -373,6 +378,7 @@ export default function DashboardShell() {
   const handleNavClick = useCallback(
     (key) => {
       setActiveKey(key);
+      setEditListingId(null); // ⬅️ toka edit mode kila unapobonyeza nav
       const url = STATE_TO_URL[side]?.[key];
       if (url) navigate(url);
     },
@@ -410,10 +416,19 @@ export default function DashboardShell() {
     [navigate]
   );
 
+  // ⬇️ EDIT — peleka kwenye ukurasa wa kuhariri
+  const goToEdit = useCallback(
+    (listingId) => {
+      if (listingId) navigate(`/dashboard/listings/edit/${listingId}`);
+    },
+    [navigate]
+  );
+
   const handleSideChange = useCallback(
     (newSide) => {
       setSide(newSide);
       setActiveKey("overview");
+      setEditListingId(null);
       const url = STATE_TO_URL[newSide]?.overview;
       if (url) navigate(url);
     },
@@ -421,8 +436,6 @@ export default function DashboardShell() {
   );
 
   const markListingPaid = async (id, { alreadyPaid = false } = {}) => {
-    // Look up from the local store directly so we do not depend on the
-    // React `listings` array (which may not have rendered the new entry yet).
     const all = getMyListings();
     const listing = all.find((l) => String(l.id) === String(id));
 
@@ -469,6 +482,7 @@ export default function DashboardShell() {
     if (activeKey === "post") {
       return (
         <PostPropertyForm
+          mode="create"
           onSubmit={addListing}
           onGoToListings={() => handleNavClick("listings")}
           onPaid={markListingPaid}
@@ -477,6 +491,51 @@ export default function DashboardShell() {
       );
     }
     if (activeKey === "listings") {
+      // ⬇️ EDIT MODE — kama editListingId ipo, onyesha PostPropertyForm
+      if (editListingId) {
+        const listing = listings.find(
+          (l) => String(l.id) === String(editListingId)
+        );
+
+        // Kama listing haipo local cache, mwambie mtumiaji arudi
+        if (!listing) {
+          return (
+            <div className="p-6 text-center">
+              <p className="text-secondary text-sm">
+                {t(
+                  "Tangazo halipatikani. Huenda limefutwa au halijasync.",
+                  "Listing not found. It may have been deleted or not synced."
+                )}
+              </p>
+              <button
+                onClick={() => handleNavClick("listings")}
+                className="mt-4 text-sm font-semibold underline"
+                style={{ color: COLORS.gold }}
+              >
+                {t("Rudi kwenye Mali Zangu", "Back to My Listings")}
+              </button>
+            </div>
+          );
+        }
+
+        return (
+          <PostPropertyForm
+            mode="edit"
+            initialData={listing}
+            onSubmit={async (data) => {
+              const res = await updateListing(editListingId, data);
+              if (res?.ok) {
+                handleNavClick("listings");
+              }
+              return res;
+            }}
+            onGoToListings={() => handleNavClick("listings")}
+            onPaid={markListingPaid}
+            onGoToBoost={goToBoost}
+          />
+        );
+      }
+
       return (
         <MyListings
           listings={listings}
@@ -489,6 +548,7 @@ export default function DashboardShell() {
           onResume={handleResume}
           onMarkSold={handleMarkSold}
           onPostNew={() => handleNavClick("post")}
+          onEdit={goToEdit}
         />
       );
     }
@@ -629,7 +689,7 @@ export default function DashboardShell() {
     );
   };
 
-  // ⬇️ Zuia render kama ni admin (kabla ya redirect)
+  // ⬇️ Zuia render kama ni admin
   if (isAdminUser) {
     return (
       <div
@@ -815,7 +875,7 @@ export default function DashboardShell() {
             <Home size={20} />
           </a>
 
-                    <button
+          <button
             onClick={() => handleNavClick("notifications")}
             className="relative text-white/80 hover:text-white p-1.5 transition-colors"
             aria-label={t("Taarifa", "Notifications")}
@@ -901,7 +961,8 @@ export default function DashboardShell() {
         style={{ background: COLORS.nightSoft }}
         className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full"
       >
-        <button          onClick={() => handleSideChange("seller")}
+        <button
+          onClick={() => handleSideChange("seller")}
           style={{
             background: side === "seller" ? COLORS.gold : "transparent",
             color: side === "seller" ? COLORS.night : COLORS.sand,

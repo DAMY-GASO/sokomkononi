@@ -2,6 +2,7 @@
 // MyListings.jsx
 // Seller — orodha ya mali zake (listings).
 // - Preview, boost, leading, advertise, mark sold, pause/resume
+// - EDIT — kitufe cha kuhariri kinachopeleka /dashboard/listings/edit/:id
 // - Delete (soft) + undo window + admin notification
 // - Picha za mraba (aspect-square) kwa grid na cards
 // ============================================================
@@ -82,8 +83,7 @@ function ActionBtn({ icon: Icon, label, color, onClick, disabled, danger, classN
 }
 
 // ============================================================
-// LISTING CARD — frame ile ile ya ListingCard ya umma:
-// border nyembamba, gold kwenye hover, gold ya kudumu kwa Featured.
+// LISTING CARD
 // ============================================================
 function ListingCard({
   listing,
@@ -96,6 +96,7 @@ function ListingCard({
   onResume,
   onMarkSold,
   onPay,
+  onEdit,
   busy,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -233,6 +234,15 @@ function ListingCard({
           </button>
         )}
 
+        {/* ✅ EDIT — kitufe cha kuhariri */}
+        <ActionBtn
+          icon={Edit3}
+          label={t("Hariri", "Edit")}
+          color={COLORS.night}
+          onClick={() => onEdit?.(listing.id)}
+          disabled={isBusy}
+        />
+
         {isLiveOrReserved && (
           <>
             <ActionBtn icon={Rocket} label={t("Angaza", "Boost")} color={COLORS.goldInk} onClick={() => onBoost(listing.id)} disabled={isBusy} />
@@ -279,6 +289,7 @@ export default function MyListings({
   onResume,
   onMarkSold,
   onPostNew,
+  onEdit,
 }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
@@ -331,64 +342,71 @@ export default function MyListings({
   ];
 
   // ============================================================
-// HANDLE REMOVE — undo window + admin notification
-// ============================================================
-const handleRemove = async (id) => {
-  if (busy[id]) return;
-  const listing = listings.find((l) => String(l.id) === String(id));
-  if (!listing) return;
+  // HANDLE REMOVE — undo window + admin notification
+  // ============================================================
+  const handleRemove = async (id) => {
+    if (busy[id]) return;
+    const listing = listings.find((l) => String(l.id) === String(id));
+    if (!listing) return;
 
-  setBusy((b) => ({ ...b, [id]: "delete" }));
+    setBusy((b) => ({ ...b, [id]: "delete" }));
 
-  // 1. Futa (soft delete) kwa API
-  let res;
-  try {
-    res = await onRemove(id);
-  } catch (err) {
-    res = { ok: false, error: err };
-  }
-  setBusy((b) => {
-    const n = { ...b };
-    delete n[id];
-    return n;
-  });
+    let res;
+    try {
+      res = await onRemove(id);
+    } catch (err) {
+      res = { ok: false, error: err };
+    }
+    setBusy((b) => {
+      const n = { ...b };
+      delete n[id];
+      return n;
+    });
 
-  if (!res?.ok) {
-    toast.error(
-      res?.error?.message || t("Imeshindikana kufuta", "Failed to delete")
-    );
-    return;
-  }
+    if (!res?.ok) {
+      toast.error(
+        res?.error?.message || t("Imeshindikana kufuta", "Failed to delete")
+      );
+      return;
+    }
 
-  // 2. Anzisha undo window
-  startUndo({
-    type: "listing",
-    id,
-    title: listing.title,
-    message: t(
-      `"${listing.title}" imefutwa. Unaweza kuirejesha.`,
-      `"${listing.title}" deleted. You can undo.`
-    ),
-    onRestore: async () => {
-      await restoreListingAsync(id);
-    },
-  });
+    startUndo({
+      type: "listing",
+      id,
+      title: listing.title,
+      message: t(
+        `"${listing.title}" imefutwa. Unaweza kuirejesha.`,
+        `"${listing.title}" deleted. You can undo.`
+      ),
+      onRestore: async () => {
+        await restoreListingAsync(id);
+      },
+    });
 
-  // 3. Tuma notification kwa admin (fire-and-forget, lakini inaonekana kwenye console)
-  //    ⬇️ TUNA TUMA `listing` YENYEWE, sio object mpya
-  notifyAdminAboutDeletion({
-    ...listing,
-    id, // hakikisha id ni ile halisi (String vs Number)
-    deleted_by: user, // hiari — kama unataka kumjulisha admin ni nani alifuta
-  }).catch((err) => {
-    console.warn("[handleRemove] Admin notification failed:", err);
-  });
+    notifyAdminAboutDeletion({
+      ...listing,
+      id,
+      deleted_by: user,
+    }).catch((err) => {
+      console.warn("[handleRemove] Admin notification failed:", err);
+    });
 
-  // 4. Toast ya kawaida
-  toast.success(t("Tangazo limefutwa", "Listing deleted"), {
-    duration: 2000,
-  });
-};
+    toast.success(t("Tangazo limefutwa", "Listing deleted"), {
+      duration: 2000,
+    });
+  };
+
+  // ============================================================
+  // HANDLE EDIT — peleka kwenye edit route
+  // ============================================================
+  const handleEdit = (id) => {
+    if (onEdit) {
+      onEdit(id);
+    } else {
+      // Fallback: navigate moja kwa moja
+      navigate(`/dashboard/listings/edit/${id}`);
+    }
+  };
 
   // ============================================================
   // RENDER
@@ -511,6 +529,7 @@ const handleRemove = async (id) => {
               onResume={onResume}
               onMarkSold={onMarkSold}
               onPay={goToPayment}
+              onEdit={handleEdit}
               busy={busy[l.id]}
             />
           ))}
