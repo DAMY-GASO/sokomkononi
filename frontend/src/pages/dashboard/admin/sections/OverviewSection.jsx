@@ -200,7 +200,7 @@ export default function OverviewSection({ onNavigate }) {
     },
     {
       id: "neitherRole",
-      label: lang === "sw" ? "Hawana (Wapya)" : "Neither (New)",
+      label: lang === "sw" ? "Hawana" : "Neither",
       value: neitherRole.toLocaleString(),
       icon: UserPlus,
       color: "#D97706",

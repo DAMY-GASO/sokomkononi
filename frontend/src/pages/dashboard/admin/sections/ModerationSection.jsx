@@ -167,7 +167,7 @@ export default function ModerationSection() {
         approvedAt: new Date().toISOString(),
       });
     } else {
-      setError(res.error?.message || t("Imeshindwa kuidhinisha listing.", "Failed to approve listing."));
+      setError(res.error?.message || t("Imeshindwa kuidhinisha mali.", "Failed to approve listing."));
     }
   };
 
@@ -327,7 +327,7 @@ export default function ModerationSection() {
   return (
     <>
       <SectionHeader
-        title={t("Uidhinishaji wa Mali & Matangazo", "Listing & Ads Moderation")}
+        title={t("Uidhinishaji wa Mali", "Listing Moderation")}
         subtitle={t(
           "Idhinisha, kataa, disapprove, au futa mali kabla hazijachapishwa",
           "Approve, reject, disapprove, or delete listings before publishing"
