@@ -20,6 +20,8 @@ export const boostPackagesApi = {
    * PATCH `/boosting/packages/{id}/`
    */
   update: (id, patch) => api.patch(`/boosting/packages/${id}/`, patch),
+
+  remove: (id) => api.delete(`/boosting/packages/${id}/`),
 };
 
 // ============================================================

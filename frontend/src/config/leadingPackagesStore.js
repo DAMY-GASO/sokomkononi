@@ -85,6 +85,15 @@ export async function updateLeadingPackageAsync(id, patch) {
   } catch (err) { return { ok: false, error: err }; }
 }
 
+// ============================================================
+// RENAME — badilisha jina la leading package
+// ============================================================
+export async function renameLeadingPackageAsync(id, name) {
+  const clean = (name || "").trim();
+  if (!clean) return { ok: false, error: new Error("Name required") };
+  return updateLeadingPackageAsync(id, { name: clean });
+}
+
 export async function removeLeadingPackageAsync(id) {
   try {
     await api.delete(`/leading-fees/packages/${id}/`);

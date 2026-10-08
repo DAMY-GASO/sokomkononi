@@ -34,18 +34,21 @@ function norm(raw) {
     .toLowerCase()
     .replace(/\s+/g, "_")
     .replace(/[^a-z0-9_]/g, "");
-  const days = Math.round((raw.duration_hours || 0) / 24) || 1;
+  const hours = Number(raw.duration_hours) || 0;
+  const days = Math.round(hours / 24) || 1;
   return {
     id: raw.id,
     key: slug,
     name: raw.name,
     label: { sw: raw.name, en: raw.name },
     days,
-    hours: raw.duration_hours,
+    hours,
     price: Number(raw.price) || 0,
+    pricing: raw.pricing || null,
     description: raw.description || "",
     benefits: { sw: [], en: [] },
     isActive: raw.is_active !== false,
+    ordering: Number(raw.ordering) || 0,
   };
 }
 
@@ -61,15 +64,15 @@ let _boostPkgsHydratePromise = null;
 export async function hydrateBoostPackagesFromApi() {
   if (_boostPkgsHydratePromise) return _boostPkgsHydratePromise;
   _boostPkgsHydratePromise = (async () => {
-  try {
-    const data = await boostingApi.packages({ page_size: 200 });
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map(norm).filter(Boolean);
-    write(normalized);
-    return { ok: true, count: normalized.length };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+    try {
+      const data = await boostingApi.packages({ page_size: 200 });
+      const list = Array.isArray(data) ? data : data?.results || [];
+      const normalized = list.map(norm).filter(Boolean);
+      write(normalized);
+      return { ok: true, count: normalized.length };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
   })().finally(() => { _boostPkgsHydratePromise = null; });
   return _boostPkgsHydratePromise;
 }
@@ -100,7 +103,37 @@ export async function updateBoostPackagePriceAsync(key, price) {
 }
 
 // ============================================================
-// TOGGLE ACTIVE — kuwasha/kuzima boost package
+// RENAME — badilisha jina la boost package
+// ============================================================
+export async function renameBoostPackageAsync(key, name) {
+  const clean = (name || "").trim();
+  if (!clean) return { ok: false, error: new Error("Name required") };
+
+  const target = getBoostPackage(key);
+  if (!target) return { ok: false, error: new Error(`Package "${key}" not found`) };
+  if (typeof target.id !== "number") {
+    return { ok: false, error: new Error("Package has no backend id") };
+  }
+
+  // Optimistic
+  write(read().map((p) => (p.key === key ? { ...p, name: clean } : p)));
+
+  try {
+    const raw = await boostPackagesApi.update(target.id, { name: clean });
+    const updated = norm(raw);
+    if (updated) {
+      write(read().map((p) => (p.key === key ? updated : p)));
+    }
+    return { ok: true, package: updated || { ...target, name: clean } };
+  } catch (err) {
+    // Rollback
+    write(read().map((p) => (p.key === key ? target : p)));
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// TOGGLE ACTIVE
 // ============================================================
 export async function toggleBoostPackageActiveAsync(key) {
   const target = getBoostPackage(key);
@@ -126,6 +159,33 @@ export async function toggleBoostPackageActiveAsync(key) {
   }
 }
 
+// ============================================================
+// REMOVE — futa boost package
+// ============================================================
+export async function removeBoostPackageAsync(key) {
+  const target = getBoostPackage(key);
+  if (!target) {
+    return { ok: false, error: new Error(`Package "${key}" not found`) };
+  }
+  if (typeof target.id !== "number") {
+    return {
+      ok: false,
+      error: new Error(`Package "${key}" has no backend id — hydrate first`),
+    };
+  }
+  const previous = read();
+  // Optimistic
+  write(previous.filter((p) => p.key !== key));
+  try {
+    await boostPackagesApi.remove(target.id);
+    return { ok: true };
+  } catch (err) {
+    // Rollback
+    write(previous);
+    return { ok: false, error: err };
+  }
+}
+
 export function useBoostPackages() {
   const [list, setList] = useState(() => read());
   useEffect(() => {
@@ -141,8 +201,6 @@ export function useBoostPackages() {
   return list;
 }
 
-// Packages a user may actually pick. Inactive packages stay in the
-// admin list (RevenueSection) but must never be offered for boosting.
 export function useActiveBoostPackages() {
   return useBoostPackages().filter((p) => p.isActive);
 }

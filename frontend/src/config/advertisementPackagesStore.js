@@ -85,6 +85,15 @@ export async function updateAdvertisementPackageAsync(id, patch) {
   } catch (err) { return { ok: false, error: err }; }
 }
 
+// ============================================================
+// RENAME — badilisha jina la advertisement package
+// ============================================================
+export async function renameAdvertisementPackageAsync(id, name) {
+  const clean = (name || "").trim();
+  if (!clean) return { ok: false, error: new Error("Name required") };
+  return updateAdvertisementPackageAsync(id, { name: clean });
+}
+
 export async function removeAdvertisementPackageAsync(id) {
   try {
     await api.delete(`/advertisement-fees/packages/${id}/`);
