@@ -1,20 +1,19 @@
 // ============================================================
 // RevenueSection.jsx — fully backend-synced
-// Flat fees: listing, reservation (tiers), success, leading, advertisement.
-// Boost packages: price + toggle.
-// Packages (bundles) zipo kwenye ukurasa tofauti (AdminBundles).
+// Flat fees: listing, reservation (tiers), success.
+// Packages: boost, leading, advertisement (Add/Edit/Delete/Toggle).
 // ============================================================
 import React, { useState, useRef } from "react";
 import {
   Home, Clock, Rocket, Search, Smartphone, Plus, AlertTriangle,
-  Pencil, Info, Loader2, RefreshCw, Trash2, Wallet, Power, PowerOff,
+  Pencil, Info, Loader2, RefreshCw, Trash2, Wallet,
   TrendingUp,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import EditableAmount from "../components/Revenue/EditableAmount.jsx";
 import EditablePercent from "../components/Revenue/EditablePercent.jsx";
-import EditableNumber from "../components/Revenue/EditableNumber.jsx"; 
+import EditableNumber from "../components/Revenue/EditableNumber.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
   useReservationSettings,
@@ -33,13 +32,31 @@ import {
   updateListingFeeModeAsync, toggleListingFeeActiveAsync,
 } from "../../../../config/listingFeeStore.js";
 import {
-  useLeadingFeeConfig, updateLeadingFeePriceAsync, hydrateLeadingFeeFromApi,
+  useLeadingFeeConfig,
   toggleLeadingFeeAsync,
+  hydrateLeadingFeeFromApi,
 } from "../../../../config/leadingFeeStore.js";
 import {
-  useAdvertisementFeeConfig, updateAdvertisementFeePriceAsync,
-  hydrateAdvertisementFeeFromApi, toggleAdvertisementFeeAsync,
+  useLeadingPackages,
+  hydrateLeadingPackagesFromApi,
+  addLeadingPackageAsync,
+  updateLeadingPackageAsync,
+  removeLeadingPackageAsync,
+  toggleLeadingPackageAsync,
+} from "../../../../config/leadingPackagesStore.js";
+import {
+  useAdvertisementFeeConfig,
+  toggleAdvertisementFeeAsync,
+  hydrateAdvertisementFeeFromApi,
 } from "../../../../config/advertisementFeeStore.js";
+import {
+  useAdvertisementPackages,
+  hydrateAdvertisementPackagesFromApi,
+  addAdvertisementPackageAsync,
+  updateAdvertisementPackageAsync,
+  removeAdvertisementPackageAsync,
+  toggleAdvertisementPackageAsync,
+} from "../../../../config/advertisementPackagesStore.js";
 import {
   useSuccessFeeConfig, updateSuccessFeeAsync, toggleSuccessFeeAsync,
   hydrateSuccessFeeFromApi,
@@ -113,7 +130,6 @@ function ToggleSwitch({ enabled, onToggle, disabled, lang, compact = false }) {
         type="button"
         role="switch"
         aria-checked={enabled}
-        aria-label={enabled ? "Disable" : "Enable"}
         onClick={onToggle}
         disabled={disabled}
         className={`relative inline-flex items-center ${h} ${w} rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0`}
@@ -121,13 +137,84 @@ function ToggleSwitch({ enabled, onToggle, disabled, lang, compact = false }) {
       >
         <span
           className={`inline-block ${knob} rounded-full bg-white shadow transform transition-transform`}
-          style={{
-            transform: enabled ? travel : rest,
-          }}
+          style={{ transform: enabled ? travel : rest }}
         />
       </button>
     </div>
   );
+}
+
+// ============================================================
+// PACKAGE ROW — inatumika kwa Boost, Leading, Advertisement
+// ============================================================
+function PackageRow({
+  pkg,
+  lang,
+  onUpdatePrice,
+  onToggle,
+  onDelete,
+  isToggling,
+  isDeleting,
+  accentColor,
+  t,
+}) {
+  return (
+    <div className="py-3 flex items-center gap-2 flex-wrap">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-primary truncate">
+          {pkg.name}
+        </p>
+        <p className="text-[10px] text-muted">
+          {pkg.hours}h ({pkg.days} {t("siku", "days")})
+          {pkg.pricing?.discount_percent > 0 && (
+            <span
+              style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+              className="ml-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+            >
+              -{pkg.pricing.discount_percent}%
+            </span>
+          )}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end gap-0.5">
+          {pkg.pricing?.discount_percent > 0 && (
+            <span className="text-[10px] text-muted line-through">
+              {formatTZSSimple(pkg.pricing.base_price)}
+            </span>
+          )}
+          <EditableAmount
+            value={pkg.pricing?.discount_percent > 0 ? pkg.pricing.final_price : pkg.price}
+            onSave={onUpdatePrice}
+          />
+        </div>
+        <ToggleSwitch
+          enabled={pkg.isActive}
+          onToggle={onToggle}
+          disabled={isToggling}
+          lang={lang}
+          compact
+        />
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={isDeleting}
+          className="p-1.5 text-muted hover:text-[#C1502E] rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+        >
+          {isDeleting ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <Trash2 size={12} />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function formatTZSSimple(amount) {
+  return "TZS " + Math.round(Number(amount) || 0).toLocaleString("en-US");
 }
 
 export default function RevenueSection() {
@@ -136,7 +223,9 @@ export default function RevenueSection() {
   const reservationSettings = useReservationSettings();
   const reservationTiers = useReservationTiers();
   const leadingFee = useLeadingFeeConfig();
+  const leadingPackages = useLeadingPackages();
   const adFee = useAdvertisementFeeConfig();
+  const advertisementPackages = useAdvertisementPackages();
   const successFee = useSuccessFeeConfig();
   const boostPackages = useBoostPackages();
   const boostFee = useBoostFee();
@@ -164,7 +253,9 @@ export default function RevenueSection() {
         hydrateReservationFromApi(),
         hydrateListingFeeConfigsFromApi(),
         hydrateLeadingFeeFromApi(),
+        hydrateLeadingPackagesFromApi(),
         hydrateAdvertisementFeeFromApi(),
+        hydrateAdvertisementPackagesFromApi(),
         hydrateSuccessFeeFromApi(),
         hydrateBoostPackagesFromApi(),
         hydrateBoostFeeFromApi(),
@@ -376,15 +467,8 @@ export default function RevenueSection() {
     });
 
   // ═══════════════════════════════════════════════════════════
-  // LEADING
+  // LEADING — Toggle + Packages CRUD
   // ═══════════════════════════════════════════════════════════
-  const updateLeadingPrice = (price) =>
-    withBusy("leading", async () => {
-      const res = await updateLeadingFeePriceAsync(price);
-      if (res.ok) flashSaved();
-      return res;
-    });
-
   const toggleLeading = () =>
     withBusy("leading-toggle", async () => {
       const res = await toggleLeadingFeeAsync();
@@ -392,22 +476,93 @@ export default function RevenueSection() {
       return res;
     });
 
-  // ═══════════════════════════════════════════════════════════
-  // ADVERTISEMENT
-  // ═══════════════════════════════════════════════════════════
-  const updateAdvertisementPrice = (price) =>
-    withBusy("advertisement", async () => {
-      const res = await updateAdvertisementFeePriceAsync(price);
+  const handleAddLeadingPackage = () =>
+    withBusy("leading-add-pkg", async () => {
+      const nextOrder =
+        leadingPackages.length > 0
+          ? Math.max(...leadingPackages.map((p) => p.ordering || 0)) + 1
+          : 1;
+      const res = await addLeadingPackageAsync({
+        name: t("Mpya", "New"),
+        hours: 24,
+        price: 3000,
+        ordering: nextOrder,
+      });
       if (res.ok) flashSaved();
       return res;
     });
 
+  const updateLeadingPackagePrice = (id, price) =>
+    withBusy(`leading-pkg-p-${id}`, async () => {
+      const res = await updateLeadingPackageAsync(id, { price });
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const toggleLeadingPackage = (id) =>
+    withBusy(`leading-pkg-t-${id}`, async () => {
+      const res = await toggleLeadingPackageAsync(id);
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const handleDeleteLeadingPackage = (pkg) => {
+    if (!window.confirm(t(`Futa package "${pkg.name}"?`, `Delete package "${pkg.name}"?`))) return;
+    withBusy(`leading-pkg-d-${pkg.id}`, async () => {
+      const res = await removeLeadingPackageAsync(pkg.id);
+      if (res.ok) showFlash(t("Package imefutwa.", "Package deleted."));
+      return res;
+    });
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // ADVERTISEMENT — Toggle + Packages CRUD
+  // ═══════════════════════════════════════════════════════════
   const toggleAdvertisement = () =>
     withBusy("advertisement-toggle", async () => {
       const res = await toggleAdvertisementFeeAsync();
       if (res.ok) flashSaved();
       return res;
     });
+
+  const handleAddAdvertisementPackage = () =>
+    withBusy("ad-add-pkg", async () => {
+      const nextOrder =
+        advertisementPackages.length > 0
+          ? Math.max(...advertisementPackages.map((p) => p.ordering || 0)) + 1
+          : 1;
+      const res = await addAdvertisementPackageAsync({
+        name: t("Mpya", "New"),
+        hours: 24,
+        price: 5000,
+        ordering: nextOrder,
+      });
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const updateAdvertisementPackagePrice = (id, price) =>
+    withBusy(`ad-pkg-p-${id}`, async () => {
+      const res = await updateAdvertisementPackageAsync(id, { price });
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const toggleAdvertisementPackage = (id) =>
+    withBusy(`ad-pkg-t-${id}`, async () => {
+      const res = await toggleAdvertisementPackageAsync(id);
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const handleDeleteAdvertisementPackage = (pkg) => {
+    if (!window.confirm(t(`Futa package "${pkg.name}"?`, `Delete package "${pkg.name}"?`))) return;
+    withBusy(`ad-pkg-d-${pkg.id}`, async () => {
+      const res = await removeAdvertisementPackageAsync(pkg.id);
+      if (res.ok) showFlash(t("Package imefutwa.", "Package deleted."));
+      return res;
+    });
+  };
 
   // ═══════════════════════════════════════════════════════════
   // BOOST PACKAGES
@@ -520,8 +675,8 @@ export default function RevenueSection() {
       <SectionHeader
         title={t("Mapato & Fedha", "Revenue & Financial Settings")}
         subtitle={t(
-          "Flat fees zote — bofya kiasi kubadilisha, tumia toggle kuwasha/kuzima. Packages (Boost, Bundles) zipo kwenye ukurasa wake.",
-          "All flat fees — click any amount to edit, use toggle to on/off. Packages (Boost, Bundles) are on their own page."
+          "Flat fees na packages — bofya kiasi kubadilisha, tumia toggle kuwasha/kuzima.",
+          "Flat fees and packages — click any amount to edit, use toggle to on/off."
         )}
       />
 
@@ -757,7 +912,6 @@ export default function RevenueSection() {
                       </button>
                     </div>
                   </div>
-                  {/* Fee Mode Selector */}
                   <div className="flex gap-1.5 mb-2">
                     <button
                       type="button"
@@ -792,7 +946,6 @@ export default function RevenueSection() {
                       {t("Flat (TZS)", "Flat (TZS)")}
                     </button>
                   </div>
-                  {/* Fields */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                     {isFlat ? (
                       <div className="flex flex-col items-start min-w-0 sm:col-span-3">
@@ -974,21 +1127,21 @@ export default function RevenueSection() {
                         </button>
                       </div>
                     </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="flex flex-col items-start min-w-0">
-                      <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                       {t("Muda (Saa)", "Duration (Hours)")}
-                       </span>
-                     <div className="w-full min-w-0">
-                       <EditableNumber
-                         value={tier.hours}
-                         onSave={(v) => updateTierHours(tier.id, v)}
-                          min={1}
-                           max={8760}
-                           suffix={t("saa", "hrs")}
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex flex-col items-start min-w-0">
+                        <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                          {t("Muda (Saa)", "Duration (Hours)")}
+                        </span>
+                        <div className="w-full min-w-0">
+                          <EditableNumber
+                            value={tier.hours}
+                            onSave={(v) => updateTierHours(tier.id, v)}
+                            min={1}
+                            max={8760}
+                            suffix={t("saa", "hrs")}
+                          />
+                        </div>
                       </div>
-                     </div>
                       <div className="flex flex-col items-start min-w-0">
                         <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
                           {t("Bei (TZS)", "Fee (TZS)")}
@@ -1117,8 +1270,8 @@ export default function RevenueSection() {
               style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
             >
               {t(
-                "Ada ya Boost imezimwa — boost ni BURE kwa watumiaji wote. Packages zilizo active ndizo zinazotoa muda wa boost.",
-                "Boost fee is disabled — boosting is FREE for everyone. Active packages still define the boost duration."
+                "Ada ya Boost imezimwa — boost ni BURE kwa watumiaji wote.",
+                "Boost fee is disabled — boosting is FREE for everyone."
               )}
             </p>
           )}
@@ -1132,110 +1285,213 @@ export default function RevenueSection() {
             </p>
           ) : (
             <div className="divide-y divide-gray-100">
-              {boostPackages.map((pkg) => {
-                const isToggling = !!busy[`boost-toggle-${pkg.key}`];
-                return (
-                  <div
-                    key={pkg.id}
-                    className="py-3 flex items-center gap-2 flex-wrap"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-primary truncate">
-                        {getLocalized(pkg.label, lang) || pkg.key}
-                      </p>
-                      <p className="text-[10px] text-muted font-mono truncate">
-                        {pkg.key} — {pkg.days} {t("siku", "days")}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <EditableAmount
-                        value={pkg.price}
-                        onSave={(v) => updateBoostPrice(pkg.key, v)}
-                      />
-                      <ToggleSwitch
-                        enabled={pkg.isActive}
-                        onToggle={() => toggleBoost(pkg.key)}
-                        disabled={isToggling || busy.saving}
-                        lang={lang}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+              {boostPackages.map((pkg) => (
+                <PackageRow
+                  key={pkg.id}
+                  pkg={pkg}
+                  lang={lang}
+                  onUpdatePrice={(v) => updateBoostPrice(pkg.key, v)}
+                  onToggle={() => toggleBoost(pkg.key)}
+                  onDelete={() => {
+                    // Boost haina delete kwa sasa — angalia backend
+                  }}
+                  isToggling={!!busy[`boost-toggle-${pkg.key}`]}
+                  isDeleting={false}
+                  accentColor={COLORS.gold}
+                  t={t}
+                />
+              ))}
             </div>
           )}
         </RevenueCard>
 
         {/* ═══════════════════════════════════════════════════════ */}
-        {/* 5 & 6. LEADING + ADVERTISEMENT */}
+        {/* 5. LEADING PACKAGES */}
         {/* ═══════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <RevenueCard accentColor={COLORS.rust}>
-            <div className="flex items-center gap-3 mb-3">
-              <div
-                style={{ background: `${COLORS.rust}15` }}
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              >
-                <Search size={18} color={COLORS.rust} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-primary">
-                  {getLocalized(leadingFee.label, lang) || "Leading Fee"}
-                </p>
-                <p className="text-xs text-secondary mt-0.5">
-                  {getLocalized(leadingFee.desc, lang) || ""}
-                </p>
-              </div>
-              <ToggleSwitch
-                enabled={leadingFee.is_enabled}
-                onToggle={toggleLeading}
-                disabled={!!busy["leading-toggle"]}
-                lang={lang}
-              />
+        <RevenueCard accentColor={COLORS.rust}>
+          <div className="flex items-center gap-3 mb-1">
+            <div
+              style={{ background: `${COLORS.rust}15` }}
+              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+            >
+              <Search size={18} color={COLORS.rust} />
             </div>
-            <EditHint lang={lang} accentColor={COLORS.rust} />
-            <EditableAmount
-              value={leadingFee.price}
-              onSave={updateLeadingPrice}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-primary">
+                {getLocalized(leadingFee.label, lang) ||
+                  t("Ada ya Kipaumbele", "Leading Fee")}
+              </p>
+              <p className="text-xs text-secondary mt-0.5">
+                {getLocalized(leadingFee.desc, lang) ||
+                  t(
+                    "Packages za kupandisha listing juu ya matokeo",
+                    "Packages to boost listing to top of results"
+                  )}
+              </p>
+            </div>
+            <ToggleSwitch
+              enabled={leadingFee.is_enabled}
+              onToggle={toggleLeading}
+              disabled={!!busy["leading-toggle"]}
+              lang={lang}
             />
-            <span className="text-[11px] text-muted mt-1.5 block">
-              / {t(`siku ${leadingFee.days}`, `${leadingFee.days} days`)}
-            </span>
-          </RevenueCard>
+          </div>
 
-          <RevenueCard accentColor={COLORS.rust}>
-            <div className="flex items-center gap-3 mb-3">
-              <div
-                style={{ background: `${COLORS.rust}15` }}
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              >
-                <Smartphone size={18} color={COLORS.rust} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-primary">
-                  {getLocalized(adFee.label, lang) || "Advertisement Fee"}
-                </p>
-                <p className="text-xs text-secondary mt-0.5">
-                  {getLocalized(adFee.desc, lang) || ""}
-                </p>
-              </div>
-              <ToggleSwitch
-                enabled={adFee.is_enabled}
-                onToggle={toggleAdvertisement}
-                disabled={!!busy["advertisement-toggle"]}
-                lang={lang}
-              />
-            </div>
-            <EditHint lang={lang} accentColor={COLORS.rust} />
-            <EditableAmount
-              value={adFee.price}
-              onSave={updateAdvertisementPrice}
-            />
-            <span className="text-[11px] text-muted mt-1.5 block">
-              / {t(`siku ${adFee.days}`, `${adFee.days} days`)}
+          {!leadingFee.is_enabled && (
+            <p
+              className="text-xs text-center rounded-lg px-3 py-2 mb-3"
+              style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+            >
+              {t(
+                "Ada ya Leading imezimwa — leading ni BURE kwa watumiaji wote.",
+                "Leading fee is disabled — leading is FREE for everyone."
+              )}
+            </p>
+          )}
+
+          <EditHint lang={lang} accentColor={COLORS.rust} />
+
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <span className="text-[11px] font-semibold text-secondary">
+              {t("Packages", "Packages")} ({leadingPackages.length})
             </span>
-          </RevenueCard>
-        </div>
+            <button
+              type="button"
+              onClick={handleAddLeadingPackage}
+              disabled={!!busy["leading-add-pkg"]}
+              style={{ background: COLORS.gold, color: COLORS.night }}
+              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+            >
+              {busy["leading-add-pkg"] ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Plus size={12} />
+              )}
+              {t("Ongeza Package", "Add Package")}
+            </button>
+          </div>
+
+          {leadingPackages.length === 0 ? (
+            <p className="text-xs text-muted text-center py-3">
+              {t(
+                "Hakuna packages. Bofya 'Ongeza Package' kuanza.",
+                "No packages yet. Click 'Add Package' to start."
+              )}
+            </p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {leadingPackages.map((pkg) => (
+                <PackageRow
+                  key={pkg.id}
+                  pkg={pkg}
+                  lang={lang}
+                  onUpdatePrice={(v) => updateLeadingPackagePrice(pkg.id, v)}
+                  onToggle={() => toggleLeadingPackage(pkg.id)}
+                  onDelete={() => handleDeleteLeadingPackage(pkg)}
+                  isToggling={!!busy[`leading-pkg-t-${pkg.id}`]}
+                  isDeleting={!!busy[`leading-pkg-d-${pkg.id}`]}
+                  accentColor={COLORS.rust}
+                  t={t}
+                />
+              ))}
+            </div>
+          )}
+        </RevenueCard>
+
+        {/* ═══════════════════════════════════════════════════════ */}
+        {/* 6. ADVERTISEMENT PACKAGES */}
+        {/* ═══════════════════════════════════════════════════════ */}
+        <RevenueCard accentColor={COLORS.rust}>
+          <div className="flex items-center gap-3 mb-1">
+            <div
+              style={{ background: `${COLORS.rust}15` }}
+              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+            >
+              <Smartphone size={18} color={COLORS.rust} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-primary">
+                {getLocalized(adFee.label, lang) ||
+                  t("Ada ya Matangazo", "Advertisement Fee")}
+              </p>
+              <p className="text-xs text-secondary mt-0.5">
+                {getLocalized(adFee.desc, lang) ||
+                  t(
+                    "Packages za tangazo kwenye Dashboard",
+                    "Packages for dashboard banner ads"
+                  )}
+              </p>
+            </div>
+            <ToggleSwitch
+              enabled={adFee.is_enabled}
+              onToggle={toggleAdvertisement}
+              disabled={!!busy["advertisement-toggle"]}
+              lang={lang}
+            />
+          </div>
+
+          {!adFee.is_enabled && (
+            <p
+              className="text-xs text-center rounded-lg px-3 py-2 mb-3"
+              style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+            >
+              {t(
+                "Ada ya Matangazo imezimwa — matangazo ni BURE kwa watumiaji wote.",
+                "Advertisement fee is disabled — ads are FREE for everyone."
+              )}
+            </p>
+          )}
+
+          <EditHint lang={lang} accentColor={COLORS.rust} />
+
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <span className="text-[11px] font-semibold text-secondary">
+              {t("Packages", "Packages")} ({advertisementPackages.length})
+            </span>
+            <button
+              type="button"
+              onClick={handleAddAdvertisementPackage}
+              disabled={!!busy["ad-add-pkg"]}
+              style={{ background: COLORS.gold, color: COLORS.night }}
+              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+            >
+              {busy["ad-add-pkg"] ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Plus size={12} />
+              )}
+              {t("Ongeza Package", "Add Package")}
+            </button>
+          </div>
+
+          {advertisementPackages.length === 0 ? (
+            <p className="text-xs text-muted text-center py-3">
+              {t(
+                "Hakuna packages. Bofya 'Ongeza Package' kuanza.",
+                "No packages yet. Click 'Add Package' to start."
+              )}
+            </p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {advertisementPackages.map((pkg) => (
+                <PackageRow
+                  key={pkg.id}
+                  pkg={pkg}
+                  lang={lang}
+                  onUpdatePrice={(v) =>
+                    updateAdvertisementPackagePrice(pkg.id, v)
+                  }
+                  onToggle={() => toggleAdvertisementPackage(pkg.id)}
+                  onDelete={() => handleDeleteAdvertisementPackage(pkg)}
+                  isToggling={!!busy[`ad-pkg-t-${pkg.id}`]}
+                  isDeleting={!!busy[`ad-pkg-d-${pkg.id}`]}
+                  accentColor={COLORS.rust}
+                  t={t}
+                />
+              ))}
+            </div>
+          )}
+        </RevenueCard>
 
         <div
           className="rounded-xl border px-4 py-3 flex items-start gap-2.5"
@@ -1247,8 +1503,8 @@ export default function RevenueSection() {
           <Info size={16} color={COLORS.gold} className="shrink-0 mt-0.5" />
           <p className="text-xs text-secondary leading-relaxed">
             {t(
-              "Flat fees zote zinahifadhiwa papo hapo kwenye backend. Boost packages zinahifadhiwa moja kwa moja. Bundles zipo kwenye ukurasa wao.",
-              "All flat fees save to the backend instantly. Boost packages save directly. Bundles are on their own page."
+              "Flat fees zote zinahifadhiwa papo hapo kwenye backend. Packages (Boost, Leading, Advertisement) zinahifadhiwa moja kwa moja.",
+              "All flat fees save to the backend instantly. Packages (Boost, Leading, Advertisement) save directly."
             )}
           </p>
         </div>

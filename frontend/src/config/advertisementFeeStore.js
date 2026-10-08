@@ -2,19 +2,22 @@
 // advertisementFeeStore.js — Advertisement Fee (API-backed)
 // Backend: GET/PATCH /api/advertisement-fees/
 //          POST      /api/advertisement-fees/toggle/
+//
+// Kumbuka: `price` na `days` zimeondolewa. Zinatoka kwenye
+// `advertisementPackagesStore.js` (packages). Store hii inahifadhi
+// `is_enabled` pekee (toggle ya jumla).
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-const KEY = "sokomkononi_advertisement_fee_config_v3";
+const KEY = "sokomkononi_advertisement_fee_config_v4";
 const EV = "sokomkononi:advertisement-fee-config-updated";
 
 const FALLBACK = {
-  price: 0,
-  days: 7,
   is_enabled: true,
   label: { sw: "Ada ya Matangazo", en: "Advertisement Fee" },
   desc: { sw: "", en: "" },
+  updated_at: null,
 };
 
 function read() {
@@ -26,25 +29,19 @@ function read() {
     return p && typeof p === "object" ? { ...FALLBACK, ...p } : FALLBACK;
   } catch { return FALLBACK; }
 }
+
 function write(cfg) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(cfg));
   window.dispatchEvent(new Event(EV));
 }
-function normalizeLabel(raw, fallback) {
-  if (!raw) return fallback;
-  if (typeof raw === "string") return { sw: raw, en: raw };
-  return { sw: raw.sw || raw.en || "", en: raw.en || raw.sw || "" };
-}
+
 function norm(raw) {
   if (!raw) return null;
   return {
-    backendId: raw.id,
-    price: Number(raw.price) || 0,
-    days: Number(raw.days) || 7,
     is_enabled: raw.is_enabled !== false,
-    label: normalizeLabel(raw.label, FALLBACK.label),
-    desc: normalizeLabel(raw.desc, FALLBACK.desc),
+    label: raw.label || FALLBACK.label,
+    desc: raw.desc || FALLBACK.desc,
     updated_at: raw.updated_at || null,
   };
 }
@@ -67,41 +64,10 @@ export async function hydrateAdvertisementFeeFromApi() {
   }
 }
 
-export async function updateAdvertisementFeePriceAsync(price) {
-  const num = Number(price);
-  if (!Number.isFinite(num) || num < 0) {
-    return { ok: false, error: new Error("price must be non-negative") };
-  }
-  const cur = getAdvertisementFeeConfig();
-  write({ ...cur, price: num });  // Optimistic
-
-  try {
-    const raw = await api.patch("/advertisement-fees/", { price: num });
-    const updated = norm(raw) || { ...cur, price: num };
-    write(updated);
-    return { ok: true, config: updated };
-  } catch (errPatch) {
-    if (errPatch?.status && errPatch.status !== 404 && errPatch.status !== 405) {
-      write(cur);  // Rollback
-      return { ok: false, error: errPatch };
-    }
-    try {
-      const raw = await api.post("/advertisement-fees/", { price: num });
-      const updated = norm(raw) || { ...cur, price: num };
-      write(updated);
-      return { ok: true, config: updated };
-    } catch (errPost) {
-      write(cur);
-      return { ok: false, error: errPost || errPatch };
-    }
-  }
-}
-
-// ⬇️ MPYA — Toggle
 export async function toggleAdvertisementFeeAsync() {
   const cur = getAdvertisementFeeConfig();
   const newState = !cur.is_enabled;
-  write({ ...cur, is_enabled: newState });  // Optimistic
+  write({ ...cur, is_enabled: newState });
 
   try {
     const raw = await api.post("/advertisement-fees/toggle/", {});
@@ -109,7 +75,7 @@ export async function toggleAdvertisementFeeAsync() {
     write(updated);
     return { ok: true, is_enabled: updated.is_enabled };
   } catch (err) {
-    write(cur);  // Rollback
+    write(cur);
     return { ok: false, error: err };
   }
 }
@@ -128,9 +94,3 @@ export function useAdvertisementFeeConfig() {
   }, []);
   return cfg;
 }
-
-// Legacy
-export const SEED_ADVERTISEMENT_FEE_CONFIG = { price: 0, days: 0, is_enabled: true, label: { sw: "", en: "" }, desc: { sw: "", en: "" } };
-export function saveAdvertisementFeeConfig() {}
-export function updateAdvertisementFeePrice() {}
-export async function updateAdvertisementFeeAsync() { return { ok: false }; }
