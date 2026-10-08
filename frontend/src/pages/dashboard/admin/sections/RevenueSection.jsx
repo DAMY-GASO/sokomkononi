@@ -14,6 +14,7 @@ import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import EditableAmount from "../components/Revenue/EditableAmount.jsx";
 import EditablePercent from "../components/Revenue/EditablePercent.jsx";
+import EditableNumber from "../components/Revenue/EditableNumber.jsx"; 
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
   useReservationSettings,
@@ -973,18 +974,21 @@ export default function RevenueSection() {
                         </button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="flex flex-col items-start min-w-0">
-                        <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
-                          {t("Muda (Saa)", "Duration (Hours)")}
-                        </span>
-                        <div className="w-full min-w-0">
-                          <EditableAmount
-                            value={tier.hours}
-                            onSave={(v) => updateTierHours(tier.id, v)}
-                          />
-                        </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex flex-col items-start min-w-0">
+                      <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
+                       {t("Muda (Saa)", "Duration (Hours)")}
+                       </span>
+                     <div className="w-full min-w-0">
+                       <EditableNumber
+                         value={tier.hours}
+                         onSave={(v) => updateTierHours(tier.id, v)}
+                          min={1}
+                           max={8760}
+                           suffix={t("saa", "hrs")}
+                        />
                       </div>
+                     </div>
                       <div className="flex flex-col items-start min-w-0">
                         <span className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-1">
                           {t("Bei (TZS)", "Fee (TZS)")}
