@@ -3,9 +3,10 @@
 // Usimamizi wa watumiaji — table (desktop) + card list (mobile).
 // Bilingual + Async actions na rollback + loading state.
 // + Futa Permanently (hard delete) kwa admin.
+// + Role inahesabiwa kutoka listings + deals (Buyer/Seller/Both/Neither)
 // ============================================================
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Search, RotateCcw, Ban, Loader2, Trash2 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -20,6 +21,58 @@ import {
 import { useListings } from "../../../../config/listingsStore.js";
 import { useDeals } from "../../../../config/dealsStore.js";
 
+// ============================================================
+// ROLE BADGE
+// ============================================================
+const ROLE_STYLES = {
+  Admin: {
+    label: { sw: "Admin", en: "Admin" },
+    bg: "rgba(16,26,46,0.10)",
+    fg: COLORS.night,
+    border: "rgba(16,26,46,0.25)",
+  },
+  Both: {
+    label: { sw: "Wote Wawili", en: "Both" },
+    bg: "rgba(124,58,237,0.12)",
+    fg: "#7C3AED",
+    border: "rgba(124,58,237,0.3)",
+  },
+  Seller: {
+    label: { sw: "Muuzaji", en: "Seller" },
+    bg: "rgba(232,163,61,0.16)",
+    fg: "#8A5A16",
+    border: "rgba(232,163,61,0.4)",
+  },
+  Buyer: {
+    label: { sw: "Mnunuzi", en: "Buyer" },
+    bg: "rgba(47,109,79,0.14)",
+    fg: COLORS.green,
+    border: "rgba(47,109,79,0.35)",
+  },
+  Neither: {
+    label: { sw: "Wapya", en: "Neither" },
+    bg: "rgba(16,26,46,0.06)",
+    fg: "var(--text-secondary, #4B5563)",
+    border: "rgba(16,26,46,0.15)",
+  },
+};
+
+function RoleBadge({ role, lang }) {
+  const conf = ROLE_STYLES[role] || ROLE_STYLES.Neither;
+  return (
+    <span
+      style={{
+        background: conf.bg,
+        color: conf.fg,
+        borderColor: conf.border,
+      }}
+      className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap"
+    >
+      {conf.label?.[lang] || conf.label?.sw}
+    </span>
+  );
+}
+
 export default function UserManagementSection() {
   const { lang } = useLanguage();
   const users = useUsers();
@@ -33,19 +86,60 @@ export default function UserManagementSection() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  // ── Compute role kwa kila user ────────────────────────────
+  // Admin        → isStaff
+  // Both         → ana listing NA deal
+  // Seller       → ana listing pekee
+  // Buyer        → ana deal pekee
+  // Neither      → hana listing wala deal
+  const rolesById = useMemo(() => {
+    const map = new Map();
+
+    // Set za watu wenye listings
+    const sellerIds = new Set();
+    listings.forEach((l) => {
+      const id = l.sellerId ?? l.seller_id;
+      if (id != null) sellerIds.add(String(id));
+    });
+
+    // Set za watu wenye deals (kama buyer)
+    const buyerIds = new Set();
+    deals.forEach((d) => {
+      const id = d.buyerId ?? d.buyer_id;
+      if (id != null) buyerIds.add(String(id));
+    });
+
+    users.forEach((u) => {
+      const id = String(u.id);
+      if (u.isStaff) {
+        map.set(id, "Admin");
+        return;
+      }
+      const isSeller = sellerIds.has(id);
+      const isBuyer = buyerIds.has(id);
+      if (isSeller && isBuyer) map.set(id, "Both");
+      else if (isSeller) map.set(id, "Seller");
+      else if (isBuyer) map.set(id, "Buyer");
+      else map.set(id, "Neither");
+    });
+
+    return map;
+  }, [users, listings, deals]);
+
+  const getUserRole = (user) => rolesById.get(String(user.id)) || "Neither";
+
   const filtered = users.filter((u) => {
     const matchesQuery =
       u.name.toLowerCase().includes(query.toLowerCase()) ||
       u.email.toLowerCase().includes(query.toLowerCase());
+    const role = getUserRole(u);
     const matchesRole =
       roleFilter === "all" ||
-      u.role?.toLowerCase() === roleFilter.toLowerCase();
+      role.toLowerCase() === roleFilter.toLowerCase();
     return matchesQuery && matchesRole;
   });
 
-  // ============================================================
-  // HANDLE TOGGLE — suspend/activate
-  // ============================================================
+  // ── HANDLE TOGGLE — suspend/activate ──────────────────────
   const handleToggle = async (userId) => {
     if (busy[userId]) return;
 
@@ -71,13 +165,10 @@ export default function UserManagementSection() {
     }
   };
 
-  // ============================================================
-  // HANDLE PERMANENT DELETE — double confirmation
-  // ============================================================
+  // ── HANDLE PERMANENT DELETE — double confirmation ─────────
   const handleDelete = async (userId, userName) => {
     if (busy[userId]) return;
 
-    // First confirmation
     const confirmed = window.confirm(
       lang === "sw"
         ? `Futa mtumiaji "${userName}" KABISA?\n\nHatua hii haiwezi kurudishwa. Data yote itaondolewa.`
@@ -85,7 +176,6 @@ export default function UserManagementSection() {
     );
     if (!confirmed) return;
 
-    // Second confirmation
     const doubleConfirm = window.confirm(
       lang === "sw"
         ? "Una uhakika KABISA? Bonyeza OK kuthibitisha."
@@ -110,16 +200,13 @@ export default function UserManagementSection() {
           t("Imeshindwa kumfuta mtumiaji.", "Failed to delete user.")
       );
     } else {
-      // Kama drawer ipo wazi kwa user huyu, ifunge
       if (selectedUser?.id === userId) {
         setSelectedUser(null);
       }
     }
   };
 
-  // ============================================================
-  // ACTION BUTTONS — inatumika table na card
-  // ============================================================
+  // ── ACTION BUTTONS ────────────────────────────────────────
   const ActionButtons = ({ user, fullWidth = false }) => {
     const isSuspended = user.status === "suspended";
     const isBusy = !!busy[user.id];
@@ -131,7 +218,6 @@ export default function UserManagementSection() {
           fullWidth ? "w-full" : "justify-end"
         }`}
       >
-        {/* Suspend / Activate */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -166,7 +252,6 @@ export default function UserManagementSection() {
           )}
         </button>
 
-        {/* Futa Permanently */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -212,7 +297,6 @@ export default function UserManagementSection() {
         )}
       />
 
-      {/* Error banner */}
       {error && (
         <div
           style={{
@@ -245,14 +329,15 @@ export default function UserManagementSection() {
           className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary"
         >
           <option value="all">{t("Zote", "All")}</option>
-          <option value="Buyer">{t("Wanunuzi", "Buyers")}</option>
+          <option value="Admin">Admin</option>
           <option value="Seller">{t("Wauzaji", "Sellers")}</option>
+          <option value="Buyer">{t("Wanunuzi", "Buyers")}</option>
+          <option value="Both">{t("Wote Wawili", "Both")}</option>
+          <option value="Neither">{t("Wapya", "Neither")}</option>
         </select>
       </div>
 
-      {/* ============================================================
-          DESKTOP — TABLE
-          ============================================================ */}
+      {/* DESKTOP — TABLE */}
       <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -265,7 +350,7 @@ export default function UserManagementSection() {
                   Email
                 </th>
                 <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                  Role
+                  {t("Nafasi", "Role")}
                 </th>
                 <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
                   Status
@@ -279,28 +364,35 @@ export default function UserManagementSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((u) => (
-                <tr
-                  key={u.id}
-                  className="hover:bg-gray-50/50 transition-colors cursor-pointer"
-                  onClick={() => setSelectedUser(u)}
-                >
-                  <td className="px-5 py-3 text-sm font-medium text-primary">
-                    {u.name}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-secondary">
-                    {u.email}
-                  </td>
-                  <td className="px-5 py-3 text-sm text-secondary">{u.role}</td>
-                  <td className="px-5 py-3">
-                    <StatusBadge status={u.status} lang={lang} />
-                  </td>
-                  <td className="px-5 py-3 text-sm text-muted">{u.joined}</td>
-                  <td className="px-5 py-3 text-right">
-                    <ActionButtons user={u} />
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((u) => {
+                const role = getUserRole(u);
+                return (
+                  <tr
+                    key={u.id}
+                    className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    onClick={() => setSelectedUser(u)}
+                  >
+                    <td className="px-5 py-3 text-sm font-medium text-primary">
+                      {u.name}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-secondary">
+                      {u.email}
+                    </td>
+                    <td className="px-5 py-3">
+                      <RoleBadge role={role} lang={lang} />
+                    </td>
+                    <td className="px-5 py-3">
+                      <StatusBadge status={u.status} lang={lang} />
+                    </td>
+                    <td className="px-5 py-3 text-sm text-muted">
+                      {u.joined}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <ActionButtons user={u} />
+                    </td>
+                  </tr>
+                );
+              })}
               {filtered.length === 0 && (
                 <tr>
                   <td
@@ -316,45 +408,50 @@ export default function UserManagementSection() {
         </div>
       </div>
 
-      {/* ============================================================
-          MOBILE — CARD LIST
-          ============================================================ */}
+      {/* MOBILE — CARD LIST */}
       <div className="sm:hidden flex flex-col gap-3">
-        {filtered.map((u) => (
-          <div
-            key={u.id}
-            onClick={() => setSelectedUser(u)}
-            className="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:shadow-sm transition-shadow"
-          >
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-primary truncate">
-                  {u.name}
-                </p>
-                <p className="text-xs text-secondary truncate mt-0.5">
-                  {u.email}
-                </p>
+        {filtered.map((u) => {
+          const role = getUserRole(u);
+          return (
+            <div
+              key={u.id}
+              onClick={() => setSelectedUser(u)}
+              className="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:shadow-sm transition-shadow"
+            >
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-primary truncate">
+                    {u.name}
+                  </p>
+                  <p className="text-xs text-secondary truncate mt-0.5">
+                    {u.email}
+                  </p>
+                </div>
+                <StatusBadge status={u.status} lang={lang} />
               </div>
-              <StatusBadge status={u.status} lang={lang} />
-            </div>
 
-            <div className="flex items-center gap-3 text-xs text-secondary mb-3 flex-wrap">
-              <span className="inline-flex items-center gap-1">
-                <span className="text-muted">Role:</span>
-                <span className="font-medium text-primary">{u.role}</span>
-              </span>
-              <span className="text-muted">•</span>
-              <span className="inline-flex items-center gap-1">
-                <span className="text-muted">
-                  {t("Alijiunga:", "Joined:")}
+              <div className="flex items-center gap-3 text-xs text-secondary mb-3 flex-wrap">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="text-muted">
+                    {t("Nafasi:", "Role:")}
+                  </span>
+                  <RoleBadge role={role} lang={lang} />
                 </span>
-                <span className="font-medium text-primary">{u.joined}</span>
-              </span>
-            </div>
+                <span className="text-muted">•</span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="text-muted">
+                    {t("Alijiunga:", "Joined:")}
+                  </span>
+                  <span className="font-medium text-primary">
+                    {u.joined}
+                  </span>
+                </span>
+              </div>
 
-            <ActionButtons user={u} fullWidth />
-          </div>
-        ))}
+              <ActionButtons user={u} fullWidth />
+            </div>
+          );
+        })}
 
         {filtered.length === 0 && (
           <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-sm text-muted">
