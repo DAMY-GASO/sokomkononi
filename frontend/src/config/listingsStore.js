@@ -490,7 +490,6 @@ let _myListingsUserId = null;
 // the seller-specific helpers and merge the results by id.
 const _SELLER_STATUS_CANDIDATES = [
   "PENDING_APPROVAL",
-  "IN_REVIEW",
   "REJECTED",
   "PAUSED",
 ];
@@ -598,7 +597,7 @@ export async function fetchPendingListingsAsync() {
 const API_STATUS_FOR_FILTER = {
   live: ["LIVE"],
   rejected: ["REJECTED"],
-  in_review: ["PENDING_APPROVAL", "IN_REVIEW"],
+  in_review: ["PENDING_APPROVAL"],
   pending_payment: ["PENDING_PAYMENT", "DRAFT"],
   paused: ["PAUSED", "ARCHIVED"],
   sold: ["SOLD"],

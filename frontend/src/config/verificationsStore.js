@@ -70,6 +70,7 @@ function norm(raw) {
     submittedAt: raw.created_at,
     reviewedAt: raw.reviewed_at,
     reviewedBy: raw.reviewed_by,
+    reviewedByName: raw.reviewed_by_name,
     rejectionReason: raw.rejection_reason,
     // ⬇️ MPYA — Admin request documents
     documentsRequestedAt: raw.documents_requested_at,

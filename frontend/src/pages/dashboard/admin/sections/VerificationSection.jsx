@@ -62,6 +62,8 @@ function StatusBadge({ status, lang }) {
   );
 }
 
+const MIN_REASON = 5;
+
 function VerificationCard({ request, lang }) {
   const [expanded, setExpanded] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -96,11 +98,24 @@ function VerificationCard({ request, lang }) {
   const handleReject = async () => {
     if (!rejecting) {
       setRejecting(true);
+      setError("");
       return;
     }
+
+    const reason = rejectReason.trim();
+    if (reason.length < MIN_REASON) {
+      setError(
+        t(
+          `Sababu ya kukataa lazima iwe na angalau herufi ${MIN_REASON}.`,
+          `Rejection reason must be at least ${MIN_REASON} characters.`
+        )
+      );
+      return;
+    }
+
     setBusy(true);
     setError("");
-    const res = await rejectVerificationAsync(request.id, rejectReason.trim());
+    const res = await rejectVerificationAsync(request.id, reason);
     setBusy(false);
     if (res.ok) {
       setRejecting(false);
@@ -299,23 +314,32 @@ function VerificationCard({ request, lang }) {
               {request.status === "approved"
                 ? t("Ilidhinishwa", "Approved")
                 : t("Ilikaguliwa", "Reviewed")}{" "}
-              {timeAgo(request.reviewedAt, lang)} · {request.reviewedBy}
+              {timeAgo(request.reviewedAt, lang)}
+              {request.reviewedByName && ` · ${request.reviewedByName}`}
             </p>
           )}
 
           {/* Reject reason input */}
           {rejecting && (
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder={t(
-                "Sababu ya kukataa (hiari)...",
-                "Reason for rejection (optional)..."
-              )}
-              rows={2}
-              className="w-full rounded-lg border px-3 py-2 text-xs outline-none resize-none bg-white"
-              style={{ borderColor: COLORS.sandLine }}
-            />
+            <div>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => {
+                  setRejectReason(e.target.value);
+                  if (error) setError("");
+                }}
+                placeholder={t(
+                  "Sababu ya kukataa (angalau herufi 5)...",
+                  "Reason for rejection (at least 5 characters)..."
+                )}
+                rows={2}
+                className="w-full rounded-lg border px-3 py-2 text-xs outline-none resize-none bg-white"
+                style={{ borderColor: COLORS.sandLine }}
+              />
+              <p className="text-[10px] text-muted mt-1 text-right">
+                {rejectReason.trim().length}/{MIN_REASON}+
+              </p>
+            </div>
           )}
 
           {/* Docs request message input */}
@@ -348,7 +372,11 @@ function VerificationCard({ request, lang }) {
 
               <button
                 onClick={handleReject}
-                disabled={busy || uploading}
+                disabled={
+                  busy ||
+                  uploading ||
+                  (rejecting && rejectReason.trim().length < MIN_REASON)
+                }
                 style={{
                   background: rejecting ? COLORS.rust : "transparent",
                   color: rejecting ? "white" : COLORS.rust,
@@ -527,7 +555,7 @@ export default function VerificationSection() {
       </div>
 
       {/* Type Tabs */}
-      <div className="flex justify-center gap-2 mb-3 overflow-x-auto pb-2">
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-2 sm:justify-center">
         <button
           onClick={() => setTypeFilter("all")}
           style={{
@@ -556,7 +584,7 @@ export default function VerificationSection() {
       </div>
 
       {/* Status Tabs */}
-      <div className="flex justify-center gap-2 mb-3 overflow-x-auto pb-2">
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-2 sm:justify-center">
         <button
           onClick={() => setStatusFilter("all")}
           style={{
