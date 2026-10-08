@@ -4,7 +4,7 @@
 // Bilingual + mobile-responsive (imeboreshwa).
 // ============================================================
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import {
   Users,
   Home,
@@ -28,6 +28,7 @@ import { useUsers } from "../../../../config/usersStore.js";
 import { useListings, useHydratePublicListings } from "../../../../config/listingsStore.js";
 import { useDeals } from "../../../../config/dealsStore.js";
 import { usePlatformRevenue, localDayKey } from "../shared/revenue.js";
+import { api } from "../../../../api/client.js";
 
 // ============================================================
 // STAT TILE — responsive
@@ -197,10 +198,33 @@ export default function ReportsSection() {
   const listings = useListings();
   const deals = useDeals();
 
+  const [userStats, setUserStats] = useState({
+    totalUsers: 0,
+    totalSellers: 0,
+    totalBuyers: 0,
+    bothRoles: 0,
+    neitherRole: 0,
+    totalAdmins: 0,
+  });
+
+  // Fetch accurate user stats kutoka backend
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api.get("/finance/user-stats/");
+        if (!cancelled) setUserStats(data);
+      } catch {
+        /* noop — fallback inatumika */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const locale = lang === "sw" ? "sw-TZ" : "en-US";
 
-  // Mapato ya Jumla: chanzo sawa na Overview (finance/dashboard)
+  // Mapato ya Jumla
   const totalRevenueText = platformRevenue.loading
     ? "…"
     : platformRevenue.error
@@ -214,12 +238,30 @@ export default function ReportsSection() {
     const pick = (api, local) => (num(api) > 0 ? num(api) : local);
     const pickList = (api, local) => (Array.isArray(api) && api.length > 0 ? api : local);
     const dayLabel = (d) => d.toLocaleDateString(locale, { day: "numeric", month: "short" });
-    const byRole = (role) => users.filter((u) => u.role === role).length;
-    const byStatus = (st) => deals.filter((d) => d.status === st).length;
-    const lsStatus = (st) => listings.filter((l) => l.status === st).length;
+
+    // ── User counts ─────────────────────────────────────
+    // Priorities: userStats (API) > apiReports (reports API) > local fallback
+    const sellerIds = new Set(
+      listings.map((l) => String(l.sellerId ?? l.seller_id)).filter(Boolean)
+    );
+    const buyerIds = new Set(
+      deals.map((d) => String(d.buyerId ?? d.buyer_id)).filter(Boolean)
+    );
+
+    const totalUsers = userStats.totalUsers
+      || num(apiReports.totalUsers)
+      || users.length;
+    const totalSellers = userStats.totalSellers
+      || num(apiReports.totalSellers)
+      || sellerIds.size;
+    const totalBuyers = userStats.totalBuyers
+      || num(apiReports.totalBuyers)
+      || buyerIds.size;
+    const bothRoles = userStats.bothRoles || num(apiReports.bothRoles) || 0;
 
     // ---- Deals ----
     const apiStatus = apiReports.dealsByStatus || {};
+    const byStatus = (st) => deals.filter((d) => d.status === st).length;
     const dealsByStatus = Object.values(apiStatus).some((v) => num(v) > 0)
       ? apiStatus
       : {
@@ -232,7 +274,6 @@ export default function ReportsSection() {
         };
     const totalDeals = pick(apiReports.totalDeals, deals.length);
     const completedDeals = pick(apiReports.completedDeals, byStatus("completed"));
-    // Conversion = deals zilizokamilika ÷ deals zote
     const conversionRate =
       num(apiReports.conversionRate) > 0
         ? num(apiReports.conversionRate)
@@ -240,7 +281,7 @@ export default function ReportsSection() {
           ? (completedDeals / totalDeals) * 100
           : 0;
 
-    // ---- Ukuaji wa watumiaji (siku 30) ----
+    // ---- Users Growth ----
     const usersGrowthLocal = [];
     if (users.length > 0) {
       for (let i = 29; i >= 0; i--) {
@@ -255,7 +296,8 @@ export default function ReportsSection() {
       }
     }
 
-    // ---- Mali (listingsStore) ----
+    // ---- Listings ----
+    const lsStatus = (st) => listings.filter((l) => l.status === st).length;
     const perDay = {};
     listings.forEach((l) => {
       const d = new Date(l.postedAt);
@@ -307,9 +349,10 @@ export default function ReportsSection() {
 
     return {
       ...apiReports,
-      totalUsers: pick(apiReports.totalUsers, users.length),
-      totalSellers: pick(apiReports.totalSellers, byRole("Seller")),
-      totalBuyers: pick(apiReports.totalBuyers, byRole("Buyer")),
+      totalUsers,
+      totalSellers,
+      totalBuyers,
+      bothRoles,
       totalListings: pick(apiReports.totalListings, listings.length),
       liveListings: pick(apiReports.liveListings, lsStatus("live")),
       soldListings: pick(apiReports.soldListings, lsStatus("sold")),
@@ -325,7 +368,7 @@ export default function ReportsSection() {
       topCategories: pickList(apiReports.topCategories, topCategoriesLocal),
       topLocations: pickList(apiReports.topLocations, topLocationsLocal),
     };
-  }, [apiReports, users, listings, deals, locale]);
+  }, [apiReports, userStats, users, listings, deals, locale]);
 
   // Compute max values for charts
   const usersMax = Math.max(
@@ -359,8 +402,8 @@ export default function ReportsSection() {
           icon={Users}
           color={COLORS.gold}
           subtext={t(
-            `${reports.totalSellers} wauzaji · ${reports.totalBuyers} wanunuzi`,
-            `${reports.totalSellers} sellers · ${reports.totalBuyers} buyers`
+            `${reports.totalSellers} wauzaji · ${reports.totalBuyers} wanunuzi · ${reports.bothRoles} wote wawili`,
+            `${reports.totalSellers} sellers · ${reports.totalBuyers} buyers · ${reports.bothRoles} both`
           )}
         />
         <ReportTile

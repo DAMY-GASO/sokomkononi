@@ -38,6 +38,7 @@ import {
   isRevenueTransaction,
   localDayKey,
 } from "../shared/revenue.js";
+import { api } from "../../../../api/client.js";
 
 const NEW_REGISTRATION_WINDOW_DAYS = 7;
 
@@ -61,6 +62,14 @@ export default function OverviewSection({ onNavigate }) {
   const revenue = usePlatformRevenue("all");
 
   const [pendingCount, setPendingCount] = useState(0);
+  const [userStats, setUserStats] = useState({
+    totalUsers: 0,
+    totalSellers: 0,
+    totalBuyers: 0,
+    bothRoles: 0,
+    neitherRole: 0,
+    totalAdmins: 0,
+  });
 
   useEffect(() => {
     fetchPendingListingsAsync().then((res) => {
@@ -68,17 +77,25 @@ export default function OverviewSection({ onNavigate }) {
     });
   }, []);
 
-  const totalUsers = users.length;
-  const activeBuyers = useMemo(
-    () =>
-      users.filter((u) => u.role === "Buyer" && u.status !== "suspended").length,
-    [users]
-  );
-  const activeSellers = useMemo(
-    () =>
-      users.filter((u) => u.role === "Seller" && u.status !== "suspended").length,
-    [users]
-  );
+  // Fetch accurate user stats kutoka backend
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api.get("/finance/user-stats/");
+        if (!cancelled) setUserStats(data);
+      } catch {
+        /* noop — fallback inatumika */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Tumia userStats kutoka API; fallback kwa local counts
+  const totalUsers = userStats.totalUsers || users.length;
+  const activeSellers = userStats.totalSellers || 0;
+  const activeBuyers = userStats.totalBuyers || 0;
+  const bothRoles = userStats.bothRoles || 0;
 
   const newRegistrations = useMemo(() => {
     const cutoff = Date.now() - NEW_REGISTRATION_WINDOW_DAYS * 86400000;
@@ -170,6 +187,13 @@ export default function OverviewSection({ onNavigate }) {
       value: activeSellers.toLocaleString(),
       icon: Store,
       color: "#2563EB",
+    },
+    {
+      id: "bothRoles",
+      label: lang === "sw" ? "Wote Wawili" : "Both Roles",
+      value: bothRoles.toLocaleString(),
+      icon: Users,
+      color: "#7C3AED",
     },
     {
       id: "listings",
@@ -295,7 +319,7 @@ export default function OverviewSection({ onNavigate }) {
           </div>
         </div>
 
-        {/* Breakdown ya mapato kwa aina — jumla hapo juu = jumla ya hizi 6 */}
+        {/* Breakdown ya mapato kwa aina */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 w-full lg:w-auto shrink-0">
           {revenue.streams.map(({ key, label }) => (
             <RevenueBreakdown
