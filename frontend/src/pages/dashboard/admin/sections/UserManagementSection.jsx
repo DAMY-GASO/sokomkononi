@@ -3,10 +3,10 @@
 // Usimamizi wa watumiaji — table (desktop) + card list (mobile).
 // Bilingual + Async actions na rollback + loading state.
 // + Futa Permanently (hard delete) kwa admin.
-// + Role inahesabiwa kutoka listings + deals (Buyer/Seller/Both/Neither)
+// + Role inatoka backend (u.role) — inahesabiwa kutoka listings + deals
 // ============================================================
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { Search, RotateCcw, Ban, Loader2, Trash2 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -81,52 +81,13 @@ export default function UserManagementSection() {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState(null);
-  const [busy, setBusy] = useState({}); // { [userId]: "toggle" | "delete" }
+  const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ── Compute role kwa kila user ────────────────────────────
-  // Admin        → isStaff
-  // Both         → ana listing NA deal
-  // Seller       → ana listing pekee
-  // Buyer        → ana deal pekee
-  // Neither      → hana listing wala deal
-  const rolesById = useMemo(() => {
-    const map = new Map();
-
-    // Set za watu wenye listings
-    const sellerIds = new Set();
-    listings.forEach((l) => {
-      const id = l.sellerId ?? l.seller_id;
-      if (id != null) sellerIds.add(String(id));
-    });
-
-    // Set za watu wenye deals (kama buyer)
-    const buyerIds = new Set();
-    deals.forEach((d) => {
-      const id = d.buyerId ?? d.buyer_id;
-      if (id != null) buyerIds.add(String(id));
-    });
-
-    users.forEach((u) => {
-      const id = String(u.id);
-      if (u.isStaff) {
-        map.set(id, "Admin");
-        return;
-      }
-      const isSeller = sellerIds.has(id);
-      const isBuyer = buyerIds.has(id);
-      if (isSeller && isBuyer) map.set(id, "Both");
-      else if (isSeller) map.set(id, "Seller");
-      else if (isBuyer) map.set(id, "Buyer");
-      else map.set(id, "Neither");
-    });
-
-    return map;
-  }, [users, listings, deals]);
-
-  const getUserRole = (user) => rolesById.get(String(user.id)) || "Neither";
+  // Role inatoka backend (`u.role`) — sio kuhesabu locally
+  const getUserRole = (user) => user.role || "Neither";
 
   const filtered = users.filter((u) => {
     const matchesQuery =
@@ -139,7 +100,7 @@ export default function UserManagementSection() {
     return matchesQuery && matchesRole;
   });
 
-  // ── HANDLE TOGGLE — suspend/activate ──────────────────────
+  // ── HANDLE TOGGLE ─────────────────────────────────────────
   const handleToggle = async (userId) => {
     if (busy[userId]) return;
 
@@ -165,7 +126,7 @@ export default function UserManagementSection() {
     }
   };
 
-  // ── HANDLE PERMANENT DELETE — double confirmation ─────────
+  // ── HANDLE PERMANENT DELETE ───────────────────────────────
   const handleDelete = async (userId, userName) => {
     if (busy[userId]) return;
 

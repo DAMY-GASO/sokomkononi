@@ -1,12 +1,11 @@
 // ============================================================
-// AdvertiseSasa.jsx (production + bundle + credits + skip-fee)
+// AdvertiseSasa.jsx (production + bundle + credits + packages)
 // Flow:
-//   A. Skip (is_enabled=false) → POST /banners/ → POST /banners/{id}/pay/
-//                                {payment_reference: "free"}
-//   B. Flat fee  → POST /banners/ → /pay/ (FimiPay)
-//   C. Bundle    → POST /bundles/purchases/ → /pay/ → credits added
-//                  kisha POST /banners/ → /pay/ {payment_reference: "credits"}
-//   D. Credit    → POST /banners/ → /pay/ {payment_reference: "credits"}
+//   A. Package flat fee  → POST /banners/ → /pay/ (FimiPay)
+//   B. Bundle            → POST /bundles/purchases/ → /pay/ → credits
+//                          kisha POST /banners/ → /pay/ {payment_reference: "credits"}
+//   C. Credit            → POST /banners/ → /pay/ {payment_reference: "credits"}
+//   D. Skip fee          → POST /banners/ → /pay/ {payment_reference: "free"}
 // ============================================================
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -14,14 +13,21 @@ import {
   Wallet, Package, Check,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS } from "./shared";
-import { useAdvertisementFeeConfig } from "../../../config/advertisementFeeStore.js";
-import { useActiveBannerAds, bannerDaysRemaining } from "../../../config/bannerAdsStore.js";
+import {
+  useAdvertisementFeeConfig,
+  hydrateAdvertisementFeeFromApi,
+} from "../../../config/advertisementFeeStore.js";
+import {
+  useAdvertisementPackages,
+  hydrateAdvertisementPackagesFromApi,
+} from "../../../config/advertisementPackagesStore.js";
+import { useActiveBannerAds } from "../../../config/bannerAdsStore.js";
 import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
-import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
-import { createBannerAdAsync, payBannerAdAsync } from "../../../config/bannerAdsStore.js";
+import { checkCredit } from "../../../config/userCreditsStore.js";
+import { createBannerAdAsync } from "../../../config/bannerAdsStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 
@@ -84,6 +90,72 @@ function ListingPicker({ listings, selectedId, onSelect, activeBannerListingIds,
         );
       })}
     </div>
+  );
+}
+
+// ============================================================
+// ADVERTISEMENT PACKAGE CARD
+// ============================================================
+function AdvertisementPackageCard({ pkg, selected, onSelect, lang, free = false }) {
+  const name = pkg.name || "Package";
+  const hasDiscount =
+    !free &&
+    pkg.pricing &&
+    Number(pkg.pricing.discount_percent) > 0;
+  const basePrice = hasDiscount ? pkg.pricing.base_price : pkg.price;
+  const finalPrice = hasDiscount ? pkg.pricing.final_price : pkg.price;
+  const days = pkg.days || Math.round((pkg.hours || 24) / 24);
+
+  return (
+    <button
+      onClick={() => onSelect(pkg.id)}
+      style={{
+        borderColor: selected ? COLORS.gold : COLORS.sandLine,
+        background: "white",
+      }}
+      className="relative flex flex-col items-center text-center gap-3 p-4 rounded-2xl border w-full"
+    >
+      {hasDiscount && (
+        <span
+          style={{ background: COLORS.rust, color: "white" }}
+          className="absolute -top-2 right-2 text-body-sm font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+        >
+          -{pkg.pricing.discount_percent}%
+        </span>
+      )}
+
+      <div className="flex items-center justify-center gap-2 w-full">
+        <span className="text-primary text-sm font-bold">{name}</span>
+        <span
+          style={{ background: selected ? COLORS.gold : COLORS.sandLine, borderColor: COLORS.gold }}
+          className="w-5 h-5 rounded-full border flex items-center justify-center shrink-0"
+        >
+          {selected && <Check size={12} color={COLORS.night} />}
+        </span>
+      </div>
+
+      <div className="flex flex-col items-center gap-0.5">
+        {hasDiscount && (
+          <span className="text-secondary text-body-sm line-through">
+            {formatTZS(basePrice)}
+          </span>
+        )}
+        <div className="flex items-baseline justify-center gap-1.5">
+          <span style={{ color: COLORS.rust }} className="text-lg font-bold">
+            {free ? (lang === "sw" ? "Bure" : "Free") : formatTZS(finalPrice)}
+          </span>
+          <span className="text-secondary text-body-sm">
+            / {lang === "sw" ? `siku ${days}` : `${days} days`}
+          </span>
+        </div>
+      </div>
+
+      {pkg.description && (
+        <p className="text-secondary text-body-sm line-clamp-2">
+          {pkg.description}
+        </p>
+      )}
+    </button>
   );
 }
 
@@ -161,11 +233,16 @@ export default function AdvertiseSasa({
   const { lang } = useLanguage();
   const { user } = useAuth();
   const liveListings = listings.filter((l) => l.status === "live");
+
   const adFee = useAdvertisementFeeConfig();
+  const advertisementPackages = useAdvertisementPackages();
   const activeBanners = useActiveBannerAds();
   const activeBannerListingIds = new Set(activeBanners.map((b) => b.listingId));
 
   const adsBundles = useActiveBundles().filter((b) => b.type === "ads");
+
+  const feeEnabled = adFee.is_enabled !== false;
+  const feeDisabled = !feeEnabled;
 
   const [selectedId, setSelectedId] = useState(
     initialListingId && liveListings.some((l) => l.id === initialListingId)
@@ -173,24 +250,46 @@ export default function AdvertiseSasa({
       : liveListings[0]?.id ?? null
   );
 
-  const [paymentMode, setPaymentMode] = useState("flat"); // "flat" | "bundle"
+  const [paymentMode, setPaymentMode] = useState("flat");
+  const [packageId, setPackageId] = useState(null);
   const [bundleId, setBundleId] = useState(null);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(null);
-  const [stage, setStage] = useState("select"); // select | paying
+  const [stage, setStage] = useState("select");
   const [pendingBanner, setPendingBanner] = useState(null);
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
   const pendingBannerIdRef = useRef(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  // Hydrate
+  useEffect(() => {
+    let cancelled = false;
+    Promise.allSettled([
+      hydrateAdvertisementFeeFromApi(),
+      hydrateAdvertisementPackagesFromApi(),
+    ]).then(() => { if (cancelled) return; });
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     if (initialListingId && liveListings.some((l) => l.id === initialListingId)) {
       setSelectedId(initialListingId);
     }
   }, [initialListingId, liveListings]);
+
+  // Auto-select first package
+  useEffect(() => {
+    if (!advertisementPackages.length) {
+      if (packageId !== null) setPackageId(null);
+      return;
+    }
+    if (!advertisementPackages.some((p) => p.id === packageId)) {
+      setPackageId(advertisementPackages[0].id);
+    }
+  }, [advertisementPackages, packageId]);
 
   useEffect(() => {
     if (!bundleId && adsBundles.length) {
@@ -202,27 +301,39 @@ export default function AdvertiseSasa({
   const alreadyAdvertising = selectedListing ? activeBannerListingIds.has(selectedListing.id) : false;
   const canAdvertise = Boolean(selectedListing) && !alreadyAdvertising;
 
+  const selectedPackage = advertisementPackages.find((p) => p.id === packageId);
+  const selectedBundle = adsBundles.find((b) => b.id === bundleId);
+
   const creditInfo = checkCredit(user?.id, "ads");
   const adsCreditRemaining = creditInfo.remaining || 0;
-  const hasCredit = creditInfo.hasCredit;
-
-  const adFeeEnabled = adFee.is_enabled !== false;
-  const selectedBundle = adsBundles.find((b) => b.id === bundleId);
+  const hasCredit = creditInfo.hasCredit && feeEnabled;
 
   const canProceed =
     canAdvertise &&
-    (paymentMode === "flat" || (paymentMode === "bundle" && selectedBundle));
+    (feeDisabled
+      ? Boolean(selectedPackage)
+      : paymentMode === "flat"
+        ? Boolean(selectedPackage)
+        : Boolean(selectedBundle));
 
   const adLabel = getLocalized(adFee.label, lang) || "Advertisement";
   const adDesc = getLocalized(adFee.desc, lang);
 
-  // ══════════════════════════════════════════════════════════
-  // CREATE PENDING BANNER
-  // ══════════════════════════════════════════════════════════
+  // ── Create PENDING banner ──────────────────────────────────
   const createPendingBanner = async () => {
-    const created = await createBannerAdAsync(selectedListing.id);
-    if (!created.ok) throw created.error;
-    const bannerId = created.banner?.id;
+    if (!selectedPackage?.id) {
+      throw new Error(
+        t(
+          "Hakuna advertisement package inayopatikana.",
+          "No advertisement package is available."
+        )
+      );
+    }
+    const created = await api.post("/banners/", {
+      listing: selectedListing.id,
+      package: selectedPackage.id,
+    });
+    const bannerId = created?.id;
     if (!bannerId) {
       throw new Error(
         t(
@@ -231,12 +342,10 @@ export default function AdvertiseSasa({
         )
       );
     }
-    return { bannerId, banner: created.banner };
+    return { bannerId, banner: created };
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PATH A: SKIP FEE (is_enabled = false)
-  // ══════════════════════════════════════════════════════════
+  // ── PATH A: SKIP FEE ───────────────────────────────────────
   const handleSkipFee = async () => {
     if (!canAdvertise || busy) return;
     setBusy(true);
@@ -259,9 +368,7 @@ export default function AdvertiseSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PATH B: FLAT FEE
-  // ══════════════════════════════════════════════════════════
+  // ── PATH B: FLAT (package) ─────────────────────────────────
   const handleBeginFlatPayment = async () => {
     if (!canAdvertise || busy) return;
     setBusy(true);
@@ -269,7 +376,11 @@ export default function AdvertiseSasa({
     try {
       const { bannerId } = await createPendingBanner();
       pendingBannerIdRef.current = bannerId;
-      setPendingBanner({ id: bannerId, listing: selectedListing });
+      setPendingBanner({
+        id: bannerId,
+        listing: selectedListing,
+        package: selectedPackage,
+      });
       setStage("paying");
     } catch (err) {
       setError(
@@ -282,9 +393,7 @@ export default function AdvertiseSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PATH C: BUNDLE PURCHASE
-  // ══════════════════════════════════════════════════════════
+  // ── PATH C: BUNDLE ─────────────────────────────────────────
   const handleBeginBundlePayment = async () => {
     if (!selectedBundle || busy) return;
     setBusy(true);
@@ -308,9 +417,7 @@ export default function AdvertiseSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PATH D: USE CREDIT
-  // ══════════════════════════════════════════════════════════
+  // ── PATH D: CREDIT ─────────────────────────────────────────
   const handleUseCredit = async () => {
     if (!canAdvertise || busy || !user) return;
     setBusy(true);
@@ -333,11 +440,8 @@ export default function AdvertiseSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PAYMENT GATEWAY INITIATE
-  // ══════════════════════════════════════════════════════════
+  // ── PAYMENT GATEWAY ────────────────────────────────────────
   const handlePaymentInitiate = async ({ methodKey, phone } = {}) => {
-    // Path B: Flat fee
     if (paymentMode === "flat" && pendingBanner) {
       try {
         const raw = await api.post(`/banners/${pendingBanner.id}/pay/`, {
@@ -360,7 +464,6 @@ export default function AdvertiseSasa({
       }
     }
 
-    // Path C: Bundle purchase
     if (paymentMode === "bundle" && pendingBundlePurchase) {
       try {
         const paid = await api.post(
@@ -386,9 +489,6 @@ export default function AdvertiseSasa({
     return { ok: false, error: new Error("invalid payment mode") };
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PAYMENT SUCCESS
-  // ══════════════════════════════════════════════════════════
   const handlePaymentSuccess = async () => {
     if (paymentMode === "flat" && pendingBanner) {
       onAdvertised(pendingBanner.listing.id, null);
@@ -398,7 +498,6 @@ export default function AdvertiseSasa({
 
     if (paymentMode === "bundle" && pendingBundlePurchase) {
       try {
-        // Unda banner + lipa kwa credits
         const { bannerId } = await createPendingBanner();
         await api.post(`/banners/${bannerId}/pay/`, {
           payment_reference: "credits",
@@ -421,9 +520,7 @@ export default function AdvertiseSasa({
     setError("");
   };
 
-  // ══════════════════════════════════════════════════════════
-  // DONE SCREEN
-  // ══════════════════════════════════════════════════════════
+  // ── DONE SCREEN ────────────────────────────────────────────
   if (done) {
     const doneTitle =
       done.mode === "bundle-only"
@@ -460,9 +557,7 @@ export default function AdvertiseSasa({
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  // MAIN RENDER
-  // ══════════════════════════════════════════════════════════
+  // ── MAIN RENDER ────────────────────────────────────────────
   return (
     <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full p-4 sm:p-6">
       <div className="max-w-2xl mx-auto">
@@ -485,7 +580,7 @@ export default function AdvertiseSasa({
         )}
 
         {/* Fee disabled banner */}
-        {!adFeeEnabled && stage !== "paying" && (
+        {feeDisabled && stage !== "paying" && (
           <div className="rounded-xl border px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left"
                style={{ background: "rgba(47,109,79,0.1)", borderColor: "rgba(47,109,79,0.35)", color: COLORS.green }}>
             <div className="flex items-center gap-2">
@@ -498,7 +593,7 @@ export default function AdvertiseSasa({
         )}
 
         {/* Credit banner */}
-        {hasCredit && adFeeEnabled && stage !== "paying" && (
+        {hasCredit && stage !== "paying" && (
           <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <Wallet size={16} color={COLORS.green} />
@@ -537,14 +632,18 @@ export default function AdvertiseSasa({
           </>
         )}
 
-        {/* 2. Flat vs Bundle (kama fee enabled) */}
-        {liveListings.length > 0 && stage !== "paying" && adFeeEnabled && (
+        {/* 2. Packages / Njia ya Malipo */}
+        {liveListings.length > 0 && stage !== "paying" && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
-              2. {t("Chagua Njia ya Malipo", "Choose Payment Option")}
+              2.{" "}
+              {feeDisabled
+                ? t("Chagua Package (Bure)", "Choose Package (Free)")
+                : t("Chagua Njia ya Malipo", "Choose Payment Option")}
             </p>
 
-            <div className="flex justify-center gap-2 mb-4">
+            {/* Payment mode toggle */}
+            <div className={`flex justify-center gap-2 mb-4${feeDisabled ? " hidden" : ""}`}>
               <button
                 onClick={() => setPaymentMode("flat")}
                 className="flex-1 sm:flex-none text-xs font-semibold px-4 py-2 rounded-full border transition-colors"
@@ -554,7 +653,7 @@ export default function AdvertiseSasa({
                   borderColor: paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
                 }}
               >
-                {t("Ada ya Kawaida", "Flat Fee")}
+                {t("Package", "Package")}
               </button>
               {adsBundles.length > 0 && (
                 <button
@@ -571,22 +670,28 @@ export default function AdvertiseSasa({
               )}
             </div>
 
-            {/* Flat fee card */}
+            {/* Packages grid */}
             {paymentMode === "flat" && (
-              <div className="rounded-2xl border p-4 flex flex-col items-center text-center gap-2 mb-4"
-                   style={{ borderColor: COLORS.sandLine, background: "white" }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                     style={{ background: `${COLORS.rust}15` }}>
-                  <Sparkles size={18} color={COLORS.rust} />
-                </div>
-                <p className="text-primary text-sm font-semibold mb-0.5">
-                  {adLabel} — {t(`siku ${adFee.days}`, `${adFee.days} days`)}
-                </p>
-                <p className="text-secondary text-body-sm max-w-md mx-auto">{adDesc}</p>
-                <p className="text-lg font-bold mt-2" style={{ color: COLORS.rust }}>
-                  {formatTZS(adFee.price)}
-                </p>
-              </div>
+              <>
+                {advertisementPackages.length === 0 ? (
+                  <p className="text-muted text-sm text-center py-6">
+                    {t("Hakuna advertisement packages.", "No advertisement packages available.")}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                    {advertisementPackages.map((pkg) => (
+                      <AdvertisementPackageCard
+                        key={pkg.id}
+                        pkg={pkg}
+                        selected={pkg.id === packageId}
+                        onSelect={setPackageId}
+                        free={feeDisabled}
+                        lang={lang}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Bundle cards */}
@@ -618,15 +723,25 @@ export default function AdvertiseSasa({
               <div>
                 <p className="text-secondary text-body-sm mb-0.5">{t("Jumla ya Malipo", "Total Payment")}</p>
                 <p className="text-lg font-bold" style={{ color: COLORS.rust }}>
-                  {formatTZS(
-                    paymentMode === "flat"
-                      ? adFee.price
-                      : selectedBundle?.price || 0
-                  )}
+                  {feeDisabled
+                    ? t("Bure", "Free")
+                    : formatTZS(
+                        paymentMode === "flat"
+                          ? (selectedPackage?.pricing?.discount_percent > 0
+                              ? selectedPackage.pricing.final_price
+                              : selectedPackage?.price || 0)
+                          : selectedBundle?.price || 0
+                      )}
                 </p>
               </div>
               <button
-                onClick={paymentMode === "flat" ? handleBeginFlatPayment : handleBeginBundlePayment}
+                onClick={
+                  feeDisabled
+                    ? handleSkipFee
+                    : paymentMode === "flat"
+                      ? handleBeginFlatPayment
+                      : handleBeginBundlePayment
+                }
                 disabled={!canProceed || busy}
                 style={{
                   background: canProceed && !busy ? COLORS.gold : COLORS.sandLine,
@@ -641,41 +756,30 @@ export default function AdvertiseSasa({
                 ) : (
                   <Package size={15} />
                 )}
-                {paymentMode === "flat"
-                  ? t("Tangaza Sasa", "Advertise Now")
-                  : t("Nunua Kifurushi", "Buy Bundle")}
+                {feeDisabled
+                  ? t("Tangaza Sasa (BURE)", "Advertise Now (FREE)")
+                  : paymentMode === "flat"
+                    ? t("Tangaza Sasa", "Advertise Now")
+                    : t("Nunua Kifurushi", "Buy Bundle")}
               </button>
             </div>
           </>
         )}
 
-        {/* Kama fee imezimwa — kitufe kimoja cha bure */}
-        {liveListings.length > 0 && stage !== "paying" && !adFeeEnabled && (
-          <button
-            onClick={handleSkipFee}
-            disabled={!canAdvertise || busy}
-            style={{
-              background: canAdvertise && !busy ? COLORS.gold : COLORS.sandLine,
-              color: canAdvertise && !busy ? COLORS.night : "rgba(16,26,46,0.4)",
-            }}
-            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
-          >
-            {busy ? <Loader2 size={15} className="animate-spin" /> : <Megaphone size={15} />}
-            {t("Tangaza Sasa (BURE)", "Advertise Now (FREE)")}
-          </button>
-        )}
-
         {/* Payment Gateway */}
         {stage === "paying" && (
           <PaymentGateway
+            scope="advertise"
             amount={
               paymentMode === "flat"
-                ? adFee.price
+                ? (pendingBanner?.package?.pricing?.discount_percent > 0
+                    ? pendingBanner.package.pricing.final_price
+                    : pendingBanner?.package?.price || 0)
                 : pendingBundlePurchase?.bundle?.price || 0
             }
             title={
               paymentMode === "flat"
-                ? adLabel || "Advertisement"
+                ? (pendingBanner?.package?.name || adLabel || "Advertisement")
                 : t("Nunua Kifurushi cha Matangazo", "Buy Ads Bundle")
             }
             description={

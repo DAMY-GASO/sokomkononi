@@ -1,13 +1,10 @@
 // ============================================================
-// LeadingSasa.jsx (production + bundle + credits + skip-fee)
+// LeadingSasa.jsx (production + bundle + credits + packages)
 // Flow:
-//   A. Skip (is_enabled=false) → POST /leading-fees/purchases/apply/
-//                                → POST /leading-fees/purchases/{id}/pay/
-//                                  {payment_reference: "free"}
-//   B. Flat fee  → apply → pay (FimiPay)
-//   C. Bundle    → POST /bundles/purchases/ → /pay/ → credits added
-//                  kisha apply → pay {payment_reference: "credits"}
-//   D. Credit    → apply → pay {payment_reference: "credits"}
+//   A. Package flat fee  → apply → pay (FimiPay)
+//   B. Bundle            → POST /bundles/purchases/ → /pay/ → credits
+//   C. Credit            → apply → pay {payment_reference: "credits"}
+//   D. Skip fee          → apply → pay {payment_reference: "free"}
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -17,12 +14,19 @@ import {
 import {
   COLORS, getCategory, formatTZS, isLeadingActive, leadingDaysRemaining,
 } from "./shared";
-import { useLeadingFeeConfig } from "../../../config/leadingFeeStore.js";
+import {
+  useLeadingFeeConfig,
+  hydrateLeadingFeeFromApi,
+} from "../../../config/leadingFeeStore.js";
+import {
+  useLeadingPackages,
+  hydrateLeadingPackagesFromApi,
+} from "../../../config/leadingPackagesStore.js";
 import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
-import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
+import { checkCredit } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 
@@ -88,6 +92,72 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
         );
       })}
     </div>
+  );
+}
+
+// ============================================================
+// LEADING PACKAGE CARD
+// ============================================================
+function LeadingPackageCard({ pkg, selected, onSelect, lang, free = false }) {
+  const name = pkg.name || "Package";
+  const hasDiscount =
+    !free &&
+    pkg.pricing &&
+    Number(pkg.pricing.discount_percent) > 0;
+  const basePrice = hasDiscount ? pkg.pricing.base_price : pkg.price;
+  const finalPrice = hasDiscount ? pkg.pricing.final_price : pkg.price;
+  const days = pkg.days || Math.round((pkg.hours || 24) / 24);
+
+  return (
+    <button
+      onClick={() => onSelect(pkg.id)}
+      style={{
+        borderColor: selected ? COLORS.gold : COLORS.sandLine,
+        background: "white",
+      }}
+      className="relative flex flex-col items-center text-center gap-3 p-4 rounded-2xl border w-full"
+    >
+      {hasDiscount && (
+        <span
+          style={{ background: COLORS.rust, color: "white" }}
+          className="absolute -top-2 right-2 text-body-sm font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+        >
+          -{pkg.pricing.discount_percent}%
+        </span>
+      )}
+
+      <div className="flex items-center justify-center gap-2 w-full">
+        <span className="text-primary text-sm font-bold">{name}</span>
+        <span
+          style={{ background: selected ? COLORS.gold : COLORS.sandLine, borderColor: COLORS.gold }}
+          className="w-5 h-5 rounded-full border flex items-center justify-center shrink-0"
+        >
+          {selected && <Check size={12} color={COLORS.night} />}
+        </span>
+      </div>
+
+      <div className="flex flex-col items-center gap-0.5">
+        {hasDiscount && (
+          <span className="text-secondary text-body-sm line-through">
+            {formatTZS(basePrice)}
+          </span>
+        )}
+        <div className="flex items-baseline justify-center gap-1.5">
+          <span style={{ color: COLORS.rust }} className="text-lg font-bold">
+            {free ? (lang === "sw" ? "Bure" : "Free") : formatTZS(finalPrice)}
+          </span>
+          <span className="text-secondary text-body-sm">
+            / {lang === "sw" ? `siku ${days}` : `${days} days`}
+          </span>
+        </div>
+      </div>
+
+      {pkg.description && (
+        <p className="text-secondary text-body-sm line-clamp-2">
+          {pkg.description}
+        </p>
+      )}
+    </button>
   );
 }
 
@@ -165,8 +235,13 @@ export default function LeadingSasa({
   const { lang } = useLanguage();
   const { user } = useAuth();
   const liveListings = listings.filter((l) => l.status === "live");
+
   const leadingFee = useLeadingFeeConfig();
+  const leadingPackages = useLeadingPackages();
   const leadingBundles = useActiveBundles().filter((b) => b.type === "leading");
+
+  const feeEnabled = leadingFee.is_enabled !== false;
+  const feeDisabled = !feeEnabled;
 
   const [selectedId, setSelectedId] = useState(
     initialListingId && liveListings.some((l) => l.id === initialListingId)
@@ -175,6 +250,7 @@ export default function LeadingSasa({
   );
 
   const [paymentMode, setPaymentMode] = useState("flat"); // "flat" | "bundle"
+  const [packageId, setPackageId] = useState(null);
   const [bundleId, setBundleId] = useState(null);
 
   const [busy, setBusy] = useState(false);
@@ -186,11 +262,32 @@ export default function LeadingSasa({
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  // Hydrate
+  useEffect(() => {
+    let cancelled = false;
+    Promise.allSettled([
+      hydrateLeadingFeeFromApi(),
+      hydrateLeadingPackagesFromApi(),
+    ]).then(() => { if (cancelled) return; });
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     if (initialListingId && liveListings.some((l) => l.id === initialListingId)) {
       setSelectedId(initialListingId);
     }
   }, [initialListingId, liveListings]);
+
+  // Auto-select first package
+  useEffect(() => {
+    if (!leadingPackages.length) {
+      if (packageId !== null) setPackageId(null);
+      return;
+    }
+    if (!leadingPackages.some((p) => p.id === packageId)) {
+      setPackageId(leadingPackages[0].id);
+    }
+  }, [leadingPackages, packageId]);
 
   useEffect(() => {
     if (!bundleId && leadingBundles.length) {
@@ -199,22 +296,34 @@ export default function LeadingSasa({
   }, [leadingBundles, bundleId]);
 
   const selectedListing = liveListings.find((l) => l.id === selectedId);
+  const selectedPackage = leadingPackages.find((p) => p.id === packageId);
   const selectedBundle = leadingBundles.find((b) => b.id === bundleId);
 
   const creditInfo = checkCredit(user?.id, "leading");
-  const hasCredit = creditInfo.hasCredit;
+  const hasCredit = creditInfo.hasCredit && feeEnabled;
   const leadingCreditRemaining = creditInfo.remaining || 0;
-
-  const feeEnabled = leadingFee.is_enabled !== false;
 
   const canLead =
     Boolean(selectedListing) &&
-    (paymentMode === "flat" || (paymentMode === "bundle" && selectedBundle));
+    (feeDisabled
+      ? Boolean(selectedPackage)
+      : paymentMode === "flat"
+        ? Boolean(selectedPackage)
+        : Boolean(selectedBundle));
 
-  // ── Create pending leading purchase ────────────────────────
+  // ── Create pending purchase ────────────────────────────────
   const createPendingPurchase = async () => {
+    if (!selectedPackage?.id) {
+      throw new Error(
+        t(
+          "Hakuna leading package inayopatikana.",
+          "No leading package is available."
+        )
+      );
+    }
     const purchase = await api.post("/leading-fees/purchases/apply/", {
       listing: selectedListing.id,
+      package: selectedPackage.id,
     });
     const purchaseId =
       purchase?.id || purchase?.purchase_id || purchase?.purchaseId;
@@ -229,9 +338,7 @@ export default function LeadingSasa({
     return purchaseId;
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PATH A: SKIP FEE (is_enabled = false)
-  // ══════════════════════════════════════════════════════════
+  // ── PATH A: SKIP FEE (is_enabled = false) ──────────────────
   const handleSkipFee = async () => {
     if (!canLead || busy) return;
     setBusy(true);
@@ -241,8 +348,9 @@ export default function LeadingSasa({
       await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {
         payment_reference: "free",
       });
+      const days = selectedPackage?.days || 1;
       const expiresAt = new Date(
-        Date.now() + (leadingFee.days || 7) * 86400000
+        Date.now() + days * 86400000
       ).toISOString();
       onLead(selectedListing.id, { leadingExpiresAt: expiresAt });
       setDone({ listing: selectedListing });
@@ -257,16 +365,18 @@ export default function LeadingSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PATH B: FLAT FEE
-  // ══════════════════════════════════════════════════════════
+  // ── PATH B: FLAT (package) ─────────────────────────────────
   const handleBeginFlatPayment = async () => {
     if (!canLead || busy) return;
     setBusy(true);
     setError("");
     try {
       const purchaseId = await createPendingPurchase();
-      setPendingPurchase({ id: purchaseId, listing: selectedListing });
+      setPendingPurchase({
+        id: purchaseId,
+        listing: selectedListing,
+        package: selectedPackage,
+      });
       setStage("paying");
     } catch (err) {
       setError(
@@ -279,9 +389,7 @@ export default function LeadingSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PATH C: BUNDLE PURCHASE
-  // ══════════════════════════════════════════════════════════
+  // ── PATH C: BUNDLE ─────────────────────────────────────────
   const handleBeginBundlePayment = async () => {
     if (!selectedBundle || busy) return;
     setBusy(true);
@@ -305,9 +413,7 @@ export default function LeadingSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PATH D: USE CREDIT
-  // ══════════════════════════════════════════════════════════
+  // ── PATH D: CREDIT ─────────────────────────────────────────
   const handleUseCredit = async () => {
     if (!canLead || !user) return;
     setBusy(true);
@@ -317,8 +423,9 @@ export default function LeadingSasa({
       await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {
         payment_reference: "credits",
       });
+      const days = selectedPackage?.days || 1;
       const expiresAt = new Date(
-        Date.now() + (leadingFee.days || 7) * 86400000
+        Date.now() + days * 86400000
       ).toISOString();
       onLead(selectedListing.id, { leadingExpiresAt: expiresAt });
       setDone({ listing: selectedListing });
@@ -333,11 +440,8 @@ export default function LeadingSasa({
     }
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PAYMENT GATEWAY INITIATE
-  // ══════════════════════════════════════════════════════════
+  // ── PAYMENT GATEWAY ────────────────────────────────────────
   const handlePaymentInitiate = async ({ methodKey, phone } = {}) => {
-    // Path B: Flat fee
     if (paymentMode === "flat" && pendingPurchase) {
       try {
         const paid = await api.post(
@@ -360,7 +464,6 @@ export default function LeadingSasa({
       }
     }
 
-    // Path C: Bundle purchase
     if (paymentMode === "bundle" && pendingBundlePurchase) {
       try {
         const paid = await api.post(
@@ -386,13 +489,11 @@ export default function LeadingSasa({
     return { ok: false, error: new Error("invalid payment mode") };
   };
 
-  // ══════════════════════════════════════════════════════════
-  // PAYMENT SUCCESS
-  // ══════════════════════════════════════════════════════════
   const handlePaymentSuccess = async () => {
     if (paymentMode === "flat" && pendingPurchase) {
+      const days = pendingPurchase.package?.days || 1;
       const expiresAt = new Date(
-        Date.now() + (leadingFee.days || 7) * 86400000
+        Date.now() + days * 86400000
       ).toISOString();
       onLead(pendingPurchase.listing.id, { leadingExpiresAt: expiresAt });
       setDone({ listing: pendingPurchase.listing });
@@ -405,8 +506,9 @@ export default function LeadingSasa({
         await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {
           payment_reference: "credits",
         });
+        const days = selectedPackage?.days || 1;
         const expiresAt = new Date(
-          Date.now() + (leadingFee.days || 7) * 86400000
+          Date.now() + days * 86400000
         ).toISOString();
         onLead(selectedListing.id, { leadingExpiresAt: expiresAt });
         setDone({ listing: selectedListing, mode: "bundle" });
@@ -426,9 +528,7 @@ export default function LeadingSasa({
     setError("");
   };
 
-  // ══════════════════════════════════════════════════════════
-  // DONE SCREEN
-  // ══════════════════════════════════════════════════════════
+  // ── DONE SCREEN ────────────────────────────────────────────
   if (done) {
     const doneTitle =
       done.mode === "bundle-only"
@@ -465,9 +565,7 @@ export default function LeadingSasa({
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  // MAIN RENDER
-  // ══════════════════════════════════════════════════════════
+  // ── MAIN RENDER ────────────────────────────────────────────
   return (
     <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full p-4 sm:p-6">
       <div className="max-w-2xl mx-auto">
@@ -490,7 +588,7 @@ export default function LeadingSasa({
         )}
 
         {/* Fee disabled banner */}
-        {!feeEnabled && stage !== "paying" && (
+        {feeDisabled && stage !== "paying" && (
           <div className="rounded-xl border px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left"
                style={{ background: "rgba(47,109,79,0.1)", borderColor: "rgba(47,109,79,0.35)", color: COLORS.green }}>
             <div className="flex items-center gap-2">
@@ -503,7 +601,7 @@ export default function LeadingSasa({
         )}
 
         {/* Credit banner */}
-        {hasCredit && feeEnabled && stage !== "paying" && (
+        {hasCredit && stage !== "paying" && (
           <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <Wallet size={16} color={COLORS.green} />
@@ -536,14 +634,18 @@ export default function LeadingSasa({
           </>
         )}
 
-        {/* 2. Flat vs Bundle toggle (kama fee enabled) */}
-        {liveListings.length > 0 && stage !== "paying" && feeEnabled && (
+        {/* 2. Chagua Package / Njia ya Malipo */}
+        {liveListings.length > 0 && stage !== "paying" && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
-              2. {t("Chagua Njia ya Malipo", "Choose Payment Option")}
+              2.{" "}
+              {feeDisabled
+                ? t("Chagua Package (Bure)", "Choose Package (Free)")
+                : t("Chagua Njia ya Malipo", "Choose Payment Option")}
             </p>
 
-            <div className="flex justify-center gap-2 mb-4">
+            {/* Payment mode toggle (flat vs bundle) */}
+            <div className={`flex justify-center gap-2 mb-4${feeDisabled ? " hidden" : ""}`}>
               <button
                 onClick={() => setPaymentMode("flat")}
                 className="flex-1 sm:flex-none text-xs font-semibold px-4 py-2 rounded-full border transition-colors"
@@ -553,7 +655,7 @@ export default function LeadingSasa({
                   borderColor: paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
                 }}
               >
-                {t("Ada ya Kawaida", "Flat Fee")}
+                {t("Package", "Package")}
               </button>
               {leadingBundles.length > 0 && (
                 <button
@@ -570,22 +672,28 @@ export default function LeadingSasa({
               )}
             </div>
 
-            {/* Flat fee card */}
+            {/* Packages grid */}
             {paymentMode === "flat" && (
-              <div className="rounded-2xl border p-4 flex flex-col items-center text-center gap-2 mb-4"
-                   style={{ borderColor: COLORS.sandLine, background: "white" }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                     style={{ background: `${COLORS.green}15` }}>
-                  <Search size={18} color={COLORS.green} />
-                </div>
-                <p className="text-primary text-sm font-semibold mb-0.5">
-                  {getLocalized(leadingFee.label, lang) || "Leading"} — {t(`siku ${leadingFee.days}`, `${leadingFee.days} days`)}
-                </p>
-                <p className="text-secondary text-body-sm max-w-md mx-auto">{getLocalized(leadingFee.desc, lang)}</p>
-                <p className="text-lg font-bold mt-2" style={{ color: COLORS.rust }}>
-                  {formatTZS(leadingFee.price)}
-                </p>
-              </div>
+              <>
+                {leadingPackages.length === 0 ? (
+                  <p className="text-muted text-sm text-center py-6">
+                    {t("Hakuna leading packages.", "No leading packages available.")}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                    {leadingPackages.map((pkg) => (
+                      <LeadingPackageCard
+                        key={pkg.id}
+                        pkg={pkg}
+                        selected={pkg.id === packageId}
+                        onSelect={setPackageId}
+                        free={feeDisabled}
+                        lang={lang}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Bundle cards */}
@@ -596,7 +704,7 @@ export default function LeadingSasa({
                     {t("Hakuna vifurushi vya leading.", "No leading bundles available.")}
                   </p>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
                     {leadingBundles.map((b) => (
                       <LeadingBundleCard
                         key={b.id}
@@ -615,17 +723,29 @@ export default function LeadingSasa({
             <div className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"
                  style={{ borderColor: COLORS.sandLine, background: "white" }}>
               <div>
-                <p className="text-secondary text-body-sm mb-0.5">{t("Jumla ya Malipo", "Total Payment")}</p>
+                <p className="text-secondary text-body-sm mb-0.5">
+                  {t("Jumla ya Malipo", "Total Payment")}
+                </p>
                 <p className="text-lg font-bold" style={{ color: COLORS.rust }}>
-                  {formatTZS(
-                    paymentMode === "flat"
-                      ? leadingFee.price
-                      : selectedBundle?.price || 0
-                  )}
+                  {feeDisabled
+                    ? t("Bure", "Free")
+                    : formatTZS(
+                        paymentMode === "flat"
+                          ? (selectedPackage?.pricing?.discount_percent > 0
+                              ? selectedPackage.pricing.final_price
+                              : selectedPackage?.price || 0)
+                          : selectedBundle?.price || 0
+                      )}
                 </p>
               </div>
               <button
-                onClick={paymentMode === "flat" ? handleBeginFlatPayment : handleBeginBundlePayment}
+                onClick={
+                  feeDisabled
+                    ? handleSkipFee
+                    : paymentMode === "flat"
+                      ? handleBeginFlatPayment
+                      : handleBeginBundlePayment
+                }
                 disabled={!canLead || busy}
                 style={{
                   background: canLead && !busy ? COLORS.gold : COLORS.sandLine,
@@ -640,41 +760,30 @@ export default function LeadingSasa({
                 ) : (
                   <Package size={15} />
                 )}
-                {paymentMode === "flat"
-                  ? t("Endelea Kulipa", "Continue to Payment")
-                  : t("Nunua Kifurushi", "Buy Bundle")}
+                {feeDisabled
+                  ? t("Weka Leading (BURE)", "Apply Leading (FREE)")
+                  : paymentMode === "flat"
+                    ? t("Endelea Kulipa", "Continue to Payment")
+                    : t("Nunua Kifurushi", "Buy Bundle")}
               </button>
             </div>
           </>
         )}
 
-        {/* Kama fee imezimwa — kitufe kimoja cha bure */}
-        {liveListings.length > 0 && stage !== "paying" && !feeEnabled && (
-          <button
-            onClick={handleSkipFee}
-            disabled={!canLead || busy}
-            style={{
-              background: canLead && !busy ? COLORS.gold : COLORS.sandLine,
-              color: canLead && !busy ? COLORS.night : "rgba(16,26,46,0.4)",
-            }}
-            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm disabled:cursor-not-allowed"
-          >
-            {busy ? <Loader2 size={15} className="animate-spin" /> : <TrendingUp size={15} />}
-            {t("Weka Leading (BURE)", "Apply Leading (FREE)")}
-          </button>
-        )}
-
         {/* Payment Gateway */}
         {stage === "paying" && (
           <PaymentGateway
+            scope="leading"
             amount={
               paymentMode === "flat"
-                ? leadingFee.price
+                ? (pendingPurchase?.package?.pricing?.discount_percent > 0
+                    ? pendingPurchase.package.pricing.final_price
+                    : pendingPurchase?.package?.price || 0)
                 : pendingBundlePurchase?.bundle?.price || 0
             }
             title={
               paymentMode === "flat"
-                ? getLocalized(leadingFee.label, lang) || "Leading"
+                ? (pendingPurchase?.package?.name || "Leading")
                 : t("Nunua Kifurushi cha Leading", "Buy Leading Bundle")
             }
             description={
