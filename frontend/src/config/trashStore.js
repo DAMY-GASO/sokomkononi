@@ -19,9 +19,32 @@ export const TRASH_TYPES = [
   { key: "deals",         label: { sw: "Deals", en: "Deals" },                   iconKey: "Handshake",  color: "#059669" },
 ];
 
+// Backend inatuma aina kama "app_label.ModelName" (mf. "verifications.VerificationRequest").
+// Hii inalinganisha jina la model na funguo za TRASH_TYPES.
+const TYPE_ALIASES = {
+  listing: "listings", listings: "listings",
+  user: "users", users: "users",
+  verification: "verifications", verifications: "verifications",
+  verificationrequest: "verifications",
+  ticket: "tickets", tickets: "tickets", supportticket: "tickets",
+  banner: "banners", banners: "banners",
+  announcement: "announcements", announcements: "announcements",
+  deal: "deals", deals: "deals",
+};
+function canonicalType(k) {
+  if (!k) return null;
+  const model = String(k).split(".").pop().toLowerCase().replace(/[\s_-]/g, "");
+  return TYPE_ALIASES[model] || null;
+}
+function prettyName(n) {
+  return String(n || "").replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
 const EMPTY_OVERVIEW = {
   listings: 0, users: 0, verifications: 0, tickets: 0,
   banners: 0, announcements: 0, deals: 0, total: 0, lastUpdated: null,
+  others: [],        // aina nyingine zenye SoftDeleteModel: [{ key, name, count }]
+  backendTypes: {},  // key ya frontend -> "app.Model" ya backend
 };
 
 function readOverview() {
@@ -58,15 +81,29 @@ function normOverview(raw) {
 
   // New backend shape: { totals: [{ type, count, protected }, ...] }
   if (Array.isArray(raw.totals)) {
-    const o = { ...EMPTY_OVERVIEW, lastUpdated: new Date().toISOString() };
+    const o = {
+      ...EMPTY_OVERVIEW,
+      others: [],
+      backendTypes: {},
+      lastUpdated: new Date().toISOString(),
+    };
     for (const t of raw.totals) {
-      const key = t?.type;
-      if (!key) continue;
-      if (Object.prototype.hasOwnProperty.call(EMPTY_OVERVIEW, key)) {
-        o[key] = Number(t.count) || 0;
+      const type = t?.type;
+      if (!type) continue;
+      const count = Number(t.count) || 0;
+      o.total += count;
+      const key = canonicalType(type);
+      if (key && !o.backendTypes[key]) {
+        o[key] = count;
+        o.backendTypes[key] = type;
+      } else if (count > 0) {
+        o.others.push({
+          key: type,
+          name: prettyName(t.model || String(type).split(".").pop()),
+          count,
+        });
       }
     }
-    o.total = raw.totals.reduce((sum, t) => sum + (Number(t?.count) || 0), 0);
     return o;
   }
 
@@ -86,18 +123,60 @@ function normOverview(raw) {
     o.listings + o.users + o.verifications + o.tickets + o.banners + o.announcements + o.deals;
   return o;
 }
-function normItem(raw) {
+function normItem(raw, fallbackType) {
   if (!raw) return null;
   return {
     id: raw.id,
-    type: raw.type,
+    type: canonicalType(raw.type) || fallbackType,
     name: raw.name || raw.title || raw.subject || raw.repr || `#${raw.id}`,
     subtitle: raw.subtitle || raw.description || "",
     deletedAt: raw.deleted_at || raw.created_at,
-    deletedBy: raw.deleted_by_name || raw.deleted_by || "—",
+    deletedBy: raw.deleted_by_name || "—",
     details: raw.details || raw.reason || "",
     thumbnail: raw.thumbnail || raw.image_url || null,
   };
+}
+
+// ── Helpers ──────────────────────────────────────────────
+function apiType(key) {
+  const bt = readOverview().backendTypes;
+  return encodeURIComponent((bt && bt[key]) || key);
+}
+function adjustCount(o, type, delta) {
+  const next = { ...o, others: (o.others || []).map((x) => ({ ...x })) };
+  let removed = 0;
+  if (TRASH_TYPES.some((t) => t.key === type)) {
+    const cur = Number(next[type]) || 0;
+    removed = delta === "all" ? cur : Math.min(cur, -delta);
+    next[type] = cur - removed;
+  } else {
+    const row = next.others.find((x) => x.key === type);
+    if (row) {
+      removed = delta === "all" ? row.count : Math.min(row.count, -delta);
+      row.count -= removed;
+    }
+  }
+  next.total = Math.max(0, (Number(next.total) || 0) - removed);
+  next.lastUpdated = new Date().toISOString();
+  return next;
+}
+export function getAllTrashTypes(o = readOverview()) {
+  const base = TRASH_TYPES.map((t) => ({ ...t, count: Number(o[t.key]) || 0 }));
+  const extra = (o.others || []).map((x) => ({
+    key: x.key,
+    label: { sw: x.name, en: x.name },
+    iconKey: "File",
+    color: "#6B7280",
+    count: Number(x.count) || 0,
+  }));
+  return [...base, ...extra];
+}
+export function getTrashTypeConfig(key) {
+  return (
+    getAllTrashTypes().find((t) => t.key === key) || {
+      key, label: { sw: key, en: key }, iconKey: "File", color: "#6B7280", count: 0,
+    }
+  );
 }
 
 // ── Reads ────────────────────────────────────────────────
@@ -130,9 +209,9 @@ export async function hydrateTrashOverviewFromApi() {
 
 export async function fetchTrashItemsAsync(type) {
   try {
-    const data = await api.get(`/trash/${type}/`);
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const normalized = list.map(normItem).filter(Boolean);
+    const data = await api.get(`/trash/${apiType(type)}/`);
+    const list = Array.isArray(data) ? data : data?.results || data?.items || [];
+    const normalized = list.map((r) => normItem(r, type)).filter(Boolean);
     setTrashItemsByType(type, normalized);
     return { ok: true, items: normalized };
   } catch (err) { return { ok: false, error: err, items: [] }; }
@@ -141,40 +220,49 @@ export async function fetchTrashItemsAsync(type) {
 // ── Mutations ────────────────────────────────────────────
 export async function restoreTrashItemAsync(type, id) {
   try {
-    await api.post(`/trash/${type}/${id}/restore/`, {});
+    await api.post(`/trash/${apiType(type)}/${id}/restore/`, {});
     setTrashItemsByType(type, getTrashItemsByType(type).filter((i) => i.id !== id));
-    const o = readOverview();
-    writeOverview({ ...o, [type]: Math.max(0, (o[type] || 0) - 1), total: Math.max(0, o.total - 1), lastUpdated: new Date().toISOString() });
+    writeOverview(adjustCount(readOverview(), type, -1));
     return { ok: true };
   } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function permanentDeleteTrashItemAsync(type, id) {
   try {
-    await api.delete(`/trash/${type}/${id}/`);
+    await api.delete(`/trash/${apiType(type)}/${id}/`);
     setTrashItemsByType(type, getTrashItemsByType(type).filter((i) => i.id !== id));
-    const o = readOverview();
-    writeOverview({ ...o, [type]: Math.max(0, (o[type] || 0) - 1), total: Math.max(0, o.total - 1), lastUpdated: new Date().toISOString() });
+    writeOverview(adjustCount(readOverview(), type, -1));
     return { ok: true };
   } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function emptyTrashByTypeAsync(type) {
   try {
-    await api.post(`/trash/${type}/empty/`, { confirm: "DELETE ALL" });
+    const data = await api.post(`/trash/${apiType(type)}/empty/`, { confirm: "DELETE ALL" });
     setTrashItemsByType(type, []);
-    const o = readOverview();
-    writeOverview({ ...o, [type]: 0, total: Math.max(0, o.total - (o[type] || 0)), lastUpdated: new Date().toISOString() });
-    return { ok: true };
+    writeOverview(adjustCount(readOverview(), type, "all"));
+    // Baadhi zinaweza kurukwa (zinatumika mahali pengine) — rekebisha kutoka server.
+    if (data?.skipped) {
+      fetchTrashItemsAsync(type);
+      hydrateTrashOverviewFromApi();
+    }
+    return { ok: true, data };
   } catch (err) { return { ok: false, error: err }; }
 }
 
 export async function emptyTrashAsync() {
   try {
-    await api.post("/trash/empty/", { confirm: "DELETE ALL" });
+    const data = await api.post("/trash/empty/", { confirm: "DELETE ALL" });
     writeItems({});
-    writeOverview({ ...EMPTY_OVERVIEW, lastUpdated: new Date().toISOString() });
-    return { ok: true };
+    writeOverview({
+      ...EMPTY_OVERVIEW,
+      others: [],
+      backendTypes: readOverview().backendTypes || {},
+      lastUpdated: new Date().toISOString(),
+    });
+    // Aina zinazolindwa au zilizorukwa zinabaki — rekebisha kutoka server.
+    hydrateTrashOverviewFromApi();
+    return { ok: true, data };
   } catch (err) { return { ok: false, error: err }; }
 }
 
@@ -194,18 +282,40 @@ export function useTrashOverview() {
   return o;
 }
 export function useHasTrash() { return useTrashOverview().total > 0; }
-export function useTrashItems(type) {
-  const [items, setItems] = useState(() => type ? getTrashItemsByType(type) : []);
+export function useTrashItemsState(type) {
+  const [items, setItems] = useState(() => (type ? getTrashItemsByType(type) : []));
+  const [loading, setLoading] = useState(!!type);
+  const [error, setError] = useState(null);
+  const [tick, setTick] = useState(0);
+
   useEffect(() => {
-    if (!type) { setItems([]); return; }
-    fetchTrashItemsAsync(type).then((r) => { if (r.ok) setItems(r.items); });
+    if (!type) {
+      setItems([]);
+      setLoading(false);
+      setError(null);
+      return undefined;
+    }
+    let alive = true;
+    setItems(getTrashItemsByType(type));
+    setLoading(true);
+    setError(null);
+    fetchTrashItemsAsync(type).then((r) => {
+      if (!alive) return;
+      if (r.ok) setItems(r.items);
+      else setError(r.error || new Error("Failed"));
+      setLoading(false);
+    });
     const sync = () => setItems(getTrashItemsByType(type));
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);
     return () => {
+      alive = false;
       window.removeEventListener("storage", sync);
       window.removeEventListener(EV, sync);
     };
-  }, [type]);
-  return items;
+  }, [type, tick]);
+
+  const reload = () => setTick((n) => n + 1);
+  return { items, loading, error, reload };
 }
+export function useTrashItems(type) { return useTrashItemsState(type).items; }

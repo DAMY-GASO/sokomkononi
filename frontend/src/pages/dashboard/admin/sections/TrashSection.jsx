@@ -30,9 +30,10 @@ import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
-  TRASH_TYPES,
+  getAllTrashTypes,
+  getTrashTypeConfig,
   useTrashOverview,
-  useTrashItems,
+  useTrashItemsState,
   useHasTrash,
   restoreTrashItemAsync,
   permanentDeleteTrashItemAsync,
@@ -54,7 +55,7 @@ const ICON_MAP = {
 };
 
 function getTypeConfig(typeKey) {
-  return TRASH_TYPES.find((t) => t.key === typeKey) || TRASH_TYPES[0];
+  return getTrashTypeConfig(typeKey);
 }
 
 // ============================================================
@@ -210,7 +211,7 @@ function TrashItemCard({ item, lang, onRestore, onDelete, busyState }) {
 // ============================================================
 function TrashTypeItems({ type, lang, onEmptyType }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
-  const items = useTrashItems(type);
+  const { items, loading, error: loadError, reload } = useTrashItemsState(type);
 
   const [busy, setBusy] = useState({}); // { [id]: { restore: bool, delete: bool } }
   const [error, setError] = useState("");
@@ -255,6 +256,44 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
       );
     }
   };
+
+  if (loading && items.length === 0) {
+    return (
+      <div
+        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        className="rounded-2xl border p-8 text-center w-full"
+      >
+        <Loader2 size={28} className="mx-auto text-muted mb-2 animate-spin" />
+        <p className="text-sm text-secondary">
+          {t("Inapakia items...", "Loading items...")}
+        </p>
+      </div>
+    );
+  }
+
+  if (loadError && items.length === 0) {
+    return (
+      <div
+        style={{ borderColor: COLORS.rust, background: "white" }}
+        className="rounded-2xl border p-6 text-center w-full"
+      >
+        <AlertTriangle size={28} color={COLORS.rust} className="mx-auto mb-2" />
+        <h3 className="font-semibold text-primary mb-1">
+          {t("Imeshindwa kupakia items", "Failed to load items")}
+        </h3>
+        <p className="text-xs text-secondary mb-3 break-words">
+          {loadError?.message || ""}
+        </p>
+        <button
+          onClick={reload}
+          style={{ background: COLORS.night, color: COLORS.sand }}
+          className="text-xs font-semibold px-4 py-2 rounded-lg"
+        >
+          {t("Jaribu tena", "Try again")}
+        </button>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -363,10 +402,9 @@ export default function TrashSection() {
   // TYPE FILTERS + counts
   // ============================================================
   const typesWithCounts = useMemo(() => {
-    return TRASH_TYPES.map((t) => ({
-      ...t,
-      count: Number(overview[t.key]) || 0,
-    })).filter((t) => t.count > 0 || activeType === t.key);
+    return getAllTrashTypes(overview).filter(
+      (t) => t.count > 0 || activeType === t.key
+    );
   }, [overview, activeType]);
 
   const totalItems = Number(overview.total) || 0;
@@ -524,7 +562,7 @@ export default function TrashSection() {
           </div>
 
           {/* Type tabs */}
-          <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0 sm:justify-center">
             <button
               onClick={() => setActiveType(null)}
               style={{
