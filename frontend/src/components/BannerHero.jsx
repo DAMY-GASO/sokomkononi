@@ -1,7 +1,7 @@
 // src/components/BannerHero.jsx
 // ============================================================
 // BannerHero — inaonyesha banners zilizo active kutoka contentStore
-// kwenye HomePage. Ina slider rahisi kama kuna banner zaidi ya moja.
+// kwenye HomePage. Maandishi yote yamewekwa katikati (centered).
 // ============================================================
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -15,16 +15,18 @@ export default function BannerHero() {
   const { lang } = useLanguage();
   const [idx, setIdx] = useState(0);
 
-  const banners = (content?.banners || []).filter(
-    (b) => b.active !== false && (b.imageUrl || b.title?.sw || b.title?.en)
-  );
+  const banners = (content?.banners || [])
+    .filter(
+      (b) =>
+        b.active !== false &&
+        (b.imageUrl || b.title?.sw || b.title?.en)
+    )
+    .sort((a, b) => (a.order ?? 1) - (b.order ?? 1));
 
-  // Reset index kama banners zimebadilika
   useEffect(() => {
     setIdx(0);
   }, [banners.length]);
 
-  // Auto-rotate kila sekunde 6 kama kuna banner zaidi ya moja
   useEffect(() => {
     if (banners.length <= 1) return;
     const t = setInterval(() => {
@@ -45,8 +47,9 @@ export default function BannerHero() {
     <section className="relative w-full">
       <div
         className="relative w-full overflow-hidden"
-        style={{ minHeight: "clamp(220px, 40vw, 420px)" }}
+        style={{ minHeight: "clamp(240px, 42vw, 460px)" }}
       >
+        {/* Background — picha au gradient */}
         {hasImage ? (
           <img
             src={b.imageUrl}
@@ -63,31 +66,31 @@ export default function BannerHero() {
           />
         )}
 
-        {/* Overlay kwa maandishi yasomeke */}
+        {/* Overlay — inaimarisha maandishi yasomeke */}
         <div
           className="absolute inset-0"
           style={{
             background: hasImage
-              ? "linear-gradient(90deg, rgba(16,26,46,0.85) 0%, rgba(16,26,46,0.4) 60%, rgba(16,26,46,0.1) 100%)"
+              ? "linear-gradient(180deg, rgba(16,26,46,0.55) 0%, rgba(16,26,46,0.75) 100%)"
               : "transparent",
           }}
         />
 
-        {/* Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-16 flex flex-col justify-center h-full">
-          <div className="max-w-xl">
+        {/* Content — centered */}
+        <div className="relative z-10 h-full flex items-center justify-center px-4 sm:px-6 py-12 sm:py-16">
+          <div className="max-w-3xl mx-auto text-center flex flex-col items-center">
             {title && (
               <h2
-                className="font-bold leading-tight text-white"
-                style={{ fontSize: "clamp(1.5rem, 4vw, 2.75rem)" }}
+                className="font-bold leading-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]"
+                style={{ fontSize: "clamp(1.6rem, 4.2vw, 2.9rem)" }}
               >
                 {title}
               </h2>
             )}
             {subtitle && (
               <p
-                className="text-white/80 mt-3 leading-relaxed"
-                style={{ fontSize: "clamp(0.9rem, 2vw, 1.1rem)" }}
+                className="text-white/90 mt-4 leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+                style={{ fontSize: "clamp(0.95rem, 2vw, 1.15rem)" }}
               >
                 {subtitle}
               </p>
@@ -95,11 +98,11 @@ export default function BannerHero() {
             {ctaText && b.ctaLink && (
               <Link
                 to={b.ctaLink}
-                className="inline-flex items-center gap-2 mt-6 rounded-full font-semibold px-5 py-2.5 transition-all hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 mt-7 rounded-full font-semibold px-6 py-3 transition-all hover:-translate-y-0.5"
                 style={{
                   background: COLORS.gold,
                   color: COLORS.night,
-                  boxShadow: "0 8px 24px -10px rgba(232,163,61,0.7)",
+                  boxShadow: "0 10px 28px -10px rgba(232,163,61,0.75)",
                 }}
               >
                 {ctaText}
@@ -111,32 +114,32 @@ export default function BannerHero() {
           </div>
         </div>
 
-        {/* Arrows kama kuna banner zaidi ya moja */}
+        {/* Arrows */}
         {banners.length > 1 && (
           <>
             <button
               onClick={() => setIdx((i) => (i - 1 + banners.length) % banners.length)}
-              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors z-20"
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/45 hover:bg-black/65 text-white flex items-center justify-center transition-colors z-20"
               aria-label="Previous"
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={20} />
             </button>
             <button
               onClick={() => setIdx((i) => (i + 1) % banners.length)}
-              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors z-20"
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/45 hover:bg-black/65 text-white flex items-center justify-center transition-colors z-20"
               aria-label="Next"
             >
-              <ChevronRight size={18} />
+              <ChevronRight size={20} />
             </button>
 
             {/* Dots */}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
               {banners.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setIdx(i)}
                   className={`rounded-full transition-all ${
-                    i === idx ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"
+                    i === idx ? "w-6 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50 hover:bg-white/80"
                   }`}
                   aria-label={`Go to banner ${i + 1}`}
                 />

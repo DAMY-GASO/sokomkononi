@@ -3,9 +3,10 @@
 // Admin — Content Management (banners, testimonials, FAQs, About,
 // Terms, Privacy, Help).
 // Bilingual + mobile-responsive + Async actions na rollback.
+// + Upload ya picha kwa banners + testimonials
 // ============================================================
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Image as ImageIcon,
   MessageSquareQuote,
@@ -21,10 +22,13 @@ import {
   Check,
   Loader2,
   Star,
+  Upload,
+  X,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
+import { api } from "../../../../api/client.js";
 import {
   useContent,
   addBannerAsync,
@@ -122,7 +126,157 @@ function FormActions({ onCancel, onSave, lang, saving = false, saveLabel = null 
 }
 
 // ============================================================
-// SECTIONS EDITOR — inatumika kwa Terms, Privacy, About values/team
+// IMAGE UPLOAD FIELD
+// Inatumika kwa banners (imageUrl) na testimonials (avatarUrl).
+// ============================================================
+function ImageUploadField({
+  label,
+  value,
+  onChange,
+  disabled = false,
+  lang,
+  aspect = "banner", // "banner" | "avatar"
+}) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError(
+        t("Picha ni kubwa mno (max 5MB).", "Image too large (max 5MB).")
+      );
+      return;
+    }
+
+    setUploading(true);
+    setUploadError("");
+
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+
+      const res = await api.upload("/admin/content/upload/", fd);
+
+      if (res?.url) {
+        onChange(res.url);
+      } else {
+        setUploadError(
+          t("Imeshindwa kupakia picha.", "Failed to upload image.")
+        );
+      }
+    } catch (err) {
+      setUploadError(
+        err?.message ||
+          t("Imeshindwa kupakia picha.", "Failed to upload image.")
+      );
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleClear = () => onChange("");
+
+  const previewClass =
+    aspect === "avatar"
+      ? "w-24 h-24 rounded-full object-cover"
+      : "w-full h-40 rounded-lg object-cover";
+
+  return (
+    <div className="flex flex-col gap-2 w-full min-w-0">
+      <span className="text-[11px] font-semibold text-secondary">
+        {label || t("Picha", "Image")}
+      </span>
+
+      {/* Preview */}
+      {value && (
+        <div className="relative self-start">
+          <img
+            src={value}
+            alt="Preview"
+            className={`border ${previewClass}`}
+            style={{ borderColor: COLORS.sandLine }}
+            onError={(e) => {
+              e.target.style.display = "none";
+            }}
+          />
+          <button
+            type="button"
+            onClick={handleClear}
+            disabled={disabled || uploading}
+            className="absolute -top-2 -right-2 bg-black/70 hover:bg-black/90 text-white rounded-full p-1 transition-colors disabled:opacity-50"
+            aria-label={t("Ondoa", "Remove")}
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
+      {/* File input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleFileChange}
+        disabled={disabled || uploading}
+        className="hidden"
+      />
+
+      {/* Buttons + URL input */}
+      <div className="flex flex-col sm:flex-row gap-2 w-full min-w-0">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled || uploading}
+          style={{ background: COLORS.night, color: COLORS.sand }}
+          className="flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 disabled:opacity-50"
+        >
+          {uploading ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Upload size={13} />
+          )}
+          {uploading
+            ? t("Inapakia...", "Uploading...")
+            : value
+              ? t("Badilisha", "Change")
+              : t("Pakia Picha", "Upload")}
+        </button>
+
+        <span className="text-[10px] text-muted self-center shrink-0">
+          {t("au", "or")}
+        </span>
+
+        <input
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={t("Weka URL ya picha", "Paste image URL")}
+          disabled={disabled || uploading}
+          className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+        />
+      </div>
+
+      {uploadError && (
+        <p className="text-[10px] text-[#C1502E] font-medium">{uploadError}</p>
+      )}
+
+      <p className="text-[10px] text-muted">
+        {t(
+          "JPG, PNG au WEBP — max 5MB. Unaweza pia kuweka URL ya picha.",
+          "JPG, PNG or WEBP — max 5MB. You can also paste an image URL."
+        )}
+      </p>
+    </div>
+  );
+}
+
+// ============================================================
+// SECTIONS EDITOR
 // ============================================================
 function SectionsEditor({
   sections = [],
@@ -447,6 +601,7 @@ function BannersTab({ lang }) {
                           onChange={(v) => setForm({ ...form, subtitle: v })} multiline rows={2} disabled={saving} />
           <BilingualField label={t("Kitufe", "CTA Text")} value={form.ctaText || { sw: "", en: "" }}
                           onChange={(v) => setForm({ ...form, ctaText: v })} disabled={saving} />
+
           <label className="flex flex-col gap-1 w-full min-w-0">
             <span className="text-[11px] font-semibold text-secondary">
               {t("Kiungo (URL)", "Link (URL)")}
@@ -456,15 +611,17 @@ function BannersTab({ lang }) {
                    placeholder="/tafuta" disabled={saving}
                    className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50" />
           </label>
-          <label className="flex flex-col gap-1 w-full min-w-0">
-            <span className="text-[11px] font-semibold text-secondary">
-              {t("Picha URL (hiari)", "Image URL (optional)")}
-            </span>
-            <input value={form.imageUrl || ""}
-                   onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                   placeholder="https://..." disabled={saving}
-                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50" />
-          </label>
+
+          {/* ⬇️ MPYA — Upload image */}
+          <ImageUploadField
+            label={t("Picha ya Banner", "Banner Image")}
+            value={form.imageUrl || ""}
+            onChange={(url) => setForm({ ...form, imageUrl: url })}
+            disabled={saving}
+            lang={lang}
+            aspect="banner"
+          />
+
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.active !== false}
                    onChange={(e) => setForm({ ...form, active: e.target.checked })}
@@ -473,6 +630,7 @@ function BannersTab({ lang }) {
               {t("Inaonekana HomePage", "Show on HomePage")}
             </span>
           </label>
+
           <FormActions onCancel={handleCancel} onSave={handleSave} lang={lang} saving={saving} />
         </div>
       )}
@@ -481,6 +639,16 @@ function BannersTab({ lang }) {
         <div key={banner.id} style={{ borderColor: COLORS.sandLine, background: "white" }}
              className="rounded-xl border p-3 sm:p-4 w-full min-w-0">
           <div className="flex items-start justify-between gap-3 w-full min-w-0">
+            {/* Thumbnail kama ipo */}
+            {banner.imageUrl && (
+              <img
+                src={banner.imageUrl}
+                alt={banner.title?.[lang] || banner.title?.sw || "Banner"}
+                className="w-20 h-14 rounded-lg object-cover shrink-0"
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+            )}
+
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span style={{
@@ -497,6 +665,7 @@ function BannersTab({ lang }) {
                 CTA: {banner.ctaText?.[lang] || banner.ctaText?.sw} → {banner.ctaLink}
               </p>
             </div>
+
             <div className="flex items-center gap-1 shrink-0">
               <button onClick={() => handleEdit(banner)} disabled={saving}
                       className="p-1.5 text-muted hover:text-[#E8A33D] disabled:opacity-50">
@@ -629,13 +798,17 @@ function TestimonialsTab({ lang }) {
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 w-full min-w-0">
-            <span className="text-[11px] font-semibold text-secondary">{t("Avatar URL (hiari)", "Avatar URL (optional)")}</span>
-            <input value={form.avatarUrl || ""}
-                   onChange={(e) => setForm({ ...form, avatarUrl: e.target.value })}
-                   placeholder="https://..." disabled={saving}
-                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50" />
-          </label>
+
+          {/* ⬇️ MPYA — Upload avatar */}
+          <ImageUploadField
+            label={t("Picha ya Mtoa Ushuhuda (hiari)", "Testimonial Avatar (optional)")}
+            value={form.avatarUrl || ""}
+            onChange={(url) => setForm({ ...form, avatarUrl: url })}
+            disabled={saving}
+            lang={lang}
+            aspect="avatar"
+          />
+
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.active !== false}
                    onChange={(e) => setForm({ ...form, active: e.target.checked })}
@@ -653,7 +826,8 @@ function TestimonialsTab({ lang }) {
             <div className="flex items-start gap-3 min-w-0 flex-1">
               {item.avatarUrl && (
                 <img src={item.avatarUrl} alt={item.name}
-                     className="w-10 h-10 rounded-full object-cover shrink-0" />
+                     className="w-10 h-10 rounded-full object-cover shrink-0"
+                     onError={(e) => { e.target.style.display = "none"; }} />
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -686,7 +860,7 @@ function TestimonialsTab({ lang }) {
 }
 
 // ============================================================
-// FAQS TAB — na Move buttons
+// FAQS TAB
 // ============================================================
 function FaqsTab({ lang }) {
   const content = useContent();
@@ -843,7 +1017,7 @@ function FaqsTab({ lang }) {
 }
 
 // ============================================================
-// SINGLE-PAGE EDITOR (Terms, Privacy, About, Help)
+// SINGLE-PAGE EDITOR
 // ============================================================
 function SinglePageEditor({ section, lang }) {
   const content = useContent();
@@ -895,7 +1069,6 @@ function SinglePageEditor({ section, lang }) {
                         onChange={(v) => setForm({ ...form, subtitle: v })} multiline rows={2} disabled={saving} />
       )}
 
-      {/* About-specific */}
       {section === "about" && (
         <>
           <BilingualField label={t("Maelezo Mafupi", "Subtext")} value={form.subtext || { sw: "", en: "" }}
@@ -925,13 +1098,11 @@ function SinglePageEditor({ section, lang }) {
         </>
       )}
 
-      {/* Help-specific */}
       {section === "help" && (
         <BilingualField label={t("Maudhui", "Content")} value={form.content || { sw: "", en: "" }}
                         onChange={(v) => setForm({ ...form, content: v })} multiline rows={6} disabled={saving} />
       )}
 
-      {/* Terms/Privacy sections */}
       {hasSections && (
         <SectionsEditor
           sections={form.sections || []}
