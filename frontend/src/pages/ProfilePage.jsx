@@ -2,7 +2,8 @@
 // ProfilePage.jsx
 // Wasifu — bilingual kamili + PageLoader.
 // + Delete Account (API)
-// + 2FA Enable/Disable (mock — tayari kwa backend)
+// + 2FA (bado "Inakuja hivi karibuni" — inahitaji backend)
+// + Data halisi: shughuli, taarifa, mapendeleo (profileApi.js)
 // + Guard: Admin hawezi kujifuta
 // ============================================================
 
@@ -33,6 +34,13 @@ import {
 } from "lucide-react";
 
 import PageLoader from "../components/PageLoader.jsx";
+import {
+  fetchActivities,
+  fetchNotificationPrefs,
+  saveNotificationPrefs,
+  fetchPreferences,
+  savePreferences,
+} from "../config/profileApi.js";
 
 
 const REGIONS = [
@@ -51,25 +59,6 @@ const TABS = [
   { id: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
   { id: "preferences", label: { sw: "Mapendeleo", en: "Preferences" }, icon: Settings },
 ];
-
-function StatCard({ icon: Icon, value, label, color }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
-      <div className="flex flex-col items-center gap-2">
-        <div
-          style={{ background: `${color}15` }}
-          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-        >
-          <Icon size={18} color={color} />
-        </div>
-        <div>
-          <p className="text-xl font-bold text-primary">{value}</p>
-          <p className="text-body-sm text-secondary">{label}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ============================================================
 // DELETE ACCOUNT MODAL
@@ -122,10 +111,7 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             disabled={deleting}
-            placeholder={t(
-              "Kwa nini unaondoka?",
-              "Why are you leaving?"
-            )}
+            placeholder={t("Kwa nini unaondoka?", "Why are you leaving?")}
             className="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] resize-none disabled:opacity-50"
           />
         </label>
@@ -183,13 +169,9 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
 }
 
 // ============================================================
-// OVERVIEW TAB
+// OVERVIEW TAB (bila stats)
 // ============================================================
 function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
-  const stats = user?.stats || {
-    listings: 0, saved: 0, deals: 0, rating: 0, reviews: 0,
-    inquiries: 0, offersSent: 0, viewings: 0, purchases: 0,
-  };
   const bioText =
     typeof user.bio === "object" ? user.bio?.[lang] || user.bio?.sw : user.bio;
   const locationText =
@@ -197,33 +179,12 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
       ? user.location?.[lang] || user.location?.sw
       : user.location;
 
-  const sellerStats = [
-    { icon: Home, value: stats.listings || 0, label: lang === "sw" ? "Mali Zangu" : "My Listings", color: COLORS.gold },
-    { icon: MessageSquare, value: stats.deals || 0, label: lang === "sw" ? "Deals Zilizofungwa" : "Deals Closed", color: COLORS.green },
-    { icon: Bell, value: stats.inquiries || 0, label: lang === "sw" ? "Maombi Yaliyopokelewa" : "Inquiries", color: COLORS.rust },
-    { icon: Star, value: stats.rating || 0, label: lang === "sw" ? "Ukadiriaji" : "Rating", color: "#2563EB" },
-  ];
-
-  const buyerStats = [
-    { icon: Heart, value: stats.saved || 0, label: lang === "sw" ? "Zilizohifadhiwa" : "Saved", color: COLORS.rust },
-    { icon: MessageSquare, value: stats.offersSent || 0, label: lang === "sw" ? "Ofa Zilizotumwa" : "Offers Sent", color: COLORS.green },
-    { icon: Calendar, value: stats.viewings || 0, label: lang === "sw" ? "Ziara Zilizopangwa" : "Viewings", color: "#2563EB" },
-    { icon: ShoppingBag, value: stats.purchases || 0, label: lang === "sw" ? "Ununuzi Uliokamilika" : "Purchases", color: COLORS.gold },
-  ];
-
-  const activeStats = viewMode === "buyer" ? buyerStats : sellerStats;
   const filteredActivities = activities.filter((a) =>
     a.type ? a.type === viewMode : true
   );
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {activeStats.map((s, i) => (
-          <StatCard key={i} icon={s.icon} value={s.value} label={s.label} color={s.color} />
-        ))}
-      </div>
-
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <h3 className="font-semibold text-primary mb-3">
           {lang === "sw" ? "Kuhusu Mimi" : "About Me"}
@@ -307,14 +268,21 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
           </div>
           <div className="space-y-3">
             {filteredActivities.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
+              <div
+                key={activity.id}
+                className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0"
+              >
                 <div className="w-2 h-2 rounded-full bg-[#E8A33D] mt-2 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-primary">
-                    {typeof activity.title === "object" ? activity.title[lang] : activity.title}
+                    {typeof activity.title === "object"
+                      ? activity.title[lang] || activity.title.sw
+                      : activity.title}
                   </p>
                   <p className="text-body-sm text-secondary truncate">
-                    {typeof activity.description === "object" ? activity.description[lang] : activity.description}
+                    {typeof activity.description === "object"
+                      ? activity.description[lang] || activity.description.sw
+                      : activity.description}
                   </p>
                 </div>
               </div>
@@ -330,9 +298,12 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
 // EDIT PROFILE TAB
 // ============================================================
 function EditProfileTab({ user, lang }) {
-  const initialBio = typeof user.bio === "object" ? user.bio?.[lang] || "" : user.bio || "";
+  const initialBio =
+    typeof user.bio === "object" ? user.bio?.[lang] || "" : user.bio || "";
   const initialLocation =
-    typeof user.location === "object" ? user.location?.[lang] || "" : user.location || "";
+    typeof user.location === "object"
+      ? user.location?.[lang] || ""
+      : user.location || "";
 
   const [form, setForm] = useState({
     name: user.name || "",
@@ -344,7 +315,9 @@ function EditProfileTab({ user, lang }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
-  const [avatar, setAvatar] = useState(null);
+  const [avatar, setAvatar] = useState(
+    user.avatar || user.avatarUrl || user.avatar_url || null
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -367,7 +340,9 @@ function EditProfileTab({ user, lang }) {
           ? Object.values(err.data).flat().find((v) => typeof v === "string")
           : null;
       setError(
-        err?.data?.detail || firstFieldError || err?.message ||
+        err?.data?.detail ||
+          firstFieldError ||
+          err?.message ||
           (lang === "sw" ? "Imeshindwa kuhifadhi" : "Failed to save")
       );
       return;
@@ -415,7 +390,12 @@ function EditProfileTab({ user, lang }) {
             </div>
             <label className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#E8A33D] text-[#101A2E] flex items-center justify-center cursor-pointer hover:bg-[#B87A1F] transition-colors">
               <Camera size={14} />
-              <input type="file" accept="image/*" hidden onChange={handleAvatarChange} />
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={handleAvatarChange}
+              />
             </label>
           </div>
           <div className="text-center">
@@ -423,7 +403,9 @@ function EditProfileTab({ user, lang }) {
               {lang === "sw" ? "Badilisha Picha" : "Change Picture"}
             </p>
             <p className="text-body-sm text-secondary mt-1">
-              {lang === "sw" ? "JPG, PNG au GIF. Kiwango cha juu 2MB." : "JPG, PNG or GIF. Max 2MB."}
+              {lang === "sw"
+                ? "JPG, PNG au GIF. Kiwango cha juu 2MB."
+                : "JPG, PNG or GIF. Max 2MB."}
             </p>
           </div>
         </div>
@@ -439,7 +421,10 @@ function EditProfileTab({ user, lang }) {
               {lang === "sw" ? "Jina Kamili" : "Full Name"}
             </label>
             <div className="relative">
-              <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+              <User
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+              />
               <input
                 type="text"
                 value={form.name}
@@ -454,7 +439,10 @@ function EditProfileTab({ user, lang }) {
               {lang === "sw" ? "Barua Pepe" : "Email"}
             </label>
             <div className="relative">
-              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+              <Mail
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+              />
               <input
                 type="email"
                 value={form.email}
@@ -463,7 +451,9 @@ function EditProfileTab({ user, lang }) {
               />
             </div>
             <p className="text-body-sm text-muted mt-1 text-center">
-              {lang === "sw" ? "Barua pepe haiwezi kubadilishwa" : "Email cannot be changed"}
+              {lang === "sw"
+                ? "Barua pepe haiwezi kubadilishwa"
+                : "Email cannot be changed"}
             </p>
           </div>
 
@@ -472,7 +462,10 @@ function EditProfileTab({ user, lang }) {
               {lang === "sw" ? "Namba ya Simu" : "Phone Number"}
             </label>
             <div className="relative">
-              <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+              <Phone
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+              />
               <input
                 type="tel"
                 value={form.phone}
@@ -487,7 +480,10 @@ function EditProfileTab({ user, lang }) {
               {lang === "sw" ? "Mahali" : "Location"}
             </label>
             <div className="relative">
-              <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+              <MapPin
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+              />
               <input
                 type="text"
                 value={form.location}
@@ -506,7 +502,11 @@ function EditProfileTab({ user, lang }) {
               value={form.bio}
               onChange={(e) => setForm({ ...form, bio: e.target.value })}
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors resize-none text-center"
-              placeholder={lang === "sw" ? "Andika kuhusu wewe mwenyewe..." : "Write about yourself..."}
+              placeholder={
+                lang === "sw"
+                  ? "Andika kuhusu wewe mwenyewe..."
+                  : "Write about yourself..."
+              }
             />
           </div>
         </div>
@@ -531,8 +531,12 @@ function EditProfileTab({ user, lang }) {
           className="px-6 py-2.5 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
         >
           {saving
-            ? lang === "sw" ? "Inahifadhi..." : "Saving..."
-            : lang === "sw" ? "Hifadhi Mabadiliko" : "Save Changes"}
+            ? lang === "sw"
+              ? "Inahifadhi..."
+              : "Saving..."
+            : lang === "sw"
+              ? "Hifadhi Mabadiliko"
+              : "Save Changes"}
         </button>
       </div>
     </form>
@@ -540,7 +544,53 @@ function EditProfileTab({ user, lang }) {
 }
 
 // ============================================================
-// SECURITY TAB — 2FA + Delete Account + Guard ya Admin
+// SESSIONS CARD
+// ============================================================
+function SessionsCard({ lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const browser = /Edg\//.test(ua)
+    ? "Edge"
+    : /Chrome\//.test(ua) && !/Chromium/.test(ua)
+      ? "Chrome"
+      : /Firefox\//.test(ua)
+        ? "Firefox"
+        : /Safari\//.test(ua)
+          ? "Safari"
+          : t("Kivinjari", "Browser");
+  const platform =
+    (typeof navigator !== "undefined" && navigator.platform) ||
+    t("Kifaa hiki", "This device");
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <h3 className="font-semibold text-primary mb-4 text-center">
+        {t("Kifaa Chako", "Your Device")}
+      </h3>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+            <Globe size={14} className="text-secondary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm text-primary truncate">
+              {browser} • {platform}
+            </p>
+            <p className="text-body-sm text-secondary">
+              {t("Kifaa cha sasa", "Current device")}
+            </p>
+          </div>
+        </div>
+        <span className="text-body-sm font-medium text-[#2F6D4F] bg-[#2F6D4F]/10 px-2 py-1 rounded-full shrink-0">
+          {t("Hai", "Active")}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// SECURITY TAB
 // ============================================================
 function SecurityTab({ lang, user }) {
   const navigate = useNavigate();
@@ -551,9 +601,6 @@ function SecurityTab({ lang, user }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
-
-  // ⬇️ 2FA state (mock — kwa sasa)
-  // ⬇️ Delete Account state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -568,7 +615,11 @@ function SecurityTab({ lang, user }) {
       return;
     }
     if (form.new.length < 6) {
-      setError(lang === "sw" ? "Nenosiri lazima liwe na herufi 6 au zaidi" : "Password must be at least 6 characters");
+      setError(
+        lang === "sw"
+          ? "Nenosiri lazima liwe na herufi 6 au zaidi"
+          : "Password must be at least 6 characters"
+      );
       return;
     }
     if (form.new !== form.confirm) {
@@ -591,8 +642,12 @@ function SecurityTab({ lang, user }) {
           ? Object.values(err.data).flat().find((v) => typeof v === "string")
           : null;
       setError(
-        err?.data?.detail || firstFieldError || err?.message ||
-          (lang === "sw" ? "Imeshindwa kubadilisha nenosiri" : "Failed to change password")
+        err?.data?.detail ||
+          firstFieldError ||
+          err?.message ||
+          (lang === "sw"
+            ? "Imeshindwa kubadilisha nenosiri"
+            : "Failed to change password")
       );
       return;
     }
@@ -602,12 +657,6 @@ function SecurityTab({ lang, user }) {
     setTimeout(() => setSaved(false), 3000);
   };
 
-  // ============================================================
-  // 2FA HANDLERS — mock
-  // ============================================================
-  // ============================================================
-  // DELETE ACCOUNT HANDLER
-  // ============================================================
   const handleDeleteAccount = async (reason) => {
     setDeleting(true);
     const res = await deleteAccountAsync(reason);
@@ -618,15 +667,19 @@ function SecurityTab({ lang, user }) {
     } else {
       alert(
         res.error?.message ||
-          (lang === "sw" ? "Imeshindwa kufuta akaunti" : "Failed to delete account")
+          (lang === "sw"
+            ? "Imeshindwa kufuta akaunti"
+            : "Failed to delete account")
       );
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* CHANGE PASSWORD */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-100 p-5">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-xl border border-gray-100 p-5"
+      >
         <h3 className="font-semibold text-primary mb-4 text-center">
           {lang === "sw" ? "Badilisha Nenosiri" : "Change Password"}
         </h3>
@@ -636,7 +689,10 @@ function SecurityTab({ lang, user }) {
               {lang === "sw" ? "Nenosiri la Sasa" : "Current Password"}
             </label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+              <Lock
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+              />
               <input
                 type={showCurrent ? "text" : "password"}
                 value={form.current}
@@ -647,7 +703,6 @@ function SecurityTab({ lang, user }) {
                 type="button"
                 onClick={() => setShowCurrent(!showCurrent)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
-                aria-label={lang === "sw" ? "Onyesha" : "Show"}
               >
                 {showCurrent ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
@@ -659,7 +714,10 @@ function SecurityTab({ lang, user }) {
               {lang === "sw" ? "Nenosiri Jipya" : "New Password"}
             </label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+              <Lock
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+              />
               <input
                 type={showNew ? "text" : "password"}
                 value={form.new}
@@ -670,7 +728,6 @@ function SecurityTab({ lang, user }) {
                 type="button"
                 onClick={() => setShowNew(!showNew)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
-                aria-label={lang === "sw" ? "Onyesha" : "Show"}
               >
                 {showNew ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
@@ -682,7 +739,10 @@ function SecurityTab({ lang, user }) {
               {lang === "sw" ? "Thibitisha Nenosiri Jipya" : "Confirm New Password"}
             </label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+              <Lock
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+              />
               <input
                 type={showConfirm ? "text" : "password"}
                 value={form.confirm}
@@ -693,7 +753,6 @@ function SecurityTab({ lang, user }) {
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
-                aria-label={lang === "sw" ? "Onyesha" : "Show"}
               >
                 {showConfirm ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
@@ -724,35 +783,33 @@ function SecurityTab({ lang, user }) {
                 <Loader2 size={14} className="animate-spin" />
                 {lang === "sw" ? "Inabadilisha..." : "Changing..."}
               </>
+            ) : lang === "sw" ? (
+              "Badilisha Nenosiri"
             ) : (
-              lang === "sw" ? "Badilisha Nenosiri" : "Change Password"
+              "Change Password"
             )}
           </button>
         </div>
       </form>
 
-      {/* 2FA */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <div className="flex flex-col items-center text-center gap-2">
           <div
             className="w-10 h-10 rounded-lg flex items-center justify-center"
-            style={{ background: false ? `${COLORS.green}15` : `${COLORS.rust}15` }}
+            style={{ background: `${COLORS.rust}15` }}
           >
-            <Shield size={18} color={false ? COLORS.green : COLORS.rust} />
+            <Shield size={18} color={COLORS.rust} />
           </div>
           <div>
             <h3 className="h-card flex items-center gap-1.5 justify-center">
-              {lang === "sw" ? "Uthibitishaji wa Hatua Mbili" : "Two-Factor Authentication"}
+              {lang === "sw"
+                ? "Uthibitishaji wa Hatua Mbili"
+                : "Two-Factor Authentication"}
               <span
-                style={{
-                  background: false ? `${COLORS.green}20` : `${COLORS.rust}20`,
-                  color: false ? COLORS.green : COLORS.rust,
-                }}
+                style={{ background: `${COLORS.rust}20`, color: COLORS.rust }}
                 className="text-body-sm font-bold px-2 py-0.5 rounded-full"
               >
-                {false
-                  ? (lang === "sw" ? "IMEWASHWA" : "ENABLED")
-                  : (lang === "sw" ? "IMEZIMWA" : "DISABLED")}
+                {lang === "sw" ? "IMEZIMWA" : "DISABLED"}
               </span>
             </h3>
             <p className="text-body-sm text-secondary mt-0.5">
@@ -770,46 +827,9 @@ function SecurityTab({ lang, user }) {
         </div>
       </div>
 
-      {/* ACTIVE SESSIONS */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 className="font-semibold text-primary mb-4 text-center">
-          {lang === "sw" ? "Vifaa Vilivyounganishwa" : "Active Sessions"}
-        </h3>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
-                <Globe size={14} className="text-secondary" />
-              </div>
-              <div>
-                <p className="text-sm text-primary truncate">
-                  {(() => {
-                    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-                    if (/Edg\//.test(ua)) return "Edge";
-                    if (/Chrome\//.test(ua) && !/Chromium/.test(ua)) return "Chrome";
-                    if (/Firefox\//.test(ua)) return "Firefox";
-                    if (/Safari\//.test(ua)) return "Safari";
-                    return lang === "sw" ? "Kivinjari" : "Browser";
-                  })()}{" "}
-                  •{" "}
-                  {(typeof navigator !== "undefined" && navigator.platform) ||
-                    (lang === "sw" ? "Kifaa hiki" : "This device")}
-                </p>
-                <p className="text-body-sm text-secondary">
-                  {lang === "sw" ? "Kifaa cha sasa" : "Current device"}
-                </p>
-              </div>
-            </div>
-            <span className="text-body-sm font-medium text-[#2F6D4F] bg-[#2F6D4F]/10 px-2 py-1 rounded-full">
-              {lang === "sw" ? "Hai" : "Active"}
-            </span>
-          </div>
-        </div>
-      </div>
+      <SessionsCard lang={lang} />
 
-      {/* DANGER ZONE — au Admin Account info */}
       {(() => {
-        // 🛡️ GUARD: Admin hawezi kufuta akaunti
         const isUserAdmin =
           user?.role === "Admin" ||
           user?.role === "admin" ||
@@ -880,36 +900,80 @@ function SecurityTab({ lang, user }) {
 }
 
 // ============================================================
-// NOTIFICATIONS TAB
+// NOTIFICATIONS TAB — API-backed
 // ============================================================
 function NotificationsTab({ lang }) {
-  const PREFS_KEY = "sokomkononi_notification_prefs_v1";
   const DEFAULT_PREFS = {
-    email_deals: true, email_messages: true, email_promotions: false, email_newsletter: true,
-    sms_deals: true, sms_messages: false, sms_promotions: false,
-    push_deals: true, push_messages: true, push_promotions: false,
+    email_deals: true,
+    email_messages: true,
+    email_promotions: false,
+    email_newsletter: true,
+    sms_deals: true,
+    sms_messages: false,
+    sms_promotions: false,
+    push_deals: true,
+    push_messages: true,
+    push_promotions: false,
   };
-  const [settings, setSettings] = useState(() => {
-    try {
-      const raw = localStorage.getItem(PREFS_KEY);
-      return raw ? { ...DEFAULT_PREFS, ...JSON.parse(raw) } : DEFAULT_PREFS;
-    } catch { return DEFAULT_PREFS; }
-  });
-  const toggle = (key) =>
-    setSettings((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      try { localStorage.setItem(PREFS_KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
+
+  const [settings, setSettings] = useState(DEFAULT_PREFS);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    (async () => {
+      const r = await fetchNotificationPrefs(ctrl.signal);
+      if (r.aborted) return;
+      if (r.ok && r.data) {
+        setSettings({ ...DEFAULT_PREFS, ...r.data });
+      } else if (r.error) {
+        setError(
+          lang === "sw"
+            ? "Imeshindwa kupakia mipangilio kutoka kwenye seva"
+            : "Could not load settings from the server"
+        );
+      }
+      setLoading(false);
+    })();
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggle = async (key) => {
+    const prev = settings;
+    const next = { ...prev, [key]: !prev[key] };
+    setSettings(next);
+    setError("");
+    const r = await saveNotificationPrefs({ [key]: next[key] });
+    if (r.ok) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } else {
+      setSettings(prev);
+      setError(
+        lang === "sw"
+          ? "Imeshindwa kuhifadhi mabadiliko"
+          : "Failed to save change"
+      );
+    }
+  };
 
   const Toggle = ({ checked, onChange }) => (
     <button
       onClick={onChange}
-      className={`relative w-11 h-6 rounded-full transition-colors ${checked ? "bg-[#E8A33D]" : "bg-gray-200"}`}
+      className={`relative w-11 h-6 rounded-full transition-colors ${
+        checked ? "bg-[#E8A33D]" : "bg-gray-200"
+      }`}
       role="switch"
       aria-checked={checked}
     >
-      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} />
+      <span
+        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+          checked ? "translate-x-5" : "translate-x-0"
+        }`}
+      />
     </button>
   );
 
@@ -941,43 +1005,132 @@ function NotificationsTab({ lang }) {
     },
   ];
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8">
+        <Loader2 size={20} className="animate-spin text-secondary" />
+        <p className="text-sm text-secondary">
+          {lang === "sw" ? "Inapakia mipangilio..." : "Loading settings..."}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       {sections.map((section) => (
-        <div key={section.title} className="bg-white rounded-xl border border-gray-100 p-5">
-          <h3 className="font-semibold text-primary mb-4 text-center">{section.title}</h3>
+        <div
+          key={section.title}
+          className="bg-white rounded-xl border border-gray-100 p-5"
+        >
+          <h3 className="font-semibold text-primary mb-4 text-center">
+            {section.title}
+          </h3>
           <div className="space-y-3">
             {section.items.map((item) => (
               <div key={item.key} className="flex items-center justify-between">
                 <span className="text-sm text-secondary">{item.label}</span>
-                <Toggle checked={settings[item.key]} onChange={() => toggle(item.key)} />
+                <Toggle
+                  checked={!!settings[item.key]}
+                  onChange={() => toggle(item.key)}
+                />
               </div>
             ))}
           </div>
         </div>
       ))}
-      <p className="text-body-sm text-muted text-center">
-        {lang === "sw"
-          ? "Mapendeleo haya yanahifadhiwa kienyeji. Backend integration inakuja."
-          : "These preferences are stored locally. Backend integration coming soon."}
-      </p>
+
+      {error && (
+        <p className="text-sm text-[#C1502E] text-center">{error}</p>
+      )}
+
+      {saved && (
+        <p className="text-sm text-[#2F6D4F] text-center flex items-center justify-center gap-1.5">
+          <Check size={14} />
+          {lang === "sw" ? "Imehifadhiwa" : "Saved"}
+        </p>
+      )}
     </div>
   );
 }
 
 // ============================================================
-// PREFERENCES TAB
+// PREFERENCES TAB — API-backed
 // ============================================================
 function PreferencesTab({ lang, setLang }) {
-  const [prefs, setPrefs] = useState({
-    language: lang, currency: "TZS", region: "Dar es Salaam",
-    showPhone: true, showEmail: false,
-  });
+  const DEFAULT_PREFS = {
+    language: lang,
+    currency: "TZS",
+    region: "Dar es Salaam",
+    showPhone: true,
+    showEmail: false,
+  };
+
+  const [prefs, setPrefs] = useState(DEFAULT_PREFS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    (async () => {
+      const r = await fetchPreferences(ctrl.signal);
+      if (r.aborted) return;
+      if (r.ok) {
+        const clean = Object.fromEntries(
+          Object.entries(r.data).filter(([, v]) => v !== undefined && v !== null)
+        );
+        setPrefs((prev) => ({ ...prev, ...clean }));
+        if (clean.language && clean.language !== lang && setLang) {
+          setLang(clean.language);
+        }
+      } else {
+        setError(
+          lang === "sw"
+            ? "Imeshindwa kupakia mapendeleo"
+            : "Failed to load preferences"
+        );
+      }
+      setLoading(false);
+    })();
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLanguageChange = (value) => {
     setPrefs({ ...prefs, language: value });
     if (setLang) setLang(value);
   };
+
+  const handleSave = async () => {
+    setError("");
+    setSaving(true);
+    const r = await savePreferences(prefs);
+    setSaving(false);
+    if (!r.ok) {
+      setError(
+        r.error?.data?.detail ||
+          (lang === "sw"
+            ? "Imeshindwa kuhifadhi mapendeleo"
+            : "Failed to save preferences")
+      );
+      return;
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8">
+        <Loader2 size={20} className="animate-spin text-secondary" />
+        <p className="text-sm text-secondary">
+          {lang === "sw" ? "Inapakia mapendeleo..." : "Loading preferences..."}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -1023,7 +1176,11 @@ function PreferencesTab({ lang, setLang }) {
               onChange={(e) => setPrefs({ ...prefs, region: e.target.value })}
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#E8A33D] text-center"
             >
-              {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+              {REGIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -1040,14 +1197,22 @@ function PreferencesTab({ lang, setLang }) {
                 {lang === "sw" ? "Onyesha Namba ya Simu" : "Show Phone Number"}
               </p>
               <p className="text-body-sm text-secondary mt-0.5">
-                {lang === "sw" ? "Watumiaji wengine wanaweza kuona namba yako" : "Other users can see your phone number"}
+                {lang === "sw"
+                  ? "Watumiaji wengine wanaweza kuona namba yako"
+                  : "Other users can see your phone number"}
               </p>
             </div>
             <button
               onClick={() => setPrefs({ ...prefs, showPhone: !prefs.showPhone })}
-              className={`relative w-11 h-6 rounded-full transition-colors ${prefs.showPhone ? "bg-[#E8A33D]" : "bg-gray-200"}`}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                prefs.showPhone ? "bg-[#E8A33D]" : "bg-gray-200"
+              }`}
             >
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${prefs.showPhone ? "translate-x-5" : "translate-x-0"}`} />
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  prefs.showPhone ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
             </button>
           </div>
 
@@ -1057,17 +1222,53 @@ function PreferencesTab({ lang, setLang }) {
                 {lang === "sw" ? "Onyesha Barua Pepe" : "Show Email"}
               </p>
               <p className="text-body-sm text-secondary mt-0.5">
-                {lang === "sw" ? "Watumiaji wengine wanaweza kuona barua pepe yako" : "Other users can see your email"}
+                {lang === "sw"
+                  ? "Watumiaji wengine wanaweza kuona barua pepe yako"
+                  : "Other users can see your email"}
               </p>
             </div>
             <button
               onClick={() => setPrefs({ ...prefs, showEmail: !prefs.showEmail })}
-              className={`relative w-11 h-6 rounded-full transition-colors ${prefs.showEmail ? "bg-[#E8A33D]" : "bg-gray-200"}`}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                prefs.showEmail ? "bg-[#E8A33D]" : "bg-gray-200"
+              }`}
             >
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${prefs.showEmail ? "translate-x-5" : "translate-x-0"}`} />
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                  prefs.showEmail ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-2">
+        {error && (
+          <p className="flex items-center gap-1.5 text-sm text-[#C1502E]">
+            <AlertTriangle size={14} />
+            {error}
+          </p>
+        )}
+        {saved && (
+          <span className="flex items-center gap-1.5 text-sm text-[#2F6D4F] font-medium">
+            <Check size={16} />
+            {lang === "sw" ? "Imehifadhiwa!" : "Saved!"}
+          </span>
+        )}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-6 py-2.5 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
+        >
+          {saving
+            ? lang === "sw"
+              ? "Inahifadhi..."
+              : "Saving..."
+            : lang === "sw"
+              ? "Hifadhi Mapendeleo"
+              : "Save Preferences"}
+        </button>
       </div>
     </div>
   );
@@ -1081,20 +1282,31 @@ export default function ProfilePage() {
   const { lang, setLang } = useLanguage();
   const navigate = useNavigate();
 
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const id = setTimeout(() => setReady(true), 300);
-    return () => clearTimeout(id);
-  }, []);
-
   const [activeTab, setActiveTab] = useState("overview");
+  const [activities, setActivities] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const userKey = user?.id ?? user?.email ?? null;
 
-  const [stats, setStats] = useState({
-    listings: 0, saved: 0, deals: 0, rating: 0, reviews: 0,
-    inquiries: 0, offersSent: 0, viewings: 0, purchases: 0,
-    ...(user?.stats || {}),
-  });
+  // Fetch activities tu (stats zimeondolewa)
+  useEffect(() => {
+    if (!userKey) {
+      setDataLoading(false);
+      return;
+    }
+    const ctrl = new AbortController();
+    setDataLoading(true);
+    setLoadError(false);
+    (async () => {
+      const a = await fetchActivities(ctrl.signal);
+      if (a.aborted) return;
+      if (a.ok) setActivities(a.data);
+      if (!a.ok) setLoadError(true);
+      setDataLoading(false);
+    })();
+    return () => ctrl.abort();
+  }, [userKey, reloadKey]);
 
   const dashboardSide = useDashboardSide();
   const [viewMode, setViewModeState] = useState(dashboardSide);
@@ -1106,7 +1318,6 @@ export default function ProfilePage() {
   const setViewMode = (mode) => {
     setViewModeState(mode);
     setDashboardSide(mode);
-    // Also send the user to that dashboard so the toggle has an effect.
     navigate(mode === "buyer" ? "/dashboard/buyer" : "/dashboard/overview");
   };
 
@@ -1115,7 +1326,7 @@ export default function ProfilePage() {
     navigate("/login");
   };
 
-  if (!ready || isLoading) {
+  if (isLoading || (user && dataLoading)) {
     return <PageLoader lang={lang} />;
   }
 
@@ -1137,7 +1348,7 @@ export default function ProfilePage() {
     );
   }
 
-  const profileUser = { ...user, stats };
+  const avatarUrl = user.avatar || user.avatarUrl || user.avatar_url || null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -1147,10 +1358,18 @@ export default function ProfilePage() {
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col items-center text-center gap-4">
             <div className="relative flex-shrink-0">
-              <div className="w-24 h-24 rounded-full bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-4xl">
-                {profileUser.name?.charAt(0) || "U"}
+              <div className="w-24 h-24 rounded-full bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold text-4xl overflow-hidden">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  user.name?.charAt(0) || "U"
+                )}
               </div>
-              {profileUser.isVerified && (
+              {user.isVerified && (
                 <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#2F6D4F] flex items-center justify-center border-2 border-[#101A2E]">
                   <Check size={14} color="white" />
                 </div>
@@ -1159,13 +1378,11 @@ export default function ProfilePage() {
 
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">
-                {profileUser.name || "User"}
+                {user.name || "User"}
               </h1>
-              <p className="text-white/60 text-sm mt-1">
-                {profileUser.email || "—"}
-              </p>
+              <p className="text-white/60 text-sm mt-1">{user.email || "—"}</p>
               <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
-                {profileUser.isVerified && (
+                {user.isVerified && (
                   <span className="text-body-sm font-medium bg-[#2F6D4F]/20 text-[#2F6D4F] px-3 py-1 rounded-full flex items-center gap-1">
                     <Shield size={12} />
                     {lang === "sw" ? "Amethibitishwa" : "Verified"}
@@ -1178,7 +1395,9 @@ export default function ProfilePage() {
               <button
                 onClick={() => setViewMode("seller")}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                  viewMode === "seller" ? "bg-[#E8A33D] text-[#101A2E]" : "text-white/70 hover:text-white"
+                  viewMode === "seller"
+                    ? "bg-[#E8A33D] text-[#101A2E]"
+                    : "text-white/70 hover:text-white"
                 }`}
               >
                 <Tag size={14} />
@@ -1187,7 +1406,9 @@ export default function ProfilePage() {
               <button
                 onClick={() => setViewMode("buyer")}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                  viewMode === "buyer" ? "bg-[#E8A33D] text-[#101A2E]" : "text-white/70 hover:text-white"
+                  viewMode === "buyer"
+                    ? "bg-[#E8A33D] text-[#101A2E]"
+                    : "text-white/70 hover:text-white"
                 }`}
               >
                 <ShoppingBag size={14} />
@@ -1217,7 +1438,9 @@ export default function ProfilePage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                    isActive ? "border-[#E8A33D] text-[#E8A33D]" : "border-transparent text-secondary hover:text-secondary"
+                    isActive
+                      ? "border-[#E8A33D] text-[#E8A33D]"
+                      : "border-transparent text-secondary hover:text-secondary"
                   }`}
                 >
                   <Icon size={16} />
@@ -1230,13 +1453,36 @@ export default function ProfilePage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-6">
-        {activeTab === "overview" && (
-          <OverviewTab user={profileUser} lang={lang} activities={[]} viewMode={viewMode} />
+        {loadError && (
+          <div className="mb-4 flex flex-col sm:flex-row items-center justify-center gap-3 bg-[#C1502E]/10 border border-[#C1502E]/20 rounded-xl px-4 py-3 text-sm text-[#C1502E]">
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle size={14} />
+              {lang === "sw"
+                ? "Baadhi ya data haikupatikana kutoka kwenye seva."
+                : "Some data could not be loaded from the server."}
+            </span>
+            <button
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="font-semibold underline"
+            >
+              {lang === "sw" ? "Jaribu tena" : "Retry"}
+            </button>
+          </div>
         )}
-        {activeTab === "edit" && <EditProfileTab user={profileUser} lang={lang} />}
-        {activeTab === "security" && <SecurityTab lang={lang} user={profileUser} />}
+        {activeTab === "overview" && (
+          <OverviewTab
+            user={user}
+            lang={lang}
+            activities={activities}
+            viewMode={viewMode}
+          />
+        )}
+        {activeTab === "edit" && <EditProfileTab user={user} lang={lang} />}
+        {activeTab === "security" && <SecurityTab lang={lang} user={user} />}
         {activeTab === "notifications" && <NotificationsTab lang={lang} />}
-        {activeTab === "preferences" && <PreferencesTab lang={lang} setLang={setLang} />}
+        {activeTab === "preferences" && (
+          <PreferencesTab lang={lang} setLang={setLang} />
+        )}
       </div>
 
       <Footer />
