@@ -302,18 +302,27 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
   const [form, setForm] = useState({
     name: { sw: "", en: "" },
     description: { sw: "", en: "" },
-    discountPercent: 0,
+    discountPercent: 10,
+    appliesTo: "ALL",
     startDate: new Date().toISOString().slice(0, 10),
     endDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
     active: true,
     ...initial,
   });
 
+  const APPLIES_TO_OPTIONS = [
+    { key: "ALL", label: t("Zote", "All") },
+    { key: "BOOST", label: t("Boost Pekee", "Boost Only") },
+    { key: "LEADING", label: t("Leading Pekee", "Leading Only") },
+    { key: "ADVERTISEMENT", label: t("Matangazo Pekee", "Advertisements Only") },
+  ];
+
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
       className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full max-w-full min-w-0 overflow-hidden"
     >
+      {/* Jina */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-secondary">
@@ -343,6 +352,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
         </label>
       </div>
 
+      {/* Maelezo */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-secondary">
@@ -380,7 +390,8 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
         </label>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full min-w-0">
+      {/* Punguzo + Inatumika kwa */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-secondary">
             {t("Punguzo (%)", "Discount (%)")}
@@ -393,13 +404,34 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
             onChange={(e) =>
               setForm({
                 ...form,
-                discountPercent: Number(e.target.value) || 0,
+                discountPercent: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
               })
             }
             disabled={saving}
             className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
           />
         </label>
+        <label className="flex flex-col gap-1 min-w-0 w-full">
+          <span className="text-[11px] font-semibold text-secondary">
+            {t("Inatumika Kwa", "Applies To")}
+          </span>
+          <select
+            value={form.appliesTo || "ALL"}
+            onChange={(e) => setForm({ ...form, appliesTo: e.target.value })}
+            disabled={saving}
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+          >
+            {APPLIES_TO_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {/* Tarehe */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-secondary">
             {t("Tarehe ya Kuanza", "Start Date")}
@@ -464,7 +496,6 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
     </div>
   );
 }
-
 // ============================================================
 // MAIN SECTION
 // ============================================================

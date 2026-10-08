@@ -1,11 +1,9 @@
+// src/config/promotionsStore.js
 // ============================================================
-// promotionsStore.js — API-only via /api/promotions/
+// promotionsStore.js — API-only via /api/banners/
 // Counts na listings za promotions.
 //
-// REVENUE: Haipo hapa. Inatoka usePlatformRevenue("all")
-// (shared/revenue.js) — chanzo kimoja cha ukweli kinachotumiwa
-// na Overview na Reports pia. Hii inahakikisha jumla ya mapato
-// inafanana kwenye sections zote.
+// REVENUE: Inatoka usePlatformRevenue("all") (shared/revenue.js).
 // ============================================================
 import { useEffect, useState } from "react";
 import { promotionsApi } from "../api/promotions.js";
@@ -16,15 +14,12 @@ const A_EV = "sokomkononi:promotions-analytics-updated";
 const C_EV = "sokomkononi:campaigns-updated";
 
 const EMPTY_ANALYTICS = {
-  // Listings kwa kila aina
   boostedListings: [],
   leadingListings: [],
   advertisedListings: [],
   reservedListings: [],
   successFeeDeals: [],
   listingFeeTransactions: [],
-
-  // Counts
   counts: {
     boosted: 0,
     leading: 0,
@@ -35,11 +30,6 @@ const EMPTY_ANALYTICS = {
     campaigns: 0,
     totalActive: 0,
   },
-
-  // ⬇️ revenueByType na totalPromotionRevenue zimeondolewa.
-  // Revenue inatoka usePlatformRevenue("all") kwenye
-  // shared/revenue.js — chanzo kimoja cha ukweli.
-
   topPromotedSellers: [],
   source: "empty",
 };
@@ -65,17 +55,11 @@ export function getCampaigns() { return readJson(C_KEY, []); }
 export async function hydratePromotionsAnalyticsFromApi() {
   try {
     const data = await promotionsApi.analytics();
-    // Merge na EMPTY_ANALYTICS ili fields zote ziwepo.
-    // revenueByType haipo kwenye EMPTY_ANALYTICS — hivyo
-    // hata kama backend inairudisha, tunaipuuza.
     const merged = {
       ...EMPTY_ANALYTICS,
       ...data,
       counts: { ...EMPTY_ANALYTICS.counts, ...(data?.counts || {}) },
     };
-    // ⬇️ Ondoa revenueByType kama backend imeirudisha
-    delete merged.revenueByType;
-    delete merged.totalPromotionRevenue;
     writeJson(A_KEY, A_EV, merged);
     return { ok: true, data: merged };
   } catch (err) { return { ok: false, error: err }; }
@@ -96,11 +80,13 @@ function normCampaign(raw) {
     id: raw.id,
     name: toBilingual(raw.name),
     description: toBilingual(raw.description),
-    discountPercent: Number(raw.discountPercent ?? raw.discount_percent) || 0,
-    startDate: raw.startDate || raw.start_date,
-    endDate: raw.endDate || raw.end_date,
+    discountPercent: Number(raw.discount_percent ?? raw.discountPercent) || 0,
+    appliesTo: raw.applies_to || raw.appliesTo || "ALL",
+    type: raw.type || "DISCOUNT",
+    startDate: raw.start_date || raw.startDate,
+    endDate: raw.end_date || raw.endDate,
     active: raw.active !== false,
-    createdAt: raw.createdAt || raw.created_at,
+    createdAt: raw.created_at || raw.createdAt,
   };
 }
 
@@ -118,9 +104,12 @@ export async function addCampaignAsync(form) {
   if (!form?.name) return { ok: false, error: new Error("name required") };
   try {
     const raw = await promotionsApi.campaigns.create({
-      name: form.name, description: form.description,
+      name: form.name,
+      description: form.description,
       discount_percent: form.discountPercent || 0,
-      start_date: form.startDate, end_date: form.endDate,
+      applies_to: form.appliesTo || "ALL",
+      start_date: form.startDate,
+      end_date: form.endDate,
       active: form.active !== false,
     });
     const created = normCampaign(raw);
@@ -135,6 +124,7 @@ export async function updateCampaignAsync(id, patch) {
     if (patch.name != null) body.name = patch.name;
     if (patch.description != null) body.description = patch.description;
     if (patch.discountPercent != null) body.discount_percent = patch.discountPercent;
+    if (patch.appliesTo != null) body.applies_to = patch.appliesTo;
     if (patch.startDate != null) body.start_date = patch.startDate;
     if (patch.endDate != null) body.end_date = patch.endDate;
     if (patch.active != null) body.active = patch.active;
@@ -190,6 +180,7 @@ export function useCampaigns() {
   }, []);
   return list;
 }
+
 export function useActiveCampaigns() {
   const now = Date.now();
   return useCampaigns().filter((c) => {
