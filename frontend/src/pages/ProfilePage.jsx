@@ -299,7 +299,9 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
 // ============================================================
 function EditProfileTab({ user, lang }) {
   const initialBio =
-    typeof user.bio === "object" ? user.bio?.[lang] || "" : user.bio || "";
+    typeof user.bio === "object"
+      ? user.bio?.[lang] || ""
+      : user.bio || "";
   const initialLocation =
     typeof user.location === "object"
       ? user.location?.[lang] || ""
@@ -324,11 +326,12 @@ function EditProfileTab({ user, lang }) {
     setError("");
     setSaving(true);
 
+    // ✅ Tuma bio/location kama STRING (sio object)
     const res = await updateProfileAsync({
       name: form.name,
       phone: form.phone,
-      bio: { sw: form.bio, en: form.bio },
-      location: { sw: form.location, en: form.location },
+      bio: form.bio,
+      location: form.location,
     });
 
     setSaving(false);
@@ -542,7 +545,6 @@ function EditProfileTab({ user, lang }) {
     </form>
   );
 }
-
 // ============================================================
 // SESSIONS CARD
 // ============================================================
