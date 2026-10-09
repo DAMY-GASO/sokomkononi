@@ -9,8 +9,6 @@ import { ADMIN_PATH } from "./adminPath.js";
 const KEY = "sokomkononi_notifications_v1";
 const EV = "sokomkononi:notifications-updated";
 
-// Map backend notification_type → admin section key
-// (used by AdminDashboard.openNotification to navigate somewhere sensible)
 const TYPE_TO_TARGET = {
   LISTING_CREATED: "moderation",
   LISTING_APPROVED: "moderation",
@@ -49,9 +47,6 @@ const TYPE_TO_TARGET = {
   VERIFICATION_REQUEST: "verification",
 };
 
-// ============================================================
-// STORAGE
-// ============================================================
 function read() {
   if (typeof window === "undefined") return [];
   try {
@@ -76,9 +71,6 @@ function sortNewest(list) {
   );
 }
 
-// ============================================================
-// NORMALIZER
-// ============================================================
 function norm(raw) {
   if (!raw) return null;
   return {
@@ -100,9 +92,6 @@ function norm(raw) {
   };
 }
 
-// ============================================================
-// HYDRATE FROM API
-// ============================================================
 export async function hydrateNotificationsFromApi() {
   try {
     const data = await notificationsApi.list({ page_size: 100 });
@@ -115,9 +104,6 @@ export async function hydrateNotificationsFromApi() {
   }
 }
 
-// ============================================================
-// SYNCHRONOUS READS
-// ============================================================
 export function getNotifications(audience) {
   const all = sortNewest(read());
   if (audience === "admin") {
@@ -126,7 +112,6 @@ export function getNotifications(audience) {
   if (audience === "user") {
     return all.filter((n) => n.audience === "user" || !n.audience);
   }
-  // undefined au "all" → zote
   return all;
 }
 
@@ -134,9 +119,6 @@ export function getUnreadCount(audience) {
   return getNotifications(audience).filter((n) => !n.read).length;
 }
 
-// ============================================================
-// MARK AS READ
-// ============================================================
 export async function markNotificationReadAsync(id) {
   try {
     await notificationsApi.markRead(id);
@@ -167,9 +149,6 @@ export async function markAllNotificationsReadAsync(audience) {
   }
 }
 
-// ============================================================
-// REMOVE — hard delete
-// ============================================================
 export async function removeNotificationAsync(id) {
   try {
     await notificationsApi.hardRemove(id);
@@ -180,22 +159,15 @@ export async function removeNotificationAsync(id) {
   }
 }
 
-// ============================================================
-// CLEAR ALL — hard delete zote (audience husika)
-// ============================================================
 export async function clearNotificationsAsync(audience) {
-  // Never clear the OTHER scope's cache — an admin tab and a user tab
-  // share the same browser and would lose each other's notifications.
   const target = audience || "user";
   try {
     await notificationsApi.hardRemoveAll({ audience: target });
     const remaining = read().filter((n) => {
       if (target === "user") {
-        // Keep admin entries.
         return n.audience === "admin";
       }
       if (target === "admin") {
-        // Keep user entries.
         return n.audience !== "admin";
       }
       return n.audience !== target;
@@ -207,10 +179,6 @@ export async function clearNotificationsAsync(audience) {
   }
 }
 
-// ============================================================
-// NOTIFY ADMIN ABOUT DELETION
-// (called from MyListings.jsx when a seller deletes a listing)
-// ============================================================
 export async function notifyAdminAboutDeletion(listing) {
   try {
     const deleter =
@@ -248,9 +216,6 @@ export async function notifyAdminAboutDeletion(listing) {
   }
 }
 
-// ============================================================
-// HOOK
-// ============================================================
 let _notificationsHydratePromise = null;
 function _dedupedHydrate() {
   if (_notificationsHydratePromise) return _notificationsHydratePromise;
@@ -274,7 +239,6 @@ export function useNotifications(audience) {
     };
   }, []);
 
-  // Chuja kwa audience
   let notifications;
   if (audience === "admin") {
     notifications = sortNewest(all.filter((n) => n.audience === "admin"));
@@ -298,26 +262,12 @@ export function useNotifications(audience) {
   };
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
 export function getLocalizedField(field, lang = "sw") {
   if (!field) return "";
   if (typeof field === "string") return field;
   return field?.[lang] || field?.sw || field?.en || "";
 }
 
-// ============================================================
-// NOTIFICATION ROUTE RESOLVER
-// ============================================================
-// ✅ IMESASISHWA: Haitui `notif.link` (action_url) kwa routing.
-// Inatumia `notification_type` + `related_object_id` pekee —
-// hii inazuia 404 kwa sababu:
-//   1. action_url inaweza kuwa frontend path ya zamani
-//   2. action_url inaweza kuwa admin panel path (/admin-django/...)
-//   3. action_url inaweza kuelekeza object iliyofutwa
-// `switch` inajenga route sahihi kutoka type + id.
-// ============================================================
 export function resolveNotificationRoute(notif, side = "seller") {
   if (!notif) return "/dashboard/notifications";
 
