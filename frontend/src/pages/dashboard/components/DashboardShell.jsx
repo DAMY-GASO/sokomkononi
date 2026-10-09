@@ -985,24 +985,22 @@ export default function DashboardShell() {
         </button>
       </div>
 
+    
       {/* ANNOUNCEMENT TICKER */}
-      <div
-        style={{ background: COLORS.sandLine, color: COLORS.night }}
-        className="w-full flex items-center gap-2 px-4 py-1.5 text-body-sm sm:text-sm"
-      >
-        <Megaphone size={14} color={COLORS.rust} className="shrink-0" />
-        <span className="truncate">
-          {announcements.length > 0
-            ? getAnnouncementMessage(
-                announcements[tickerIndex % announcements.length],
-                lang
-              )
-            : t(
-                "Karibu SokoMkononi — tafuta au weka mali yako leo.",
-                "Welcome to SokoMkononi — find or list your property today."
-              )}
-        </span>
+     {announcements.length > 0 && (
+   <div
+     style={{ background: COLORS.sandLine, color: COLORS.night }}
+     className="w-full flex items-center gap-2 px-4 py-1.5 text-body-sm sm:text-sm"
+   >
+    <Megaphone size={14} color={COLORS.rust} className="shrink-0" />
+      <span className="truncate">
+        {getAnnouncementMessage(
+        announcements[tickerIndex % announcements.length],
+        lang
+        )}
+       </span>
       </div>
+    )}
 
       <PromotedBannerStrip onOpenListing={goToListingDetail} />
 
