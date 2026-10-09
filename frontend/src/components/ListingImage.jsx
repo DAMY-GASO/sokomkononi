@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { pickVariant } from "../utils/imageVariants.js";
 
 /**
  * ListingImage — picha ya tangazo yenye fremu moja thabiti (kama Facebook
@@ -16,6 +17,7 @@ const COVER_MAX = 1.4;
 
 export default function ListingImage({
   src,
+  variant = "card",
   alt = "",
   ratio = "aspect-square",
   fallback = null,
@@ -23,7 +25,10 @@ export default function ListingImage({
   eager = false,
 }) {
   const imgRef = useRef(null);
-  const [status, setStatus] = useState(src ? "loading" : "error");
+  // Resolve variant URLs from either a string or an image object.
+  const resolved = pickVariant(src, variant);
+  const effectiveSrc = resolved.src || (typeof src === "string" ? src : null);
+  const [status, setStatus] = useState(effectiveSrc ? "loading" : "error");
   const [fit, setFit] = useState("cover");
 
   const settle = (el) => {
@@ -37,18 +42,17 @@ export default function ListingImage({
   };
 
   useEffect(() => {
-    if (!src) {
+    if (!effectiveSrc) {
       setStatus("error");
       return;
     }
     setStatus("loading");
     setFit("cover");
     const el = imgRef.current;
-    // Picha iliyokuwa tayari kwenye cache
     if (el && el.complete && el.naturalWidth) settle(el);
-  }, [src]);
+  }, [effectiveSrc]);
 
-  const showImage = src && status !== "error";
+  const showImage = effectiveSrc && status !== "error";
 
   return (
     <div className={`relative overflow-hidden bg-sand ${ratio} ${className}`}>
@@ -59,7 +63,7 @@ export default function ListingImage({
       {/* Mandharinyuma iliyofifishwa — kwa picha zisizo za mraba tu */}
       {showImage && fit === "contain" && status === "loaded" && (
         <img
-          src={src}
+          src={effectiveSrc}
           alt=""
           aria-hidden="true"
           className="absolute inset-0 h-full w-full scale-125 object-cover opacity-70 blur-2xl"
@@ -69,10 +73,13 @@ export default function ListingImage({
       {showImage && (
         <img
           ref={imgRef}
-          src={src}
+          src={effectiveSrc}
+          srcSet={resolved.srcSet || undefined}
+          sizes={resolved.sizes || undefined}
           alt={alt}
           loading={eager ? "eager" : "lazy"}
           decoding="async"
+          fetchpriority={eager ? "high" : undefined}
           onLoad={(e) => settle(e.currentTarget)}
           onError={() => setStatus("error")}
           className={`absolute inset-0 h-full w-full transition duration-500 ${

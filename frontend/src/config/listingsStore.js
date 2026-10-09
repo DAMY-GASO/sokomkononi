@@ -364,16 +364,43 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   else if (Array.isArray(raw.images)) photos = raw.images;
   else if (Array.isArray(raw.gallery)) photos = raw.gallery;
 
+  // Preserve variant URLs so the frontend can pick the right size per context.
   photos = photos
     .map((img) => {
       if (typeof img === "string") return img;
-      return img?.image_url || img?.url || img?.image || img?.src || null;
+      if (!img) return null;
+      const base = img.image_url || img.url || img.image || img.src || null;
+      if (!base) return null;
+      return {
+        image_url: base,
+        thumb:  img.thumb  || img.thumb_url  || null,
+        card:   img.card   || img.card_url   || null,
+        detail: img.detail || img.detail_url || null,
+        large:  img.large  || img.large_url  || null,
+      };
     })
     .filter(Boolean);
 
   const singleImage = pickImageUrl(raw);
-  if (singleImage && !photos.includes(singleImage)) {
-    photos.unshift(singleImage);
+  if (singleImage) {
+    const hasSingle = photos.some((p) =>
+      typeof p === "string" ? p === singleImage : p.image_url === singleImage
+    );
+    if (!hasSingle) {
+      // Try to hydrate variants from the raw single image if it's an object.
+      const rawObj = raw.image || raw.primary_image || null;
+      if (rawObj && typeof rawObj === "object") {
+        photos.unshift({
+          image_url: singleImage,
+          thumb:  rawObj.thumb  || rawObj.thumb_url  || null,
+          card:   rawObj.card   || rawObj.card_url   || null,
+          detail: rawObj.detail || rawObj.detail_url || null,
+          large:  rawObj.large  || rawObj.large_url  || null,
+        });
+      } else {
+        photos.unshift(singleImage);
+      }
+    }
   }
 
   const categoryObj = raw.category;
@@ -403,8 +430,25 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   const leadingExpiresAt =
     raw.leading_expires_at || raw.leadingExpiresAt || null;
 
-  const primaryPhoto = resolveImageUrl(photos[0] || null);
-  const normalizedPhotos = photos.map((u) => resolveImageUrl(u)).filter(Boolean);
+  // Resolve URLs (prepend / if relative) while keeping variant metadata.
+  const normalizeOne = (p) => {
+    if (typeof p === "string") return resolveImageUrl(p);
+    return {
+      image_url: resolveImageUrl(p.image_url),
+      thumb:  p.thumb  ? resolveImageUrl(p.thumb)  : null,
+      card:   p.card   ? resolveImageUrl(p.card)   : null,
+      detail: p.detail ? resolveImageUrl(p.detail) : null,
+      large:  p.large  ? resolveImageUrl(p.large)  : null,
+    };
+  };
+
+  const normalizedPhotos = photos.map(normalizeOne).filter(Boolean);
+
+  const firstPhoto = normalizedPhotos[0] || null;
+  const primaryPhoto =
+    typeof firstPhoto === "string"
+      ? firstPhoto
+      : firstPhoto?.image_url || null;
 
   return {
     ...raw,

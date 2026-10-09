@@ -119,9 +119,10 @@ function ListingCard({
     category?.label?.[lang] || category?.label?.sw || listing.category || "—";
   const isBusy = busy === "delete";
 
+  // Pass the object form when available so variant picking works.
   const imageUrl =
-    listing.imageUrl ||
     (listing.photos && listing.photos[0]) ||
+    listing.imageUrl ||
     null;
 
   const isLiveOrReserved =
@@ -135,6 +136,7 @@ function ListingCard({
     <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl sm:h-28 sm:w-28">
       <ListingImage
         src={imageUrl}
+        variant="thumb"
         alt={listing.title}
         ratio="aspect-square"
         fallback={<CategoryIcon size={24} color={COLORS.night} />}

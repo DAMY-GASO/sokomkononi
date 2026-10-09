@@ -36,7 +36,12 @@ export default function ListingCard({
 }) {
   const navigate = useNavigate();
   const photos = Array.isArray(listing.photos) ? listing.photos : [];
-  const photo = listing.imageUrl || photos[0] || category?.imageUrl || null;
+  // Prefer the object form so ListingImage can use variants; fallback to URL.
+  const photo =
+    photos[0] ||
+    listing.imageUrl ||
+    category?.imageUrl ||
+    null;
   const extra = photos.length > 1 ? photos.length : 0;
   const chip = STATUS_CHIP[listing.status];
   const featured = isBoostActive(listing);
@@ -76,6 +81,7 @@ export default function ListingCard({
         <div className="relative shrink-0 overflow-hidden rounded-xl w-32 h-32 sm:w-40 sm:h-40">
           <ListingImage
             src={photo}
+            variant="card"
             alt={listing.title}
             ratio="aspect-square"
             fallback={Icon ? <Icon size={32} strokeWidth={1.6} /> : null}
@@ -124,6 +130,7 @@ export default function ListingCard({
       <div className="relative overflow-hidden rounded-xl">
         <ListingImage
           src={photo}
+          variant="card"
           alt={listing.title}
           ratio="aspect-square"
           fallback={Icon ? <Icon size={44} strokeWidth={1.6} /> : null}

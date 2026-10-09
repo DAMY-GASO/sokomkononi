@@ -326,7 +326,7 @@ export default function PayListingFee() {
   // ── READY — payment form ───────────────────────────────────
   const category = getCategory(listing?.category);
   const CatIcon = getCategoryIcon(category?.iconKey);
-  const imageUrl = listing?.imageUrl || (listing?.photos || [])[0] || null;
+  const imageUrl = (listing?.photos || [])[0] || listing?.imageUrl || null;
   const isFree = feeAmount === 0;
 
   return (
@@ -378,6 +378,7 @@ export default function PayListingFee() {
         <div className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden">
           <ListingImage
             src={imageUrl}
+            variant="thumb"
             alt={listing?.title}
             ratio="aspect-square"
             fallback={
