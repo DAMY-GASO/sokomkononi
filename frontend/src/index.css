@@ -265,3 +265,66 @@ a {
     scroll-behavior: auto !important;
   }
 }
+
+
+/* ============================================================
+   MOBILE RESPONSIVENESS — GLOBAL
+   ============================================================ */
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Long emails / URLs / IDs wrap instead of pushing layout wide */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Touch targets + iOS input-zoom prevention */
+@media (max-width: 640px) {
+  button,
+  a[role="button"],
+  [type="submit"],
+  [type="button"] {
+    min-height: 40px;
+  }
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Modal panels slide up from bottom on mobile */
+@media (max-width: 640px) {
+  .mobile-modal {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .mobile-modal > * {
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 92vh !important;
+    width: 100% !important;
+    overflow-y: auto;
+  }
+}
+
+/* iOS safe-area helper for fixed bottom elements */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+  }
+}
+
+/* Wide tables scroll horizontally instead of breaking layout */
+@media (max-width: 640px) {
+  table:not(.force-table) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+}

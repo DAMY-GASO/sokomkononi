@@ -54,9 +54,22 @@ import { restoreListingAsync } from "../../../config/listingsStore.js";
 function isUnpaid(listing) {
   if (!listing) return false;
   const s = String(listing.status || "").toLowerCase();
+
+  // Explicit pre-payment states
   if (s === "pending_payment" || s === "draft") return true;
-  if (listing.isPaid === false) return true;
-  return false;
+
+  // Post-payment states — even if isPaid flag is missing/stale,
+  // these listings already crossed the paywall. Never show Pay Now.
+  if (
+    ["live", "reserved", "sold", "paused", "in_review", "rejected", "expired"].includes(
+      s
+    )
+  ) {
+    return false;
+  }
+
+  // Fall back to the explicit backend flag
+  return listing.isPaid === false;
 }
 
 // ============================================================

@@ -1151,7 +1151,7 @@ export default function DashboardShell() {
           </div>
         )}
 
-        <div className="flex-1 min-w-0 overflow-y-auto">{renderMain()}</div>
+        <div className="flex-1 min-w-0 w-full max-w-full overflow-x-hidden overflow-y-auto">{renderMain()}</div>
       </div>
 
       <div className="md:hidden">

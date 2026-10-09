@@ -78,7 +78,7 @@ export default function BottomNav() {
   const listingsLink = "/mali-zote";
 
   return (
-    <nav className="bottom-nav">
+    <nav className="bottom-nav safe-bottom">
       <Link to="/" className={`nav-item ${isActive("/") ? "active" : ""}`}>
         {icons.home}
         <span>{t("nav_home")}</span>

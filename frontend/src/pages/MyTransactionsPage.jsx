@@ -493,7 +493,7 @@ export default function MyTransactionsPage() {
   // RENDER
   // ============================================================
   return (
-    <div className="w-full max-w-5xl mx-auto px-3 sm:px-5 py-6">
+    <div className="w-full max-w-5xl mx-auto px-2 sm:px-5 py-4 sm:py-6">
       {/* ── Header ───────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3 flex-wrap mb-5">
         <div className="min-w-0 flex-1">

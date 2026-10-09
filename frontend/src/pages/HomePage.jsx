@@ -377,7 +377,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════ */}
         {/* HERO                                                */}
         {/* ═══════════════════════════════════════════════════ */}
-        <section className="relative dark-surface bg-night-deep text-white px-4 py-14 sm:py-20 lg:py-24 overflow-hidden min-h-[92svh] sm:min-h-[88svh] flex items-center">
+        <section className="relative dark-surface bg-night-deep text-white px-4 py-10 sm:py-20 lg:py-24 overflow-hidden min-h-[86svh] sm:min-h-[88svh] flex items-center">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div
               className="absolute -top-1/3 -left-1/4 w-[70%] h-[70%] rounded-full opacity-20 blur-[130px] animate-aurora"

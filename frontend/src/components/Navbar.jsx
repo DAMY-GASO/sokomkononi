@@ -6,6 +6,40 @@ import {
   getCategoryIcon,
 } from "../config/categoriesStore.js";
 import { useAuth, logoutAsync } from "../config/authStore.js";
+import { useNotifications } from "../config/notificationsStore.js";
+import { useDashboardSide } from "../config/dashboardSideStore.js";
+import { Bell } from "lucide-react";
+
+function NotificationBell() {
+  const { user, isLoading } = useAuth();
+  const { unreadCount } = useNotifications("user", Boolean(user) && !isLoading);
+  const side = useDashboardSide();
+
+  if (!user) return null;
+
+  const target =
+    side === "buyer"
+      ? "/dashboard/buyer/notifications"
+      : "/dashboard/notifications";
+
+  return (
+    <Link
+      to={target}
+      className="relative text-white/60 hover:text-white p-1.5 transition-colors"
+      aria-label="Notifications"
+    >
+      <Bell size={20} />
+      {unreadCount > 0 && (
+        <span
+          className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+          style={{ background: "#C1502E" }}
+        >
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+    </Link>
+  );
+}
 
 export default function Navbar({
   lang: langProp,
@@ -385,6 +419,9 @@ export default function Navbar({
                 </div>
               )}
             </div>
+
+            {/* Notification Bell — logged-in users only */}
+            <NotificationBell />
 
             {/* User Menu / Login Button */}
             {user ? (

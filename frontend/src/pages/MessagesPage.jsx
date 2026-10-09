@@ -700,7 +700,10 @@ export default function MessagesPage({ initialConversationId = null }) {
       {mobileShowChat && selectedConvo && (
         <div
           className="md:hidden fixed inset-0 z-[9998] flex flex-col"
-          style={{ background: "white" }}
+          style={{
+            background: "white",
+            paddingBottom: "env(safe-area-inset-bottom, 0)",
+          }}
         >
           <ChatView
             convo={selectedConvo}

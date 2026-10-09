@@ -235,7 +235,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
   return (
     <>
       <aside className="hidden lg:block w-64 flex-shrink-0">
-        <div className="bg-white rounded-xl border border-gray-100 p-5 sticky top-20">
+        <div className="bg-white rounded-xl border border-gray-100 p-5 lg:sticky lg:top-20">
           {content}
         </div>
       </aside>

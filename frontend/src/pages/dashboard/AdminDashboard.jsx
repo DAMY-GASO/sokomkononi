@@ -742,7 +742,7 @@ export default function AdminDashboard() {
         )}
 
         {/* MAIN */}
-        <main className="flex-1 min-w-0 max-w-7xl px-4 sm:px-6 py-6 overflow-x-hidden">
+        <main className="flex-1 min-w-0 w-full max-w-7xl px-3 sm:px-6 py-4 sm:py-6 overflow-x-hidden">
           {renderSection()}
         </main>
       </div>

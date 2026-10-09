@@ -225,10 +225,11 @@ function _dedupedHydrate() {
   return _notificationsHydratePromise;
 }
 
-export function useNotifications(audience) {
+export function useNotifications(audience, enabled = true) {
   const [all, setAll] = useState(() => read());
 
   useEffect(() => {
+    if (!enabled) return undefined;
     _dedupedHydrate();
     const sync = () => setAll(read());
     window.addEventListener("storage", sync);
@@ -237,7 +238,7 @@ export function useNotifications(audience) {
       window.removeEventListener("storage", sync);
       window.removeEventListener(EV, sync);
     };
-  }, []);
+  }, [enabled]);
 
   let notifications;
   if (audience === "admin") {
@@ -319,7 +320,10 @@ export function resolveNotificationRoute(notif, side = "seller") {
     case "LISTING_DELETED":
     case "LISTING_RESTORED":
     case "LISTING_SUBMITTED":
-      return `${prefix}/listings`;
+      // Buyer side has no listings page — fall back to their notifications.
+      return side === "buyer"
+        ? `${prefix}/notifications`
+        : `${prefix}/listings`;
 
     case "LISTING_FEE_PAID":
     case "SUCCESS_FEE_PAID":
@@ -327,13 +331,13 @@ export function resolveNotificationRoute(notif, side = "seller") {
 
     case "BOOST_PURCHASED":
     case "BOOST_ACTIVATED":
-      return `${prefix}/boost`;
+      return side === "buyer" ? `${prefix}/notifications` : `${prefix}/boost`;
 
     case "LEADING_PURCHASED":
-      return `${prefix}/leading`;
+      return side === "buyer" ? `${prefix}/notifications` : `${prefix}/leading`;
 
     case "ADVERTISEMENT_PURCHASED":
-      return `${prefix}/advertise`;
+      return side === "buyer" ? `${prefix}/notifications` : `${prefix}/advertise`;
 
     case "BUNDLE_PURCHASED":
       return `${prefix}/bundles`;

@@ -198,7 +198,7 @@ export default function Footer({ selectedLang: propLang }) {
             {selectedLang === "sw" ? "Haki zote zimehifadhiwa." : "All rights reserved."}
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 w-full md:w-auto">
             {[
               { file: "mpesa.svg", alt: "M-Pesa" },
               { file: "halopesa.svg", alt: "HaloPesa" },
