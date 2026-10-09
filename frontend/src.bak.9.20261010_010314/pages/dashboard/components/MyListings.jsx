@@ -312,15 +312,7 @@ export default function MyListings({
   const navigate = useNavigate();
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const goToPayment = (id) => {
-    if (String(id).startsWith("temp_")) {
-      alert(lang === "sw"
-        ? "Tangazo lako bado halijathibitishwa. Subiri sekunde chache."
-        : "Your listing hasn't synced yet. Please wait.");
-      return;
-    }
-    navigate(`/dashboard/pay-listing?id=${id}`);
-  };
+  const goToPayment = (id) => navigate(`/dashboard/pay-listing?id=${id}`);
 
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");

@@ -14,7 +14,6 @@ import {
   FileText, CreditCard, Receipt,
 } from "lucide-react";
 import { COLORS, formatTZS, getCategory, timeAgo } from "./shared";
-import { getListing } from "../../../config/listingsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { api } from "../../../api/client.js";
 import { useAuth } from "../../../config/authStore.js";
@@ -45,15 +44,6 @@ export default function PayListingFee() {
       setError(t(
         "Hakuna listing iliyochaguliwa.",
         "No listing selected."
-      ));
-      return;
-    }
-
-    if (String(listingId).startsWith("temp_")) {
-      setStage("error");
-      setError(t(
-        "Tangazo lako bado halijathibitishwa. Subiri sekunde chache ujaribu tena.",
-        "Your listing hasn't synced. Wait a moment and try again."
       ));
       return;
     }
