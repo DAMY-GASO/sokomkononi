@@ -1,11 +1,12 @@
 // ============================================================
 // MyTransactionsPage.jsx
 // Miamala Yangu — API-backed success fee + PDF/CSV/DOC download.
-// + Bundle purchase flow + Credits support + Free download.
+// + FimiPay direct payment + Bundle purchase flow + Credits + Free.
 //
 // SASISHO:
-//   - Inasoma fee fresh kutoka useSuccessFeeStatus() (sio successFee.min_fee stale)
-//   - Bundle purchase ina-poll credits baada ya malipo
+//   - Inasoma fee fresh kutoka useSuccessFeeStatus() (sio stale)
+//   - FimiPay direct payment kwa success fee
+//   - Bundle purchase kama option ya pili
 //   - Loading + error handling bora
 // ============================================================
 import React, { useState, useEffect, useRef } from "react";
@@ -40,6 +41,7 @@ import {
   useSuccessFeeConfig,
   useSuccessFeeStatus,
   hydrateSuccessFeeStatusFromApi,
+  getSuccessFeeStatus,
 } from "../config/successFeeStore.js";
 
 // ============================================================
@@ -110,7 +112,11 @@ const STATUS_META = {
 // ============================================================
 // HELPER — poll credits
 // ============================================================
-async function pollForCredit(userId, service, { attempts = 8, intervalMs = 2000 } = {}) {
+async function pollForCredit(
+  userId,
+  service,
+  { attempts = 8, intervalMs = 2000 } = {}
+) {
   for (let i = 0; i < attempts; i++) {
     const info = checkCredit(userId, service);
     if (info.hasCredit) {
@@ -140,6 +146,12 @@ export default function MyTransactionsPage() {
   // Credits state
   const [downloading, setDownloading] = useState(false);
 
+  // ✅ FimiPay direct payment state
+  const [showFeePayModal, setShowFeePayModal] = useState(false);
+  const [feePayStage, setFeePayStage] = useState("select"); // "select" | "paying"
+  const [feePayError, setFeePayError] = useState("");
+  const [feePayBusy, setFeePayBusy] = useState(false);
+
   // Bundle flow state
   const [showBundleModal, setShowBundleModal] = useState(false);
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
@@ -147,7 +159,7 @@ export default function MyTransactionsPage() {
   const [bundleLoading, setBundleLoading] = useState(false);
   const [bundleStage, setBundleStage] = useState("select");
 
-  // ⬇️ SASISHO: Config + status tofauti
+  // Config + status
   const successFee = useSuccessFeeConfig();
   const status = useSuccessFeeStatus();
 
@@ -155,13 +167,15 @@ export default function MyTransactionsPage() {
     if (!showBundleModal) setBundleStage("select");
   }, [showBundleModal]);
 
-  const successBundles = useActiveBundles().filter((b) => b.type === "success");
+  const successBundles = useActiveBundles().filter(
+    (b) => b.type === "success"
+  );
 
   const creditInfo = checkCredit(user?.id, "success");
   const hasCredit = creditInfo.hasCredit;
   const creditRemaining = creditInfo.remaining || 0;
 
-  // ⬇️ SASISHO: Fee inatoka `status` (fresh kutoka backend)
+  // Fee inatoka `status` (fresh kutoka backend)
   const feeAmount = Number(status.fee) || 0;
   const requiresPayment = status.requires_payment;
   const isFree = status.is_free;
@@ -286,6 +300,7 @@ export default function MyTransactionsPage() {
 
       setShowFeeFlow(false);
       setShowBundleModal(false);
+      setShowFeePayModal(false);
       setPendingBundlePurchase(null);
       setDownloading(false);
     } catch (err) {
@@ -309,9 +324,11 @@ export default function MyTransactionsPage() {
       handleCreditDownload();
       return;
     }
-    // Nenda kwa FimiPay flow
+    // ✅ FimiPay direct payment
     setShowFeeFlow(false);
-    setShowBundleModal(true);
+    setFeePayStage("select");
+    setFeePayError("");
+    setShowFeePayModal(true);
   };
 
   // ── Credit download ──────────────────────────────────────
@@ -334,6 +351,55 @@ export default function MyTransactionsPage() {
     } catch (err) {
       setFeeError(err?.message || t("Imeshindikana.", "Failed."));
       setDownloading(false);
+    }
+  };
+
+  // ============================================================
+  // FIMIPAY DIRECT PAYMENT — Success Fee
+  // ============================================================
+  const handleFeePayInitiate = async ({ methodKey, phone } = {}) => {
+    try {
+      const raw = await api.post("/finance/success-fee/", {
+        payment_method: methodKey || "mobile",
+        phone: phone || "",
+      });
+      const fimipay = raw?.fimipay || raw?.data?.fimipay || {};
+      return {
+        ok: true,
+        orderId: fimipay.order_id || null,
+        gatewayUrl: fimipay.payment_gateway_url || null,
+        simulated: !!fimipay.simulated,
+        environment: fimipay.environment || "live",
+      };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  };
+
+  const handleFeePaySuccess = async () => {
+    setFeePayBusy(true);
+    setFeePayError("");
+    try {
+      // Poll kama webhook imefika
+      for (let i = 0; i < 10; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        await hydrateSuccessFeeStatusFromApi();
+        const fresh = getSuccessFeeStatus();
+        // Kama bado requires_payment, endelea kusubiri
+        if (!fresh.requires_payment) break;
+      }
+      await performDownload();
+      setShowFeePayModal(false);
+    } catch (err) {
+      setFeePayError(
+        err?.message ||
+          t(
+            "Malipo yamefanyika lakini download imeshindikana.",
+            "Payment went through but download failed."
+          )
+      );
+    } finally {
+      setFeePayBusy(false);
     }
   };
 
@@ -379,7 +445,7 @@ export default function MyTransactionsPage() {
     }
   };
 
-  // ⬇️ SASISHO: Poll kwa credits kabla ya kutuma download
+  // Poll kwa credits kabla ya kutuma download
   const handleBundleSuccess = async () => {
     setBundleLoading(true);
     setBundleError("");
@@ -740,52 +806,172 @@ export default function MyTransactionsPage() {
             )}
 
             {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowFeeFlow(false)}
-                disabled={downloading}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
-              >
-                {t("Ghairi", "Cancel")}
-              </button>
-              <button
-                onClick={handleModalConfirm}
-                disabled={downloading}
-                style={{ background: COLORS.gold, color: COLORS.night }}
-                className="flex-1 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
-              >
-                {downloading ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    {t("Inapakia...", "Loading...")}
-                  </>
-                ) : isFree ? (
-                  <>
-                    <Download size={14} />
-                    {t("Pakua", "Download")}
-                  </>
-                ) : hasCredit ? (
-                  <>
-                    <Wallet size={14} />
-                    {t(
-                      `Tumia Credit (${creditRemaining})`,
-                      `Use Credit (${creditRemaining})`
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <Package size={14} />
-                    {t("Nunua Kifurushi", "Buy a Bundle")}
-                  </>
-                )}
-              </button>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowFeeFlow(false)}
+                  disabled={downloading}
+                  className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+                >
+                  {t("Ghairi", "Cancel")}
+                </button>
+                <button
+                  onClick={handleModalConfirm}
+                  disabled={downloading}
+                  style={{ background: COLORS.gold, color: COLORS.night }}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {downloading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      {t("Inapakia...", "Loading...")}
+                    </>
+                  ) : isFree ? (
+                    <>
+                      <Download size={14} />
+                      {t("Pakua", "Download")}
+                    </>
+                  ) : hasCredit ? (
+                    <>
+                      <Wallet size={14} />
+                      {t(
+                        `Tumia Credit (${creditRemaining})`,
+                        `Use Credit (${creditRemaining})`
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={14} />
+                      {t(
+                        `Lipa ${formatTZS(feeAmount)}`,
+                        `Pay ${formatTZS(feeAmount)}`
+                      )}
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* ✅ Option ya pili: Nunua kifurushi */}
+              {!isFree && !hasCredit && (
+                <button
+                  onClick={() => {
+                    setShowFeeFlow(false);
+                    setShowBundleModal(true);
+                  }}
+                  disabled={downloading}
+                  style={{
+                    borderColor: COLORS.sandLine,
+                    color: COLORS.green,
+                    background: "white",
+                  }}
+                  className="w-full text-xs font-semibold py-2 rounded-lg border transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  <Package size={12} />
+                  {t(
+                    "Au nunua kifurushi (bei nafuu)",
+                    "Or buy a bundle (cheaper)"
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
 
       {/* ============================================================ */}
-      {/* BUNDLE MODAL */}
+      {/* FIMIPAY MODAL — Direct Success Fee Payment */}
+      {/* ============================================================ */}
+      {showFeePayModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
+            {feePayStage === "paying" ? (
+              <PaymentGateway
+                amount={feeAmount}
+                title={t("Lipa Ada ya Mafanikio", "Pay Success Fee")}
+                description={t(
+                  "Lipa ili kupakua ripoti ya miamala yako.",
+                  "Pay to download your transactions report."
+                )}
+                onInitiate={handleFeePayInitiate}
+                onSuccess={handleFeePaySuccess}
+                onCancel={() => {
+                  setShowFeePayModal(false);
+                  setFeePayStage("select");
+                }}
+                lang={lang}
+              />
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold text-primary">
+                      {t("Lipa Ada ya Mafanikio", "Pay Success Fee")}
+                    </h3>
+                    <p className="text-xs text-secondary mt-0.5">
+                      {t(
+                        "Chagua njia ya malipo.",
+                        "Choose payment method."
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowFeePayModal(false)}
+                    disabled={feePayBusy}
+                    className="p-1 text-muted hover:text-secondary shrink-0 disabled:opacity-50"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    background: `${COLORS.gold}10`,
+                    borderColor: `${COLORS.gold}40`,
+                  }}
+                  className="rounded-lg border px-3 py-2.5 mb-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-secondary">
+                      {t("Ada", "Fee")}
+                    </span>
+                    <span
+                      style={{ color: "#8A5A16" }}
+                      className="text-sm font-bold"
+                    >
+                      {formatTZS(feeAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                {feePayError && (
+                  <div
+                    style={{
+                      background: `${COLORS.rust}10`,
+                      color: COLORS.rust,
+                    }}
+                    className="text-xs font-semibold px-3 py-2 rounded-lg mb-3"
+                  >
+                    {feePayError}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setFeePayStage("paying")}
+                  disabled={feePayBusy}
+                  style={{ background: COLORS.gold, color: COLORS.night }}
+                  className="w-full py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  <CreditCard size={14} />
+                  {t("Endelea Kulipa", "Continue to Pay")}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* BUNDLE MODAL — Alternative option */}
       {/* ============================================================ */}
       {showBundleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -805,133 +991,132 @@ export default function MyTransactionsPage() {
               />
             ) : (
               <>
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div className="min-w-0">
-                <h3 className="text-base font-bold text-primary">
-                  {t("Nunua Kifurushi", "Buy Bundle")}
-                </h3>
-                <p className="text-xs text-secondary mt-0.5">
-                  {t(
-                    "Nunua kifurushi cha success fee na upate credits nyingi.",
-                    "Buy a success fee bundle and get multiple credits."
-                  )}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowBundleModal(false)}
-                disabled={bundleLoading}
-                className="p-1 text-muted hover:text-secondary shrink-0 disabled:opacity-50"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Bundles list */}
-            <div className="flex flex-col gap-2 mb-4">
-              {successBundles.map((b) => {
-                const bundleName = b.name?.[lang] || b.name?.sw || b.code;
-                const isSelected = pendingBundlePurchase?.id === b.id;
-                return (
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold text-primary">
+                      {t("Nunua Kifurushi", "Buy Bundle")}
+                    </h3>
+                    <p className="text-xs text-secondary mt-0.5">
+                      {t(
+                        "Nunua kifurushi cha success fee na upate credits nyingi.",
+                        "Buy a success fee bundle and get multiple credits."
+                      )}
+                    </p>
+                  </div>
                   <button
-                    key={b.id}
-                    onClick={() => setPendingBundlePurchase(b)}
+                    onClick={() => setShowBundleModal(false)}
                     disabled={bundleLoading}
-                    style={{
-                      borderColor: isSelected
-                        ? COLORS.gold
-                        : COLORS.sandLine,
-                      background: isSelected
-                        ? `${COLORS.gold}10`
-                        : "white",
-                    }}
-                    className="flex items-center gap-3 border-2 rounded-xl p-3 text-left transition-colors disabled:opacity-50"
+                    className="p-1 text-muted hover:text-secondary shrink-0 disabled:opacity-50"
                   >
-                    <div
-                      style={{ background: `${COLORS.gold}15` }}
-                      className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                    >
-                      <Package size={18} color="#8A5A16" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-primary truncate">
-                        {bundleName}
-                      </p>
-                      <p className="text-[11px] text-secondary">
-                        {b.credits?.success || 1} {t("credits", "credits")}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p
-                        style={{ color: COLORS.rust }}
-                        className="text-sm font-bold"
-                      >
-                        {formatTZS(b.price)}
-                      </p>
-                    </div>
+                    <X size={18} />
                   </button>
-                );
-              })}
-            </div>
+                </div>
 
-            {/* Bundle error */}
-            {bundleError && (
-              <div
-                style={{
-                  background: `${COLORS.rust}10`,
-                  color: COLORS.rust,
-                }}
-                className="text-xs font-semibold px-3 py-2 rounded-lg mb-3"
-              >
-                {bundleError}
-              </div>
-            )}
+                {/* Bundles list */}
+                <div className="flex flex-col gap-2 mb-4">
+                  {successBundles.map((b) => {
+                    const bundleName =
+                      b.name?.[lang] || b.name?.sw || b.code;
+                    const isSelected = pendingBundlePurchase?.id === b.id;
+                    return (
+                      <button
+                        key={b.id}
+                        onClick={() => setPendingBundlePurchase(b)}
+                        disabled={bundleLoading}
+                        style={{
+                          borderColor: isSelected
+                            ? COLORS.gold
+                            : COLORS.sandLine,
+                          background: isSelected
+                            ? `${COLORS.gold}10`
+                            : "white",
+                        }}
+                        className="flex items-center gap-3 border-2 rounded-xl p-3 text-left transition-colors disabled:opacity-50"
+                      >
+                        <div
+                          style={{ background: `${COLORS.gold}15` }}
+                          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                        >
+                          <Package size={18} color="#8A5A16" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-primary truncate">
+                            {bundleName}
+                          </p>
+                          <p className="text-[11px] text-secondary">
+                            {b.credits?.success || 1}{" "}
+                            {t("credits", "credits")}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p
+                            style={{ color: COLORS.rust }}
+                            className="text-sm font-bold"
+                          >
+                            {formatTZS(b.price)}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowBundleModal(false)}
-                disabled={bundleLoading}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
-              >
-                {t("Ghairi", "Cancel")}
-              </button>
-              <button
-                onClick={() => {
-                  if (!pendingBundlePurchase) return;
-                  setBundleStage("pay");
-                }}
-                disabled={!pendingBundlePurchase || bundleLoading}
-                style={{
-                  background:
-                    pendingBundlePurchase && !bundleLoading
-                      ? COLORS.gold
-                      : COLORS.sandLine,
-                  color:
-                    pendingBundlePurchase && !bundleLoading
-                      ? COLORS.night
-                      : "var(--text-muted)",
-                }}
-                className="flex-1 py-2.5 rounded-lg text-sm font-semibold disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-              >
-                {bundleLoading ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    {t("Inafanya...", "Processing...")}
-                  </>
-                ) : (
-                  <>
-                    <CreditCard size={14} />
-                    {t("Lipa", "Pay")}
-                  </>
+                {bundleError && (
+                  <div
+                    style={{
+                      background: `${COLORS.rust}10`,
+                      color: COLORS.rust,
+                    }}
+                    className="text-xs font-semibold px-3 py-2 rounded-lg mb-3"
+                  >
+                    {bundleError}
+                  </div>
                 )}
-              </button>
-            </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowBundleModal(false)}
+                    disabled={bundleLoading}
+                    className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+                  >
+                    {t("Ghairi", "Cancel")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!pendingBundlePurchase) return;
+                      setBundleStage("pay");
+                    }}
+                    disabled={!pendingBundlePurchase || bundleLoading}
+                    style={{
+                      background:
+                        pendingBundlePurchase && !bundleLoading
+                          ? COLORS.gold
+                          : COLORS.sandLine,
+                      color:
+                        pendingBundlePurchase && !bundleLoading
+                          ? COLORS.night
+                          : "var(--text-muted)",
+                    }}
+                    className="flex-1 py-2.5 rounded-lg text-sm font-semibold disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  >
+                    {bundleLoading ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        {t("Inafanya...", "Processing...")}
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard size={14} />
+                        {t("Lipa", "Pay")}
+                      </>
+                    )}
+                  </button>
+                </div>
               </>
             )}
           </div>
         </div>
       )}
-
     </div>
   );
 }
