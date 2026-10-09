@@ -247,6 +247,7 @@ export async function notifyAdminAboutDeletion(listing) {
     return { ok: false, error: err };
   }
 }
+
 // ============================================================
 // HOOK
 // ============================================================
@@ -309,12 +310,16 @@ export function getLocalizedField(field, lang = "sw") {
 // ============================================================
 // NOTIFICATION ROUTE RESOLVER
 // ============================================================
+// ✅ IMESASISHWA: Haitui `notif.link` (action_url) kwa routing.
+// Inatumia `notification_type` + `related_object_id` pekee —
+// hii inazuia 404 kwa sababu:
+//   1. action_url inaweza kuwa frontend path ya zamani
+//   2. action_url inaweza kuwa admin panel path (/admin-django/...)
+//   3. action_url inaweza kuelekeza object iliyofutwa
+// `switch` inajenga route sahihi kutoka type + id.
+// ============================================================
 export function resolveNotificationRoute(notif, side = "seller") {
   if (!notif) return "/dashboard/notifications";
-
-  const explicit = typeof notif.link === "string" ? notif.link.trim() : "";
-  if (explicit && explicit.startsWith("/")) return explicit;
-  if (explicit && /^https?:\/\//i.test(explicit)) return explicit;
 
   const prefix = side === "buyer" ? "/dashboard/buyer" : "/dashboard";
   const rawType = String(notif.type || "").toUpperCase();
@@ -386,6 +391,11 @@ export function resolveNotificationRoute(notif, side = "seller") {
     case "WAITING_LIST_JOINED":
     case "WAITING_LIST_AVAILABLE":
       return "/dashboard/buyer/waiting";
+
+    case "VERIFICATION_REQUEST":
+    case "ACCOUNT_VERIFIED":
+    case "ACCOUNT_REJECTED":
+      return `${prefix}/verification`;
 
     default:
       return `${prefix}/notifications`;
