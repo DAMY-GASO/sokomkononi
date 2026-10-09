@@ -20,6 +20,11 @@ export default function PaymentReturnRoute() {
   const sw = lang === "sw";
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const side = useDashboardSide();
+  const txPath =
+    side === "buyer"
+      ? "/dashboard/buyer/transactions"
+      : "/dashboard/transactions";
 
   const [stage, setStage] = useState("POLLING");
   const [error, setError] = useState("");
@@ -158,13 +163,7 @@ export default function PaymentReturnRoute() {
             )}
             <div className="flex flex-col sm:flex-row gap-2">
               <button
-                onClick={() =>
-                  navigate(
-                    getDashboardSide() === "buyer"
-                      ? "/dashboard/buyer/transactions"
-                      : "/dashboard/transactions"
-                  )
-                }
+                onClick={() => navigate(txPath)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
                 style={{ background: COLORS.gold, color: COLORS.night }}
               >
@@ -196,13 +195,7 @@ export default function PaymentReturnRoute() {
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
               <button
-                onClick={() =>
-                  navigate(
-                    getDashboardSide() === "buyer"
-                      ? "/dashboard/buyer/transactions"
-                      : "/dashboard/transactions"
-                  )
-                }
+                onClick={() => navigate(txPath)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-primary"
               >
                 {sw ? "Miamala Yangu" : "My Transactions"}

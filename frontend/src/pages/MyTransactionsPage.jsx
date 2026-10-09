@@ -364,6 +364,11 @@ export default function MyTransactionsPage() {
         phone: phone || "",
       });
       const fimipay = raw?.fimipay || raw?.data?.fimipay || {};
+      try {
+        if (fimipay?.order_id) {
+          sessionStorage.setItem("pending_order_id", String(fimipay.order_id));
+        }
+      } catch { /* noop */ }
       return {
         ok: true,
         orderId: fimipay.order_id || null,

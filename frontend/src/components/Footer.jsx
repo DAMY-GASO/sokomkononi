@@ -152,7 +152,7 @@ export default function Footer({ selectedLang: propLang }) {
                 </Link>
               </li>
               <li>
-                <Link to="/kuhusu#usalama" className="text-white/50 hover:text-white text-sm transition-colors">
+                <Link to="/kuhusu" className="text-white/50 hover:text-white text-sm transition-colors">
                   {selectedLang === "sw" ? "Usalama" : "Safety"}
                 </Link>
               </li>

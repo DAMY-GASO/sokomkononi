@@ -145,7 +145,11 @@ export function parsePrice(value) {
 }
 
 export function formatTZS(amount) {
-  return "TZS " + Math.round(amount).toLocaleString("en-US");
+  const n = Number(amount);
+  return (
+    "TZS " +
+    (Number.isFinite(n) ? Math.round(n) : 0).toLocaleString("en-US")
+  );
 }
 
 // ============================================================

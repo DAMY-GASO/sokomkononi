@@ -118,9 +118,7 @@ function App() {
               <Route path="/dashboard/transactions" element={<DashboardShell />} />
               <Route path="/dashboard/activity" element={<DashboardShell />} />
               <Route path="/dashboard/verification" element={<DashboardShell />} />
-              <Route path="/dashboard/listings" element={<DashboardShell />} />
               <Route path="/dashboard/listings/edit/:id" element={<DashboardShell />} />
-              
 
               {/* DASHBOARD — BUYER */}
               <Route path="/dashboard/buyer" element={<DashboardShell />} />

@@ -699,7 +699,7 @@ export default function MessagesPage({ initialConversationId = null }) {
       {/* Mobile overlay: full-screen chat when a conversation is open */}
       {mobileShowChat && selectedConvo && (
         <div
-          className="md:hidden fixed inset-0 z-[9999] flex flex-col"
+          className="md:hidden fixed inset-0 z-[9998] flex flex-col"
           style={{ background: "white" }}
         >
           <ChatView

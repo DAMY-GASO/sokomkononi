@@ -308,7 +308,7 @@ export default function AdminDashboard() {
   };
 
   const visibleNav = useMemo(() => {
-    if (!rolesReady) return [];
+    if (!rolesReady) return NAV;   // show full nav during hydration
     return NAV.filter((item) => canAccess(item.key));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffRole, rolesReady]);

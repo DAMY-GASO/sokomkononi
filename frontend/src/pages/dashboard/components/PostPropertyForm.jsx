@@ -383,6 +383,7 @@ export default function PostPropertyForm({
 
   const reset = () => {
     setStage("form");
+    setWarnings([]);
     setCreatedListing(null);
     setCategoryKey(null);
     setCategoryMode(null);
@@ -754,6 +755,27 @@ export default function PostPropertyForm({
     }
   };
 
+  const handleFreeSubmit = async () => {
+    if (!createdListing) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await api.post(`/listings/${createdListing.id}/fee/pay/`, {
+        payment_reference: "free",
+      });
+      onPaid?.(createdListing.id, { alreadyPaid: true });
+      setStage("done");
+    } catch (err) {
+      setError(
+        err?.data?.detail ||
+          err?.message ||
+          t("Imeshindwa kuwasilisha.", "Failed to submit.")
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleBeginBundlePurchase = async () => {
     if (!selectedBundle) return;
     setSubmitting(true);
@@ -986,13 +1008,15 @@ export default function PostPropertyForm({
 
               <button
                 onClick={
-                  paymentMode === "flat"
-                    ? () => setStage("paying")
-                    : handleBeginBundlePurchase
+                  isFreeCategory || listingFeeDisabled
+                    ? handleFreeSubmit
+                    : paymentMode === "flat"
+                      ? () => setStage("paying")
+                      : handleBeginBundlePurchase
                 }
                 disabled={
                   submitting ||
-                  feeAmount === 0 ||
+                  (feeAmount === 0 && !isFreeCategory && !listingFeeDisabled) ||
                   (paymentMode === "bundle" && !selectedBundle)
                 }
                 style={{

@@ -494,7 +494,7 @@ const _SELLER_STATUS_CANDIDATES = [
   "PAUSED",
 ];
 
-export async function fetchMyListingsFromApi({ refreshUser = false } = {}) {
+async function _fetchMyListingsImpl({ refreshUser = false } = {}) {
   try {
     if (refreshUser || _myListingsUserId == null) {
       const me = await authApi.me();
@@ -553,6 +553,15 @@ export async function fetchMyListingsFromApi({ refreshUser = false } = {}) {
     console.warn("[listingsStore] fetchMyListings failed:", err);
     return { source: "error", count: getMyListings().length };
   }
+}
+
+let _inflight_myListings = null;
+export function fetchMyListingsFromApi(...args) {
+  if (_inflight_myListings) return _inflight_myListings;
+  _inflight_myListings = _fetchMyListingsImpl(...args).finally(() => {
+    _inflight_myListings = null;
+  });
+  return _inflight_myListings;
 }
 
 export async function fetchFeaturedFromApi(params = {}) {

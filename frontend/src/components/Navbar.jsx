@@ -98,7 +98,7 @@ export default function Navbar({
     cat.slug;
 
   // Helper ya kupata key/slug ya category
-  const getCatKey = (cat) => cat.key || cat.slug;
+  const getCatKey = (cat) => cat.key || cat.slug || "";
 
   // Helper ya kupata picha ya category (null kama haipo)
   const getCatImage = (cat) => cat.imageUrl || null;

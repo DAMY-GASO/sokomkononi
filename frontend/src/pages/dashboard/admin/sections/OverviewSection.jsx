@@ -94,8 +94,10 @@ export default function OverviewSection({ onNavigate }) {
   }, []);
 
   const totalUsers = userStats.totalUsers || users.length;
-  const sellersOnly = userStats.sellersOnly || 0;
-  const buyersOnly = userStats.buyersOnly || 0;
+  const _sellerIds = new Set(listings.map((l) => String(l.sellerId ?? l.seller_id ?? "")).filter(Boolean));
+  const _buyerIds = new Set(deals.map((d) => String(d.buyerId ?? d.buyer_id ?? "")).filter(Boolean));
+  const sellersOnly = userStats.sellersOnly || _sellerIds.size;
+  const buyersOnly = userStats.buyersOnly || _buyerIds.size;
   const bothRoles = userStats.bothRoles || 0;
   const neitherRole = userStats.neitherRole || 0;
 

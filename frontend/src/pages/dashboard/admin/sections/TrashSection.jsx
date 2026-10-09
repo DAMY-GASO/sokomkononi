@@ -403,7 +403,7 @@ export default function TrashSection() {
   // ============================================================
   const typesWithCounts = useMemo(() => {
     return getAllTrashTypes(overview).filter(
-      (t) => t.count > 0 || activeType === t.key
+      (ty) => ty.count > 0 || activeType === ty.key
     );
   }, [overview, activeType]);
 
@@ -453,13 +453,13 @@ export default function TrashSection() {
     }
   };
 
-  const filteredTypes = typesWithCounts.filter((t) => {
+  const filteredTypes = typesWithCounts.filter((ty) => {
     if (!query.trim()) return true;
     const q = query.toLowerCase();
     return (
-      t.label?.sw?.toLowerCase().includes(q) ||
-      t.label?.en?.toLowerCase().includes(q) ||
-      t.key.toLowerCase().includes(q)
+      ty.label?.sw?.toLowerCase().includes(q) ||
+      ty.label?.en?.toLowerCase().includes(q) ||
+      ty.key.toLowerCase().includes(q)
     );
   });
 

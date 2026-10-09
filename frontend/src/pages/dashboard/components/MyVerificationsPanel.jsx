@@ -28,7 +28,6 @@ export default function MyVerificationsPanel() {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [createdId, setCreatedId] = useState(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -47,7 +46,6 @@ export default function MyVerificationsPanel() {
     });
     setBusy(false);
     if (res.ok) {
-      setCreatedId(res.verification.id);
       setForm({ type: "seller", subject: "", notes: "" });
       setShowForm(false);
     } else {

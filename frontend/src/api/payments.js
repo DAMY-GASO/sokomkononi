@@ -105,7 +105,6 @@ export async function pollOrderStatus(orderId, { onProgress, signal } = {}) {
     try {
       data = await api.post("/payments/order-status/", { order_id: orderId });
     } catch (err) {
-      // Auth expired mid-poll — surface immediately, don't burn 30 retries.
       if (err?.status === 401) {
         return {
           ok: false,
@@ -113,7 +112,15 @@ export async function pollOrderStatus(orderId, { onProgress, signal } = {}) {
           data: { detail: "Session expired. Please log in again." },
         };
       }
-      continue; // network blip — retry next interval
+      // 400/403/404 — malformed order_id or forbidden. Do NOT retry.
+      if (err?.status >= 400 && err.status < 500) {
+        return {
+          ok: false,
+          status: "CLIENT_ERROR",
+          data: { detail: err?.message || `Request failed (${err.status}).` },
+        };
+      }
+      continue; // network blip — retry
     }
 
     const status = String(data?.payment_status || "").toUpperCase();

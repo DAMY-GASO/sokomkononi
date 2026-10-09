@@ -94,6 +94,11 @@ const pendingTimers = {};
 /**
  * Rejesha item (mtumiaji amebofya "Rejesha").
  */
+let _RESTORE_HANDLERS = null;
+export function registerRestoreHandlers(map) {
+  _RESTORE_HANDLERS = { ...(_RESTORE_HANDLERS || {}), ...map };
+}
+
 export async function restoreUndo(undoId) {
   const item = read().find((i) => i.undoId === undoId);
   if (!item) return { ok: false, error: new Error("Undo haipo") };
@@ -106,9 +111,20 @@ export async function restoreUndo(undoId) {
       console.warn("[undoStore] restore failed:", err);
       return { ok: false, error: err };
     }
+  } else if (_RESTORE_HANDLERS?.[item.type]) {
+    try {
+      await _RESTORE_HANDLERS[item.type](item.itemId);
+    } catch (err) {
+      console.warn("[undoStore] handler restore failed:", err);
+      return { ok: false, error: err };
+    }
+  } else {
+    return {
+      ok: false,
+      error: new Error("Undo callback lost (page was reloaded)"),
+    };
   }
 
-  // Ondoa kwenye storage
   cancelUndo(undoId);
   return { ok: true };
 }

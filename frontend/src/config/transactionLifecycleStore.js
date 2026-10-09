@@ -70,7 +70,7 @@ function saveAll(list) {
 
 function upsertLocal(tx) {
   const current = readFromStorage();
-  const next = [tx, ...current.filter((t) => t.id !== tx.id)];
+  const next = [tx, ...current.filter((t) => String(t.id) !== String(tx.id))];
   saveAll(next);
   return next;
 }
@@ -155,7 +155,10 @@ export function getTransaction(id) {
 }
 
 export function getTransactionByDealRoom(dealRoomId) {
-  return readFromStorage().find((t) => t.dealRoomId === dealRoomId) || null;
+  return (
+    readFromStorage().find((t) => String(t.dealRoomId) === String(dealRoomId)) ||
+    null
+  );
 }
 
 export function getTransactionsForListing(listingId) {
@@ -165,7 +168,7 @@ export function getTransactionsForListing(listingId) {
 // ============================================================
 // HYDRATE FROM API
 // ============================================================
-export async function hydrateTransactionsFromApi() {
+async function _hydrateLifecycleImpl() {
   try {
     const data = await transactionsApi.mine();
     const rawList = Array.isArray(data) ? data : data?.results || [];
@@ -176,6 +179,13 @@ export async function hydrateTransactionsFromApi() {
     console.warn("[transactionLifecycleStore] hydrate failed:", err);
     return { source: "error", count: getTransactions().length };
   }
+}
+
+let _inflight_hydrateTransactionsFromApi = null;
+export function hydrateTransactionsFromApi(...args) {
+  if (_inflight_hydrateTransactionsFromApi) return _inflight_hydrateTransactionsFromApi;
+  _inflight_hydrateTransactionsFromApi = _hydrateLifecycleImpl(...args).finally(() => { _inflight_hydrateTransactionsFromApi = null; });
+  return _inflight_hydrateTransactionsFromApi;
 }
 
 export async function fetchTransactionDetailAsync(id) {
@@ -628,14 +638,14 @@ export async function fetchDealRoomDetailAsync(dealRoomId) {
       ok: true,
       dealRoom: data,
       messages: data?.messages || [],
-      paymentProof: data?.paymentProof || null,
+      paymentProof: data?.payment_proof || data?.paymentProof || null,
       reservation: {
-        fee: data?.reservationFee,
-        hours: data?.reservationHours,
-        method: data?.reservationMethod,
-        expiresAt: data?.reservationExpiresAt,
+        fee: data?.reservation_fee ?? data?.reservationFee,
+        hours: data?.reservation_hours ?? data?.reservationHours,
+        method: data?.reservation_method ?? data?.reservationMethod,
+        expiresAt: data?.reservation_expires_at ?? data?.reservationExpiresAt,
       },
-      disputeNote: data?.disputeNote || "",
+      disputeNote: data?.dispute_note || data?.disputeNote || "",
     };
   } catch (err) {
     console.warn("[transactionLifecycleStore] fetchDealRoomDetail failed:", err);

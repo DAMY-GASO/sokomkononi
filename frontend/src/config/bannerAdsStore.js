@@ -51,13 +51,20 @@ function norm(raw) {
   };
 }
 
-export async function hydrateBannerAdsFromApi() {
+async function _hydrateBannersImpl() {
   try {
     const d = await api.get("/banners/?page_size=200");
     const list = Array.isArray(d) ? d : d?.results || [];
     write(list.map(norm).filter(Boolean));
     return { ok: true, count: list.length };
   } catch (err) { return { ok: false, error: err }; }
+}
+
+let _inflight_hydrateBannerAdsFromApi = null;
+export function hydrateBannerAdsFromApi(...args) {
+  if (_inflight_hydrateBannerAdsFromApi) return _inflight_hydrateBannerAdsFromApi;
+  _inflight_hydrateBannerAdsFromApi = _hydrateBannersImpl(...args).finally(() => { _inflight_hydrateBannerAdsFromApi = null; });
+  return _inflight_hydrateBannerAdsFromApi;
 }
 
 export async function createBannerAdAsync(listingId, payment_reference = "") {
@@ -137,7 +144,7 @@ export function useActiveBannerAds() {
     return () => {
       window.removeEventListener("storage", sync);
       window.removeEventListener(EV, sync);
-      _bannerSyncSubscribers--;
+      _bannerSyncSubscribers = Math.max(0, _bannerSyncSubscribers - 1);
       if (_bannerSyncSubscribers <= 0 && _bannerSyncInterval != null) {
         clearInterval(_bannerSyncInterval);
         _bannerSyncInterval = null;

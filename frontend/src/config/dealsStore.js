@@ -392,7 +392,7 @@ function normalizeDealFromApi(raw, currentUserId) {
 // ============================================================
 let _dealsUserId = null;
 
-export async function hydrateDealsFromApi(currentUserId) {
+async function _hydrateDealsImpl(currentUserId) {
   _dealsUserId = currentUserId ?? _dealsUserId;
   try {
     const data = await dealsApi.list({ page_size: 200 });
@@ -406,6 +406,13 @@ export async function hydrateDealsFromApi(currentUserId) {
     console.warn("[dealsStore] hydrate failed:", err);
     return { source: "error", count: getDeals().length };
   }
+}
+
+let _inflight_hydrateDealsFromApi = null;
+export function hydrateDealsFromApi(...args) {
+  if (_inflight_hydrateDealsFromApi) return _inflight_hydrateDealsFromApi;
+  _inflight_hydrateDealsFromApi = _hydrateDealsImpl(...args).finally(() => { _inflight_hydrateDealsFromApi = null; });
+  return _inflight_hydrateDealsFromApi;
 }
 
 export async function fetchDealDetailAsync(dealId) {
@@ -734,8 +741,8 @@ export function useDeals(currentUserId) {
   const listings = useListings();
 
   useEffect(() => {
-    if (currentUserId == null) return;
-    hydrateDealsFromApi(currentUserId);
+    // Hydrate even without currentUserId so admin/overview still get data.
+    hydrateDealsFromApi(currentUserId ?? null);
     const sync = () => setDeals(getDeals());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);

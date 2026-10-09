@@ -43,7 +43,7 @@ function cleanupLegacyDealsOnce() {
 export default function DealsSection() {
   const { lang } = useLanguage();
   const { user } = useAuth();
-  const deals = useDeals(user?.id);
+  const deals = useDeals();   // admin needs ALL deals, not just own
 
   // Cleanup mara moja tu kwenye mwanzo wa app
   useEffect(() => {

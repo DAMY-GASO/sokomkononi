@@ -67,7 +67,8 @@ const PUBLIC_GET_PATTERNS = [
   /^\/leading-fees\/?(\?.*)?$/,
   /^\/advertisement-fees\/?(\?.*)?$/,
   /^\/credits\/services\/?(\?.*)?$/,
-  /^\/system-settings\/.*$/,
+  /^\/system-settings\/platform-policy\/?(\?.*)?$/,
+  /^\/system-settings\/app-store-links\/?(\?.*)?$/,
 ];
 
 function isPublicEndpoint(path, method) {

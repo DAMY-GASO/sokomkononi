@@ -208,7 +208,10 @@ export default function PaymentGateway({
       session.clear();
       return;
     }
-    if (saved.amount && Number(saved.amount) !== Number(amount)) return;
+    if (saved.amount && Number(saved.amount) !== Number(amount)) {
+      session.clear();
+      return;
+    }
 
     if (saved.method) setMethodKey(saved.method);
     setOrderId(saved.orderId);

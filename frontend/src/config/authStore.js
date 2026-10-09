@@ -113,6 +113,7 @@ function hardReset() {
   saveUser(null);
   clearJWT();
   resetHydrateCache();
+  wipeUserScopedCaches();   // 🔒 Prevent user-A data leaking into user-B session
   if (typeof window === "undefined") return;
   const AUTH_KEYS =
     getSessionScope() === "admin"

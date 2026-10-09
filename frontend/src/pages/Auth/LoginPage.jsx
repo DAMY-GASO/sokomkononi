@@ -65,8 +65,11 @@ export default function LoginPage() {
       setError(t("login_error_required"));
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.identifier.trim())) {
-      setError(tx("Weka barua pepe sahihi.", "Please enter a valid email address."));
+    const v = form.identifier.trim();
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    const isPhone = /^\+?[0-9\s\-()]{9,15}$/.test(v);
+    if (!isEmail && !isPhone) {
+      setError(tx("Weka barua pepe au namba sahihi.", "Enter a valid email or phone number."));
       return;
     }
 

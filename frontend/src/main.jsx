@@ -27,6 +27,20 @@ function purgeStaleCsrfCookies() {
 }
 purgeStaleCsrfCookies();
 
+// ── One-time boot cleanup ─────────────────────────────────
+try { localStorage.removeItem("sokomkononi_deals_v1"); } catch { /* noop */ }
+
+// ── Register undo restore handlers (survive page reload) ──
+import("./config/undoStore.js").then(
+  ({ registerRestoreHandlers }) => {
+    import("./config/listingsStore.js").then(({ restoreListingAsync }) => {
+      registerRestoreHandlers({
+        listing: (id) => restoreListingAsync(id),
+      });
+    });
+  }
+);
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>

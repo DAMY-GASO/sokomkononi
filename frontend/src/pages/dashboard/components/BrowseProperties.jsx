@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   Grid3x3,
@@ -260,7 +260,14 @@ export default function BrowseProperties({
   excludeSellerId = null, // ⬅️ MPYA — seller hawezi kuona listings zake kwenye browse
 }) {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get("tafuta") || ""
+  );
+
+  useEffect(() => {
+    setSearchQuery(searchParams.get("tafuta") || "");
+  }, [searchParams]);
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("newest");
   const [filters, setFilters] = useState({

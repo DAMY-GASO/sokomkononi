@@ -114,7 +114,7 @@ export function getSuccessFeeStatus() {
 // ============================================================
 // HYDRATE CONFIG
 // ============================================================
-export async function hydrateSuccessFeeFromApi() {
+async function _hydrateSuccessCfgImpl() {
   try {
     const raw = await api.get("/finance/success-fee-config/");
     const normalized = norm(raw);
@@ -137,7 +137,7 @@ export async function hydrateSuccessFeeFromApi() {
 // ============================================================
 // HYDRATE STATUS (fee fresh kutoka /status/)
 // ============================================================
-export async function hydrateSuccessFeeStatusFromApi() {
+async function _hydrateSuccessStatusImpl() {
   try {
     const raw = await api.get("/finance/success-fee/status/");
     const normalized = normStatus(raw);
@@ -160,6 +160,20 @@ export async function hydrateSuccessFeeStatusFromApi() {
 // ============================================================
 // MUTATIONS
 // ============================================================
+let _inflight_hydrateSuccessFeeStatusFromApi = null;
+let _inflight_hydrateSuccessFeeFromApi = null;
+export function hydrateSuccessFeeFromApi(...args) {
+  if (_inflight_hydrateSuccessFeeFromApi) return _inflight_hydrateSuccessFeeFromApi;
+  _inflight_hydrateSuccessFeeFromApi = _hydrateSuccessCfgImpl(...args).finally(() => { _inflight_hydrateSuccessFeeFromApi = null; });
+  return _inflight_hydrateSuccessFeeFromApi;
+}
+
+export function hydrateSuccessFeeStatusFromApi(...args) {
+  if (_inflight_hydrateSuccessFeeStatusFromApi) return _inflight_hydrateSuccessFeeStatusFromApi;
+  _inflight_hydrateSuccessFeeStatusFromApi = _hydrateSuccessStatusImpl(...args).finally(() => { _inflight_hydrateSuccessFeeStatusFromApi = null; });
+  return _inflight_hydrateSuccessFeeStatusFromApi;
+}
+
 export async function updateSuccessFeeAsync(patch) {
   const cur = read();
   const optimistic = { ...cur, ...patch };

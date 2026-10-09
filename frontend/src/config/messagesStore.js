@@ -86,6 +86,16 @@ export async function hydrateConversationsFromApi(currentUserId) {
     write(normalized);
     return { ok: true, count: normalized.length };
   } catch (err) {
+    write(
+      getConversations().map((c) =>
+        sameId(c.id, conversationId)
+          ? {
+              ...c,
+              messages: (c.messages || []).filter((m) => m.id !== _tempId),
+            }
+          : c
+      )
+    );
     return { ok: false, error: err };
   }
 }
@@ -95,6 +105,27 @@ export async function hydrateConversationsFromApi(currentUserId) {
 export async function sendMessageAsync(conversationId, text, currentUserId = null) {
   const trimmed = (text || "").trim();
   if (!trimmed) return { ok: false, error: new Error("Message empty") };
+  const _tempId = `temp_${Date.now()}`;
+  const _current = getConversations();
+  write(
+    _current.map((c) =>
+      sameId(c.id, conversationId)
+        ? {
+            ...c,
+            messages: [
+              ...(c.messages || []),
+              {
+                id: _tempId,
+                senderId: currentUserId ?? "me",
+                text: trimmed,
+                at: new Date().toISOString(),
+                pending: true,
+              },
+            ],
+          }
+        : c
+    )
+  );
   try {
     const raw = await api.post(
       `/messaging/conversations/${conversationId}/messages/`,
@@ -111,13 +142,15 @@ export async function sendMessageAsync(conversationId, text, currentUserId = nul
       read: !!raw?.is_read,
     };
     write(
-      current.map((c) =>
+      getConversations().map((c) =>
         sameId(c.id, conversationId)
           ? {
               ...c,
               lastMessage: msg.text,
               lastAt: msg.at,
-              messages: [...(c.messages || []), msg],
+              messages: (c.messages || []).map((m) =>
+                m.id === _tempId ? msg : m
+              ),
             }
           : c
       )
