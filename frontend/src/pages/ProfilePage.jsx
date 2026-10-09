@@ -3,7 +3,7 @@
 // Wasifu — bilingual kamili + PageLoader.
 // + Delete Account (API)
 // + 2FA (bado "Inakuja hivi karibuni" — inahitaji backend)
-// + Data halisi: shughuli, taarifa, mapendeleo (profileApi.js)
+// + Data halisi: taarifa, mapendeleo (profileApi.js)
 // + Guard: Admin hawezi kujifuta
 // ============================================================
 
@@ -35,7 +35,6 @@ import {
 
 import PageLoader from "../components/PageLoader.jsx";
 import {
-  fetchActivities,
   fetchNotificationPrefs,
   saveNotificationPrefs,
   fetchPreferences,
@@ -171,17 +170,13 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
 // ============================================================
 // OVERVIEW TAB (bila stats)
 // ============================================================
-function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
+function OverviewTab({ user, lang }) {
   const bioText =
     typeof user.bio === "object" ? user.bio?.[lang] || user.bio?.sw : user.bio;
   const locationText =
     typeof user.location === "object"
       ? user.location?.[lang] || user.location?.sw
       : user.location;
-
-  const filteredActivities = activities.filter((a) =>
-    a.type ? a.type === viewMode : true
-  );
 
   return (
     <div className="space-y-6">
@@ -252,44 +247,6 @@ function OverviewTab({ user, lang, activities = [], viewMode = "seller" }) {
           </div>
         </div>
       </div>
-
-      {filteredActivities.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="flex flex-col items-center text-center gap-1 mb-4">
-            <h3 className="font-semibold text-primary">
-              {lang === "sw" ? "Shughuli za Hivi Karibuni" : "Recent Activity"}
-            </h3>
-            <Link
-              to="/dashboard"
-              className="text-body-sm text-[#E8A33D] font-medium hover:underline"
-            >
-              {lang === "sw" ? "Tazama Zote" : "View All"} →
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {filteredActivities.map((activity) => (
-              <div
-                key={activity.id}
-                className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0"
-              >
-                <div className="w-2 h-2 rounded-full bg-[#E8A33D] mt-2 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-primary">
-                    {typeof activity.title === "object"
-                      ? activity.title[lang] || activity.title.sw
-                      : activity.title}
-                  </p>
-                  <p className="text-body-sm text-secondary truncate">
-                    {typeof activity.description === "object"
-                      ? activity.description[lang] || activity.description.sw
-                      : activity.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1285,30 +1242,6 @@ export default function ProfilePage() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("overview");
-  const [activities, setActivities] = useState([]);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
-  const userKey = user?.id ?? user?.email ?? null;
-
-  // Fetch activities tu (stats zimeondolewa)
-  useEffect(() => {
-    if (!userKey) {
-      setDataLoading(false);
-      return;
-    }
-    const ctrl = new AbortController();
-    setDataLoading(true);
-    setLoadError(false);
-    (async () => {
-      const a = await fetchActivities(ctrl.signal);
-      if (a.aborted) return;
-      if (a.ok) setActivities(a.data);
-      if (!a.ok) setLoadError(true);
-      setDataLoading(false);
-    })();
-    return () => ctrl.abort();
-  }, [userKey, reloadKey]);
 
   const dashboardSide = useDashboardSide();
   const [viewMode, setViewModeState] = useState(dashboardSide);
@@ -1328,7 +1261,7 @@ export default function ProfilePage() {
     navigate("/login");
   };
 
-  if (isLoading || (user && dataLoading)) {
+  if (isLoading) {
     return <PageLoader lang={lang} />;
   }
 
@@ -1455,29 +1388,8 @@ export default function ProfilePage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-6">
-        {loadError && (
-          <div className="mb-4 flex flex-col sm:flex-row items-center justify-center gap-3 bg-[#C1502E]/10 border border-[#C1502E]/20 rounded-xl px-4 py-3 text-sm text-[#C1502E]">
-            <span className="flex items-center gap-1.5">
-              <AlertTriangle size={14} />
-              {lang === "sw"
-                ? "Baadhi ya data haikupatikana kutoka kwenye seva."
-                : "Some data could not be loaded from the server."}
-            </span>
-            <button
-              onClick={() => setReloadKey((k) => k + 1)}
-              className="font-semibold underline"
-            >
-              {lang === "sw" ? "Jaribu tena" : "Retry"}
-            </button>
-          </div>
-        )}
         {activeTab === "overview" && (
-          <OverviewTab
-            user={user}
-            lang={lang}
-            activities={activities}
-            viewMode={viewMode}
-          />
+          <OverviewTab user={user} lang={lang} />
         )}
         {activeTab === "edit" && <EditProfileTab user={user} lang={lang} />}
         {activeTab === "security" && <SecurityTab lang={lang} user={user} />}
