@@ -7,7 +7,49 @@ import { notificationsApi } from "../api/notifications.js";
 import { ADMIN_PATH } from "./adminPath.js";
 
 const KEY = "sokomkononi_notifications_v1";
+const DELETED_KEY = "sokomkononi_notifications_deleted_v1";
 const EV = "sokomkononi:notifications-updated";
+
+// ── Blacklist of IDs the user deleted ─────────────────────────
+// The backend sometimes returns soft-deleted items in the list.
+// We remember what the user deleted locally so hydrate never
+// resurrects them within the same session.
+function readDeletedSet() {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(DELETED_KEY);
+    if (!raw) return new Set();
+    const p = JSON.parse(raw);
+    return new Set(Array.isArray(p) ? p.map(String) : []);
+  } catch { return new Set(); }
+}
+
+function writeDeletedSet(set) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      DELETED_KEY,
+      JSON.stringify(Array.from(set).slice(-500))
+    );
+  } catch { /* noop */ }
+}
+
+function markDeleted(id) {
+  if (id == null) return;
+  const s = readDeletedSet();
+  s.add(String(id));
+  writeDeletedSet(s);
+}
+
+function unmarkDeleted(id) {
+  const s = readDeletedSet();
+  s.delete(String(id));
+  writeDeletedSet(s);
+}
+
+export function clearDeletedNotifications() {
+  writeDeletedSet(new Set());
+}
 
 const TYPE_TO_TARGET = {
   LISTING_CREATED: "moderation",
@@ -96,7 +138,12 @@ export async function hydrateNotificationsFromApi() {
   try {
     const data = await notificationsApi.list({ page_size: 100 });
     const rawList = Array.isArray(data) ? data : data?.results || [];
-    const normalized = rawList.map(norm).filter(Boolean);
+    const deleted = readDeletedSet();
+    const normalized = rawList
+      .map(norm)
+      .filter(Boolean)
+      // Never re-add a notification the user has deleted locally.
+      .filter((n) => !deleted.has(String(n.id)));
     write(sortNewest(normalized));
     return { ok: true, count: normalized.length };
   } catch (err) {
@@ -150,33 +197,45 @@ export async function markAllNotificationsReadAsync(audience) {
 }
 
 export async function removeNotificationAsync(id) {
+  // Mark local blacklist FIRST so a slow hydrate can't resurrect it.
+  markDeleted(id);
   try {
     await notificationsApi.hardRemove(id);
     write(read().filter((n) => n.id !== id));
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: err };
+    // Even if the backend errored, the local removal stands — the user
+    // intent was "delete". We keep the blacklist entry so a refresh
+    // doesn't bring it back. If the backend still has it, it will
+    // simply stay hidden until the next clear-on-logout.
+    write(read().filter((n) => n.id !== id));
+    return { ok: false, error: err, soft: true };
   }
 }
 
 export async function clearNotificationsAsync(audience) {
   const target = audience || "user";
+  // Mark every currently-visible notification as deleted so a hydrate
+  // can't resurrect any of them.
+  read()
+    .filter((n) =>
+      target === "user" ? n.audience !== "admin" : n.audience === target
+    )
+    .forEach((n) => markDeleted(n.id));
+
   try {
     await notificationsApi.hardRemoveAll({ audience: target });
-    const remaining = read().filter((n) => {
-      if (target === "user") {
-        return n.audience === "admin";
-      }
-      if (target === "admin") {
-        return n.audience !== "admin";
-      }
-      return n.audience !== target;
-    });
-    write(remaining);
-    return { ok: true };
   } catch (err) {
-    return { ok: false, error: err };
+    // fall through — local state is already correct
   }
+
+  const remaining = read().filter((n) => {
+    if (target === "user") return n.audience === "admin";
+    if (target === "admin") return n.audience !== "admin";
+    return n.audience !== target;
+  });
+  write(remaining);
+  return { ok: true };
 }
 
 export async function notifyAdminAboutDeletion(listing) {

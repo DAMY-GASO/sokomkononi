@@ -83,6 +83,7 @@ const USER_SCOPED_KEYS = [
   "sokomkononi_searches_v1",
   "sokomkononi_waiting_list_v1",
   "sokomkononi_notifications_v1",
+  "sokomkononi_notifications_deleted_v1",
   "sokomkononi_deals_v1",
   "sokomkononi_transactions_v1",
   "sokomkononi_transactions_lifecycle_v1",

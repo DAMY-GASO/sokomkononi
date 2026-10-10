@@ -39,76 +39,159 @@ export default function PayListingFee() {
   const [busy, setBusy] = useState(false);
 
   // ── Fetch listing + fee on mount ───────────────────────────
+  // Order of operations:
+  //   1. temp_ id       → error (backend hasn't assigned a real id yet)
+  //   2. GET /listings/{id}/   → on 404, fall back to local cache (owner still owns it)
+  //   3. GET /listings/{id}/fee/ → on 404, fall back to cached fee_amount
   useEffect(() => {
     if (!listingId) {
       setStage("error");
-      setError(t(
-        "Hakuna listing iliyochaguliwa.",
-        "No listing selected."
-      ));
+      setError(t("Hakuna listing iliyochaguliwa.", "No listing selected."));
       return;
     }
 
     if (String(listingId).startsWith("temp_")) {
       setStage("error");
-      setError(t(
-        "Tangazo lako bado halijathibitishwa. Subiri sekunde chache ujaribu tena.",
-        "Your listing hasn't synced. Wait a moment and try again."
-      ));
+      setError(
+        t(
+          "Tangazo lako bado halijathibitishwa na seva. Subiri sekunde chache, fungua Mali Zangu, kisha bofya Lipa Sasa tena.",
+          "Your listing hasn't synced to the server yet. Wait a moment, open My Listings, then click Pay Now again."
+        )
+      );
       return;
     }
 
     let cancelled = false;
+
     (async () => {
+      // ── Step 1: fetch the listing ──────────────────────────
+      let listingData = null;
+      let listingFromCache = false;
       try {
-        const [listingRes, feeRes] = await Promise.all([
-          api.get(`/listings/${listingId}/`),
-          api.get(`/listings/${listingId}/fee/`).catch((err) => {
-            // fee endpoint might 404 for legacy listings — carry on
-            console.warn("[PayListingFee] fee fetch failed:", err);
-            return null;
-          }),
-        ]);
-        if (cancelled) return;
-
-        setListing(listingRes);
-
-        // Fetch already-paid guard
-        const paymentStatus = (feeRes?.payment_status || "").toUpperCase();
-
-        if (paymentStatus === "PAID") {
-          setFee(feeRes);
-          setStage("already_paid");
-          return;
-        }
-
-        // Determine if listing is in a payable state
-        const status = (listingRes?.status || "").toUpperCase();
-        if (status === "PENDING_APPROVAL" || status === "LIVE" ||
-            status === "RESERVED" || status === "SOLD") {
-          setFee(feeRes);
-          setStage("already_paid");
-          return;
-        }
-
-        if (status !== "PENDING_PAYMENT" && status !== "DRAFT") {
-          setFee(feeRes);
-          setStage("not_payable");
-          return;
-        }
-
-        setFee(feeRes || { amount: listingRes?.fee_amount || 0 });
-        setStage("ready");
+        listingData = await api.get(`/listings/${listingId}/`);
       } catch (err) {
-        if (cancelled) return;
-        console.error("[PayListingFee] load failed:", err);
-        setError(
-          err?.data?.detail ||
-          err?.message ||
-          t("Imeshindwa kupakia listing.", "Failed to load listing.")
-        );
-        setStage("error");
+        if (err?.status === 404) {
+          const cached = getListing(listingId);
+          if (cached) {
+            console.warn(
+              "[PayListingFee] API 404 — using cached listing", listingId
+            );
+            listingData = cached;
+            listingFromCache = true;
+          } else {
+            if (!cancelled) {
+              setStage("error");
+              setError(
+                t(
+                  "Tangazo hili halipatikani kwenye seva. Fungua Mali Zangu na ujaribu tena.",
+                  "This listing can't be found on the server. Open My Listings and try again."
+                )
+              );
+            }
+            return;
+          }
+        } else {
+          if (!cancelled) {
+            setStage("error");
+            setError(
+              err?.data?.detail ||
+                err?.message ||
+                t("Imeshindwa kupakia listing.", "Failed to load listing.")
+            );
+          }
+          return;
+        }
       }
+
+      if (cancelled) return;
+      setListing(listingData);
+
+      // ── Step 2: guard against already-paid / not-payable ───
+      const apiStatus = String(listingData?.status || "").toUpperCase();
+      const localStatus = String(listingData?.status || "").toLowerCase();
+      const isPaid =
+        listingData?.isPaid === true ||
+        listingData?.is_paid === true ||
+        apiStatus === "PENDING_APPROVAL" ||
+        apiStatus === "LIVE" ||
+        apiStatus === "RESERVED" ||
+        apiStatus === "SOLD" ||
+        ["live", "reserved", "sold", "in_review", "paused"].includes(localStatus);
+      if (isPaid) {
+        setStage("already_paid");
+        return;
+      }
+
+      // ── Step 3: fetch the fee ──────────────────────────────
+      let feeData = null;
+      try {
+        feeData = await api.get(`/listings/${listingId}/fee/`);
+      } catch (err) {
+        if (err?.status === 404 && listingFromCache) {
+          // Derive from cached listing
+          const amount =
+            listingData?.feeAmount ??
+            listingData?.fee_amount ??
+            listingData?.listingFee ??
+            0;
+          feeData = {
+            amount,
+            is_disabled: false,
+            payment_status: listingData?.paymentStatus || "PENDING",
+          };
+          console.warn(
+            "[PayListingFee] fee endpoint 404 — using cached fee", amount
+          );
+        } else if (err?.status === 404) {
+          // Listing is available but fee endpoint is missing — try
+          // to read fee from the listing payload itself.
+          const amount =
+            listingData?.feeAmount ??
+            listingData?.fee_amount ??
+            listingData?.listingFee ??
+            0;
+          feeData = {
+            amount,
+            is_disabled: false,
+            payment_status: listingData?.paymentStatus || "PENDING",
+          };
+        } else {
+          if (!cancelled) {
+            setStage("error");
+            setError(
+              err?.data?.detail ||
+                err?.message ||
+                t("Imeshindwa kupakia ada.", "Failed to load fee.")
+            );
+          }
+          return;
+        }
+      }
+
+      if (cancelled) return;
+
+      const paymentStatus = (feeData?.payment_status || "").toUpperCase();
+      if (paymentStatus === "PAID" || paymentStatus === "FREE") {
+        setFee(feeData);
+        setStage(paymentStatus === "PAID" ? "already_paid" : "ready");
+        return;
+      }
+
+      // If status isn't payable AND it's not a draft/pending_payment,
+      // flag it.
+      if (
+        apiStatus &&
+        apiStatus !== "PENDING_PAYMENT" &&
+        apiStatus !== "DRAFT" &&
+        !["pending_payment", "draft"].includes(localStatus)
+      ) {
+        setFee(feeData);
+        setStage("not_payable");
+        return;
+      }
+
+      setFee(feeData || { amount: listingData?.feeAmount || 0 });
+      setStage("ready");
     })();
 
     return () => { cancelled = true; };
@@ -120,6 +203,9 @@ export default function PayListingFee() {
     if (!listing || !user) return;
     const ownerId =
       listing.sellerId ?? listing.seller_id ?? listing.seller?.id ?? null;
+    // Only enforce when the owner id is present. Cached listings sometimes
+    // lack a seller id; in that case we trust the router (they clicked
+    // Pay Now from their own My Listings page).
     if (ownerId != null && String(ownerId) !== String(user.id)) {
       setStage("error");
       setError(t(
