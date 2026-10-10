@@ -335,7 +335,7 @@ function AttributesTable({ property, lang }) {
   );
 }
 
-function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onContact, lang, isOwner = false, editTo }) {
+function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onContact, onReportSeller, lang, isOwner = false, editTo }) {
   const isReserved = status === "reserved";
   const isSold = status === "sold";
   const isUnavailable = isReserved || isSold;
@@ -415,7 +415,16 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
         </button>
       )}
 
-      <div className="mt-4 pt-4 border-t border-gray-100">
+      <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-2">
+        {!isOwner && !isUnavailable && (
+          <button
+            type="button"
+            onClick={onReportSeller}
+            className="w-full text-[11px] font-semibold text-muted hover:text-rust transition-colors py-1"
+          >
+            {t(lang, "Ripoti Muuzaji Huyu", "Report this Seller")}
+          </button>
+        )}
         <p className="text-body-sm text-secondary text-center">
           {t(lang, "Muuzaji amethibitishwa na SokoMkononi", "Seller verified by SokoMkononi")}
         </p>
@@ -708,6 +717,40 @@ export default function PropertyDetailPage() {
     }
   };
 
+  const handleReportSeller = async (property) => {
+    if (!user) {
+      navigate("/login", { state: { from: `${location.pathname}${location.search}` } });
+      return;
+    }
+    const ok = await confirm({
+      title: t(lang, "Ripoti muuzaji huyu?", "Report this seller?"),
+      description: t(
+        lang,
+        "Tutaipitia taarifa hii na kuchukua hatua ikiwa ni ya udanganyifu.",
+        "We will review this report and act if fraudulent."
+      ),
+      confirmLabel: t(lang, "Ripoti", "Report"),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.post("/tickets/", {
+        subject: t(lang, `Ripoti ya muuzaji: ${property.seller_name || ""}`,
+                       `Seller report: ${property.seller_name || ""}`),
+        description: t(
+          lang,
+          `Mtumiaji ameripoti muuzaji kwenye tangazo "${property.title}" (ID: ${property.id}).`,
+          `User reported the seller on listing "${property.title}" (ID: ${property.id}).`
+        ),
+        category: "DISPUTE",
+        priority: "HIGH",
+      });
+      toast.success(t(lang, "Ripoti imetumwa.", "Report submitted."));
+    } catch (err) {
+      toast.error(err?.message || t(lang, "Imeshindwa kutuma ripoti.", "Failed to submit report."));
+    }
+  };
+
   const handleReport = async () => {
     if (!user) {
       navigate("/login", {
@@ -921,6 +964,7 @@ export default function PropertyDetailPage() {
               alreadyOnWaitlist={alreadyOnWaitlist}
               onJoinWaitlist={handleJoinWaitlist}
               onContact={handleContact}
+              onReportSeller={() => handleReportSeller(property)}
               lang={lang}
               isOwner={isOwner}
               editTo={ownerEditPath(property.id)}

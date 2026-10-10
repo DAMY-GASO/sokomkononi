@@ -5,7 +5,7 @@
 // ============================================================
 
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Bell,
   Check,
@@ -84,26 +84,54 @@ const NOTIFICATION_TYPES = {
 // NOTIFICATION ITEM
 // ============================================================
 function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
+  const navigate = useNavigate();
   const config = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.system;
   const Icon = config.icon;
 
   const title = getLocalizedField(notif.title, lang);
   const body = getLocalizedField(notif.body, lang);
 
-  // ✅ Tumia resolveNotificationRoute — inajenga route sahihi
-  // kutoka notification_type + related_object_id + side.
-  // Hii inashughulikia kesi zote: notif.link null, link isiyo sahihi,
-  // n.k. Na daima inarudisha route inayojulikana (haipo null).
+  // Determine the destination route from the notification type + payload.
   const target = resolveNotificationRoute(notif, side);
+
+  // Full date + time — not just "timeAgo".
+  const when = notif.at ? new Date(notif.at) : null;
+  const timeText = when && !Number.isNaN(when.getTime())
+    ? when.toLocaleString(lang === "sw" ? "sw-TZ" : "en-US", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+
+  const handleOpen = () => {
+    if (!notif.read) onMarkRead(notif.id);
+    navigate(target);
+  };
+
+  const handleKey = (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleOpen();
+    }
+  };
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={handleOpen}
+      onKeyDown={handleKey}
+      aria-label={title || ""}
       style={{
         background: notif.read ? "white" : (config?.bg || "#F5F3EC"),
         borderColor: COLORS.sandLine,
       }}
-      className="rounded-xl border p-4 flex items-start gap-3 transition-colors"
+      className="rounded-xl border p-4 flex items-start gap-3 transition-all cursor-pointer hover:shadow-md hover:border-[#E8A33D]/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8A33D]"
     >
+      {/* Icon */}
       <div
         style={{ background: config?.bg || "#F5F3EC" }}
         className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
@@ -111,11 +139,12 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
         <Icon size={18} color={config.color} />
       </div>
 
+      {/* Body */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2 mb-0.5">
+        <div className="flex items-start justify-between gap-2 mb-1">
           <p
             style={{ color: "var(--text-primary)" }}
-            className={`text-sm ${
+            className={`text-sm break-words ${
               notif.read ? "font-medium" : "font-semibold"
             }`}
           >
@@ -125,43 +154,39 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
             <span
               style={{ background: COLORS.rust }}
               className="w-2 h-2 rounded-full shrink-0 mt-1.5"
+              aria-label={lang === "sw" ? "Haijasomwa" : "Unread"}
             />
           )}
         </div>
+
         {body && (
           <p
             style={{ color: "var(--text-secondary)" }}
-            className="text-xs mb-2 leading-relaxed"
+            className="text-xs mb-2 leading-relaxed whitespace-pre-wrap break-words"
           >
             {body}
           </p>
         )}
-        <div className="flex items-center gap-3">
-          <span
-            style={{ color: "var(--text-muted)" }}
-            className="text-[10px]"
-          >
-            {timeAgo(notif.at, lang)}
-          </span>
 
-          {/* ✅ Link daima inaonyeshwa — target haipo null kamwe */}
-          <Link
-            to={target}
-            onClick={() => {
-              if (!notif.read) onMarkRead(notif.id);
-            }}
-            className="text-[11px] font-semibold hover:underline"
-            style={{ color: COLORS.gold }}
+        {timeText && (
+          <p
+            style={{ color: "var(--text-muted)" }}
+            className="text-[11px] font-medium"
           >
-            {lang === "sw" ? "Angalia" : "View"} →
-          </Link>
-        </div>
+            {timeText}
+          </p>
+        )}
       </div>
 
+      {/* Row actions (stop propagation so they don't trigger the card click) */}
       <div className="flex flex-col gap-1 shrink-0">
         {!notif.read && (
           <button
-            onClick={() => onMarkRead(notif.id)}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMarkRead(notif.id);
+            }}
             className="p-1.5 text-muted hover:text-green-600 rounded-lg hover:bg-green-50 transition-colors"
             aria-label={lang === "sw" ? "Weka kama imesomwa" : "Mark as read"}
           >
@@ -169,7 +194,11 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
           </button>
         )}
         <button
-          onClick={() => onRemove(notif.id)}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(notif.id);
+          }}
           className="p-1.5 text-muted hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
           aria-label={lang === "sw" ? "Ondoa" : "Remove"}
         >

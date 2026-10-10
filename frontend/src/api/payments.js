@@ -34,13 +34,13 @@ export function isNonTerminal(status) {
 }
 
 // ── Payment methods (spec Section 3.1) ─────────────────────
+// Only payment methods available in Tanzania.
+// MTN MoMo and Orange Money are NOT offered in TZ and were removed.
 export const MOBILE_METHODS = [
   { key: "mpesa",    label: "M-Pesa",       icon: "smartphone" },
   { key: "airtel",   label: "Airtel Money", icon: "smartphone" },
   { key: "mixx",     label: "Mixx by Yas",  icon: "smartphone" },
   { key: "halopesa", label: "HaloPesa",     icon: "smartphone" },
-  { key: "mtn",      label: "MTN MoMo",     icon: "smartphone" },
-  { key: "orange",   label: "Orange Money", icon: "smartphone" },
 ];
 
 export const CARD_METHODS = [

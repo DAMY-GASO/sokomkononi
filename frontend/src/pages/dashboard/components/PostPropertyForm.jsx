@@ -190,6 +190,35 @@ export default function PostPropertyForm({
   });
   const [cropQueue, setCropQueue] = useState([]);
   const [stage, setStage] = useState("form");
+  // ── Wizard history stack (per-step Back) ──────────────────
+  // Each entry is a snapshot { stage, categoryKey, categoryMode }.
+  const [stageHistory, setStageHistory] = useState([]);
+
+  const pushHistory = () => {
+    setStageHistory((h) => [
+      ...h,
+      { stage, categoryKey, categoryMode },
+    ]);
+  };
+
+  const handleBackStep = () => {
+    if (saving || submitting) return;
+    setStageHistory((h) => {
+      if (h.length === 0) {
+        // Nothing recorded — fall back to the natural parent step.
+        if (stage === "paying") pushHistory(); setStage("review");
+        else if (stage === "review") setStage("form");
+        else if (categoryMode) setCategoryMode(null);
+        else if (categoryKey) setCategoryKey(null);
+        return h;
+      }
+      const snap = h[h.length - 1];
+      setStage(snap.stage);
+      setCategoryKey(snap.categoryKey ?? null);
+      setCategoryMode(snap.categoryMode ?? null);
+      return h.slice(0, -1);
+    });
+  };
   const [createdListing, setCreatedListing] = useState(null);
   const [feeAmount, setFeeAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -352,6 +381,7 @@ export default function PostPropertyForm({
 
   const chooseCategory = (key) => {
     if (isEdit) return; // hairuhusiwi kubadilisha category kwenye edit
+    pushHistory();
     setCategoryKey(key);
     setCategoryMode(null);
     setExtra({});
@@ -363,6 +393,7 @@ export default function PostPropertyForm({
     chooseCategory(null);
   };
   const chooseMode = (m) => {
+    pushHistory();
     setCategoryMode(m);
     setExtra({});
   };
@@ -1011,7 +1042,7 @@ export default function PostPropertyForm({
                   isFreeCategory || listingFeeDisabled
                     ? handleFreeSubmit
                     : paymentMode === "flat"
-                      ? () => setStage("paying")
+                      ? () => { pushHistory(); setStage("paying"); }
                       : handleBeginBundlePurchase
                 }
                 disabled={
@@ -1050,7 +1081,7 @@ export default function PostPropertyForm({
               )}
               onInitiate={handleFeeInitiate}
               onSuccess={handleFeeSuccess}
-              onCancel={() => setStage("review")}
+              onCancel={handleBackStep}
             />
           )}
 
@@ -1139,18 +1170,29 @@ export default function PostPropertyForm({
       <div className="max-w-2xl mx-auto">
 
         {category && !isEdit && (
-          <div className="flex justify-center mb-3">
+          <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
             <button
-              onClick={() =>
-                activeMode ? setCategoryMode(null) : clearCategory()
-              }
-              className="text-primary flex items-center gap-1 text-sm font-medium opacity-70"
+              type="button"
+              onClick={handleBackStep}
+              disabled={saving || submitting || stage === "done"}
+              className="text-primary flex items-center gap-1 text-sm font-medium opacity-80 hover:opacity-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label={t("Rudi hatua moja nyuma", "Back one step")}
             >
-              <ChevronLeft size={16} />{" "}
-              {activeMode
-                ? t("Badilisha Chaguo", "Change Option")
-                : t("Badilisha Category", "Change Category")}
+              <ChevronLeft size={16} />
+              {t("Nyuma", "Back")}
             </button>
+            <span className="text-[11px] text-muted">
+              {t("Hatua", "Step")}:{" "}
+              {stage === "form"
+                ? categoryMode
+                  ? t("Fomu", "Form")
+                  : t("Aina", "Type")
+                : stage === "review"
+                  ? t("Kagua", "Review")
+                  : stage === "paying"
+                    ? t("Malipo", "Payment")
+                    : t("Kamilisha", "Done")}
+            </span>
           </div>
         )}
 

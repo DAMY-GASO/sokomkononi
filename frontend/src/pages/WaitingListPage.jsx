@@ -18,6 +18,7 @@ import {
 import {
   useWaitingList,
   leaveWaitingList as leaveWaitingListStore,
+  expireStaleReservationsAsync,
 } from "../config/waitingListStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 
@@ -57,6 +58,31 @@ const getWaitingStatus = (lang) => ({
 // ============================================================
 // WAITING LIST ITEM — imeachwa kushoto (kadi zina data nyingi)
 // ============================================================
+function CountdownBadge({ to, lang }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  const ms = new Date(to).getTime() - now;
+  if (!Number.isFinite(ms)) return null;
+  if (ms <= 0) {
+    return (
+      <span className="text-[11px] font-bold" style={{ color: COLORS.rust }}>
+        {lang === "sw" ? "Muda umeisha" : "Expired"}
+      </span>
+    );
+  }
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const sec = Math.floor((ms % 60000) / 1000);
+  return (
+    <span className="text-[11px] font-bold tabular-nums" style={{ color: COLORS.rust }}>
+      {h}h {String(m).padStart(2,"0")}m {String(sec).padStart(2,"0")}s
+    </span>
+  );
+}
+
 function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
   const category = getCategory(entry.category);
   const Icon = category?.icon;
@@ -132,8 +158,9 @@ style={{ background: status?.bg || "#F5F3EC", color: status?.color || "#101A2E" 
           >
             <span
               style={{ color: COLORS.green }}
-              className="text-[11px] font-medium"
+              className="text-[11px] font-medium flex items-center gap-2"
             >
+              {entry.respondBy && <CountdownBadge to={entry.respondBy} lang={lang} />}
               {lang === "sw" ? (
                 <>
                   Nafasi imefunguka! Una hadi{" "}
@@ -190,6 +217,21 @@ export default function WaitingListPage({
   const { lang } = useLanguage();
   const entries = entriesProp ?? storeEntries;
   const [filter, setFilter] = useState("all");
+
+  // Poll the backend every 60s to release expired reservations
+  // and advance the waitlist (Option A — first in queue is notified).
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      const res = await expireStaleReservationsAsync();
+      if (!cancelled && res.ok && res.changed) {
+        // Trigger a re-render through the store
+      }
+    };
+    tick();
+    const iv = setInterval(tick, 60000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, []);
 
   const handleLeave = (id) => {
     if (onLeave) {

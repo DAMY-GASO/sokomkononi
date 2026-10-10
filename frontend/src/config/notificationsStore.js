@@ -87,6 +87,8 @@ const TYPE_TO_TARGET = {
   BUNDLE_PURCHASED: "revenue",
   DISPUTE_RESOLVED: "deals",
   VERIFICATION_REQUEST: "verification",
+  PRICE_DROP: "listings",
+  SEARCH_ALERT: "listings",
 };
 
 function read() {
@@ -343,6 +345,10 @@ export function resolveNotificationRoute(notif, side = "seller") {
       : base;
 
   switch (type) {
+    case "PRICE_DROP":
+    case "SEARCH_ALERT":
+      return `/mali/${relatedId}`;
+
     case "MESSAGE_RECEIVED":
     case "MESSAGE":
     case "NEW_MESSAGE":
@@ -419,6 +425,10 @@ export function notificationCtaKey(notif) {
   const rawType = String(notif?.type || "").toUpperCase();
   const type = rawType.replace(/\./g, "_");
   switch (type) {
+    case "PRICE_DROP":
+    case "SEARCH_ALERT":
+      return `/mali/${relatedId}`;
+
     case "MESSAGE_RECEIVED":
     case "MESSAGE":
     case "NEW_MESSAGE":

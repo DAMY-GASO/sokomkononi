@@ -39,6 +39,7 @@ import { COLORS } from "./shared.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import MyVerificationsPanel from "./MyVerificationsPanel.jsx";
 import UserSupportSection from "./UserSupportSection.jsx";
+import SellerFeedback from "../seller/SellerFeedback.jsx";
 import { useAuth, logoutAsync } from "../../../config/authStore.js";
 import { ADMIN_PATH } from "../../../config/adminPath.js";
 import {
@@ -101,20 +102,21 @@ import PageLoader from "../../../components/PageLoader.jsx";
 // ============================================================
 const SELLER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
-  { key: "post", label: { sw: "Weka Mali Yako", en: "Post Property" }, icon: PlusCircle },
+  { key: "post", label: { sw: "Weka Tangazo", en: "Post Listing" }, icon: PlusCircle },
   { key: "listings", label: { sw: "Mali Zangu", en: "My Listings" }, icon: ListChecks },
   { key: "leads", label: { sw: "Maulizio", en: "Enquiries" }, icon: Inbox },
-  { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
+  { key: "saved", label: { sw: "Matangazo Yaliyohifadhiwa", en: "Saved Listings" }, icon: Heart },
   { key: "boost", label: { sw: "Boost Sasa", en: "Boost Now" }, icon: Rocket },
-  { key: "leading", label: { sw: "Ada ya Kipaumbele", en: "Leading Fee" }, icon: TrendingUp },
+  { key: "leading", label: { sw: "Nunua Leads", en: "Buy Leads" }, icon: TrendingUp },
   { key: "advertise", label: { sw: "Tangaza Sasa", en: "Advertise Now" }, icon: Megaphone },
   { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
   { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
   { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
   { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
   { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
-  { key: "verification", label: { sw: "Uthibitisho", en: "Verification" }, icon: ShieldCheck },
+  { key: "verification", label: { sw: "Uthibitisho Wangu", en: "My Verification" }, icon: ShieldCheck },
   { key: "support", label: { sw: "Msaada", en: "Support" }, icon: Headphones },
+  { key: "feedback", label: { sw: "Maoni Yangu", en: "My Feedback" }, icon: MessageSquarePlus },
 ];
 
 // ============================================================
@@ -123,7 +125,7 @@ const SELLER_NAV = [
 const BUYER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
   { key: "browse", label: { sw: "Tafuta Mali", en: "Browse Properties" }, icon: Search },
-  { key: "saved", label: { sw: "Zilizohifadhiwa", en: "Saved" }, icon: Heart },
+  { key: "saved", label: { sw: "Matangazo Yaliyohifadhiwa", en: "Saved Listings" }, icon: Heart },
   { key: "searches", label: { sw: "Utafutaji Wangu", en: "My Searches" }, icon: Bell },
   { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
   { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
@@ -131,9 +133,10 @@ const BUYER_NAV = [
   { key: "waiting", label: { sw: "Orodha ya Kusubiri", en: "Waiting List" }, icon: Clock3 },
   { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
   { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
-  { key: "verification", label: { sw: "Uthibitisho", en: "Verification" }, icon: ShieldCheck },
+  { key: "verification", label: { sw: "Uthibitisho Wangu", en: "My Verification" }, icon: ShieldCheck },
   { key: "safety", label: { sw: "Usalama & Msaada", en: "Safety & Support" }, icon: Shield },
   { key: "support", label: { sw: "Msaada", en: "Support" }, icon: Headphones },
+  { key: "feedback", label: { sw: "Maoni Yangu", en: "My Feedback" }, icon: MessageSquarePlus },
 ];
 
 const URL_TO_STATE = {
@@ -154,6 +157,7 @@ const URL_TO_STATE = {
   "/dashboard/bundles": { side: "seller", key: "bundles" },
   "/dashboard/verification": { side: "seller", key: "verification" },
   "/dashboard/support": { side: "seller", key: "support" },
+  "/dashboard/feedback": { side: "seller", key: "feedback" },
   "/dashboard/activity": { side: "seller", key: "activity" },
   "/dashboard/pay-listing": { side: "seller", key: "pay_listing" },
 
@@ -191,6 +195,7 @@ const STATE_TO_URL = {
     bundles: "/dashboard/bundles",
     verification: "/dashboard/verification",
     support: "/dashboard/support",
+    feedback: "/dashboard/feedback",
     activity: "/dashboard/activity",
     pay_listing: "/dashboard/pay-listing",
   },
@@ -633,6 +638,9 @@ export default function DashboardShell() {
     }
     if (activeKey === "support") {
       return <UserSupportSection side={side} />;
+    }
+    if (activeKey === "feedback") {
+      return <SellerFeedback />;
     }
     if (activeKey === "waiting") {
       return (
