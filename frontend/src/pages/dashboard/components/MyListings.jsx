@@ -42,6 +42,7 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { useToast } from "../../../components/Toast.jsx";
+import { useConfirm } from "../../../components/ConfirmDialog.jsx";
 import { startUndo } from "../../../config/undoStore.js";
 import { notifyAdminAboutDeletion } from "../../../config/notificationsStore.js";
 import { restoreListingAsync } from "../../../config/listingsStore.js";
@@ -309,6 +310,7 @@ export default function MyListings({
   const { lang } = useLanguage();
   const { user } = useAuth();
   const toast = useToast();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -371,6 +373,17 @@ export default function MyListings({
     if (busy[id]) return;
     const listing = listings.find((l) => String(l.id) === String(id));
     if (!listing) return;
+
+    const ok = await confirm({
+      title: t("Futa tangazo?", "Delete listing?"),
+      description: t(
+        `"${listing.title}" itaingizwa kwenye Recycle Bin. Unaweza kuirejesha kwa dakika 5.`,
+        `"${listing.title}" will be moved to the Recycle Bin. You can restore within 5 minutes.`
+      ),
+      confirmLabel: t("Futa", "Delete"),
+      danger: true,
+    });
+    if (!ok) return;
 
     setBusy((b) => ({ ...b, [id]: "delete" }));
 

@@ -33,10 +33,12 @@ import {
   Tag,
   ShoppingBag,
   ShieldCheck,
+  Headphones,
 } from "lucide-react";
 import { COLORS } from "./shared.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import MyVerificationsPanel from "./MyVerificationsPanel.jsx";
+import UserSupportSection from "./UserSupportSection.jsx";
 import { useAuth, logoutAsync } from "../../../config/authStore.js";
 import { ADMIN_PATH } from "../../../config/adminPath.js";
 import {
@@ -112,6 +114,7 @@ const SELLER_NAV = [
   { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
   { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
   { key: "verification", label: { sw: "Uthibitisho", en: "Verification" }, icon: ShieldCheck },
+  { key: "support", label: { sw: "Msaada", en: "Support" }, icon: Headphones },
 ];
 
 // ============================================================
@@ -130,6 +133,7 @@ const BUYER_NAV = [
   { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
   { key: "verification", label: { sw: "Uthibitisho", en: "Verification" }, icon: ShieldCheck },
   { key: "safety", label: { sw: "Usalama & Msaada", en: "Safety & Support" }, icon: Shield },
+  { key: "support", label: { sw: "Msaada", en: "Support" }, icon: Headphones },
 ];
 
 const URL_TO_STATE = {
@@ -149,6 +153,7 @@ const URL_TO_STATE = {
   "/dashboard/transactions": { side: "seller", key: "transactions" },
   "/dashboard/bundles": { side: "seller", key: "bundles" },
   "/dashboard/verification": { side: "seller", key: "verification" },
+  "/dashboard/support": { side: "seller", key: "support" },
   "/dashboard/activity": { side: "seller", key: "activity" },
   "/dashboard/pay-listing": { side: "seller", key: "pay_listing" },
 
@@ -164,6 +169,7 @@ const URL_TO_STATE = {
   "/dashboard/buyer/transactions": { side: "buyer", key: "transactions" },
   "/dashboard/buyer/bundles": { side: "buyer", key: "bundles" },
   "/dashboard/buyer/verification": { side: "buyer", key: "verification" },
+  "/dashboard/buyer/support": { side: "buyer", key: "support" },
   "/dashboard/buyer/safety": { side: "buyer", key: "safety" },
   "/dashboard/buyer/activity": { side: "buyer", key: "activity" },
 };
@@ -184,6 +190,7 @@ const STATE_TO_URL = {
     transactions: "/dashboard/transactions",
     bundles: "/dashboard/bundles",
     verification: "/dashboard/verification",
+    support: "/dashboard/support",
     activity: "/dashboard/activity",
     pay_listing: "/dashboard/pay-listing",
   },
@@ -199,6 +206,7 @@ const STATE_TO_URL = {
     transactions: "/dashboard/buyer/transactions",
     bundles: "/dashboard/buyer/bundles",
     verification: "/dashboard/buyer/verification",
+    support: "/dashboard/buyer/support",
     safety: "/dashboard/buyer/safety",
     activity: "/dashboard/buyer/activity",
   },
@@ -622,6 +630,9 @@ export default function DashboardShell() {
     }
     if (activeKey === "verification") {
       return <MyVerificationsPanel />;
+    }
+    if (activeKey === "support") {
+      return <UserSupportSection side={side} />;
     }
     if (activeKey === "waiting") {
       return (

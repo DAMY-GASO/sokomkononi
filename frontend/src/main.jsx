@@ -27,8 +27,6 @@ function purgeStaleCsrfCookies() {
 }
 purgeStaleCsrfCookies();
 
-// ── One-time boot cleanup ─────────────────────────────────
-try { localStorage.removeItem("sokomkononi_deals_v1"); } catch { /* noop */ }
 
 // ── Register undo restore handlers (survive page reload) ──
 import("./config/undoStore.js").then(

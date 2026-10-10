@@ -140,7 +140,7 @@ export const NAV = [
   },
   {
     key: "trash",
-    label: { sw: "Trash", en: "Trash" },
+    label: { sw: "Recycle Bin", en: "Recycle Bin" },
     icon: Trash2,
   },
   {

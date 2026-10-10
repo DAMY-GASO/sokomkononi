@@ -272,9 +272,12 @@ a {
    ============================================================ */
 
 html, body {
-  overflow-x: hidden;
-  max-width: 100vw;
   -webkit-text-size-adjust: 100%;
+}
+
+/* Prefer `overflow-x: clip` on specific containers (does not break sticky) */
+.page-clip {
+  overflow-x: clip;
 }
 
 /* Long emails / URLs / IDs wrap instead of pushing layout wide */

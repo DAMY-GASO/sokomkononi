@@ -86,16 +86,6 @@ export async function hydrateConversationsFromApi(currentUserId) {
     write(normalized);
     return { ok: true, count: normalized.length };
   } catch (err) {
-    write(
-      getConversations().map((c) =>
-        sameId(c.id, conversationId)
-          ? {
-              ...c,
-              messages: (c.messages || []).filter((m) => m.id !== _tempId),
-            }
-          : c
-      )
-    );
     return { ok: false, error: err };
   }
 }

@@ -82,6 +82,27 @@ export default function TwoFactorCard({ lang }) {
     );
   }
 
+  if (status?.unsupported) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center"
+               style={{ background: `${COLORS.rust}15` }}>
+            <AlertTriangle size={18} color={COLORS.rust} />
+          </div>
+          <div>
+            <h3 className="h-card">
+              {t("2FA Haipatikani Kwa Sasa", "2FA Not Available")}
+            </h3>
+            <p className="text-body-sm text-secondary mt-0.5">
+              {t("Wasiliana na msaada.", "Contact support.")}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-5">
       <div className="flex items-center gap-3 mb-3">

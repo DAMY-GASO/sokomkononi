@@ -131,6 +131,12 @@ export class ApiError extends Error {
 
 async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const controller = new AbortController();
+  const external = options?.signal;
+  const onAbort = () => controller.abort();
+  if (external) {
+    if (external.aborted) controller.abort();
+    else external.addEventListener("abort", onAbort, { once: true });
+  }
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
@@ -141,6 +147,7 @@ async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
     throw new ApiError(0, { detail: err.message || "Network error. Check your connection." });
   } finally {
     clearTimeout(timer);
+    if (external) external.removeEventListener("abort", onAbort);
   }
 }
 

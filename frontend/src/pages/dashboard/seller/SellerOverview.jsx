@@ -42,9 +42,13 @@ export default function SellerOverview({ onNavigate }) {
 
     const totalListings = myListings.length;
     const activeListings = myListings.filter((l) => l.status === "live").length;
-    const pendingApproval = myListings.filter(
-      (l) => l.status === "in_review" || l.status === "pending_payment"
+    const awaitingPayment = myListings.filter(
+      (l) => l.status === "pending_payment"
     ).length;
+    const awaitingReview = myListings.filter(
+      (l) => l.status === "in_review"
+    ).length;
+    const pendingApproval = awaitingPayment + awaitingReview;
     const soldListings = myListings.filter((l) => l.status === "sold").length;
     const totalViews = myListings.reduce((sum, l) => sum + (l.views || 0), 0);
     const totalEnquiries = myListings.reduce(
@@ -63,6 +67,8 @@ export default function SellerOverview({ onNavigate }) {
       totalListings,
       activeListings,
       pendingApproval,
+      awaitingPayment,
+      awaitingReview,
       soldListings,
       totalViews,
       totalEnquiries,
@@ -98,6 +104,12 @@ export default function SellerOverview({ onNavigate }) {
       label: t("Vyumba vya Majadiliano", "Deal Rooms"),
       icon: MessagesSquare,
       color: COLORS.rust,
+    },
+    {
+      key: "support",
+      label: t("Msaada", "Support"),
+      icon: Inbox,
+      color: "#2563EB",
     },
   ];
 
@@ -215,10 +227,10 @@ export default function SellerOverview({ onNavigate }) {
           size="sm"
         />
         <StatTile
-          label={t("Zinasubiri Idhini", "Pending Approval")}
-          value={stats.pendingApproval}
+          label={t("Zinasubiri Malipo", "Awaiting Payment")}
+          value={stats.awaitingPayment}
           icon={Clock3}
-          color={COLORS.gold}
+          color={COLORS.rust}
           size="sm"
         />
         <StatTile

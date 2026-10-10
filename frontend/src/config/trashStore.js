@@ -319,3 +319,52 @@ export function useTrashItemsState(type) {
   return { items, loading, error, reload };
 }
 export function useTrashItems(type) { return useTrashItemsState(type).items; }
+// ============================================================
+// RECYCLE BIN — action history (recycled / restored / permanent)
+// ============================================================
+const HISTORY_KEY = "sokomkononi_recycle_history_v1";
+const HISTORY_EV = "sokomkononi:recycle-history-updated";
+
+function _readHistory() {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(HISTORY_KEY);
+    const p = raw ? JSON.parse(raw) : [];
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
+}
+
+function _writeHistory(list) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 500)));
+  window.dispatchEvent(new Event(HISTORY_EV));
+}
+
+export function getRecycleHistory() {
+  return _readHistory();
+}
+
+export function recordRecycleAction({ type, id, name, action, actor }) {
+  const entry = {
+    id: `rh_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    type, itemId: id, name,
+    action,                 // "recycled" | "restored" | "permanent" | "emptied"
+    actor: actor || "Admin",
+    at: new Date().toISOString(),
+  };
+  _writeHistory([entry, ..._readHistory()]);
+  return entry;
+}
+
+export function clearRecycleHistory() {
+  _writeHistory([]);
+}
+
+// Patch mutations to record history
+const _origRestore = restoreTrashItemAsync;
+export async function restoreTrashItemAsyncWithHistory(type, id) {
+  const item = getTrashItem(type, id);
+  const res = await _origRestore(type, id);
+  if (res.ok) recordRecycleAction({ type, id, name: item?.name, action: "restored" });
+  return res;
+}

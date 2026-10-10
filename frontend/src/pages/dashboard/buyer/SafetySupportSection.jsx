@@ -330,7 +330,7 @@ function MyTicketCard({ ticket, lang }) {
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-export default function SafetySupportSection() {
+export default function SafetySupportSection({ side = "buyer" }) {
   const { lang } = useLanguage();
   const tickets = useTickets();
 
@@ -399,7 +399,9 @@ export default function SafetySupportSection() {
         {/* HEADER */}
         <div className="mb-6 text-center">
           <h1 className="h-title">
-            {t("Usalama & Msaada", "Safety & Support")}
+            {side === "seller"
+              ? t("Msaada wa Muuzaji", "Seller Support")
+              : t("Usalama & Msaada", "Safety & Support")}
           </h1>
           <p className="text-secondary text-body-sm mt-2 max-w-xl mx-auto">
             {t(

@@ -35,6 +35,8 @@ import {
 } from "../config/notificationsStore.js";
 import { useDashboardSide } from "../config/dashboardSideStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { useConfirm } from "../components/ConfirmDialog.jsx";
+import { useToast } from "../components/Toast.jsx";
 
 // ============================================================
 // NOTIFICATION TYPES — icon + color
@@ -184,6 +186,8 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
 export default function NotificationsPage() {
   const { lang } = useLanguage();
   const side = useDashboardSide();
+  const confirm = useConfirm();
+  const toast = useToast();
   const { notifications, unreadCount, markRead, markAllRead, remove, clearAll } =
     useNotifications("user");
   const [filter, setFilter] = useState("all");
@@ -196,21 +200,32 @@ export default function NotificationsPage() {
   const handleRemove = (id) => remove(id);
 
   const handleClearAll = async () => {
-    const message =
-      lang === "sw"
-        ? "Una uhakika unataka kufuta taarifa zote? Hatua hii haiwezi kurudishwa."
-        : "Are you sure you want to delete all notifications? This cannot be undone.";
-    if (!window.confirm(message)) return;
+    const ok = await confirm({
+      title: lang === "sw" ? "Ondoa alama zote za kusoma?" : "Clear all read marks?",
+      description: lang === "sw"
+        ? "Taarifa zote zitabaki lakini zitaonekana kama zimesomwa."
+        : "All notifications stay but will be marked as read.",
+      confirmLabel: lang === "sw" ? "Ondoa Alama" : "Clear",
+    });
+    if (!ok) return;
+    const res = await markAllRead();
+    if (!res?.ok) toast.error(res?.error?.message || "Failed.");
+    else toast.success(lang === "sw" ? "Alama zimeondolewa" : "Marks cleared");
+  };
 
+  const handleDeleteAll = async () => {
+    const ok = await confirm({
+      title: lang === "sw" ? "Futa taarifa zote?" : "Delete all notifications?",
+      description: lang === "sw"
+        ? "Hatua hii haiwezi kurudishwa."
+        : "This action cannot be undone.",
+      confirmLabel: lang === "sw" ? "Futa Zote" : "Delete All",
+      danger: true,
+    });
+    if (!ok) return;
     const res = await clearAll();
-    if (!res?.ok) {
-      alert(
-        res?.error?.message ||
-          (lang === "sw"
-            ? "Imeshindwa kufuta taarifa."
-            : "Failed to delete notifications.")
-      );
-    }
+    if (!res?.ok) toast.error(res?.error?.message || "Failed.");
+    else toast.success(lang === "sw" ? "Zimefutwa" : "Deleted");
   };
 
   return (
@@ -299,10 +314,18 @@ export default function NotificationsPage() {
               <button
                 onClick={handleClearAll}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+                style={{ color: COLORS.night }}
+              >
+                <CheckCheck size={14} />
+                {lang === "sw" ? "Ondoa Alama Zote" : "Clear All"}
+              </button>
+              <button
+                onClick={handleDeleteAll}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
                 style={{ color: COLORS.rust }}
               >
                 <Trash2 size={14} />
-                {lang === "sw" ? "Futa zote" : "Clear all"}
+                {lang === "sw" ? "Futa Zote" : "Delete All"}
               </button>
             </div>
           </div>

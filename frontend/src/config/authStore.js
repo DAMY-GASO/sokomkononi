@@ -70,44 +70,25 @@ export function invalidateAuthCache() {
   resetHydrateCache();
 }
 
-const USER_SCOPED_KEYS = [
-  "sokomkononi_current_user_v1",
-  "sokomkononi_access",
-  "sokomkononi_refresh",
-  "sokomkononi_listings_mine_v1",
-  "sokomkononi_listings_public_v1",
-  "sokomkononi_saved_v1",
-  "sokomkononi_saved_snapshots_v1",
-  "sokomkononi_messages_v2",
-  "sokomkononi_leads_v1",
-  "sokomkononi_searches_v1",
-  "sokomkononi_waiting_list_v1",
-  "sokomkononi_notifications_v1",
-  "sokomkononi_notifications_deleted_v1",
-  "sokomkononi_deals_v1",
-  "sokomkononi_transactions_v1",
-  "sokomkononi_transactions_lifecycle_v1",
-  "sokomkononi_user_credits_v1",
-  "sokomkononi_recently_viewed_v1",
-  "sokomkononi_dashboard_side_v1",
-  "sokomkononi_undo_v1",
-  "sokomkononi_moderation_queue_v1",
-  "sokomkononi_moderation_decisions_v1",
-];
+const CACHE_PREFIX = "sokomkononi_";
+const PRESERVE_KEYS = new Set([
+  "sokomkononi_admin_access",
+  "sokomkononi_admin_refresh",
+  "sokomkononi_admin_user_v1",
+]);
 
 function wipeUserScopedCaches() {
   if (typeof window === "undefined") return;
   try {
-    USER_SCOPED_KEYS.forEach((k) => {
-      try {
-        window.localStorage.removeItem(k);
-      } catch {
-        /* noop */
-      }
-    });
-  } catch {
-    /* noop */
-  }
+    const toRemove = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (!k || !k.startsWith(CACHE_PREFIX)) continue;
+      if (PRESERVE_KEYS.has(k)) continue;
+      toRemove.push(k);
+    }
+    toRemove.forEach((k) => { try { window.localStorage.removeItem(k); } catch {} });
+  } catch { /* noop */ }
 }
 
 function hardReset() {

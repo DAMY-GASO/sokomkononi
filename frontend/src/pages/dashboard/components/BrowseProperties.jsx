@@ -664,7 +664,7 @@ export default function BrowseProperties({
                   onClick={clearFilters}
                   className="mt-4 px-5 py-2 bg-gold text-night rounded-lg text-sm font-semibold hover:bg-flame transition-colors"
                 >
-                  {lang === "sw" ? "Safisha Vichujui" : "Clear Filters"}
+                  {lang === "sw" ? "Safisha Vichujio" : "Clear Filters"}
                 </button>
               </div>
             )}

@@ -157,3 +157,18 @@ export function useUserCredits(userId) {
 }
 
 export function removeExpiredCredits() {}
+
+// ============================================================
+// waitForCredit — poll for credits after a bundle purchase.
+// FimiPay webhook may land seconds after the frontend poll succeeds.
+// ============================================================
+export async function waitForCredit(userId, service, { attempts = 10, intervalMs = 2000 } = {}) {
+  for (let i = 0; i < attempts; i++) {
+    const info = checkCredit(userId, service);
+    if (info.hasCredit) return { ok: true, remaining: info.remaining };
+    await new Promise((r) => setTimeout(r, intervalMs));
+    await hydrateUserCreditsFromApi(userId).catch(() => {});
+  }
+  const finalInfo = checkCredit(userId, service);
+  return { ok: finalInfo.hasCredit, remaining: finalInfo.remaining };
+}

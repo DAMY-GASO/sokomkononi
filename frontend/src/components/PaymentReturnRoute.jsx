@@ -6,6 +6,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { COLORS } from "../pages/dashboard/components/shared";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { useDashboardSide } from "../config/dashboardSideStore.js";
 import {
   pollOrderStatus,
   TERMINAL_FAILURE,

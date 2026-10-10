@@ -154,9 +154,15 @@ export default function BuyerOverview({ onNavigate }) {
     },
     {
       key: "safety",
-      label: t("Usalama & Msaada", "Safety & Support"),
+      label: t("Usalama", "Safety"),
       icon: Shield,
       color: COLORS.rust,
+    },
+    {
+      key: "support",
+      label: t("Msaada", "Support"),
+      icon: Shield,
+      color: "#2563EB",
     },
   ];
 

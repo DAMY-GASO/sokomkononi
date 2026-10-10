@@ -260,7 +260,6 @@ export default function AdvertiseSasa({
   const [stage, setStage] = useState("select");
   const [pendingBanner, setPendingBanner] = useState(null);
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
-  const pendingBannerIdRef = useRef(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -375,7 +374,6 @@ export default function AdvertiseSasa({
     setError("");
     try {
       const { bannerId } = await createPendingBanner();
-      pendingBannerIdRef.current = bannerId;
       setPendingBanner({
         id: bannerId,
         listing: selectedListing,

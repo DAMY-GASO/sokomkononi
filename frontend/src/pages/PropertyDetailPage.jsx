@@ -2,6 +2,9 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../config/authStore.js";
+import { useToast } from "../components/Toast.jsx";
+import { useConfirm } from "../components/ConfirmDialog.jsx";
+import { api } from "../api/client.js";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
@@ -447,6 +450,9 @@ function ListingNotFound({ lang }) {
 }
 
 export default function PropertyDetailPage() {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [reporting, setReporting] = React.useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -702,6 +708,47 @@ export default function PropertyDetailPage() {
     }
   };
 
+  const handleReport = async () => {
+    if (!user) {
+      navigate("/login", {
+        state: { from: `${location.pathname}${location.search}` },
+      });
+      return;
+    }
+    if (reporting) return;
+    const ok = await confirm({
+      title: t(lang, "Ripoti tangazo hili?", "Report this listing?"),
+      description: t(
+        lang,
+        "Tutaipitia na kuchukua hatua ikiwa ni ya udanganyifu.",
+        "We will review it and take action if fraudulent."
+      ),
+      confirmLabel: t(lang, "Ripoti", "Report"),
+      danger: true,
+    });
+    if (!ok) return;
+    setReporting(true);
+    try {
+      await api.post("/tickets/", {
+        subject: t(lang, `Ripoti ya tangazo: ${property.title}`,
+                       `Listing report: ${property.title}`),
+        description: t(
+          lang,
+          `Mtumiaji ameripoti tangazo "${property.title}" (ID: ${property.id}).`,
+          `User reported listing "${property.title}" (ID: ${property.id}).`
+        ),
+        category: "LISTING",
+        priority: "HIGH",
+      });
+      toast.success(t(lang, "Ripoti imetumwa.", "Report submitted."));
+    } catch (err) {
+      toast.error(err?.message ||
+        t(lang, "Imeshindwa kutuma ripoti.", "Failed to submit report."));
+    } finally {
+      setReporting(false);
+    }
+  };
+
   const categoryLabel =
     CATEGORY_LABELS[property.category]?.[lang] ||
     CATEGORY_LABELS[property.category]?.sw ||
@@ -779,7 +826,9 @@ export default function PropertyDetailPage() {
                     <Share2 size={18} />
                   </button>
                   <button
-                    className="w-10 h-10 rounded-full border border-gray-200 text-muted hover:text-rust flex items-center justify-center transition-colors"
+                    onClick={handleReport}
+                    disabled={reporting}
+                    className="w-10 h-10 rounded-full border border-gray-200 text-muted hover:text-rust flex items-center justify-center transition-colors disabled:opacity-50"
                     aria-label={t(lang, "Ripoti", "Report")}
                   >
                     <Flag size={18} />
