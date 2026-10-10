@@ -34,6 +34,7 @@ import {
   ShoppingBag,
   ShieldCheck,
   Headphones,
+  MessageSquarePlus,
 } from "lucide-react";
 import { COLORS } from "./shared.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
