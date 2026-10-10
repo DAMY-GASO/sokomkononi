@@ -18,7 +18,7 @@ import {
 
 const ICONS = { MessageSquare, AlertTriangle, Lightbulb, Star };
 
-export default function SellerFeedback() {
+export default function SellerFeedback({ side = "seller" }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
   const toast = useToast();
@@ -55,7 +55,7 @@ export default function SellerFeedback() {
       subject: subject.trim(),
       message: message.trim(),
       rating: type === "rating" ? Number(rating) : null,
-      authorSide: "seller",
+      authorSide: side,
     });
     setBusy(false);
     if (res.ok) {
@@ -70,7 +70,7 @@ export default function SellerFeedback() {
     <div style={{ background: COLORS.sand, minHeight: "100%" }} className="w-full p-4 sm:p-6">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6 text-center">
-          <h1 className="h-title">{t("Maoni ya Muuzaji", "Seller Feedback")}</h1>
+          <h1 className="h-title">{side === "buyer" ? t("Maoni ya Mnunuzi", "Buyer Feedback") : t("Maoni ya Muuzaji", "Seller Feedback")}</h1>
           <p className="text-body-sm text-secondary mt-2 max-w-xl mx-auto">
             {t(
               "Toa maoni, ripoti changamoto, pendekeza maboresho, au kadiria uzoefu wako.",
