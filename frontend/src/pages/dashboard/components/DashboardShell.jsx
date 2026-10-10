@@ -116,7 +116,6 @@ const SELLER_NAV = [
   { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
   { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
   { key: "verification", label: { sw: "Uthibitisho Wangu", en: "My Verification" }, icon: ShieldCheck },
-  { key: "support", label: { sw: "Msaada", en: "Support" }, icon: Headphones },
   { key: "feedback", label: { sw: "Maoni Yangu", en: "My Feedback" }, icon: MessageSquarePlus },
 ];
 
@@ -157,7 +156,6 @@ const URL_TO_STATE = {
   "/dashboard/transactions": { side: "seller", key: "transactions" },
   "/dashboard/bundles": { side: "seller", key: "bundles" },
   "/dashboard/verification": { side: "seller", key: "verification" },
-  "/dashboard/support": { side: "seller", key: "support" },
   "/dashboard/feedback": { side: "seller", key: "feedback" },
   "/dashboard/activity": { side: "seller", key: "activity" },
   "/dashboard/pay-listing": { side: "seller", key: "pay_listing" },
@@ -174,7 +172,7 @@ const URL_TO_STATE = {
   "/dashboard/buyer/transactions": { side: "buyer", key: "transactions" },
   "/dashboard/buyer/bundles": { side: "buyer", key: "bundles" },
   "/dashboard/buyer/verification": { side: "buyer", key: "verification" },
-  "/dashboard/buyer/support": { side: "buyer", key: "support" },
+  "/dashboard/buyer/feedback": { side: "buyer", key: "feedback" },
   "/dashboard/buyer/safety": { side: "buyer", key: "safety" },
   "/dashboard/buyer/activity": { side: "buyer", key: "activity" },
 };
@@ -195,7 +193,6 @@ const STATE_TO_URL = {
     transactions: "/dashboard/transactions",
     bundles: "/dashboard/bundles",
     verification: "/dashboard/verification",
-    support: "/dashboard/support",
     feedback: "/dashboard/feedback",
     activity: "/dashboard/activity",
     pay_listing: "/dashboard/pay-listing",
@@ -212,7 +209,7 @@ const STATE_TO_URL = {
     transactions: "/dashboard/buyer/transactions",
     bundles: "/dashboard/buyer/bundles",
     verification: "/dashboard/buyer/verification",
-    support: "/dashboard/buyer/support",
+    feedback: "/dashboard/buyer/feedback",
     safety: "/dashboard/buyer/safety",
     activity: "/dashboard/buyer/activity",
   },
@@ -637,11 +634,8 @@ export default function DashboardShell() {
     if (activeKey === "verification") {
       return <MyVerificationsPanel />;
     }
-    if (activeKey === "support") {
-      return <UserSupportSection side={side} />;
-    }
     if (activeKey === "feedback") {
-      return <SellerFeedback />;
+      return <SellerFeedback side={side} />;
     }
     if (activeKey === "waiting") {
       return (
