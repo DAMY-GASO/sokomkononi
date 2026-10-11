@@ -6,6 +6,7 @@ import { ToastProvider } from "./components/Toast.jsx";
 import { ConfirmProvider } from "./components/ConfirmDialog.jsx";
 import PaymentReturnRoute from "./components/PaymentReturnRoute.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { AttributionProvider } from "./context/AttributionContext.jsx";
 
 import { installUnauthorizedHandler } from "./config/authStore.js";
 import UndoToast from "./components/UndoToast.jsx";
@@ -68,6 +69,7 @@ function App() {
 
   return (
     <LanguageProvider>
+      <AttributionProvider>
       <ToastProvider>
         <UndoToast />
         <ConfirmProvider>
@@ -160,6 +162,7 @@ function App() {
           </Router>
         </ConfirmProvider>
       </ToastProvider>
+    </AttributionProvider>
     </LanguageProvider>
   );
 }

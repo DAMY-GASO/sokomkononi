@@ -120,6 +120,12 @@ function fillSpan(itemCount, cols) {
     .join(" ");
 }
 
+// ── Real store URLs (fallbacks when admin hasn't set custom links) ──
+const STORE_FALLBACKS = {
+  play: "https://play.google.com/store/apps/details?id=co.tz.sokomkononi.app",
+  appstore: "https://apps.apple.com/app/sokomkononi/id0000000000",
+};
+
 const TRENDING_LIMIT = 24;
 const TRENDING_COLS = { base: 2, md: 3, lg: 4 };
 const CATEGORY_COLS = { base: 2, sm: 3, md: 4, lg: 6 };
@@ -223,8 +229,8 @@ export default function HomePage() {
   }, [ready]);
 
   const [appLinks] = useAppStoreLinks();
-  const playUrl = (appLinks?.play || "").trim();
-  const appStoreUrl = (appLinks?.appstore || "").trim();
+  const playUrl = (appLinks?.play || "").trim() || STORE_FALLBACKS.play;
+  const appStoreUrl = (appLinks?.appstore || "").trim() || STORE_FALLBACKS.appstore;
 
   const handleBuyNow = () => {
     if (user) navigate("/dashboard/buyer");
@@ -478,7 +484,7 @@ export default function HomePage() {
             </div>
 
             <div
-              className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center mt-10 max-w-md sm:max-w-none mx-auto animate-fade-in-up px-2"
+              className="flex flex-col sm:flex-row gap-2.5 sm:gap-4 justify-center items-center mt-10 max-w-xs sm:max-w-none mx-auto animate-fade-in-up px-2"
               style={{ animationDelay: "0.35s" }}
             >
               <button
@@ -487,19 +493,19 @@ export default function HomePage() {
                   bg-gradient-to-r from-gold to-gold-light
                   hover:from-flame hover:to-gold
                   text-night font-semibold
-                  pl-2 pr-6 sm:pr-8 py-2.5
+                  pl-1.5 pr-3 sm:pl-2 sm:pr-8 py-2 sm:py-2.5
                   shadow-[0_8px_30px_-8px_rgba(254,164,6,0.55)]
                   hover:shadow-[0_14px_45px_-8px_rgba(254,164,6,0.75)]
                   transition-all duration-300
                   hover:-translate-y-1 active:translate-y-0"
               >
-                <span className="w-12 h-12 rounded-full bg-night/10 group-hover:bg-night/[0.16] flex items-center justify-center shrink-0 transition-colors">
+                <span className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-night/10 group-hover:bg-night/[0.16] flex items-center justify-center shrink-0 transition-colors">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8" />
                     <path d="m21 21-4.3-4.3" />
                   </svg>
                 </span>
-                <span className="text-lg sm:text-xl whitespace-nowrap">
+                <span className="text-sm sm:text-lg lg:text-xl whitespace-nowrap">
                   {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                 </span>
                 <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
@@ -511,18 +517,18 @@ export default function HomePage() {
                   bg-gradient-to-r from-royal to-royal-dark
                   hover:from-royal-dark hover:to-royal
                   text-white font-semibold
-                  pl-2 pr-6 sm:pr-8 py-2.5
+                  pl-1.5 pr-3 sm:pl-2 sm:pr-8 py-2 sm:py-2.5
                   shadow-[0_8px_30px_-8px_rgba(0,98,253,0.55)]
                   hover:shadow-[0_14px_45px_-8px_rgba(0,98,253,0.7)]
                   transition-all duration-300
                   hover:-translate-y-1 active:translate-y-0"
               >
-                <span className="w-12 h-12 rounded-full bg-white/15 group-hover:bg-white/25 flex items-center justify-center shrink-0 transition-colors">
+                <span className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-white/15 group-hover:bg-white/25 flex items-center justify-center shrink-0 transition-colors">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 </span>
-                <span className="text-lg sm:text-xl whitespace-nowrap">
+                <span className="text-sm sm:text-lg lg:text-xl whitespace-nowrap">
                   {lang === "sw" ? "Uza Sasa" : "Sell Now"}
                 </span>
                 <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-[1200ms] bg-gradient-to-r from-transparent via-white/25 to-transparent" />

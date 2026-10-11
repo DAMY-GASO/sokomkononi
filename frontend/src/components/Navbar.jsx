@@ -8,6 +8,7 @@ import {
 import { useAuth, logoutAsync } from "../config/authStore.js";
 import { useNotifications } from "../config/notificationsStore.js";
 import { useDashboardSide } from "../config/dashboardSideStore.js";
+import { useAttribution } from "../context/AttributionContext.jsx";
 import { Bell } from "lucide-react";
 
 function NotificationBell() {
@@ -52,6 +53,7 @@ export default function Navbar({
 
   // Soma kutoka context kama props hazijatolewa
   const { lang: langCtx, setLang: setLangCtx } = useLanguage();
+  const { registerTap: registerLogoTap } = useAttribution();
   const lang = langProp ?? langCtx;
   const setLang = setLangProp ?? setLangCtx;
 
@@ -152,7 +154,7 @@ export default function Navbar({
                 <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
               </svg>
             </button>
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/" onClick={(e) => { const hit = registerLogoTap(); if (hit) e.preventDefault(); }} className="flex items-center gap-2">
               <img src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full" />
               <span className="font-bold text-base sm:text-lg tracking-tight">SokoMkononi</span>
             </Link>

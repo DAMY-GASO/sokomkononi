@@ -160,7 +160,7 @@ function normalizeUserFromApi(raw) {
     verified: !!(raw.is_verified ?? raw.verified),
     isActive: raw.is_active !== false,
     isDeleted: !!raw.is_deleted,
-    avatarUrl: raw.avatar || raw.avatar_url || raw.avatarUrl || null,
+    avatarUrl: raw.avatar || raw.avatar_url || raw.avatarUrl || raw.picture || null,
     bio: raw.bio || "",
     region: raw.region || "",
     location: raw.location || raw.region || "",

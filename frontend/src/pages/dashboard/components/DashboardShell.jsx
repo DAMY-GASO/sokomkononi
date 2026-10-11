@@ -686,12 +686,20 @@ export default function DashboardShell() {
   };
 
   const renderAvatar = (size = "w-8 h-8", textSize = "text-sm") => {
-    if (user?.avatarUrl) {
+    const url =
+      user?.avatarUrl ||
+      user?.avatar ||
+      user?.avatar_url ||
+      user?.picture ||
+      null;
+
+    if (url) {
       return (
         <img
-          src={user.avatarUrl}
-          alt={user.name || "User"}
+          src={url}
+          alt={user?.name || "User"}
           className={`${size} rounded-full object-cover shrink-0`}
+          onError={(e) => { e.target.style.display = "none"; }}
         />
       );
     }
