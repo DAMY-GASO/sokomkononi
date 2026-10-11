@@ -1,14 +1,16 @@
 // ============================================================
-// feedbackStore.js — Seller & Buyer Feedback
-// Backend (Django apps/support):
+// feedbackStore.js — matches backend apps/feedback/serializers.py
+//
+// Backend serializer fields (camelCase):
+//   id, type, subject, message, rating, listingId,
+//   userName, userEmail, status, adminReply, repliedAt,
+//   createdAt, authorSide
+//
+// Endpoints:
 //   POST /api/feedback/                 submit
 //   GET  /api/feedback/mine/            my submissions
 //   GET  /api/feedback/                 admin: all
 //   POST /api/feedback/{id}/respond/    admin: reply
-//
-// Field names match backend FeedbackType enum:
-//   general | problem | suggestion | rating
-// Body sends `feedback_type`, response reads `feedback_type`.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -16,12 +18,11 @@ import { api } from "../api/client";
 const KEY = "sokomkononi_feedback_v1";
 const EV  = "sokomkononi:feedback-updated";
 
-// Keys MUST match backend apps/support/models.py FeedbackType
 export const FEEDBACK_TYPES = [
-  { key: "general",    label: { sw: "Maoni",           en: "Feedback" },                icon: "MessageSquare" },
-  { key: "problem",    label: { sw: "Ripoti Tatizo",   en: "Report a Problem" },        icon: "AlertTriangle" },
-  { key: "suggestion", label: { sw: "Pendekeza",       en: "Suggest an Improvement" },  icon: "Lightbulb" },
-  { key: "rating",     label: { sw: "Kadiria Uzoefu",  en: "Rate Your Experience" },    icon: "Star" },
+  { key: "feedback",   label: { sw: "Maoni",           en: "Feedback" },              icon: "MessageSquare" },
+  { key: "problem",    label: { sw: "Ripoti Tatizo",   en: "Report a Problem" },      icon: "AlertTriangle" },
+  { key: "suggestion", label: { sw: "Pendekeza",       en: "Suggest an Improvement" },icon: "Lightbulb" },
+  { key: "rating",     label: { sw: "Kadiria Uzoefu",  en: "Rate Your Experience" },  icon: "Star" },
 ];
 
 function read() {
@@ -32,30 +33,28 @@ function read() {
     return Array.isArray(p) ? p : [];
   } catch { return []; }
 }
-
 function write(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(list.slice(0, 500)));
   window.dispatchEvent(new Event(EV));
 }
 
-// Accept both backend and legacy field names.
 function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
-    type: raw.feedback_type || raw.type || "general",
+    type: raw.type || "feedback",
     subject: raw.subject || "",
     message: raw.message || "",
     rating: raw.rating != null ? Number(raw.rating) : null,
-    listingId: raw.listing_id ?? raw.listingId ?? raw.listing ?? null,
-    userName: raw.user_name || raw.userName || "",
-    userEmail: raw.user_email || raw.userEmail || "",
-    status: (raw.status || "NEW").toLowerCase(),
-    adminReply: raw.admin_reply || raw.adminReply || "",
-    createdAt: raw.created_at || raw.createdAt,
-    repliedAt: raw.replied_at || raw.repliedAt || null,
-    authorSide: raw.author_side || raw.authorSide || "seller",
+    listingId: raw.listingId ?? null,
+    userName: raw.userName || "",
+    userEmail: raw.userEmail || "",
+    status: (raw.status || "new").toLowerCase(),
+    adminReply: raw.adminReply || "",
+    createdAt: raw.createdAt,
+    repliedAt: raw.repliedAt || null,
+    authorSide: raw.authorSide || "seller",
   };
 }
 
@@ -88,18 +87,14 @@ export async function hydrateMyFeedbackFromApi() {
 }
 
 export async function submitFeedbackAsync(payload) {
-  // Backend expects `feedback_type`, and there is no "feedback" enum —
-  // the client-side "general" key maps to backend "general".
-  const rawType = String(payload.type || "general").toLowerCase();
-  const feedback_type = rawType === "feedback" ? "general" : rawType;
-
+  // Body matches backend serializer field names EXACTLY (camelCase)
   const body = {
-    feedback_type,
+    type: payload.type || "feedback",
     subject: (payload.subject || "").trim(),
     message: (payload.message || "").trim(),
     rating: payload.rating ?? null,
-    listing_id: payload.listingId ?? null,
-    author_side: payload.authorSide || "seller",
+    listingId: payload.listingId ?? null,
+    authorSide: payload.authorSide || "seller",
   };
   if (!body.subject || !body.message) {
     return { ok: false, error: new Error("subject+message required") };
@@ -118,7 +113,7 @@ export async function respondToFeedbackAsync(id, reply) {
   const clean = (reply || "").trim();
   if (!clean) return { ok: false, error: new Error("reply required") };
   try {
-    const raw = await api.post(`/feedback/${id}/respond/`, { admin_reply: clean });
+    const raw = await api.post(`/feedback/${id}/respond/`, { adminReply: clean });
     const updated = norm(raw) || {
       ...(getFeedback().find((f) => f.id === id) || {}),
       adminReply: clean,
