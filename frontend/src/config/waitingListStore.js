@@ -170,3 +170,34 @@ export async function expireStaleReservationsAsync() {
     return { ok: false, error: err };
   }
 }
+
+
+// ============================================================
+// useWaitingListState — exposes { list, loading, error } so pages
+// can render skeletons / error retry instead of silent empties.
+// Kept separate from useWaitingList() for backward compatibility.
+// ============================================================
+export function useWaitingListState() {
+  const [state, setState] = useState({ list: read(), loading: true, error: null });
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await hydrateWaitingListFromApi();
+      if (cancelled) return;
+      setState({
+        list: read(),
+        loading: false,
+        error: res.ok ? null : (res.error?.message || "Failed to load waitlist"),
+      });
+    })();
+    const sync = () => setState((s) => ({ ...s, list: read() }));
+    window.addEventListener("storage", sync);
+    window.addEventListener(EV, sync);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(EV, sync);
+    };
+  }, []);
+  return state;
+}

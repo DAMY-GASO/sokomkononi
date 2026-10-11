@@ -51,6 +51,26 @@ export function clearDeletedNotifications() {
   writeDeletedSet(new Set());
 }
 
+// ── Type normalizer — backend sends UPPERCASE enums, page uses short keys
+function mapNotificationType(rawType) {
+  const t = String(rawType || "").toUpperCase();
+  if (!t) return "system";
+  if (t.includes("MESSAGE")) return "message";
+  if (t.includes("OFFER") || t.includes("TRANSACTION") ||
+      t.includes("RESERVATION") || t.includes("INSPECTION") ||
+      t.includes("BUYER_DECISION")) return "deal";
+  if (t.includes("PAYMENT_PROOF") || t.includes("PAYMENT_CONFIRMED")) return "payment";
+  if (t === "BOOST_ACTIVATED" || t === "BOOST_PURCHASED") return "boost";
+  if (t === "LEADING_PURCHASED") return "leading";
+  if (t === "ADVERTISEMENT_PURCHASED") return "advertisement";
+  if (t === "LISTING_FEE_PAID" || t === "SUCCESS_FEE_PAID") return "listing_fee";
+  if (t.startsWith("LISTING_")) return "listing_released";
+  if (t.includes("VERIFICATION") || t.includes("ACCOUNT_")) return "verified";
+  if (t.includes("WAITING_LIST")) return "reminder";
+  if (t.includes("DISPUTE")) return "dispute.resolved";
+  return "system";
+}
+
 const TYPE_TO_TARGET = {
   LISTING_CREATED: "moderation",
   LISTING_APPROVED: "moderation",
@@ -120,7 +140,8 @@ function norm(raw) {
   return {
     id: raw.id,
     audience: raw.audience || "user",
-    type: raw.notification_type,
+    type: mapNotificationType(raw.notification_type),
+    rawType: raw.notification_type,
     title: raw.title,
     body: raw.message,
     at: raw.created_at,

@@ -116,6 +116,7 @@ const SELLER_NAV = [
   { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
   { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
   { key: "verification", label: { sw: "Uthibitisho Wangu", en: "My Verification" }, icon: ShieldCheck },
+  { key: "safety", label: { sw: "Usalama & Msaada", en: "Safety & Support" }, icon: Shield },
   { key: "feedback", label: { sw: "Maoni Yangu", en: "My Feedback" }, icon: MessageSquarePlus },
 ];
 
@@ -135,7 +136,6 @@ const BUYER_NAV = [
   { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
   { key: "verification", label: { sw: "Uthibitisho Wangu", en: "My Verification" }, icon: ShieldCheck },
   { key: "safety", label: { sw: "Usalama & Msaada", en: "Safety & Support" }, icon: Shield },
-  { key: "support", label: { sw: "Msaada", en: "Support" }, icon: Headphones },
   { key: "feedback", label: { sw: "Maoni Yangu", en: "My Feedback" }, icon: MessageSquarePlus },
 ];
 
@@ -156,6 +156,7 @@ const URL_TO_STATE = {
   "/dashboard/transactions": { side: "seller", key: "transactions" },
   "/dashboard/bundles": { side: "seller", key: "bundles" },
   "/dashboard/verification": { side: "seller", key: "verification" },
+  "/dashboard/safety": { side: "seller", key: "safety" },
   "/dashboard/feedback": { side: "seller", key: "feedback" },
   "/dashboard/activity": { side: "seller", key: "activity" },
   "/dashboard/pay-listing": { side: "seller", key: "pay_listing" },
@@ -193,6 +194,7 @@ const STATE_TO_URL = {
     transactions: "/dashboard/transactions",
     bundles: "/dashboard/bundles",
     verification: "/dashboard/verification",
+    safety: "/dashboard/safety",
     feedback: "/dashboard/feedback",
     activity: "/dashboard/activity",
     pay_listing: "/dashboard/pay-listing",
@@ -576,7 +578,7 @@ export default function DashboardShell() {
       return <MySearchesSection />;
     }
     if (activeKey === "safety") {
-      return <SafetySupportSection />;
+      return <SafetySupportSection side={side} />;
     }
     if (activeKey === "boost") {
       return (
