@@ -87,6 +87,19 @@ export default function Navbar({
     setMobileHelpDropdownOpen(false);
   };
 
+  // Bullet-proof: functional updaters never go stale.
+  // Only the target becomes true; every other menu is forced false.
+  const toggle = (name) => {
+    setLangOpen((v) => (name === "lang" ? !v : false));
+    setCatOpen((v) => (name === "cat" ? !v : false));
+    setAdsDropdownOpen((v) => (name === "ads" ? !v : false));
+    setHelpDropdownOpen((v) => (name === "help" ? !v : false));
+    setUserMenuOpen((v) => (name === "user" ? !v : false));
+    setMobileCatOpen((v) => (name === "mobileCat" ? !v : false));
+    setMobileAdsDropdownOpen((v) => (name === "mobileAds" ? !v : false));
+    setMobileHelpDropdownOpen((v) => (name === "mobileHelp" ? !v : false));
+  };
+
   // Close every dropdown on route change
   useEffect(() => {
     closeAllDropdowns();
@@ -211,7 +224,7 @@ export default function Navbar({
             {/* Categories Dropdown */}
             <div className="relative">
               <button
-                onClick={() => { const next = !catOpen; closeAllDropdowns(); setCatOpen(next); }}
+                onClick={() => toggle("cat")}
                 className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
               >
                 {lang === "sw" ? "Kategoria" : "Categories"}
@@ -269,7 +282,7 @@ export default function Navbar({
                   return (
                     <div key={l.to} className="relative">
                       <button
-                        onClick={() => { const next = !adsDropdownOpen; closeAllDropdowns(); setAdsDropdownOpen(next); }}
+                        onClick={() => toggle("ads")}
                         className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
                       >
                         {lang === "sw" ? "Matangazo" : "Ads"}
@@ -349,7 +362,7 @@ export default function Navbar({
                 </div>
                 <div className="relative">
                   <button
-                    onClick={() => { const next = !helpDropdownOpen; closeAllDropdowns(); setHelpDropdownOpen(next); }}
+                    onClick={() => toggle("help")}
                     className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
                   >
                     {lang === "sw" ? "Msaada" : "Help"}
@@ -419,7 +432,7 @@ export default function Navbar({
             {/* Language Switcher */}
             <div className="relative">
               <button
-                onClick={() => { const next = !langOpen; closeAllDropdowns(); setLangOpen(next); }}
+                onClick={() => toggle("lang")}
                 className="text-white/60 hover:text-white text-sm font-medium border border-white/15 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
               >
                 <span className="hidden sm:inline">{currentLang?.native || "Kiswahili"}</span>
@@ -471,7 +484,7 @@ export default function Navbar({
             {user ? (
               <div className="relative">
                 <button
-                  onClick={() => { const next = !userMenuOpen; closeAllDropdowns(); setUserMenuOpen(next); }}
+                  onClick={() => toggle("user")}
                   className="flex items-center gap-2 bg-white/10 hover:bg-white/15 rounded-md px-2 py-1.5 transition-colors"
                 >
                   <div className="w-7 h-7 rounded-full bg-gold flex items-center justify-center text-night font-bold text-xs">
@@ -623,7 +636,7 @@ export default function Navbar({
 
             {/* Categories dropdown - mobile */}
             <button
-              onClick={() => { const next = !mobileCatOpen; closeAllDropdowns(); setMobileCatOpen(next); }}
+              onClick={() => toggle("mobileCat")}
               aria-expanded={mobileCatOpen}
               className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
             >
@@ -681,7 +694,7 @@ export default function Navbar({
 
             {/* Matangazo Dropdown - mobile */}
             <button
-              onClick={() => { const next = !mobileAdsDropdownOpen; closeAllDropdowns(); setMobileAdsDropdownOpen(next); }}
+              onClick={() => toggle("mobileAds")}
               aria-expanded={mobileAdsDropdownOpen}
               className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
             >
@@ -742,7 +755,7 @@ export default function Navbar({
 
                 {/* Msaada Dropdown - mobile */}
                 <button
-                  onClick={() => { const next = !mobileHelpDropdownOpen; closeAllDropdowns(); setMobileHelpDropdownOpen(next); }}
+                  onClick={() => toggle("mobileHelp")}
                   aria-expanded={mobileHelpDropdownOpen}
                   className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
                 >
