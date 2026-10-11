@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import {
   usePopularCategories,
@@ -72,6 +72,48 @@ export default function Navbar({
   const [searchQuery, setSearchQuery] = useState("");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
+  // ── Master dropdown coordination ─────────────────────────
+  const location = useLocation();
+  const navRef = useRef(null);
+
+  const closeAllDropdowns = () => {
+    setLangOpen(false);
+    setCatOpen(false);
+    setAdsDropdownOpen(false);
+    setHelpDropdownOpen(false);
+    setUserMenuOpen(false);
+    setMobileCatOpen(false);
+    setMobileAdsDropdownOpen(false);
+    setMobileHelpDropdownOpen(false);
+  };
+
+  // Close every dropdown on route change
+  useEffect(() => {
+    closeAllDropdowns();
+  }, [location.pathname]);
+
+  // Close every dropdown on outside click
+  useEffect(() => {
+    const onClickOutside = (e) => {
+      if (navRef.current && !navRef.current.contains(e.target)) {
+        closeAllDropdowns();
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("touchstart", onClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("touchstart", onClickOutside);
+    };
+  }, []);
+
+  // Close every dropdown on Escape
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") closeAllDropdowns(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
   // Matangazo menu items
   const adMenuItems = [
     { label: { sw: "Matangazo Mapya", en: "New Ads" }, link: "/tafuta?tafuta=mpya" },
@@ -142,7 +184,7 @@ export default function Navbar({
   return (
     <>
       {/* HEADER */}
-      <header className="bg-night text-white border-b border-white/10 sticky top-0 z-50">
+      <header ref={navRef} className="bg-night text-white border-b border-white/10 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Left: Hamburger + Logo */}
           <div className="flex items-center gap-3">
@@ -169,7 +211,7 @@ export default function Navbar({
             {/* Categories Dropdown */}
             <div className="relative">
               <button
-                onClick={() => setCatOpen((prev) => !prev)}
+                onClick={() => { const next = !catOpen; closeAllDropdowns(); setCatOpen(next); }}
                 className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
               >
                 {lang === "sw" ? "Kategoria" : "Categories"}
@@ -191,7 +233,7 @@ export default function Navbar({
                       <Link
                         key={getCatKey(cat)}
                         to={`/kategoria/${getCatKey(cat)}`}
-                        onClick={() => setCatOpen(false)}
+                        onClick={closeAllDropdowns}
                         className="flex items-center gap-2.5 px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                       >
                         {img ? (
@@ -210,7 +252,7 @@ export default function Navbar({
                   <div className="border-t border-white/10 mt-1 pt-1">
                     <Link
                       to="/kategoria"
-                      onClick={() => setCatOpen(false)}
+                      onClick={closeAllDropdowns}
                       className="block px-4 py-2 text-sm text-gold font-semibold hover:bg-white/5 transition-colors"
                     >
                       {lang === "sw" ? "Ona Zote →" : "View All →"}
@@ -227,7 +269,7 @@ export default function Navbar({
                   return (
                     <div key={l.to} className="relative">
                       <button
-                        onClick={() => setAdsDropdownOpen((prev) => !prev)}
+                        onClick={() => { const next = !adsDropdownOpen; closeAllDropdowns(); setAdsDropdownOpen(next); }}
                         className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
                       >
                         {lang === "sw" ? "Matangazo" : "Ads"}
@@ -246,7 +288,7 @@ export default function Navbar({
                             <Link
                               key={item.link}
                               to={item.link}
-                              onClick={() => setAdsDropdownOpen(false)}
+                              onClick={closeAllDropdowns}
                               className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                             >
                               {lang === "sw" ? item.label.sw : item.label.en}
@@ -296,7 +338,7 @@ export default function Navbar({
                         <Link
                           key={item.link}
                           to={item.link}
-                          onClick={() => setAdsDropdownOpen(false)}
+                          onClick={closeAllDropdowns}
                           className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                         >
                           {lang === "sw" ? item.label.sw : item.label.en}
@@ -307,7 +349,7 @@ export default function Navbar({
                 </div>
                 <div className="relative">
                   <button
-                    onClick={() => setHelpDropdownOpen((prev) => !prev)}
+                    onClick={() => { const next = !helpDropdownOpen; closeAllDropdowns(); setHelpDropdownOpen(next); }}
                     className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
                   >
                     {lang === "sw" ? "Msaada" : "Help"}
@@ -326,7 +368,7 @@ export default function Navbar({
                         <Link
                           key={item.link}
                           to={item.link}
-                          onClick={() => setHelpDropdownOpen(false)}
+                          onClick={closeAllDropdowns}
                           className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                         >
                           {lang === "sw" ? item.label.sw : item.label.en}
@@ -377,7 +419,7 @@ export default function Navbar({
             {/* Language Switcher */}
             <div className="relative">
               <button
-                onClick={() => setLangOpen(!langOpen)}
+                onClick={() => { const next = !langOpen; closeAllDropdowns(); setLangOpen(next); }}
                 className="text-white/60 hover:text-white text-sm font-medium border border-white/15 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
               >
                 <span className="hidden sm:inline">{currentLang?.native || "Kiswahili"}</span>
@@ -429,7 +471,7 @@ export default function Navbar({
             {user ? (
               <div className="relative">
                 <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  onClick={() => { const next = !userMenuOpen; closeAllDropdowns(); setUserMenuOpen(next); }}
                   className="flex items-center gap-2 bg-white/10 hover:bg-white/15 rounded-md px-2 py-1.5 transition-colors"
                 >
                   <div className="w-7 h-7 rounded-full bg-gold flex items-center justify-center text-night font-bold text-xs">
@@ -455,35 +497,35 @@ export default function Navbar({
                     </div>
                     <Link
                       to="/dashboard"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={closeAllDropdowns}
                       className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                     >
                       {lang === "sw" ? "Dashibodi" : "Dashboard"}
                     </Link>
                     <Link
                       to="/wasifu"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={closeAllDropdowns}
                       className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                     >
                       {lang === "sw" ? "Wasifu" : "Profile"}
                     </Link>
                     <Link
                       to="/dashboard/buyer"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={closeAllDropdowns}
                       className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                     >
                       {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                     </Link>
                     <Link
                       to="/dashboard/post"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={closeAllDropdowns}
                       className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                     >
                       {lang === "sw" ? "Uza Sasa" : "Sell Now"}
                     </Link>
                     <Link
                       to="/alika-marafiki"
-                      onClick={() => setUserMenuOpen(false)}
+                      onClick={closeAllDropdowns}
                       className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                     >
                       {lang === "sw" ? "Alika Marafiki" : "Invite Friends"}
@@ -560,7 +602,7 @@ export default function Navbar({
         }`}
       >
         <button
-          onClick={() => setMenuOpen(false)}
+          onClick={() => { closeAllDropdowns(); setMenuOpen(false); }}
           className="absolute top-4 right-4 text-white/60 hover:text-white text-2xl p-2"
         >
           ✕
@@ -573,7 +615,7 @@ export default function Navbar({
           <nav className="flex flex-col gap-1">
             <Link
               to="/"
-              onClick={() => setMenuOpen(false)}
+              onClick={() => { closeAllDropdowns(); setMenuOpen(false); }}
               className="text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
             >
               {lang === "sw" ? "Nyumbani" : "Home"}
@@ -581,7 +623,7 @@ export default function Navbar({
 
             {/* Categories dropdown - mobile */}
             <button
-              onClick={() => setMobileCatOpen((prev) => !prev)}
+              onClick={() => { const next = !mobileCatOpen; closeAllDropdowns(); setMobileCatOpen(next); }}
               aria-expanded={mobileCatOpen}
               className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
             >
@@ -609,7 +651,7 @@ export default function Navbar({
                     <Link
                       key={getCatKey(cat)}
                       to={`/kategoria/${getCatKey(cat)}`}
-                      onClick={() => setMenuOpen(false)}
+                      onClick={() => { closeAllDropdowns(); setMenuOpen(false); }}
                       className="flex items-center gap-2.5 text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
                     >
                       {img ? (
@@ -627,7 +669,7 @@ export default function Navbar({
                 })}
                 <Link
                   to="/kategoria"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => { closeAllDropdowns(); setMenuOpen(false); }}
                   className="block text-gold hover:text-flame text-sm font-semibold py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
                 >
                   {lang === "sw" ? "Ona Zote →" : "View All →"}
@@ -639,7 +681,7 @@ export default function Navbar({
 
             {/* Matangazo Dropdown - mobile */}
             <button
-              onClick={() => setMobileAdsDropdownOpen((prev) => !prev)}
+              onClick={() => { const next = !mobileAdsDropdownOpen; closeAllDropdowns(); setMobileAdsDropdownOpen(next); }}
               aria-expanded={mobileAdsDropdownOpen}
               className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
             >
@@ -664,7 +706,7 @@ export default function Navbar({
                   <Link
                     key={item.link}
                     to={item.link}
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => { closeAllDropdowns(); setMenuOpen(false); }}
                     className="block text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
                   >
                     {lang === "sw" ? item.label.sw : item.label.en}
@@ -681,7 +723,7 @@ export default function Navbar({
                   <Link
                     key={l.to}
                     to={l.to}
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => { closeAllDropdowns(); setMenuOpen(false); }}
                     className="text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
                   >
                     {lang === "sw" ? l.label.sw : l.label.en}
@@ -692,7 +734,7 @@ export default function Navbar({
               <>
                 <Link
                   to="/kuhusu"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => { closeAllDropdowns(); setMenuOpen(false); }}
                   className="text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
                 >
                   {lang === "sw" ? "Kuhusu Sisi" : "About Us"}
@@ -700,7 +742,7 @@ export default function Navbar({
 
                 {/* Msaada Dropdown - mobile */}
                 <button
-                  onClick={() => setMobileHelpDropdownOpen((prev) => !prev)}
+                  onClick={() => { const next = !mobileHelpDropdownOpen; closeAllDropdowns(); setMobileHelpDropdownOpen(next); }}
                   aria-expanded={mobileHelpDropdownOpen}
                   className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
                 >
@@ -725,7 +767,7 @@ export default function Navbar({
                       <Link
                         key={item.link}
                         to={item.link}
-                        onClick={() => setMenuOpen(false)}
+                        onClick={() => { closeAllDropdowns(); setMenuOpen(false); }}
                         className="block text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
                       >
                         {lang === "sw" ? item.label.sw : item.label.en}
