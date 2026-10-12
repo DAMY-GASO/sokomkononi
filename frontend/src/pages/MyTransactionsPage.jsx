@@ -1,15 +1,8 @@
 // ============================================================
 // MyTransactionsPage.jsx
-// Miamala Yangu — API-backed success fee + PDF/CSV/DOC download.
-// + FimiPay direct payment + Bundle purchase flow + Credits + Free.
-//
-// SASISHO:
-//   - Inasoma fee fresh kutoka useSuccessFeeStatus() (sio stale)
-//   - FimiPay direct payment kwa success fee
-//   - Bundle purchase kama option ya pili
-//   - Loading + error handling bora
+// Miamala Yangu — completed pekee + receipt download + period report.
 // ============================================================
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Receipt,
   Search,
@@ -25,6 +18,9 @@ import {
   Wallet,
   Package,
   X,
+  TrendingUp,
+  TrendingDown,
+  Calendar,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "./dashboard/components/shared";
 import { useTransactions } from "../config/transactionsStore.js";
@@ -52,14 +48,8 @@ const TYPE_META = {
     label: { sw: "Ada ya Kuchapisha", en: "Listing Fee" },
     color: COLORS.gold,
   },
-  boost: {
-    label: { sw: "Kukuza", en: "Boost" },
-    color: "#2563EB",
-  },
-  leading: {
-    label: { sw: "Kuongoza", en: "Leading" },
-    color: COLORS.green,
-  },
+  boost: { label: { sw: "Kukuza", en: "Boost" }, color: "#2563EB" },
+  leading: { label: { sw: "Kuongoza", en: "Leading" }, color: COLORS.green },
   advertisement: {
     label: { sw: "Matangazo", en: "Ads" },
     color: COLORS.rust,
@@ -68,10 +58,7 @@ const TYPE_META = {
     label: { sw: "Uhifadhi", en: "Reservation" },
     color: "#2563EB",
   },
-  sale: {
-    label: { sw: "Mauzo", en: "Sales" },
-    color: COLORS.green,
-  },
+  sale: { label: { sw: "Mauzo", en: "Sales" }, color: COLORS.green },
   purchase: {
     label: { sw: "Ununuzi", en: "Purchase" },
     color: "#7C3AED",
@@ -109,23 +96,15 @@ const STATUS_META = {
   },
 };
 
-// ============================================================
-// HELPER — poll credits
-// ============================================================
-async function pollForCredit(
-  userId,
-  service,
-  { attempts = 8, intervalMs = 2000 } = {}
-) {
-  for (let i = 0; i < attempts; i++) {
-    const info = checkCredit(userId, service);
-    if (info.hasCredit) {
-      return { ok: true, remaining: info.remaining };
-    }
-    await new Promise((r) => setTimeout(r, intervalMs));
-  }
-  return { ok: false };
-}
+// ⬇️ Period options — kwa filter na download
+const PERIOD_OPTIONS = [
+  { key: "today", label: { sw: "Leo", en: "Today" }, days: 0 },
+  { key: "week", label: { sw: "Wiki Hii", en: "This Week" }, days: 7 },
+  { key: "two_weeks", label: { sw: "Wiki Mbili", en: "Two Weeks" }, days: 14 },
+  { key: "month", label: { sw: "Mwezi Huu", en: "This Month" }, days: 30 },
+  { key: "year", label: { sw: "Mwaka Huu", en: "This Year" }, days: 365 },
+  { key: "all", label: { sw: "Zote", en: "All Time" }, days: null },
+];
 
 // ============================================================
 // MAIN COMPONENT
@@ -138,28 +117,29 @@ export default function MyTransactionsPage() {
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fee flow state
-  const [showFeeFlow, setShowFeeFlow] = useState(false);
-  const [format, setFormat] = useState("pdf");
+  // Download flow
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState("pdf");
+  const [downloadPeriod, setDownloadPeriod] = useState("all");
   const [feeError, setFeeError] = useState("");
-
-  // Credits state
   const [downloading, setDownloading] = useState(false);
 
-  // ✅ FimiPay direct payment state
+  // Receipt download per transaction
+  const [receiptBusyId, setReceiptBusyId] = useState(null);
+
+  // Fee pay modal
   const [showFeePayModal, setShowFeePayModal] = useState(false);
-  const [feePayStage, setFeePayStage] = useState("select"); // "select" | "paying"
+  const [feePayStage, setFeePayStage] = useState("select");
   const [feePayError, setFeePayError] = useState("");
   const [feePayBusy, setFeePayBusy] = useState(false);
 
-  // Bundle flow state
+  // Bundle modal
   const [showBundleModal, setShowBundleModal] = useState(false);
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
   const [bundleError, setBundleError] = useState("");
   const [bundleLoading, setBundleLoading] = useState(false);
   const [bundleStage, setBundleStage] = useState("select");
 
-  // Config + status
   const successFee = useSuccessFeeConfig();
   const status = useSuccessFeeStatus();
 
@@ -167,21 +147,51 @@ export default function MyTransactionsPage() {
     if (!showBundleModal) setBundleStage("select");
   }, [showBundleModal]);
 
-  const successBundles = useActiveBundles().filter(
-    (b) => b.type === "success"
-  );
+  const successBundles = useActiveBundles().filter((b) => b.type === "success");
 
   const creditInfo = checkCredit(user?.id, "success");
   const hasCredit = creditInfo.hasCredit;
   const creditRemaining = creditInfo.remaining || 0;
 
-  // Fee inatoka `status` (fresh kutoka backend)
   const feeAmount = Number(status.fee) || 0;
   const requiresPayment = status.requires_payment;
   const isFree = status.is_free;
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  // ============================================================
+  // ✅ STEP 1: Chuja completed pekee (defensive)
+  // ============================================================
+  const completedTx = useMemo(
+    () => transactions.filter((tr) => tr.status === "completed"),
+    [transactions]
+  );
+
+  // ============================================================
+  // ✅ STEP 2: Period filter (kama filter ni period_*)
+  // ============================================================
+  const periodFilteredTx = useMemo(() => {
+    if (!filter.startsWith("period_")) return completedTx;
+
+    const periodKey = filter.replace("period_", "");
+    const option = PERIOD_OPTIONS.find((p) => p.key === periodKey);
+    if (!option || option.days === null) return completedTx;
+
+    if (option.days === 0) {
+      // Leo — kuanzia saa 12 usiku
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return completedTx.filter((tr) => new Date(tr.at) >= start);
+    }
+
+    const start = new Date();
+    start.setDate(start.getDate() - option.days);
+    return completedTx.filter((tr) => new Date(tr.at) >= start);
+  }, [completedTx, filter]);
+
+  // ============================================================
+  // ✅ STEP 3: Type filter + search
+  // ============================================================
   const filters = [
     { key: "all", label: lang === "sw" ? "Zote" : "All" },
     { key: "listing_fee", label: t("Ada ya Kuchapisha", "Listing Fee") },
@@ -191,48 +201,47 @@ export default function MyTransactionsPage() {
     { key: "reservation", label: t("Uhifadhi", "Reservation") },
     { key: "sale", label: t("Mauzo", "Sales") },
     { key: "bundle_purchase", label: t("Vifurushi", "Bundles") },
+    { key: "success_fee", label: t("Ada ya Mafanikio", "Success Fee") },
   ];
 
-  const filtered = transactions.filter((tr) => {
-    const matchesFilter = filter === "all" || tr.type === filter;
-    const matchesSearch =
-      !searchQuery ||
-      tr.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tr.ref?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  const filtered = useMemo(() => {
+    return periodFilteredTx.filter((tr) => {
+      const matchesFilter =
+        filter === "all" ||
+        filter.startsWith("period_") ||
+        tr.type === filter;
+      const matchesSearch =
+        !searchQuery ||
+        tr.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tr.ref?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+  }, [periodFilteredTx, filter, searchQuery]);
 
-  const totals = transactions.reduce(
-    (acc, tr) => {
-      if (tr.status === "completed") {
-        if (tr.type === "sale") acc.earned += tr.amount;
-        else acc.spent += tr.amount;
+  // ============================================================
+  // ✅ TOTALS — earned + spent (hakuna balance)
+  // ============================================================
+  const totals = useMemo(() => {
+    let earned = 0;
+    let spent = 0;
+    for (const tr of filtered) {
+      if (tr.type === "sale") {
+        earned += tr.amount || 0;
+      } else {
+        spent += tr.amount || 0;
       }
-      return acc;
-    },
-    { earned: 0, spent: 0 }
-  );
+    }
+    return { earned, spent };
+  }, [filtered]);
 
   // ============================================================
-  // DOWNLOAD FLOW
+  // ✅ RECEIPT DOWNLOAD — kwa kila muamala
   // ============================================================
-  const handleDownloadClick = async () => {
-    if (filtered.length === 0) return;
-    setFeeError("");
-    setBundleError("");
-    // Sasisha fee fresh kabla ya kuonyesha modal
-    await hydrateSuccessFeeStatusFromApi();
-    setShowFeeFlow(true);
-  };
-
-  // ── Download file kwa fetch + JWT ────────────────────────
-  const performDownload = async () => {
-    setDownloading(true);
-    setFeeError("");
+  const handleDownloadReceipt = async (tr) => {
+    setReceiptBusyId(tr.id);
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
-      const url = `${baseUrl}/finance/success-fee/download/?format=${format}`;
-
+      const url = `${baseUrl}/finance/transactions/${tr.id}/receipt/`;
       const token = getAccessToken();
 
       const response = await fetch(url, {
@@ -241,7 +250,56 @@ export default function MyTransactionsPage() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
-      // 204 = no transactions
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData?.detail ||
+            errorData?.message ||
+            t("Receipt imeshindikana kupakua.", "Failed to download receipt.")
+        );
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = `receipt_${tr.ref || tr.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      alert(err?.message || t("Imeshindikana.", "Failed."));
+    } finally {
+      setReceiptBusyId(null);
+    }
+  };
+
+  // ============================================================
+  // ✅ REPORT DOWNLOAD — pamoja na period param
+  // ============================================================
+  const handleDownloadClick = async () => {
+    if (filtered.length === 0) return;
+    setFeeError("");
+    setBundleError("");
+    await hydrateSuccessFeeStatusFromApi();
+    setShowDownloadModal(true);
+  };
+
+  const performDownload = async () => {
+    setDownloading(true);
+    setFeeError("");
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
+      const url = `${baseUrl}/finance/success-fee/download/?format=${downloadFormat}&period=${downloadPeriod}`;
+      const token = getAccessToken();
+
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "omit",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
       if (response.status === 204) {
         setFeeError(
           t("Hakuna miamala ya kupakua.", "No transactions to download.")
@@ -250,7 +308,6 @@ export default function MyTransactionsPage() {
         return;
       }
 
-      // 402 = payment required
       if (response.status === 402) {
         const errorData = await response.json().catch(() => ({}));
         setFeeError(
@@ -264,7 +321,6 @@ export default function MyTransactionsPage() {
         return;
       }
 
-      // 401 = session expired
       if (response.status === 401) {
         setFeeError(
           t(
@@ -276,7 +332,6 @@ export default function MyTransactionsPage() {
         return;
       }
 
-      // Error nyingine
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
@@ -286,19 +341,20 @@ export default function MyTransactionsPage() {
         );
       }
 
-      // Blob → download
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;
-      const ext = format === "doc" ? "docx" : format;
-      a.download = `miamala_${new Date().toISOString().slice(0, 10)}.${ext}`;
+      const ext = downloadFormat === "doc" ? "docx" : downloadFormat;
+      a.download = `miamala_${downloadPeriod}_${new Date()
+        .toISOString()
+        .slice(0, 10)}.${ext}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(downloadUrl);
 
-      setShowFeeFlow(false);
+      setShowDownloadModal(false);
       setShowBundleModal(false);
       setShowFeePayModal(false);
       setPendingBundlePurchase(null);
@@ -324,14 +380,12 @@ export default function MyTransactionsPage() {
       handleCreditDownload();
       return;
     }
-    // ✅ FimiPay direct payment
-    setShowFeeFlow(false);
+    setShowDownloadModal(false);
     setFeePayStage("select");
     setFeePayError("");
     setShowFeePayModal(true);
   };
 
-  // ── Credit download ──────────────────────────────────────
   const handleCreditDownload = async () => {
     setDownloading(true);
     setFeeError("");
@@ -368,7 +422,9 @@ export default function MyTransactionsPage() {
         if (fimipay?.order_id) {
           sessionStorage.setItem("pending_order_id", String(fimipay.order_id));
         }
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
       return {
         ok: true,
         orderId: fimipay.order_id || null,
@@ -385,12 +441,10 @@ export default function MyTransactionsPage() {
     setFeePayBusy(true);
     setFeePayError("");
     try {
-      // Poll kama webhook imefika
       for (let i = 0; i < 10; i++) {
         await new Promise((r) => setTimeout(r, 2000));
         await hydrateSuccessFeeStatusFromApi();
         const fresh = getSuccessFeeStatus();
-        // Kama bado requires_payment, endelea kusubiri
         if (!fresh.requires_payment) break;
       }
       await performDownload();
@@ -409,7 +463,7 @@ export default function MyTransactionsPage() {
   };
 
   // ============================================================
-  // BUNDLE FLOW — purchase bundle kisha download
+  // BUNDLE FLOW
   // ============================================================
   const handleBundlePurchaseInitiate = async ({ methodKey, phone } = {}) => {
     if (!pendingBundlePurchase) {
@@ -420,19 +474,14 @@ export default function MyTransactionsPage() {
         bundle: pendingBundlePurchase.id,
       });
       const purchaseId =
-        purchase?.id ||
-        purchase?.purchase_id ||
-        purchase?.purchaseId;
+        purchase?.id || purchase?.purchase_id || purchase?.purchaseId;
       if (!purchaseId) {
         throw new Error("Backend did not return purchase id.");
       }
-      const paid = await api.post(
-        `/bundles/purchases/${purchaseId}/pay/`,
-        {
-          payment_method: methodKey || "",
-          phone: phone || "",
-        }
-      );
+      const paid = await api.post(`/bundles/purchases/${purchaseId}/pay/`, {
+        payment_method: methodKey || "",
+        phone: phone || "",
+      });
       const fimipay = paid?.fimipay || paid?.data?.fimipay || {};
       return {
         ok: true,
@@ -443,24 +492,33 @@ export default function MyTransactionsPage() {
       };
     } catch (err) {
       setBundleError(
-        err?.message ||
-          t("Malipo yameshindikana.", "Payment failed.")
+        err?.message || t("Malipo yameshindikana.", "Payment failed.")
       );
       return { ok: false, error: err };
     }
   };
 
-  // Poll kwa credits kabla ya kutuma download
+  async function pollForCredit(
+    userId,
+    service,
+    { attempts = 8, intervalMs = 2000 } = {}
+  ) {
+    for (let i = 0; i < attempts; i++) {
+      const info = checkCredit(userId, service);
+      if (info.hasCredit) return { ok: true, remaining: info.remaining };
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
+    return { ok: false };
+  }
+
   const handleBundleSuccess = async () => {
     setBundleLoading(true);
     setBundleError("");
     try {
-      // Subiri webhook iingize credits
       const pollRes = await pollForCredit(user?.id, "success", {
         attempts: 10,
         intervalMs: 2000,
       });
-
       if (!pollRes.ok) {
         setBundleError(
           t(
@@ -471,8 +529,6 @@ export default function MyTransactionsPage() {
         setBundleLoading(false);
         return;
       }
-
-      // Sasa tumia credit
       const res = await consumeCreditAsync(user?.id, "success");
       if (res.success || res.ok) {
         await performDownload();
@@ -505,8 +561,8 @@ export default function MyTransactionsPage() {
           </div>
           <p className="text-xs sm:text-sm text-secondary">
             {t(
-              "Fuatilia malipo yote, mafanikio, na miamala yako.",
-              "Track all your payments, earnings, and transactions."
+              "Fuatilia malipo yote yaliyokamilika, mafanikio, na miamala yako.",
+              "Track all your completed payments, earnings, and transactions."
             )}
           </p>
         </div>
@@ -515,10 +571,8 @@ export default function MyTransactionsPage() {
           onClick={handleDownloadClick}
           disabled={filtered.length === 0}
           style={{
-            background:
-              filtered.length > 0 ? COLORS.gold : COLORS.sandLine,
-            color:
-              filtered.length > 0 ? COLORS.night : "var(--text-muted)",
+            background: filtered.length > 0 ? COLORS.gold : COLORS.sandLine,
+            color: filtered.length > 0 ? COLORS.night : "var(--text-muted)",
           }}
           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 disabled:cursor-not-allowed"
         >
@@ -527,8 +581,8 @@ export default function MyTransactionsPage() {
         </button>
       </div>
 
-      {/* ── Stats grid ───────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
+      {/* ── Stats grid — 3 cards (bila balance) ──────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="rounded-xl border p-3 sm:p-4"
@@ -540,7 +594,7 @@ export default function MyTransactionsPage() {
             style={{ color: "var(--text-primary)" }}
             className="text-lg font-bold mt-1"
           >
-            {transactions.length}
+            {filtered.length}
           </p>
         </div>
 
@@ -548,7 +602,8 @@ export default function MyTransactionsPage() {
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="rounded-xl border p-3 sm:p-4"
         >
-          <p className="text-[10px] font-semibold text-secondary uppercase">
+          <p className="text-[10px] font-semibold text-secondary uppercase flex items-center gap-1">
+            <TrendingDown size={10} color={COLORS.rust} />
             {t("Umetumia", "Spent")}
           </p>
           <p
@@ -563,7 +618,8 @@ export default function MyTransactionsPage() {
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="rounded-xl border p-3 sm:p-4"
         >
-          <p className="text-[10px] font-semibold text-secondary uppercase">
+          <p className="text-[10px] font-semibold text-secondary uppercase flex items-center gap-1">
+            <TrendingUp size={10} color={COLORS.green} />
             {t("Umepata", "Earned")}
           </p>
           <p
@@ -592,7 +648,30 @@ export default function MyTransactionsPage() {
         </div>
       </div>
 
-      {/* ── Filters ──────────────────────────────────────── */}
+      {/* ── Period filters ───────────────────────────────── */}
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
+        {PERIOD_OPTIONS.map((p) => {
+          const key = p.key === "all" ? "all" : `period_${p.key}`;
+          const isActive = filter === key;
+          return (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              style={{
+                background: isActive ? COLORS.gold : "white",
+                color: isActive ? COLORS.night : "var(--text-primary)",
+                borderColor: COLORS.sandLine,
+              }}
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
+            >
+              <Calendar size={11} />
+              {p.label[lang]}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Type filters ─────────────────────────────────── */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
         {filters.map((f) => (
           <button
@@ -600,8 +679,7 @@ export default function MyTransactionsPage() {
             onClick={() => setFilter(f.key)}
             style={{
               background: filter === f.key ? COLORS.night : "white",
-              color:
-                filter === f.key ? COLORS.sand : "var(--text-primary)",
+              color: filter === f.key ? COLORS.sand : "var(--text-primary)",
               borderColor: COLORS.sandLine,
             }}
             className="text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
@@ -619,12 +697,12 @@ export default function MyTransactionsPage() {
         >
           <Receipt size={40} className="mx-auto text-muted mb-3" />
           <p className="text-sm font-semibold text-primary mb-1">
-            {t("Hakuna miamala", "No transactions")}
+            {t("Hakuna miamala iliyokamilika", "No completed transactions")}
           </p>
           <p className="text-xs text-secondary">
             {t(
-              "Miamala yako itaonekana hapa.",
-              "Your transactions will appear here."
+              "Miamala iliyokamilika itaonekana hapa.",
+              "Completed transactions will appear here."
             )}
           </p>
         </div>
@@ -635,8 +713,9 @@ export default function MyTransactionsPage() {
               label: { sw: tr.type, en: tr.type },
               color: COLORS.night,
             };
-            const stMeta = STATUS_META[tr.status] || STATUS_META.pending;
+            const stMeta = STATUS_META[tr.status] || STATUS_META.completed;
             const StatusIcon = stMeta.Icon;
+            const isReceiptBusy = receiptBusyId === tr.id;
 
             return (
               <div
@@ -687,17 +766,34 @@ export default function MyTransactionsPage() {
                   </p>
                 </div>
 
-                <div className="text-right shrink-0">
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <p
                     style={{
-                      color:
-                        tr.type === "sale" ? COLORS.green : COLORS.rust,
+                      color: tr.type === "sale" ? COLORS.green : COLORS.rust,
                     }}
                     className="text-sm font-bold"
                   >
                     {tr.type === "sale" ? "+" : "−"}
                     {formatTZS(tr.amount)}
                   </p>
+
+                  <button
+                    onClick={() => handleDownloadReceipt(tr)}
+                    disabled={isReceiptBusy}
+                    style={{
+                      borderColor: COLORS.sandLine,
+                      color: "#8A5A16",
+                    }}
+                    className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg border hover:bg-amber-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={t("Pakua Risiti", "Download Receipt")}
+                  >
+                    {isReceiptBusy ? (
+                      <Loader2 size={10} className="animate-spin" />
+                    ) : (
+                      <FileText size={10} />
+                    )}
+                    {t("Risiti", "Receipt")}
+                  </button>
                 </div>
               </div>
             );
@@ -706,11 +802,11 @@ export default function MyTransactionsPage() {
       )}
 
       {/* ============================================================ */}
-      {/* FORMAT SELECTOR MODAL */}
+      {/* DOWNLOAD REPORT MODAL — format + period */}
       {/* ============================================================ */}
-      {showFeeFlow && (
+      {showDownloadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-3 mb-4">
               <div className="min-w-0">
                 <h3 className="text-base font-bold text-primary">
@@ -719,8 +815,8 @@ export default function MyTransactionsPage() {
                 <p className="text-xs text-secondary mt-0.5">
                   {isFree
                     ? t(
-                        "Chagua format. Download ni bure.",
-                        "Choose format. Download is free."
+                        "Chagua format na kipindi. Download ni bure.",
+                        "Choose format and period. Download is free."
                       )
                     : t(
                         "Lipa ada ndogo ili kupakua ripoti ya miamala yako.",
@@ -729,40 +825,75 @@ export default function MyTransactionsPage() {
                 </p>
               </div>
               <button
-                onClick={() => setShowFeeFlow(false)}
+                onClick={() => setShowDownloadModal(false)}
                 className="p-1 text-muted hover:text-secondary shrink-0"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Format selector */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              {[
-                { key: "pdf", Icon: FileText, label: "PDF" },
-                { key: "csv", Icon: FileSpreadsheet, label: "CSV" },
-                { key: "doc", Icon: File, label: "DOC" },
-              ].map(({ key, Icon, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setFormat(key)}
-                  style={{
-                    borderColor:
-                      format === key ? COLORS.gold : COLORS.sandLine,
-                    background:
-                      format === key ? `${COLORS.gold}15` : "white",
-                    color:
-                      format === key ? "#8A5A16" : "var(--text-primary)",
-                  }}
-                  className="flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-colors"
-                >
-                  <Icon size={20} />
-                  <span className="text-xs font-semibold">{label}</span>
-                </button>
-              ))}
+            {/* Format */}
+            <div className="mb-4">
+              <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
+                {t("Format", "Format")}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { key: "pdf", Icon: FileText, label: "PDF" },
+                  { key: "csv", Icon: FileSpreadsheet, label: "CSV" },
+                  { key: "doc", Icon: File, label: "DOC" },
+                ].map(({ key, Icon, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setDownloadFormat(key)}
+                    style={{
+                      borderColor:
+                        downloadFormat === key
+                          ? COLORS.gold
+                          : COLORS.sandLine,
+                      background:
+                        downloadFormat === key ? `${COLORS.gold}15` : "white",
+                      color:
+                        downloadFormat === key
+                          ? "#8A5A16"
+                          : "var(--text-primary)",
+                    }}
+                    className="flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-colors"
+                  >
+                    <Icon size={20} />
+                    <span className="text-xs font-semibold">{label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Fee summary */}
+            {/* Period */}
+            <div className="mb-4">
+              <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
+                {t("Kipindi", "Period")}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {PERIOD_OPTIONS.map((p) => {
+                  const isActive = downloadPeriod === p.key;
+                  return (
+                    <button
+                      key={p.key}
+                      onClick={() => setDownloadPeriod(p.key)}
+                      style={{
+                        borderColor: isActive ? COLORS.gold : COLORS.sandLine,
+                        background: isActive ? `${COLORS.gold}15` : "white",
+                        color: isActive ? "#8A5A16" : "var(--text-primary)",
+                      }}
+                      className="text-xs font-semibold py-2 rounded-lg border-2 transition-colors"
+                    >
+                      {p.label[lang]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Fee */}
             {!isFree && (
               <div
                 style={{
@@ -797,7 +928,6 @@ export default function MyTransactionsPage() {
               </div>
             )}
 
-            {/* Error */}
             {feeError && (
               <div
                 style={{
@@ -810,11 +940,10 @@ export default function MyTransactionsPage() {
               </div>
             )}
 
-            {/* Actions */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowFeeFlow(false)}
+                  onClick={() => setShowDownloadModal(false)}
                   disabled={downloading}
                   className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
                 >
@@ -856,11 +985,10 @@ export default function MyTransactionsPage() {
                 </button>
               </div>
 
-              {/* ✅ Option ya pili: Nunua kifurushi */}
               {!isFree && !hasCredit && (
                 <button
                   onClick={() => {
-                    setShowFeeFlow(false);
+                    setShowDownloadModal(false);
                     setShowBundleModal(true);
                   }}
                   disabled={downloading}
@@ -913,10 +1041,7 @@ export default function MyTransactionsPage() {
                       {t("Lipa Ada ya Mafanikio", "Pay Success Fee")}
                     </h3>
                     <p className="text-xs text-secondary mt-0.5">
-                      {t(
-                        "Chagua njia ya malipo.",
-                        "Choose payment method."
-                      )}
+                      {t("Chagua njia ya malipo.", "Choose payment method.")}
                     </p>
                   </div>
                   <button
@@ -1017,7 +1142,6 @@ export default function MyTransactionsPage() {
                   </button>
                 </div>
 
-                {/* Bundles list */}
                 <div className="flex flex-col gap-2 mb-4">
                   {successBundles.map((b) => {
                     const bundleName =
@@ -1049,8 +1173,7 @@ export default function MyTransactionsPage() {
                             {bundleName}
                           </p>
                           <p className="text-[11px] text-secondary">
-                            {b.credits?.success || 1}{" "}
-                            {t("credits", "credits")}
+                            {b.credits?.success || 1} {t("credits", "credits")}
                           </p>
                         </div>
                         <div className="text-right shrink-0">
