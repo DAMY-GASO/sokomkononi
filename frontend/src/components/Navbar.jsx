@@ -1,9 +1,17 @@
 // ============================================================
-// Navbar.jsx — clean rewrite
+// Navbar.jsx — clean rewrite (fixed)
 //
 // Dropdowns use a SINGLE state variable `openMenu` that holds the
 // name of the currently-open dropdown, or null. Only one can ever
 // be open. Outside-click, route change, and Escape all close it.
+//
+// FIXES:
+//  - whitespace-nowrap on all nav links (Kiswahili haivunji UI)
+//  - flex-shrink-0 on right side, min-w-0 on left side
+//  - Reduced nav gap (gap-4 lg:gap-6)
+//  - Removed broken Ads dropdown (New/Deal/Verified/Urgent) —
+//    replaced with simple /tafuta link
+//  - Shortened "Ingia/Jisajili" → "Ingia"
 // ============================================================
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -32,7 +40,7 @@ function NotificationBell() {
   return (
     <Link
       to={target}
-      className="relative text-white/60 hover:text-white p-1.5 transition-colors"
+      className="relative text-white/60 hover:text-white p-1.5 transition-colors flex-shrink-0"
       aria-label="Notifications"
     >
       <Bell size={20} />
@@ -68,7 +76,7 @@ export default function Navbar({
 
   // ═══════════════════════════════════════════════════════════
   // SINGLE dropdown state — only one can ever be open.
-  // Value is one of: "lang" | "cat" | "ads" | "help" | "user" | null
+  // Value is one of: "lang" | "cat" | "help" | "user" | null
   // ═══════════════════════════════════════════════════════════
   const [openMenu, setOpenMenu] = useState(null);
   const navRef = useRef(null);
@@ -79,7 +87,7 @@ export default function Navbar({
 
   // Mobile drawer is a separate overlay — not a dropdown
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [mobileSub, setMobileSub] = useState(null); // "cat" | "ads" | "help" | null
+  const [mobileSub, setMobileSub] = useState(null); // "cat" | "help" | null
 
   // Search
   const [searchOpen, setSearchOpen] = useState(false);
@@ -133,14 +141,8 @@ export default function Navbar({
   }, [drawerOpen]);
 
   // ── Menu definitions ──────────────────────────────────────
-  const adMenuItems = [
-    { label: { sw: "Matangazo Mapya", en: "New Ads" }, link: "/tafuta?tafuta=mpya" },
-    { label: { sw: "Matangazo ya Ofa", en: "Deal Ads" }, link: "/tafuta?tafuta=ofa" },
-    { label: { sw: "Matangazo Yaliyothibitishwa", en: "Verified Ads" }, link: "/tafuta?tafuta=verified" },
-    { label: { sw: "Matangazo ya Haraka", en: "Urgent Ads" }, link: "/tafuta?tafuta=haraka" },
-    { label: { sw: "Matangazo Yote", en: "All Ads" }, link: "/tafuta" },
-  ];
-
+  // NOTE: Ads dropdown removed — /tafuta?tafuta=... filters weren't
+  // returning anything, so Ads is now a simple link to /tafuta.
   const helpMenuItems = [
     { label: { sw: "Jinsi ya Kununua", en: "How to Buy" }, link: "/jinsi-ya-kununua" },
     { label: { sw: "Jinsi ya Kuuza", en: "How to Sell" }, link: "/jinsi-ya-kununua#kuuza" },
@@ -209,12 +211,12 @@ export default function Navbar({
         ref={navRef}
         className="bg-night text-white border-b border-white/10 sticky top-0 z-50"
       >
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-3">
           {/* Left: Hamburger + Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
             <button
               onClick={() => setDrawerOpen(true)}
-              className="md:hidden text-white p-1 hover:bg-white/10 rounded-lg transition-colors"
+              className="md:hidden text-white p-1 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
               aria-label="Open menu"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -224,18 +226,18 @@ export default function Navbar({
             <Link
               to="/"
               onClick={handleLogoClick}
-              className="flex items-center gap-2 select-none"
+              className="flex items-center gap-2 select-none min-w-0"
             >
-              <img src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full" />
-              <span className="font-bold text-base sm:text-lg tracking-tight">SokoMkononi</span>
+              <img src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full flex-shrink-0" />
+              <span className="font-bold text-base sm:text-lg tracking-tight truncate">SokoMkononi</span>
             </Link>
           </div>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
+          <nav className="hidden md:flex items-center gap-3 lg:gap-5 min-w-0">
             <Link
               to="/"
-              className="text-white/70 hover:text-white text-sm font-medium transition-colors"
+              className="text-white/70 hover:text-white text-sm font-medium transition-colors whitespace-nowrap"
             >
               {lang === "sw" ? "Nyumbani" : "Home"}
             </Link>
@@ -246,7 +248,7 @@ export default function Navbar({
                 type="button"
                 onClick={() => toggleMenu("cat")}
                 aria-expanded={openMenu === "cat"}
-                className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
+                className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors whitespace-nowrap"
               >
                 {lang === "sw" ? "Kategoria" : "Categories"}
                 <Chev open={openMenu === "cat"} />
@@ -285,76 +287,31 @@ export default function Navbar({
 
             {/* Trust links or defaults */}
             {trustLinks.length > 0 ? (
-              trustLinks.map((l) => {
-                if (l.to === "/usalama") {
-                  return (
-                    <div key={l.to} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => toggleMenu("ads")}
-                        aria-expanded={openMenu === "ads"}
-                        className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
-                      >
-                        {lang === "sw" ? "Matangazo" : "Ads"}
-                        <Chev open={openMenu === "ads"} />
-                      </button>
-                      {openMenu === "ads" && (
-                        <div className="absolute left-0 mt-2 w-64 bg-night-soft border border-white/10 rounded-lg shadow-xl py-2 z-50">
-                          {adMenuItems.map((item) => (
-                            <Link
-                              key={item.link}
-                              to={item.link}
-                              className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
-                            >
-                              {lang === "sw" ? item.label.sw : item.label.en}
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-                return (
-                  <Link
-                    key={l.to}
-                    to={l.to}
-                    className="text-white/70 hover:text-white text-sm font-medium transition-colors"
-                  >
-                    {lang === "sw" ? l.label.sw : l.label.en}
-                  </Link>
-                );
-              })
+              trustLinks.map((l) => (
+                <Link
+                  key={l.to}
+                  to={l.to}
+                  className="text-white/70 hover:text-white text-sm font-medium transition-colors whitespace-nowrap"
+                >
+                  {lang === "sw" ? l.label.sw : l.label.en}
+                </Link>
+              ))
             ) : (
               <>
-                <Link to="/kuhusu" className="text-white/70 hover:text-white text-sm font-medium transition-colors">
+                <Link
+                  to="/kuhusu"
+                  className="text-white/70 hover:text-white text-sm font-medium transition-colors whitespace-nowrap"
+                >
                   {lang === "sw" ? "Kuhusu Sisi" : "About Us"}
                 </Link>
 
-                {/* Ads */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => toggleMenu("ads")}
-                    aria-expanded={openMenu === "ads"}
-                    className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
-                  >
-                    {lang === "sw" ? "Matangazo" : "Ads"}
-                    <Chev open={openMenu === "ads"} />
-                  </button>
-                  {openMenu === "ads" && (
-                    <div className="absolute left-0 mt-2 w-64 bg-night-soft border border-white/10 rounded-lg shadow-xl py-2 z-50">
-                      {adMenuItems.map((item) => (
-                        <Link
-                          key={item.link}
-                          to={item.link}
-                          className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
-                        >
-                          {lang === "sw" ? item.label.sw : item.label.en}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {/* Ads — simple link (dropdown removed) */}
+                <Link
+                  to="/tafuta"
+                  className="text-white/70 hover:text-white text-sm font-medium transition-colors whitespace-nowrap"
+                >
+                  {lang === "sw" ? "Matangazo" : "Ads"}
+                </Link>
 
                 {/* Help */}
                 <div className="relative">
@@ -362,7 +319,7 @@ export default function Navbar({
                     type="button"
                     onClick={() => toggleMenu("help")}
                     aria-expanded={openMenu === "help"}
-                    className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
+                    className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors whitespace-nowrap"
                   >
                     {lang === "sw" ? "Msaada" : "Help"}
                     <Chev open={openMenu === "help"} />
@@ -386,15 +343,15 @@ export default function Navbar({
           </nav>
 
           {/* Right: search + lang + bell + user */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
             {/* Search - desktop */}
-            <form onSubmit={handleSearchSubmit} className="relative hidden sm:block">
+            <form onSubmit={handleSearchSubmit} className="relative hidden lg:block">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={lang === "sw" ? "Tafuta mali..." : "Search properties..."}
-                className="bg-white/10 border border-white/15 rounded-md pl-3 pr-9 py-1.5 text-white text-sm placeholder-white/40 focus:outline-none focus:border-gold w-40 lg:w-56"
+                className="bg-white/10 border border-white/15 rounded-md pl-3 pr-9 py-1.5 text-white text-sm placeholder-white/40 focus:outline-none focus:border-gold w-40 xl:w-56"
               />
               <button
                 type="submit"
@@ -408,10 +365,10 @@ export default function Navbar({
               </button>
             </form>
 
-            {/* Search icon - mobile */}
+            {/* Search icon - below lg */}
             <button
               onClick={() => setSearchOpen((v) => !v)}
-              className="sm:hidden text-white/60 hover:text-white p-1.5 transition-colors"
+              className="lg:hidden text-white/60 hover:text-white p-1.5 transition-colors"
               aria-label="Search"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -426,7 +383,7 @@ export default function Navbar({
                 type="button"
                 onClick={() => toggleMenu("lang")}
                 aria-expanded={openMenu === "lang"}
-                className="text-white/60 hover:text-white text-sm font-medium border border-white/15 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
+                className="text-white/60 hover:text-white text-sm font-medium border border-white/15 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1 whitespace-nowrap"
               >
                 <span className="hidden sm:inline">{currentLang?.native || "Kiswahili"}</span>
                 <span className="sm:hidden">{currentLang?.code?.toUpperCase() || "SW"}</span>
@@ -524,9 +481,9 @@ export default function Navbar({
             ) : (
               <Link
                 to="/login"
-                className="bg-gold hover:bg-flame text-night font-semibold text-sm px-4 py-2 rounded-md transition-colors whitespace-nowrap"
+                className="bg-gold hover:bg-flame text-night font-semibold text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-md transition-colors whitespace-nowrap"
               >
-                {lang === "sw" ? "Ingia/Jisajili" : "Login/Register"}
+                {lang === "sw" ? "Ingia" : "Login"}
               </Link>
             )}
           </div>
@@ -534,7 +491,7 @@ export default function Navbar({
 
         {/* Mobile search bar */}
         {searchOpen && (
-          <div className="sm:hidden bg-night border-t border-white/10 px-4 py-3">
+          <div className="lg:hidden bg-night border-t border-white/10 px-3 sm:px-4 py-3">
             <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
               <div className="relative flex-1">
                 <input
@@ -650,33 +607,14 @@ export default function Navbar({
 
             <div className="my-2 border-t border-white/10" />
 
-            {/* Ads sub */}
-            <button
-              type="button"
-              onClick={() => setMobileSub((v) => (v === "ads" ? null : "ads"))}
-              aria-expanded={mobileSub === "ads"}
-              className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
+            {/* Ads — simple link (dropdown removed) */}
+            <Link
+              to="/tafuta"
+              onClick={() => setDrawerOpen(false)}
+              className="text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
             >
-              <span>{lang === "sw" ? "Matangazo" : "Ads"}</span>
-              <Chev open={mobileSub === "ads"} />
-            </button>
-            <div
-              className={`grid transition-all duration-300 ${mobileSub === "ads" ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-              style={{ display: "grid" }}
-            >
-              <div className="overflow-hidden pl-2">
-                {adMenuItems.map((item) => (
-                  <Link
-                    key={item.link}
-                    to={item.link}
-                    onClick={() => setDrawerOpen(false)}
-                    className="block text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
-                  >
-                    {lang === "sw" ? item.label.sw : item.label.en}
-                  </Link>
-                ))}
-              </div>
-            </div>
+              {lang === "sw" ? "Matangazo" : "Ads"}
+            </Link>
 
             <Link
               to="/kuhusu"

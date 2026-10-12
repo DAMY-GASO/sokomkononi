@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { COLORS } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-// ⬇️ MABADILIKO: useAuth kutoka authStore
 import { useAuth } from "../../../config/authStore.js";
 import { useMyListings, useUnpaidListings } from "../../../config/listingsStore.js";
 import { useDeals } from "../../../config/dealsStore.js";
@@ -127,7 +126,7 @@ export default function SellerOverview({ onNavigate }) {
         </h1>
         <p className="text-body-sm text-secondary mt-2 max-w-xl mx-auto">
           {t(
-            "Hii ni muhtasari wa mali zako, maulizio, na deals.",
+            "Hii ni muhtasari wa mali zako, maulizio, na makubaliano.",
             "Here's a summary of your listings, enquiries, and deals."
           )}
         </p>

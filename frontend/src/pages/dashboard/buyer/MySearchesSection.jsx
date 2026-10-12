@@ -64,7 +64,7 @@ export default function MySearchesSection() {
     detectSearchAlertsAsync().catch(() => {});
   }, []);
 
-  // Match counts kwa kila search
+  
   const searchesWithCounts = useMemo(
     () =>
       searches.map((s) => ({
@@ -97,7 +97,7 @@ export default function MySearchesSection() {
             ? "Imeshindwa kuhifadhi utafutaji. Jaribu tena."
             : "Failed to save search. Try again.")
       );
-      return; // do NOT clear the form on failure
+      return; 
     }
     setForm({
       name: "",

@@ -18,9 +18,6 @@ import { COLORS, timeAgo } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import {
   useLeads,
-  // ⬇️ MABADILIKO: Tumia async variants badala ya sync
-  // markLeadResponded,  ❌ ONDOA
-  // removeLead,         ❌ ONDOA
   markLeadRespondedAsync,
   removeLeadAsync,
 } from "../../../config/leadsStore.js";
@@ -29,8 +26,7 @@ export default function LeadsSection({ onNavigate }) {
   const { lang } = useLanguage();
   const leads = useLeads();
   const [filter, setFilter] = useState("all");
-  // ⬇️ MPYA: Busy state kuzuia double-click
-  const [busy, setBusy] = useState({}); // { [leadId]: "respond" | "remove" }
+  const [busy, setBusy] = useState({});
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -105,7 +101,6 @@ export default function LeadsSection({ onNavigate }) {
     });
 
     if (!res.ok) {
-      // TODO: badilisha na toast/notify yako
       console.warn("[LeadsSection] respond failed:", res.error);
       alert(
         res.error?.message ||
@@ -148,7 +143,7 @@ export default function LeadsSection({ onNavigate }) {
         {/* ============================================================ */}
         <div className="mb-6 text-center">
           <h1 className="h-title">
-            {t("Maulizio (Leads)", "Enquiries (Leads)")}
+            {t("Maulizio", "Enquiries")}
           </h1>
           <p className="text-secondary text-body-sm mt-2 max-w-xl mx-auto">
             {t(
@@ -248,7 +243,7 @@ export default function LeadsSection({ onNavigate }) {
                             }}
                             className="text-body-sm font-bold px-2 py-0.5 rounded-full shrink-0"
                           >
-                            {t("Kutoka Deal Room", "From Deal Room")}
+                            {t("Kutoka chumba cha makubaliano", "From Deal Room")}
                           </span>
                         )}
                       </div>
