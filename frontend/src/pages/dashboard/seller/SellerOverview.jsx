@@ -18,6 +18,8 @@ import {
   Inbox,
   ArrowRight,
   X,
+  Shield,
+  MessageSquarePlus,
 } from "lucide-react";
 import { COLORS } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -78,6 +80,8 @@ export default function SellerOverview({ onNavigate }) {
 
   // ============================================================
   // QUICK ACTIONS — bilingual kamili
+  // NOTE: "support" inapeleka "safety" (SafetySupportSection side=seller)
+  //       "feedback" inapeleka "feedback" (SellerFeedback)
   // ============================================================
   const quickActions = [
     {
@@ -105,10 +109,16 @@ export default function SellerOverview({ onNavigate }) {
       color: COLORS.rust,
     },
     {
-      key: "support",
+      key: "safety",
       label: t("Msaada", "Support"),
-      icon: Inbox,
+      icon: Shield,
       color: "#2563EB",
+    },
+    {
+      key: "feedback",
+      label: t("Maoni", "Feedback"),
+      icon: MessageSquarePlus,
+      color: COLORS.green,
     },
   ];
 
@@ -255,7 +265,7 @@ export default function SellerOverview({ onNavigate }) {
         <h2 className="h-card mb-4 text-center">
           {t("Vitendo vya Haraka", "Quick Actions")}
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
           {quickActions.map(({ key, label, icon: Icon, color }) => (
             <button
               key={key}
@@ -268,7 +278,7 @@ export default function SellerOverview({ onNavigate }) {
               >
                 <Icon size={18} color={color} />
               </div>
-              <span className="text-body-sm font-semibold text-secondary text-center">
+              <span className="text-body-sm font-semibold text-secondary text-center leading-tight">
                 {label}
               </span>
             </button>
@@ -277,9 +287,7 @@ export default function SellerOverview({ onNavigate }) {
       </div>
 
       {/* ============================================================
-          RECENT ACTIVITY — component yake ndani inaweza kuwa
-          na headers zake. Kama unataka ziwe centered pia,
-          niambie nirekebishe RecentActivity.jsx.
+          RECENT ACTIVITY
           ============================================================ */}
       <RecentActivity onNavigate={onNavigate} side="seller" />
     </div>

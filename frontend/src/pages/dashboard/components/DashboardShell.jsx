@@ -3,6 +3,9 @@
 // Seller/Buyer dashboard shell. Inaruhusu admin KUPITA tu kama
 // guard ya kuzuia admin kuingia dashboard za watumiaji.
 // Admin ana dashboard yake (/smk-control-9x7k).
+//
+// SASISHO: "saved" (Matangazo Yaliyohifadhiwa) imeondolewa kwa
+// seller — ni kipengele cha buyer pekee.
 // ============================================================
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -99,14 +102,13 @@ import {
 import PageLoader from "../../../components/PageLoader.jsx";
 
 // ============================================================
-// SELLER NAV
+// SELLER NAV — "saved" imeondolewa (ni kipengele cha buyer)
 // ============================================================
 const SELLER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
   { key: "post", label: { sw: "Weka Tangazo", en: "Post Listing" }, icon: PlusCircle },
   { key: "listings", label: { sw: "Mali Zangu", en: "My Listings" }, icon: ListChecks },
   { key: "leads", label: { sw: "Maulizio", en: "Enquiries" }, icon: Inbox },
-  { key: "saved", label: { sw: "Matangazo Yaliyohifadhiwa", en: "Saved Listings" }, icon: Heart },
   { key: "boost", label: { sw: "Boost Sasa", en: "Boost Now" }, icon: Rocket },
   { key: "leading", label: { sw: "Nunua Leads", en: "Buy Leads" }, icon: TrendingUp },
   { key: "advertise", label: { sw: "Tangaza Sasa", en: "Advertise Now" }, icon: Megaphone },
@@ -121,7 +123,7 @@ const SELLER_NAV = [
 ];
 
 // ============================================================
-// BUYER NAV
+// BUYER NAV — "saved" inabaki hapa
 // ============================================================
 const BUYER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
@@ -139,6 +141,11 @@ const BUYER_NAV = [
   { key: "feedback", label: { sw: "Maoni Yangu", en: "My Feedback" }, icon: MessageSquarePlus },
 ];
 
+// ============================================================
+// URL ↔ STATE MAPS
+// NOTE: "/dashboard/saved" (seller) imeondolewa.
+//       "/dashboard/buyer/saved" (buyer) inabaki.
+// ============================================================
 const URL_TO_STATE = {
   "/dashboard": { side: "seller", key: "overview" },
   "/dashboard/seller": { side: "seller", key: "overview" },
@@ -146,7 +153,6 @@ const URL_TO_STATE = {
   "/dashboard/post": { side: "seller", key: "post" },
   "/dashboard/listings": { side: "seller", key: "listings" },
   "/dashboard/leads": { side: "seller", key: "leads" },
-  "/dashboard/saved": { side: "seller", key: "saved" },
   "/dashboard/boost": { side: "seller", key: "boost" },
   "/dashboard/leading": { side: "seller", key: "leading" },
   "/dashboard/advertise": { side: "seller", key: "advertise" },
@@ -184,7 +190,6 @@ const STATE_TO_URL = {
     post: "/dashboard/post",
     listings: "/dashboard/listings",
     leads: "/dashboard/leads",
-    saved: "/dashboard/saved",
     boost: "/dashboard/boost",
     leading: "/dashboard/leading",
     advertise: "/dashboard/advertise",
@@ -1009,22 +1014,21 @@ export default function DashboardShell() {
         </button>
       </div>
 
-    
       {/* ANNOUNCEMENT TICKER */}
-     {announcements.length > 0 && (
-   <div
-     style={{ background: COLORS.sandLine, color: COLORS.night }}
-     className="w-full flex items-center gap-2 px-4 py-1.5 text-body-sm sm:text-sm"
-   >
-    <Megaphone size={14} color={COLORS.rust} className="shrink-0" />
-      <span className="truncate">
-        {getAnnouncementMessage(
-        announcements[tickerIndex % announcements.length],
-        lang
-        )}
-       </span>
-      </div>
-    )}
+      {announcements.length > 0 && (
+        <div
+          style={{ background: COLORS.sandLine, color: COLORS.night }}
+          className="w-full flex items-center gap-2 px-4 py-1.5 text-body-sm sm:text-sm"
+        >
+          <Megaphone size={14} color={COLORS.rust} className="shrink-0" />
+          <span className="truncate">
+            {getAnnouncementMessage(
+              announcements[tickerIndex % announcements.length],
+              lang
+            )}
+          </span>
+        </div>
+      )}
 
       <PromotedBannerStrip onOpenListing={goToListingDetail} />
 

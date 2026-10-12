@@ -18,6 +18,38 @@ import {
 
 const ICONS = { MessageSquare, AlertTriangle, Lightbulb, Star };
 
+// Placeholders that change automatically with the selected Feedback Type
+const PLACEHOLDERS = {
+  feedback: {
+    subject: { sw: "Kichwa cha maoni yako", en: "Feedback title" },
+    message: {
+      sw: "Shiriki maoni yako kuhusu SokoMkononi. Tuambie unachopenda, uzoefu wako wa kutumia jukwaa, au unachofikiri tunapaswa kujua.",
+      en: "Share your feedback about SokoMkononi. Tell us what you like, your experience using the platform, or what you think we should know.",
+    },
+  },
+  problem: {
+    subject: { sw: "Tatizo kwa ufupi", en: "Brief summary of the problem" },
+    message: {
+      sw: "Eleza tatizo ulilokutana nalo, lilitokea wapi, na nini kilitokea. Weka maelezo muhimu ili kutusaidia kulichunguza na kulitatua.",
+      en: "Describe the problem you encountered, where it occurred, and what happened. Include any relevant details to help us investigate and resolve it.",
+    },
+  },
+  suggestion: {
+    subject: { sw: "Pendekezo lako kwa ufupi", en: "Brief summary of your suggestion" },
+    message: {
+      sw: "Tuambie ungependa tuboreshe au tuongeze nini kwenye SokoMkononi. Eleza jinsi pendekezo lako lingefanya jukwaa liwe na manufaa zaidi, rahisi zaidi, au salama zaidi.",
+      en: "Tell us what you would like us to improve or add to SokoMkononi. Explain how your suggestion would make the platform more useful, convenient, or secure.",
+    },
+  },
+  rating: {
+    subject: { sw: "Kichwa cha tathmini yako", en: "Title for your rating" },
+    message: {
+      sw: "Kadiria uzoefu wako wa jumla na SokoMkononi na utuambie kwa nini umechagua kiwango hicho. Shiriki yaliyokwenda vizuri na tunachoweza kufanya ili kuboresha uzoefu wako.",
+      en: "Rate your overall experience with SokoMkononi and tell us why you chose this rating. Share what went well and what we could do to make your experience better.",
+    },
+  },
+};
+
 export default function SellerFeedback({ side = "seller" }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
@@ -32,6 +64,8 @@ export default function SellerFeedback({ side = "seller" }) {
   const [rating, setRating] = useState(5);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  const ph = PLACEHOLDERS[type] || PLACEHOLDERS.feedback;
 
   const reset = () => {
     setSubject("");
@@ -143,7 +177,7 @@ export default function SellerFeedback({ side = "seller" }) {
           <input
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            placeholder={t("Kichwa", "Subject")}
+            placeholder={ph.subject[lang] || ph.subject.sw}
             disabled={busy}
             className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] mb-3"
             style={{ borderColor: COLORS.sandLine }}
@@ -152,11 +186,11 @@ export default function SellerFeedback({ side = "seller" }) {
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            rows={4}
-            placeholder={t("Eleza maoni/tatizo/pendekezo lako...", "Describe your feedback/problem/suggestion...")}
+            rows={7}
+            placeholder={ph.message[lang] || ph.message.sw}
             disabled={busy}
             className="w-full border rounded-lg px-3 py-2 text-sm outline-none resize-none focus:border-[#E8A33D]"
-            style={{ borderColor: COLORS.sandLine }}
+            style={{ borderColor: COLORS.sandLine, minHeight: 160 }}
           />
 
           {error && (

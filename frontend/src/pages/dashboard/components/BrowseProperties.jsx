@@ -28,7 +28,6 @@ import {
   getCategoryIcon,
 } from "../../../config/categoriesStore.js";
 
-// Mikoa 31 ya Tanzania
 const REGIONS = [
   "Arusha", "Dar es Salaam", "Dodoma", "Geita", "Iringa", "Kagera", "Katavi",
   "Kigoma", "Kilimanjaro", "Lindi", "Manyara", "Mara", "Mbeya", "Morogoro",
@@ -257,7 +256,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
 // ============================================================
 export default function BrowseProperties({
   lang = "sw",
-  excludeSellerId = null, // ⬅️ MPYA — seller hawezi kuona listings zake kwenye browse
+  excludeSellerId = null,
 }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -284,7 +283,6 @@ export default function BrowseProperties({
 
   const allPropertiesRaw = usePublicListings();
 
-  // ⬇️ MPYA: Chuja listings za seller mwenyewe
   const allProperties = useMemo(() => {
     if (!excludeSellerId) return allPropertiesRaw;
     return allPropertiesRaw.filter(
@@ -421,7 +419,7 @@ export default function BrowseProperties({
         {/* HEADER — CENTERED */}
         <div className="mb-5 text-center">
           <h1 className="h-title">
-            {lang === "sw" ? "Tafuta Mali" : "Browse Properties"}
+            {lang === "sw" ? "Tafuta Mali" : "Browse Listings"}
           </h1>
           <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
             {lang === "sw"
@@ -444,7 +442,7 @@ export default function BrowseProperties({
               placeholder={
                 lang === "sw"
                   ? "Tafuta mali kwa jina, mahali, au kategoria..."
-                  : "Search by title, location, or category..."
+                  : "Search lisyings by title, location, or category..."
               }
               style={{
                 background: "white",
@@ -478,7 +476,7 @@ export default function BrowseProperties({
                 <span className="font-semibold text-primary">
                   {filteredProperties.length}
                 </span>{" "}
-                {lang === "sw" ? "mali zimepatikana" : "properties found"}
+                {lang === "sw" ? "mali zimepatikana" : "Listings found"}
               </p>
 
               <div className="flex items-center gap-2">
@@ -653,7 +651,7 @@ export default function BrowseProperties({
                 <h3 className="font-semibold text-primary">
                   {lang === "sw"
                     ? "Hakuna mali iliyopatikana"
-                    : "No properties found"}
+                    : "No listing found"}
                 </h3>
                 <p className="text-secondary text-sm mt-1">
                   {lang === "sw"

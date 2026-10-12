@@ -1,6 +1,5 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-// ⬇️ MABADILIKO: useAuth kutoka authStore (sio AuthContext)
 import { useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useDashboardSide } from "../config/dashboardSideStore.js";
@@ -14,6 +13,13 @@ const icons = {
   saved: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2 15.09 8.26 22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z" />
+    </svg>
+  ),
+  deals: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path d="M8 9h8" />
+      <path d="M8 13h5" />
     </svg>
   ),
   sell: (
@@ -65,39 +71,46 @@ export default function BottomNav() {
     ? (lang === "sw" ? "Tafuta" : "Search")
     : t("nav_sell");
 
-  const savedTarget = isBuyerSide
-    ? "/dashboard/buyer/saved"
-    : "/dashboard/saved";
   const messagesTarget = isBuyerSide
     ? "/dashboard/buyer/messages"
     : "/dashboard/messages";
-
-  const savedLink = user ? savedTarget : "/login";
   const messagesLink = user ? messagesTarget : "/login";
+
+  const secondTarget = isBuyerSide
+    ? "/dashboard/buyer/saved"
+    : "/dashboard/deals";
+  const secondLink = user ? secondTarget : "/login";
+  const secondIcon = isBuyerSide ? icons.saved : icons.deals;
+  const secondLabel = isBuyerSide
+    ? t("nav_saved")
+    : (lang === "sw" ? "Deals" : "Deals");
 
   const listingsLink = "/mali-zote";
 
   return (
     <nav className="bottom-nav safe-bottom">
+      {/* Home — wote */}
       <Link to="/" className={`nav-item ${isActive("/") ? "active" : ""}`}>
         {icons.home}
         <span>{t("nav_home")}</span>
       </Link>
 
       <Link
-        to={savedLink}
-        state={!user ? { from: savedTarget } : undefined}
-        className={`nav-item ${isActive(savedLink) ? "active" : ""}`}
+        to={secondLink}
+        state={!user ? { from: secondTarget } : undefined}
+        className={`nav-item ${isActive(secondTarget) ? "active" : ""}`}
       >
-        {icons.saved}
-        <span>{t("nav_saved")}</span>
+        {secondIcon}
+        <span>{secondLabel}</span>
       </Link>
 
+      {/* Center action — Post (seller) au Search (buyer) */}
       <Link to={actionLink} className="nav-item sell-btn">
         {actionIcon}
         <span>{actionLabel}</span>
       </Link>
 
+      {/* Messages — wote */}
       <Link
         to={messagesLink}
         state={!user ? { from: messagesTarget } : undefined}
@@ -109,6 +122,7 @@ export default function BottomNav() {
         <span>{t("nav_messages")}</span>
       </Link>
 
+      {/* Listings — wote */}
       <Link to={listingsLink} className={`nav-item ${isActive(listingsLink) ? "active" : ""}`}>
         {icons.listings}
         <span>{lang === "sw" ? "Mali Zote" : "All Listings"}</span>
