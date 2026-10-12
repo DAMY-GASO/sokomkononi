@@ -133,7 +133,7 @@ const BUYER_NAV = [
   { key: "saved", label: { sw: "Matangazo Yaliyohifadhiwa", en: "Saved Listings" }, icon: Heart },
   { key: "searches", label: { sw: "Utafutaji Wangu", en: "My Searches" }, icon: Bell },
   { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
-  { key: "reservations", label: { sw: "Reservation Zangu", en: "My Reservations" }, icon: CalendarCheck },
+  { key: "reservations", label: { sw: "Mali Nilizoshikilia", en: "My Reservations" }, icon: CalendarCheck },
   { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
   { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
   { key: "waiting", label: { sw: "Orodha ya Kusubiri", en: "Waiting List" }, icon: Clock3 },
@@ -252,7 +252,7 @@ export default function DashboardShell() {
     return () => clearTimeout(id);
   }, []);
 
-  // ⬇️ ZUIA ADMIN kuingia dashboard za watumiaji
+
   const isAdminUser =
     user?.role === "Admin" ||
     user?.role === "admin" ||
@@ -269,7 +269,6 @@ export default function DashboardShell() {
 
   const [side, setSide] = useState("seller");
   const [activeKey, setActiveKey] = useState("overview");
-  // ⬇️ EDIT — listing id inayohaririwa (null kama hakuna)
   const [editListingId, setEditListingId] = useState(null);
   const [tickerIndex, setTickerIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
