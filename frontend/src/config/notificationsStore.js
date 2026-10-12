@@ -11,9 +11,6 @@ const DELETED_KEY = "sokomkononi_notifications_deleted_v1";
 const EV = "sokomkononi:notifications-updated";
 
 // ── Blacklist of IDs the user deleted ─────────────────────────
-// The backend sometimes returns soft-deleted items in the list.
-// We remember what the user deleted locally so hydrate never
-// resurrects them within the same session.
 function readDeletedSet() {
   if (typeof window === "undefined") return new Set();
   try {
@@ -165,7 +162,6 @@ export async function hydrateNotificationsFromApi() {
     const normalized = rawList
       .map(norm)
       .filter(Boolean)
-      // Never re-add a notification the user has deleted locally.
       .filter((n) => !deleted.has(String(n.id)));
     write(sortNewest(normalized));
     return { ok: true, count: normalized.length };
@@ -220,17 +216,12 @@ export async function markAllNotificationsReadAsync(audience) {
 }
 
 export async function removeNotificationAsync(id) {
-  // Mark local blacklist FIRST so a slow hydrate can't resurrect it.
   markDeleted(id);
   try {
     await notificationsApi.hardRemove(id);
     write(read().filter((n) => n.id !== id));
     return { ok: true };
   } catch (err) {
-    // Even if the backend errored, the local removal stands — the user
-    // intent was "delete". We keep the blacklist entry so a refresh
-    // doesn't bring it back. If the backend still has it, it will
-    // simply stay hidden until the next clear-on-logout.
     write(read().filter((n) => n.id !== id));
     return { ok: false, error: err, soft: true };
   }
@@ -238,8 +229,6 @@ export async function removeNotificationAsync(id) {
 
 export async function clearNotificationsAsync(audience) {
   const target = audience || "user";
-  // Mark every currently-visible notification as deleted so a hydrate
-  // can't resurrect any of them.
   read()
     .filter((n) =>
       target === "user" ? n.audience !== "admin" : n.audience === target
@@ -351,14 +340,25 @@ export function getLocalizedField(field, lang = "sw") {
   return field?.[lang] || field?.sw || field?.en || "";
 }
 
+// ============================================================
+// ROUTE RESOLVER
+// ============================================================
+// ✅ FIX: Tumia `notif.rawType` (mfano "LISTING_APPROVED") badala ya
+//         `notif.type` (mfano "listing_released") — kwa sababu switch
+//         cases zinatumia raw types kutoka backend.
+// ✅ FIX: `notificationCtaKey()` sasa inatumia `rawType` pia.
+// ============================================================
 export function resolveNotificationRoute(notif, side = "seller") {
   if (!notif) return "/dashboard/notifications";
 
   const prefix = side === "buyer" ? "/dashboard/buyer" : "/dashboard";
-  const rawType = String(notif.type || "").toUpperCase();
+
+  // ✅ Tumia rawType kama ipo, vinginevyo type
+  const rawType = String(notif.rawType || notif.type || "").toUpperCase();
   const type = rawType.replace(/\./g, "_");
   const meta = notif.meta || {};
   const relatedId = meta.related_object_id;
+  const relatedType = String(meta.related_object_type || "").toLowerCase();
 
   const withQuery = (base, key) =>
     relatedId != null && relatedId !== ""
@@ -366,15 +366,33 @@ export function resolveNotificationRoute(notif, side = "seller") {
       : base;
 
   switch (type) {
+    // ── Listing-specific ──
     case "PRICE_DROP":
     case "SEARCH_ALERT":
-      return `/mali/${relatedId}`;
+      // Nenda kwenye listing husika
+      return relatedId != null ? `/mali/${relatedId}` : `${prefix}/notifications`;
 
+    case "LISTING_CREATED":
+    case "LISTING_APPROVED":
+    case "LISTING_REJECTED":
+    case "LISTING_RELEASED":
+    case "LISTING_EXPIRED":
+    case "LISTING_DELETED":
+    case "LISTING_RESTORED":
+    case "LISTING_SUBMITTED":
+      // Seller → kwenye listing yake; Buyer → notifications
+      if (side === "buyer") return `${prefix}/notifications`;
+      // Kama tuna relatedId, nenda kwenye listing detail
+      if (relatedId != null) return `/mali/${relatedId}`;
+      return `${prefix}/listings`;
+
+    // ── Messages ──
     case "MESSAGE_RECEIVED":
     case "MESSAGE":
     case "NEW_MESSAGE":
       return withQuery(`${prefix}/messages`, "c");
 
+    // ── Deals / Transactions ──
     case "DEAL_ROOM_CREATED":
     case "DEAL_ROOM":
     case "NEW_DEAL_ROOM":
@@ -398,23 +416,13 @@ export function resolveNotificationRoute(notif, side = "seller") {
     case "DISPUTE_RESOLVED":
       return withQuery(`${prefix}/deals`, "deal");
 
-    case "LISTING_CREATED":
-    case "LISTING_APPROVED":
-    case "LISTING_REJECTED":
-    case "LISTING_RELEASED":
-    case "LISTING_EXPIRED":
-    case "LISTING_DELETED":
-    case "LISTING_RESTORED":
-    case "LISTING_SUBMITTED":
-      // Buyer side has no listings page — fall back to their notifications.
-      return side === "buyer"
-        ? `${prefix}/notifications`
-        : `${prefix}/listings`;
-
+    // ── Payments ──
     case "LISTING_FEE_PAID":
     case "SUCCESS_FEE_PAID":
+    case "BUNDLE_PURCHASED":
       return `${prefix}/transactions`;
 
+    // ── Promotions ──
     case "BOOST_PURCHASED":
     case "BOOST_ACTIVATED":
       return side === "buyer" ? `${prefix}/notifications` : `${prefix}/boost`;
@@ -425,13 +433,12 @@ export function resolveNotificationRoute(notif, side = "seller") {
     case "ADVERTISEMENT_PURCHASED":
       return side === "buyer" ? `${prefix}/notifications` : `${prefix}/advertise`;
 
-    case "BUNDLE_PURCHASED":
-      return `${prefix}/bundles`;
-
+    // ── Waiting list ──
     case "WAITING_LIST_JOINED":
     case "WAITING_LIST_AVAILABLE":
-      return "/dashboard/buyer/waiting";
+      return side === "buyer" ? "/dashboard/buyer/waiting" : `${prefix}/notifications`;
 
+    // ── Verification ──
     case "VERIFICATION_REQUEST":
     case "ACCOUNT_VERIFIED":
     case "ACCOUNT_REJECTED":
@@ -442,26 +449,36 @@ export function resolveNotificationRoute(notif, side = "seller") {
   }
 }
 
+// ============================================================
+// CTA KEY — kwa button label
+// ============================================================
 export function notificationCtaKey(notif) {
-  const rawType = String(notif?.type || "").toUpperCase();
+  const rawType = String(notif?.rawType || notif?.type || "").toUpperCase();
   const type = rawType.replace(/\./g, "_");
+  const meta = notif?.meta || {};
+  const relatedId = meta.related_object_id;
+
   switch (type) {
     case "PRICE_DROP":
     case "SEARCH_ALERT":
-      return `/mali/${relatedId}`;
+      // ✅ FIX: relatedId ipo kwenye scope sasa
+      return relatedId != null ? `/mali/${relatedId}` : "view";
 
     case "MESSAGE_RECEIVED":
     case "MESSAGE":
     case "NEW_MESSAGE":
       return "reply";
+
     case "DEAL_ROOM_CREATED":
     case "DEAL_ROOM":
     case "NEW_DEAL_ROOM":
     case "DEAL_CREATED":
       return "open";
+
     case "LISTING_APPROVED":
     case "LISTING_RELEASED":
       return "view_listing";
+
     default:
       return "view";
   }

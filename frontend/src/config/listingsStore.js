@@ -466,6 +466,8 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     region: raw.region || raw.location || "",
     status,
     views: Number(raw.views_count ?? raw.views) || 0,
+    // Mara tangazo lilipowekewa reservation (kutoka backend: reservation_count)
+    reservationCount: Number(raw.reservation_count ?? raw.reservationCount) || 0,
     inquiries: Number(raw.inquiries) || 0,
     verified: Boolean(raw.verified ?? raw.is_verified),
     isFeatured: Boolean(raw.is_featured),

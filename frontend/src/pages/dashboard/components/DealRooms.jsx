@@ -1312,6 +1312,18 @@ function DealDetail({
   // Phone lock: buyer haioni mpaka reservation ilipwe
   const phoneLocked = isBuyer && !reservationPaid;
 
+  // ═══════════════════════════════════════════════════════════
+  // AUTO-OPEN RESERVATION
+  // Negotiation inakamilika pale upande mmoja unapokubali ofa ya mwisho
+  // (status → "accepted"). Mnunuzi anaona ReservationPanel ikifunguka
+  // yenyewe. Kama malipo yameshaanzishwa (pendingPayment), usifungue tena.
+  // ═══════════════════════════════════════════════════════════
+  useEffect(() => {
+    setReserveOpen(
+      deal.status === "accepted" && isBuyer && !deal.pendingPayment
+    );
+  }, [deal.id, deal.status, isBuyer, deal.pendingPayment]);
+
   const handleSend = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -1615,7 +1627,30 @@ function DealDetail({
         </div>
       )}
 
-      {deal.status === "accepted" && !reserveOpen && (
+      {deal.status === "accepted" && isSeller && (
+        <div
+          style={{
+            borderColor: COLORS.sandLine,
+            background: "rgba(232,163,61,0.10)",
+          }}
+          className="flex flex-col items-center text-center gap-1 px-3 sm:px-4 py-3 border-t"
+        >
+          <span
+            style={{ color: "#8A5A16" }}
+            className="text-body-sm font-medium max-w-md"
+          >
+            {lang === "sw"
+              ? `Mmekubaliana kwenye ${formatTZS(
+                  deal.currentOffer
+                )}. Tunasubiri mnunuzi alipe Reservation Fee.`
+              : `You agreed at ${formatTZS(
+                  deal.currentOffer
+                )}. Waiting for the buyer to pay the Reservation Fee.`}
+          </span>
+        </div>
+      )}
+
+      {deal.status === "accepted" && isBuyer && !reserveOpen && (
         <div
           style={{
             borderColor: COLORS.sandLine,
@@ -1645,7 +1680,7 @@ function DealDetail({
         </div>
       )}
 
-      {deal.status === "accepted" && reserveOpen && (
+      {deal.status === "accepted" && isBuyer && reserveOpen && (
         <ReservationPanel
           deal={deal}
           lang={lang}

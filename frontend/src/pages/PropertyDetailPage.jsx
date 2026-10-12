@@ -69,6 +69,13 @@ function timeAgo(dateStr, lang) {
     ? t(lang, "Mwezi 1 uliopita", "1 month ago")
     : t(lang, `Miezi ${months} iliyopita`, `${months} months ago`);
 }
+// Mara ambazo mali imewekewa reservation (kwa wanunuzi wengine kuona demand)
+function reservedTimes(count, lang) {
+  const n = Number(count) || 0;
+  if (n < 1) return "";
+  return lang === "sw" ? `mara ${n}` : `${n} ${n === 1 ? "time" : "times"}`;
+}
+
 function reservationCountdown(reservedUntil, lang) {
   if (!reservedUntil) return "";
   const ms = new Date(reservedUntil).getTime() - Date.now();
@@ -113,7 +120,13 @@ function ImageGallery({ property, lang }) {
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <span className="bg-night text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-2">
               {isSold ? <Ban size={16} /> : <Clock3 size={16} />}
-              {isSold ? t(lang, "Imeuzwa", "Sold") : t(lang, "Ina Reservation", "Reserved")}
+              {isSold
+                ? t(lang, "Imeuzwa", "Sold")
+                : `${t(lang, "Ina Reservation", "Reserved")}${
+                    reservedTimes(property.reservationCount, lang)
+                      ? ` (${reservedTimes(property.reservationCount, lang)})`
+                      : ""
+                  }`}
             </span>
           </div>
         )}
@@ -383,6 +396,11 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
                 ? t(lang, "Mali hii tayari imeuzwa.", "This property has already been sold.")
                 : t(lang, "Mali hii tayari ina Reservation.", "This property already has a Reservation.")}
             </p>
+            {isReserved && reservedTimes(property.reservationCount, lang) && (
+              <p className="text-body-sm text-gold-ink mt-1">
+                {t(lang, "Imewekewa Reservation", "Reserved")} {reservedTimes(property.reservationCount, lang)}{t(lang, " hadi sasa.", " so far.")}
+              </p>
+            )}
             {isReserved && property.reservedUntil && (
               <p className="text-body-sm text-gold-ink mt-1">{reservationCountdown(property.reservedUntil, lang)}</p>
             )}
@@ -892,6 +910,9 @@ export default function PropertyDetailPage() {
                   {property.status === "reserved" && (
                     <span className="text-body-sm font-medium text-gold-ink bg-gold/15 px-2.5 py-1 rounded-full mb-1">
                       {t(lang, "Ina Reservation", "Reserved")}
+                      {reservedTimes(property.reservationCount, lang)
+                        ? ` · ${reservedTimes(property.reservationCount, lang)}`
+                        : ""}
                     </span>
                   )}
                   {property.status === "sold" && (

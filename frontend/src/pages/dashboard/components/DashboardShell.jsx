@@ -21,6 +21,7 @@ import {
   Receipt,
   LayoutGrid,
   Clock3,
+  CalendarCheck,
   Megaphone,
   Heart,
   MessageSquare,
@@ -75,6 +76,7 @@ import LeadingSasa from "./LeadingSasa.jsx";
 import AdvertiseSasa from "./AdvertiseSasa.jsx";
 import PromotedBannerStrip from "./PromotedBannerStrip.jsx";
 import DealRooms from "./DealRooms.jsx";
+import MyReservationsPage from "./MyReservationsPage.jsx";
 import BrowseProperties from "./BrowseProperties.jsx";
 import BottomNav from "../../../components/BottomNav.jsx";
 
@@ -131,6 +133,7 @@ const BUYER_NAV = [
   { key: "saved", label: { sw: "Matangazo Yaliyohifadhiwa", en: "Saved Listings" }, icon: Heart },
   { key: "searches", label: { sw: "Utafutaji Wangu", en: "My Searches" }, icon: Bell },
   { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
+  { key: "reservations", label: { sw: "Reservation Zangu", en: "My Reservations" }, icon: CalendarCheck },
   { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
   { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
   { key: "waiting", label: { sw: "Orodha ya Kusubiri", en: "Waiting List" }, icon: Clock3 },
@@ -175,6 +178,7 @@ const URL_TO_STATE = {
   "/dashboard/buyer/messages": { side: "buyer", key: "messages" },
   "/dashboard/buyer/notifications": { side: "buyer", key: "notifications" },
   "/dashboard/buyer/deals": { side: "buyer", key: "deals" },
+  "/dashboard/buyer/reservations": { side: "buyer", key: "reservations" },
   "/dashboard/buyer/waiting": { side: "buyer", key: "waiting" },
   "/dashboard/buyer/transactions": { side: "buyer", key: "transactions" },
   "/dashboard/buyer/bundles": { side: "buyer", key: "bundles" },
@@ -210,6 +214,7 @@ const STATE_TO_URL = {
     saved: "/dashboard/buyer/saved",
     searches: "/dashboard/buyer/searches",
     deals: "/dashboard/buyer/deals",
+    reservations: "/dashboard/buyer/reservations",
     messages: "/dashboard/buyer/messages",
     notifications: "/dashboard/buyer/notifications",
     waiting: "/dashboard/buyer/waiting",
@@ -621,6 +626,9 @@ export default function DashboardShell() {
           onFinalPaymentConfirmed={handleFinalPaymentConfirmed}
         />
       );
+    }
+    if (activeKey === "reservations") {
+      return <MyReservationsPage />;
     }
     if (activeKey === "messages") {
       return (

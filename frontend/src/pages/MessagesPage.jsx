@@ -527,7 +527,10 @@ export default function MessagesPage({ initialConversationId = null }) {
     });
   }, [selectedId, currentUserId]);
 
-  const selectedConvo = conversations.find((c) => c.id === selectedId);
+  // ?c=12 inatoka URL kama string, wakati c.id ni number — linganisha kama String
+  const selectedConvo = conversations.find(
+    (c) => String(c.id) === String(selectedId)
+  );
   const totalUnread = conversations.reduce(
     (sum, c) => sum + (c.unreadCount || 0),
     0
@@ -669,7 +672,7 @@ export default function MessagesPage({ initialConversationId = null }) {
                   key={c.id}
                   convo={c}
                   currentUserId={currentUserId}
-                  active={c.id === selectedId}
+                  active={String(c.id) === String(selectedId)}
                   onSelect={handleSelect}
                   lang={lang}
                 />
