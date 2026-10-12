@@ -1,9 +1,16 @@
 // ============================================================
 // SafetySupportSection.jsx
 // Buyer & Seller — Safety & Support (report, help center, complaints).
+// Kila upande (buyer/seller) na content yake maalum:
+//   • Header + subtitle
+//   • Safety Tips
+//   • Report Form (options + placeholder)
+//   • Ripoti Zangu (title + subtitle)
+//   • FAQ
+//   • Contact (subtitle)
 // ============================================================
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Shield,
   Flag,
@@ -12,7 +19,6 @@ import {
   Phone,
   Mail,
   CheckCircle,
-  X,
   ChevronDown,
   ChevronUp,
   Loader2,
@@ -49,8 +55,8 @@ const BUYER_FAQ = [
       en: "How do I report a fraudulent listing?",
     },
     a: {
-      sw: "Bofya 'Ripoti Tangazo' hapa chini, kisha chagua listing na eleza tatizo. Timu yetu itachukua hatua ndani ya saa 24.",
-      en: "Click 'Report Listing' below, select the listing, and describe the issue. Our team will act within 24 hours.",
+      sw: "Bofya 'Ripoti Tatizo' hapa chini, kisha chagua Tangazo na eleza tatizo. Timu yetu itachukua hatua ndani ya saa 24.",
+      en: "Click 'Report an Issue' below, select Listing, and describe the issue. Our team will act within 24 hours.",
     },
   },
   {
@@ -90,7 +96,7 @@ const SELLER_FAQ = [
     },
     a: {
       sw: "Ripoti mara moja kupitia 'Ripoti Mnunuzi' hapa chini. Usikabidhi mali hadi malipo yathibitishwe. Hifadhi screenshot zote za mazungumzo.",
-      en: "Report immediately via 'Report Buyer' below. Do not hand over the property until payment is confirmed. Keep all screenshots of the conversation.",
+      en: "Report immediately via 'Report a Buyer' below. Do not hand over the property until payment is confirmed. Keep all screenshots of the conversation.",
     },
   },
   {
@@ -434,17 +440,107 @@ export default function SafetySupportSection({ side = "buyer" }) {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // Report type options — tofauti kwa buyer vs seller
-  const reportTypeOptions = isSeller
-    ? [
-        { key: "buyer", label: t("Mnunuzi", "Buyer") },
-        { key: "listing", label: t("Tangazo", "Listing") },
-        { key: "platform", label: t("Jukwaa", "Platform") },
-      ]
-    : [
-        { key: "listing", label: t("Tangazo", "Listing") },
-        { key: "user", label: t("Mtumiaji", "User") },
-      ];
+  // ============================================================
+  // CONTENT ZA KILA UPANDE — buyer vs seller
+  // ============================================================
+  const content = isSeller
+    ? {
+        // Header
+        headerTitle: t("Msaada wa Muuzaji", "Seller Support"),
+        headerSubtitle: t(
+          "Ripoti mnunuzi, soma vidokezo vya usalama wa muuzaji, au wasiliana nasi.",
+          "Report a buyer, read seller safety tips, or contact us."
+        ),
+        // Safety Tips
+        tipsTitle: t("Vidokezo vya Usalama wa Muuzaji", "Seller Safety Tips"),
+        tipsSubtitle: t(
+          "Fuata vidokezo hivi ili kulinda biashara yako.",
+          "Follow these tips to protect your business."
+        ),
+        // Report
+        reportTitle: t("Ripoti Mnunuzi", "Report a Buyer"),
+        reportSubtitle: t(
+          "Mnunuzi anakukatisha tamaa, anakataa kutumia Deal Room, au ana tabia ya kutiliwa shaka?",
+          "A buyer is giving you trouble, refusing to use the Deal Room, or acting suspiciously?"
+        ),
+        reportStartLabel: t("Anza Ripoti ya Mnunuzi", "Start Buyer Report"),
+        reportDetailsPlaceholder: t(
+          "Eleza tatizo la mnunuzi kwa ufupi (lazima)...",
+          "Describe the buyer's issue briefly (required)..."
+        ),
+        // Ripoti Zangu
+        myReportsTitle: t("Ripoti Zangu za Wanunuzi", "My Buyer Reports"),
+        myReportsSubtitle: t(
+          "Fuatilia majibu ya timu yetu kwa ripoti zako za wanunuzi.",
+          "Track our team's replies to your buyer reports."
+        ),
+        // Contact
+        contactSubtitle: t(
+          "Timu yetu ya wauzaji iko tayari kukusaidia.",
+          "Our seller support team is ready to help."
+        ),
+        // Report options
+        reportTypeOptions: [
+          { key: "buyer", label: t("Mnunuzi", "Buyer") },
+          { key: "listing", label: t("Tangazo", "Listing") },
+          { key: "platform", label: t("Jukwaa", "Platform") },
+        ],
+        defaultCategory: (type) =>
+          type === "buyer" ? "DISPUTE" : "LISTING",
+        defaultSubject: (type) =>
+          type === "buyer"
+            ? t("Ripoti ya mnunuzi", "Buyer report")
+            : type === "platform"
+            ? t("Ripoti ya jukwaa", "Platform report")
+            : t("Ripoti ya tangazo", "Listing report"),
+      }
+    : {
+        // Header
+        headerTitle: t("Usalama & Msaada", "Safety & Support"),
+        headerSubtitle: t(
+          "Ripoti tatizo, soma vidokezo vya usalama, au wasiliana nasi.",
+          "Report an issue, read safety tips, or contact us."
+        ),
+        // Safety Tips
+        tipsTitle: t("Vidokezo vya Usalama", "Safety Tips"),
+        tipsSubtitle: t(
+          "Fuata vidokezo hivi ili kulinda pesa zako.",
+          "Follow these tips to protect your money."
+        ),
+        // Report
+        reportTitle: t("Ripoti Tatizo", "Report an Issue"),
+        reportSubtitle: t(
+          "Unaona tangazo la udanganyifu au mtumiaji mwenye tabia ya kutiliwa shaka?",
+          "See a fraudulent listing or suspicious user?"
+        ),
+        reportStartLabel: t("Anza Ripoti", "Start Report"),
+        reportDetailsPlaceholder: t(
+          "Eleza tatizo kwa ufupi (lazima)...",
+          "Describe the issue briefly (required)..."
+        ),
+        // Ripoti Zangu
+        myReportsTitle: t("Ripoti Zangu", "My Reports"),
+        myReportsSubtitle: t(
+          "Fuatilia majibu ya timu yetu kwa ripoti zako.",
+          "Track our team's replies to your reports."
+        ),
+        // Contact
+        contactSubtitle: t(
+          "Timu yetu iko tayari kukusaidia.",
+          "Our support team is ready to help."
+        ),
+        // Report options
+        reportTypeOptions: [
+          { key: "listing", label: t("Tangazo", "Listing") },
+          { key: "user", label: t("Mtumiaji", "User") },
+        ],
+        defaultCategory: (type) =>
+          type === "listing" ? "LISTING" : "DISPUTE",
+        defaultSubject: (type) =>
+          type === "listing"
+            ? t("Ripoti ya tangazo", "Listing report")
+            : t("Ripoti ya mtumiaji", "User report"),
+      };
 
   const handleReportSubmit = async () => {
     if (!reportDetails.trim()) {
@@ -458,23 +554,8 @@ export default function SafetySupportSection({ side = "buyer" }) {
     setReportError("");
 
     try {
-      // Category tofauti kwa seller
-      let category = "LISTING";
-      if (isSeller) {
-        category = reportType === "buyer" ? "DISPUTE" : "LISTING";
-      } else {
-        category = reportType === "listing" ? "LISTING" : "DISPUTE";
-      }
-
-      const defaultSubject = isSeller
-        ? reportType === "buyer"
-          ? t("Ripoti ya mnunuzi", "Buyer report")
-          : reportType === "platform"
-          ? t("Ripoti ya jukwaa", "Platform report")
-          : t("Ripoti ya tangazo", "Listing report")
-        : reportType === "listing"
-        ? t("Ripoti ya tangazo", "Listing report")
-        : t("Ripoti ya mtumiaji", "User report");
+      const category = content.defaultCategory(reportType);
+      const defaultSubject = content.defaultSubject(reportType);
 
       await api.post("/tickets/", {
         subject: reportSubject.trim() || defaultSubject,
@@ -512,21 +593,9 @@ export default function SafetySupportSection({ side = "buyer" }) {
       <div className="max-w-3xl mx-auto">
         {/* HEADER */}
         <div className="mb-6 text-center">
-          <h1 className="h-title">
-            {isSeller
-              ? t("Msaada wa Muuzaji", "Seller Support")
-              : t("Usalama & Msaada", "Safety & Support")}
-          </h1>
+          <h1 className="h-title">{content.headerTitle}</h1>
           <p className="text-secondary text-body-sm mt-2 max-w-xl mx-auto">
-            {isSeller
-              ? t(
-                  "Ripoti mnunuzi, soma vidokezo vya usalama wa muuzaji, au wasiliana nasi.",
-                  "Report a buyer, read seller safety tips, or contact us."
-                )
-              : t(
-                  "Ripoti tatizo, soma vidokezo vya usalama, au wasiliana nasi.",
-                  "Report an issue, read safety tips, or contact us."
-                )}
+            {content.headerSubtitle}
           </p>
         </div>
 
@@ -548,20 +617,10 @@ export default function SafetySupportSection({ side = "buyer" }) {
             </div>
             <div>
               <p style={{ color: COLORS.green }} className="h-card">
-                {isSeller
-                  ? t("Vidokezo vya Usalama wa Muuzaji", "Seller Safety Tips")
-                  : t("Vidokezo vya Usalama", "Safety Tips")}
+                {content.tipsTitle}
               </p>
               <p className="text-secondary text-body-sm mt-0.5">
-                {isSeller
-                  ? t(
-                      "Fuata vidokezo hivi ili kulinda biashara yako.",
-                      "Follow these tips to protect your business."
-                    )
-                  : t(
-                      "Fuata vidokezo hivi ili kulinda pesa zako.",
-                      "Follow these tips to protect your money."
-                    )}
+                {content.tipsSubtitle}
               </p>
             </div>
           </div>
@@ -592,21 +651,9 @@ export default function SafetySupportSection({ side = "buyer" }) {
               <Flag size={18} color={COLORS.rust} />
             </div>
             <div>
-              <p className="text-primary h-card">
-                {isSeller
-                  ? t("Ripoti Mnunuzi", "Report a Buyer")
-                  : t("Ripoti Tatizo", "Report an Issue")}
-              </p>
+              <p className="text-primary h-card">{content.reportTitle}</p>
               <p className="text-secondary text-body-sm mt-0.5 max-w-md mx-auto">
-                {isSeller
-                  ? t(
-                      "Mnunuzi anakukatisha tamaa, anakataa kutumia Deal Room, au ana tabia ya kutiliwa shaka?",
-                      "A buyer is giving you trouble, refusing to use the Deal Room, or acting suspiciously?"
-                    )
-                  : t(
-                      "Unaona tangazo la udanganyifu au mtumiaji mwenye tabia ya kutiliwa shaka?",
-                      "See a fraudulent listing or suspicious user?"
-                    )}
+                {content.reportSubtitle}
               </p>
             </div>
           </div>
@@ -633,9 +680,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 className="flex items-center gap-1.5 text-btn font-semibold px-4 py-2.5 rounded-lg"
               >
                 <Flag size={13} />
-                {isSeller
-                  ? t("Anza Ripoti", "Start Report")
-                  : t("Anza Ripoti", "Start Report")}
+                {content.reportStartLabel}
               </button>
             </div>
           ) : (
@@ -654,7 +699,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
 
               {/* Type — tofauti kwa buyer vs seller */}
               <div className="flex gap-2">
-                {reportTypeOptions.map((opt) => (
+                {content.reportTypeOptions.map((opt) => (
                   <button
                     key={opt.key}
                     onClick={() => setReportType(opt.key)}
@@ -689,17 +734,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
               <textarea
                 value={reportDetails}
                 onChange={(e) => setReportDetails(e.target.value)}
-                placeholder={
-                  isSeller
-                    ? t(
-                        "Eleza tatizo la mnunuzi kwa ufupi (lazima)...",
-                        "Describe the buyer's issue briefly (required)..."
-                      )
-                    : t(
-                        "Eleza tatizo kwa ufupi (lazima)...",
-                        "Describe the issue briefly (required)..."
-                      )
-                }
+                placeholder={content.reportDetailsPlaceholder}
                 rows={4}
                 style={{ borderColor: COLORS.sandLine }}
                 className="border rounded-lg px-3 py-2 text-sm outline-none resize-none bg-white"
@@ -744,7 +779,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
           )}
         </div>
 
-        {/* MY TICKETS */}
+        {/* MY REPORTS */}
         {tickets.length > 0 && (
           <div
             style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -759,15 +794,10 @@ export default function SafetySupportSection({ side = "buyer" }) {
               </div>
               <div>
                 <p className="text-primary h-card">
-                  {isSeller
-                    ? t("Ripoti Zangu", "My Reports")
-                    : t("Ripoti Zangu", "My Reports")}
+                  {content.myReportsTitle}
                 </p>
                 <p className="text-secondary text-body-sm mt-0.5 max-w-md mx-auto">
-                  {t(
-                    "Fuatilia majibu ya timu yetu kwa ripoti zako.",
-                    "Track our team's replies to your reports."
-                  )}
+                  {content.myReportsSubtitle}
                 </p>
               </div>
             </div>
@@ -865,15 +895,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 {t("Wasiliana Nasi", "Contact Us")}
               </p>
               <p className="text-secondary text-body-sm mt-0.5">
-                {isSeller
-                  ? t(
-                      "Timu yetu iko tayari kukusaidia.",
-                      "Our support team is ready to help."
-                    )
-                  : t(
-                      "Timu yetu iko tayari kukusaidia.",
-                      "Our Support team is ready to help."
-                    )}
+                {content.contactSubtitle}
               </p>
             </div>
           </div>

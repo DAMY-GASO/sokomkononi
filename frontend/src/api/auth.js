@@ -1,10 +1,5 @@
 // ============================================================
 // api/auth.js — Auth endpoints
-// Backend: /api/auth/
-// 
-// ⚠️ NOTE: Social login is handled by `socialLoginAsync` in
-// `authStore.js` (it needs access to `saveUser` and other
-// authStore internals). Do NOT duplicate it here.
 // ============================================================
 import { api, setTokens, clearTokens, getAccessToken, getRefreshToken } from "./client";
 

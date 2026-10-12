@@ -16,8 +16,7 @@ export const moderationApi = {
     }),
 
   // Hard delete kwa scam. Tunatuma reason tu kama ipo (baadhi ya proxies
-  // hupoteza DELETE bodies, na backend inaweza kuchukulia `{reason:""}`
-  // kama valid payload).
+  
   delete: (listingId, reason = "") =>
     api.delete(
       `/listings/${listingId}/?hard=true`,

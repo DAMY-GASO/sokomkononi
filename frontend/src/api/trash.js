@@ -84,7 +84,7 @@ export const trashApi = {
 // ============================================================
 export function getTrashTypeLabel(type, lang = "sw") {
   const labels = {
-    listings: { sw: "Mali (Listings)", en: "Listings" },
+    listings: { sw: "Mali", en: "Listings" },
     users: { sw: "Watumiaji", en: "Users" },
     verifications: { sw: "Uthibitisho", en: "Verifications" },
     tickets: { sw: "Tiketi", en: "Tickets" },

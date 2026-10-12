@@ -63,10 +63,6 @@ export function isCardMethod(key) {
 }
 
 // ── Phone normalization (spec Section 3.2) ─────────────────
-//   0712345678    → 255712345678
-//   +255712345678 → 255712345678
-//   255712345678  → 255712345678
-//   0712 345 678  → 255712345678
 export function normalizeTzPhone(raw) {
   const digits = String(raw || "").replace(/[^0-9]/g, "");
   if (!digits) return "";
