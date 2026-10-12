@@ -3,6 +3,8 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { registerAsync, verifyOtpAsync } from "../../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
+import PasswordStrengthMeter from "../../components/PasswordStrengthMeter.jsx";
+import Captcha, { isCaptchaEnabled } from "../../components/Captcha.jsx";
 
 const icons = {
   user: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a7 7 0 0 1 14 0v1" /></svg>),
@@ -83,6 +85,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const cooldownRef = useRef(null);
+  const [captchaToken, setCaptchaToken] = useState("");
 
   function postAuthPath() {
     return intent === "buy" ? "/dashboard/buyer" : "/dashboard/post";
@@ -146,7 +149,13 @@ export default function RegisterPage() {
     setLoading(true);
 
     const { confirmPassword, ...payload } = form;
-    const res = await registerAsync({ ...payload, intent: intent || null });
+    const res = await registerAsync({
+      ...payload,
+      intent: intent || null,
+      captcha_token: captchaToken || undefined,
+      terms_version: "v1.0",
+      privacy_version: "v1.0",
+    });
     setLoading(false);
 
     if (!res.ok) {
@@ -227,7 +236,10 @@ export default function RegisterPage() {
                   <FieldInput icon={icons.user} label={t("register_name_placeholder")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                   <FieldInput icon={icons.mail} type="email" required label={t("register_email_placeholder")} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                   <FieldInput icon={icons.phone} type="tel" label={t("register_phone_placeholder")} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-                  <FieldInput icon={icons.lock} type="password" label={t("register_password_placeholder")} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                  <div>
+                    <FieldInput icon={icons.lock} type="password" label={t("register_password_placeholder")} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                    <PasswordStrengthMeter value={form.password} lang={lang} />
+                  </div>
                   <FieldInput icon={icons.lock} type="password" label={t("register_confirm_password_placeholder")} value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} />
 
                   <label className="flex items-start gap-2.5 text-body-sm text-secondary leading-relaxed cursor-pointer">
@@ -245,10 +257,12 @@ export default function RegisterPage() {
                     </span>
                   </label>
 
+                  <Captcha onVerify={setCaptchaToken} onExpire={() => setCaptchaToken("")} />
+
                   {error && <p className="text-rust text-body-sm">{error}</p>}
 
                   <button
-                    disabled={loading || !agreedToTerms}
+                    disabled={loading || !agreedToTerms || (isCaptchaEnabled && !captchaToken)}
                     className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-lg font-semibold text-btn transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {loading ? t("register_sending_otp") : t("register_continue")}

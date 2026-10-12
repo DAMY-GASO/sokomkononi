@@ -10,8 +10,12 @@ import { api, setTokens, clearTokens, getAccessToken, getRefreshToken } from "./
 
 export const authApi = {
   // ----- Register / Login / Logout -----
-  login: async ({ identifier, password }) => {
-    const data = await api.post("/auth/login/", { identifier, password });
+  login: async ({ identifier, password, captcha_token }) => {
+    const data = await api.post("/auth/login/", {
+      identifier,
+      password,
+      ...(captcha_token ? { captcha_token } : {}),
+    });
     if (data?.access) setTokens({ access: data.access, refresh: data.refresh });
     return data;
   },

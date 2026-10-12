@@ -9,15 +9,13 @@ import {
   socialLoginAsync,
 } from "../config/socialAuth.js";
 
-const IS_DEV =
-  typeof import.meta !== "undefined" && Boolean(import.meta.env && import.meta.env.DEV);
-
 function errMsg(err, fallback) {
-  const first =
-    err?.data && typeof err.data === "object" && !err.data.detail
-      ? Object.values(err.data).flat().find((v) => typeof v === "string")
-      : null;
-  return err?.data?.detail || first || err?.message || fallback;
+  if (err?.data && typeof err.data === "object") {
+    if (typeof err.data.detail === "string") return err.data.detail;
+    const first = Object.values(err.data).flat().find((v) => typeof v === "string");
+    if (first) return first;
+  }
+  return err?.message || fallback;
 }
 
 const GoogleG = () => (
@@ -35,20 +33,13 @@ const AppleLogo = () => (
   </svg>
 );
 
-export default function SocialAuthButtons({
-  lang = "sw",
-  onSuccess,
-  showTerms = false,
-}) {
+export default function SocialAuthButtons({ lang = "sw", onSuccess, showTerms = false }) {
   const tx = (sw, en) => (lang === "sw" ? sw : en);
   const googleRef = useRef(null);
   const handlerRef = useRef(null);
   const busyRef = useRef(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-
-  const showGoogle = isGoogleEnabled || IS_DEV;
-  const showApple = isAppleEnabled || IS_DEV;
 
   async function finish(provider, identity) {
     if (busyRef.current) return;
@@ -64,9 +55,7 @@ export default function SocialAuthButtons({
     busyRef.current = false;
     setBusy("");
     if (!res.ok) {
-      setError(
-        errMsg(res.error, tx("Imeshindwa kuingia. Jaribu tena.", "Sign-in failed. Please try again."))
-      );
+      setError(errMsg(res.error, tx("Imeshindwa kuingia. Jaribu tena.", "Sign-in failed.")));
       return;
     }
     onSuccess?.(res);
@@ -85,7 +74,7 @@ export default function SocialAuthButtons({
       busyRef.current = false;
       setBusy("");
       if (!isSocialCancel(err)) {
-        setError(err?.message || tx("Imeshindwa kuingia na Apple.", "Could not sign in with Apple."));
+        setError(err?.message || tx("Imeshindwa kuingia na Apple.", "Apple sign-in failed."));
       }
       return;
     }
@@ -100,13 +89,22 @@ export default function SocialAuthButtons({
     renderGoogleButton(el, {
       locale: lang === "sw" ? "sw" : "en",
       onCredential: (idToken) => handlerRef.current("google", { idToken }),
-      onError: (err) =>
-        setError(err?.message || tx("Google imeshindwa.", "Google sign-in failed.")),
+      onError: (err) => setError(err?.message || tx("Google imeshindwa.", "Google sign-in failed.")),
     }).catch((err) => setError(err?.message || ""));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
 
-  if (!showGoogle && !showApple) return null;
+  if (!isGoogleEnabled && !isAppleEnabled) {
+    if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
+      return (
+        <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800">
+          Social login not configured. Add <code>VITE_GOOGLE_CLIENT_ID</code> to{" "}
+          <code>.env</code>, then restart <code>npm run dev</code>.
+        </div>
+      );
+    }
+    return null;
+  }
 
   const base =
     "w-full h-10 inline-flex items-center justify-center gap-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed";
@@ -114,20 +112,14 @@ export default function SocialAuthButtons({
   return (
     <div className="mb-6">
       <div className={`space-y-3 transition-opacity ${busy ? "opacity-60 pointer-events-none" : ""}`}>
-        {showGoogle &&
-          (isGoogleEnabled ? (
-            <div ref={googleRef} className="flex w-full min-h-[40px] justify-center" />
-          ) : (
-            <button type="button" disabled className={`${base} border border-sandline bg-white text-text-primary`}>
-              <GoogleG /> {tx("Endelea na Google", "Continue with Google")}
-            </button>
-          ))}
-
-        {showApple && (
+        {isGoogleEnabled && (
+          <div ref={googleRef} className="flex w-full min-h-[40px] justify-center" />
+        )}
+        {isAppleEnabled && (
           <button
             type="button"
             onClick={handleApple}
-            disabled={!isAppleEnabled || !!busy}
+            disabled={!!busy}
             className={`${base} bg-black text-white hover:bg-neutral-800`}
           >
             <AppleLogo />
@@ -137,14 +129,6 @@ export default function SocialAuthButtons({
           </button>
         )}
       </div>
-
-      {IS_DEV && (!isGoogleEnabled || !isAppleEnabled) && (
-        <p className="mt-2 rounded-md bg-gold/15 px-3 py-2 text-xs text-gold-ink">
-          DEV — weka kwenye <code>.env</code> kisha restart dev server:{" "}
-          {!isGoogleEnabled && <code>VITE_GOOGLE_CLIENT_ID </code>}
-          {!isAppleEnabled && <code>VITE_APPLE_CLIENT_ID</code>}
-        </p>
-      )}
 
       {error && <p className="mt-3 text-center text-body-sm text-rust">{error}</p>}
 

@@ -6,6 +6,7 @@ import { ToastProvider } from "./components/Toast.jsx";
 import { ConfirmProvider } from "./components/ConfirmDialog.jsx";
 import PaymentReturnRoute from "./components/PaymentReturnRoute.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { AttributionProvider } from "./context/AttributionContext.jsx";
 
 import { installUnauthorizedHandler } from "./config/authStore.js";
 import UndoToast from "./components/UndoToast.jsx";
@@ -68,6 +69,7 @@ function App() {
 
   return (
     <LanguageProvider>
+      <AttributionProvider>
       <ToastProvider>
         <UndoToast />
         <ConfirmProvider>
@@ -118,9 +120,9 @@ function App() {
               <Route path="/dashboard/transactions" element={<DashboardShell />} />
               <Route path="/dashboard/activity" element={<DashboardShell />} />
               <Route path="/dashboard/verification" element={<DashboardShell />} />
-              <Route path="/dashboard/listings" element={<DashboardShell />} />
+              <Route path="/dashboard/safety" element={<DashboardShell />} />
+              <Route path="/dashboard/feedback" element={<DashboardShell />} />
               <Route path="/dashboard/listings/edit/:id" element={<DashboardShell />} />
-              
 
               {/* DASHBOARD — BUYER */}
               <Route path="/dashboard/buyer" element={<DashboardShell />} />
@@ -135,6 +137,7 @@ function App() {
               <Route path="/dashboard/buyer/waiting" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/transactions" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/safety" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/feedback" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/activity" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/verification" element={<DashboardShell />} />
 
@@ -159,6 +162,7 @@ function App() {
           </Router>
         </ConfirmProvider>
       </ToastProvider>
+    </AttributionProvider>
     </LanguageProvider>
   );
 }

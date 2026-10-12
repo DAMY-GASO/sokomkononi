@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { loginAsync } from "../../config/authStore.js";
 import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
+import Captcha, { isCaptchaEnabled } from "../../components/Captcha.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const icons = {
@@ -47,6 +48,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
 
   function finishLogin() {
     const { from, ...restState } = location.state || {};
@@ -65,8 +67,11 @@ export default function LoginPage() {
       setError(t("login_error_required"));
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.identifier.trim())) {
-      setError(tx("Weka barua pepe sahihi.", "Please enter a valid email address."));
+    const v = form.identifier.trim();
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    const isPhone = /^\+?[0-9\s\-()]{9,15}$/.test(v);
+    if (!isEmail && !isPhone) {
+      setError(tx("Weka barua pepe au namba sahihi.", "Enter a valid email or phone number."));
       return;
     }
 
@@ -75,6 +80,7 @@ export default function LoginPage() {
     const res = await loginAsync({
       identifier: form.identifier.trim(),
       password: form.password,
+      captcha_token: captchaToken || undefined,
     });
     setLoading(false);
 
@@ -183,11 +189,13 @@ export default function LoginPage() {
                 </Link>
               </div>
 
+              <Captcha onVerify={setCaptchaToken} onExpire={() => setCaptchaToken("")} />
+
               {error && <p className="text-rust text-body-sm">{error}</p>}
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (isCaptchaEnabled && !captchaToken)}
                 className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-lg font-semibold text-btn transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? t("login_submitting") : t("login_submit")}

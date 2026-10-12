@@ -392,7 +392,7 @@ function normalizeDealFromApi(raw, currentUserId) {
 // ============================================================
 let _dealsUserId = null;
 
-export async function hydrateDealsFromApi(currentUserId) {
+async function _hydrateDealsImpl(currentUserId) {
   _dealsUserId = currentUserId ?? _dealsUserId;
   try {
     const data = await dealsApi.list({ page_size: 200 });
@@ -406,6 +406,13 @@ export async function hydrateDealsFromApi(currentUserId) {
     console.warn("[dealsStore] hydrate failed:", err);
     return { source: "error", count: getDeals().length };
   }
+}
+
+let _inflight_hydrateDealsFromApi = null;
+export function hydrateDealsFromApi(...args) {
+  if (_inflight_hydrateDealsFromApi) return _inflight_hydrateDealsFromApi;
+  _inflight_hydrateDealsFromApi = _hydrateDealsImpl(...args).finally(() => { _inflight_hydrateDealsFromApi = null; });
+  return _inflight_hydrateDealsFromApi;
 }
 
 export async function fetchDealDetailAsync(dealId) {
@@ -443,6 +450,14 @@ export async function fetchDealDetailAsync(dealId) {
       ? {
           ...existing,
           ...deal,
+          // Never overwrite a known string with an empty one
+          buyerName:  deal.buyerName  || existing.buyerName  || "",
+          sellerName: deal.sellerName || existing.sellerName || "",
+          listingTitle: deal.listingTitle || existing.listingTitle || "",
+          category:   deal.category   || existing.category   || null,
+          location:   deal.location   || existing.location   || "",
+          askingPrice: deal.askingPrice || existing.askingPrice || 0,
+          currentOffer: deal.currentOffer || existing.currentOffer || 0,
           messages:
             (deal.messages?.length || 0) >= (existing.messages?.length || 0)
               ? deal.messages
@@ -734,8 +749,8 @@ export function useDeals(currentUserId) {
   const listings = useListings();
 
   useEffect(() => {
-    if (currentUserId == null) return;
-    hydrateDealsFromApi(currentUserId);
+    // Hydrate even without currentUserId so admin/overview still get data.
+    hydrateDealsFromApi(currentUserId ?? null);
     const sync = () => setDeals(getDeals());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);

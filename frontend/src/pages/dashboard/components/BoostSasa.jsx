@@ -764,6 +764,7 @@ export default function BoostSasa({
 
         {stage === "paying" && (
           <PaymentGateway
+            scope="boost"
             amount={
               paymentMode === "flat"
                 ? pendingBoost?.package?.price || 0

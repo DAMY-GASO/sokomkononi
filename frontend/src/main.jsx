@@ -27,6 +27,18 @@ function purgeStaleCsrfCookies() {
 }
 purgeStaleCsrfCookies();
 
+
+// ── Register undo restore handlers (survive page reload) ──
+import("./config/undoStore.js").then(
+  ({ registerRestoreHandlers }) => {
+    import("./config/listingsStore.js").then(({ restoreListingAsync }) => {
+      registerRestoreHandlers({
+        listing: (id) => restoreListingAsync(id),
+      });
+    });
+  }
+);
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>

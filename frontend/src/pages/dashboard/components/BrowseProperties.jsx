@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   Grid3x3,
@@ -235,7 +235,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
   return (
     <>
       <aside className="hidden lg:block w-64 flex-shrink-0">
-        <div className="bg-white rounded-xl border border-gray-100 p-5 sticky top-20">
+        <div className="bg-white rounded-xl border border-gray-100 p-5 lg:sticky lg:top-20">
           {content}
         </div>
       </aside>
@@ -260,7 +260,14 @@ export default function BrowseProperties({
   excludeSellerId = null, // ⬅️ MPYA — seller hawezi kuona listings zake kwenye browse
 }) {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get("tafuta") || ""
+  );
+
+  useEffect(() => {
+    setSearchQuery(searchParams.get("tafuta") || "");
+  }, [searchParams]);
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("newest");
   const [filters, setFilters] = useState({
@@ -657,7 +664,7 @@ export default function BrowseProperties({
                   onClick={clearFilters}
                   className="mt-4 px-5 py-2 bg-gold text-night rounded-lg text-sm font-semibold hover:bg-flame transition-colors"
                 >
-                  {lang === "sw" ? "Safisha Vichujui" : "Clear Filters"}
+                  {lang === "sw" ? "Safisha Vichujio" : "Clear Filters"}
                 </button>
               </div>
             )}

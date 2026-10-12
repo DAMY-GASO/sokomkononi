@@ -116,7 +116,7 @@ export default function ContactPage() {
               <p className="font-semibold text-primary text-body-sm">
                 {t("contact_phone_label")}
               </p>
-              <p className="text-secondary text-body-sm">+255 743 895 038</p>
+              <p className="text-secondary text-body-sm flex items-center justify-center gap-2 flex-wrap"><a href="tel:+255743895038" className="hover:text-night underline">+255 743 895 038</a><a href="https://wa.me/255743895038" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 bg-[#25D366] text-white text-[11px] font-semibold px-2 py-0.5 rounded-full hover:opacity-90">WhatsApp</a></p>
             </div>
           </div>
 

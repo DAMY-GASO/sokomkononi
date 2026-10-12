@@ -10,6 +10,8 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import {
   useNotifications,
   getLocalizedField,
+  markAllNotificationsReadAsync,
+  clearNotificationsAsync,
 } from "../../config/notificationsStore.js";
 import {
   Menu,
@@ -308,7 +310,7 @@ export default function AdminDashboard() {
   };
 
   const visibleNav = useMemo(() => {
-    if (!rolesReady) return [];
+    if (!rolesReady) return [];   // hide nav until roles load
     return NAV.filter((item) => canAccess(item.key));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffRole, rolesReady]);
@@ -559,6 +561,34 @@ export default function AdminDashboard() {
                     </p>
                   )}
                 </div>
+
+                <div className="border-t border-gray-100 px-4 py-2 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const res = await markAllNotificationsReadAsync("admin");
+                      if (!res?.ok) console.warn("markAllRead failed:", res?.error);
+                    }}
+                    className="text-[11px] font-semibold hover:underline"
+                    style={{ color: COLORS.green }}
+                  >
+                    {lang === "sw" ? "Soma Zote" : "Mark All Read"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!window.confirm(lang === "sw"
+                        ? "Futa taarifa zote za admin?"
+                        : "Delete all admin notifications?")) return;
+                      const res = await clearNotificationsAsync("admin");
+                      if (!res?.ok) console.warn("clearAll failed:", res?.error);
+                    }}
+                    className="text-[11px] font-semibold hover:underline"
+                    style={{ color: COLORS.rust }}
+                  >
+                    {lang === "sw" ? "Futa Zote" : "Delete All"}
+                  </button>
+                </div>
               </div>
               </>
             )}
@@ -742,7 +772,7 @@ export default function AdminDashboard() {
         )}
 
         {/* MAIN */}
-        <main className="flex-1 min-w-0 max-w-7xl px-4 sm:px-6 py-6 overflow-x-hidden">
+        <main className="flex-1 min-w-0 w-full max-w-7xl px-3 sm:px-6 py-4 sm:py-6 overflow-x-hidden">
           {renderSection()}
         </main>
       </div>

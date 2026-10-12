@@ -34,13 +34,13 @@ export function isNonTerminal(status) {
 }
 
 // ── Payment methods (spec Section 3.1) ─────────────────────
+// Only payment methods available in Tanzania.
+// MTN MoMo and Orange Money are NOT offered in TZ and were removed.
 export const MOBILE_METHODS = [
   { key: "mpesa",    label: "M-Pesa",       icon: "smartphone" },
   { key: "airtel",   label: "Airtel Money", icon: "smartphone" },
   { key: "mixx",     label: "Mixx by Yas",  icon: "smartphone" },
   { key: "halopesa", label: "HaloPesa",     icon: "smartphone" },
-  { key: "mtn",      label: "MTN MoMo",     icon: "smartphone" },
-  { key: "orange",   label: "Orange Money", icon: "smartphone" },
 ];
 
 export const CARD_METHODS = [
@@ -105,7 +105,6 @@ export async function pollOrderStatus(orderId, { onProgress, signal } = {}) {
     try {
       data = await api.post("/payments/order-status/", { order_id: orderId });
     } catch (err) {
-      // Auth expired mid-poll — surface immediately, don't burn 30 retries.
       if (err?.status === 401) {
         return {
           ok: false,
@@ -113,7 +112,15 @@ export async function pollOrderStatus(orderId, { onProgress, signal } = {}) {
           data: { detail: "Session expired. Please log in again." },
         };
       }
-      continue; // network blip — retry next interval
+      // 400/403/404 — malformed order_id or forbidden. Do NOT retry.
+      if (err?.status >= 400 && err.status < 500) {
+        return {
+          ok: false,
+          status: "CLIENT_ERROR",
+          data: { detail: err?.message || `Request failed (${err.status}).` },
+        };
+      }
+      continue; // network blip — retry
     }
 
     const status = String(data?.payment_status || "").toUpperCase();

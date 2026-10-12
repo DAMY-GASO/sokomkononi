@@ -70,49 +70,32 @@ export function invalidateAuthCache() {
   resetHydrateCache();
 }
 
-const USER_SCOPED_KEYS = [
-  "sokomkononi_current_user_v1",
-  "sokomkononi_access",
-  "sokomkononi_refresh",
-  "sokomkononi_listings_mine_v1",
-  "sokomkononi_listings_public_v1",
-  "sokomkononi_saved_v1",
-  "sokomkononi_saved_snapshots_v1",
-  "sokomkononi_messages_v2",
-  "sokomkononi_leads_v1",
-  "sokomkononi_searches_v1",
-  "sokomkononi_waiting_list_v1",
-  "sokomkononi_notifications_v1",
-  "sokomkononi_deals_v1",
-  "sokomkononi_transactions_v1",
-  "sokomkononi_transactions_lifecycle_v1",
-  "sokomkononi_user_credits_v1",
-  "sokomkononi_recently_viewed_v1",
-  "sokomkononi_dashboard_side_v1",
-  "sokomkononi_undo_v1",
-  "sokomkononi_moderation_queue_v1",
-  "sokomkononi_moderation_decisions_v1",
-];
+const CACHE_PREFIX = "sokomkononi_";
+const PRESERVE_KEYS = new Set([
+  "sokomkononi_admin_access",
+  "sokomkononi_admin_refresh",
+  "sokomkononi_admin_user_v1",
+]);
 
 function wipeUserScopedCaches() {
   if (typeof window === "undefined") return;
   try {
-    USER_SCOPED_KEYS.forEach((k) => {
-      try {
-        window.localStorage.removeItem(k);
-      } catch {
-        /* noop */
-      }
-    });
-  } catch {
-    /* noop */
-  }
+    const toRemove = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (!k || !k.startsWith(CACHE_PREFIX)) continue;
+      if (PRESERVE_KEYS.has(k)) continue;
+      toRemove.push(k);
+    }
+    toRemove.forEach((k) => { try { window.localStorage.removeItem(k); } catch {} });
+  } catch { /* noop */ }
 }
 
 function hardReset() {
   saveUser(null);
   clearJWT();
   resetHydrateCache();
+  wipeUserScopedCaches();   // 🔒 Prevent user-A data leaking into user-B session
   if (typeof window === "undefined") return;
   const AUTH_KEYS =
     getSessionScope() === "admin"
@@ -177,7 +160,7 @@ function normalizeUserFromApi(raw) {
     verified: !!(raw.is_verified ?? raw.verified),
     isActive: raw.is_active !== false,
     isDeleted: !!raw.is_deleted,
-    avatarUrl: raw.avatar || raw.avatar_url || raw.avatarUrl || null,
+    avatarUrl: raw.avatar || raw.avatar_url || raw.avatarUrl || raw.picture || null,
     bio: raw.bio || "",
     region: raw.region || "",
     location: raw.location || raw.region || "",
@@ -255,7 +238,7 @@ export function hydrateCurrentUserFromApi() {
   return inflightHydrate;
 }
 
-export async function loginAsync({ identifier, password }) {
+export async function loginAsync({ identifier, password, captcha_token }) {
   if (!identifier || !password) {
     return {
       ok: false,
@@ -263,7 +246,7 @@ export async function loginAsync({ identifier, password }) {
     };
   }
   try {
-    const data = await authApi.login({ identifier, password });
+    const data = await authApi.login({ identifier, password, captcha_token });
     const me = data?.user ?? (await authApi.me());
     if (getSessionScope() === "user" && computeIsAdmin(me)) {
       hardReset();
@@ -332,6 +315,9 @@ export async function registerAsync(payload) {
       phone: payload.phone,
       password: payload.password,
       account_type,
+      captcha_token: payload.captcha_token,
+      terms_version: payload.terms_version || "v1.0",
+      privacy_version: payload.privacy_version || "v1.0",
     });
     return { ok: true, data };
   } catch (err) {

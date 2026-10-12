@@ -100,7 +100,7 @@ function normalizeMyTransaction(raw) {
 // ============================================================
 // HYDRATE FROM API
 // ============================================================
-export async function hydrateTransactionsFromApi() {
+async function _hydrateTxImpl() {
   try {
     const data = await financeApi.myTransactions();
     const rawList = Array.isArray(data) ? data : data?.results || [];
@@ -116,6 +116,13 @@ export async function hydrateTransactionsFromApi() {
 // ============================================================
 // HOOKS
 // ============================================================
+let _inflight_hydrateTransactionsFromApi = null;
+export function hydrateTransactionsFromApi(...args) {
+  if (_inflight_hydrateTransactionsFromApi) return _inflight_hydrateTransactionsFromApi;
+  _inflight_hydrateTransactionsFromApi = _hydrateTxImpl(...args).finally(() => { _inflight_hydrateTransactionsFromApi = null; });
+  return _inflight_hydrateTransactionsFromApi;
+}
+
 export function useTransactions() {
   const [list, setList] = useState(() => getTransactions());
 

@@ -113,3 +113,87 @@ export function useSearches() {
 }
 export function useSearchesCount() { return useSearches().length; }
 
+
+
+// ============================================================
+// SEARCH ALERTS
+// When a new listing matches a saved search and the user has
+// not been notified for that (search, listing) pair yet, emit
+// a notification.
+// ============================================================
+import { getPublicListings } from "./listingsStore.js";
+import { notificationsApi } from "../api/notifications.js";
+
+const SEEN_KEY = "sokomkononi_search_alerts_seen_v1";
+
+function readSeen() {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(SEEN_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+function writeSeen(map) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SEEN_KEY, JSON.stringify(map));
+}
+
+function match(search, listing) {
+  if (!listing || listing.status !== "live") return false;
+  if (search.category && listing.category !== search.category) return false;
+  if (search.region && listing.region !== search.region) return false;
+  if (search.minPrice != null && Number(listing.price) < search.minPrice) return false;
+  if (search.maxPrice != null && Number(listing.price) > search.maxPrice) return false;
+  if (search.verifiedOnly && !listing.verified) return false;
+  if (search.query) {
+    const q = search.query.toLowerCase();
+    const text = `${listing.title || ""} ${listing.location || ""} ${listing.description || ""}`.toLowerCase();
+    if (!text.includes(q)) return false;
+  }
+  return true;
+}
+
+export async function detectSearchAlertsAsync() {
+  const searches = getSearches();
+  if (searches.length === 0) return { ok: true, alerts: [] };
+
+  const listings = getPublicListings();
+  const seen = readSeen();
+  const alerts = [];
+
+  for (const search of searches) {
+    const seenForSearch = new Set(seen[search.id] || []);
+    const matches = listings.filter(
+      (l) => match(search, l) && !seenForSearch.has(String(l.id))
+    );
+    // Cap per-run so we don't spam the user
+    const take = matches.slice(0, 5);
+    for (const l of take) {
+      alerts.push({ search, listing: l });
+      seenForSearch.add(String(l.id));
+    }
+    seen[search.id] = Array.from(seenForSearch);
+  }
+
+  writeSeen(seen);
+  if (alerts.length === 0) return { ok: true, alerts: [] };
+
+  for (const a of alerts) {
+    try {
+      await notificationsApi.create({
+        notification_type: "SEARCH_ALERT",
+        audience: "user",
+        title: "Tangazo jipya linafanana na utafutaji wako",
+        message: `"${a.search.name}": ${a.listing.title} — TZS ${Number(a.listing.price || 0).toLocaleString("en-US")}`,
+        related_object_type: "listing",
+        related_object_id: a.listing.id,
+        action_url: `/mali/${a.listing.id}`,
+        priority: "normal",
+      });
+    } catch (e) {
+      console.warn("[searchesStore] alert notify failed:", e);
+    }
+  }
+
+  return { ok: true, alerts };
+}

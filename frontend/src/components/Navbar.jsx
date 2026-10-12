@@ -1,12 +1,54 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+// ============================================================
+// Navbar.jsx — clean rewrite
+//
+// Dropdowns use a SINGLE state variable `openMenu` that holds the
+// name of the currently-open dropdown, or null. Only one can ever
+// be open. Outside-click, route change, and Escape all close it.
+// ============================================================
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Bell } from "lucide-react";
+
 import { useLanguage } from "../context/LanguageContext.jsx";
 import {
   usePopularCategories,
   getCategoryIcon,
 } from "../config/categoriesStore.js";
 import { useAuth, logoutAsync } from "../config/authStore.js";
+import { useNotifications } from "../config/notificationsStore.js";
+import { useDashboardSide } from "../config/dashboardSideStore.js";
+import { useAttribution } from "../context/AttributionContext.jsx";
 
+// ─────────────────────────────────────────────────────────────
+function NotificationBell() {
+  const { user, isLoading } = useAuth();
+  const { unreadCount } = useNotifications("user", Boolean(user) && !isLoading);
+  const side = useDashboardSide();
+  if (!user) return null;
+  const target =
+    side === "buyer"
+      ? "/dashboard/buyer/notifications"
+      : "/dashboard/notifications";
+  return (
+    <Link
+      to={target}
+      className="relative text-white/60 hover:text-white p-1.5 transition-colors"
+      aria-label="Notifications"
+    >
+      <Bell size={20} />
+      {unreadCount > 0 && (
+        <span
+          className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+          style={{ background: "#C1502E" }}
+        >
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 export default function Navbar({
   lang: langProp,
   setLang: setLangProp,
@@ -14,29 +56,83 @@ export default function Navbar({
   trustLinks = [],
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  const { registerTap: registerLogoTap } = useAttribution();
 
-  // Soma kutoka context kama props hazijatolewa
   const { lang: langCtx, setLang: setLangCtx } = useLanguage();
   const lang = langProp ?? langCtx;
   const setLang = setLangProp ?? setLangCtx;
 
-  // Popular categories kutoka store — fallback kama hakuna prop
   const popularCategories = usePopularCategories();
 
-  const [langOpen, setLangOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [catOpen, setCatOpen] = useState(false);
-  const [mobileCatOpen, setMobileCatOpen] = useState(false);
-  const [adsDropdownOpen, setAdsDropdownOpen] = useState(false);
-  const [mobileAdsDropdownOpen, setMobileAdsDropdownOpen] = useState(false);
-  const [helpDropdownOpen, setHelpDropdownOpen] = useState(false);
-  const [mobileHelpDropdownOpen, setMobileHelpDropdownOpen] = useState(false);
+  // ═══════════════════════════════════════════════════════════
+  // SINGLE dropdown state — only one can ever be open.
+  // Value is one of: "lang" | "cat" | "ads" | "help" | "user" | null
+  // ═══════════════════════════════════════════════════════════
+  const [openMenu, setOpenMenu] = useState(null);
+  const navRef = useRef(null);
+
+  const toggleMenu = (name) =>
+    setOpenMenu((prev) => (prev === name ? null : name));
+  const closeMenu = () => setOpenMenu(null);
+
+  // Mobile drawer is a separate overlay — not a dropdown
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mobileSub, setMobileSub] = useState(null); // "cat" | "ads" | "help" | null
+
+  // Search
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  // Matangazo menu items
+  // ── Close dropdown + drawer on route change ───────────────
+  useEffect(() => {
+    setOpenMenu(null);
+    setDrawerOpen(false);
+    setMobileSub(null);
+  }, [location.pathname]);
+
+  // ── Outside click closes dropdown + drawer ────────────────
+  useEffect(() => {
+    const onDown = (e) => {
+      // Dropdowns live inside navRef; the mobile drawer does not.
+      // We close the dropdown if the click is outside navRef.
+      if (openMenu !== null && navRef.current && !navRef.current.contains(e.target)) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [openMenu]);
+
+  // ── Escape closes everything ──────────────────────────────
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setOpenMenu(null);
+        setDrawerOpen(false);
+        setMobileSub(null);
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  // ── Body scroll lock while drawer is open ─────────────────
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    if (drawerOpen) document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [drawerOpen]);
+
+  // ── Menu definitions ──────────────────────────────────────
   const adMenuItems = [
     { label: { sw: "Matangazo Mapya", en: "New Ads" }, link: "/tafuta?tafuta=mpya" },
     { label: { sw: "Matangazo ya Ofa", en: "Deal Ads" }, link: "/tafuta?tafuta=ofa" },
@@ -45,7 +141,6 @@ export default function Navbar({
     { label: { sw: "Matangazo Yote", en: "All Ads" }, link: "/tafuta" },
   ];
 
-  // Msaada menu items
   const helpMenuItems = [
     { label: { sw: "Jinsi ya Kununua", en: "How to Buy" }, link: "/jinsi-ya-kununua" },
     { label: { sw: "Jinsi ya Kuuza", en: "How to Sell" }, link: "/jinsi-ya-kununua#kuuza" },
@@ -58,9 +153,12 @@ export default function Navbar({
     { code: "sw", native: "Kiswahili" },
   ];
 
+  const currentLang = languages.find((l) => l.code === lang) || languages[1];
+
+  // ── Handlers ──────────────────────────────────────────────
   const handleLanguageSelect = (code) => {
     setLang(code);
-    setLangOpen(false);
+    closeMenu();
   };
 
   const handleSearchSubmit = (e) => {
@@ -72,81 +170,88 @@ export default function Navbar({
     }
   };
 
-
   const handleLogout = async () => {
+    closeMenu();
     await logoutAsync();
     navigate("/login");
   };
 
-  const currentLang = languages.find((l) => l.code === lang) || languages[1];
-
-  const handleOverlayClick = () => {
-    setMenuOpen(false);
+  const handleLogoClick = (e) => {
+    const hit = registerLogoTap();
+    if (hit) e.preventDefault();
   };
 
-  // Kama page imepitisha `categories` prop (kutoka HomePage), tumia hizo.
-  // Vinginevyo, tumia popularCategories kutoka store.
   const displayCategories = categories.length > 0 ? categories : popularCategories;
-
-  // Helper ya kupata jina la category — inashughulikia `label` na `name`
   const getCatLabel = (cat) =>
-    cat.label?.[lang] ||
-    cat.label?.sw ||
-    cat.name?.[lang] ||
-    cat.name?.sw ||
-    cat.key ||
-    cat.slug;
-
-  // Helper ya kupata key/slug ya category
-  const getCatKey = (cat) => cat.key || cat.slug;
-
-  // Helper ya kupata picha ya category (null kama haipo)
+    cat.label?.[lang] || cat.label?.sw ||
+    cat.name?.[lang] || cat.name?.sw ||
+    cat.key || cat.slug;
+  const getCatKey = (cat) => cat.key || cat.slug || "";
   const getCatImage = (cat) => cat.imageUrl || null;
+
+  const Chev = ({ open }) => (
+    <svg
+      className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
 
   return (
     <>
-      {/* HEADER */}
-      <header className="bg-night text-white border-b border-white/10 sticky top-0 z-50">
+      {/* ═════════════════════════════════════════════════════ */}
+      {/* HEADER                                                */}
+      {/* ═════════════════════════════════════════════════════ */}
+      <header
+        ref={navRef}
+        className="bg-night text-white border-b border-white/10 sticky top-0 z-50"
+      >
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Left: Hamburger + Logo */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setMenuOpen(true)}
+              onClick={() => setDrawerOpen(true)}
               className="md:hidden text-white p-1 hover:bg-white/10 rounded-lg transition-colors"
+              aria-label="Open menu"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
               </svg>
             </button>
-            <Link to="/" className="flex items-center gap-2">
+            <Link
+              to="/"
+              onClick={handleLogoClick}
+              className="flex items-center gap-2 select-none"
+            >
               <img src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full" />
               <span className="font-bold text-base sm:text-lg tracking-tight">SokoMkononi</span>
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
+          {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <Link to="/" className="text-white/70 hover:text-white text-sm font-medium transition-colors">
+            <Link
+              to="/"
+              className="text-white/70 hover:text-white text-sm font-medium transition-colors"
+            >
               {lang === "sw" ? "Nyumbani" : "Home"}
             </Link>
 
-            {/* Categories Dropdown */}
+            {/* Categories dropdown */}
             <div className="relative">
               <button
-                onClick={() => setCatOpen((prev) => !prev)}
+                type="button"
+                onClick={() => toggleMenu("cat")}
+                aria-expanded={openMenu === "cat"}
                 className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
               >
                 {lang === "sw" ? "Kategoria" : "Categories"}
-                <svg
-                  className={`w-3.5 h-3.5 transition-transform ${catOpen ? "rotate-180" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                <Chev open={openMenu === "cat"} />
               </button>
-              {catOpen && (
+              {openMenu === "cat" && (
                 <div className="absolute left-0 mt-2 w-56 bg-night-soft border border-white/10 rounded-lg shadow-xl py-2 z-50 max-h-96 overflow-y-auto">
                   {displayCategories.map((cat) => {
                     const CatIcon = getCategoryIcon(cat.iconKey);
@@ -155,15 +260,10 @@ export default function Navbar({
                       <Link
                         key={getCatKey(cat)}
                         to={`/kategoria/${getCatKey(cat)}`}
-                        onClick={() => setCatOpen(false)}
                         className="flex items-center gap-2.5 px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                       >
                         {img ? (
-                          <img
-                            src={img}
-                            alt=""
-                            className="w-5 h-5 rounded object-cover flex-shrink-0"
-                          />
+                          <img src={img} alt="" className="w-5 h-5 rounded object-cover flex-shrink-0" />
                         ) : (
                           <CatIcon size={16} className="text-white/50 flex-shrink-0" />
                         )}
@@ -174,7 +274,6 @@ export default function Navbar({
                   <div className="border-t border-white/10 mt-1 pt-1">
                     <Link
                       to="/kategoria"
-                      onClick={() => setCatOpen(false)}
                       className="block px-4 py-2 text-sm text-gold font-semibold hover:bg-white/5 transition-colors"
                     >
                       {lang === "sw" ? "Ona Zote →" : "View All →"}
@@ -184,33 +283,27 @@ export default function Navbar({
               )}
             </div>
 
-            {/* Trust Links */}
+            {/* Trust links or defaults */}
             {trustLinks.length > 0 ? (
               trustLinks.map((l) => {
                 if (l.to === "/usalama") {
                   return (
                     <div key={l.to} className="relative">
                       <button
-                        onClick={() => setAdsDropdownOpen((prev) => !prev)}
+                        type="button"
+                        onClick={() => toggleMenu("ads")}
+                        aria-expanded={openMenu === "ads"}
                         className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
                       >
                         {lang === "sw" ? "Matangazo" : "Ads"}
-                        <svg
-                          className={`w-3.5 h-3.5 transition-transform ${adsDropdownOpen ? "rotate-180" : ""}`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
+                        <Chev open={openMenu === "ads"} />
                       </button>
-                      {adsDropdownOpen && (
+                      {openMenu === "ads" && (
                         <div className="absolute left-0 mt-2 w-64 bg-night-soft border border-white/10 rounded-lg shadow-xl py-2 z-50">
                           {adMenuItems.map((item) => (
                             <Link
                               key={item.link}
                               to={item.link}
-                              onClick={() => setAdsDropdownOpen(false)}
                               className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                             >
                               {lang === "sw" ? item.label.sw : item.label.en}
@@ -233,34 +326,27 @@ export default function Navbar({
               })
             ) : (
               <>
-                <Link
-                  to="/kuhusu"
-                  className="text-white/70 hover:text-white text-sm font-medium transition-colors"
-                >
+                <Link to="/kuhusu" className="text-white/70 hover:text-white text-sm font-medium transition-colors">
                   {lang === "sw" ? "Kuhusu Sisi" : "About Us"}
                 </Link>
+
+                {/* Ads */}
                 <div className="relative">
                   <button
-                    onClick={() => setAdsDropdownOpen((prev) => !prev)}
+                    type="button"
+                    onClick={() => toggleMenu("ads")}
+                    aria-expanded={openMenu === "ads"}
                     className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
                   >
                     {lang === "sw" ? "Matangazo" : "Ads"}
-                    <svg
-                      className={`w-3.5 h-3.5 transition-transform ${adsDropdownOpen ? "rotate-180" : ""}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <Chev open={openMenu === "ads"} />
                   </button>
-                  {adsDropdownOpen && (
+                  {openMenu === "ads" && (
                     <div className="absolute left-0 mt-2 w-64 bg-night-soft border border-white/10 rounded-lg shadow-xl py-2 z-50">
                       {adMenuItems.map((item) => (
                         <Link
                           key={item.link}
                           to={item.link}
-                          onClick={() => setAdsDropdownOpen(false)}
                           className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                         >
                           {lang === "sw" ? item.label.sw : item.label.en}
@@ -269,28 +355,24 @@ export default function Navbar({
                     </div>
                   )}
                 </div>
+
+                {/* Help */}
                 <div className="relative">
                   <button
-                    onClick={() => setHelpDropdownOpen((prev) => !prev)}
+                    type="button"
+                    onClick={() => toggleMenu("help")}
+                    aria-expanded={openMenu === "help"}
                     className="flex items-center gap-1 text-white/70 hover:text-white text-sm font-medium transition-colors"
                   >
                     {lang === "sw" ? "Msaada" : "Help"}
-                    <svg
-                      className={`w-3.5 h-3.5 transition-transform ${helpDropdownOpen ? "rotate-180" : ""}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <Chev open={openMenu === "help"} />
                   </button>
-                  {helpDropdownOpen && (
+                  {openMenu === "help" && (
                     <div className="absolute left-0 mt-2 w-56 bg-night-soft border border-white/10 rounded-lg shadow-xl py-2 z-50">
                       {helpMenuItems.map((item) => (
                         <Link
                           key={item.link}
                           to={item.link}
-                          onClick={() => setHelpDropdownOpen(false)}
                           className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
                         >
                           {lang === "sw" ? item.label.sw : item.label.en}
@@ -303,9 +385,9 @@ export default function Navbar({
             )}
           </nav>
 
-          {/* Right: Search + Language + User/Login */}
+          {/* Right: search + lang + bell + user */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Search - Desktop */}
+            {/* Search - desktop */}
             <form onSubmit={handleSearchSubmit} className="relative hidden sm:block">
               <input
                 type="text"
@@ -316,7 +398,7 @@ export default function Navbar({
               />
               <button
                 type="submit"
-                aria-label={lang === "sw" ? "Tafuta" : "Search"}
+                aria-label="Search"
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -326,11 +408,11 @@ export default function Navbar({
               </button>
             </form>
 
-            {/* Search Icon - Mobile */}
+            {/* Search icon - mobile */}
             <button
-              onClick={() => setSearchOpen(!searchOpen)}
+              onClick={() => setSearchOpen((v) => !v)}
               className="sm:hidden text-white/60 hover:text-white p-1.5 transition-colors"
-              aria-label={lang === "sw" ? "Tafuta" : "Search"}
+              aria-label="Search"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8" />
@@ -338,24 +420,19 @@ export default function Navbar({
               </svg>
             </button>
 
-            {/* Language Switcher */}
+            {/* Language */}
             <div className="relative">
               <button
-                onClick={() => setLangOpen(!langOpen)}
+                type="button"
+                onClick={() => toggleMenu("lang")}
+                aria-expanded={openMenu === "lang"}
                 className="text-white/60 hover:text-white text-sm font-medium border border-white/15 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
               >
                 <span className="hidden sm:inline">{currentLang?.native || "Kiswahili"}</span>
                 <span className="sm:hidden">{currentLang?.code?.toUpperCase() || "SW"}</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${langOpen ? "rotate-180" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                <Chev open={openMenu === "lang"} />
               </button>
-              {langOpen && (
+              {openMenu === "lang" && (
                 <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-night-soft border border-white/10 rounded-lg shadow-xl py-2 z-50">
                   <div className="px-4 py-2 border-b border-white/10">
                     <p className="text-white/50 text-xs font-semibold">
@@ -386,67 +463,52 @@ export default function Navbar({
               )}
             </div>
 
-            {/* User Menu / Login Button */}
+            <NotificationBell />
+
+            {/* User / Login */}
             {user ? (
               <div className="relative">
                 <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  type="button"
+                  onClick={() => toggleMenu("user")}
+                  aria-expanded={openMenu === "user"}
                   className="flex items-center gap-2 bg-white/10 hover:bg-white/15 rounded-md px-2 py-1.5 transition-colors"
                 >
-                  <div className="w-7 h-7 rounded-full bg-gold flex items-center justify-center text-night font-bold text-xs">
-                    {user.name?.charAt(0)?.toUpperCase() || "U"}
-                  </div>
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt=""
+                      className="w-7 h-7 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-gold flex items-center justify-center text-night font-bold text-xs">
+                      {user.name?.charAt(0)?.toUpperCase() || "U"}
+                    </div>
+                  )}
                   <span className="hidden lg:inline text-white text-sm font-medium truncate max-w-[80px]">
                     {user.name?.split(" ")[0] || "User"}
                   </span>
-                  <svg
-                    className={`w-4 h-4 text-white/60 transition-transform ${userMenuOpen ? "rotate-180" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <Chev open={openMenu === "user"} />
                 </button>
-                {userMenuOpen && (
+                {openMenu === "user" && (
                   <div className="absolute right-0 mt-2 w-56 bg-night-soft border border-white/10 rounded-lg shadow-xl py-2 z-50">
                     <div className="px-4 py-3 border-b border-white/10">
                       <p className="text-white text-sm font-semibold truncate">{user.name}</p>
                       <p className="text-white/50 text-xs truncate">{user.email}</p>
                     </div>
-                    <Link
-                      to="/dashboard"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
-                    >
+                    <Link to="/dashboard" className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors">
                       {lang === "sw" ? "Dashibodi" : "Dashboard"}
                     </Link>
-                    <Link
-                      to="/wasifu"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
-                    >
+                    <Link to="/wasifu" className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors">
                       {lang === "sw" ? "Wasifu" : "Profile"}
                     </Link>
-                    <Link
-                      to="/dashboard/buyer"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
-                    >
+                    <Link to="/dashboard/buyer" className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors">
                       {lang === "sw" ? "Nunua Sasa" : "Buy Now"}
                     </Link>
-                    <Link
-                      to="/dashboard/post"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
-                    >
+                    <Link to="/dashboard/post" className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors">
                       {lang === "sw" ? "Uza Sasa" : "Sell Now"}
                     </Link>
-                    <Link
-                      to="/alika-marafiki"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors"
-                    >
+                    <Link to="/alika-marafiki" className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors">
                       {lang === "sw" ? "Alika Marafiki" : "Invite Friends"}
                     </Link>
                     <div className="my-2 border-t border-white/10" />
@@ -470,7 +532,7 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Mobile Search Bar */}
+        {/* Mobile search bar */}
         {searchOpen && (
           <div className="sm:hidden bg-night border-t border-white/10 px-4 py-3">
             <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
@@ -483,10 +545,7 @@ export default function Navbar({
                   placeholder={lang === "sw" ? "Tafuta mali..." : "Search properties..."}
                   className="w-full bg-white/10 border border-white/15 rounded-md pl-3 pr-9 py-2 text-white text-sm placeholder-white/40 focus:outline-none focus:border-gold"
                 />
-                <button
-                  type="submit"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
-                >
+                <button type="submit" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="8" strokeWidth="2" />
                     <path d="M21 21l-4.35-4.35" strokeWidth="2" />
@@ -508,21 +567,25 @@ export default function Navbar({
         )}
       </header>
 
-      {/* MOBILE MENU — inatokea KUSHOTO */}
+      {/* ═════════════════════════════════════════════════════ */}
+      {/* MOBILE DRAWER                                         */}
+      {/* ═════════════════════════════════════════════════════ */}
       <div
         className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${
-          menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          drawerOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
-        onClick={handleOverlayClick}
+        onClick={() => setDrawerOpen(false)}
+        aria-hidden="true"
       />
       <div
         className={`fixed top-0 left-0 h-full w-72 max-w-[80%] bg-night z-50 transition-transform duration-300 ease-out ${
-          menuOpen ? "translate-x-0" : "-translate-x-full"
+          drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <button
-          onClick={() => setMenuOpen(false)}
+          onClick={() => setDrawerOpen(false)}
           className="absolute top-4 right-4 text-white/60 hover:text-white text-2xl p-2"
+          aria-label="Close menu"
         >
           ✕
         </button>
@@ -531,35 +594,28 @@ export default function Navbar({
             <img src="/logo.webp" alt="" width={36} height={36} className="h-9 w-9 rounded-full" />
             <span className="text-white font-bold text-lg tracking-tight">SokoMkononi</span>
           </div>
+
           <nav className="flex flex-col gap-1">
             <Link
               to="/"
-              onClick={() => setMenuOpen(false)}
+              onClick={() => setDrawerOpen(false)}
               className="text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
             >
               {lang === "sw" ? "Nyumbani" : "Home"}
             </Link>
 
-            {/* Categories dropdown - mobile */}
+            {/* Categories sub */}
             <button
-              onClick={() => setMobileCatOpen((prev) => !prev)}
-              aria-expanded={mobileCatOpen}
+              type="button"
+              onClick={() => setMobileSub((v) => (v === "cat" ? null : "cat"))}
+              aria-expanded={mobileSub === "cat"}
               className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
             >
               <span>{lang === "sw" ? "Kategoria" : "Categories"}</span>
-              <svg
-                className={`w-4 h-4 transition-transform ${mobileCatOpen ? "rotate-180" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <Chev open={mobileSub === "cat"} />
             </button>
             <div
-              className={`grid transition-all duration-300 ease-in-out ${
-                mobileCatOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-              }`}
+              className={`grid transition-all duration-300 ${mobileSub === "cat" ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
               style={{ display: "grid" }}
             >
               <div className="overflow-hidden pl-2">
@@ -570,15 +626,11 @@ export default function Navbar({
                     <Link
                       key={getCatKey(cat)}
                       to={`/kategoria/${getCatKey(cat)}`}
-                      onClick={() => setMenuOpen(false)}
+                      onClick={() => setDrawerOpen(false)}
                       className="flex items-center gap-2.5 text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
                     >
                       {img ? (
-                        <img
-                          src={img}
-                          alt=""
-                          className="w-5 h-5 rounded object-cover flex-shrink-0"
-                        />
+                        <img src={img} alt="" className="w-5 h-5 rounded object-cover flex-shrink-0" />
                       ) : (
                         <CatIcon size={16} className="text-white/40 flex-shrink-0" />
                       )}
@@ -588,7 +640,7 @@ export default function Navbar({
                 })}
                 <Link
                   to="/kategoria"
-                  onClick={() => setMenuOpen(false)}
+                  onClick={() => setDrawerOpen(false)}
                   className="block text-gold hover:text-flame text-sm font-semibold py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
                 >
                   {lang === "sw" ? "Ona Zote →" : "View All →"}
@@ -598,26 +650,18 @@ export default function Navbar({
 
             <div className="my-2 border-t border-white/10" />
 
-            {/* Matangazo Dropdown - mobile */}
+            {/* Ads sub */}
             <button
-              onClick={() => setMobileAdsDropdownOpen((prev) => !prev)}
-              aria-expanded={mobileAdsDropdownOpen}
+              type="button"
+              onClick={() => setMobileSub((v) => (v === "ads" ? null : "ads"))}
+              aria-expanded={mobileSub === "ads"}
               className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
             >
               <span>{lang === "sw" ? "Matangazo" : "Ads"}</span>
-              <svg
-                className={`w-4 h-4 transition-transform ${mobileAdsDropdownOpen ? "rotate-180" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <Chev open={mobileSub === "ads"} />
             </button>
             <div
-              className={`grid transition-all duration-300 ease-in-out ${
-                mobileAdsDropdownOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-              }`}
+              className={`grid transition-all duration-300 ${mobileSub === "ads" ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
               style={{ display: "grid" }}
             >
               <div className="overflow-hidden pl-2">
@@ -625,7 +669,7 @@ export default function Navbar({
                   <Link
                     key={item.link}
                     to={item.link}
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => setDrawerOpen(false)}
                     className="block text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
                   >
                     {lang === "sw" ? item.label.sw : item.label.en}
@@ -634,68 +678,41 @@ export default function Navbar({
               </div>
             </div>
 
-            {/* Trust Links - mobile */}
-            {trustLinks.length > 0 ? (
-              trustLinks.map((l) => {
-                if (l.to === "/usalama") return null;
-                return (
-                  <Link
-                    key={l.to}
-                    to={l.to}
-                    onClick={() => setMenuOpen(false)}
-                    className="text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
-                  >
-                    {lang === "sw" ? l.label.sw : l.label.en}
-                  </Link>
-                );
-              })
-            ) : (
-              <>
-                <Link
-                  to="/kuhusu"
-                  onClick={() => setMenuOpen(false)}
-                  className="text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
-                >
-                  {lang === "sw" ? "Kuhusu Sisi" : "About Us"}
-                </Link>
+            <Link
+              to="/kuhusu"
+              onClick={() => setDrawerOpen(false)}
+              className="text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
+            >
+              {lang === "sw" ? "Kuhusu Sisi" : "About Us"}
+            </Link>
 
-                {/* Msaada Dropdown - mobile */}
-                <button
-                  onClick={() => setMobileHelpDropdownOpen((prev) => !prev)}
-                  aria-expanded={mobileHelpDropdownOpen}
-                  className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
-                >
-                  <span>{lang === "sw" ? "Msaada" : "Help"}</span>
-                  <svg
-                    className={`w-4 h-4 transition-transform ${mobileHelpDropdownOpen ? "rotate-180" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+            {/* Help sub */}
+            <button
+              type="button"
+              onClick={() => setMobileSub((v) => (v === "help" ? null : "help"))}
+              aria-expanded={mobileSub === "help"}
+              className="flex items-center justify-between text-white/80 hover:text-white text-base font-medium py-3 px-4 rounded-lg hover:bg-white/5 transition-colors"
+            >
+              <span>{lang === "sw" ? "Msaada" : "Help"}</span>
+              <Chev open={mobileSub === "help"} />
+            </button>
+            <div
+              className={`grid transition-all duration-300 ${mobileSub === "help" ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+              style={{ display: "grid" }}
+            >
+              <div className="overflow-hidden pl-2">
+                {helpMenuItems.map((item) => (
+                  <Link
+                    key={item.link}
+                    to={item.link}
+                    onClick={() => setDrawerOpen(false)}
+                    className="block text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    mobileHelpDropdownOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-                  }`}
-                  style={{ display: "grid" }}
-                >
-                  <div className="overflow-hidden pl-2">
-                    {helpMenuItems.map((item) => (
-                      <Link
-                        key={item.link}
-                        to={item.link}
-                        onClick={() => setMenuOpen(false)}
-                        className="block text-white/60 hover:text-white text-sm py-2 px-4 rounded-lg hover:bg-white/5 transition-colors"
-                      >
-                        {lang === "sw" ? item.label.sw : item.label.en}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+                    {lang === "sw" ? item.label.sw : item.label.en}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </nav>
         </div>
       </div>

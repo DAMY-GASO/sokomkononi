@@ -81,7 +81,7 @@ export function getRoleById(id) { return getRoles().find((r) => r.id === id) || 
 export function getSubAdmins() { return read(STAFF_KEY, []); }
 export function getSubAdmin(id) { return getSubAdmins().find((s) => s.id === id) || null; }
 
-export async function hydrateRolesFromApi() {
+async function _hydrateRolesImpl() {
   const out = { roles: null, staff: null, errors: [] };
   try {
     const d = await api.get("/rbac/roles/?page_size=200");
@@ -102,6 +102,13 @@ export async function hydrateRolesFromApi() {
     out.errors.push({ slice: "staff", error: err });
   }
   return out;
+}
+
+let _inflight_hydrateRolesFromApi = null;
+export function hydrateRolesFromApi(...args) {
+  if (_inflight_hydrateRolesFromApi) return _inflight_hydrateRolesFromApi;
+  _inflight_hydrateRolesFromApi = _hydrateRolesImpl(...args).finally(() => { _inflight_hydrateRolesFromApi = null; });
+  return _inflight_hydrateRolesFromApi;
 }
 
 export async function addRoleAsync({ key, label, description, permissions }) {

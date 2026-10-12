@@ -67,7 +67,8 @@ const PUBLIC_GET_PATTERNS = [
   /^\/leading-fees\/?(\?.*)?$/,
   /^\/advertisement-fees\/?(\?.*)?$/,
   /^\/credits\/services\/?(\?.*)?$/,
-  /^\/system-settings\/.*$/,
+  /^\/system-settings\/platform-policy\/?(\?.*)?$/,
+  /^\/system-settings\/app-store-links\/?(\?.*)?$/,
 ];
 
 function isPublicEndpoint(path, method) {
@@ -102,9 +103,12 @@ function extractFieldMessage(data) {
 }
 
 export class ApiError extends Error {
-  constructor(status, data) {
-    const detail = data?.detail;
+  constructor(status, data, opts = {}) {
+    // Prefer the backend's uniform shape: { error: { code, message, field, detail } }
+    const env = data?.error && typeof data.error === "object" ? data.error : null;
+    const detail = env?.detail || data?.detail;
     const msg =
+      (typeof env?.message === "string" && env.message) ||
       (typeof detail === "string" && detail) ||
       (typeof data?.message === "string" && data.message) ||
       (typeof data?.error === "string" && data.error) ||
@@ -116,11 +120,23 @@ export class ApiError extends Error {
     this.name = "ApiError";
     this.status = status;
     this.data = data;
+    this.code = env?.code || null;
+    this.field = env?.field || null;
+    this.requestId = env?.request_id || opts.requestId || null;
+    this.retryAfter =
+      opts.retryAfter ??
+      (Number(env?.retry_after) || Number(data?.retry_after) || null);
   }
 }
 
 async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const controller = new AbortController();
+  const external = options?.signal;
+  const onAbort = () => controller.abort();
+  if (external) {
+    if (external.aborted) controller.abort();
+    else external.addEventListener("abort", onAbort, { once: true });
+  }
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
@@ -131,6 +147,7 @@ async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
     throw new ApiError(0, { detail: err.message || "Network error. Check your connection." });
   } finally {
     clearTimeout(timer);
+    if (external) external.removeEventListener("abort", onAbort);
   }
 }
 
@@ -181,7 +198,11 @@ async function withRetry(fn, method) {
       const retryable =
         s === 0 || s === 408 || s === 429 || (s >= 500 && s < 600);
       if (!retryable || attempt === RETRY_MAX - 1) throw err;
-      const wait = RETRY_BASE_MS * Math.pow(2, attempt) + Math.random() * 200;
+
+      // Prefer the server's Retry-After over our backoff
+      const headerWait = err?.retryAfter ? Number(err.retryAfter) * 1000 : 0;
+      const backoff = RETRY_BASE_MS * Math.pow(2, attempt) + Math.random() * 200;
+      const wait = Math.min(headerWait || backoff, 30000);
       await new Promise((r) => setTimeout(r, wait));
     }
   }
@@ -209,11 +230,42 @@ async function refreshAccessToken() {
   return refreshPromise;
 }
 
+function makeIdempotencyKey() {
+  try {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  } catch { /* noop */ }
+  return `idem_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+}
+
+// Mutable methods that must be idempotent so a retry doesn't double-charge
+const IDEMPOTENT_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+const IDEMPOTENT_PATH_HINTS = [
+  "/fee/pay/",
+  "/reservation/pay/",
+  "/boosting/",
+  "/banners/",
+  "/leading-fees/purchases/",
+  "/bundles/purchases/",
+  "/finance/success-fee/",
+  "/payments/",
+  "/credits/consume/",
+];
+
+function shouldUseIdempotency(path, method) {
+  const m = String(method).toUpperCase();
+  if (!IDEMPOTENT_METHODS.has(m)) return false;
+  return IDEMPOTENT_PATH_HINTS.some((h) => path.includes(h));
+}
+
 async function request(path, {
   method = "GET", body, headers = {}, retry = true, isFormData = false, timeoutMs,
+  idempotencyKey = null, signal = null,
 } = {}) {
   const isPublic = isPublicEndpoint(path, method);
   const finalHeaders = {
+    ...(shouldUseIdempotency(path, method)
+      ? { "Idempotency-Key": idempotencyKey || makeIdempotencyKey() }
+      : {}),
     ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
     ...(!isPublic && getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
     // Marks the request as XHR. Some Django middleware/settings skip CSRF
@@ -228,6 +280,7 @@ async function request(path, {
         method,
         headers: finalHeaders,
         body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
+        signal: signal || undefined,
       }, timeoutMs);
       // 401 handling happens below (needs the response, not an error).
       // Throw here ONLY for retryable statuses so withRetry can act on them.
@@ -250,6 +303,16 @@ async function request(path, {
     }
   }
 
+  // 429 Too Many Requests — surface Retry-After so callers can show a countdown
+  if (res.status === 429) {
+    const retryAfter =
+      Number(res.headers.get("Retry-After")) ||
+      Number(res.headers.get("X-RateLimit-Reset")) ||
+      null;
+    const data = await parseResponse(res);
+    throw new ApiError(429, data, { retryAfter });
+  }
+
   const data = await parseResponse(res);
   if (!res.ok) throw new ApiError(res.status, data);
   return data;
@@ -269,4 +332,6 @@ export const api = {
   delete: (path, body = {}, opts) => request(path, { ...opts, method: "DELETE", body: normalizeBody(body) }),
   upload: (path, formData, opts) =>
     request(path, { ...opts, method: "POST", body: formData, isFormData: true, timeoutMs: UPLOAD_TIMEOUT_MS }),
+  /** Generate a stable idempotency key you can reuse across retries */
+  makeIdempotencyKey,
 };

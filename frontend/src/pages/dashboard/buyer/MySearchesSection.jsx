@@ -23,6 +23,7 @@ import {
   addSearch,
   removeSearch,
   countMatches,
+  detectSearchAlertsAsync,
 } from "../../../config/searchesStore.js";
 import { usePublicListings } from "../../../config/listingsStore.js";
 import {
@@ -58,6 +59,10 @@ export default function MySearchesSection() {
   });
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  React.useEffect(() => {
+    detectSearchAlertsAsync().catch(() => {});
+  }, []);
 
   // Match counts kwa kila search
   const searchesWithCounts = useMemo(

@@ -387,6 +387,12 @@ export default function BundlesPage() {
                     {}
                   );
                   const fimipay = paid?.fimipay || paid?.data?.fimipay || {};
+                  try {
+                    if (fimipay?.order_id) {
+                      sessionStorage.setItem("pending_order_id", String(fimipay.order_id));
+                      sessionStorage.setItem("pending_order_amount", String(payingBundle?.price || ""));
+                    }
+                  } catch { /* noop */ }
                   return {
                     ok: true,
                     orderId: fimipay.order_id,

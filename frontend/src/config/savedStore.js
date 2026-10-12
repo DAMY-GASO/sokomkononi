@@ -122,7 +122,7 @@ export async function toggleSaved(id, listing = null) {
 export function useSavedIds() {
   const [ids, setIds] = useState(() => readIds());
   useEffect(() => {
-    hydrateSavedFromApi();
+    hydrateSavedFromApi().then(() => detectPriceDropsAsync().catch(() => {}));
     const sync = () => setIds(readIds());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);
@@ -166,4 +166,74 @@ export function removeSnapshot(id) {
 }
 export function saveSavedIds(ids) {
   writeIds(ids);
+}
+
+
+// ============================================================
+// PRICE ALERTS
+// Compare each saved snapshot's price against the current
+// listing price. When the price drops, emit a local notification.
+// ============================================================
+import { notificationsApi } from "../api/notifications.js";
+
+export async function detectPriceDropsAsync() {
+  const snaps = readSnaps();
+  const ids = Object.keys(snaps);
+  if (ids.length === 0) return { ok: true, drops: [] };
+
+  // Fetch current prices of all saved listings in one call
+  let current = [];
+  try {
+    const d = await api.get(`/listings/?id__in=${ids.join(",")}&page_size=200`);
+    current = Array.isArray(d) ? d : d?.results || [];
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+
+  const drops = [];
+  for (const l of current) {
+    const snap = snaps[l.id];
+    if (!snap) continue;
+    const oldPrice = Number(snap.price) || 0;
+    const newPrice = Number(l.price) || 0;
+    if (oldPrice > 0 && newPrice > 0 && newPrice < oldPrice) {
+      drops.push({
+        listingId: l.id,
+        title: l.title || snap.title || "",
+        oldPrice,
+        newPrice,
+      });
+    }
+  }
+
+  if (drops.length === 0) return { ok: true, drops: [] };
+
+  // Emit a local notification for each drop (also reachable via the badge)
+  const { notificationsApi: NA } = await import("../api/notifications.js");
+  for (const d of drops) {
+    try {
+      await NA.create({
+        notification_type: "PRICE_DROP",
+        audience: "user",
+        title: "Bei imeshuka! / Price dropped!",
+        message: `${d.title}: TZS ${d.oldPrice.toLocaleString("en-US")} → TZS ${d.newPrice.toLocaleString("en-US")}`,
+        related_object_type: "listing",
+        related_object_id: d.listingId,
+        action_url: `/mali/${d.listingId}`,
+        priority: "normal",
+      });
+    } catch (e) {
+      // Silent — will retry on next hydrate
+      console.warn("[savedStore] price-drop notify failed:", e);
+    }
+  }
+
+  // Update snapshots to the new prices so we don't alert twice
+  const updated = { ...snaps };
+  drops.forEach((d) => {
+    updated[d.listingId] = { ...updated[d.listingId], price: d.newPrice };
+  });
+  writeSnaps(updated);
+
+  return { ok: true, drops };
 }

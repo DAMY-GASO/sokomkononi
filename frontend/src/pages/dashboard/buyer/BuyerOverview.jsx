@@ -154,9 +154,15 @@ export default function BuyerOverview({ onNavigate }) {
     },
     {
       key: "safety",
-      label: t("Usalama & Msaada", "Safety & Support"),
+      label: t("Usalama", "Safety"),
       icon: Shield,
       color: COLORS.rust,
+    },
+    {
+      key: "support",
+      label: t("Msaada", "Support"),
+      icon: Shield,
+      color: "#2563EB",
     },
   ];
 
@@ -424,13 +430,27 @@ function HowToBuyGuide({ lang }) {
     }
   });
 
-  if (dismissed) return null;
-
-  const handleDismiss = () => {
-    setDismissed(true);
+  const [hiddenThisSession, setHiddenThisSession] = useState(() => {
+    if (typeof window === "undefined") return false;
     try {
-      window.localStorage.setItem(STORAGE_KEY, "1");
-    } catch {}
+      return window.sessionStorage.getItem("sokomkononi_buyer_guide_hidden_session_v1") === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const [hideForever, setHideForever] = useState(false);
+
+  if (dismissed || hiddenThisSession) return null;
+
+  const handleGotIt = () => {
+    if (hideForever) {
+      setDismissed(true);
+      try { window.localStorage.setItem("sokomkononi_buyer_guide_dismissed_v1", "1"); } catch { /* noop */ }
+    } else {
+      setHiddenThisSession(true);
+      try { window.sessionStorage.setItem("sokomkononi_buyer_guide_hidden_session_v1", "1"); } catch { /* noop */ }
+    }
   };
 
   const stepsBeforeNote = [
@@ -461,13 +481,7 @@ function HowToBuyGuide({ lang }) {
         <h2 className="h-card text-center flex-1">
           {t("Jinsi ya Kununua", "How to Buy")}
         </h2>
-        <button
-          onClick={handleDismiss}
-          aria-label={t("Ficha", "Dismiss")}
-          className="text-muted hover:text-secondary shrink-0"
-        >
-          <X size={16} />
-        </button>
+        <span className="w-4" aria-hidden="true" />
       </div>
 
       <StepFlow steps={stepsBeforeNote} />
@@ -496,6 +510,27 @@ function HowToBuyGuide({ lang }) {
           "Hongera! Umefanikiwa kukamilisha ununuzi wa mali kupitia SokoMkononi.",
           "Congratulations! You've successfully completed a property purchase through SokoMkononi."
         )}
+      </div>
+
+      {/* ── Dismiss controls ─────────────────────────── */}
+      <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <label className="flex items-center gap-2 cursor-pointer text-xs text-secondary order-2 sm:order-1">
+          <input
+            type="checkbox"
+            checked={hideForever}
+            onChange={(e) => setHideForever(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-[#E8A33D] focus:ring-[#E8A33D]"
+          />
+          <span>{t("Usinionyeshe tena", "Don't show this again")}</span>
+        </label>
+        <button
+          type="button"
+          onClick={handleGotIt}
+          style={{ background: COLORS.gold, color: COLORS.night }}
+          className="w-full sm:w-auto text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors hover:opacity-90 order-1 sm:order-2"
+        >
+          {t("Sawa, nimeelewa", "Got it, thanks")}
+        </button>
       </div>
     </div>
   );

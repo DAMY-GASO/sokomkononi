@@ -83,7 +83,8 @@ export function useActivityEvents(side = "seller", onNavigate) {
       // Listing "posted" events zimeondolewa — hazina maana kwenye timeline
       // (ni action, sio event ya mazingira).
       myListings.forEach((l) => {
-        if (l.boostExpiresAt && new Date(l.boostExpiresAt) > new Date()) {
+        const boostExpiry = l.boostExpiresAt || l.boostedUntil;
+        if (boostExpiry && new Date(boostExpiry) > new Date()) {
           events.push({
             id: `listing_boosted_${l.id}`,
             type: "listing",

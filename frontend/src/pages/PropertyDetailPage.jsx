@@ -2,6 +2,9 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../config/authStore.js";
+import { useToast } from "../components/Toast.jsx";
+import { useConfirm } from "../components/ConfirmDialog.jsx";
+import { api } from "../api/client.js";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
@@ -126,8 +129,9 @@ function ImageGallery({ property, lang }) {
       <div className="relative w-full aspect-square max-w-[640px] mx-auto rounded-2xl overflow-hidden bg-sand">
         <div className="absolute inset-0">
           <ListingImage
-            key={images[currentIndex]}
+            key={typeof images[currentIndex] === "string" ? images[currentIndex] : images[currentIndex]?.image_url}
             src={images[currentIndex]}
+            variant="detail"
             alt={property.title}
             ratio="h-full w-full"
             eager
@@ -171,17 +175,29 @@ function ImageGallery({ property, lang }) {
 
       {images.length > 1 && (
         <div className="flex gap-2 mt-3 overflow-x-auto pb-2 max-w-[640px] mx-auto">
-          {images.map((img, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentIndex(idx)}
-              className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all ${
-                idx === currentIndex ? "border-gold opacity-100" : "border-transparent opacity-60 hover:opacity-100"
-              }`}
-            >
-              <img src={img} alt="" loading="lazy" className="w-full h-full object-cover object-center block" />
-            </button>
-          ))}
+          {images.map((img, idx) => {
+            // Images may be strings or { image_url, thumb, card, ... } objects.
+            const thumbUrl =
+              typeof img === "string" ? img : img?.thumb || img?.card || img?.image_url;
+            const key = typeof img === "string" ? img : img?.image_url || idx;
+            return (
+              <button
+                key={key}
+                onClick={() => setCurrentIndex(idx)}
+                className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all ${
+                  idx === currentIndex ? "border-gold opacity-100" : "border-transparent opacity-60 hover:opacity-100"
+                }`}
+              >
+                <img
+                  src={thumbUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover object-center block"
+                />
+              </button>
+            );
+          })}
         </div>
       )}
     </>
@@ -319,7 +335,7 @@ function AttributesTable({ property, lang }) {
   );
 }
 
-function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onContact, lang, isOwner = false, editTo }) {
+function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onContact, onReportSeller, lang, isOwner = false, editTo }) {
   const isReserved = status === "reserved";
   const isSold = status === "sold";
   const isUnavailable = isReserved || isSold;
@@ -399,7 +415,16 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
         </button>
       )}
 
-      <div className="mt-4 pt-4 border-t border-gray-100">
+      <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-2">
+        {!isOwner && !isUnavailable && (
+          <button
+            type="button"
+            onClick={onReportSeller}
+            className="w-full text-[11px] font-semibold text-muted hover:text-rust transition-colors py-1"
+          >
+            {t(lang, "Ripoti Muuzaji Huyu", "Report this Seller")}
+          </button>
+        )}
         <p className="text-body-sm text-secondary text-center">
           {t(lang, "Muuzaji amethibitishwa na SokoMkononi", "Seller verified by SokoMkononi")}
         </p>
@@ -434,6 +459,9 @@ function ListingNotFound({ lang }) {
 }
 
 export default function PropertyDetailPage() {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [reporting, setReporting] = React.useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -689,6 +717,81 @@ export default function PropertyDetailPage() {
     }
   };
 
+  const handleReportSeller = async (property) => {
+    if (!user) {
+      navigate("/login", { state: { from: `${location.pathname}${location.search}` } });
+      return;
+    }
+    const ok = await confirm({
+      title: t(lang, "Ripoti muuzaji huyu?", "Report this seller?"),
+      description: t(
+        lang,
+        "Tutaipitia taarifa hii na kuchukua hatua ikiwa ni ya udanganyifu.",
+        "We will review this report and act if fraudulent."
+      ),
+      confirmLabel: t(lang, "Ripoti", "Report"),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.post("/tickets/", {
+        subject: t(lang, `Ripoti ya muuzaji: ${property.seller_name || ""}`,
+                       `Seller report: ${property.seller_name || ""}`),
+        description: t(
+          lang,
+          `Mtumiaji ameripoti muuzaji kwenye tangazo "${property.title}" (ID: ${property.id}).`,
+          `User reported the seller on listing "${property.title}" (ID: ${property.id}).`
+        ),
+        category: "DISPUTE",
+        priority: "HIGH",
+      });
+      toast.success(t(lang, "Ripoti imetumwa.", "Report submitted."));
+    } catch (err) {
+      toast.error(err?.message || t(lang, "Imeshindwa kutuma ripoti.", "Failed to submit report."));
+    }
+  };
+
+  const handleReport = async () => {
+    if (!user) {
+      navigate("/login", {
+        state: { from: `${location.pathname}${location.search}` },
+      });
+      return;
+    }
+    if (reporting) return;
+    const ok = await confirm({
+      title: t(lang, "Ripoti tangazo hili?", "Report this listing?"),
+      description: t(
+        lang,
+        "Tutaipitia na kuchukua hatua ikiwa ni ya udanganyifu.",
+        "We will review it and take action if fraudulent."
+      ),
+      confirmLabel: t(lang, "Ripoti", "Report"),
+      danger: true,
+    });
+    if (!ok) return;
+    setReporting(true);
+    try {
+      await api.post("/tickets/", {
+        subject: t(lang, `Ripoti ya tangazo: ${property.title}`,
+                       `Listing report: ${property.title}`),
+        description: t(
+          lang,
+          `Mtumiaji ameripoti tangazo "${property.title}" (ID: ${property.id}).`,
+          `User reported listing "${property.title}" (ID: ${property.id}).`
+        ),
+        category: "LISTING",
+        priority: "HIGH",
+      });
+      toast.success(t(lang, "Ripoti imetumwa.", "Report submitted."));
+    } catch (err) {
+      toast.error(err?.message ||
+        t(lang, "Imeshindwa kutuma ripoti.", "Failed to submit report."));
+    } finally {
+      setReporting(false);
+    }
+  };
+
   const categoryLabel =
     CATEGORY_LABELS[property.category]?.[lang] ||
     CATEGORY_LABELS[property.category]?.sw ||
@@ -698,7 +801,7 @@ export default function PropertyDetailPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <nav className="flex items-center gap-2 text-sm text-secondary mb-4 overflow-x-auto">
           <Link to="/" className="hover:text-gold-ink transition-colors whitespace-nowrap">
             {t(lang, "Nyumbani", "Home")}
@@ -766,7 +869,9 @@ export default function PropertyDetailPage() {
                     <Share2 size={18} />
                   </button>
                   <button
-                    className="w-10 h-10 rounded-full border border-gray-200 text-muted hover:text-rust flex items-center justify-center transition-colors"
+                    onClick={handleReport}
+                    disabled={reporting}
+                    className="w-10 h-10 rounded-full border border-gray-200 text-muted hover:text-rust flex items-center justify-center transition-colors disabled:opacity-50"
                     aria-label={t(lang, "Ripoti", "Report")}
                   >
                     <Flag size={18} />
@@ -859,6 +964,7 @@ export default function PropertyDetailPage() {
               alreadyOnWaitlist={alreadyOnWaitlist}
               onJoinWaitlist={handleJoinWaitlist}
               onContact={handleContact}
+              onReportSeller={() => handleReportSeller(property)}
               lang={lang}
               isOwner={isOwner}
               editTo={ownerEditPath(property.id)}

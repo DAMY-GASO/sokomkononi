@@ -51,27 +51,27 @@ export const listingsApi = {
   createPropertyDetails: (id, payload) =>
     api.post(`/listings/${id}/property-details/`, payload),
   updatePropertyDetails: (id, payload) =>
-    api.patch(`/listings/${id}/property-details/detail/`, payload),
+    api.patch(`/listings/${id}/property-details/`, payload),
 
   createLandDetails: (id, payload) =>
     api.post(`/listings/${id}/land-details/`, payload),
   updateLandDetails: (id, payload) =>
-    api.patch(`/listings/${id}/land-details/detail/`, payload),
+    api.patch(`/listings/${id}/land-details/`, payload),
 
   createVehicleDetails: (id, payload) =>
     api.post(`/listings/${id}/vehicle-details/`, payload),
   updateVehicleDetails: (id, payload) =>
-    api.patch(`/listings/${id}/vehicle-details/detail/`, payload),
+    api.patch(`/listings/${id}/vehicle-details/`, payload),
 
   createBusinessDetails: (id, payload) =>
     api.post(`/listings/${id}/business-details/`, payload),
   updateBusinessDetails: (id, payload) =>
-    api.patch(`/listings/${id}/business-details/detail/`, payload),
+    api.patch(`/listings/${id}/business-details/`, payload),
 
   createEquipmentDetails: (id, payload) =>
     api.post(`/listings/${id}/equipment-details/`, payload),
   updateEquipmentDetails: (id, payload) =>
-    api.patch(`/listings/${id}/equipment-details/detail/`, payload),
+    api.patch(`/listings/${id}/equipment-details/`, payload),
 
   // ----- Admin -----
   pending: () => api.get("/listings/admin/pending/"),

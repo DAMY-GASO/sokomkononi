@@ -13,6 +13,8 @@ import StatusBadge from "../shared/StatusBadge.jsx";
 import DealRoomViewer from "../components/DealDispute/DealRoomViewer.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../../config/authStore.js";
+import { hydrateUsersFromApi } from "../../../../config/usersStore.js";
+import { hydrateListingsFromApi } from "../../../../config/listingsStore.js";
 import {
   useDeals,
   hydrateDealsFromApi,
@@ -43,11 +45,20 @@ function cleanupLegacyDealsOnce() {
 export default function DealsSection() {
   const { lang } = useLanguage();
   const { user } = useAuth();
-  const deals = useDeals(user?.id);
+  const deals = useDeals();   // admin needs ALL deals, not just own
 
   // Cleanup mara moja tu kwenye mwanzo wa app
   useEffect(() => {
     cleanupLegacyDealsOnce();
+  }, []);
+
+  // Pre-hydrate users + listings so:
+  //  1. deal.buyerName / deal.sellerName resolve even when the backend
+  //     only sends flat ids, and
+  //  2. deal.listingTitle / deal.listingPrice resolve from listings cache.
+  useEffect(() => {
+    hydrateUsersFromApi().catch(() => {});
+    hydrateListingsFromApi().catch(() => {});
   }, []);
 
   // Enrich deals zinazokosekana data
@@ -63,10 +74,24 @@ export default function DealsSection() {
       if (!needsEnrich) return;
       if (enrichedRef.current.has(d.id)) return;
       enrichedRef.current.add(d.id);
-      fetchDealDetailAsync(d.id).catch((err) => {
-        console.warn("[DealsSection] enrich failed for", d.id, err);
-        enrichedRef.current.delete(d.id);
-      });
+
+      fetchDealDetailAsync(d.id)
+        .then((res) => {
+          const enriched = res?.deal;
+          // If the enriched deal still has no useful data, allow a retry
+          // on the next render pass.
+          if (
+            !enriched?.buyerName &&
+            !enriched?.sellerName &&
+            !enriched?.listingTitle
+          ) {
+            enrichedRef.current.delete(d.id);
+          }
+        })
+        .catch((err) => {
+          console.warn("[DealsSection] enrich failed for", d.id, err);
+          enrichedRef.current.delete(d.id);
+        });
     });
   }, [deals, user?.id]);
 
@@ -85,9 +110,12 @@ export default function DealsSection() {
       d?.askingPrice > 0 ? d.askingPrice : 0;
     return amt > 0 ? "TZS " + Math.round(amt).toLocaleString("en-US") : "—";
   };
-  const displayDealName = (name, id) => name || (id ? `#${id}` : "—");
+  const displayDealName = (name, id) =>
+    name || (id != null ? `#${id}` : "—");
   const displayListing = (d) =>
-    d?.listingTitle || (d?.listingId ? `#${d.listingId}` : `#${d.id}`);
+    d?.listingTitle ||
+    (d?.listingId != null ? `#${d.listingId}` : null) ||
+    (d?.id != null ? `#${d.id}` : "—");
   const displayCategory = (d) => {
     if (!d?.category) return "—";
     const cat = getCategory(d.category);

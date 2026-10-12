@@ -319,18 +319,7 @@ export default function AuditLogsSection() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => handleRemove(log.id)}
-                  disabled={isBusy}
-                  className="p-1.5 text-muted hover:text-[#C1502E] transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label={t("Ondoa", "Remove")}
-                >
-                  {isBusy ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Trash2 size={14} />
-                  )}
-                </button>
+                {/* Read-only for compliance — no delete button */}
               </div>
             );
           })}

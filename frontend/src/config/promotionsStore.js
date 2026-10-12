@@ -52,7 +52,7 @@ function writeJson(key, ev, v) {
 export function getPromotionsAnalyticsCache() { return readJson(A_KEY, null); }
 export function getCampaigns() { return readJson(C_KEY, []); }
 
-export async function hydratePromotionsAnalyticsFromApi() {
+async function _hydratePromoImpl() {
   try {
     const data = await promotionsApi.analytics();
     const merged = {
@@ -88,6 +88,13 @@ function normCampaign(raw) {
     active: raw.active !== false,
     createdAt: raw.created_at || raw.createdAt,
   };
+}
+
+let _inflight_hydratePromotionsAnalyticsFromApi = null;
+export function hydratePromotionsAnalyticsFromApi(...args) {
+  if (_inflight_hydratePromotionsAnalyticsFromApi) return _inflight_hydratePromotionsAnalyticsFromApi;
+  _inflight_hydratePromotionsAnalyticsFromApi = _hydratePromoImpl(...args).finally(() => { _inflight_hydratePromotionsAnalyticsFromApi = null; });
+  return _inflight_hydratePromotionsAnalyticsFromApi;
 }
 
 export async function hydrateCampaignsFromApi() {

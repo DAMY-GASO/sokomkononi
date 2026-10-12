@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Clock3,
   Bell,
@@ -17,7 +17,9 @@ import {
 } from "./dashboard/components/shared";
 import {
   useWaitingList,
+  useWaitingListState,
   leaveWaitingList as leaveWaitingListStore,
+  expireStaleReservationsAsync,
 } from "../config/waitingListStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 
@@ -57,6 +59,31 @@ const getWaitingStatus = (lang) => ({
 // ============================================================
 // WAITING LIST ITEM — imeachwa kushoto (kadi zina data nyingi)
 // ============================================================
+function CountdownBadge({ to, lang }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  const ms = new Date(to).getTime() - now;
+  if (!Number.isFinite(ms)) return null;
+  if (ms <= 0) {
+    return (
+      <span className="text-[11px] font-bold" style={{ color: COLORS.rust }}>
+        {lang === "sw" ? "Muda umeisha" : "Expired"}
+      </span>
+    );
+  }
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const sec = Math.floor((ms % 60000) / 1000);
+  return (
+    <span className="text-[11px] font-bold tabular-nums" style={{ color: COLORS.rust }}>
+      {h}h {String(m).padStart(2,"0")}m {String(sec).padStart(2,"0")}s
+    </span>
+  );
+}
+
 function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
   const category = getCategory(entry.category);
   const Icon = category?.icon;
@@ -132,8 +159,9 @@ style={{ background: status?.bg || "#F5F3EC", color: status?.color || "#101A2E" 
           >
             <span
               style={{ color: COLORS.green }}
-              className="text-[11px] font-medium"
+              className="text-[11px] font-medium flex items-center gap-2"
             >
+              {entry.respondBy && <CountdownBadge to={entry.respondBy} lang={lang} />}
               {lang === "sw" ? (
                 <>
                   Nafasi imefunguka! Una hadi{" "}
@@ -186,10 +214,27 @@ export default function WaitingListPage({
   onLeave,
   onGoToDeals,
 }) {
-  const storeEntries = useWaitingList();
   const { lang } = useLanguage();
-  const entries = entriesProp ?? storeEntries;
+  const storeState = useWaitingListState();
+  const entries = entriesProp ?? storeState.list;
+  const loading = storeState.loading && entries.length === 0;
+  const loadError = storeState.error;
   const [filter, setFilter] = useState("all");
+
+  // Poll the backend every 60s to release expired reservations
+  // and advance the waitlist (Option A — first in queue is notified).
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      const res = await expireStaleReservationsAsync();
+      if (!cancelled && res.ok && res.changed) {
+        // Trigger a re-render through the store
+      }
+    };
+    tick();
+    const iv = setInterval(tick, 60000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, []);
 
   const handleLeave = (id) => {
     if (onLeave) {
@@ -213,6 +258,46 @@ export default function WaitingListPage({
   const notifiedCount = entries.filter(
     (e) => e.status === "notified"
   ).length;
+
+  if (loading) {
+    return (
+      <div style={{ background: COLORS.sand, minHeight: "100%" }}
+           className="w-full p-4 sm:p-6 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-8 h-8 border-2 rounded-full animate-spin"
+               style={{ borderColor: COLORS.sandLine, borderTopColor: COLORS.gold }} />
+          <p className="text-sm text-secondary">
+            {lang === "sw" ? "Inapakia..." : "Loading..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ background: COLORS.sand, minHeight: "100%" }}
+           className="w-full p-4 sm:p-6 flex items-center justify-center">
+        <div className="bg-white rounded-2xl border max-w-md w-full p-6 text-center"
+             style={{ borderColor: COLORS.sandLine }}>
+          <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center"
+               style={{ background: "rgba(193,80,46,0.1)" }}>
+            <span style={{ color: COLORS.rust }} className="text-2xl font-bold">!</span>
+          </div>
+          <p className="text-sm font-semibold text-primary mb-1">
+            {lang === "sw" ? "Imeshindwa kupakia orodha" : "Failed to load waitlist"}
+          </p>
+          <p className="text-xs text-secondary mb-4">{loadError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ background: COLORS.gold, color: COLORS.night }}
+            className="px-4 py-2 rounded-lg text-sm font-semibold">
+            {lang === "sw" ? "Jaribu tena" : "Try again"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

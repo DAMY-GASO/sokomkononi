@@ -339,7 +339,9 @@ export function useHydratePublicListings() {
   useEffect(() => { hydrateListingsFromApi(); }, []);
 }
 
-// Drop temp_ listings that never got a real backend id, older than 24h.
+// Drop temp_ listings that never got a real backend id.
+// 30 seconds is long enough for the POST to land; anything older
+// means the create failed and the ghost entry must go.
 if (typeof window !== "undefined") {
   try {
     const now = Date.now();
@@ -347,9 +349,10 @@ if (typeof window !== "undefined") {
     const cleaned = mine.filter((l) => {
       if (!String(l.id || "").startsWith("temp_")) return true;
       const age = now - new Date(l.postedAt || 0).getTime();
-      return age < 24 * 60 * 60 * 1000;
+      return age < 30 * 1000;
     });
     if (cleaned.length !== mine.length) {
+      console.warn("[listingsStore] purged", mine.length - cleaned.length, "stale temp_ listing(s)");
       writeKey(MINE_KEY, cleaned, true);
       emit();
     }
@@ -364,16 +367,43 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   else if (Array.isArray(raw.images)) photos = raw.images;
   else if (Array.isArray(raw.gallery)) photos = raw.gallery;
 
+  // Preserve variant URLs so the frontend can pick the right size per context.
   photos = photos
     .map((img) => {
       if (typeof img === "string") return img;
-      return img?.image_url || img?.url || img?.image || img?.src || null;
+      if (!img) return null;
+      const base = img.image_url || img.url || img.image || img.src || null;
+      if (!base) return null;
+      return {
+        image_url: base,
+        thumb:  img.thumb  || img.thumb_url  || null,
+        card:   img.card   || img.card_url   || null,
+        detail: img.detail || img.detail_url || null,
+        large:  img.large  || img.large_url  || null,
+      };
     })
     .filter(Boolean);
 
   const singleImage = pickImageUrl(raw);
-  if (singleImage && !photos.includes(singleImage)) {
-    photos.unshift(singleImage);
+  if (singleImage) {
+    const hasSingle = photos.some((p) =>
+      typeof p === "string" ? p === singleImage : p.image_url === singleImage
+    );
+    if (!hasSingle) {
+      // Try to hydrate variants from the raw single image if it's an object.
+      const rawObj = raw.image || raw.primary_image || null;
+      if (rawObj && typeof rawObj === "object") {
+        photos.unshift({
+          image_url: singleImage,
+          thumb:  rawObj.thumb  || rawObj.thumb_url  || null,
+          card:   rawObj.card   || rawObj.card_url   || null,
+          detail: rawObj.detail || rawObj.detail_url || null,
+          large:  rawObj.large  || rawObj.large_url  || null,
+        });
+      } else {
+        photos.unshift(singleImage);
+      }
+    }
   }
 
   const categoryObj = raw.category;
@@ -403,8 +433,25 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   const leadingExpiresAt =
     raw.leading_expires_at || raw.leadingExpiresAt || null;
 
-  const primaryPhoto = resolveImageUrl(photos[0] || null);
-  const normalizedPhotos = photos.map((u) => resolveImageUrl(u)).filter(Boolean);
+  // Resolve URLs (prepend / if relative) while keeping variant metadata.
+  const normalizeOne = (p) => {
+    if (typeof p === "string") return resolveImageUrl(p);
+    return {
+      image_url: resolveImageUrl(p.image_url),
+      thumb:  p.thumb  ? resolveImageUrl(p.thumb)  : null,
+      card:   p.card   ? resolveImageUrl(p.card)   : null,
+      detail: p.detail ? resolveImageUrl(p.detail) : null,
+      large:  p.large  ? resolveImageUrl(p.large)  : null,
+    };
+  };
+
+  const normalizedPhotos = photos.map(normalizeOne).filter(Boolean);
+
+  const firstPhoto = normalizedPhotos[0] || null;
+  const primaryPhoto =
+    typeof firstPhoto === "string"
+      ? firstPhoto
+      : firstPhoto?.image_url || null;
 
   return {
     ...raw,
@@ -494,7 +541,7 @@ const _SELLER_STATUS_CANDIDATES = [
   "PAUSED",
 ];
 
-export async function fetchMyListingsFromApi({ refreshUser = false } = {}) {
+async function _fetchMyListingsImpl({ refreshUser = false } = {}) {
   try {
     if (refreshUser || _myListingsUserId == null) {
       const me = await authApi.me();
@@ -531,17 +578,24 @@ export async function fetchMyListingsFromApi({ refreshUser = false } = {}) {
       .map((r) => normalizeListingFromApi(r))
       .filter(Boolean);
 
-    // Preserve locally-created entries the backend hasn't returned yet
-    // (either `temp_…` placeholders or real ids the fetch above missed,
-    // e.g. right after POST /listings/ before a backend refresh). This
-    // stops a page refresh from wiping the just-created listing.
+    // Preserve *recent* locally-created entries the backend hasn't returned
+    // yet (from a POST /listings/ that just completed). Anything older than
+    // 60 seconds with a temp_ id is a ghost — the POST failed — so drop it.
     const localExisting = readKey(MINE_KEY);
     const fetchedIds = new Set(normalized.map((l) => String(l.id)));
-    const localOnly = localExisting.filter(
-      (l) =>
-        String(l.id).startsWith("temp_") ||
-        !fetchedIds.has(String(l.id))
-    );
+    const now = Date.now();
+    const GHOST_MS = 60 * 1000;
+    const localOnly = localExisting.filter((l) => {
+      const isTemp = String(l.id).startsWith("temp_");
+      if (!isTemp && fetchedIds.has(String(l.id))) return false;
+      if (!isTemp) return true; // real id missing from backend — keep (edge case)
+      const age = now - new Date(l.postedAt || 0).getTime();
+      if (age > GHOST_MS) {
+        console.warn("[listingsStore] dropping ghost temp_ listing", l.id, l.title);
+        return false;
+      }
+      return true;
+    });
 
     saveMyListings([...normalized, ...localOnly]);
     return {
@@ -553,6 +607,15 @@ export async function fetchMyListingsFromApi({ refreshUser = false } = {}) {
     console.warn("[listingsStore] fetchMyListings failed:", err);
     return { source: "error", count: getMyListings().length };
   }
+}
+
+let _inflight_myListings = null;
+export function fetchMyListingsFromApi(...args) {
+  if (_inflight_myListings) return _inflight_myListings;
+  _inflight_myListings = _fetchMyListingsImpl(...args).finally(() => {
+    _inflight_myListings = null;
+  });
+  return _inflight_myListings;
 }
 
 export async function fetchFeaturedFromApi(params = {}) {

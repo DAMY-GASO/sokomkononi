@@ -62,7 +62,16 @@ export const faqs = [
     },
   },
   {
-    q: { sw: "Je, kuna app ya simu?", en: "Is there a mobile app?" },
+    q: {
+    q: {
+      sw: "Je, SokoMkononi ina programu ya simu?",
+      en: "Does SokoMkononi have a mobile app?",
+    },
+    a: {
+      sw: "Ndiyo! SokoMkononi ina programu za Android na iOS, zinazokuwezesha kununua na kuuza mali kwa urahisi popote ulipo. Unaweza pia kutumia tovuti yetu kupitia simu au kompyuta.",
+      en: "Yes! SokoMkononi offers Android and iOS apps, making it easy to buy and sell a wide range of products and services wherever you are. You can also access our marketplace through our website on your mobile phone or computer.",
+    },
+  },
     a: {
       sw: "Ndiyo, app ya Android na iOS inakuja hivi karibuni. Kwa sasa unaweza kutumia tovuti ya SokoMkononi kupitia simu na, ikiwa browser yako inaunga mkono, kutumia kipengele cha \"Install/Add to Home Screen\" ili kuitumia kama app.\n\nLinki za kupakua app zitawekwa hapa zikiwa tayari.",
       en: "Yes, an Android and iOS app is coming soon. For now you can use the SokoMkononi website on your phone and, if your browser supports it, use the \"Install/Add to Home Screen\" feature to use it like an app.\n\nDownload links will be added here once the apps are ready.",

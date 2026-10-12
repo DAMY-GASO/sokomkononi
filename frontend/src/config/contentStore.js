@@ -196,7 +196,10 @@ export function getHelp() { return read().help || EMPTY.help; }
 export async function hydrateContentFromApi() {
   try {
     const data = await api.get("/content/");
-    write(normFull(data || {}));
+    if (!data || Object.keys(data).length === 0) {
+      return { ok: true, empty: true };
+    }
+    write(normFull(data));
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err };

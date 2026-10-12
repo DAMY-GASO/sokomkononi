@@ -34,6 +34,8 @@ import {
 } from "lucide-react";
 
 import PageLoader from "../components/PageLoader.jsx";
+import { securityApi } from "../api/security.js";
+import TwoFactorCard from "../components/TwoFactorCard.jsx";
 import {
   fetchNotificationPrefs,
   saveNotificationPrefs,
@@ -505,45 +507,113 @@ function EditProfileTab({ user, lang }) {
 // ============================================================
 // SESSIONS CARD
 // ============================================================
-function SessionsCard({ lang }) {
+function SessionsCard({ lang, user }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
-  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const browser = /Edg\//.test(ua)
-    ? "Edge"
-    : /Chrome\//.test(ua) && !/Chromium/.test(ua)
-      ? "Chrome"
-      : /Firefox\//.test(ua)
-        ? "Firefox"
-        : /Safari\//.test(ua)
-          ? "Safari"
-          : t("Kivinjari", "Browser");
-  const platform =
-    (typeof navigator !== "undefined" && navigator.platform) ||
-    t("Kifaa hiki", "This device");
+  const [sessions, setSessions] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await securityApi.sessions();
+        if (!cancelled) setSessions(Array.isArray(data) ? data : data?.results || []);
+      } catch {
+        if (!cancelled) setSessions([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  const revoke = async (id) => {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      await securityApi.revokeSession(id);
+      setSessions((s) => (s || []).filter((x) => x.id !== id));
+    } catch (err) {
+      setError(err?.message || t("Imeshindwa kuondoa.", "Failed to revoke."));
+    } finally { setBusy(false); }
+  };
+
+  const revokeOthers = async () => {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      await securityApi.revokeAllOtherSessions();
+      const data = await securityApi.sessions();
+      setSessions(Array.isArray(data) ? data : data?.results || []);
+    } catch (err) {
+      setError(err?.message || t("Imeshindwa.", "Failed."));
+    } finally { setBusy(false); }
+  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-5">
-      <h3 className="font-semibold text-primary mb-4 text-center">
-        {t("Kifaa Chako", "Your Device")}
-      </h3>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-            <Globe size={14} className="text-secondary" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm text-primary truncate">
-              {browser} • {platform}
-            </p>
-            <p className="text-body-sm text-secondary">
-              {t("Kifaa cha sasa", "Current device")}
-            </p>
-          </div>
-        </div>
-        <span className="text-body-sm font-medium text-[#2F6D4F] bg-[#2F6D4F]/10 px-2 py-1 rounded-full shrink-0">
-          {t("Hai", "Active")}
-        </span>
+      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+        <h3 className="font-semibold text-primary">
+          {t("Vifaa Vilivyoingia", "Active Sessions")}
+        </h3>
+        {sessions && sessions.length > 1 && (
+          <button onClick={revokeOthers} disabled={busy}
+            className="text-xs font-semibold hover:underline disabled:opacity-50"
+            style={{ color: COLORS.rust }}>
+            {t("Ondoa vingine", "Revoke others")}
+          </button>
+        )}
       </div>
+
+      {error && (
+        <div className="text-xs px-3 py-2 rounded-lg mb-3"
+             style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}>
+          {error}
+        </div>
+      )}
+
+      {sessions === null ? (
+        <div className="text-center py-4">
+          <Loader2 size={18} className="animate-spin inline text-muted" />
+        </div>
+      ) : sessions.length === 0 ? (
+        <p className="text-sm text-secondary text-center py-2">
+          {t("Hakuna vifaa vingine", "No other sessions")}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {sessions.map((s) => (
+            <div key={s.id}
+              className="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                  <Globe size={14} className="text-secondary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-primary truncate">
+                    {s.device_name || s.user_agent || t("Kifaa", "Device")}
+                  </p>
+                  <p className="text-[11px] text-muted truncate">
+                    {s.ip_address || ""}
+                    {s.last_seen ? ` · ${new Date(s.last_seen).toLocaleString()}` : ""}
+                  </p>
+                </div>
+              </div>
+              {s.is_current ? (
+                <span className="text-[11px] font-medium px-2 py-1 rounded-full shrink-0"
+                      style={{ background: `${COLORS.green}15`, color: COLORS.green }}>
+                  {t("Kifaa hiki", "This device")}
+                </span>
+              ) : (
+                <button onClick={() => revoke(s.id)} disabled={busy}
+                  className="text-[11px] font-semibold hover:underline disabled:opacity-50"
+                  style={{ color: COLORS.rust }}>
+                  {t("Ondoa", "Revoke")}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -551,6 +621,55 @@ function SessionsCard({ lang }) {
 // ============================================================
 // SECURITY TAB
 // ============================================================
+function DataExportButton({ lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+  const handle = async () => {
+    setBusy(true); setError(""); setDone(false);
+    try {
+      const res = await securityApi.exportData();
+      // Backend may return { url } or { job_id } — if url, trigger download.
+      if (res?.url) {
+        window.open(res.url, "_blank", "noopener,noreferrer");
+      }
+      setDone(true);
+    } catch (err) {
+      setError(err?.message || t("Imeshindwa.", "Failed."));
+    } finally { setBusy(false); }
+  };
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <h3 className="font-semibold text-primary mb-2">
+        {t("Pakua Data Yangu", "Download My Data")}
+      </h3>
+      <p className="text-body-sm text-secondary mb-3">
+        {t("Pakua nakala ya taarifa zote tulizohifadhi kukuhusu.",
+           "Download a copy of all information we hold about you.")}
+      </p>
+      <button onClick={handle} disabled={busy}
+        style={{ background: COLORS.green, color: "white" }}
+        className="w-full py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60">
+        {busy ? t("Inaandaa...", "Preparing...") :
+         done ? t("Tayari!", "Ready!") :
+                t("Pakua Data", "Download Data")}
+      </button>
+      {done && (
+        <p className="text-[11px] mt-2 text-center"
+           style={{ color: COLORS.green }}>
+          {t("Angalia barua pepe yako kwa kiungo cha kupakua.",
+             "Check your email for a download link.")}
+        </p>
+      )}
+      {error && (
+        <p className="text-[11px] mt-2 text-center"
+           style={{ color: COLORS.rust }}>{error}</p>
+      )}
+    </div>
+  );
+}
+
 function SecurityTab({ lang, user }) {
   const navigate = useNavigate();
   const [showCurrent, setShowCurrent] = useState(false);
@@ -751,42 +870,11 @@ function SecurityTab({ lang, user }) {
         </div>
       </form>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <div className="flex flex-col items-center text-center gap-2">
-          <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center"
-            style={{ background: `${COLORS.rust}15` }}
-          >
-            <Shield size={18} color={COLORS.rust} />
-          </div>
-          <div>
-            <h3 className="h-card flex items-center gap-1.5 justify-center">
-              {lang === "sw"
-                ? "Uthibitishaji wa Hatua Mbili"
-                : "Two-Factor Authentication"}
-              <span
-                style={{ background: `${COLORS.rust}20`, color: COLORS.rust }}
-                className="text-body-sm font-bold px-2 py-0.5 rounded-full"
-              >
-                {lang === "sw" ? "IMEZIMWA" : "DISABLED"}
-              </span>
-            </h3>
-            <p className="text-body-sm text-secondary mt-0.5">
-              {lang === "sw"
-                ? "Ongeza usalama kwa akaunti yako kwa app ya authenticator"
-                : "Add extra security using an authenticator app"}
-            </p>
-          </div>
-          <span
-            style={{ background: `${COLORS.night}10`, color: COLORS.night }}
-            className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
-          >
-            {lang === "sw" ? "Inakuja hivi karibuni" : "Coming soon"}
-          </span>
-        </div>
-      </div>
+      <TwoFactorCard lang={lang} user={user} />
 
-      <SessionsCard lang={lang} />
+      <SessionsCard lang={lang} user={user} />
+
+      <DataExportButton lang={lang} />
 
       {(() => {
         const isUserAdmin =

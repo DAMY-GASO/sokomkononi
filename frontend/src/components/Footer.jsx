@@ -2,6 +2,13 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAppStoreLinks } from "../config/systemSettingsStore.js";
+import { useAttribution } from "../context/AttributionContext.jsx";
+
+// ── Real store URLs (fallbacks when admin hasn't set custom links) ──
+const STORE_FALLBACKS = {
+  play: "https://play.google.com/store/apps/details?id=co.tz.sokomkononi.app",
+  appstore: "https://apps.apple.com/app/sokomkononi/id0000000000",
+};
 
 export default function Footer({ selectedLang: propLang }) {
   
@@ -10,8 +17,9 @@ export default function Footer({ selectedLang: propLang }) {
 
   // Links za apps zinatoka kwenye system settings (admin anazisimamia)
   const [appLinks] = useAppStoreLinks();
-  const playUrl = (appLinks?.play || "").trim();
-  const appStoreUrl = (appLinks?.appstore || "").trim();
+  const { registerTap: registerLogoTap } = useAttribution();
+  const playUrl = (appLinks?.play || "").trim() || STORE_FALLBACKS.play;
+  const appStoreUrl = (appLinks?.appstore || "").trim() || STORE_FALLBACKS.appstore;
 
   return (
     <footer className="bg-night-deep text-white/80 border-t border-white/10">
@@ -77,7 +85,7 @@ export default function Footer({ selectedLang: propLang }) {
           {/* Column 1: Brand */}
           <div className="col-span-2 lg:col-span-1 text-center lg:text-left">
             <div className="flex items-center justify-center lg:justify-start gap-2 mb-4">
-              <img src="/logo.webp" alt="" width={40} height={40} className="h-10 w-10 rounded-full" />
+              <img src="/logo.webp" alt="" width={40} height={40} onClick={(e) => { e.stopPropagation(); registerLogoTap(); }} className="h-10 w-10 rounded-full cursor-pointer select-none" />
               <span className="text-white font-bold text-lg tracking-tight">SokoMkononi</span>
             </div>
             <p className="text-white/50 text-sm leading-relaxed max-w-xs mx-auto lg:mx-0">
@@ -152,7 +160,7 @@ export default function Footer({ selectedLang: propLang }) {
                 </Link>
               </li>
               <li>
-                <Link to="/kuhusu#usalama" className="text-white/50 hover:text-white text-sm transition-colors">
+                <Link to="/kuhusu" className="text-white/50 hover:text-white text-sm transition-colors">
                   {selectedLang === "sw" ? "Usalama" : "Safety"}
                 </Link>
               </li>
@@ -178,7 +186,7 @@ export default function Footer({ selectedLang: propLang }) {
                 <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 fill-none stroke-gold stroke-2" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 4.5a1.5 1.5 0 011.5-1.5h2.086a1.5 1.5 0 011.42 1.023l1.14 3.42a1.5 1.5 0 01-.4 1.583L6.63 10.39a12.03 12.03 0 006.98 6.98l1.365-1.366a1.5 1.5 0 011.583-.4l3.42 1.14a1.5 1.5 0 011.023 1.42v2.086a1.5 1.5 0 01-1.5 1.5H18.75C9.646 21.75 2.25 14.354 2.25 5.25V4.5z" />
                 </svg>
-                <span>0743 895 038</span>
+                <span className="flex items-center gap-2"><a href="tel:+255743895038" className="hover:text-white transition-colors">+255 743 895 038</a><a href="https://wa.me/255743895038" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-[10px] bg-[#25D366] text-white px-1.5 py-0.5 rounded hover:opacity-90" aria-label="WhatsApp">WA</a></span>
               </li>
               <li className="text-white/50 text-sm flex items-center justify-center lg:justify-start gap-2">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 fill-none stroke-gold stroke-2" aria-hidden="true">
@@ -198,7 +206,7 @@ export default function Footer({ selectedLang: propLang }) {
             {selectedLang === "sw" ? "Haki zote zimehifadhiwa." : "All rights reserved."}
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 w-full md:w-auto">
             {[
               { file: "mpesa.svg", alt: "M-Pesa" },
               { file: "halopesa.svg", alt: "HaloPesa" },

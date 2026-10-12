@@ -42,6 +42,7 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { useToast } from "../../../components/Toast.jsx";
+import { useConfirm } from "../../../components/ConfirmDialog.jsx";
 import { startUndo } from "../../../config/undoStore.js";
 import { notifyAdminAboutDeletion } from "../../../config/notificationsStore.js";
 import { restoreListingAsync } from "../../../config/listingsStore.js";
@@ -54,9 +55,22 @@ import { restoreListingAsync } from "../../../config/listingsStore.js";
 function isUnpaid(listing) {
   if (!listing) return false;
   const s = String(listing.status || "").toLowerCase();
+
+  // Explicit pre-payment states
   if (s === "pending_payment" || s === "draft") return true;
-  if (listing.isPaid === false) return true;
-  return false;
+
+  // Post-payment states — even if isPaid flag is missing/stale,
+  // these listings already crossed the paywall. Never show Pay Now.
+  if (
+    ["live", "reserved", "sold", "paused", "in_review", "rejected", "expired"].includes(
+      s
+    )
+  ) {
+    return false;
+  }
+
+  // Fall back to the explicit backend flag
+  return listing.isPaid === false;
 }
 
 // ============================================================
@@ -106,9 +120,10 @@ function ListingCard({
     category?.label?.[lang] || category?.label?.sw || listing.category || "—";
   const isBusy = busy === "delete";
 
+  // Pass the object form when available so variant picking works.
   const imageUrl =
-    listing.imageUrl ||
     (listing.photos && listing.photos[0]) ||
+    listing.imageUrl ||
     null;
 
   const isLiveOrReserved =
@@ -122,6 +137,7 @@ function ListingCard({
     <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl sm:h-28 sm:w-28">
       <ListingImage
         src={imageUrl}
+        variant="thumb"
         alt={listing.title}
         ratio="aspect-square"
         fallback={<CategoryIcon size={24} color={COLORS.night} />}
@@ -224,7 +240,7 @@ function ListingCard({
         {isUnpaid(listing) && (
           <button
             type="button"
-            onClick={() => onPay?.(listing.id)}
+            onClick={() => onPay?.(listing.id, listing)}
             disabled={isBusy}
             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
             style={{ background: COLORS.rust, color: "white" }}
@@ -294,10 +310,19 @@ export default function MyListings({
   const { lang } = useLanguage();
   const { user } = useAuth();
   const toast = useToast();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const goToPayment = (id) => navigate(`/dashboard/pay-listing?id=${id}`);
+  const goToPayment = (id) => {
+    if (String(id).startsWith("temp_")) {
+      alert(lang === "sw"
+        ? "Tangazo lako bado halijathibitishwa. Subiri sekunde chache."
+        : "Your listing hasn't synced yet. Please wait.");
+      return;
+    }
+    navigate(`/dashboard/pay-listing?id=${id}`);
+  };
 
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -348,6 +373,17 @@ export default function MyListings({
     if (busy[id]) return;
     const listing = listings.find((l) => String(l.id) === String(id));
     if (!listing) return;
+
+    const ok = await confirm({
+      title: t("Futa tangazo?", "Delete listing?"),
+      description: t(
+        `"${listing.title}" itaingizwa kwenye Recycle Bin. Unaweza kuirejesha kwa dakika 5.`,
+        `"${listing.title}" will be moved to the Recycle Bin. You can restore within 5 minutes.`
+      ),
+      confirmLabel: t("Futa", "Delete"),
+      danger: true,
+    });
+    if (!ok) return;
 
     setBusy((b) => ({ ...b, [id]: "delete" }));
 
