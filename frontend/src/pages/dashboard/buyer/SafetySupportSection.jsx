@@ -1,10 +1,6 @@
 // ============================================================
 // SafetySupportSection.jsx
-// Buyer — Safety & Support (report, help center, complaints).
-// Bilingual + mobile-responsive + KILA KITU CENTERED.
-//
-// SASISHO: Ongeza "Ripoti Zangu" — inaonyesha tickets za mtumiaji
-// + mazungumzo (thread) + composer ya kutuma reply kwa admin.
+// Buyer & Seller — Safety & Support (report, help center, complaints).
 // ============================================================
 
 import React, { useState, useEffect } from "react";
@@ -36,7 +32,10 @@ import {
   TICKET_STATUSES,
 } from "../../../config/ticketsStore.js";
 
-const FAQ_ITEMS = [
+// ============================================================
+// FAQ — tofauti kwa buyer na seller
+// ============================================================
+const BUYER_FAQ = [
   {
     q: { sw: "Je, SokoMkononi ni salama?", en: "Is SokoMkononi safe?" },
     a: {
@@ -70,6 +69,90 @@ const FAQ_ITEMS = [
       sw: "Kutana sehemu za wazi, wakati wa mchana, na uende na mtu mwingine. Usilipe kabla ya kuona mali.",
       en: "Meet in public places, during daylight, and bring someone with you. Never pay before viewing the property.",
     },
+  },
+];
+
+const SELLER_FAQ = [
+  {
+    q: {
+      sw: "Ninawezaje kulinda tangazo langu dhidi ya wanunuzi wa uongo?",
+      en: "How do I protect my listing from fake buyers?",
+    },
+    a: {
+      sw: "Thibitisha akaunti yako, tumia Deal Room kwa mazungumzo yote, na usikubali malipo nje ya jukwaa. Wanunuzi wa uongo mara nyingi wanakataa kutumia Deal Room.",
+      en: "Verify your account, use the Deal Room for all conversations, and never accept payments outside the platform. Fake buyers often refuse to use the Deal Room.",
+    },
+  },
+  {
+    q: {
+      sw: "Nifanye nini mnunuzi akinipa malipo ya uongo?",
+      en: "What should I do if a buyer gives me a fake payment?",
+    },
+    a: {
+      sw: "Ripoti mara moja kupitia 'Ripoti Mnunuzi' hapa chini. Usikabidhi mali hadi malipo yathibitishwe. Hifadhi screenshot zote za mazungumzo.",
+      en: "Report immediately via 'Report Buyer' below. Do not hand over the property until payment is confirmed. Keep all screenshots of the conversation.",
+    },
+  },
+  {
+    q: {
+      sw: "Ninawezaje kuepuka mashtaka ya udanganyifu?",
+      en: "How do I avoid fraud accusations?",
+    },
+    a: {
+      sw: "Weka picha za kweli, eleza hali halisi ya mali, na usikubali malipo ya nje. Onyesha hati zote ikiwa mnunuzi anaomba.",
+      en: "Use real photos, describe the property accurately, and never accept off-platform payments. Show all documents if the buyer asks.",
+    },
+  },
+  {
+    q: {
+      sw: "Je, ni salama kukutana na mnunuzi peke yangu?",
+      en: "Is it safe to meet a buyer alone?",
+    },
+    a: {
+      sw: "Hapana. Kutana sehemu za wazi, wakati wa mchana, na uende na mtu mwingine. Mwambie mtu unayemwamini unakoenda.",
+      en: "No. Meet in public places, during daylight, and bring someone with you. Tell someone you trust where you are going.",
+    },
+  },
+];
+
+// ============================================================
+// SAFETY TIPS — tofauti kwa buyer na seller
+// ============================================================
+const BUYER_TIPS = [
+  {
+    sw: "Thibitisha akaunti ya muuzaji kabla ya kuendelea.",
+    en: "Verify the seller's account before proceeding.",
+  },
+  {
+    sw: "Kutana sehemu za wazi, wakati wa mchana.",
+    en: "Meet in public places, during daylight.",
+  },
+  {
+    sw: "Usilipe kabla ya kuona mali na hati zake.",
+    en: "Never pay before viewing the property and its documents.",
+  },
+  {
+    sw: "Tumia Deal Room yetu — mazungumzo yote yanahifadhiwa.",
+    en: "Use our Deal Room — all conversations are recorded.",
+  },
+];
+
+const SELLER_TIPS = [
+  {
+    sw: "Thibitisha akaunti yako ili kupata wanunuzi wa kuaminika.",
+    en: "Verify your account to attract trusted buyers.",
+  },
+  {
+    sw: "Tumia Deal Room kwa mazungumzo yote — usihamie WhatsApp haraka.",
+    en: "Use the Deal Room for all conversations — don't move to WhatsApp too quickly.",
+  },
+  {
+    sw: "Usikabidhi mali hadi malipo yathibitishwe rasmi.",
+    en: "Never hand over the property until payment is officially confirmed.",
+  },
+  {
+    sw: "Ripoti mnunuzi yeyote anayekataa kutumia jukwaa au kutoa malipo ya nje.",
+    en: "Report any buyer who refuses to use the platform or offers off-platform payments.",
   },
 ];
 
@@ -334,8 +417,14 @@ export default function SafetySupportSection({ side = "buyer" }) {
   const { lang } = useLanguage();
   const tickets = useTickets();
 
+  const isSeller = side === "seller";
+
+  // Chagua content kulingana na side
+  const FAQ_ITEMS = isSeller ? SELLER_FAQ : BUYER_FAQ;
+  const SAFETY_TIPS = isSeller ? SELLER_TIPS : BUYER_TIPS;
+
   const [showReportForm, setShowReportForm] = useState(false);
-  const [reportType, setReportType] = useState("listing");
+  const [reportType, setReportType] = useState(isSeller ? "buyer" : "listing");
   const [reportSubject, setReportSubject] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [reportSent, setReportSent] = useState(false);
@@ -344,6 +433,18 @@ export default function SafetySupportSection({ side = "buyer" }) {
   const [reportError, setReportError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // Report type options — tofauti kwa buyer vs seller
+  const reportTypeOptions = isSeller
+    ? [
+        { key: "buyer", label: t("Mnunuzi", "Buyer") },
+        { key: "listing", label: t("Tangazo", "Listing") },
+        { key: "platform", label: t("Jukwaa", "Platform") },
+      ]
+    : [
+        { key: "listing", label: t("Tangazo", "Listing") },
+        { key: "user", label: t("Mtumiaji", "User") },
+      ];
 
   const handleReportSubmit = async () => {
     if (!reportDetails.trim()) {
@@ -357,15 +458,28 @@ export default function SafetySupportSection({ side = "buyer" }) {
     setReportError("");
 
     try {
+      // Category tofauti kwa seller
+      let category = "LISTING";
+      if (isSeller) {
+        category = reportType === "buyer" ? "DISPUTE" : "LISTING";
+      } else {
+        category = reportType === "listing" ? "LISTING" : "DISPUTE";
+      }
+
+      const defaultSubject = isSeller
+        ? reportType === "buyer"
+          ? t("Ripoti ya mnunuzi", "Buyer report")
+          : reportType === "platform"
+          ? t("Ripoti ya jukwaa", "Platform report")
+          : t("Ripoti ya tangazo", "Listing report")
+        : reportType === "listing"
+        ? t("Ripoti ya tangazo", "Listing report")
+        : t("Ripoti ya mtumiaji", "User report");
+
       await api.post("/tickets/", {
-        subject:
-          reportSubject.trim() ||
-          (reportType === "listing"
-            ? t("Ripoti ya tangazo", "Listing report")
-            : t("Ripoti ya mtumiaji", "User report")),
+        subject: reportSubject.trim() || defaultSubject,
         description: reportDetails.trim(),
-        category:
-          reportType === "listing" ? "LISTING" : "DISPUTE",
+        category,
         priority: "HIGH",
       });
 
@@ -399,15 +513,20 @@ export default function SafetySupportSection({ side = "buyer" }) {
         {/* HEADER */}
         <div className="mb-6 text-center">
           <h1 className="h-title">
-            {side === "seller"
+            {isSeller
               ? t("Msaada wa Muuzaji", "Seller Support")
               : t("Usalama & Msaada", "Safety & Support")}
           </h1>
           <p className="text-secondary text-body-sm mt-2 max-w-xl mx-auto">
-            {t(
-              "Ripoti tatizo, soma vidokezo vya usalama, au wasiliana nasi.",
-              "Report an issue, read safety tips, or contact us."
-            )}
+            {isSeller
+              ? t(
+                  "Ripoti mnunuzi, soma vidokezo vya usalama wa muuzaji, au wasiliana nasi.",
+                  "Report a buyer, read seller safety tips, or contact us."
+                )
+              : t(
+                  "Ripoti tatizo, soma vidokezo vya usalama, au wasiliana nasi.",
+                  "Report an issue, read safety tips, or contact us."
+                )}
           </p>
         </div>
 
@@ -429,36 +548,26 @@ export default function SafetySupportSection({ side = "buyer" }) {
             </div>
             <div>
               <p style={{ color: COLORS.green }} className="h-card">
-                {t("Vidokezo vya Usalama", "Safety Tips")}
+                {isSeller
+                  ? t("Vidokezo vya Usalama wa Muuzaji", "Seller Safety Tips")
+                  : t("Vidokezo vya Usalama", "Safety Tips")}
               </p>
               <p className="text-secondary text-body-sm mt-0.5">
-                {t(
-                  "Fuata vidokezo hivi ili kulinda pesa zako.",
-                  "Follow these tips to protect your money."
-                )}
+                {isSeller
+                  ? t(
+                      "Fuata vidokezo hivi ili kulinda biashara yako.",
+                      "Follow these tips to protect your business."
+                    )
+                  : t(
+                      "Fuata vidokezo hivi ili kulinda pesa zako.",
+                      "Follow these tips to protect your money."
+                    )}
               </p>
             </div>
           </div>
 
           <ul className="space-y-2 text-body-sm text-secondary max-w-md mx-auto">
-            {[
-              {
-                sw: "Thibitisha akaunti ya muuzaji kabla ya kuendelea.",
-                en: "Verify the seller's account before proceeding.",
-              },
-              {
-                sw: "Kutana sehemu za wazi, wakati wa mchana.",
-                en: "Meet in public places, during daylight.",
-              },
-              {
-                sw: "Usilipe kabla ya kuona mali na hati zake.",
-                en: "Never pay before viewing the property and its documents.",
-              },
-              {
-                sw: "Tumia Deal Room yetu — mazungumzo yote yanahifadhiwa.",
-                en: "Use our Deal Room — all conversations are recorded.",
-              },
-            ].map((tip, i) => (
+            {SAFETY_TIPS.map((tip, i) => (
               <li key={i} className="flex items-start gap-2 text-left">
                 <CheckCircle
                   size={14}
@@ -484,13 +593,20 @@ export default function SafetySupportSection({ side = "buyer" }) {
             </div>
             <div>
               <p className="text-primary h-card">
-                {t("Ripoti Tatizo", "Report an Issue")}
+                {isSeller
+                  ? t("Ripoti Mnunuzi", "Report a Buyer")
+                  : t("Ripoti Tatizo", "Report an Issue")}
               </p>
               <p className="text-secondary text-body-sm mt-0.5 max-w-md mx-auto">
-                {t(
-                  "Unaona tangazo la udanganyifu au mtumiaji mwenye tabia ya kutiliwa shaka?",
-                  "See a fraudulent listing or suspicious user?"
-                )}
+                {isSeller
+                  ? t(
+                      "Mnunuzi anakukatisha tamaa, anakataa kutumia Deal Room, au ana tabia ya kutiliwa shaka?",
+                      "A buyer is giving you trouble, refusing to use the Deal Room, or acting suspiciously?"
+                    )
+                  : t(
+                      "Unaona tangazo la udanganyifu au mtumiaji mwenye tabia ya kutiliwa shaka?",
+                      "See a fraudulent listing or suspicious user?"
+                    )}
               </p>
             </div>
           </div>
@@ -517,7 +633,9 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 className="flex items-center gap-1.5 text-btn font-semibold px-4 py-2.5 rounded-lg"
               >
                 <Flag size={13} />
-                {t("Anza Ripoti", "Start Report")}
+                {isSeller
+                  ? t("Anza Ripoti", "Start Report")
+                  : t("Anza Ripoti", "Start Report")}
               </button>
             </div>
           ) : (
@@ -534,12 +652,9 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 </div>
               )}
 
-              {/* Type */}
+              {/* Type — tofauti kwa buyer vs seller */}
               <div className="flex gap-2">
-                {[
-                  { key: "listing", label: t("Tangazo", "Listing") },
-                  { key: "user", label: t("Mtumiaji", "User") },
-                ].map((opt) => (
+                {reportTypeOptions.map((opt) => (
                   <button
                     key={opt.key}
                     onClick={() => setReportType(opt.key)}
@@ -574,10 +689,17 @@ export default function SafetySupportSection({ side = "buyer" }) {
               <textarea
                 value={reportDetails}
                 onChange={(e) => setReportDetails(e.target.value)}
-                placeholder={t(
-                  "Eleza tatizo kwa ufupi (lazima)...",
-                  "Describe the issue briefly (required)..."
-                )}
+                placeholder={
+                  isSeller
+                    ? t(
+                        "Eleza tatizo la mnunuzi kwa ufupi (lazima)...",
+                        "Describe the buyer's issue briefly (required)..."
+                      )
+                    : t(
+                        "Eleza tatizo kwa ufupi (lazima)...",
+                        "Describe the issue briefly (required)..."
+                      )
+                }
                 rows={4}
                 style={{ borderColor: COLORS.sandLine }}
                 className="border rounded-lg px-3 py-2 text-sm outline-none resize-none bg-white"
@@ -637,7 +759,9 @@ export default function SafetySupportSection({ side = "buyer" }) {
               </div>
               <div>
                 <p className="text-primary h-card">
-                  {t("Ripoti Zangu", "My Reports")}
+                  {isSeller
+                    ? t("Ripoti Zangu", "My Reports")
+                    : t("Ripoti Zangu", "My Reports")}
                 </p>
                 <p className="text-secondary text-body-sm mt-0.5 max-w-md mx-auto">
                   {t(
@@ -660,7 +784,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
           </div>
         )}
 
-        {/* FAQ */}
+        {/* FAQ — tofauti kwa buyer vs seller */}
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="rounded-2xl border p-4 sm:p-5 mb-4"
@@ -741,10 +865,15 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 {t("Wasiliana Nasi", "Contact Us")}
               </p>
               <p className="text-secondary text-body-sm mt-0.5">
-                {t(
-                  "Timu yetu iko tayari kukusaidia.",
-                  "Our team is ready to help."
-                )}
+                {isSeller
+                  ? t(
+                      "Timu yetu iko tayari kukusaidia.",
+                      "Our support team is ready to help."
+                    )
+                  : t(
+                      "Timu yetu iko tayari kukusaidia.",
+                      "Our Support team is ready to help."
+                    )}
               </p>
             </div>
           </div>

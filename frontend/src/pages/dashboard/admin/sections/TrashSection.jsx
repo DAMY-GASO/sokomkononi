@@ -425,7 +425,7 @@ export default function TrashSection() {
     if (!res.ok) {
       setError(
         res.error?.message ||
-          t("Imeshindwa kufuta trash yote.", "Failed to empty trash.")
+          t("Imeshindwa kufuta recycle bin yote.", "Failed to empty recycle bin.")
       );
     }
   };
@@ -466,7 +466,7 @@ export default function TrashSection() {
   return (
     <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
       <SectionHeader
-        title={t("Sanduku la Taka", "Recycle Bin")}
+        title={t("Sanduku la Kurejesha", "Recycle Bin")}
         subtitle={t(
           "Items zilizofutwa. Unaweza kuzirudisha au kuzifuta kabisa.",
           "Deleted items. You can restore or permanently delete them."
@@ -501,8 +501,8 @@ export default function TrashSection() {
           <p className="text-sm font-semibold text-primary break-words">
             {totalItems}{" "}
             {totalItems === 1
-              ? t("item kwenye trash", "item in trash")
-              : t("items kwenye trash", "items in trash")}
+              ? t("item kwenye sanduku la kurejesha", "item in recycle bin")
+              : t("items kwenye sanduku la kurejesha", "items in recycle bin")}
           </p>
           <p className="text-xs text-secondary mt-0.5">
             {t(
@@ -536,7 +536,7 @@ export default function TrashSection() {
         >
           <Trash2 size={48} className="mx-auto text-muted mb-3" />
           <h3 className="font-semibold text-primary mb-1">
-            {t("Trash ni tupu", "Trash is empty")}
+            {t("Sanduku la kurejesha ni tupu", "Recycle bin is empty")}
           </h3>
           <p className="text-sm text-secondary">
             {t(
@@ -658,10 +658,10 @@ export default function TrashSection() {
         open={confirmEmptyAll}
         busy={!!busy.emptyAll}
         danger
-        title={t("Futa Trash Yote?", "Empty Entire Trash?")}
+        title={t("Futa Sanduku la Kurejesha Yote?", "Empty Entire Recycle Bin?")}
         description={t(
-          "Items zote kwenye trash zitafutwa kabisa. Hatua hii haiwezi kurudishwa.",
-          "All items in trash will be permanently deleted. This action cannot be undone."
+          "Items zote kwenye sanduku la kurejesha zitafutwa kabisa. Hatua hii haiwezi kurudishwa.",
+          "All items in the recycle bin will be permanently deleted. This action cannot be undone."
         )}
         confirmLabel={
           <>

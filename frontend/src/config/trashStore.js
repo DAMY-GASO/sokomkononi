@@ -10,7 +10,7 @@ const ITEMS_KEY = "sokomkononi_trash_items_v1";
 const EV = "sokomkononi:trash-updated";
 
 export const TRASH_TYPES = [
-  { key: "listings",      label: { sw: "Mali (Listings)", en: "Listings" },      iconKey: "Home",       color: "#E8A33D" },
+  { key: "listings",      label: { sw: "Mali ", en: "Listings" },      iconKey: "Home",       color: "#E8A33D" },
   { key: "users",         label: { sw: "Watumiaji", en: "Users" },                iconKey: "Users",      color: "#2563EB" },
   { key: "verifications", label: { sw: "Uthibitisho", en: "Verifications" },      iconKey: "ShieldCheck", color: "#2F6D4F" },
   { key: "tickets",       label: { sw: "Tiketi", en: "Tickets" },                iconKey: "Headphones", color: "#C1502E" },
@@ -43,8 +43,8 @@ function prettyName(n) {
 const EMPTY_OVERVIEW = {
   listings: 0, users: 0, verifications: 0, tickets: 0,
   banners: 0, announcements: 0, deals: 0, total: 0, lastUpdated: null,
-  others: [],        // aina nyingine zenye SoftDeleteModel: [{ key, name, count }]
-  backendTypes: {},  // key ya frontend -> "app.Model" ya backend
+  others: [],     
+  backendTypes: {}, 
 };
 
 function readOverview() {
@@ -78,8 +78,6 @@ function writeItems(items) {
 
 function normOverview(raw) {
   if (!raw || typeof raw !== "object") return EMPTY_OVERVIEW;
-
-  // New backend shape: { totals: [{ type, count, protected }, ...] }
   if (Array.isArray(raw.totals)) {
     const o = {
       ...EMPTY_OVERVIEW,
@@ -241,7 +239,6 @@ export async function emptyTrashByTypeAsync(type) {
     const data = await api.post(`/trash/${apiType(type)}/empty/`, { confirm: "DELETE ALL" });
     setTrashItemsByType(type, []);
     writeOverview(adjustCount(readOverview(), type, "all"));
-    // Baadhi zinaweza kurukwa (zinatumika mahali pengine) — rekebisha kutoka server.
     if (data?.skipped) {
       fetchTrashItemsAsync(type);
       hydrateTrashOverviewFromApi();
@@ -260,7 +257,6 @@ export async function emptyTrashAsync() {
       backendTypes: readOverview().backendTypes || {},
       lastUpdated: new Date().toISOString(),
     });
-    // Aina zinazolindwa au zilizorukwa zinabaki — rekebisha kutoka server.
     hydrateTrashOverviewFromApi();
     return { ok: true, data };
   } catch (err) { return { ok: false, error: err }; }
@@ -348,7 +344,7 @@ export function recordRecycleAction({ type, id, name, action, actor }) {
   const entry = {
     id: `rh_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     type, itemId: id, name,
-    action,                 // "recycled" | "restored" | "permanent" | "emptied"
+    action,               
     actor: actor || "Admin",
     at: new Date().toISOString(),
   };

@@ -1,7 +1,5 @@
 // ============================================================
 // verificationsStore.js — API-only via /api/verifications/
-// + Admin: request documents
-// + Upload documents (mtumiaji au admin)
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -72,7 +70,6 @@ function norm(raw) {
     reviewedBy: raw.reviewed_by,
     reviewedByName: raw.reviewed_by_name,
     rejectionReason: raw.rejection_reason,
-    // ⬇️ MPYA — Admin request documents
     documentsRequestedAt: raw.documents_requested_at,
     documentsRequestMessage: raw.documents_request_message,
   };
@@ -185,23 +182,6 @@ export async function requestDocumentsAsync(id, message) {
       };
     write(read().map((v) => (v.id === id ? updated : v)));
     return { ok: true, verification: updated };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
-}
-
-// ══════════════════════════════════════════════════════════
-// UPLOAD document (mtumiaji au admin)
-// ══════════════════════════════════════════════════════════
-export async function uploadVerificationDocumentAsync(id, file) {
-  if (!file) return { ok: false, error: new Error("File required") };
-  try {
-    const fd = new FormData();
-    fd.append("file", file);
-    const raw = await api.upload(`/verifications/${id}/documents/`, fd);
-    // Refresh list ili documents mpya zionekane
-    await hydrateVerificationsFromApi();
-    return { ok: true, document: raw };
   } catch (err) {
     return { ok: false, error: err };
   }

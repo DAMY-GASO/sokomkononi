@@ -2,14 +2,13 @@
 // VerificationSection.jsx (admin)
 // - A: Admin anaona maombi, approve/reject
 // - B: Admin anaweza kuomba documents zaidi
-// - Upload documents kwa niaba ya mtumiaji
 // ============================================================
 
 import React, { useState, useMemo } from "react";
 import {
   ShieldCheck, User, UserCheck, Building2, CarFront, Building,
   Check, X, FileText, ChevronDown, ChevronUp, Search, Trash2,
-  Loader2, Upload, MessageSquare, AlertCircle,
+  Loader2, MessageSquare, AlertCircle,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -20,7 +19,6 @@ import {
   rejectVerificationAsync,
   removeVerificationAsync,
   requestDocumentsAsync,
-  uploadVerificationDocumentAsync,
   VERIFICATION_TYPES,
   VERIFICATION_STATUSES,
 } from "../../../../config/verificationsStore.js";
@@ -70,10 +68,8 @@ function VerificationCard({ request, lang }) {
   const [rejectReason, setRejectReason] = useState("");
   const [requestingDocs, setRequestingDocs] = useState(false);
   const [docsMessage, setDocsMessage] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const fileInputRef = React.useRef(null);
 
   const TypeIcon = TYPE_ICONS[request.type] || ShieldCheck;
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -144,23 +140,6 @@ function VerificationCard({ request, lang }) {
     } else {
       setError(res.error?.message || t("Imeshindwa.", "Failed."));
     }
-  };
-
-  const handleFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setError(t("Faili ni kubwa sana (max 10MB).", "File too large (max 10MB)."));
-      return;
-    }
-    setUploading(true);
-    setError("");
-    const res = await uploadVerificationDocumentAsync(request.id, file);
-    setUploading(false);
-    if (!res.ok) {
-      setError(res.error?.message || t("Imeshindwa kupakia.", "Upload failed."));
-    }
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleRemove = async () => {
@@ -362,7 +341,7 @@ function VerificationCard({ request, lang }) {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={handleApprove}
-                disabled={busy || uploading}
+                disabled={busy}
                 style={{ background: COLORS.green, color: "white" }}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-50"
               >
@@ -374,7 +353,6 @@ function VerificationCard({ request, lang }) {
                 onClick={handleReject}
                 disabled={
                   busy ||
-                  uploading ||
                   (rejecting && rejectReason.trim().length < MIN_REASON)
                 }
                 style={{
@@ -406,7 +384,7 @@ function VerificationCard({ request, lang }) {
               {/* Omba docs */}
               <button
                 onClick={handleRequestDocs}
-                disabled={busy || uploading}
+                disabled={busy}
                 style={{
                   background: requestingDocs ? COLORS.gold : "transparent",
                   color: requestingDocs ? COLORS.night : "#8A5A16",
@@ -437,31 +415,9 @@ function VerificationCard({ request, lang }) {
                 </button>
               )}
 
-              {/* Upload document kwa niaba */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={busy || uploading}
-                style={{ borderColor: COLORS.sandLine, color: "var(--text-primary)" }}
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border bg-white disabled:opacity-50"
-              >
-                {uploading ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : (
-                  <Upload size={12} />
-                )}
-                {t("Pakia", "Upload")}
-              </button>
-
               <button
                 onClick={handleRemove}
-                disabled={busy || uploading}
+                disabled={busy}
                 className="ml-auto text-xs font-semibold p-2 rounded-lg text-muted hover:text-[#C1502E] disabled:opacity-50"
                 aria-label={t("Ondoa", "Remove")}
               >
