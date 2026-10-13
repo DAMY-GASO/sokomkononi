@@ -87,7 +87,6 @@ export async function hydrateMyFeedbackFromApi() {
 }
 
 export async function submitFeedbackAsync(payload) {
-  // Body matches backend serializer field names EXACTLY (camelCase)
   const body = {
     type: payload.type || "feedback",
     subject: (payload.subject || "").trim(),
@@ -109,11 +108,17 @@ export async function submitFeedbackAsync(payload) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// ✅ FIX: Backend inatarajia `admin_reply` (snake_case),
+//         sio `adminReply` (camelCase).
+// ═══════════════════════════════════════════════════════════
 export async function respondToFeedbackAsync(id, reply) {
   const clean = (reply || "").trim();
   if (!clean) return { ok: false, error: new Error("reply required") };
   try {
-    const raw = await api.post(`/feedback/${id}/respond/`, { adminReply: clean });
+    const raw = await api.post(`/feedback/${id}/respond/`, {
+      admin_reply: clean,
+    });
     const updated = norm(raw) || {
       ...(getFeedback().find((f) => f.id === id) || {}),
       adminReply: clean,
