@@ -140,6 +140,7 @@ function App() {
               <Route path="/dashboard/buyer/feedback" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/activity" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/verification" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/reservations" element={<DashboardShell />} />
 
               {/* ADMIN */}
               <Route path={ADMIN_LOGIN_PATH} element={<AdminLoginPage />} />
