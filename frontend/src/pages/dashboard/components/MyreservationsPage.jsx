@@ -188,11 +188,11 @@ export default function MyReservationsPage() {
       <div className="max-w-3xl mx-auto">
         <div className="mb-6 text-center">
           <h1 className="h-title">
-            {lang === "sw" ? "Reservation Zangu" : "My Reservations"}
+            {lang === "sw" ? "Mali Nilizoshikilia" : "My Reservations"}
           </h1>
           <p className="text-body-sm text-secondary mt-2 max-w-xl mx-auto">
             {lang === "sw"
-              ? "Mali ulizolipia Reservation Fee. Muda wa ukaguzi na hatua zinazofuata zinaonekana hapa."
+              ? "Mali ulizolipia ada ya kushikilia. Muda wa ukaguzi na hatua zinazofuata zinaonekana hapa."
               : "Properties you've paid a Reservation Fee for. Inspection time and next steps show here."}
           </p>
         </div>
@@ -205,7 +205,7 @@ export default function MyReservationsPage() {
             <Inbox size={30} className="mx-auto text-muted mb-2" />
             <p className="text-sm text-muted">
               {lang === "sw"
-                ? "Hujalipia reservation yoyote bado."
+                ? "Bado hujalipia ada yoyote ya kushikilia mali."
                 : "You haven't paid for any reservation yet."}
             </p>
           </div>
