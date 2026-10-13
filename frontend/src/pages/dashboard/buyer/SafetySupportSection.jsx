@@ -446,13 +446,13 @@ export default function SafetySupportSection({ side = "buyer" }) {
   const content = isSeller
     ? {
         // Header
-        headerTitle: t("Msaada wa Muuzaji", "Seller Support"),
+        headerTitle: t("Usalama & Msaada", "Safety & Support"),
         headerSubtitle: t(
           "Ripoti mnunuzi, soma vidokezo vya usalama wa muuzaji, au wasiliana nasi.",
           "Report a buyer, read seller safety tips, or contact us."
         ),
         // Safety Tips
-        tipsTitle: t("Vidokezo vya Usalama wa Muuzaji", "Seller Safety Tips"),
+        tipsTitle: t("Vidokezo vya Usalama", "Safety Tips"),
         tipsSubtitle: t(
           "Fuata vidokezo hivi ili kulinda biashara yako.",
           "Follow these tips to protect your business."
