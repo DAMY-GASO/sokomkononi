@@ -508,7 +508,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
           "Follow these tips to protect your money."
         ),
         // Report
-        reportTitle: t("Ripoti Tatizo", "Report an Issue"),
+        reportTitle: t("Ripoti Muuzaji", "Report a Seller"),
         reportSubtitle: t(
           "Unaona tangazo la udanganyifu au mtumiaji mwenye tabia ya kutiliwa shaka?",
           "See a fraudulent listing or suspicious user?"
