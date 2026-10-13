@@ -22,6 +22,5 @@ export const boostingApi = {
   pay: (id, body = {}) =>
     api.post(`/boosting/${id}/pay/`,
       body && typeof body === "object" ? body : {}),
-  activate: (id) => api.post(`/boosting/${id}/activate/`, {}),
   cancel: (id) => api.post(`/boosting/${id}/cancel/`, { confirm: true }),
 };

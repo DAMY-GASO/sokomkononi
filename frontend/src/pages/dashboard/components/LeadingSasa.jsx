@@ -345,9 +345,7 @@ export default function LeadingSasa({
     setError("");
     try {
       const purchaseId = await createPendingPurchase();
-      await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {
-        payment_reference: "free",
-      });
+      await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {});
       const days = selectedPackage?.days || 1;
       const expiresAt = new Date(
         Date.now() + days * 86400000

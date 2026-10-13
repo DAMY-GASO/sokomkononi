@@ -91,6 +91,31 @@ function wipeUserScopedCaches() {
   } catch { /* noop */ }
 }
 
+
+// ============================================================
+// LOGIN HYGIENE — wipe cached data when a new user logs in.
+// Protects shared browsers from leaking user A's data into
+// user B's session (deals, notifications, messages, leads).
+// ============================================================
+function wipeDataCachesOnLogin() {
+  if (typeof window === "undefined") return;
+  try {
+    const toRemove = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (!k || !k.startsWith("sokomkononi_")) continue;
+      if (k.includes("_access") || k.includes("_refresh")) continue;
+      if (k === "sokomkononi_current_user_v1") continue;
+      if (k === "sokomkononi_admin_user_v1") continue;
+      if (k.startsWith("sokomkononi_admin_")) continue;
+      toRemove.push(k);
+    }
+    toRemove.forEach((k) => {
+      try { window.localStorage.removeItem(k); } catch {}
+    });
+  } catch { /* noop */ }
+}
+
 function hardReset() {
   saveUser(null);
   clearJWT();
@@ -259,6 +284,7 @@ export async function loginAsync({ identifier, password, captcha_token }) {
         error: new Error(ADMIN_BLOCKED_MESSAGE),
       };
     }
+    wipeDataCachesOnLogin();
     const user = normalizeUserFromApi(me);
     saveUser(user);
     resetHydrateCache();
@@ -289,6 +315,7 @@ export async function adminLoginAsync({ identifier, password }) {
         error: new Error("Huna ruhusa ya kuingia kama admin"),
       };
     }
+    wipeDataCachesOnLogin();
     const user = normalizeUserFromApi(me);
     saveUser(user);
     resetHydrateCache();
@@ -329,6 +356,23 @@ export async function registerAsync(payload) {
   }
 }
 
+
+// ============================================================
+// RESEND REGISTRATION OTP — dedicated endpoint (not re-register)
+// ============================================================
+export async function resendRegistrationOtpAsync(identifier) {
+  if (!identifier) {
+    return { ok: false, error: new Error("identifier inahitajika") };
+  }
+  try {
+    await authApi.resendOtp(identifier);
+    return { ok: true };
+  } catch (err) {
+    console.warn("[authStore] resendRegistrationOtp failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
 export async function verifyOtpAsync({
   identifier,
   otpCode,
@@ -349,6 +393,7 @@ export async function verifyOtpAsync({
       verification_type: type,
     });
     const me = data?.user ?? (await authApi.me());
+    wipeDataCachesOnLogin();
     const user = normalizeUserFromApi(me);
     saveUser(user);
     resetHydrateCache();
@@ -682,6 +727,7 @@ export async function socialLoginAsync({
         error: new Error(ADMIN_BLOCKED_MESSAGE),
       };
     }
+    wipeDataCachesOnLogin();
     const user = normalizeUserFromApi(me);
     saveUser(user);
     resetHydrateCache();

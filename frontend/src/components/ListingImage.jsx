@@ -79,7 +79,7 @@ export default function ListingImage({
           alt={alt}
           loading={eager ? "eager" : "lazy"}
           decoding="async"
-          fetchpriority={eager ? "high" : undefined}
+          fetchPriority={eager ? "high" : undefined}
           onLoad={(e) => settle(e.currentTarget)}
           onError={() => setStatus("error")}
           className={`absolute inset-0 h-full w-full transition duration-500 ${

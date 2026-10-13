@@ -2,7 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
 import ListingImage from "./ListingImage.jsx";
-import { isBoostActive } from "../pages/dashboard/components/shared";
+import { isBoostActive } from "../utils/listings.js";
 
 export function formatTZS(amount) {
   return "TZS " + Math.round(amount || 0).toLocaleString("en-US");

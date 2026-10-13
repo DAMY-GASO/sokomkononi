@@ -50,7 +50,6 @@ import {
   getDeals,
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
-import { markSoldAsync } from "../../../config/listingsStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";
@@ -2439,16 +2438,6 @@ export default function DealRooms({
             : "Failed to confirm payment.")
       );
       return;
-    }
-
-    // Auto-transition the listing to SOLD. Without this, the listing
-    // stays LIVE forever and other buyers can keep opening deals on it.
-    if (deal.listingId) {
-      try {
-        await markSoldAsync(deal.listingId);
-      } catch (soldErr) {
-        console.warn("[DealRooms] markSold after completion failed:", soldErr);
-      }
     }
 
     const note =

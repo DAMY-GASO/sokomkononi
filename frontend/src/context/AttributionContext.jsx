@@ -12,6 +12,7 @@
 // Footer logo contribute to the same counter.
 // ============================================================
 import React, { createContext, useCallback, useContext, useRef, useState } from "react";
+import { useLanguage } from "./LanguageContext.jsx";
 
 const AttributionContext = createContext(null);
 
@@ -71,16 +72,7 @@ export function useAttribution() {
 // MODAL
 // ═══════════════════════════════════════════════════════════
 function AttributionModal({ open, onClose }) {
-  const [lang, setLang] = useState("sw");
-
-  // Read app language from localStorage so we don't need a hook here
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const saved = window.localStorage.getItem("preferred_language");
-      if (saved === "en" || saved === "sw") setLang(saved);
-    } catch { /* noop */ }
-  }, [open]);
+  const { lang } = useLanguage();
 
   // Close on Escape
   React.useEffect(() => {

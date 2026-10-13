@@ -176,6 +176,7 @@ export default function PaymentGateway({
 
   const pollSeqRef = useRef(0);   // monotonically increasing; invalidates stale pollers
   const pollTimerRef = useRef(null);
+  const abortControllersRef = useRef(new Map());
 
   const isMobile = isMobileMethod(methodKey);
   const isCard = isCardMethod(methodKey);
@@ -192,6 +193,8 @@ export default function PaymentGateway({
     return () => {
       pollSeqRef.current++;
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+      abortControllersRef.current.forEach((c) => { try { c.abort(); } catch {} });
+      abortControllersRef.current.clear();
     };
   }, []);
 
@@ -224,24 +227,27 @@ export default function PaymentGateway({
   const runPoll = async (oid) => {
     const mySeq = ++pollSeqRef.current;
     const isStale = () => pollSeqRef.current !== mySeq;
-    for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
-      if (isStale()) return;
-      await new Promise((resolve) => {
-        pollTimerRef.current = setTimeout(resolve, POLL_INTERVAL_MS);
-      });
-      if (isStale()) return;
+    const controller = new AbortController();
+    abortControllersRef.current.set(mySeq, controller);
+    try {
+      for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
+        if (isStale()) return;
+        setAttempt(i + 1);
 
-      setAttempt(i + 1);
-
-      let data;
-      try {
-        data = await api.post(
-          "/payments/order-status/",
-          { order_id: oid }
-        );
-      } catch {
-        continue; // network blip
-      }
+        let data;
+        try {
+          data = await api.post(
+            "/payments/order-status/",
+            { order_id: oid },
+            { signal: controller.signal }
+          );
+        } catch {
+          if (isStale()) return;
+          await new Promise((resolve) => {
+            pollTimerRef.current = setTimeout(resolve, POLL_INTERVAL_MS);
+          });
+          continue;
+        }
 
       const status = String(data?.payment_status || "").toUpperCase();
       setPollStatus(status);
@@ -262,9 +268,16 @@ export default function PaymentGateway({
         setStage("FAILED");
         return;
       }
+        if (isStale()) return;
+
+        await new Promise((resolve) => {
+          pollTimerRef.current = setTimeout(resolve, POLL_INTERVAL_MS);
+        });
+      }
+    } finally {
+      abortControllersRef.current.delete(mySeq);
     }
 
-    // Timeout after 30 attempts
     setError(failureMessage("TIMEOUT", lang));
     setStage("FAILED");
   };
@@ -355,12 +368,16 @@ export default function PaymentGateway({
   const handleCancel = () => {
     pollSeqRef.current++;
     if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    abortControllersRef.current.forEach((c) => { try { c.abort(); } catch {} });
+    abortControllersRef.current.clear();
     session.clear();
     onCancel?.();
   };
 
   const handleRetry = () => {
-    pollSeqRef.current++;   // invalidate any in-flight poller for the OLD order
+    pollSeqRef.current++;
+    abortControllersRef.current.forEach((c) => { try { c.abort(); } catch {} });
+    abortControllersRef.current.clear();
     setError("");
     setStage("SELECT");
     setAttempt(0);

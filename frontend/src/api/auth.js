@@ -38,6 +38,9 @@ export const authApi = {
     }
   },
 
+  resendOtp: (identifier) =>
+    api.post("/auth/resend-otp/", { identifier }),
+
   // ----- Profile -----
   me: () => api.get("/auth/me/"),
   profile: () => api.get("/auth/profile/"),

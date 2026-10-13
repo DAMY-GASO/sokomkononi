@@ -3,6 +3,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { guarded } from "./hydrateGuard.js";
 
 const KEY = "sokomkononi_leads_v1";
 const EV = "sokomkononi:leads-updated";
@@ -44,7 +45,7 @@ export function getLeads() { return read(); }
 export function getLead(id) { return read().find((l) => l.id === id) || null; }
 export function getLeadsForListing(listingId) { return read().filter((l) => l.listingId === listingId); }
 
-export async function hydrateLeadsFromApi() {
+async function _hydrateLeadsFromApi_impl() {
   try {
     const d = await api.get("/leads/?page_size=200");
     const list = Array.isArray(d) ? d : d?.results || [];
@@ -126,3 +127,4 @@ export function useLeadsForListing(listingId) {
   return listingId ? list.filter((l) => l.listingId === listingId) : [];
 }
 
+export const hydrateLeadsFromApi = guarded(_hydrateLeadsFromApi_impl, { key: "hydrateLeadsFromApi" });

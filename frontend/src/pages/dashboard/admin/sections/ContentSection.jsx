@@ -6,7 +6,7 @@
 // + Upload ya picha kwa banners + testimonials
 // ============================================================
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Image as ImageIcon,
   MessageSquareQuote,

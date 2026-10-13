@@ -31,7 +31,7 @@ import {
   consumeCreditAsync,
 } from "../config/userCreditsStore.js";
 import { useActiveBundles } from "../config/bundlesStore.js";
-import { api, getAccessToken } from "../api/client.js";
+import { api, getAccessToken, downloadFile } from "../api/client.js";
 import PaymentGateway from "./dashboard/components/PaymentGateway";
 import {
   useSuccessFeeConfig,
@@ -240,26 +240,7 @@ export default function MyTransactionsPage() {
   const handleDownloadReceipt = async (tr) => {
     setReceiptBusyId(tr.id);
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
-      const url = `${baseUrl}/finance/transactions/${tr.id}/receipt/`;
-      const token = getAccessToken();
-
-      const response = await fetch(url, {
-        method: "GET",
-        credentials: "omit",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData?.detail ||
-            errorData?.message ||
-            t("Receipt imeshindikana kupakua.", "Failed to download receipt.")
-        );
-      }
-
-      const blob = await response.blob();
+      const blob = await downloadFile(`/finance/transactions/${tr.id}/receipt/`);
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;
@@ -290,58 +271,19 @@ export default function MyTransactionsPage() {
     setDownloading(true);
     setFeeError("");
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
-      const url = `${baseUrl}/finance/success-fee/download/?format=${downloadFormat}&period=${downloadPeriod}`;
-      const token = getAccessToken();
-
-      const response = await fetch(url, {
-        method: "GET",
-        credentials: "omit",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-
-      if (response.status === 204) {
-        setFeeError(
-          t("Hakuna miamala ya kupakua.", "No transactions to download.")
-        );
+      const path = `/finance/success-fee/download/?format=${downloadFormat}&period=${downloadPeriod}`;
+      let blob;
+      try {
+        blob = await downloadFile(path);
+      } catch (err) {
+        if (err?.status === 402) {
+          setFeeError(err?.data?.message || t("Lipa ada ya mafanikio kwanza ili kupakua.", "Pay the success fee first to download."));
+        } else {
+          setFeeError(err?.message || t("Download imeshindikana. Jaribu tena.", "Download failed. Try again."));
+        }
         setDownloading(false);
         return;
       }
-
-      if (response.status === 402) {
-        const errorData = await response.json().catch(() => ({}));
-        setFeeError(
-          errorData?.message ||
-            t(
-              "Lipa ada ya mafanikio kwanza ili kupakua.",
-              "Pay the success fee first to download."
-            )
-        );
-        setDownloading(false);
-        return;
-      }
-
-      if (response.status === 401) {
-        setFeeError(
-          t(
-            "Kipindi kimeisha. Ingia tena.",
-            "Session expired. Please log in again."
-          )
-        );
-        setDownloading(false);
-        return;
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData?.detail ||
-            errorData?.message ||
-            `Download failed: ${response.status}`
-        );
-      }
-
-      const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;

@@ -3,6 +3,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { guarded } from "./hydrateGuard.js";
 
 const KEY = "sokomkononi_announcements_v1";
 const EV = "sokomkononi:announcements-updated";
@@ -49,7 +50,7 @@ function norm(raw) {
 
 export function getAnnouncements() { return read(); }
 
-export async function hydrateAnnouncementsFromApi() {
+async function _hydrateAnnouncementsFromApi_impl() {
   try {
     const d = await api.get("/announcements/?page_size=100");
     const list = Array.isArray(d) ? d : d?.results || [];
@@ -102,3 +103,4 @@ export function useAnnouncements() {
 }
 export function useSentAnnouncements() { return useAnnouncements().filter((a) => a.sent); }
 
+export const hydrateAnnouncementsFromApi = guarded(_hydrateAnnouncementsFromApi_impl, { key: "hydrateAnnouncementsFromApi" });

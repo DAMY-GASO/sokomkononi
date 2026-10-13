@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { registerAsync, verifyOtpAsync } from "../../config/authStore.js";
+import { registerAsync, verifyOtpAsync, resendRegistrationOtpAsync } from "../../config/authStore.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
 import PasswordStrengthMeter from "../../components/PasswordStrengthMeter.jsx";
@@ -115,7 +115,7 @@ export default function RegisterPage() {
   function validateForm() {
     if (!form.name.trim()) return t("register_error_name_required");
     if (!form.email.trim()) return t("register_error_email_required");
-    if (!form.phone.trim()) return t("register_error_phone_required");
+    // Phone optional per backend
     if (!form.password || form.password.length < 6) return t("register_error_password_short");
     if (form.confirmPassword !== form.password) return t("register_error_password_mismatch");
     if (!agreedToTerms) return t("register_error_terms_required");
@@ -191,8 +191,7 @@ export default function RegisterPage() {
     if (resendCooldown > 0 || loading) return;
     setError("");
     setLoading(true);
-    const { confirmPassword, ...payload } = form;
-    const res = await registerAsync({ ...payload, intent: intent || null });
+    const res = await resendRegistrationOtpAsync(form.email);
     setLoading(false);
     if (!res.ok) {
       setError(extractError(res.error, t("register_error_default")));

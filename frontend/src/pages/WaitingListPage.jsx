@@ -19,7 +19,7 @@ import {
   useWaitingList,
   useWaitingListState,
   leaveWaitingList as leaveWaitingListStore,
-  expireStaleReservationsAsync,
+  hydrateWaitingListFromApi,
 } from "../config/waitingListStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 
@@ -221,19 +221,13 @@ export default function WaitingListPage({
   const loadError = storeState.error;
   const [filter, setFilter] = useState("all");
 
-  // Poll the backend every 60s to release expired reservations
-  // and advance the waitlist (Option A — first in queue is notified).
+  // Periodic re-hydrate so queue progression is visible without
+  // a manual refresh. Reservation expiry is a backend job.
   useEffect(() => {
-    let cancelled = false;
-    const tick = async () => {
-      const res = await expireStaleReservationsAsync();
-      if (!cancelled && res.ok && res.changed) {
-        // Trigger a re-render through the store
-      }
-    };
-    tick();
-    const iv = setInterval(tick, 60000);
-    return () => { cancelled = true; clearInterval(iv); };
+    const iv = setInterval(() => {
+      hydrateWaitingListFromApi().catch(() => {});
+    }, 60000);
+    return () => clearInterval(iv);
   }, []);
 
   const handleLeave = (id) => {

@@ -1,7 +1,7 @@
 // ============================================================
 // ConfirmDialog.jsx — promise-based confirm() replacement
 // ============================================================
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { COLORS } from "../pages/dashboard/components/shared";
 
@@ -25,6 +25,15 @@ export function ConfirmProvider({ children }) {
 
   const finish = (result) =>
     setState((prev) => { prev?.resolve?.(result); return null; });
+
+  // Close on Escape — dismisses with `false` for safety.
+  useEffect(() => {
+    if (!state) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") finish(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   return (
     <ConfirmContext.Provider value={confirm}>
@@ -56,13 +65,14 @@ export function ConfirmProvider({ children }) {
             <div className="flex gap-2">
               <button
                 onClick={() => finish(false)}
+                autoFocus={state.danger}
                 className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
               >
                 {state.cancelLabel}
               </button>
               <button
                 onClick={() => finish(true)}
-                autoFocus
+                autoFocus={!state.danger}
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold"
                 style={{
                   background: state.danger ? COLORS.rust : COLORS.gold,

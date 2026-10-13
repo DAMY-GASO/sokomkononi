@@ -314,7 +314,10 @@ async function request(path, {
   }
 
   const data = await parseResponse(res);
-  if (!res.ok) throw new ApiError(res.status, data);
+  if (!res.ok) {
+    if (res.status === 401 && !isPublic) onUnauthorized?.();
+    throw new ApiError(res.status, data);
+  }
   return data;
 }
 
@@ -322,6 +325,46 @@ function normalizeBody(body) {
   if (body === undefined || body === null) return undefined;
   if (typeof body === "object" && !Array.isArray(body) && Object.keys(body).length === 0) return undefined;
   return body;
+}
+
+
+// ============================================================
+// downloadFile() — binary download via the auth + refresh pipeline.
+// ============================================================
+export async function downloadFile(path, { signal } = {}) {
+  const isPublic = isPublicEndpoint(path, "GET");
+  const headers = {
+    ...(!isPublic && getAccessToken()
+      ? { Authorization: `Bearer ${getAccessToken()}` }
+      : {}),
+    "X-Requested-With": "XMLHttpRequest",
+  };
+
+  let res = await fetchWithTimeout(
+    `${getBaseUrl()}${path}`,
+    { method: "GET", headers, signal }
+  );
+
+  if (res.status === 401 && !isPublic && getRefreshToken()) {
+    try {
+      await refreshAccessToken();
+      headers.Authorization = `Bearer ${getAccessToken()}`;
+      res = await fetchWithTimeout(
+        `${getBaseUrl()}${path}`,
+        { method: "GET", headers, signal }
+      );
+    } catch (err) {
+      onUnauthorized?.();
+      throw err;
+    }
+  }
+
+  if (!res.ok) {
+    const data = await parseResponse(res);
+    if (res.status === 401 && !isPublic) onUnauthorized?.();
+    throw new ApiError(res.status, data);
+  }
+  return res.blob();
 }
 
 export const api = {

@@ -119,58 +119,10 @@ export function useWaitingListCount() {
 
 
 // ============================================================
-// RESERVATION EXPIRY WATCH (Option A: notify first in queue)
-// The backend is the source of truth for expiry. This helper
-// simply nudges the backend when a reservation has expired
-// (idempotent), then refetches the list.
+// RESERVATION EXPIRY — handled by backend cron. The frontend
+// no longer nudges the backend; a periodic hydrate on the
+// WaitingListPage shows queue progression.
 // ============================================================
-import { api } from "../api/client";
-import { transactionsApi } from "../api/transactions.js";
-
-export async function expireStaleReservationsAsync() {
-  try {
-    const data = await waitingListApi.mine();
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const now = Date.now();
-
-    let anyExpired = false;
-    for (const item of list) {
-      if (item.status !== "WAITING" && item.status !== "NOTIFIED") continue;
-      if (!item.listing) continue;
-      const listingStatus = String(item.listing.status || "").toUpperCase();
-      if (listingStatus !== "RESERVED") continue;
-      const expiresAt = item.listing.reservation_expires_at;
-      if (!expiresAt) continue;
-      if (new Date(expiresAt).getTime() > now) continue;
-
-      // Nudge the backend to release the reservation and advance the queue.
-      try {
-        // Preferred endpoint if your backend exposes one:
-        // POST /listings/{id}/release-reservation/
-        await api.post(`/listings/${item.listing.id}/release-reservation/`, {});
-        anyExpired = true;
-      } catch (e) {
-        // Fallback: try transaction-level expire (already exists)
-        const txId = item.listing.active_transaction_id;
-        if (txId) {
-          try {
-            await transactionsApi.expireReservation(txId);
-            anyExpired = true;
-          } catch { /* give up, try again next cycle */ }
-        }
-      }
-    }
-
-    if (anyExpired) {
-      await hydrateWaitingListFromApi();
-      return { ok: true, changed: true };
-    }
-    return { ok: true, changed: false };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
-}
-
 
 // ============================================================
 // useWaitingListState — exposes { list, loading, error } so pages

@@ -4,6 +4,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { bundlesApi } from "../api/bundles.js";
+import { guarded } from "./hydrateGuard.js";
 
 const KEY = "sokomkononi_bundles_v1";
 const EV = "sokomkononi:bundles-updated";
@@ -114,7 +115,7 @@ export function resetBundles(list) {
 // ============================================================
 // HYDRATE FROM API
 // ============================================================
-export async function hydrateBundlesFromApi() {
+async function _hydrateBundlesFromApi_impl() {
   try {
     const d = await bundlesApi.list({ page_size: 200 });
     const list = Array.isArray(d) ? d : d?.results || [];
@@ -237,3 +238,5 @@ export function initializeBundles() {
   // hydrateBundlesFromApi(). Kept for backward compatibility.
   return [];
 }
+
+export const hydrateBundlesFromApi = guarded(_hydrateBundlesFromApi_impl, { key: "hydrateBundlesFromApi" });

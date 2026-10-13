@@ -264,6 +264,12 @@ a {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  /* Loading spinners convey live state — do not freeze them. */
+  .animate-spin,
+  .animate-pulse {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
 
 

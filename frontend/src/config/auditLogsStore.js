@@ -3,6 +3,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { guarded } from "./hydrateGuard.js";
 
 const KEY = "sokomkononi_audit_logs_v1";
 const EV = "sokomkononi:audit-logs-updated";
@@ -51,7 +52,7 @@ function norm(raw) {
 
 export function getAuditLogs() { return read(); }
 
-export async function hydrateAuditLogsFromApi() {
+async function _hydrateAuditLogsFromApi_impl() {
   try {
     const d = await api.get("/audit/?page_size=200");
     const list = Array.isArray(d) ? d : d?.results || [];
@@ -102,3 +103,4 @@ export function useAuditLogs() {
 }
 export function useAuditLogsCount() { return useAuditLogs().length; }
 
+export const hydrateAuditLogsFromApi = guarded(_hydrateAuditLogsFromApi_impl, { key: "hydrateAuditLogsFromApi" });

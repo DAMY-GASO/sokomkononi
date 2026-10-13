@@ -40,7 +40,7 @@ function norm(raw) {
 
 export function getSearches() { return read(); }
 
-export async function hydrateSearchesFromApi() {
+async function _hydrateSearchesFromApi_impl() {
   try {
     const d = await api.get("/searches/?page_size=100");
     const list = Array.isArray(d) ? d : d?.results || [];
@@ -123,6 +123,7 @@ export function useSearchesCount() { return useSearches().length; }
 // ============================================================
 import { getPublicListings } from "./listingsStore.js";
 import { notificationsApi } from "../api/notifications.js";
+import { guarded } from "./hydrateGuard.js";
 
 const SEEN_KEY = "sokomkononi_search_alerts_seen_v1";
 
@@ -197,3 +198,5 @@ export async function detectSearchAlertsAsync() {
 
   return { ok: true, alerts };
 }
+
+export const hydrateSearchesFromApi = guarded(_hydrateSearchesFromApi_impl, { key: "hydrateSearchesFromApi" });

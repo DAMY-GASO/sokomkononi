@@ -14,6 +14,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { guarded } from "./hydrateGuard.js";
 
 const KEY = "sokomkononi_feedback_v1";
 const EV  = "sokomkononi:feedback-updated";
@@ -64,7 +65,7 @@ export function getFeedbackForUser(email) {
   return read().filter((f) => f.userEmail === email);
 }
 
-export async function hydrateFeedbackFromApi() {
+async function _hydrateFeedbackFromApi_impl() {
   try {
     const d = await api.get("/feedback/?page_size=200");
     const list = Array.isArray(d) ? d : d?.results || [];
@@ -73,7 +74,7 @@ export async function hydrateFeedbackFromApi() {
   } catch (err) { return { ok: false, error: err }; }
 }
 
-export async function hydrateMyFeedbackFromApi() {
+async function _hydrateMyFeedbackFromApi_impl() {
   try {
     const d = await api.get("/feedback/mine/?page_size=200");
     const list = Array.isArray(d) ? d : d?.results || [];
@@ -167,3 +168,7 @@ export function useMyFeedback(userEmail) {
   }, [userEmail]);
   return list;
 }
+
+export const hydrateFeedbackFromApi = guarded(_hydrateFeedbackFromApi_impl, { key: "hydrateFeedbackFromApi" });
+
+export const hydrateMyFeedbackFromApi = guarded(_hydrateMyFeedbackFromApi_impl, { key: "hydrateMyFeedbackFromApi" });

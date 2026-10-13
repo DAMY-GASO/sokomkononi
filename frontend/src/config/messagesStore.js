@@ -4,6 +4,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { guarded } from "./hydrateGuard.js";
 
 const KEY = "sokomkononi_messages_v2";
 const EV = "sokomkononi:messages-updated";
@@ -75,7 +76,7 @@ export function getConversation(id) {
   return read().find((c) => sameId(c.id, id)) || null;
 }
 
-export async function hydrateConversationsFromApi(currentUserId) {
+async function _hydrateConversationsFromApi_impl(currentUserId) {
   try {
     const data = await api.get("/messaging/conversations/?page_size=100");
     const list = Array.isArray(data) ? data : data?.results || [];
@@ -293,3 +294,5 @@ export async function fetchConversationDetailAsync(conversationId, currentUserId
     return { ok: false, error: err };
   }
 }
+
+export const hydrateConversationsFromApi = guarded(_hydrateConversationsFromApi_impl, { key: "hydrateConversationsFromApi" });

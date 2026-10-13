@@ -294,18 +294,12 @@ export default function AdminDashboard() {
   ]);
 
   const canAccess = (sectionKey) => {
-    if (!rolesReady) return true;
-    if (
-      sectionKey === "profile" ||
-      sectionKey === "system" ||
-      sectionKey === "overview"
-    ) {
-      return true;
-    }
+    // Always-accessible personal sections
+    if (sectionKey === "profile" || sectionKey === "overview") return true;
+    // Fail closed when roles haven't loaded
+    if (!rolesReady) return false;
     if (!staffRole) return false;
-    if (staffRole.key === "super_admin" || staffRole.key === "admin") {
-      return true;
-    }
+    if (staffRole.key === "super_admin" || staffRole.key === "admin") return true;
     return (staffRole.permissions || []).includes(sectionKey);
   };
 

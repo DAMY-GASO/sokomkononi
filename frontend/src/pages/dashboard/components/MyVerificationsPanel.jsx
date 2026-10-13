@@ -15,6 +15,7 @@ import {
   addVerificationAsync,
   uploadVerificationDocumentAsync,
   VERIFICATION_TYPES,
+  VERIFICATION_CREATE_TYPES,
 } from "../../../config/verificationsStore.js";
 
 export default function MyVerificationsPanel() {
@@ -110,7 +111,7 @@ export default function MyVerificationsPanel() {
                 onChange={(e) => setForm({ ...form, type: e.target.value })}
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
               >
-                {VERIFICATION_TYPES.map((v) => (
+                {VERIFICATION_CREATE_TYPES.map((v) => (
                   <option key={v.key} value={v.key}>
                     {v.label?.[lang] || v.label?.sw}
                   </option>

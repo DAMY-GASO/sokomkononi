@@ -91,15 +91,11 @@ export async function pollOrderStatus(orderId, { onProgress, signal } = {}) {
     if (signal?.aborted) {
       return { ok: false, status: "ABORTED", data: { detail: "Cancelled." } };
     }
-    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-    if (signal?.aborted) {
-      return { ok: false, status: "ABORTED", data: { detail: "Cancelled." } };
-    }
     onProgress?.(i + 1);
 
     let data;
     try {
-      data = await api.post("/payments/order-status/", { order_id: orderId });
+      data = await api.post("/payments/order-status/", { order_id: orderId }, { signal });
     } catch (err) {
       if (err?.status === 401) {
         return {
@@ -122,7 +118,8 @@ export async function pollOrderStatus(orderId, { onProgress, signal } = {}) {
     const status = String(data?.payment_status || "").toUpperCase();
     if (TERMINAL_SUCCESS.has(status)) return { ok: true, data, status };
     if (TERMINAL_FAILURE.has(status)) return { ok: false, data, status };
-    // PENDING / INPROGRESS → keep going
+
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
   }
 
   return {
@@ -137,7 +134,11 @@ export const paymentsApi = {
   orderStatus: (orderId) =>
     api.post("/payments/order-status/", { order_id: orderId }),
 
-  createOrder: (payload) => api.post("/payments/create-order/", payload),
+  createOrder: () => {
+    throw new Error(
+      "paymentsApi.createOrder is deprecated — use the per-service /pay/ endpoints."
+    );
+  },
 
   transactions: (params = {}) => {
     const q = new URLSearchParams(

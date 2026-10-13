@@ -56,7 +56,7 @@ export function isSaved(id) {
   return readIds().includes(id);
 }
 
-export async function hydrateSavedFromApi() {
+async function _hydrateSavedFromApi_impl() {
   try {
     const data = await api.get("/saved/?page_size=200");
     const list = Array.isArray(data) ? data : data?.results || [];
@@ -187,20 +187,21 @@ export function saveSavedIds(ids) {
 // listing price. When the price drops, emit a local notification.
 // ============================================================
 import { notificationsApi } from "../api/notifications.js";
+import { guarded } from "./hydrateGuard.js";
 
 export async function detectPriceDropsAsync() {
   const snaps = readSnaps();
   const ids = Object.keys(snaps);
   if (ids.length === 0) return { ok: true, drops: [] };
 
-  // Fetch current prices of all saved listings in one call
-  let current = [];
-  try {
-    const d = await api.get(`/listings/?id__in=${ids.join(",")}&page_size=200`);
-    current = Array.isArray(d) ? d : d?.results || [];
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+  // Fetch each saved listing individually — avoids the
+  // undocumented ?id__in= query param.
+  const results = await Promise.allSettled(
+    ids.map((id) => api.get(`/listings/${id}/`))
+  );
+  const current = results
+    .filter((r) => r.status === "fulfilled" && r.value)
+    .map((r) => r.value);
 
   const drops = [];
   for (const l of current) {
@@ -249,3 +250,5 @@ export async function detectPriceDropsAsync() {
 
   return { ok: true, drops };
 }
+
+export const hydrateSavedFromApi = guarded(_hydrateSavedFromApi_impl, { key: "hydrateSavedFromApi" });

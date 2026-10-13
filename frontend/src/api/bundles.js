@@ -1,6 +1,5 @@
 // ============================================================
 // bundles.js — API client for Service Bundles
-// Used by admin CRUD + user purchase flow.
 // ============================================================
 import { api } from "./client";
 
@@ -17,6 +16,23 @@ export const bundlesApi = {
   update: (id, patch) => api.patch(`/bundles/${id}/`, patch),
   remove: (id) => api.delete(`/bundles/${id}/`),
   toggleActive: (id) => api.post(`/bundles/${id}/toggle/`, {}),
+
   purchase: (bundleId, payment_reference = "") =>
-    api.post("/bundles/purchases/", { bundle: bundleId, payment_reference }),
+    api.post("/bundles/purchases/", {
+      bundle: bundleId,
+      ...(payment_reference ? { payment_reference } : {}),
+    }),
+
+  purchases: {
+    create: (bundleId) => api.post("/bundles/purchases/", { bundle: bundleId }),
+    list: (params = {}) => api.get(`/bundles/purchases/${toQuery(params)}`),
+    detail: (id) => api.get(`/bundles/purchases/${id}/`),
+    pay: (purchaseId, body = {}) =>
+      api.post(`/bundles/purchases/${purchaseId}/pay/`, body),
+  },
+
+  payPurchase: (purchaseId, body = {}) =>
+    api.post(`/bundles/purchases/${purchaseId}/pay/`, body),
 };
+
+export default bundlesApi;

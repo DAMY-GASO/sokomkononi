@@ -80,6 +80,18 @@ export default function ImageCropper({
     };
   }, []);
 
+  // Native wheel handler with passive:false so preventDefault works.
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return undefined;
+    const handler = (e) => {
+      e.preventDefault();
+      setZoom((z) => clamp(z - e.deltaY * 0.002, minZoom, MAX_ZOOM));
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, [minZoom]);
+
   // scale ya msingi: upande mfupi wa picha ujaze kisanduku (cover / "Jaza")
   const baseScale = nat.w && nat.h ? view / Math.min(nat.w, nat.h) : 1;
   // zoom ya chini kabisa: picha nzima ionekane (fit / "Nzima")
@@ -159,6 +171,7 @@ export default function ImageCropper({
   };
 
   const onWheel = (e) => {
+    e.preventDefault();
     changeZoom(zoom - e.deltaY * 0.002);
   };
 

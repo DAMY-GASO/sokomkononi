@@ -581,7 +581,7 @@ export async function sendOfferAsync(
     const raw = await dealsApi.sendOffer(dealId, {
       amount,
       message,
-      responded_to_id: respondedTo,
+      responded_to: respondedTo,
     });
     const current = getDeals();
     const target = current.find((d) => sameId(d.id, dealId));

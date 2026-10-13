@@ -66,6 +66,29 @@ export function ToastProvider({ children }) {
     warning: (m, o) => push(m, { ...o, type: "warning" }),
     info:    (m, o) => push(m, { ...o, type: "info" }),
     loading: (m, o) => push(m, { ...o, type: "loading", duration: 0 }),
+    /** Replace an existing toast in place (loading → success/error). */
+    update: (id, message, opts = {}) => {
+      const type = opts.type || "info";
+      const duration =
+        opts.duration != null ? opts.duration : type === "loading" ? 0 : 4000;
+      setToasts((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                type,
+                message: String(message || ""),
+                title: opts.title || t.title,
+                action: opts.action || null,
+              }
+            : t
+        )
+      );
+      if (duration > 0) {
+        if (timersRef.current[id]) clearTimeout(timersRef.current[id]);
+        timersRef.current[id] = setTimeout(() => dismiss(id), duration);
+      }
+    },
   }), [push, dismiss]);
 
   useEffect(() => () => {

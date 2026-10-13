@@ -96,6 +96,18 @@ export async function hydrateVerificationsFromApi() {
   }
 }
 
+
+// ============================================================
+// CREATE-time whitelist — backend only accepts SELLER / BUYER
+// on POST /verifications/.
+// ============================================================
+export const VERIFICATION_CREATE_TYPES = [
+  { key: "seller", label: { sw: "Muuzaji", en: "Seller" } },
+  { key: "buyer",  label: { sw: "Mnunuzi", en: "Buyer" } },
+];
+
+const _CREATABLE = new Set(VERIFICATION_CREATE_TYPES.map((v) => v.key));
+
 export async function addVerificationAsync({
   type,
   subject,
@@ -104,6 +116,15 @@ export async function addVerificationAsync({
 }) {
   if (!type || !subject)
     return { ok: false, error: new Error("type + subject required") };
+  if (!_CREATABLE.has(type)) {
+    return {
+      ok: false,
+      error: new Error(
+        `Verification type "${type}" is not supported for creation. ` +
+        `Allowed: ${Array.from(_CREATABLE).join(", ")}.`
+      ),
+    };
+  }
   try {
     const raw = await api.post("/verifications/", {
       type: KEY_TO_API[type] || type,

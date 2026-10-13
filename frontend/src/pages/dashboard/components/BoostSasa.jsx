@@ -385,7 +385,7 @@ export default function BoostSasa({
     try {
       const raw = await createBoostOnBackend();
       const paid = await boostingApi.pay(raw.id, { payment_reference: "credits" });
-      const activated = paid?.boost || (await boostingApi.activate(raw.id).catch(() => null));
+      const activated = paid?.boost || paid?.data?.boost || null;
       setDone({
         listing: selectedListing,
         pkg: flatPackage,
@@ -479,7 +479,7 @@ export default function BoostSasa({
       try {
         const raw = await createBoostOnBackend();
         const paid = await boostingApi.pay(raw.id, { payment_reference: "credits" });
-        const activated = paid?.boost || (await boostingApi.activate(raw.id).catch(() => null));
+        const activated = paid?.boost || paid?.data?.boost || null;
         setDone({ listing: selectedListing, pkg: flatPackage, boost: activated, mode: "bundle" });
         setStage("done");
         onBoosted(selectedListing.id, {
@@ -501,9 +501,9 @@ export default function BoostSasa({
     setError("");
     try {
       const raw = await createBoostOnBackend();
-      const paid = await boostingApi.pay(raw.id, { payment_reference: "free" });
+      const paid = await boostingApi.pay(raw.id, {});
       const activated =
-        paid?.boost || (await boostingApi.activate(raw.id).catch(() => null));
+        paid?.boost || paid?.data?.boost || null;
       setDone({
         listing: selectedListing,
         pkg: flatPackage,
