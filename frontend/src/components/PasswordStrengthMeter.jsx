@@ -24,8 +24,8 @@ function score(pw = "") {
   if (/^\d+$/.test(pw)) s = Math.min(s, 1);
 
   if (s <= 2) return { level: 1, label: "Weak", color: COLORS.rust };
-  if (s <= 4) return { level: 2, label: "Fair", color: "#D97706" };
-  if (s <= 5) return { level: 3, label: "Good", color: COLORS.green };
+  if (s <= 3) return { level: 2, label: "Fair", color: "#D97706" };
+  if (s <= 4) return { level: 3, label: "Good", color: COLORS.green };
   return { level: 4, label: "Strong", color: COLORS.green };
 }
 

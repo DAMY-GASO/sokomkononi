@@ -310,7 +310,9 @@ export default function AdminDashboard() {
   };
 
   const visibleNav = useMemo(() => {
-    if (!rolesReady) return [];   // hide nav until roles load
+    // Show the full nav until roles are known; a failed role fetch must not
+    // leave the admin without any way to navigate.
+    if (!rolesReady) return NAV;
     return NAV.filter((item) => canAccess(item.key));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffRole, rolesReady]);

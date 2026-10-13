@@ -76,7 +76,7 @@ import LeadingSasa from "./LeadingSasa.jsx";
 import AdvertiseSasa from "./AdvertiseSasa.jsx";
 import PromotedBannerStrip from "./PromotedBannerStrip.jsx";
 import DealRooms from "./DealRooms.jsx";
-import MyReservationsPage from "./MyreservationsPage.jsx";
+import MyReservationsPage from "./MyReservationsPage.jsx";
 import BrowseProperties from "./BrowseProperties.jsx";
 import BottomNav from "../../../components/BottomNav.jsx";
 

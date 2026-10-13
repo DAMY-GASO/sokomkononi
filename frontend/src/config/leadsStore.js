@@ -49,7 +49,30 @@ export async function hydrateLeadsFromApi() {
     const d = await api.get("/leads/?page_size=200");
     const list = Array.isArray(d) ? d : d?.results || [];
     const normalized = list.map(norm).filter(Boolean);
-    write(normalized);
+
+    // Preserve any locally-advanced status (responded/converted) that the
+    // server hasn't caught up with yet — otherwise a hydrate that fires
+    // 500ms after a click reverts the UI.
+    const current = read();
+    const byId = new Map(current.map((l) => [l.id, l]));
+    for (const incoming of normalized) {
+      const existing = byId.get(incoming.id);
+      if (!existing) { byId.set(incoming.id, incoming); continue; }
+      const rank = { new: 0, responded: 1, converted: 2, ignored: 1 };
+      const exR = rank[existing.status] ?? -1;
+      const inR = rank[incoming.status] ?? -1;
+      if (exR > inR) {
+        byId.set(incoming.id, {
+          ...incoming,
+          status: existing.status,
+          respondedAt: existing.respondedAt || incoming.respondedAt,
+          convertedAt: existing.convertedAt || incoming.convertedAt,
+        });
+      } else {
+        byId.set(incoming.id, incoming);
+      }
+    }
+    write(Array.from(byId.values()));
     return { ok: true, count: normalized.length };
   } catch (err) { return { ok: false, error: err }; }
 }

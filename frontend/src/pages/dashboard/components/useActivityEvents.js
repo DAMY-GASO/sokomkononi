@@ -61,7 +61,7 @@ function getBundleIcon(tx) {
 // ============================================================
 // MAIN HOOK
 // ============================================================
-export function useActivityEvents(side = "seller", onNavigate) {
+export function useActivityEvents(side = "seller", onNavigate = () => {}) {
   const { lang } = useLanguage();
   const { user } = useAuth();
   const currentUserId = user?.id || null;

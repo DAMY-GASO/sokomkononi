@@ -1022,10 +1022,18 @@ function FaqsTab({ lang }) {
 function SinglePageEditor({ section, lang }) {
   const content = useContent();
   const data = content[section] || {};
-  const [form, setForm] = useState({ ...data });
+  const [form, setForm] = useState(() => ({ ...data }));
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Resync the form when the store updates (e.g. hydration completed after
+  // mount, or another tab saved). Without this the editor shows stale
+  // blank fields and overwrites real content on save.
+  useEffect(() => {
+    setForm({ ...data });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section, data?.lastUpdated]);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 

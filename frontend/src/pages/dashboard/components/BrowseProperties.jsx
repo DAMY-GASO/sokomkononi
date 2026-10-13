@@ -442,7 +442,7 @@ export default function BrowseProperties({
               placeholder={
                 lang === "sw"
                   ? "Tafuta mali kwa jina, mahali, au kategoria..."
-                  : "Search lisyings by title, location, or category..."
+                  : "Search listings by title, location, or category..."
               }
               style={{
                 background: "white",

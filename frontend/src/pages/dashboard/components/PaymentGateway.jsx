@@ -174,7 +174,7 @@ export default function PaymentGateway({
   const [channel, setChannel] = useState("");
   const [transid, setTransid] = useState("");
 
-  const cancelledRef = useRef(false);
+  const pollSeqRef = useRef(0);   // monotonically increasing; invalidates stale pollers
   const pollTimerRef = useRef(null);
 
   const isMobile = isMobileMethod(methodKey);
@@ -190,7 +190,7 @@ export default function PaymentGateway({
   // ── Cleanup ─────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      cancelledRef.current = true;
+      pollSeqRef.current++;
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
     };
   }, []);
@@ -222,12 +222,14 @@ export default function PaymentGateway({
 
   // ── Polling ─────────────────────────────────────────────
   const runPoll = async (oid) => {
+    const mySeq = ++pollSeqRef.current;
+    const isStale = () => pollSeqRef.current !== mySeq;
     for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
-      if (cancelledRef.current) return;
+      if (isStale()) return;
       await new Promise((resolve) => {
         pollTimerRef.current = setTimeout(resolve, POLL_INTERVAL_MS);
       });
-      if (cancelledRef.current) return;
+      if (isStale()) return;
 
       setAttempt(i + 1);
 
@@ -351,14 +353,14 @@ export default function PaymentGateway({
   };
 
   const handleCancel = () => {
-    cancelledRef.current = true;
+    pollSeqRef.current++;
     if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
     session.clear();
     onCancel?.();
   };
 
   const handleRetry = () => {
-    cancelledRef.current = false;
+    pollSeqRef.current++;   // invalidate any in-flight poller for the OLD order
     setError("");
     setStage("SELECT");
     setAttempt(0);

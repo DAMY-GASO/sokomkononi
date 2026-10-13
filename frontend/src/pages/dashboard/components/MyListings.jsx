@@ -76,7 +76,7 @@ function isUnpaid(listing) {
 // ============================================================
 // ACTION BUTTON — kitufe kidogo chenye icon, kina ukubwa mmoja kila mahali
 // ============================================================
-function ActionBtn({ icon: Icon, label, color, onClick, disabled, danger, className = "" }) {
+function ActionBtn({ icon: Icon, label, color, onClick, disabled, danger, spin, className = "" }) {
   return (
     <button
       type="button"
@@ -90,7 +90,7 @@ function ActionBtn({ icon: Icon, label, color, onClick, disabled, danger, classN
         color,
       }}
     >
-      <Icon size={12} className="shrink-0" />
+      <Icon size={12} className={`shrink-0 ${spin ? "animate-spin" : ""}`} />
       {label}
     </button>
   );
@@ -283,6 +283,7 @@ function ListingCard({
           color={COLORS.rust}
           onClick={() => onRemove(listing.id)}
           disabled={isBusy}
+          spin={isBusy}
           danger
           className="ml-auto"
         />

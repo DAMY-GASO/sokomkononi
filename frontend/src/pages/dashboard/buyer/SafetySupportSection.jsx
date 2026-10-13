@@ -554,7 +554,12 @@ export default function SafetySupportSection({ side = "buyer" }) {
     setReportError("");
 
     try {
-      const category = content.defaultCategory(reportType);
+      // Canonical category enum values (uppercase keys, matching
+      // CAT_KEY_TO_API in ticketsStore.js). Do NOT send arbitrary strings.
+      const category =
+        reportType === "listing" ? "LISTING"
+        : reportType === "user" ? "DISPUTE"
+        : "OTHER";
       const defaultSubject = content.defaultSubject(reportType);
 
       await api.post("/tickets/", {

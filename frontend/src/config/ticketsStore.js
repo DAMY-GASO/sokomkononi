@@ -84,18 +84,21 @@ export async function hydrateTicketsFromApi() {
   } catch (err) { return { ok: false, error: err }; }
 }
 
-export async function addTicketMessageAsync(id, { text }) {
+export async function addTicketMessageAsync(id, { text, sender = "user" }) {
   if (!text?.trim()) return { ok: false, error: new Error("text required") };
+  const fbFrom = String(sender).toLowerCase() === "admin" ? "admin" : "user";
+  const fbName = fbFrom === "admin" ? "Admin" : "You";
   try {
     const raw = await api.post(`/tickets/${id}/messages/`, { text: text.trim() });
     const msg = raw && raw.id ? {
       id: raw.id,
-      from: (raw.sender || "ADMIN").toLowerCase(),
-      senderName: raw.sender_name,
+      from: (raw.sender || fbFrom).toLowerCase(),
+      senderName: raw.sender_name || fbName,
       text: raw.text,
+      time: raw.created_at,
       at: raw.created_at,
     } : {
-      id: `msg_${Date.now()}`, from: "admin", senderName: "Admin",
+      id: `msg_${Date.now()}`, from: fbFrom, senderName: fbName,
       text: text.trim(), at: new Date().toISOString(),
     };
     const current = getTickets();

@@ -22,6 +22,7 @@ function write(list) {
   window.dispatchEvent(new Event(EV));
 }
 export function isBannerActive(b) {
+  if (!b || b.active === false) return false;
   return Boolean(b.expiresAt && new Date(b.expiresAt).getTime() > Date.now());
 }
 export function getBannerAds() { return read(); }

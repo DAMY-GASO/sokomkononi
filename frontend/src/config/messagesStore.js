@@ -21,7 +21,16 @@ function read() {
 }
 function write(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify(list));
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(list));
+  } catch (e) {
+    console.warn("[store] localStorage write failed (quota?):", e);
+    if (Array.isArray(list) && list.length > 100) {
+      try {
+        window.localStorage.setItem(KEY, JSON.stringify(list.slice(0, 100)));
+      } catch { /* give up */ }
+    }
+  }
   window.dispatchEvent(new Event(EV));
 }
 
@@ -147,6 +156,14 @@ export async function sendMessageAsync(conversationId, text, currentUserId = nul
     );
     return { ok: true, message: msg };
   } catch (err) {
+    // Remove the optimistic message that never reached the server.
+    write(
+      getConversations().map((c) =>
+        sameId(c.id, conversationId)
+          ? { ...c, messages: (c.messages || []).filter((m) => m.id !== _tempId) }
+          : c
+      )
+    );
     return { ok: false, error: err };
   }
 }

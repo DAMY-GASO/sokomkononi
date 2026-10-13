@@ -12,7 +12,7 @@ import { useEffect, useState, useMemo } from "react";
 import { dealsApi } from "../api/deals.js";
 import { transactionsApi } from "../api/transactions.js";
 import { getTransactionByDealRoom } from "./transactionLifecycleStore.js";
-import { getListings, useListings } from "./listingsStore.js";
+import { getListings } from "./listingsStore.js";
 import { getUser as getUserById } from "./usersStore.js";
 
 const STORAGE_KEY = "sokomkononi_deals_v1";
@@ -746,7 +746,6 @@ export async function resolveDisputeAsync(
 // ============================================================
 export function useDeals(currentUserId) {
   const [deals, setDeals] = useState(() => getDeals());
-  const listings = useListings();
 
   useEffect(() => {
     // Hydrate even without currentUserId so admin/overview still get data.
@@ -761,6 +760,7 @@ export function useDeals(currentUserId) {
   }, [currentUserId]);
 
   return useMemo(() => {
+    const listings = getListings();   // sync read — no network, no re-render loop
     return deals.map((d) => {
       const needsPrice = !d.askingPrice || d.askingPrice <= 0;
       const needsMeta = !d.category || !d.location || !d.listingTitle;
@@ -779,7 +779,7 @@ export function useDeals(currentUserId) {
         listingTitle: d.listingTitle || cached.title || "",
       };
     });
-  }, [deals, listings]);
+  }, [deals]);
 }
 
 export function useDeal(id) {

@@ -167,15 +167,15 @@ export default function PackageRow({
         <button
           type="button"
           role="switch"
-          aria-checked={pkg.isActive}
+          aria-checked={pkg.isActive ?? pkg.active ?? true}
           onClick={onToggle}
           disabled={isToggling}
           className="relative inline-flex items-center h-5 w-9 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-          style={{ background: pkg.isActive ? COLORS.green : "#D1D5DB" }}
+          style={{ background: (pkg.isActive ?? pkg.active ?? true) ? COLORS.green : "#D1D5DB" }}
         >
           <span
             className="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transform transition-transform"
-            style={{ transform: pkg.isActive ? "translateX(18px)" : "translateX(3px)" }}
+            style={{ transform: (pkg.isActive ?? pkg.active ?? true) ? "translateX(18px)" : "translateX(3px)" }}
           />
         </button>
 

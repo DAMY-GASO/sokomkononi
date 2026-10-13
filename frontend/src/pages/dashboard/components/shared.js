@@ -167,7 +167,12 @@ export function cleanNumberInput(value) {
 }
 
 export function formatPhoneDisplay(value) {
-  const digits = String(value).replace(/[^0-9]/g, "").slice(0, 10);
+  let digits = String(value || "").replace(/[^0-9]/g, "");
+  // Normalize 255XXXXXXXXX → 0XXXXXXXXX so the display is always local.
+  if (digits.startsWith("255") && digits.length >= 12) {
+    digits = "0" + digits.slice(3);
+  }
+  digits = digits.slice(0, 10);
   if (!digits) return "";
   if (digits.length <= 4) return digits;
   if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
@@ -206,7 +211,10 @@ export function calculateListingFee(categoryKey, priceInput) {
   const flatFee = Number(config.flatFee) || 0;
 
   if (isFlat) {
-    const fee = flatFee > 0 ? Math.round(flatFee / 500) * 500 : 0;
+    // Return the admin's exact flat amount. Rounding happens once at the
+    // admin form, never here — rounding here makes the preview disagree
+    // with the amount actually charged.
+    const fee = Math.max(0, Number(flatFee) || 0);
     return { price, rate: 0, rawFee: fee, fee, capped: null, mode: "FLAT" };
   }
 
@@ -455,6 +463,6 @@ export function resolveSender(sender, deal) {
     }
   }
 
-  // 4. Fallback — haijulikani
-  return "buyer";
+  // 4. Fallback — haijulikani; kaa neutral (usimdharau admin/buyer/seller)
+  return "unknown";
 }

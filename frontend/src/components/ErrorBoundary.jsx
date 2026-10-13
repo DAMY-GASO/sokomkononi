@@ -24,7 +24,9 @@ export default class ErrorBoundary extends React.Component {
   };
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    // Prefer a page reload — deterministic errors would just re-throw on
+    // the next render and trap the user in a flash loop.
+    window.location.reload();
   };
 
   render() {

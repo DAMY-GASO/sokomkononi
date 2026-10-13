@@ -53,7 +53,11 @@ export async function renderGoogleButton(el, { onCredential, onError, locale = "
     return;
   }
 
-  googleCredentialHandler = { onCredential, onError };
+  // Merge into the existing handler so a second mount doesn't clobber
+  // the callback that Google's already-registered click handler points to.
+  if (!googleCredentialHandler) googleCredentialHandler = {};
+  googleCredentialHandler.onCredential = onCredential;
+  googleCredentialHandler.onError = onError;
 
   if (!googleInitialized) {
     window.google.accounts.id.initialize({

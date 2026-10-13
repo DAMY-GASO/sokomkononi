@@ -7,7 +7,7 @@
 // NEW: attributes (JSONField) inasomwa kutoka API na kuhifadhiwa.
 // NEW: restoreListingAsync — rejesha listing iliyofutwa (undo).
 // ============================================================
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
 import { listingsApi } from "../api/listings.js";
 import { authApi } from "../api/auth.js";
@@ -301,13 +301,20 @@ export function useListings() { return useStoreValue(getListings); }
 export function useMyListings() { return useStoreValue(getMyListings); }
 export function usePublicListings() {
   const listings = useStoreValue(getPublicListings);
-  return listings.filter(
-    (l) => l.status === "live" || l.status === "reserved" || l.status === "sold"
+  return useMemo(
+    () =>
+      listings.filter(
+        (l) =>
+          l.status === "live" ||
+          l.status === "reserved" ||
+          l.status === "sold"
+      ),
+    [listings]
   );
 }
 export function useLiveListings() {
   const listings = useStoreValue(getPublicListings);
-  return listings.filter((l) => l.status === "live");
+  return useMemo(() => listings.filter((l) => l.status === "live"), [listings]);
 }
 export function useListing(id) {
   const listings = useStoreValue(getListings);
@@ -588,9 +595,11 @@ async function _fetchMyListingsImpl({ refreshUser = false } = {}) {
     const now = Date.now();
     const GHOST_MS = 60 * 1000;
     const localOnly = localExisting.filter((l) => {
+      // Only keep short-lived temp entries; anything with a real backend id
+      // must be reflected by the server. If a listing disappears from the
+      // API (admin hard-delete), we must drop it locally too.
       const isTemp = String(l.id).startsWith("temp_");
-      if (!isTemp && fetchedIds.has(String(l.id))) return false;
-      if (!isTemp) return true; // real id missing from backend — keep (edge case)
+      if (!isTemp) return false;
       const age = now - new Date(l.postedAt || 0).getTime();
       if (age > GHOST_MS) {
         console.warn("[listingsStore] dropping ghost temp_ listing", l.id, l.title);

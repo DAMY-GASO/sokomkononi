@@ -97,17 +97,14 @@ export async function consumeCreditAsync(userId, service, amount = 1) {
  * instead of leaking revenue. Also fires the async call in the
  * background so credit accounting still happens if the backend allows it.
  */
-export function consumeCredit(userId, service, amount = 1) {
+export function consumeCredit() {
   console.warn(
-    "[userCredits] consumeCredit() is deprecated — migrate to consumeCreditAsync(). " +
-    "Returning {success:false} so callers fall back to real payment."
+    "[userCredits] consumeCredit() is deprecated and now a NO-OP. " +
+    "Use consumeCreditAsync(). Returning {success:false} so callers fall back to real payment."
   );
-  consumeCreditAsync(userId, service, amount).catch(() => {});
-  return {
-    success: false,
-    remaining: getCreditBalance(userId, service),
-    deprecated: true,
-  };
+  // Intentionally do NOT fire a network call — a "deprecated" helper that
+  // still spends credits can double-charge callers that fall back to payment.
+  return { success: false, remaining: 0, deprecated: true };
 }
 
 export function addBundleCredits() {

@@ -122,7 +122,19 @@ export async function toggleSaved(id, listing = null) {
 export function useSavedIds() {
   const [ids, setIds] = useState(() => readIds());
   useEffect(() => {
-    hydrateSavedFromApi().then(() => detectPriceDropsAsync().catch(() => {}));
+    // Throttle price-drop detection to once per hour; otherwise every
+    // mount of useSavedIds (which is every listing card) triggers a
+    // listings fetch.
+    const LAST_KEY = "sokomkononi_price_drops_last_v1";
+    const ONE_HOUR = 60 * 60 * 1000;
+    hydrateSavedFromApi().then(() => {
+      try {
+        const last = Number(localStorage.getItem(LAST_KEY) || 0);
+        if (Date.now() - last < ONE_HOUR) return;
+        localStorage.setItem(LAST_KEY, String(Date.now()));
+      } catch { /* noop */ }
+      detectPriceDropsAsync().catch(() => {});
+    });
     const sync = () => setIds(readIds());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);

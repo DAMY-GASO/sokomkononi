@@ -55,6 +55,9 @@ export default function BottomNav() {
   const side = useDashboardSide();
 
   const isActive = (path) => {
+    if (!path) return false;
+    // Never treat /login as "active" for Messages/Saved tabs when logged out.
+    if (path === "/login") return false;
     if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
   };

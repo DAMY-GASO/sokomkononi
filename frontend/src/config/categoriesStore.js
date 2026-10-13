@@ -714,13 +714,10 @@ export async function hydrateCategoriesFromApi() {
       }
     });
     const normalized = Array.from(seen.values());
-    const apiKeys = new Set(normalized.map((c) => c.key));
 
-    const seedOnly = SEED_CATEGORIES.filter((c) => !apiKeys.has(c.key)).map(
-      (c) => ({ ...c, id: null })
-    );
-
-    const merged = [...normalized, ...seedOnly];
+    // Trust the backend as source of truth once it returned data.
+    // Re-injecting SEED entries would resurrect categories the admin deleted.
+    const merged = normalized;
 
     merged.sort((a, b) => {
       const ao = a.ordering ?? 999;

@@ -1,5 +1,16 @@
 {
   "rewrites": [
-    { "source": "/((?!api/|media/|static/|django-admin/).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api|media|static|django-admin|assets|favicon|logo|robots\\.txt|sitemap\\.xml).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
   ]
 }

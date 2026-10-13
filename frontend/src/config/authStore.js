@@ -148,12 +148,15 @@ function normalizeUserFromApi(raw) {
     is_seller: !!(raw.is_seller || raw.account_type === "BUSINESS"),
     account_type: raw.account_type || "PERSONAL",
     accountType: raw.account_type || "PERSONAL",
-    role:
-      raw.is_staff || raw.is_superuser
-        ? "Admin"
-        : raw.account_type === "BUSINESS" || raw.is_seller
-          ? "Seller"
-          : "Buyer",
+    role: (() => {
+      const rawRole = String(raw.role || "").toLowerCase();
+      const isAdminByRole = rawRole === "admin" || rawRole === "super_admin";
+      const isStaff = !!(raw.is_staff ?? raw.isStaff);
+      const isSuper = !!(raw.is_superuser ?? raw.isSuperuser);
+      if (isAdminByRole || isStaff || isSuper) return "Admin";
+      if (raw.account_type === "BUSINESS" || raw.is_seller) return "Seller";
+      return "Buyer";
+    })(),
     isVerified: !!(raw.is_verified ?? raw.isVerified),
     emailVerified: !!(raw.email_verified ?? raw.emailVerified),
     phoneVerified: !!(raw.phone_verified ?? raw.phoneVerified),
@@ -609,7 +612,9 @@ export function useAuth() {
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
+    // Only show the loader when we have nothing cached. Cached users see
+    // their state immediately and the fetch refreshes in the background.
+    if (!getCurrentUser()) setIsLoading(true);
     hydrateCurrentUserFromApi().finally(() => {
       if (!cancelled) setIsLoading(false);
     });
