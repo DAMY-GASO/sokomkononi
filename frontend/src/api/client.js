@@ -4,6 +4,8 @@
 // - 5xx / 408 / 429 retry with exponential backoff
 // - AbortController timeout
 // - DELETE supports body
+// - FIX: Always send Authorization header when token exists
+//        (backend uses IsAuthenticated as default permission)
 // ============================================================
 
 import { getSessionScope } from "../config/adminPath.js";
@@ -35,6 +37,18 @@ function getBaseUrl() {
   return raw.replace(/\/+$/, "");
 }
 
+// ============================================================
+// FIX: We no longer classify endpoints as "public" for the
+// purpose of skipping the Authorization header. The backend
+// uses IsAuthenticated as the default permission, so even
+// endpoints that allow anonymous GET (like /categories/ and
+// /listings/) still need the header to avoid 401s.
+//
+// The `isPublicEndpoint` helper is kept only for the retry /
+// refresh logic — i.e. we don't want to trigger a token
+// refresh for a 401 on a genuinely public endpoint (like
+// /auth/login/) because that would loop forever.
+// ============================================================
 const PUBLIC_POST_PREFIX = [
   "/auth/login/",
   "/auth/register/",
@@ -47,35 +61,17 @@ const PUBLIC_POST_PREFIX = [
   "/contact/",
 ];
 
+// Endpoints where a 401 should NOT trigger a token refresh.
+// These are genuinely anonymous endpoints.
 const PUBLIC_GET_PATTERNS = [
-  /^\/listings\/?(\?.*)?$/,
-  /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/?(\?.*)?$/,
-  /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/images\/?(\?.*)?$/,
-  /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/images\/([^/]+)\/?(\?.*)?$/,
-  /^\/listings\/(?!admin\/|fee-rules\/)([^/]+)\/(property-details|land-details|vehicle-details|business-details|equipment-details)\/detail\/?(\?.*)?$/,
-  /^\/categories\/?(\?.*)?$/,
-  /^\/categories\/[^/]+\/?(\?.*)?$/,
   /^\/content\/?(\?.*)?$/,
   /^\/content\/(about|terms|privacy|help)\/?(\?.*)?$/,
-  /^\/announcements\/?(\?.*)?$/,
-  /^\/boosting\/packages\/?(\?.*)?$/,
-  /^\/boosting\/packages\/([^/]+)\/?(\?.*)?$/,
-  /^\/bundles\/?(\?.*)?$/,
-  /^\/bundles\/([^/]+)\/?(\?.*)?$/,
-  /^\/banners\/?(\?.*)?$/,
-  /^\/reservation-rates\/?(\?.*)?$/,
-  /^\/leading-fees\/?(\?.*)?$/,
-  /^\/advertisement-fees\/?(\?.*)?$/,
-  /^\/credits\/services\/?(\?.*)?$/,
-  /^\/system-settings\/platform-policy\/?(\?.*)?$/,
-  /^\/system-settings\/app-store-links\/?(\?.*)?$/,
 ];
 
 function isPublicEndpoint(path, method) {
   const m = (method || "GET").toUpperCase();
   if (m === "GET") return PUBLIC_GET_PATTERNS.some((re) => re.test(path));
   if (m === "POST") return PUBLIC_POST_PREFIX.some((p) => path.startsWith(p));
-  // Only GET and POST have public prefixes; everything else is private.
   return false;
 }
 
@@ -104,7 +100,6 @@ function extractFieldMessage(data) {
 
 export class ApiError extends Error {
   constructor(status, data, opts = {}) {
-    // Prefer the backend's uniform shape: { error: { code, message, field, detail } }
     const env = data?.error && typeof data.error === "object" ? data.error : null;
     const detail = env?.detail || data?.detail;
     const msg =
@@ -151,10 +146,6 @@ async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
   }
 }
 
-// ------------------------------------------------------------
-// Retry for transient errors (5xx / 408 / 429 / network).
-// Only for GET/HEAD — mutations may not be idempotent.
-// ------------------------------------------------------------
 const RETRYABLE_METHODS = new Set(["GET", "HEAD"]);
 const RETRY_MAX = 3;
 const RETRY_BASE_MS = 600;
@@ -199,7 +190,6 @@ async function withRetry(fn, method) {
         s === 0 || s === 408 || s === 429 || (s >= 500 && s < 600);
       if (!retryable || attempt === RETRY_MAX - 1) throw err;
 
-      // Prefer the server's Retry-After over our backoff
       const headerWait = err?.retryAfter ? Number(err.retryAfter) * 1000 : 0;
       const backoff = RETRY_BASE_MS * Math.pow(2, attempt) + Math.random() * 200;
       const wait = Math.min(headerWait || backoff, 30000);
@@ -237,7 +227,6 @@ function makeIdempotencyKey() {
   return `idem_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
 }
 
-// Mutable methods that must be idempotent so a retry doesn't double-charge
 const IDEMPOTENT_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 const IDEMPOTENT_PATH_HINTS = [
   "/fee/pay/",
@@ -261,15 +250,21 @@ async function request(path, {
   method = "GET", body, headers = {}, retry = true, isFormData = false, timeoutMs,
   idempotencyKey = null, signal = null,
 } = {}) {
+  // FIX: isPublic is now only used to decide whether a 401 should
+  // trigger a token refresh. The Authorization header is ALWAYS
+  // sent when a token exists, regardless of the endpoint.
   const isPublic = isPublicEndpoint(path, method);
+
+  const accessToken = getAccessToken();
+
   const finalHeaders = {
     ...(shouldUseIdempotency(path, method)
       ? { "Idempotency-Key": idempotencyKey || makeIdempotencyKey() }
       : {}),
     ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
-    ...(!isPublic && getAccessToken() ? { Authorization: `Bearer ${getAccessToken()}` } : {}),
-    // Marks the request as XHR. Some Django middleware/settings skip CSRF
-    // enforcement for XHR requests — harmless either way for a JWT API.
+    // ALWAYS send the Authorization header if we have a token.
+    // This fixes 401s on endpoints the frontend used to treat as public.
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     "X-Requested-With": "XMLHttpRequest",
     ...headers,
   };
@@ -282,8 +277,6 @@ async function request(path, {
         body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
         signal: signal || undefined,
       }, timeoutMs);
-      // 401 handling happens below (needs the response, not an error).
-      // Throw here ONLY for retryable statuses so withRetry can act on them.
       if (RETRYABLE_METHODS.has(method.toUpperCase()) && (r.status === 408 || r.status === 429 || (r.status >= 500 && r.status < 600))) {
         const data = await parseResponse(r);
         throw new ApiError(r.status, data);
@@ -293,6 +286,11 @@ async function request(path, {
     method
   );
 
+  // Only try to refresh the token if:
+  //  - we got a 401
+  //  - this is NOT a genuinely public endpoint
+  //  - we have a refresh token
+  //  - retry is allowed
   if (res.status === 401 && !isPublic && retry && getRefreshToken()) {
     try {
       await refreshAccessToken();
@@ -303,7 +301,6 @@ async function request(path, {
     }
   }
 
-  // 429 Too Many Requests — surface Retry-After so callers can show a countdown
   if (res.status === 429) {
     const retryAfter =
       Number(res.headers.get("Retry-After")) ||
@@ -315,9 +312,6 @@ async function request(path, {
 
   const data = await parseResponse(res);
   if (!res.ok) {
-    // Only notify the app of a 401 if we actually had a token to begin with.
-    // Otherwise a logged-out visitor browsing public pages triggers a hard
-    // reset on every page load.
     const hadToken = Boolean(getAccessToken() || getRefreshToken());
     if (res.status === 401 && !isPublic && hadToken) onUnauthorized?.();
     throw new ApiError(res.status, data);
@@ -331,16 +325,11 @@ function normalizeBody(body) {
   return body;
 }
 
-
-// ============================================================
-// downloadFile() — binary download via the auth + refresh pipeline.
-// ============================================================
 export async function downloadFile(path, { signal } = {}) {
   const isPublic = isPublicEndpoint(path, "GET");
+  const accessToken = getAccessToken();
   const headers = {
-    ...(!isPublic && getAccessToken()
-      ? { Authorization: `Bearer ${getAccessToken()}` }
-      : {}),
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     "X-Requested-With": "XMLHttpRequest",
   };
 
@@ -379,6 +368,5 @@ export const api = {
   delete: (path, body = {}, opts) => request(path, { ...opts, method: "DELETE", body: normalizeBody(body) }),
   upload: (path, formData, opts) =>
     request(path, { ...opts, method: "POST", body: formData, isFormData: true, timeoutMs: UPLOAD_TIMEOUT_MS }),
-  /** Generate a stable idempotency key you can reuse across retries */
   makeIdempotencyKey,
 };
