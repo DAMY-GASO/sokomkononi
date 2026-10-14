@@ -13,7 +13,7 @@ import UndoToast from "./components/UndoToast.jsx";
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
 
 import { initializeCategories, hydrateCategoriesFromApi } from "./config/categoriesStore.js";
-import { hydrateListingsFromApi } from "./config/listingsStore.js";
+import { hydrateListingsFromApi, sweepGhostListings } from "./config/listingsStore.js";
 
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
@@ -59,6 +59,7 @@ function App() {
   useEffect(() => {
     installUnauthorizedHandler();
     initializeCategories();
+    sweepGhostListings();
     (async () => {
       await Promise.allSettled([
         hydrateCategoriesFromApi(),

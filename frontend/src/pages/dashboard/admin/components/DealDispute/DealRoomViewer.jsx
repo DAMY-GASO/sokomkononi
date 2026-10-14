@@ -56,7 +56,10 @@ export default function DealRoomViewer({
   if (!deal) return null;
 
   // Tumia roomData kama ipo, la sivyo deal.messages (fallback)
-  const messages = roomData?.messages ?? deal.messages ?? [];
+  const messages =
+    (Array.isArray(roomData?.messages) && roomData.messages.length > 0
+      ? roomData.messages
+      : deal.messages) || [];
   const messageCount = messages.length;
   const isDisputed = deal.status === "disputed";
   const paymentProof = roomData?.paymentProof ?? deal.paymentProof ?? null;

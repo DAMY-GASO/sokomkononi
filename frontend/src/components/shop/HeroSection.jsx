@@ -122,7 +122,7 @@ export default function HeroSection({
                 className="bg-clip-text text-transparent"
                 style={{
                   backgroundImage:
-                    "linear-gradient(135deg, #FEA406 0%, #FFC857 100%)",
+                    "linear-gradient(135deg, #FEA406 0%, #FEA406 100%)",
                 }}
               >
                 {t("Mali", "Property")}

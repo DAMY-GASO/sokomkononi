@@ -215,7 +215,7 @@ export default function AnnouncementsPanel() {
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             placeholder={lang === "sw" ? "Kichwa cha tangazo (SW)" : "Announcement title (SW)"}
             disabled={busy.sending}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
           />
 
           {/* Title EN */}
@@ -226,7 +226,7 @@ export default function AnnouncementsPanel() {
               ? "Kichwa cha tangazo (EN) — hiari"
               : "Announcement title (EN) — optional"}
             disabled={busy.sending}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
           />
 
           {/* Message SW */}
@@ -236,7 +236,7 @@ export default function AnnouncementsPanel() {
             placeholder={lang === "sw" ? "Ujumbe kamili (SW)..." : "Full message (SW)..."}
             rows={3}
             disabled={busy.sending}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none resize-none focus:border-[#E8A33D] disabled:opacity-50"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none resize-none focus:border-[#FEA406] disabled:opacity-50"
           />
 
           {/* Message EN */}
@@ -248,7 +248,7 @@ export default function AnnouncementsPanel() {
               : "Full message (EN) — optional"}
             rows={3}
             disabled={busy.sending}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none resize-none focus:border-[#E8A33D] disabled:opacity-50"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none resize-none focus:border-[#FEA406] disabled:opacity-50"
           />
 
           {/* Schedule */}
@@ -261,7 +261,7 @@ export default function AnnouncementsPanel() {
               value={form.scheduledFor}
               onChange={(e) => setForm({ ...form, scheduledFor: e.target.value })}
               disabled={busy.sending}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none flex-1 min-w-0 focus:border-[#E8A33D] disabled:opacity-50"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none flex-1 min-w-0 focus:border-[#FEA406] disabled:opacity-50"
             />
           </div>
 

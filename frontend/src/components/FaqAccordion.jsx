@@ -40,7 +40,7 @@ export default function FaqAccordion({ items, lang = "sw" }) {
             >
               <h3 className="h-card flex-1">{question}</h3>
               <svg
-                className={`w-5 h-5 flex-shrink-0 text-[#E8A33D] transition-transform duration-200 mt-0.5 ${
+                className={`w-5 h-5 flex-shrink-0 text-[#FEA406] transition-transform duration-200 mt-0.5 ${
                   isOpen ? "rotate-180" : ""
                 }`}
                 viewBox="0 0 24 24"

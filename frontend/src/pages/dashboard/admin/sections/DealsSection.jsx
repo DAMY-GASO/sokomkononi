@@ -61,8 +61,9 @@ export default function DealsSection() {
     hydrateListingsFromApi().catch(() => {});
   }, []);
 
-  // Enrich deals zinazokosekana data
+  // Enrich deals zinazokosekana data — capped at 3 attempts each.
   const enrichedRef = useRef(new Set());
+  const enrichmentAttemptsRef = useRef(new Map());
   useEffect(() => {
     if (!user?.id) return;
     deals.forEach((d) => {
@@ -73,25 +74,15 @@ export default function DealsSection() {
         (d.currentOffer === 0 && d.askingPrice === 0);
       if (!needsEnrich) return;
       if (enrichedRef.current.has(d.id)) return;
+
+      const attempts = enrichmentAttemptsRef.current.get(d.id) || 0;
+      if (attempts >= 3) return;
+      enrichmentAttemptsRef.current.set(d.id, attempts + 1);
       enrichedRef.current.add(d.id);
 
-      fetchDealDetailAsync(d.id)
-        .then((res) => {
-          const enriched = res?.deal;
-          // If the enriched deal still has no useful data, allow a retry
-          // on the next render pass.
-          if (
-            !enriched?.buyerName &&
-            !enriched?.sellerName &&
-            !enriched?.listingTitle
-          ) {
-            enrichedRef.current.delete(d.id);
-          }
-        })
-        .catch((err) => {
-          console.warn("[DealsSection] enrich failed for", d.id, err);
-          enrichedRef.current.delete(d.id);
-        });
+      fetchDealDetailAsync(d.id).catch((err) => {
+        console.warn("[DealsSection] enrich failed for", d.id, err);
+      });
     });
   }, [deals, user?.id]);
 

@@ -1382,7 +1382,7 @@ function DealDetail({
           {deal.listingId ? (
             <Link
               to={`/mali/${deal.listingId}`}
-              className="text-secondary text-body-sm truncate flex items-center gap-1 hover:text-[#E8A33D] transition-colors"
+              className="text-secondary text-body-sm truncate flex items-center gap-1 hover:text-[#FEA406] transition-colors"
             >
               <MapPin size={10} /> {deal.listingTitle}
             </Link>
@@ -1925,13 +1925,8 @@ export default function DealRooms({
 
   const selectedDeal = deals.find((d) => d.id === selectedId) || deals[0];
   const updateDeal = (id, patchOrUpdater) => {
-    if (typeof patchOrUpdater === "function") {
-      const current = (getDeals() || []).find((d) => String(d.id) === String(id));
-      if (!current) return;
-      updateDealInStore(id, patchOrUpdater(current));
-    } else {
-      updateDealInStore(id, patchOrUpdater);
-    }
+    // Store handles both shapes now.
+    updateDealInStore(id, patchOrUpdater);
   };
 
   const handleSelect = (id) => {
@@ -2062,6 +2057,8 @@ export default function DealRooms({
                 : `The offer of ${formatTZS(lastOffer.offerAmount)} was declined. Please make another offer.`,
           }
         );
+        // Unlock respond logic — clear the offered amount locally.
+        updateDeal(id, { currentOffer: 0 });
       } catch (msgErr) {
         console.warn("[DealRooms] decline message failed:", msgErr);
       }
@@ -2094,7 +2091,7 @@ export default function DealRooms({
 
     updateDeal(id, {
       status: "reserved",
-      transactionId: deal.transactionId || null,
+      transactionId: deal.transactionId || transactionIds[id] || null,
       reservationHours: hours,
       reservationFee: fee,
       reservationMethod: method,

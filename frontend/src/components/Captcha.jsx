@@ -1,6 +1,10 @@
 // ============================================================
 // Captcha.jsx — Cloudflare Turnstile (env-gated, degrades to no-op)
 // Set VITE_TURNSTILE_SITE_KEY in .env to enable.
+//
+// FIXED:
+//   - callbacks stored in refs so parent re-renders don't remount widget
+//   - theme follows document.documentElement.dark
 // ============================================================
 import React, { useEffect, useRef } from "react";
 
@@ -11,6 +15,13 @@ export const isCaptchaEnabled = Boolean(SITE_KEY);
 export default function Captcha({ onVerify, onExpire }) {
   const ref = useRef(null);
   const widgetIdRef = useRef(null);
+  const onVerifyRef = useRef(onVerify);
+  const onExpireRef = useRef(onExpire);
+
+  useEffect(() => {
+    onVerifyRef.current = onVerify;
+    onExpireRef.current = onExpire;
+  }, [onVerify, onExpire]);
 
   useEffect(() => {
     if (!isCaptchaEnabled || !ref.current) return undefined;
@@ -19,14 +30,15 @@ export default function Captcha({ onVerify, onExpire }) {
     function mount() {
       if (cancelled || !window.turnstile || !ref.current) return;
       if (widgetIdRef.current) {
-        window.turnstile.remove(widgetIdRef.current);
+        try { window.turnstile.remove(widgetIdRef.current); } catch {}
       }
+      const theme = document.documentElement.classList.contains("dark") ? "dark" : "light";
       widgetIdRef.current = window.turnstile.render(ref.current, {
         sitekey: SITE_KEY,
-        theme: "light",
-        callback: (token) => onVerify?.(token),
-        "expired-callback": () => onExpire?.(),
-        "error-callback": () => onExpire?.(),
+        theme,
+        callback: (token) => onVerifyRef.current?.(token),
+        "expired-callback": () => onExpireRef.current?.(),
+        "error-callback": () => onExpireRef.current?.(),
       });
     }
 
@@ -48,7 +60,7 @@ export default function Captcha({ onVerify, onExpire }) {
         widgetIdRef.current = null;
       }
     };
-  }, [onVerify, onExpire]);
+  }, []);   // empty deps — mount once
 
   if (!isCaptchaEnabled) return null;
   return <div ref={ref} className="flex justify-center my-3" />;

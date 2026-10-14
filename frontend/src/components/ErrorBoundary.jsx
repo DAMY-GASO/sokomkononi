@@ -1,6 +1,10 @@
 // ============================================================
 // ErrorBoundary.jsx — catches render-time errors so the whole
 // SPA does not go blank.
+//
+// FIXED:
+//   - Added "Clear cache and restart" to break reload loops caused
+//     by deterministic errors from poisoned localStorage.
 // ============================================================
 import React from "react";
 import { COLORS } from "../pages/dashboard/components/shared.js";
@@ -8,7 +12,7 @@ import { COLORS } from "../pages/dashboard/components/shared.js";
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, clearing: false };
   }
 
   static getDerivedStateFromError(error) {
@@ -24,9 +28,23 @@ export default class ErrorBoundary extends React.Component {
   };
 
   handleReset = () => {
-    // Prefer a page reload — deterministic errors would just re-throw on
-    // the next render and trap the user in a flash loop.
     window.location.reload();
+  };
+
+  handleClearAndReload = () => {
+    this.setState({ clearing: true });
+    try {
+      const kill = [];
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i);
+        if (k && k.startsWith("sokomkononi_")) kill.push(k);
+      }
+      kill.forEach((k) => {
+        try { window.localStorage.removeItem(k); } catch {}
+      });
+      try { window.sessionStorage.clear(); } catch {}
+    } catch {}
+    window.location.href = "/";
   };
 
   render() {
@@ -50,9 +68,9 @@ export default class ErrorBoundary extends React.Component {
             Kuna hitilafu imetokea / Something went wrong
           </h1>
           <p className="text-sm text-secondary mb-5 leading-relaxed">
-            Samahani kwa usumbufu. Jaribu kurudisha ukurasa.
+            Samahani kwa usumbufu. Jaribu kurudisha ukurasa, au safisha data ya mfumo.
             <br />
-            Sorry for the trouble. Try reloading the page.
+            Sorry for the trouble. Reload the page, or clear app data.
           </p>
 
           {this.state.error?.message && (
@@ -68,19 +86,31 @@ export default class ErrorBoundary extends React.Component {
             </pre>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <button
+                onClick={this.handleReset}
+                className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold text-secondary"
+              >
+                Jaribu tena / Retry
+              </button>
+              <button
+                onClick={this.handleReload}
+                style={{ background: COLORS.gold, color: COLORS.night }}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold"
+              >
+                Rudi Nyumbani / Home
+              </button>
+            </div>
             <button
-              onClick={this.handleReset}
-              className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold text-secondary"
+              onClick={this.handleClearAndReload}
+              disabled={this.state.clearing}
+              style={{ borderColor: COLORS.rust, color: COLORS.rust }}
+              className="w-full py-2.5 rounded-lg border text-xs font-semibold disabled:opacity-50"
             >
-              Jaribu tena / Retry
-            </button>
-            <button
-              onClick={this.handleReload}
-              style={{ background: COLORS.gold, color: COLORS.night }}
-              className="flex-1 py-2.5 rounded-lg text-sm font-semibold"
-            >
-              Rudi Nyumbani / Home
+              {this.state.clearing
+                ? "Inasafisha... / Clearing..."
+                : "Safisha data na anza upya / Clear data & restart"}
             </button>
           </div>
         </div>

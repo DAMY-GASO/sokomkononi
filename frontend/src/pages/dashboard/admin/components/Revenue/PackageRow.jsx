@@ -60,7 +60,7 @@ function EditableName({ value, onSave, disabled, placeholder }) {
         type="button"
         onClick={() => !disabled && setEditing(true)}
         disabled={disabled}
-        className="group flex items-center gap-1.5 text-sm font-medium text-primary hover:text-[#E8A33D] transition-colors disabled:opacity-50"
+        className="group flex items-center gap-1.5 text-sm font-medium text-primary hover:text-[#FEA406] transition-colors disabled:opacity-50"
       >
         <span className="truncate">{value || placeholder || "—"}</span>
         <Pencil size={11} className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
@@ -82,7 +82,7 @@ function EditableName({ value, onSave, disabled, placeholder }) {
         onBlur={commit}
         disabled={saving}
         placeholder={placeholder}
-        className="w-full max-w-[200px] rounded-md border px-2 py-1 text-sm outline-none focus:border-[#E8A33D]"
+        className="w-full max-w-[200px] rounded-md border px-2 py-1 text-sm outline-none focus:border-[#FEA406]"
         style={{ borderColor: COLORS.sandLine }}
       />
       {saving ? (

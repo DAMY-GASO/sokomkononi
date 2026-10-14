@@ -77,7 +77,7 @@ export default function EditableNumber({
         type="button"
         onClick={startEdit}
         disabled={disabled}
-        className="group flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-[#E8A33D] transition-colors disabled:opacity-50"
+        className="group flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-[#FEA406] transition-colors disabled:opacity-50"
       >
         <span>
           {value ?? 0}
@@ -102,7 +102,7 @@ export default function EditableNumber({
         onKeyDown={handleKeyDown}
         onBlur={commit}
         disabled={saving}
-        className="w-16 rounded-md border px-2 py-1 text-sm text-center outline-none focus:border-[#E8A33D]"
+        className="w-16 rounded-md border px-2 py-1 text-sm text-center outline-none focus:border-[#FEA406]"
         style={{ borderColor: COLORS.sandLine }}
       />
       {suffix && (
@@ -113,6 +113,7 @@ export default function EditableNumber({
       ) : (
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={commit}
           className="p-1 text-[#2F6D4F] hover:bg-[#2F6D4F]/10 rounded transition-colors"
           aria-label="Save"
@@ -122,6 +123,7 @@ export default function EditableNumber({
       )}
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={cancel}
         disabled={saving}
         className="p-1 text-muted hover:text-[#C1502E] rounded transition-colors"

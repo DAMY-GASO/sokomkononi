@@ -346,10 +346,9 @@ export function useHydratePublicListings() {
   useEffect(() => { hydrateListingsFromApi(); }, []);
 }
 
-// Drop temp_ listings that never got a real backend id.
-// 30 seconds is long enough for the POST to land; anything older
-// means the create failed and the ghost entry must go.
-if (typeof window !== "undefined") {
+// Explicit ghost purge (was a top-level IIFE). Called from App.jsx.
+export function sweepGhostListings() {
+  if (typeof window === "undefined") return;
   try {
     const now = Date.now();
     const mine = readKey(MINE_KEY);
@@ -426,7 +425,13 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   const status =
     API_TO_FRONTEND_STATUS[raw.status] ||
     API_TO_FRONTEND_STATUS[rawStatus] ||
-    fallbackStatus;
+    null;
+
+  if (!status) {
+    // Unknown backend status — do NOT fabricate. Skip so callers' filter(Boolean) drops it.
+    console.warn("[listingsStore] unknown status, skipping listing:", raw.status, raw.id);
+    return null;
+  }
 
   const sellerName =
     raw.seller_name ||
@@ -867,6 +872,7 @@ export async function markSoldAsync(id) {
 
 export function resetMyListingsUserCache() {
   _myListingsUserId = null;
+  _inflight_myListings = null;
 }
 
 export async function payListingFeeAsync(id, payload) {

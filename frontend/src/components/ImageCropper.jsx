@@ -80,23 +80,11 @@ export default function ImageCropper({
     };
   }, []);
 
-  // Native wheel handler with passive:false so preventDefault works.
-  useEffect(() => {
-    const el = boxRef.current;
-    if (!el) return undefined;
-    const handler = (e) => {
-      e.preventDefault();
-      setZoom((z) => clamp(z - e.deltaY * 0.002, minZoom, MAX_ZOOM));
-    };
-    el.addEventListener("wheel", handler, { passive: false });
-    return () => el.removeEventListener("wheel", handler);
-  }, [minZoom]);
-
   // scale ya msingi: upande mfupi wa picha ujaze kisanduku (cover / "Jaza")
-  const baseScale = nat.w && nat.h ? view / Math.min(nat.w, nat.h) : 1;
   // zoom ya chini kabisa: picha nzima ionekane (fit / "Nzima")
   const minZoom =
     nat.w && nat.h ? Math.min(nat.w, nat.h) / Math.max(nat.w, nat.h) : 1;
+  const baseScale = nat.w && nat.h ? view / Math.min(nat.w, nat.h) : 1;
   const scale = baseScale * zoom;
 
   const clampOffset = useCallback(
@@ -237,6 +225,7 @@ export default function ImageCropper({
     } catch (err) {
       console.warn("[ImageCropper] crop failed:", err);
       setLoadError(true);
+      setNat({ w: 0, h: 0 });   // force re-pick rather than lock the UI
     } finally {
       setBusy(false);
     }
@@ -345,7 +334,7 @@ export default function ImageCropper({
             onChange={(e) => changeZoom(Number(e.target.value))}
             disabled={!nat.w || loadError}
             aria-label={t("Kuvuta", "Zoom")}
-            className="h-1.5 w-full cursor-pointer accent-[#E8A33D]"
+            className="h-1.5 w-full cursor-pointer accent-[#FEA406]"
           />
           <ZoomIn size={16} className="shrink-0 text-secondary" />
         </div>
@@ -390,7 +379,7 @@ export default function ImageCropper({
             type="button"
             onClick={handleConfirm}
             disabled={busy || !nat.w || loadError}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#E8A33D] px-4 py-2.5 text-sm font-semibold text-[#101A2E] hover:bg-[#D99728] disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#FEA406] px-4 py-2.5 text-sm font-semibold text-[#101A2E] hover:bg-[#D98706] disabled:opacity-50"
           >
             <Check size={16} />
             {busy ? t("Inakata...", "Cropping...") : t("Kata na Tumia", "Crop & Use")}

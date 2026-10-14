@@ -105,7 +105,7 @@ async function _hydrateConversationsFromApi_impl(currentUserId) {
 export async function sendMessageAsync(conversationId, text, currentUserId = null) {
   const trimmed = (text || "").trim();
   if (!trimmed) return { ok: false, error: new Error("Message empty") };
-  const _tempId = `temp_${Date.now()}`;
+  const _tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const _current = getConversations();
   write(
     _current.map((c) =>

@@ -409,7 +409,9 @@ function toBackendPayload(category) {
     typeof category.extra === "object" &&
     !Array.isArray(category.extra)
       ? category.extra
-      : {};
+      : (category._backendExtra && typeof category._backendExtra === "object"
+          ? category._backendExtra
+          : {});
 
   return {
     name: category.label?.sw || category.key,
@@ -680,6 +682,7 @@ function normalizeCategoryFromApi(raw) {
     active: raw.is_active !== false,
     ordering: raw.ordering ?? 0,
     extra: SEED_EXTRA_BY_KEY[seedKey] || [],
+    _backendExtra: extraData,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
   };
@@ -688,6 +691,7 @@ function normalizeCategoryFromApi(raw) {
 function preserveExtras(optimistic, fromApi) {
   return {
     extra: optimistic?.extra || fromApi?.extra || [],
+    _backendExtra: fromApi?._backendExtra || optimistic?._backendExtra || {},
     iconKey: optimistic?.iconKey || fromApi?.iconKey || "Home",
     imageUrl: optimistic?.imageUrl || fromApi?.imageUrl || null,
     isPopular: optimistic?.isPopular ?? fromApi?.isPopular ?? false,

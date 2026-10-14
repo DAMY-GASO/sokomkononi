@@ -129,7 +129,7 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
         background: notif.read ? "white" : (config?.bg || "#F5F3EC"),
         borderColor: COLORS.sandLine,
       }}
-      className="rounded-xl border p-4 flex items-start gap-3 transition-all cursor-pointer hover:shadow-md hover:border-[#E8A33D]/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E8A33D]"
+      className="rounded-xl border p-4 flex items-start gap-3 transition-all cursor-pointer hover:shadow-md hover:border-[#FEA406]/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FEA406]"
     >
       {/* Icon */}
       <div

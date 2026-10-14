@@ -20,7 +20,7 @@ export const COLORS = {
   royalLight: "#3D8BFF",
   royalDark: "#0050D0",
   gold: "#FEA406",
-  goldLight: "#FFC857",
+  goldLight: "#FEA406",
   goldInk: "#A35F00", // gold kwa maandishi kwenye mandhari nyeupe (5:1)
   flame: "#FD8706",
   sand: "#F4F7FC",

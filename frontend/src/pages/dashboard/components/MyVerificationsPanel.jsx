@@ -18,12 +18,12 @@ import {
   VERIFICATION_CREATE_TYPES,
 } from "../../../config/verificationsStore.js";
 
-export default function MyVerificationsPanel() {
+export default function MyVerificationsPanel({ side = "buyer" }) {
   const { lang } = useLanguage();
   const requests = useVerifications();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
-    type: "seller",
+    type: side === "seller" ? "seller" : "buyer",
     subject: "",
     notes: "",
   });
@@ -47,7 +47,7 @@ export default function MyVerificationsPanel() {
     });
     setBusy(false);
     if (res.ok) {
-      setForm({ type: "seller", subject: "", notes: "" });
+      setForm({ type: side === "seller" ? "seller" : "buyer", subject: "", notes: "" });
       setShowForm(false);
     } else {
       setError(res.error?.message || t("Imeshindwa.", "Failed."));
@@ -174,7 +174,7 @@ export default function MyVerificationsPanel() {
                 className="rounded-xl border p-4"
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#E8A33D]/20 text-[#8A5A16]">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#FEA406]/20 text-[#8A5A16]">
                     {VERIFICATION_TYPES.find((v) => v.key === r.type)?.label?.[lang] || r.type}
                   </span>
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full"
@@ -223,7 +223,7 @@ export default function MyVerificationsPanel() {
                         href={doc.url || doc.file || "#"}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-1.5 text-xs text-primary hover:text-[#E8A33D]"
+                        className="flex items-center gap-1.5 text-xs text-primary hover:text-[#FEA406]"
                       >
                         <FileText size={11} /> {doc.name || `Document ${i + 1}`}
                       </a>

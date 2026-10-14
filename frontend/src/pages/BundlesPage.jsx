@@ -102,16 +102,16 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
   return (
     <div
       className={`relative bg-white rounded-2xl border-2 p-4 sm:p-5 flex flex-col items-center text-center gap-3 transition-all ${
-        bundle.featured ? "border-[#E8A33D] shadow-lg" : "border-gray-100"
+        bundle.featured ? "border-[#FEA406] shadow-lg" : "border-gray-100"
       }`}
     >
       {bundle.featured && (
-        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#E8A33D] text-[#101A2E] text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap">
+        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-[#FEA406] text-[#101A2E] text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap">
           {t("Maarufu Zaidi", "Most Popular")}
         </span>
       )}
 
-      <div className="w-12 h-12 rounded-xl bg-[#E8A33D]/10 flex items-center justify-center">
+      <div className="w-12 h-12 rounded-xl bg-[#FEA406]/10 flex items-center justify-center">
         <Icon size={22} color={COLORS.gold} />
       </div>
 
@@ -168,7 +168,7 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
         className={`w-full py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition-colors ${
           owned
             ? "bg-gray-100 text-muted cursor-not-allowed"
-            : "bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E]"
+            : "bg-[#FEA406] hover:bg-[#D98706] text-[#101A2E]"
         }`}
       >
         {owned ? t("Tayari Unayo", "Already Owned") : t("Nunua Sasa", "Buy Now")}

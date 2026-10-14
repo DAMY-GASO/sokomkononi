@@ -235,7 +235,12 @@ export default function ReportsSection() {
   // hesabu halisi kutoka stores zile zile zinazotumiwa na Overview.
   const reports = useMemo(() => {
     const num = (v) => Number(v) || 0;
-    const pick = (api, local) => (num(api) > 0 ? num(api) : local);
+    const apiHasLoaded = apiReports?.source === "api";
+    const pick = (api, local) => {
+      const n = Number(api);
+      if (apiHasLoaded && Number.isFinite(n)) return n;
+      return Number(local) || 0;
+    };
     const pickList = (api, local) => (Array.isArray(api) && api.length > 0 ? api : local);
     const dayLabel = (d) => d.toLocaleDateString(locale, { day: "numeric", month: "short" });
 

@@ -74,9 +74,13 @@ export function getDeals() {
   return readFromStorage();
 }
 
-export function updateDeal(id, patch) {
+export function updateDeal(id, patchOrUpdater) {
   const current = getDeals();
-  const next = current.map((d) => (sameId(d.id, id) ? { ...d, ...patch } : d));
+  const next = current.map((d) => {
+    if (!sameId(d.id, id)) return d;
+    if (typeof patchOrUpdater === "function") return patchOrUpdater(d);
+    return { ...d, ...patchOrUpdater };
+  });
   saveDeals(next);
   return next;
 }
@@ -406,6 +410,11 @@ async function _hydrateDealsImpl(currentUserId) {
     console.warn("[dealsStore] hydrate failed:", err);
     return { source: "error", count: getDeals().length };
   }
+}
+
+export function resetDealsUserCache() {
+  _dealsUserId = null;
+  _inflight_hydrateDealsFromApi = null;
 }
 
 let _inflight_hydrateDealsFromApi = null;

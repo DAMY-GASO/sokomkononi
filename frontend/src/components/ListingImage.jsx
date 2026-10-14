@@ -60,13 +60,13 @@ export default function ListingImage({
         <div className="absolute inset-0 animate-pulse bg-sandline/60" aria-hidden="true" />
       )}
 
-      {/* Mandharinyuma iliyofifishwa — kwa picha zisizo za mraba tu */}
+      {/* Mandharinyuma iliyofifishwa — kwa picha zisizo za mraba tu.
+          CSS background avoids a second <img> decode pass. */}
       {showImage && fit === "contain" && status === "loaded" && (
-        <img
-          src={effectiveSrc}
-          alt=""
+        <div
           aria-hidden="true"
-          className="absolute inset-0 h-full w-full scale-125 object-cover opacity-70 blur-2xl"
+          className="absolute inset-0 scale-125 bg-cover bg-center opacity-70 blur-2xl"
+          style={{ backgroundImage: `url(${effectiveSrc})` }}
         />
       )}
 

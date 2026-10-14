@@ -51,15 +51,14 @@ function writeSettings(cfg) {
 }
 
 function readTiers() {
-  if (typeof window === "undefined") return DEFAULT_TIERS;
+  if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(TIERS_KEY);
-    if (!raw) return DEFAULT_TIERS;
+    if (!raw) return [];
     const arr = JSON.parse(raw);
-    if (!Array.isArray(arr) || arr.length === 0) return DEFAULT_TIERS;
-    return arr;
+    return Array.isArray(arr) ? arr : [];
   } catch {
-    return DEFAULT_TIERS;
+    return [];
   }
 }
 
@@ -126,10 +125,8 @@ export async function hydrateReservationFromApi() {
     const t = await api.get("/reservation-tiers/");
     const arr = Array.isArray(t) ? t : t?.results || [];
     const norm = arr.map(normTier).filter(Boolean);
-    if (norm.length > 0) {
-      writeTiers(norm);
-      result.tiers = norm;
-    }
+    writeTiers(norm);
+    result.tiers = norm;
   } catch (err) {
     console.warn("[feePolicy] tiers hydrate failed:", err?.message);
     result.ok = false;

@@ -519,7 +519,7 @@ function HowToBuyGuide({ lang }) {
             type="checkbox"
             checked={hideForever}
             onChange={(e) => setHideForever(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300 text-[#E8A33D] focus:ring-[#E8A33D]"
+            className="w-4 h-4 rounded border-gray-300 text-[#FEA406] focus:ring-[#FEA406]"
           />
           <span>{t("Usinionyeshe tena", "Don't show this again")}</span>
         </label>

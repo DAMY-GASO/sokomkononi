@@ -75,7 +75,7 @@ const PRIVACY_CONTENT = {
     title: "Sera ya Faragha",
     subtitle:
       "Tunajali faragha yako. Soma jinsi tunakusanya, kutumia, na kulinda taarifa zako.",
-    lastUpdated: "Ilisasishwa mwisho: 15 Septemba 2026",
+    lastUpdated: new Date().toLocaleDateString('sw-TZ', { year: 'numeric', month: 'long', day: 'numeric' }),
     sections: [
       {
         id: "intro",
@@ -199,7 +199,7 @@ const PRIVACY_CONTENT = {
     title: "Privacy Policy",
     subtitle:
       "We care about your privacy. Read how we collect, use, and protect your information.",
-    lastUpdated: "Last updated: 15 September 2026",
+    lastUpdated: new Date().toLocaleDateString('sw-TZ', { year: 'numeric', month: 'long', day: 'numeric' }),
     sections: [
       {
         id: "intro",

@@ -7,7 +7,7 @@ import React, { useState } from "react";
 import { Save, Pencil, X, Loader2 } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 
-export default function EditablePercent({ value, onSave }) {
+export default function EditablePercent({ value, onSave, error = null }) {
   const safeValue = value ?? 0;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState((safeValue * 100).toString());
@@ -67,8 +67,8 @@ export default function EditablePercent({ value, onSave }) {
           disabled={saving}
           className="flex-1 min-w-0 text-sm font-semibold border-2 rounded-lg px-2.5 py-1.5 outline-none transition-colors disabled:opacity-50"
           style={{
-            borderColor: COLORS.gold,
-            background: `${COLORS.gold}08`,
+            borderColor: error ? COLORS.rust : COLORS.gold,
+            background: `${error ? COLORS.rust : COLORS.gold}08`,
             color: "var(--text-primary)",
           }}
           autoFocus

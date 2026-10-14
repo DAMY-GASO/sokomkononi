@@ -44,7 +44,6 @@ import { useAuth } from "../../../config/authStore.js";
 import { useToast } from "../../../components/Toast.jsx";
 import { useConfirm } from "../../../components/ConfirmDialog.jsx";
 import { startUndo } from "../../../config/undoStore.js";
-import { notifyAdminAboutDeletion } from "../../../config/notificationsStore.js";
 import { restoreListingAsync } from "../../../config/listingsStore.js";
 
 // ============================================================
@@ -420,13 +419,9 @@ export default function MyListings({
       },
     });
 
-    notifyAdminAboutDeletion({
-      ...listing,
-      id,
-      deleted_by: user,
-    }).catch((err) => {
-      console.warn("[handleRemove] Admin notification failed:", err);
-    });
+    // NOTE: Admin notification is emitted server-side on soft-delete.
+    // Do NOT create it from the client — that would let any user spam
+    // the admin notification feed.
 
     toast.success(t("Tangazo limefutwa", "Listing deleted"), {
       duration: 2000,

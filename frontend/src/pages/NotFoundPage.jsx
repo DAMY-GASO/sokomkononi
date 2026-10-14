@@ -18,7 +18,7 @@ export default function NotFoundPage() {
       <Navbar />
       <main className="flex-1 flex items-center justify-center px-4 py-20">
         <div className="max-w-md w-full text-center">
-          <p className="text-6xl font-bold text-[#E8A33D] mb-4">404</p>
+          <p className="text-6xl font-bold text-[#FEA406] mb-4">404</p>
           <h1 className="text-2xl font-bold text-primary mb-2">
             {t("Ukurasa haupatikani", "Page not found")}
           </h1>
@@ -31,7 +31,7 @@ export default function NotFoundPage() {
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
             <Link
               to="/"
-              className="px-5 py-2.5 rounded-lg bg-[#E8A33D] text-[#101A2E] font-semibold text-sm"
+              className="px-5 py-2.5 rounded-lg bg-[#FEA406] text-[#101A2E] font-semibold text-sm"
             >
               {t("Nyumbani", "Home")}
             </Link>

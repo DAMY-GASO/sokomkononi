@@ -152,7 +152,7 @@ export default function ListingCardShop({
           )}
         </div>
 
-        <p className="mt-3 text-base sm:text-lg font-bold text-night dark:text-[#FFC857] break-words">
+        <p className="mt-3 text-base sm:text-lg font-bold text-night dark:text-[#FEA406] break-words">
           {formatTZS(listing.price)}
         </p>
       </div>

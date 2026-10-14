@@ -2,20 +2,27 @@
 // adminPath.js
 // Secret path prefix kwa admin routes.
 //
-// 
-export const ADMIN_PATH =
-  import.meta.env.VITE_ADMIN_PATH || "/smk-control-9x7k";
+// - Production REQUIRES VITE_ADMIN_PATH to be set at build time.
+// - Dev falls back to a known default so local dev keeps working.
+// ============================================================
+
+const ENV_PATH = import.meta.env.VITE_ADMIN_PATH;
+
+if (!ENV_PATH && import.meta.env.PROD) {
+  // Fail loudly at runtime rather than silently exposing the default.
+  console.error(
+    "[adminPath] VITE_ADMIN_PATH is not set in production. " +
+      "Set it in your build env (Docker ARG / Vercel env)."
+  );
+}
+
+export const ADMIN_PATH = ENV_PATH || "/smk-control-9x7k";
 
 // Admin login path (tofauti na dashboard)
 export const ADMIN_LOGIN_PATH = `${ADMIN_PATH}/enter`;
 
 // ------------------------------------------------------------
 // SESSION SCOPE
-// Admin na mtumiaji wana session TOFAUTI (tokens + user zinahifadhiwa
-// kwenye keys tofauti), hivyo browser moja inaweza kuwa na admin tab
-// na user tab bila kuingiliana.
-//   • path inaanza na ADMIN_PATH  → scope "admin"
-//   • nyingine zote               → scope "user"
 // ------------------------------------------------------------
 export function getSessionScope() {
   if (typeof window === "undefined") return "user";

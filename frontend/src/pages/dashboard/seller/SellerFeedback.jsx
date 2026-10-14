@@ -179,7 +179,7 @@ export default function SellerFeedback({ side = "seller" }) {
             onChange={(e) => setSubject(e.target.value)}
             placeholder={ph.subject[lang] || ph.subject.sw}
             disabled={busy}
-            className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D] mb-3"
+            className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406] mb-3"
             style={{ borderColor: COLORS.sandLine }}
           />
 
@@ -189,7 +189,7 @@ export default function SellerFeedback({ side = "seller" }) {
             rows={7}
             placeholder={ph.message[lang] || ph.message.sw}
             disabled={busy}
-            className="w-full border rounded-lg px-3 py-2 text-sm outline-none resize-none focus:border-[#E8A33D]"
+            className="w-full border rounded-lg px-3 py-2 text-sm outline-none resize-none focus:border-[#FEA406]"
             style={{ borderColor: COLORS.sandLine, minHeight: 160 }}
           />
 

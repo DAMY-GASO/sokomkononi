@@ -271,7 +271,7 @@ function CampaignCard({ campaign, lang, onEdit, onRemove, isBusy }) {
           <button
             onClick={() => onEdit(campaign)}
             disabled={isBusy}
-            className="p-1.5 text-muted hover:text-[#E8A33D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-1.5 text-muted hover:text-[#FEA406] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={t("Hariri", "Edit")}
           >
             <Pencil size={14} />
@@ -334,7 +334,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
               setForm({ ...form, name: { ...form.name, sw: e.target.value } })
             }
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
@@ -347,7 +347,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
               setForm({ ...form, name: { ...form.name, en: e.target.value } })
             }
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
           />
         </label>
       </div>
@@ -368,7 +368,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
             }
             rows={2}
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none disabled:opacity-50"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
@@ -385,7 +385,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
             }
             rows={2}
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none disabled:opacity-50"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50"
           />
         </label>
       </div>
@@ -408,7 +408,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
               })
             }
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
@@ -419,7 +419,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
             value={form.appliesTo || "ALL"}
             onChange={(e) => setForm({ ...form, appliesTo: e.target.value })}
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
           >
             {APPLIES_TO_OPTIONS.map((o) => (
               <option key={o.key} value={o.key}>
@@ -441,7 +441,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
             value={form.startDate?.slice(0, 10) || ""}
             onChange={(e) => setForm({ ...form, startDate: e.target.value })}
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
           />
         </label>
         <label className="flex flex-col gap-1 min-w-0 w-full">
@@ -453,7 +453,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
             value={form.endDate?.slice(0, 10) || ""}
             onChange={(e) => setForm({ ...form, endDate: e.target.value })}
             disabled={saving}
-            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+            className="w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
           />
         </label>
       </div>
@@ -464,7 +464,7 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
           checked={form.active !== false}
           onChange={(e) => setForm({ ...form, active: e.target.checked })}
           disabled={saving}
-          className="w-4 h-4 rounded text-[#E8A33D] shrink-0"
+          className="w-4 h-4 rounded text-[#FEA406] shrink-0"
         />
         <span className="text-xs text-secondary">
           {t("Kampeni hai", "Active campaign")}

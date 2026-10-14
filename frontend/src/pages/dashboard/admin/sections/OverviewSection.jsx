@@ -333,7 +333,7 @@ export default function OverviewSection({ onNavigate }) {
             {revenue.error ? (
               <p
                 className="text-[11px] sm:text-xs mt-2 inline-block px-2 py-0.5 rounded"
-                style={{ background: "rgba(232,163,61,0.25)", color: "#E8A33D" }}
+                style={{ background: "rgba(232,163,61,0.25)", color: "#FEA406" }}
               >
                 {lang === "sw"
                   ? "⚠️ Imeshindwa kupakia mapato ya jukwaa"

@@ -249,13 +249,10 @@ async function _hydrateTxImpl() {
     console.log("[transactionsStore] tx normalized:", normalizedTx);
   }
 
-  // Unganisha + ondoa duplicates kwa id
+  // Prefix keys so finance txn #5 and deal txn #5 stay distinct.
   const byId = new Map();
-  [...normalizedFinance, ...normalizedTx].forEach((tr) => {
-    if (!byId.has(String(tr.id))) {
-      byId.set(String(tr.id), tr);
-    }
-  });
+  normalizedFinance.forEach((tr) => byId.set(`fin_${tr.id}`, tr));
+  normalizedTx.forEach((tr) => byId.set(`tx_${tr.id}`, tr));
 
   const all = Array.from(byId.values());
   all.sort((a, b) => new Date(b.at) - new Date(a.at));

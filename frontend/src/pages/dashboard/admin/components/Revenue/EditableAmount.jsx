@@ -19,7 +19,7 @@ function parseNumber(value) {
   return digits ? parseInt(digits, 10) : 0;
 }
 
-export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
+export default function EditableAmount({ value, onSave, prefix = "TZS ", error = null }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
@@ -73,8 +73,8 @@ export default function EditableAmount({ value, onSave, prefix = "TZS " }) {
           disabled={saving}
           className="flex-1 min-w-0 text-sm font-semibold border-2 rounded-lg px-2.5 py-1.5 outline-none transition-colors disabled:opacity-50"
           style={{
-            borderColor: COLORS.gold,
-            background: `${COLORS.gold}08`,
+            borderColor: error ? COLORS.rust : COLORS.gold,
+            background: `${error ? COLORS.rust : COLORS.gold}08`,
             color: "var(--text-primary)",
           }}
           autoFocus

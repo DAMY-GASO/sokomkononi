@@ -136,7 +136,7 @@ export default function JinsiYaKununuaNaKuuza() {
         <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
           <a
             href="#kununua"
-            className="bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold text-btn px-5 py-2.5 rounded-full transition-colors"
+            className="bg-[#FEA406] hover:bg-[#D98706] text-[#101A2E] font-semibold text-btn px-5 py-2.5 rounded-full transition-colors"
           >
             {t("Jinsi ya Kununua", "How to Buy")}
           </a>
@@ -158,7 +158,7 @@ export default function JinsiYaKununuaNaKuuza() {
       >
         <span
           className="text-body-sm font-bold uppercase tracking-wide"
-          style={{ color: "#E8A33D" }}
+          style={{ color: "#FEA406" }}
         >
           {t("Kwa Mnunuzi", "For Buyers")}
         </span>
@@ -205,7 +205,7 @@ export default function JinsiYaKununuaNaKuuza() {
 
         <button
           onClick={handleBuyNow}
-          className="mt-8 bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] font-semibold text-btn px-8 py-3.5 rounded-xl transition-all shadow-sm hover:shadow-md"
+          className="mt-8 bg-[#FEA406] hover:bg-[#D98706] text-[#101A2E] font-semibold text-btn px-8 py-3.5 rounded-xl transition-all shadow-sm hover:shadow-md"
         >
           {t("Nunua Sasa", "Buy Now")}
         </button>
@@ -266,7 +266,7 @@ export default function JinsiYaKununuaNaKuuza() {
           <Link
             to="/mawasiliano#faq"
             className="font-semibold hover:underline"
-            style={{ color: "#E8A33D" }}
+            style={{ color: "#FEA406" }}
           >
             {t("Angalia FAQ", "Check the FAQ")}
           </Link>{" "}
@@ -274,7 +274,7 @@ export default function JinsiYaKununuaNaKuuza() {
           <Link
             to="/mawasiliano"
             className="font-semibold hover:underline"
-            style={{ color: "#E8A33D" }}
+            style={{ color: "#FEA406" }}
           >
             {t("Wasiliana Nasi", "Contact Us")}
           </Link>

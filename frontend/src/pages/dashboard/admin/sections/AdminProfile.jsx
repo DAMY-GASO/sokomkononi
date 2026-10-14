@@ -55,7 +55,7 @@ function Avatar({ user, size = "lg" }) {
   }
   return (
     <div
-      className={`${sizeClass} rounded-full bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold`}
+      className={`${sizeClass} rounded-full bg-[#FEA406] flex items-center justify-center text-[#101A2E] font-bold`}
     >
       {initial}
     </div>
@@ -321,7 +321,7 @@ export default function AdminProfile() {
               onChange={(e) =>
                 setProfileForm({ ...profileForm, name: e.target.value })
               }
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406]"
               placeholder={t("Jina lako", "Your name")}
             />
           </label>
@@ -361,7 +361,7 @@ export default function AdminProfile() {
               onChange={(e) =>
                 setProfileForm({ ...profileForm, phone: e.target.value })
               }
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406]"
               placeholder="+255 700 000 000"
             />
           </label>
@@ -371,7 +371,7 @@ export default function AdminProfile() {
           <button
             type="submit"
             disabled={savingProfile}
-            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-lg bg-[#E8A33D] text-[#101A2E] hover:bg-[#B87A1F] disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-lg bg-[#FEA406] text-[#101A2E] hover:bg-[#D98706] disabled:opacity-50 transition-colors"
           >
             <Save size={14} />
             {savingProfile
@@ -409,7 +409,7 @@ export default function AdminProfile() {
                   currentPassword: e.target.value,
                 })
               }
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406]"
               autoComplete="current-password"
             />
           </label>
@@ -427,7 +427,7 @@ export default function AdminProfile() {
                   newPassword: e.target.value,
                 })
               }
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406]"
               autoComplete="new-password"
             />
             <span className="text-[10px] text-muted">
@@ -448,7 +448,7 @@ export default function AdminProfile() {
                   confirmPassword: e.target.value,
                 })
               }
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E8A33D]"
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406]"
               autoComplete="new-password"
             />
           </label>

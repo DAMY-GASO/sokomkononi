@@ -52,7 +52,7 @@ export default function LoginPage() {
 
   function finishLogin() {
     const { from, ...restState } = location.state || {};
-    const redirectTo = from || searchParams.get("redirect") || "/dashboard/post";
+    const redirectTo = from || searchParams.get("redirect") || "/dashboard";
 
     navigate(redirectTo, {
       replace: true,

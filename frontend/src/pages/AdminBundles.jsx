@@ -311,7 +311,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
               checked={form.featured}
               onChange={(e) => updateField("featured", e.target.checked)}
               disabled={saving}
-              className="w-4 h-4 rounded text-[#E8A33D] disabled:opacity-50"
+              className="w-4 h-4 rounded text-[#FEA406] disabled:opacity-50"
             />
             <span className="text-xs sm:text-sm text-secondary">
               {t("Onyesha kama Maarufu", "Mark as Featured")}
@@ -324,7 +324,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
               checked={form.active !== false}
               onChange={(e) => updateField("active", e.target.checked)}
               disabled={saving}
-              className="w-4 h-4 rounded text-[#E8A33D] disabled:opacity-50"
+              className="w-4 h-4 rounded text-[#FEA406] disabled:opacity-50"
             />
             <span className="text-xs sm:text-sm text-secondary">
               {t("Hai (active)", "Active")}
@@ -349,7 +349,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#E8A33D] text-[#101A2E] text-xs sm:text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#FEA406] text-[#101A2E] text-xs sm:text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {saving ? <Loader2 size={13} className="animate-spin" /> : null}
               {t("Hifadhi", "Save")}
@@ -497,7 +497,7 @@ export default function AdminBundles() {
               </p>
             </div>
             <div className="bg-white rounded-lg border border-gray-100 p-2.5 text-center">
-              <p className="text-lg font-bold text-[#E8A33D]">
+              <p className="text-lg font-bold text-[#FEA406]">
                 {stats.featured}
               </p>
               <p className="text-[10px] text-secondary">
@@ -513,7 +513,7 @@ export default function AdminBundles() {
               setError("");
             }}
             disabled={saving}
-            className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#E8A33D] text-[#101A2E] mt-2 disabled:opacity-50"
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#FEA406] text-[#101A2E] mt-2 disabled:opacity-50"
           >
             <Plus size={14} />
             {t("Ongeza Kifurushi", "Add Bundle")}
@@ -537,7 +537,7 @@ export default function AdminBundles() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("Tafuta kifurushi...", "Search bundle...")}
-              className="w-full rounded-xl border border-gray-200 pl-10 pr-3 py-2.5 text-sm outline-none focus:border-[#E8A33D] bg-white"
+              className="w-full rounded-xl border border-gray-200 pl-10 pr-3 py-2.5 text-sm outline-none focus:border-[#FEA406] bg-white"
             />
           </div>
           <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0">

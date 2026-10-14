@@ -87,6 +87,11 @@ export function ToastProvider({ children }) {
       if (duration > 0) {
         if (timersRef.current[id]) clearTimeout(timersRef.current[id]);
         timersRef.current[id] = setTimeout(() => dismiss(id), duration);
+      } else {
+        if (timersRef.current[id]) {
+          clearTimeout(timersRef.current[id]);
+          delete timersRef.current[id];
+        }
       }
     },
   }), [push, dismiss]);
@@ -109,7 +114,7 @@ export function ToastProvider({ children }) {
             <div
               key={t.id}
               role="status"
-              aria-live="polite"
+              aria-live={t.type === "error" ? "assertive" : "polite"}
               data-batch-e-toast
               className="pointer-events-auto rounded-xl border shadow-lg px-3.5 py-3 flex items-start gap-2.5 bg-card"
               style={{ borderColor: tone.border }}

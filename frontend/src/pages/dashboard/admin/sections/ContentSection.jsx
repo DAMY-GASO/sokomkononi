@@ -65,7 +65,7 @@ const TABS = [
 function BilingualField({ label, value, onChange, multiline = false, rows = 3, disabled = false }) {
   const swVal = value?.sw || "";
   const enVal = value?.en || "";
-  const cls = "w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none mt-1 disabled:opacity-50";
+  const cls = "w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none mt-1 disabled:opacity-50";
 
   return (
     <div className="flex flex-col gap-2 w-full min-w-0">
@@ -257,7 +257,7 @@ function ImageUploadField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={t("Weka URL ya picha", "Paste image URL")}
           disabled={disabled || uploading}
-          className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50"
+          className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
         />
       </div>
 
@@ -441,7 +441,7 @@ function SectionsEditor({
                   }
                   rows={2}
                   disabled={disabled}
-                  className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none disabled:opacity-50"
+                  className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50"
                 />
                 <button
                   type="button"
@@ -478,7 +478,7 @@ function SectionsEditor({
                   }
                   rows={2}
                   disabled={disabled}
-                  className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none disabled:opacity-50"
+                  className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50"
                 />
                 <button
                   type="button"
@@ -609,7 +609,7 @@ function BannersTab({ lang }) {
             <input value={form.ctaLink || ""}
                    onChange={(e) => setForm({ ...form, ctaLink: e.target.value })}
                    placeholder="/tafuta" disabled={saving}
-                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50" />
+                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50" />
           </label>
 
           {/* ⬇️ MPYA — Upload image */}
@@ -625,7 +625,7 @@ function BannersTab({ lang }) {
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.active !== false}
                    onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                   disabled={saving} className="w-4 h-4 rounded text-[#E8A33D]" />
+                   disabled={saving} className="w-4 h-4 rounded text-[#FEA406]" />
             <span className="text-xs text-secondary">
               {t("Inaonekana HomePage", "Show on HomePage")}
             </span>
@@ -668,7 +668,7 @@ function BannersTab({ lang }) {
 
             <div className="flex items-center gap-1 shrink-0">
               <button onClick={() => handleEdit(banner)} disabled={saving}
-                      className="p-1.5 text-muted hover:text-[#E8A33D] disabled:opacity-50">
+                      className="p-1.5 text-muted hover:text-[#FEA406] disabled:opacity-50">
                 <Pencil size={14} />
               </button>
               <button onClick={() => handleRemove(banner.id)} disabled={saving}
@@ -774,14 +774,14 @@ function TestimonialsTab({ lang }) {
             <input value={form.name || ""}
                    onChange={(e) => setForm({ ...form, name: e.target.value })}
                    placeholder="Mary Mwangi" disabled={saving}
-                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50" />
+                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50" />
           </label>
           <label className="flex flex-col gap-1 w-full min-w-0">
             <span className="text-[11px] font-semibold text-secondary">{t("Mahali", "Location")}</span>
             <input value={form.location || ""}
                    onChange={(e) => setForm({ ...form, location: e.target.value })}
                    placeholder="Dar es Salaam" disabled={saving}
-                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50" />
+                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50" />
           </label>
           <BilingualField label={t("Ushuhuda", "Quote")} value={form.quote || { sw: "", en: "" }}
                           onChange={(v) => setForm({ ...form, quote: v })} multiline rows={3} disabled={saving} />
@@ -790,7 +790,7 @@ function TestimonialsTab({ lang }) {
             <select value={form.rating || 5}
                     onChange={(e) => setForm({ ...form, rating: Number(e.target.value) })}
                     disabled={saving}
-                    className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50">
+                    className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50">
               {[5, 4, 3, 2, 1].map((r) => (
                 <option key={r} value={r}>
                   {"★".repeat(r)}{"☆".repeat(5 - r)} ({r})
@@ -812,7 +812,7 @@ function TestimonialsTab({ lang }) {
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.active !== false}
                    onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                   disabled={saving} className="w-4 h-4 rounded text-[#E8A33D]" />
+                   disabled={saving} className="w-4 h-4 rounded text-[#FEA406]" />
             <span className="text-xs text-secondary">{t("Inaonekana HomePage", "Show on HomePage")}</span>
           </label>
           <FormActions onCancel={handleCancel} onSave={handleSave} lang={lang} saving={saving} />
@@ -844,7 +844,7 @@ function TestimonialsTab({ lang }) {
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <button onClick={() => handleEdit(item)} disabled={saving}
-                      className="p-1.5 text-muted hover:text-[#E8A33D] disabled:opacity-50">
+                      className="p-1.5 text-muted hover:text-[#FEA406] disabled:opacity-50">
                 <Pencil size={14} />
               </button>
               <button onClick={() => handleRemove(item.id)} disabled={saving}
@@ -934,11 +934,13 @@ function FaqsTab({ lang }) {
     [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
 
     setSaving(true);
-    for (let i = 0; i < reordered.length; i++) {
-      // eslint-disable-next-line no-await-in-loop
-      await updateFaqAsync(reordered[i].id, { order: i + 1 });
+    try {
+      await Promise.all(
+        reordered.map((f, i) => updateFaqAsync(f.id, { order: i + 1 }))
+      );
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const sortedFaqs = [...faqs].sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -1001,7 +1003,7 @@ function FaqsTab({ lang }) {
                 ↓
               </button>
               <button onClick={() => handleEdit(faq)} disabled={saving}
-                      className="p-1.5 text-muted hover:text-[#E8A33D] disabled:opacity-50">
+                      className="p-1.5 text-muted hover:text-[#FEA406] disabled:opacity-50">
                 <Pencil size={14} />
               </button>
               <button onClick={() => handleRemove(faq.id)} disabled={saving}
@@ -1027,13 +1029,12 @@ function SinglePageEditor({ section, lang }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Resync the form when the store updates (e.g. hydration completed after
-  // mount, or another tab saved). Without this the editor shows stale
-  // blank fields and overwrites real content on save.
+  // Resync the form whenever the store's data object identity changes —
+  // covers hydration completing after mount and cross-tab saves.
   useEffect(() => {
     setForm({ ...data });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section, data?.lastUpdated]);
+  }, [section, data]);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 

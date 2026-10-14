@@ -48,7 +48,7 @@ function RoleCard({ role, lang, onEdit, onDelete, isBusy }) {
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button onClick={() => onEdit(role)} disabled={isBusy}
-            className="p-1.5 text-muted hover:text-[#E8A33D] transition-colors disabled:opacity-50">
+            className="p-1.5 text-muted hover:text-[#FEA406] transition-colors disabled:opacity-50">
             <Pencil size={14} />
           </button>
           {!role.isSystem && (
@@ -104,13 +104,13 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
           <span className="text-[11px] font-semibold text-secondary">{t("Jina (SW)", "Name (SW)")}</span>
           <input value={form.label.sw} onChange={(e) => setForm({ ...form, label: { ...form.label, sw: e.target.value } })}
             placeholder="Msimamizi wa Mali" disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50" />
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50" />
         </label>
         <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-secondary">{t("Jina (EN)", "Name (EN)")}</span>
           <input value={form.label.en} onChange={(e) => setForm({ ...form, label: { ...form.label, en: e.target.value } })}
             placeholder="Moderator" disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50" />
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50" />
         </label>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -118,13 +118,13 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
           <span className="text-[11px] font-semibold text-secondary">{t("Maelezo (SW)", "Description (SW)")}</span>
           <textarea value={form.description.sw} onChange={(e) => setForm({ ...form, description: { ...form.description, sw: e.target.value } })}
             rows={2} disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none disabled:opacity-50" />
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50" />
         </label>
         <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-secondary">{t("Maelezo (EN)", "Description (EN)")}</span>
           <textarea value={form.description.en} onChange={(e) => setForm({ ...form, description: { ...form.description, en: e.target.value } })}
             rows={2} disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] resize-none disabled:opacity-50" />
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50" />
         </label>
       </div>
       <div className="min-w-0">
@@ -197,7 +197,7 @@ function StaffCard({ staff, roles, lang, onEdit, onRemove, isBusy }) {
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button onClick={() => onEdit(staff)} disabled={isBusy}
-            className="p-1.5 text-muted hover:text-[#E8A33D] transition-colors disabled:opacity-50">
+            className="p-1.5 text-muted hover:text-[#FEA406] transition-colors disabled:opacity-50">
             <Pencil size={14} />
           </button>
           <button onClick={() => onRemove(staff)} disabled={isBusy}
@@ -244,7 +244,7 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
       <label className="flex flex-col gap-1 min-w-0 w-full">
         <span className="text-[11px] font-semibold text-secondary">{t("Chagua Mtumiaji (User ID)", "Pick User")}</span>
         <select value={form.userId ?? ""} onChange={(e) => handleUserChange(e.target.value)} disabled={saving}
-          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50">
+          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50">
           <option value="">{t("-- Chagua mtumiaji --", "-- Pick a user --")}</option>
           {allUsers.map((u) => (
             <option key={u.id} value={u.id}>{u.name || u.email} (#{u.id})</option>
@@ -262,20 +262,20 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
           <span className="text-[11px] font-semibold text-secondary">{t("Jina", "Name")}</span>
           <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Amina Rashid" disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50" />
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50" />
         </label>
         <label className="flex flex-col gap-1 min-w-0">
           <span className="text-[11px] font-semibold text-secondary">{t("Barua Pepe", "Email")}</span>
           <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
             placeholder="amina@sokomkononi.co.tz" disabled={saving}
-            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50" />
+            className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50" />
         </label>
       </div>
 
       <label className="flex flex-col gap-1 min-w-0">
         <span className="text-[11px] font-semibold text-secondary">Role</span>
         <select value={form.roleKey} onChange={(e) => setForm({ ...form, roleKey: e.target.value })} disabled={saving}
-          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#E8A33D] disabled:opacity-50">
+          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50">
           {roles.map((role) => (
             <option key={role.key} value={role.key}>{role.label?.[lang] || role.label?.sw}</option>
           ))}
@@ -284,7 +284,7 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
 
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })}
-          disabled={saving} className="w-4 h-4 rounded text-[#E8A33D] shrink-0" />
+          disabled={saving} className="w-4 h-4 rounded text-[#FEA406] shrink-0" />
         <span className="text-xs text-secondary">{t("Hai (anaweza kuingia)", "Active (can log in)")}</span>
       </label>
 

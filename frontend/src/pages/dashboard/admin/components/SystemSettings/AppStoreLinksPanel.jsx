@@ -65,7 +65,7 @@ export default function AppStoreLinksPanel() {
         </span>
         <input value={links.play} onChange={(e) => setField({ play: e.target.value })}
           placeholder="https://play.google.com/store/apps/details?id=..." disabled={saving}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#E8A33D] min-w-0 disabled:opacity-50"
+          className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#FEA406] min-w-0 disabled:opacity-50"
           type="url" />
       </label>
 
@@ -75,7 +75,7 @@ export default function AppStoreLinksPanel() {
         </span>
         <input value={links.appstore} onChange={(e) => setField({ appstore: e.target.value })}
           placeholder="https://apps.apple.com/app/..." disabled={saving}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#E8A33D] min-w-0 disabled:opacity-50"
+          className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#FEA406] min-w-0 disabled:opacity-50"
           type="url" />
       </label>
 

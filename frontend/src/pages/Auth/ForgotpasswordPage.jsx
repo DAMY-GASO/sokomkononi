@@ -44,15 +44,15 @@ const icons = {
 function SkylineDecoration() {
   return (
     <svg viewBox="0 0 400 200" className="absolute bottom-0 left-0 w-full h-40 opacity-[0.18]" preserveAspectRatio="none">
-      <rect x="0" y="120" width="46" height="80" fill="#E8A33D" />
-      <rect x="52" y="80" width="34" height="120" fill="#E8A33D" />
-      <rect x="92" y="140" width="52" height="60" fill="#E8A33D" />
-      <polygon points="150,100 178,60 206,100" fill="#E8A33D" />
-      <rect x="150" y="100" width="56" height="100" fill="#E8A33D" />
-      <rect x="214" y="70" width="30" height="130" fill="#E8A33D" />
-      <rect x="250" y="130" width="60" height="70" fill="#E8A33D" />
-      <rect x="316" y="95" width="40" height="105" fill="#E8A33D" />
-      <rect x="362" y="150" width="38" height="50" fill="#E8A33D" />
+      <rect x="0" y="120" width="46" height="80" fill="#FEA406" />
+      <rect x="52" y="80" width="34" height="120" fill="#FEA406" />
+      <rect x="92" y="140" width="52" height="60" fill="#FEA406" />
+      <polygon points="150,100 178,60 206,100" fill="#FEA406" />
+      <rect x="150" y="100" width="56" height="100" fill="#FEA406" />
+      <rect x="214" y="70" width="30" height="130" fill="#FEA406" />
+      <rect x="250" y="130" width="60" height="70" fill="#FEA406" />
+      <rect x="316" y="95" width="40" height="105" fill="#FEA406" />
+      <rect x="362" y="150" width="38" height="50" fill="#FEA406" />
     </svg>
   );
 }
@@ -76,7 +76,7 @@ function FieldInput({ icon, type = "text", value, onChange, label }) {
           type={inputType}
           className={`w-full border border-gray-300 rounded-lg pl-10 ${
             isPassword ? "pr-11" : "pr-3"
-          } py-2.5 focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors`}
+          } py-2.5 focus:outline-none focus:border-[#FEA406] focus:ring-2 focus:ring-[#FEA406]/20 transition-colors`}
           value={value}
           onChange={onChange}
         />
@@ -298,8 +298,8 @@ export default function ForgotPasswordPage() {
             {/* STEP: OTP */}
             {step === "otp" && (
               <>
-                <div className="w-12 h-12 rounded-full bg-[#E8A33D]/15 flex items-center justify-center mb-5 mx-auto">
-                  <span className="text-[#E8A33D]">{icons.mail}</span>
+                <div className="w-12 h-12 rounded-full bg-[#FEA406]/15 flex items-center justify-center mb-5 mx-auto">
+                  <span className="text-[#FEA406]">{icons.mail}</span>
                 </div>
 
                 <h1 className="h-title mb-1 text-center">{t("forgot_otp_heading")}</h1>
@@ -312,7 +312,7 @@ export default function ForgotPasswordPage() {
                     inputMode="numeric"
                     maxLength={6}
                     autoFocus
-                    className="w-full border border-gray-300 rounded-lg px-3 py-3 text-lg tracking-[0.5em] text-center font-semibold focus:outline-none focus:border-[#E8A33D] focus:ring-2 focus:ring-[#E8A33D]/20 transition-colors"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-3 text-lg tracking-[0.5em] text-center font-semibold focus:outline-none focus:border-[#FEA406] focus:ring-2 focus:ring-[#FEA406]/20 transition-colors"
                     placeholder="••••••"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}

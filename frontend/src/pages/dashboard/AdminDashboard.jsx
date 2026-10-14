@@ -140,7 +140,7 @@ function Avatar({ user, size = "md" }) {
   }
   return (
     <div
-      className={`${sizeClass} rounded-full bg-[#E8A33D] flex items-center justify-center text-[#101A2E] font-bold`}
+      className={`${sizeClass} rounded-full bg-[#FEA406] flex items-center justify-center text-[#101A2E] font-bold`}
     >
       {initial}
     </div>
@@ -215,7 +215,7 @@ function LanguageSwitcher({ lang, setLang }) {
                 </span>
                 {lang === l.code && (
                   <svg
-                    className="w-4 h-4 text-[#E8A33D]"
+                    className="w-4 h-4 text-[#FEA406]"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -296,8 +296,9 @@ export default function AdminDashboard() {
   const canAccess = (sectionKey) => {
     // Always-accessible personal sections
     if (sectionKey === "profile" || sectionKey === "overview") return true;
-    // Fail closed when roles haven't loaded
-    if (!rolesReady) return false;
+    // Fail OPEN while roles hydrate, so the admin always sees the nav.
+    // The actual API endpoints remain enforced server-side.
+    if (!rolesReady) return true;
     if (!staffRole) return false;
     if (staffRole.key === "super_admin" || staffRole.key === "admin") return true;
     return (staffRole.permissions || []).includes(sectionKey);
@@ -461,7 +462,7 @@ export default function AdminDashboard() {
           >
             SokoMkononi
           </span>
-          <span className="text-[10px] font-semibold bg-[#E8A33D]/20 text-[#E8A33D] px-2.5 py-0.5 rounded-full shrink-0">
+          <span className="text-[10px] font-semibold bg-[#FEA406]/20 text-[#FEA406] px-2.5 py-0.5 rounded-full shrink-0">
             ADMIN
           </span>
           {staffRole && staffRole.key !== "super_admin" && (
@@ -594,7 +595,7 @@ export default function AdminDashboard() {
           <div className="relative">
             <button
               onClick={() => setProfileMenuOpen((v) => !v)}
-              className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#E8A33D]/40"
+              className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#FEA406]/40"
               aria-label={lang === "sw" ? "Menyu ya wasifu" : "Profile menu"}
             >
               <Avatar user={user} />

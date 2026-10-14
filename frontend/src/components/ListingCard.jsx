@@ -42,7 +42,7 @@ export default function ListingCard({
     listing.imageUrl ||
     category?.imageUrl ||
     null;
-  const extra = photos.length > 1 ? photos.length : 0;
+  const extra = photos.length > 1 ? photos.length - 1 : 0;
   const chip = STATUS_CHIP[listing.status];
   const featured = isBoostActive(listing);
   const sold = listing.status === "sold";

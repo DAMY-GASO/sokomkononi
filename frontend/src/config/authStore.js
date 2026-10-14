@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { authApi, setUnauthorizedHandler } from "../api/index.js";
 import { clearTokens as clearJWT, setTokens, api as apiClient } from "../api/client.js";
 import { getSessionScope } from "./adminPath.js";
+import { resetMyListingsUserCache } from "./listingsStore.js";
+import { resetDealsUserCache } from "./dealsStore.js";
 
 // User wa admin na wa kawaida wanahifadhiwa kwenye keys tofauti (angalia adminPath.getSessionScope)
 const USER_KEYS = {
@@ -121,6 +123,8 @@ function hardReset() {
   clearJWT();
   resetHydrateCache();
   wipeUserScopedCaches();   // 🔒 Prevent user-A data leaking into user-B session
+  resetMyListingsUserCache();
+  resetDealsUserCache();
   if (typeof window === "undefined") return;
   const AUTH_KEYS =
     getSessionScope() === "admin"
@@ -400,7 +404,7 @@ export async function verifyOtpAsync({
     lastHydrateAt = Date.now();
     return { ok: true, user };
   } catch (err) {
-    hardReset();
+    if (err?.status === 401) hardReset();
     console.warn("[authStore] verifyOtp failed:", err);
     return { ok: false, error: err };
   }

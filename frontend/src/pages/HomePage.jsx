@@ -85,9 +85,11 @@ export default function HomePage() {
     [liveListings]
   );
 
-  // Fixed marketing stats shown on the hero
+  // Marketing stats — placeholder until backend exposes /public-stats/.
+  // Never present fabricated counts as authoritative; keep as strings
+  // and label them as approximate on the UI if needed.
   const stats = useMemo(
-    () => ({ listings: 500, users: 140000, rating: "4.7" }),
+    () => ({ listings: "500+", users: "140k+", rating: "4.7" }),
     []
   );
 

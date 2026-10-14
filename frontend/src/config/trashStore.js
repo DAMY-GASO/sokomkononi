@@ -10,7 +10,7 @@ const ITEMS_KEY = "sokomkononi_trash_items_v1";
 const EV = "sokomkononi:trash-updated";
 
 export const TRASH_TYPES = [
-  { key: "listings",      label: { sw: "Mali ", en: "Listings" },      iconKey: "Home",       color: "#E8A33D" },
+  { key: "listings",      label: { sw: "Mali ", en: "Listings" },      iconKey: "Home",       color: "#FEA406" },
   { key: "users",         label: { sw: "Watumiaji", en: "Users" },                iconKey: "Users",      color: "#2563EB" },
   { key: "verifications", label: { sw: "Uthibitisho", en: "Verifications" },      iconKey: "ShieldCheck", color: "#2F6D4F" },
   { key: "tickets",       label: { sw: "Tiketi", en: "Tickets" },                iconKey: "Headphones", color: "#C1502E" },
@@ -141,6 +141,10 @@ function apiType(key) {
   return encodeURIComponent((bt && bt[key]) || key);
 }
 function adjustCount(o, type, delta) {
+  if (delta !== "all" && Number(delta) > 0) {
+    console.warn("[trashStore] adjustCount called with positive delta:", delta);
+    return o;
+  }
   const next = { ...o, others: (o.others || []).map((x) => ({ ...x })) };
   let removed = 0;
   if (TRASH_TYPES.some((t) => t.key === type)) {

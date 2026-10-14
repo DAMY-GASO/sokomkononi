@@ -164,7 +164,7 @@ function ValueCard({ value, lang }) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col items-center text-center gap-3 hover:shadow-md transition-shadow">
-      <div className="w-12 h-12 rounded-xl bg-[#E8A33D]/10 flex items-center justify-center flex-shrink-0">
+      <div className="w-12 h-12 rounded-xl bg-[#FEA406]/10 flex items-center justify-center flex-shrink-0">
         <Icon size={22} color={COLORS.gold} />
       </div>
       <h3 className="font-bold text-primary text-base">{value.title}</h3>
@@ -283,7 +283,7 @@ export default function AboutPage() {
           </Link>
 
           <div className="flex flex-col items-center text-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-[#E8A33D]/20 flex items-center justify-center flex-shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-[#FEA406]/20 flex items-center justify-center flex-shrink-0">
               <Info size={28} color={COLORS.gold} />
             </div>
             <div>
@@ -306,7 +306,7 @@ export default function AboutPage() {
           {/* Mission */}
           <div className="bg-white rounded-xl border border-gray-100 p-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-xl bg-[#E8A33D]/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-[#FEA406]/10 flex items-center justify-center flex-shrink-0">
                 <Target size={22} color={COLORS.gold} />
               </div>
               <h2 className="font-bold text-primary text-lg">
@@ -387,7 +387,7 @@ export default function AboutPage() {
       {/* CTA — CONTACT */}
       {/* ============================================================ */}
       <section className="max-w-5xl mx-auto px-4 py-10">
-        <div className="bg-[#E8A33D]/5 border border-[#E8A33D]/20 rounded-xl p-6 text-center">
+        <div className="bg-[#FEA406]/5 border border-[#FEA406]/20 rounded-xl p-6 text-center">
           <h3 className="font-bold text-primary text-lg mb-2">
             {lang === "sw" ? "Unahitaji Msaada Zaidi?" : "Need More Help?"}
           </h3>
@@ -398,7 +398,7 @@ export default function AboutPage() {
           </p>
           <Link
             to="/mawasiliano"
-            className="inline-block bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] px-6 py-2.5 rounded-xl font-semibold text-sm transition-colors"
+            className="inline-block bg-[#FEA406] hover:bg-[#D98706] text-[#101A2E] px-6 py-2.5 rounded-xl font-semibold text-sm transition-colors"
           >
             {lang === "sw" ? "Wasiliana Nasi" : "Contact Us"}
           </Link>

@@ -646,7 +646,7 @@ export default function DashboardShell() {
       return <BundlesPage />;
     }
     if (activeKey === "verification") {
-      return <MyVerificationsPanel />;
+      return <MyVerificationsPanel side={side} />;
     }
     if (activeKey === "feedback") {
       return <SellerFeedback side={side} />;
@@ -930,7 +930,7 @@ export default function DashboardShell() {
                 e.stopPropagation();
                 setUserMenuOpen((v) => !v);
               }}
-              className="rounded-full transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#E8A33D]/50"
+              className="rounded-full transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#FEA406]/50"
               aria-label={t("Menyu ya mtumiaji", "User menu")}
               aria-expanded={userMenuOpen}
             >

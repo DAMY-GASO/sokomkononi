@@ -136,7 +136,11 @@ function readSeen() {
 }
 function writeSeen(map) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(SEEN_KEY, JSON.stringify(map));
+  const capped = {};
+  for (const [k, v] of Object.entries(map || {})) {
+    if (Array.isArray(v)) capped[k] = v.slice(-500);
+  }
+  window.localStorage.setItem(SEEN_KEY, JSON.stringify(capped));
 }
 
 function match(search, listing) {
