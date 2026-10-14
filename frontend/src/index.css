@@ -337,3 +337,280 @@ html, body {
     white-space: nowrap;
   }
 }
+
+/* ============================================================
+   BATCH-A-THEME — themeable semantic tokens
+   :root = light, html.dark = dark.
+   Uses the same RGB-channel convention as the brand tokens so
+   Tailwind alpha modifiers (`bg-card/50`) keep working.
+   ============================================================ */
+:root {
+  --c-page:     244 247 252;   /* sand */
+  --c-card:     255 255 255;   /* white */
+  --c-hairline: 220 228 242;   /* sandline */
+  --text-primary:   #111827;
+  --text-secondary: #6B7280;
+  --text-muted:     #9CA3AF;
+}
+
+html.dark {
+  --c-page:     1 15 58;       /* night-deep */
+  --c-card:     1 25 87;       /* night */
+  --c-hairline: 4 36 117;      /* night-soft */
+  --text-primary:   #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.72);
+  --text-muted:     rgba(255, 255, 255, 0.42);
+}
+
+/* Global body background flips with the theme */
+html.dark body {
+  background: rgb(var(--c-page));
+  color: #ffffff;
+}
+
+/* Utility overrides — common Tailwind surface classes follow
+   the theme automatically so existing pages flip without edits. */
+html.dark .bg-white     { background-color: rgb(var(--c-card)) !important; }
+html.dark .bg-sand      { background-color: rgb(var(--c-page)) !important; }
+html.dark .bg-gray-50   { background-color: rgba(255, 255, 255, 0.03) !important; }
+html.dark .bg-gray-100  { background-color: rgba(255, 255, 255, 0.06) !important; }
+html.dark .border-gray-100 { border-color: rgba(255, 255, 255, 0.08) !important; }
+html.dark .border-gray-200 { border-color: rgba(255, 255, 255, 0.14) !important; }
+html.dark .border-gray-300 { border-color: rgba(255, 255, 255, 0.20) !important; }
+html.dark .text-gray-800,
+html.dark .text-gray-700 { color: #ffffff !important; }
+html.dark .text-gray-600,
+html.dark .text-gray-500 { color: rgba(255, 255, 255, 0.68) !important; }
+html.dark .text-gray-400 { color: rgba(255, 255, 255, 0.42) !important; }
+
+/* Focus ring adapts */
+html.dark :focus-visible {
+  outline-color: rgb(var(--c-gold));
+}
+
+/* Smooth theme transition */
+html, body, .bg-white, .bg-sand, .bg-card, .bg-page {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  html, body, .bg-white, .bg-sand, .bg-card, .bg-page {
+    transition: none;
+  }
+}
+
+/* ============================================================
+   BATCH-C — Gradient CTA utility + dashboard overrides
+   Replaces the flat bg-gold on primary action buttons with the
+   brand gradient. Everything else (badges, hints) keeps bg-gold.
+   ============================================================ */
+.cta-gradient {
+  background: linear-gradient(135deg, #FEA406 0%, #FD8706 100%) !important;
+  color: #011957 !important;
+  transition: filter .18s ease, transform .18s ease;
+}
+.cta-gradient:hover:not(:disabled):not([aria-disabled="true"]) {
+  filter: brightness(1.05);
+}
+.cta-gradient:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(1px);
+}
+.cta-gradient:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Dark-mode dashboard shells flip with the theme */
+html.dark [data-surface="sand"] {
+  background: rgb(var(--c-page)) !important;
+}
+html.dark [data-surface="sand-line"] {
+  border-color: rgb(var(--c-hairline)) !important;
+}
+html.dark [data-surface="night"] {
+  background: rgb(var(--c-card)) !important;
+}
+
+/* ============================================================
+   BATCH-E-DARK-SWEEP
+   Force every remaining light surface to a dark equivalent when
+   html.dark is active. Catches:
+     • Tailwind utilities: bg-white, bg-gray-50/100/200, bg-sand...
+     • Inline styles:       style={{ background: "white" }}
+                            style={{ background: COLORS.sand }}
+                            style={{ background: "#F5F3EC" }}
+     • Arbitrary values:    class="bg-[#F5F3EC]" ...
+   Prefer the theme tokens --c-page / --c-card / --c-hairline so
+   nothing hardcodes a color twice.
+   ============================================================ */
+
+/* ── 1. Tailwind background utilities ─────────────────────── */
+
+html.dark .bg-white,
+html.dark .bg-white\/50,
+html.dark .bg-white\/80,
+html.dark .bg-white\/90,
+html.dark .bg-white\/95 {
+  background-color: rgb(var(--c-card)) !important;
+}
+
+/* gray-50/100/200 → subtle elevations above the card base, so hover
+   states still read as a visible change instead of flat navy. */
+html.dark .bg-gray-50,
+html.dark .bg-neutral-50,
+html.dark .bg-zinc-50,
+html.dark .bg-slate-50,
+html.dark .bg-stone-50 {
+  background-color: rgba(255, 255, 255, 0.035) !important;
+}
+html.dark .bg-gray-100,
+html.dark .bg-neutral-100,
+html.dark .bg-zinc-100,
+html.dark .bg-slate-100,
+html.dark .bg-stone-100 {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+html.dark .bg-gray-200,
+html.dark .bg-neutral-200,
+html.dark .bg-zinc-200,
+html.dark .bg-slate-200,
+html.dark .bg-stone-200 {
+  background-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+/* Sand / sandline brand tokens map to page + hairline */
+html.dark .bg-sand {
+  background-color: rgb(var(--c-page)) !important;
+}
+html.dark .bg-sandline {
+  background-color: rgb(var(--c-page)) !important;
+}
+
+/* Arbitrary-value classes: bg-[#F5F3EC], bg-[#F4F7FC], bg-[#DCE4F2] */
+html.dark [class*="bg-[#F5F3EC]"],
+html.dark [class*="bg-[#f5f3ec]"],
+html.dark [class*="bg-[#F4F7FC]"],
+html.dark [class*="bg-[#f4f7fc]"] {
+  background-color: rgb(var(--c-page)) !important;
+}
+html.dark [class*="bg-[#DCE4F2]"],
+html.dark [class*="bg-[#dce4f2]"] {
+  background-color: rgb(var(--c-hairline)) !important;
+}
+
+/* ── 2. Inline style attributes ───────────────────────────── */
+
+/* Pure white — React serializes `background: "white"` to that exact
+   string. Match all case variants + hex + rgb forms. */
+html.dark [style*="background: white" i],
+html.dark [style*="background:white" i],
+html.dark [style*="background:#FFF" i],
+html.dark [style*="background: #FFF" i],
+html.dark [style*="background:#FFFFFF" i],
+html.dark [style*="background: #FFFFFF" i],
+html.dark [style*="background:#ffffff" i],
+html.dark [style*="background: #ffffff" i],
+html.dark [style*="background: rgb(255, 255, 255)"],
+html.dark [style*="background:rgb(255,255,255)"],
+html.dark [style*="background-color: white" i],
+html.dark [style*="background-color:white" i],
+html.dark [style*="background-color:#FFF" i],
+html.dark [style*="background-color: #FFF" i],
+html.dark [style*="background-color:#FFFFFF" i],
+html.dark [style*="background-color: #FFFFFF" i] {
+  background-color: rgb(var(--c-card)) !important;
+  background-image: none !important;
+}
+
+/* Sand / off-white inline backgrounds (COLORS.sand, COLORS.sandLine, #F5F3EC) */
+html.dark [style*="#F4F7FC" i],
+html.dark [style*="#DCE4F2" i],
+html.dark [style*="#F5F3EC" i],
+html.dark [style*="rgb(244, 247, 252)"],
+html.dark [style*="rgb(244,247,252)"],
+html.dark [style*="rgb(220, 228, 242)"],
+html.dark [style*="rgb(220,228,242)"],
+html.dark [style*="rgb(245, 243, 236)"],
+html.dark [style*="rgb(245,243,236)"] {
+  background-color: rgb(var(--c-page)) !important;
+  background-image: none !important;
+}
+
+/* ── 3. Tailwind arbitrary bg classes that carry color channels ── */
+/* (bg-[rgba(255,255,255,...)], bg-white/5, bg-white/10 — leave those
+   alone; they are already translucent and read correctly on dark.) */
+
+/* ── 4. Common light-mode borders → hairline ───────────────── */
+
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300,
+html.dark .border-neutral-100,
+html.dark .border-neutral-200,
+html.dark .border-zinc-100,
+html.dark .border-slate-100,
+html.dark .border-sandline {
+  border-color: rgb(var(--c-hairline)) !important;
+}
+
+/* ── 5. Table + list separators ────────────────────────────── */
+
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ── 6. Form controls — inputs, selects, textareas ────────── */
+
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark textarea,
+html.dark select {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: rgba(255, 255, 255, 0.38) !important;
+}
+html.dark select option {
+  background-color: #011957 !important;
+  color: #ffffff !important;
+}
+
+/* Disabled inputs keep a flatter look */
+html.dark input:disabled,
+html.dark textarea:disabled,
+html.dark select:disabled {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  color: rgba(255, 255, 255, 0.42) !important;
+}
+
+/* ── 7. Modal + overlay surfaces ─────────────────────────── */
+
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  /* shadows stay, but cast onto a darker backdrop — safe to leave. */
+}
+
+/* ── 8. Tooltips, popovers, dropdowns ────────────────────── */
+
+html.dark [role="menu"],
+html.dark [role="dialog"] > div:not([data-keep-light]) {
+  background-color: rgb(var(--c-card)) !important;
+  border-color: rgb(var(--c-hairline)) !important;
+}
+
+/* ── 9. Buttons that hardcode bg-white or bg-gray ────────── */
+
+html.dark button.bg-white,
+html.dark button.bg-gray-50,
+html.dark button.bg-gray-100 {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ── 10. Card surfaces with class + inline (card utility already
+   flips, but make the muted variant readable too) ─────────── */
+
+html.dark .bg-muted,
+html.dark [data-bg="white"] {
+  background-color: rgb(var(--c-card)) !important;
+}

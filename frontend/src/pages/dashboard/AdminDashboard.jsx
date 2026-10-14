@@ -440,8 +440,8 @@ export default function AdminDashboard() {
 
   return (
     <div
-      style={{ background: COLORS.sand }}
-      className="min-h-screen w-full overflow-x-hidden"
+      data-surface="sand"
+      className="bg-page min-h-screen w-full overflow-x-hidden"
     >
       <header
         style={{ background: COLORS.night }}

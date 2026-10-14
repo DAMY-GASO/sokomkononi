@@ -775,11 +775,8 @@ export default function DashboardShell() {
 
   return (
     <div
-      style={{
-        background: COLORS.sand,
-        minHeight: "100vh",
-      }}
-      className="w-full flex flex-col pb-16 md:pb-0"
+      data-surface="sand"
+      className="bg-page w-full flex flex-col pb-16 md:pb-0 min-h-screen"
     >
       {/* TOP HEADER */}
       <header

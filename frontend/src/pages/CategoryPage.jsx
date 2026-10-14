@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import ListingCard from "../components/ListingCard.jsx";
+import ListingCardShop from "../components/shop/ListingCardShop.jsx";
 import {
   Grid3x3,
   List,
@@ -585,13 +586,12 @@ export default function CategoryPage() {
                       (c) => c.key === property.category
                     );
                     return (
-                      <ListingCard
+                      <ListingCardShop
                         key={property.id}
                         listing={property}
                         category={cat}
                         Icon={getCategoryIcon(cat?.iconKey)}
                         lang={lang}
-                        viewMode={viewMode}
                         isSaved={savedIds.includes(property.id)}
                         onToggleSave={handleToggleSave}
                       />

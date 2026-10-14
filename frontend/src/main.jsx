@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { applyTheme, getTheme } from "./config/themeStore.js";
 import "./index.css";
 
 // SokoMkononi uses Bearer tokens, not cookies. Any leftover `sessionid`
@@ -26,6 +27,9 @@ function purgeStaleCsrfCookies() {
   } catch { /* noop */ }
 }
 purgeStaleCsrfCookies();
+
+// Apply the persisted theme before first render.
+applyTheme(getTheme());
 
 
 // ── Register undo restore handlers (survive page reload) ──

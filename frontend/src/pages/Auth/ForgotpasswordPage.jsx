@@ -281,7 +281,7 @@ export default function ForgotPasswordPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-btn transition-colors disabled:opacity-60"
+                    className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn"
                   >
                     {loading ? t("forgot_sending_otp") : t("forgot_continue")}
                   </button>
@@ -323,7 +323,7 @@ export default function ForgotPasswordPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-btn transition-colors disabled:opacity-60"
+                    className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn"
                   >
                     {loading ? t("forgot_verifying") : t("forgot_continue")}
                   </button>
@@ -388,7 +388,7 @@ export default function ForgotPasswordPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-btn transition-colors disabled:opacity-60"
+                    className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn"
                   >
                     {loading ? t("forgot_verifying") : t("forgot_verify_submit")}
                   </button>
@@ -406,7 +406,7 @@ export default function ForgotPasswordPage() {
                 <p className="text-secondary text-body-sm mb-7 leading-relaxed">{t("forgot_success_subtext")}</p>
                 <button
                   onClick={() => navigate("/login")}
-                  className="w-full bg-[#E8A33D] hover:bg-[#B87A1F] text-[#101A2E] py-2.5 rounded-lg font-semibold text-btn transition-colors"
+                  className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn"
                 >
                   {t("forgot_go_to_login")}
                 </button>

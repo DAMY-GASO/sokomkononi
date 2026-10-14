@@ -262,7 +262,7 @@ export default function RegisterPage() {
 
                   <button
                     disabled={loading || !agreedToTerms || (isCaptchaEnabled && !captchaToken)}
-                    className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-lg font-semibold text-btn transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn disabled:cursor-not-allowed"
                   >
                     {loading ? t("register_sending_otp") : t("register_continue")}
                   </button>
@@ -300,7 +300,7 @@ export default function RegisterPage() {
                   {error && <p className="text-rust text-body-sm">{error}</p>}
                   <button
                     disabled={loading}
-                    className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-lg font-semibold text-btn transition-colors disabled:opacity-60"
+                    className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn"
                   >
                     {loading ? t("register_verifying") : t("register_verify_submit")}
                   </button>

@@ -29,6 +29,7 @@ import {
 
 import PageLoader from "../components/PageLoader.jsx";
 import { usePrivacy } from "../config/contentStore.js";
+import NewsletterStrip from "../components/NewsletterStrip.jsx";
 
 
 // ============================================================
@@ -503,7 +504,9 @@ export default function PrivacyPage() {
         </div>
       </div>
 
-      <Footer />
+      <NewsletterStrip variant="compact" />
+
+      <Footer  />
       <BottomNav />
     </div>
   );

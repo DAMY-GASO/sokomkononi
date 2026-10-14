@@ -5,6 +5,7 @@
 const c = (name) => `rgb(var(--c-${name}) / <alpha-value>)`;
 
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
@@ -34,6 +35,11 @@ export default {
         flame: c("flame"),
         sand: c("sand"),
         sandline: c("sandline"),
+
+        // ── Themeable semantic surfaces (light ↔ dark) ──
+        page: c("page"),
+        card: c("card"),
+        hairline: c("hairline"),
 
         // ── Semantic (hazitokani na logo kwa makusudi) ─────────
         green: "#2F6D4F", // success

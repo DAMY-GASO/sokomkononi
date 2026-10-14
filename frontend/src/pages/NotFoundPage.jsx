@@ -7,6 +7,7 @@ import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import NewsletterStrip from "../components/NewsletterStrip.jsx";
 
 export default function NotFoundPage() {
   const { lang } = useLanguage();
@@ -43,7 +44,8 @@ export default function NotFoundPage() {
           </div>
         </div>
       </main>
-      <Footer selectedLang={lang} />
+      <NewsletterStrip variant="compact" />
+      <Footer selectedLang={lang}  />
       <BottomNav />
     </div>
   );

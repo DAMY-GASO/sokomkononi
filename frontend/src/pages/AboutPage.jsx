@@ -29,6 +29,7 @@ import {
 
 import PageLoader from "../components/PageLoader.jsx";
 import { useAbout } from "../config/contentStore.js";
+import NewsletterStrip from "../components/NewsletterStrip.jsx";
 
 
 // ============================================================
@@ -404,7 +405,9 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <Footer />
+      <NewsletterStrip variant="compact" />
+
+      <Footer  />
       <BottomNav />
     </div>
   );

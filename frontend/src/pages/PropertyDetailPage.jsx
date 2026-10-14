@@ -9,6 +9,7 @@ import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import ListingImage from "../components/ListingImage.jsx";
+import BenefitTiles from "../components/shop/BenefitTiles.jsx";
 import {
   MapPin, Bed, Bath, Maximize, Calendar, Heart, Share2, Phone,
   MessageSquare, ChevronLeft, ChevronRight, CheckCircle, Shield,
@@ -976,6 +977,9 @@ export default function PropertyDetailPage() {
                 )}
               </div>
             </div>
+
+            {/* Benefit tiles — matches the product-detail template */}
+            <BenefitTiles />
           </div>
 
           <div className="lg:col-span-1 space-y-4">

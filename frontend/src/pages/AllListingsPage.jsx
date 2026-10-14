@@ -7,6 +7,9 @@ import BottomNav from "../components/BottomNav.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
 import ListingCard from "../components/ListingCard.jsx";
+import ListingCardShop from "../components/shop/ListingCardShop.jsx";
+import SortDropdown from "../components/shop/SortDropdown.jsx";
+import Pagination from "../components/shop/Pagination.jsx";
 import {
   useActiveCategories,
   getCategoryIcon,

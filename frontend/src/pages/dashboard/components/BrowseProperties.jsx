@@ -19,6 +19,7 @@ import {
 } from "./shared";
 import { usePublicListings } from "../../../config/listingsStore.js";
 import ListingCard from "../../../components/ListingCard.jsx";
+import ListingCardShop from "../../../components/shop/ListingCardShop.jsx";
 import {
   useSavedIds,
   toggleSaved,
@@ -595,13 +596,12 @@ export default function BrowseProperties({
                   {paginatedProperties.map((property) => {
                     const cat = getCategory(property.category);
                     return (
-                      <ListingCard
+                      <ListingCardShop
                         key={property.id}
                         listing={property}
                         category={cat}
                         Icon={getCategoryIcon(cat?.iconKey)}
                         lang={lang}
-                        viewMode={viewMode}
                         isSaved={savedIds.includes(property.id)}
                         onToggleSave={toggleSave}
                       />

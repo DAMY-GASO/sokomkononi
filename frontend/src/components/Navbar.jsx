@@ -26,6 +26,8 @@ import { useAuth, logoutAsync } from "../config/authStore.js";
 import { useNotifications } from "../config/notificationsStore.js";
 import { useDashboardSide } from "../config/dashboardSideStore.js";
 import { useAttribution } from "../context/AttributionContext.jsx";
+import ThemeToggle from "./ThemeToggle.jsx";
+import AnnouncementBar from "./AnnouncementBar.jsx";
 
 // ─────────────────────────────────────────────────────────────
 function NotificationBell() {
@@ -204,6 +206,7 @@ export default function Navbar({
 
   return (
     <>
+      <AnnouncementBar />
       {/* ═════════════════════════════════════════════════════ */}
       {/* HEADER                                                */}
       {/* ═════════════════════════════════════════════════════ */}
@@ -419,6 +422,8 @@ export default function Navbar({
                 </div>
               )}
             </div>
+
+            <ThemeToggle />
 
             <NotificationBell />
 

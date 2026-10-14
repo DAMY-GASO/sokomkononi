@@ -13,6 +13,7 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
+import NewsletterStrip from "../components/NewsletterStrip.jsx";
 
 const FB_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID || "";
 const enc = encodeURIComponent;
@@ -220,7 +221,9 @@ export default function InviteFriendsPage() {
         </div>
       </main>
 
-      <Footer />
+      <NewsletterStrip variant="compact" />
+
+      <Footer  />
       <BottomNav />
     </div>
   );

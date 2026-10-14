@@ -7,6 +7,7 @@ import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../config/authStore.js";
+import NewsletterStrip from "../components/NewsletterStrip.jsx";
 
 // ============================================================
 // STEP FLOW — hatua zimepangwa wima, zimeunganishwa na mstari.
@@ -281,7 +282,9 @@ export default function JinsiYaKununuaNaKuuza() {
         </p>
       </section>
 
-      <Footer selectedLang={lang} />
+      <NewsletterStrip variant="compact" />
+
+      <Footer selectedLang={lang}  />
       <BottomNav />
     </div>
   );

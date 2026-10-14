@@ -465,8 +465,7 @@ export default function MyListings({
         </div>
         <button
           onClick={onPostNew}
-          style={{ background: COLORS.gold, color: COLORS.night }}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 hover:opacity-90 transition-opacity"
+          className="cta-gradient flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
         >
           <PlusCircle size={14} />
           {t("Weka Mpya", "Post New")}

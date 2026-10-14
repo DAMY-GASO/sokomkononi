@@ -26,6 +26,7 @@ import {
 
 import PageLoader from "../components/PageLoader.jsx";
 import { useTerms } from "../config/contentStore.js";
+import NewsletterStrip from "../components/NewsletterStrip.jsx";
 
 
 // ============================================================
@@ -460,7 +461,9 @@ export default function TermsPage() {
         </div>
       </div>
 
-      <Footer />
+      <NewsletterStrip variant="compact" />
+
+      <Footer  />
       <BottomNav />
     </div>
   );

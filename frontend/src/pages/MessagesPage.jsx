@@ -222,8 +222,7 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang, loading }) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
-        className="flex items-center gap-3 border-b px-3 sm:px-4 py-3 shrink-0"
+        className="flex items-center gap-3 border-b border-hairline bg-card px-3 sm:px-4 py-3 shrink-0"
       >
         <button
           onClick={onBack}
@@ -309,8 +308,7 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang, loading }) {
       {/* Messages */}
       <div
         ref={scrollRef}
-        style={{ background: COLORS.sand }}
-        className="flex-1 overflow-y-auto px-3 sm:px-4 py-4"
+        className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 bg-sand"
       >
         {loading && grouped.length === 0 ? (
           <div className="h-full flex items-center justify-center">
@@ -413,8 +411,7 @@ function ChatView({ convo, currentUserId, onBack, onSend, lang, loading }) {
 
       {/* Composer */}
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
-        className="flex items-center gap-2 p-2.5 sm:p-3 border-t shrink-0"
+        className="flex items-center gap-2 p-2.5 sm:p-3 border-t border-hairline bg-card shrink-0"
       >
         <input
           style={{
@@ -562,8 +559,7 @@ export default function MessagesPage({ initialConversationId = null }) {
     >
       {/* ── Header bar ───────────────────────────────────── */}
       <div
-        style={{ background: "white", borderColor: COLORS.sandLine }}
-        className="border-b px-3 sm:px-5 py-3 flex items-center gap-3 shrink-0"
+        className="border-b border-hairline bg-card px-3 sm:px-5 py-3 flex items-center gap-3 shrink-0"
       >
         <h1
           style={{ color: "var(--text-primary)" }}

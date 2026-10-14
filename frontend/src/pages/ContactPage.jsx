@@ -15,6 +15,7 @@ import { contactApi } from "../api/contact.js";
 import PageLoader from "../components/PageLoader.jsx";
 import FaqAccordion from "../components/FaqAccordion.jsx";
 import { faqs } from "../config/FaqsData.js";
+import NewsletterStrip from "../components/NewsletterStrip.jsx";
 
 export default function ContactPage() {
   const { t, lang } = useLanguage();
@@ -213,7 +214,8 @@ export default function ContactPage() {
       </section>
 
       <BottomNav />
-      <Footer selectedLang={lang} />
+      <NewsletterStrip variant="compact" />
+      <Footer selectedLang={lang}  />
     </div>
   );
 }

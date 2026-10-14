@@ -1,5 +1,5 @@
 // ============================================================
-// Toast.jsx — Global toast system
+// Toast.jsx — Global toast system   [BATCH-E-TOAST]
 // ============================================================
 import React, {
   createContext, useContext, useState, useCallback, useEffect, useRef, useMemo,
@@ -23,7 +23,7 @@ const TONES = {
   error:   { fg: COLORS.rust,  bg: "rgba(193,80,46,0.08)", border: COLORS.rust },
   warning: { fg: "#8A5A16",    bg: "rgba(232,163,61,0.10)", border: COLORS.gold },
   info:    { fg: COLORS.night, bg: "rgba(16,26,46,0.06)", border: COLORS.night },
-  loading: { fg: COLORS.night, bg: "white", border: COLORS.sandLine },
+  loading: { fg: COLORS.night, bg: "rgba(16,26,46,0.06)", border: COLORS.sandLine },
 };
 
 export function ToastProvider({ children }) {
@@ -110,8 +110,9 @@ export function ToastProvider({ children }) {
               key={t.id}
               role="status"
               aria-live="polite"
-              className="pointer-events-auto rounded-xl border shadow-lg px-3.5 py-3 flex items-start gap-2.5"
-              style={{ background: "white", borderColor: tone.border }}
+              data-batch-e-toast
+              className="pointer-events-auto rounded-xl border shadow-lg px-3.5 py-3 flex items-start gap-2.5 bg-card"
+              style={{ borderColor: tone.border }}
             >
               <div
                 className="shrink-0 rounded-lg flex items-center justify-center w-7 h-7"
