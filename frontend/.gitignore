@@ -1,5 +1,4 @@
 node_modules/
-COPY .env .env
 .env.local
 .env.development
 dist/
