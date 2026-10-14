@@ -23,7 +23,6 @@ ENV VITE_ADMIN_PATH=$VITE_ADMIN_PATH
 ENV VITE_FACEBOOK_APP_ID=$VITE_FACEBOOK_APP_ID
 ENV VITE_CREDITS_CONSUME_PATH=$VITE_CREDITS_CONSUME_PATH
 
-
 RUN rm -rf /app/dist /app/node_modules/.vite && npm run build
 
 # ---- Serve stage ----
