@@ -45,7 +45,8 @@ export const fetchActivities = async (signal) => {
 export const fetchPreferences = async (signal) => {
   const r = await safe(api.get(PATHS.preferences), signal);
   if (!r.ok) return r;
-  const d = r.data || {};
+  // Defensive: backend may return {preferences: {...}} or {...} directly.
+  const d = r.data?.preferences ?? r.data?.data ?? r.data ?? {};
   return {
     ...r,
     data: {
@@ -75,7 +76,8 @@ export const savePreferences = (p) =>
 export const fetchNotificationPrefs = async (signal) => {
   const r = await safe(api.get(PATHS.notificationPrefs), signal);
   if (!r.ok) return r;
-  return { ok: true, data: r.data || {} };
+  const d = r.data?.preferences ?? r.data?.data ?? r.data ?? {};
+  return { ok: true, data: d };
 };
 
 export const saveNotificationPrefs = (partial) =>

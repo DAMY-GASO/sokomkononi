@@ -42,8 +42,16 @@ export const authApi = {
     api.post("/auth/resend-otp/", { identifier }),
 
   // ----- Profile -----
-  me: () => api.get("/auth/me/"),
-  profile: () => api.get("/auth/profile/"),
+  // Backend returns `{user: {...}}` for /auth/me/ and `{message, profile}`
+  // for /auth/profile/. Unwrap both so callers always get a user object.
+  me: async () => {
+    const data = await api.get("/auth/me/");
+    return data?.user ?? data;
+  },
+  profile: async () => {
+    const data = await api.get("/auth/profile/");
+    return data?.profile ?? data?.user ?? data;
+  },
   updateProfile: (payload) => api.patch("/auth/profile/", payload),
 
   // ----- Password change (logged-in) -----

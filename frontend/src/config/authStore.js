@@ -456,7 +456,8 @@ export async function updateProfileAsync(patch) {
 
 export async function refreshProfileAsync() {
   try {
-    const raw = await authApi.profile();
+    // Use /auth/me/ — always exists. /auth/profile/ is only documented for PATCH.
+    const raw = await authApi.me();
     const user = normalizeUserFromApi(raw);
     if (user) saveUser(user);
     return { ok: true, user };
