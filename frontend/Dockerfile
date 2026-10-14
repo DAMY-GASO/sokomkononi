@@ -4,13 +4,14 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
+COPY .env .env      
 
-ARG VITE_API_BASE_URL
+ARG VITE_API_BASE_URL=https://api.sokomkononi.co.tz/api
 ARG VITE_GOOGLE_CLIENT_ID
 ARG VITE_APPLE_CLIENT_ID
 ARG VITE_APPLE_REDIRECT_URI
 ARG VITE_TURNSTILE_SITE_KEY
-ARG VITE_ADMIN_PATH
+ARG VITE_ADMIN_PATH=/smk-control-9x7k
 ARG VITE_FACEBOOK_APP_ID
 ARG VITE_CREDITS_CONSUME_PATH
 
@@ -23,7 +24,7 @@ ENV VITE_ADMIN_PATH=$VITE_ADMIN_PATH
 ENV VITE_FACEBOOK_APP_ID=$VITE_FACEBOOK_APP_ID
 ENV VITE_CREDITS_CONSUME_PATH=$VITE_CREDITS_CONSUME_PATH
 
-RUN npm run build
+RUN rm -rf /app/dist /app/node_modules/.vite && npm run build
 
 # ---- Serve stage ----
 FROM nginx:1.27-alpine
