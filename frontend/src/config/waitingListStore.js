@@ -98,6 +98,9 @@ export function leaveWaitingList(id) {
 export function useWaitingList() {
   const [list, setList] = useState(() => read());
   useEffect(() => {
+    let hasToken = false;
+    try { hasToken = Boolean(localStorage.getItem("sokomkononi_access")); } catch {}
+    if (!hasToken) return undefined;
     hydrateWaitingListFromApi();
     const sync = () => setList(read());
     window.addEventListener("storage", sync);

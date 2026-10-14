@@ -122,6 +122,10 @@ export async function toggleSaved(id, listing = null) {
 export function useSavedIds() {
   const [ids, setIds] = useState(() => readIds());
   useEffect(() => {
+    // Only hydrate when a user is actually signed in.
+    let hasToken = false;
+    try { hasToken = Boolean(localStorage.getItem("sokomkononi_access")); } catch {}
+    if (!hasToken) return undefined;
     // Throttle price-drop detection to once per hour; otherwise every
     // mount of useSavedIds (which is every listing card) triggers a
     // listings fetch.

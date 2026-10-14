@@ -315,7 +315,11 @@ async function request(path, {
 
   const data = await parseResponse(res);
   if (!res.ok) {
-    if (res.status === 401 && !isPublic) onUnauthorized?.();
+    // Only notify the app of a 401 if we actually had a token to begin with.
+    // Otherwise a logged-out visitor browsing public pages triggers a hard
+    // reset on every page load.
+    const hadToken = Boolean(getAccessToken() || getRefreshToken());
+    if (res.status === 401 && !isPublic && hadToken) onUnauthorized?.();
     throw new ApiError(res.status, data);
   }
   return data;
