@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
-COPY .env .env        # ← ONGEZA HII
+COPY .env .env      
 
 ARG VITE_API_BASE_URL=https://api.sokomkononi.co.tz/api
 ARG VITE_GOOGLE_CLIENT_ID
