@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
 
-ARG VITE_API_BASE_URL
+ARG VITE_API_BASE_URL=https://api.sokomkononi.co.tz/api
 ARG VITE_GOOGLE_CLIENT_ID
 ARG VITE_APPLE_CLIENT_ID
 ARG VITE_APPLE_REDIRECT_URI
