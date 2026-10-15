@@ -55,8 +55,6 @@ export default function BottomNav() {
   const { user } = useAuth();
   const { t, lang } = useLanguage();
   const side = useDashboardSide();
-  const isActive = (p) => (p === "/" ? location.pathname === "/" : location.pathname.startsWith(p));
-  const isBuyer = side === "buyer";
 
   const isActive = (path) => {
     if (!path) return false;
