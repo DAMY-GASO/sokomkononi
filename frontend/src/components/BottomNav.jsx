@@ -33,9 +33,10 @@ const icons = {
       <path d="m21 21-4.3-4.3" />
     </svg>
   ),
-  messages: (
+  myListings: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
+      <path d="M8 6h13M8 12h13M8 18h13" />
+      <path d="M3 6h.01M3 12h.01M3 18h.01" />
     </svg>
   ),
   listings: (
@@ -56,7 +57,7 @@ export default function BottomNav() {
 
   const isActive = (path) => {
     if (!path) return false;
-    // Never treat /login as "active" for Messages/Saved tabs when logged out.
+    // Never treat /login as "active" for Deals/Saved tabs when logged out.
     if (path === "/login") return false;
     if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
@@ -74,19 +75,20 @@ export default function BottomNav() {
     ? (lang === "sw" ? "Tafuta" : "Search")
     : t("nav_sell");
 
-  const messagesTarget = isBuyerSide
-    ? "/dashboard/buyer/messages"
-    : "/dashboard/messages";
-  const messagesLink = user ? messagesTarget : "/login";
+  // Deal Rooms ndiyo sehemu pekee ya mazungumzo (Messages page imeondolewa).
+  const dealsTarget = isBuyerSide
+    ? "/dashboard/buyer/deals"
+    : "/dashboard/deals";
+  const dealsLink = user ? dealsTarget : "/login";
 
   const secondTarget = isBuyerSide
     ? "/dashboard/buyer/saved"
-    : "/dashboard/deals";
+    : "/dashboard/listings";
   const secondLink = user ? secondTarget : "/login";
-  const secondIcon = isBuyerSide ? icons.saved : icons.deals;
+  const secondIcon = isBuyerSide ? icons.saved : icons.myListings;
   const secondLabel = isBuyerSide
     ? t("nav_saved")
-    : (lang === "sw" ? "Deals" : "Deals");
+    : (lang === "sw" ? "Mali Zangu" : "My Listings");
 
   const listingsLink = "/mali-zote";
 
@@ -113,16 +115,16 @@ export default function BottomNav() {
         <span>{actionLabel}</span>
       </Link>
 
-      {/* Messages — wote */}
+      {/* Deals — wote (mazungumzo yote yako hapa) */}
       <Link
-        to={messagesLink}
-        state={!user ? { from: messagesTarget } : undefined}
-        className={`nav-item ${isActive(messagesLink) ? "active" : ""}`}
+        to={dealsLink}
+        state={!user ? { from: dealsTarget } : undefined}
+        className={`nav-item ${isActive(dealsLink) ? "active" : ""}`}
       >
         <span className="relative">
-          {icons.messages}
+          {icons.deals}
         </span>
-        <span>{t("nav_messages")}</span>
+        <span>Deals</span>
       </Link>
 
       {/* Listings — wote */}

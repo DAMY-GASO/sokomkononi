@@ -97,12 +97,6 @@ export default function SellerOverview({ onNavigate }) {
       color: COLORS.green,
     },
     {
-      key: "messages",
-      label: t("Ujumbe", "Messages"),
-      icon: MessageSquare,
-      color: "#2563EB",
-    },
-    {
       key: "deals",
       label: t("Vyumba vya Majadiliano", "Deal Rooms"),
       icon: MessagesSquare,

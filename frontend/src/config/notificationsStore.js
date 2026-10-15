@@ -10,7 +10,6 @@ const KEY = "sokomkononi_notifications_v1";
 const DELETED_KEY = "sokomkononi_notifications_deleted_v1";
 const EV = "sokomkononi:notifications-updated";
 
-// ── Blacklist of IDs the user deleted ─────────────────────────
 function readDeletedSet() {
   if (typeof window === "undefined") return new Set();
   try {
@@ -48,7 +47,6 @@ export function clearDeletedNotifications() {
   writeDeletedSet(new Set());
 }
 
-// ── Type normalizer — backend sends UPPERCASE enums, page uses short keys
 function mapNotificationType(rawType) {
   const t = String(rawType || "").toUpperCase();
   if (!t) return "system";
@@ -247,7 +245,6 @@ export async function clearNotificationsAsync(audience) {
   try {
     await notificationsApi.hardRemoveAll({ audience: target });
   } catch (err) {
-    // fall through — local state is already correct
   }
 
   const remaining = read().filter((n) => {
@@ -349,20 +346,12 @@ export function getLocalizedField(field, lang = "sw") {
   return field?.[lang] || field?.sw || field?.en || "";
 }
 
-// ============================================================
-// ROUTE RESOLVER
-// ============================================================
-// ✅ FIX: Tumia `notif.rawType` (mfano "LISTING_APPROVED") badala ya
-//         `notif.type` (mfano "listing_released") — kwa sababu switch
-//         cases zinatumia raw types kutoka backend.
-// ✅ FIX: `notificationCtaKey()` sasa inatumia `rawType` pia.
-// ============================================================
+
 export function resolveNotificationRoute(notif, side = "seller") {
   if (!notif) return "/dashboard/notifications";
 
   const prefix = side === "buyer" ? "/dashboard/buyer" : "/dashboard";
 
-  // ✅ Tumia rawType kama ipo, vinginevyo type
   const rawType = String(notif.rawType || notif.type || "").toUpperCase();
   const type = rawType.replace(/\./g, "_");
   const meta = notif.meta || {};
@@ -399,7 +388,9 @@ export function resolveNotificationRoute(notif, side = "seller") {
     case "MESSAGE_RECEIVED":
     case "MESSAGE":
     case "NEW_MESSAGE":
-      return withQuery(`${prefix}/messages`, "c");
+      return relatedType.includes("deal")
+        ? withQuery(`${prefix}/deals`, "deal")
+        : `${prefix}/deals`;
 
     // ── Deals / Transactions ──
     case "DEAL_ROOM_CREATED":
@@ -470,7 +461,6 @@ export function notificationCtaKey(notif) {
   switch (type) {
     case "PRICE_DROP":
     case "SEARCH_ALERT":
-      // ✅ FIX: relatedId ipo kwenye scope sasa
       return relatedId != null ? `/mali/${relatedId}` : "view";
 
     case "MESSAGE_RECEIVED":

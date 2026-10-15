@@ -62,8 +62,8 @@ const BUYER_FAQ = [
   {
     q: { sw: "Ninawezaje kuwasiliana na muuzaji?", en: "How do I contact a seller?" },
     a: {
-      sw: "Tumia Deal Room au Messages ndani ya jukwaa. Usitoe namba yako ya simu kwa mtu usiyemjua.",
-      en: "Use the Deal Room or Messages inside the platform. Never share your phone number with strangers.",
+      sw: "Tumia Deal Room ndani ya jukwaa. Usitoe namba yako ya simu kwa mtu usiyemjua.",
+      en: "Use the Deal Room inside the platform. Never share your phone number with strangers.",
     },
   },
   {
@@ -554,8 +554,6 @@ export default function SafetySupportSection({ side = "buyer" }) {
     setReportError("");
 
     try {
-      // Canonical category enum values (uppercase keys, matching
-      // CAT_KEY_TO_API in ticketsStore.js). Do NOT send arbitrary strings.
       const category =
         reportType === "listing" ? "LISTING"
         : reportType === "user" ? "DISPUTE"

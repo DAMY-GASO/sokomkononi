@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
 import ScrollToHash from "./components/ScrollToHash.jsx";
 import { ToastProvider } from "./components/Toast.jsx";
@@ -116,7 +116,8 @@ function App() {
               <Route path="/dashboard/advertise" element={<DashboardShell />} />
               <Route path="/dashboard/bundles" element={<DashboardShell />} />
               <Route path="/dashboard/deals" element={<DashboardShell />} />
-              <Route path="/dashboard/messages" element={<DashboardShell />} />
+              {/* Messages page imeondolewa - links za zamani zinaelekezwa Deal Rooms */}
+              <Route path="/dashboard/messages" element={<Navigate to="/dashboard/deals" replace />} />
               <Route path="/dashboard/notifications" element={<DashboardShell />} />
               <Route path="/dashboard/transactions" element={<DashboardShell />} />
               <Route path="/dashboard/activity" element={<DashboardShell />} />
@@ -133,7 +134,7 @@ function App() {
               <Route path="/dashboard/buyer/searches" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/bundles" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/deals" element={<DashboardShell />} />
-              <Route path="/dashboard/buyer/messages" element={<DashboardShell />} />
+              <Route path="/dashboard/buyer/messages" element={<Navigate to="/dashboard/buyer/deals" replace />} />
               <Route path="/dashboard/buyer/notifications" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/waiting" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/transactions" element={<DashboardShell />} />

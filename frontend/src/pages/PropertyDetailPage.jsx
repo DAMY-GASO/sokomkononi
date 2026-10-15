@@ -25,7 +25,6 @@ import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { useWaitingList, joinWaitingListAsync } from "../config/waitingListStore.js";
 import { getOrCreateDealAsync } from "../config/dealsStore.js";
 import { trackViewed } from "../config/recentlyViewedStore.js";
-import { createConversationAsync } from "../config/messagesStore.js";
 import {
   CATEGORY_EXTRA,
   getPostingConfig,
@@ -505,7 +504,6 @@ export default function PropertyDetailPage() {
 
   const savedIds = useSavedIds();
   const isSaved = property ? savedIds.includes(property.id) : false;
-  const [showContactModal, setShowContactModal] = useState(false);
   const [contactLoading, setContactLoading] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
 
@@ -607,7 +605,7 @@ export default function PropertyDetailPage() {
     if (!user || !property || isOwner || !location.state) return;
     const { openContactModal, autoJoinWaitlist } = location.state;
 
-    if (openContactModal) setShowContactModal(true);
+    if (openContactModal) handleStartDealRoom();
     if (autoJoinWaitlist && !alreadyOnWaitlist) {
       joinWaitingListAsync(property.id).then((res) => {
         if (!res.ok) console.warn("[PropertyDetailPage] auto-join waiting list failed:", res.error);
@@ -650,15 +648,9 @@ export default function PropertyDetailPage() {
     }
   };
 
+  // Mawasiliano yote sasa yanaanzia Deal Room (hakuna Messages page tena).
   const handleContact = () => {
-    if (isOwner) return;
-    if (!user) {
-      navigate("/login", {
-        state: { from: `${location.pathname}${location.search}`, openContactModal: true },
-      });
-      return;
-    }
-    setShowContactModal(true);
+    handleStartDealRoom();
   };
 
   const handleStartDealRoom = async () => {
@@ -669,7 +661,6 @@ export default function PropertyDetailPage() {
       });
       return;
     }
-    setShowContactModal(false);
     setContactLoading("deal");
     try {
       const res = await getOrCreateDealAsync({
@@ -693,44 +684,6 @@ export default function PropertyDetailPage() {
       console.error("[PropertyDetail] deal handler threw:", err);
       alert(err?.message || t(lang, "Hitilafu imetokea.", "Something went wrong."));
       navigate("/dashboard/buyer/deals");
-    } finally {
-      setContactLoading(null);
-    }
-  };
-
-  const handleStartConversation = async () => {
-    if (isOwner || contactLoading) return;
-    if (!user) {
-      navigate("/login", {
-        state: { from: `${location.pathname}${location.search}`, openContactModal: true },
-      });
-      return;
-    }
-    setShowContactModal(false);
-    setContactLoading("message");
-    try {
-      const res = await createConversationAsync({
-        listingId: property.id,
-        initialMessage: t(
-          "Habari, nina swali kuhusu mali hii.",
-          "Hi, I have a question about this listing."
-        ),
-      });
-      if (res?.ok && res?.conversation?.id) {
-        navigate(`/dashboard/buyer/messages?c=${res.conversation.id}`);
-      } else {
-        console.error("[PropertyDetail] conversation create failed:", res?.error);
-        alert(
-          res?.error?.data?.detail ||
-            res?.error?.message ||
-            t(lang, "Imeshindwa kuanzisha mazungumzo.", "Failed to start conversation.")
-        );
-        navigate("/dashboard/buyer/messages");
-      }
-    } catch (err) {
-      console.error("[PropertyDetail] conversation handler threw:", err);
-      alert(err?.message || t(lang, "Hitilafu imetokea.", "Something went wrong."));
-      navigate("/dashboard/buyer/messages");
     } finally {
       setContactLoading(null);
     }
@@ -1031,59 +984,6 @@ export default function PropertyDetailPage() {
           </div>
         </div>
       </div>
-
-      {showContactModal && !isOwner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 text-center">
-            <h3 className="text-primary mb-2">
-              {t(lang, "Wasiliana na", "Contact")} {property.seller_name || t(lang, "Muuzaji", "Seller")}
-            </h3>
-            <p className="text-sm text-secondary mb-4">
-              {t(lang, "Chagua jinsi ungependa kuwasiliana:", "Choose how you'd like to get in touch:")}
-            </p>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={handleStartDealRoom}
-                disabled={!!contactLoading}
-                className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <MessageSquare size={20} className="text-gold-ink" />
-                <div>
-                  <p className="text-sm font-medium text-primary">
-                    {t(lang, "Anzisha Deal Room", "Start a Deal Room")}
-                  </p>
-                  <p className="text-body-sm text-secondary">
-                    {t(lang, "Mazungumzo ya kina ya ununuzi", "Full purchase negotiation")}
-                  </p>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={handleStartConversation}
-                disabled={!!contactLoading}
-                className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors text-left disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <MessageSquare size={20} className="text-green" />
-                <div>
-                  <p className="text-sm font-medium text-primary">
-                    {t(lang, "Tuma Ujumbe wa Haraka", "Send a Quick Message")}
-                  </p>
-                  <p className="text-body-sm text-secondary">
-                    {t(lang, "Uliza swali bila kuanzisha deal", "Ask a question without a deal")}
-                  </p>
-                </div>
-              </button>
-            </div>
-            <button
-              onClick={() => setShowContactModal(false)}
-              className="w-full mt-4 py-2.5 text-sm font-medium text-secondary hover:text-primary transition-colors"
-            >
-              {t(lang, "Funga", "Close")}
-            </button>
-          </div>
-        </div>
-      )}
 
       <Footer />
       <BottomNav />

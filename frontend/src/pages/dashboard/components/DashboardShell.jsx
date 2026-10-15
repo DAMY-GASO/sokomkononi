@@ -24,7 +24,6 @@ import {
   CalendarCheck,
   Megaphone,
   Heart,
-  MessageSquare,
   Home,
   Globe,
   Check,
@@ -91,7 +90,6 @@ import SafetySupportSection from "../buyer/SafetySupportSection.jsx";
 
 // Kurasa mpya
 import SavedPropertiesPage from "../../SavedPropertiesPage.jsx";
-import MessagesPage from "../../MessagesPage.jsx";
 import NotificationsPage from "../../NotificationsPage.jsx";
 import MyTransactionsPage from "../../MyTransactionsPage.jsx";
 import WaitingListPage from "../../WaitingListPage.jsx";
@@ -111,11 +109,10 @@ const SELLER_NAV = [
   { key: "post", label: { sw: "Weka Tangazo", en: "Post Listing" }, icon: PlusCircle },
   { key: "listings", label: { sw: "Mali Zangu", en: "My Listings" }, icon: ListChecks },
   { key: "leads", label: { sw: "Maulizio", en: "Enquiries" }, icon: Inbox },
-  { key: "boost", label: { sw: "Boost Sasa", en: "Boost Now" }, icon: Rocket },
-  { key: "leading", label: { sw: "Nunua Leads", en: "Buy Leads" }, icon: TrendingUp },
+  { key: "boost", label: { sw: "Angaza Sasa", en: "Boost Now" }, icon: Rocket },
+  { key: "leading", label: { sw: "Kuwa Kipaumbele", en: "Buy Leads" }, icon: TrendingUp },
   { key: "advertise", label: { sw: "Tangaza Sasa", en: "Advertise Now" }, icon: Megaphone },
   { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
-  { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
   { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
   { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
   { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
@@ -129,14 +126,13 @@ const SELLER_NAV = [
 // ============================================================
 const BUYER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
-  { key: "browse", label: { sw: "Tafuta Mali", en: "Browse Properties" }, icon: Search },
+  { key: "browse", label: { sw: "Tafuta Mali", en: "Browse Listing" }, icon: Search },
   { key: "saved", label: { sw: "Matangazo Yaliyohifadhiwa", en: "Saved Listings" }, icon: Heart },
   { key: "searches", label: { sw: "Utafutaji Wangu", en: "My Searches" }, icon: Bell },
   { key: "deals", label: { sw: "Vyumba vya Majadiliano", en: "Deal Rooms" }, icon: MessagesSquare },
   { key: "reservations", label: { sw: "Mali Nilizoshikilia", en: "My Reservations" }, icon: CalendarCheck },
-  { key: "messages", label: { sw: "Ujumbe", en: "Messages" }, icon: MessageSquare },
   { key: "notifications", label: { sw: "Taarifa", en: "Notifications" }, icon: Bell },
-  { key: "waiting", label: { sw: "Orodha ya Kusubiri", en: "Waiting List" }, icon: Clock3 },
+  { key: "waiting", label: { sw: "Orodha ya Kusubiri", en: "Reservation List" }, icon: Clock3 },
   { key: "transactions", label: { sw: "Miamala Yangu", en: "My Transactions" }, icon: Receipt },
   { key: "bundles", label: { sw: "Nunua Vifurushi", en: "Buy Bundles" }, icon: Package },
   { key: "verification", label: { sw: "Uthibitisho Wangu", en: "My Verification" }, icon: ShieldCheck },
@@ -160,7 +156,6 @@ const URL_TO_STATE = {
   "/dashboard/leading": { side: "seller", key: "leading" },
   "/dashboard/advertise": { side: "seller", key: "advertise" },
   "/dashboard/deals": { side: "seller", key: "deals" },
-  "/dashboard/messages": { side: "seller", key: "messages" },
   "/dashboard/notifications": { side: "seller", key: "notifications" },
   "/dashboard/transactions": { side: "seller", key: "transactions" },
   "/dashboard/bundles": { side: "seller", key: "bundles" },
@@ -175,7 +170,6 @@ const URL_TO_STATE = {
   "/dashboard/buyer/browse": { side: "buyer", key: "browse" },
   "/dashboard/buyer/saved": { side: "buyer", key: "saved" },
   "/dashboard/buyer/searches": { side: "buyer", key: "searches" },
-  "/dashboard/buyer/messages": { side: "buyer", key: "messages" },
   "/dashboard/buyer/notifications": { side: "buyer", key: "notifications" },
   "/dashboard/buyer/deals": { side: "buyer", key: "deals" },
   "/dashboard/buyer/reservations": { side: "buyer", key: "reservations" },
@@ -198,7 +192,6 @@ const STATE_TO_URL = {
     leading: "/dashboard/leading",
     advertise: "/dashboard/advertise",
     deals: "/dashboard/deals",
-    messages: "/dashboard/messages",
     notifications: "/dashboard/notifications",
     transactions: "/dashboard/transactions",
     bundles: "/dashboard/bundles",
@@ -215,7 +208,6 @@ const STATE_TO_URL = {
     searches: "/dashboard/buyer/searches",
     deals: "/dashboard/buyer/deals",
     reservations: "/dashboard/buyer/reservations",
-    messages: "/dashboard/buyer/messages",
     notifications: "/dashboard/buyer/notifications",
     waiting: "/dashboard/buyer/waiting",
     transactions: "/dashboard/buyer/transactions",
@@ -438,7 +430,6 @@ export default function DashboardShell() {
     [navigate]
   );
 
-  // ⬇️ EDIT — peleka kwenye ukurasa wa kuhariri
   const goToEdit = useCallback(
     (listingId) => {
       if (listingId) navigate(`/dashboard/listings/edit/${listingId}`);
@@ -513,13 +504,11 @@ export default function DashboardShell() {
       );
     }
     if (activeKey === "listings") {
-      // ⬇️ EDIT MODE — kama editListingId ipo, onyesha PostPropertyForm
       if (editListingId) {
         const listing = listings.find(
           (l) => String(l.id) === String(editListingId)
         );
 
-        // Kama listing haipo local cache, mwambie mtumiaji arudi
         if (!listing) {
           return (
             <div className="p-6 text-center">
@@ -628,13 +617,6 @@ export default function DashboardShell() {
     }
     if (activeKey === "reservations") {
       return <MyReservationsPage />;
-    }
-    if (activeKey === "messages") {
-      return (
-        <MessagesPage
-          initialConversationId={new URLSearchParams(location.search).get("c")}
-        />
-      );
     }
     if (activeKey === "notifications") {
       return <NotificationsPage />;

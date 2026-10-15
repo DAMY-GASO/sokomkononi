@@ -12,7 +12,6 @@ import {
   LayoutGrid,
   Heart,
   MessagesSquare,
-  MessageSquare,
   TrendingUp,
   Clock3,
   Eye,
@@ -147,19 +146,7 @@ export default function BuyerOverview({ onNavigate }) {
       color: COLORS.gold,
     },
     {
-      key: "messages",
-      label: t("Ujumbe", "Messages"),
-      icon: MessageSquare,
-      color: COLORS.night,
-    },
-    {
       key: "safety",
-      label: t("Usalama", "Safety"),
-      icon: Shield,
-      color: COLORS.rust,
-    },
-    {
-      key: "support",
       label: t("Msaada", "Support"),
       icon: Shield,
       color: "#2563EB",
