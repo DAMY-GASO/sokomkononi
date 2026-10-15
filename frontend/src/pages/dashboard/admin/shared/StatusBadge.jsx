@@ -35,6 +35,11 @@ const CONFIG = {
   decided_accept:        { label: { sw: "Imekubaliwa", en: "Accepted" }, tone: "success" },
   decided_reject:        { label: { sw: "Imekataliwa", en: "Rejected" }, tone: "danger" },
   awaiting_confirmation: { label: { sw: "Inasubiri Uthibitisho", en: "Awaiting Confirmation" }, tone: "royal" },
+
+  // ── Moderation statuses mpya ─────────────────────────────
+  needs_edit:              { label: { sw: "Inahitaji Uhariri", en: "Needs Edit" }, tone: "warn" },
+  approved_pending_payment: { label: { sw: "Inasubiri Malipo", en: "Awaiting Payment" }, tone: "warn" },
+  paid_pending_approval:   { label: { sw: "Inasubiri Idhini", en: "Pending Final Approval" }, tone: "royal" },
 };
 
 const TONES = {

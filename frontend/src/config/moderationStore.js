@@ -4,17 +4,16 @@
 //   GET    /api/listings/admin/pending/
 //   POST   /api/listings/{id}/approve/
 //   POST   /api/listings/{id}/reject/
-//   POST   /api/listings/{id}/disapprove/     (kama ipo)
+//   POST   /api/listings/{id}/request-edit/
+//   POST   /api/listings/{id}/request-payment/
+//   POST   /api/listings/{id}/finalize-approval/
 //   PATCH  /api/listings/{id}/                 (fallback ya disapprove)
 //   DELETE /api/listings/{id}/?hard=true       (admin pekee)
-//
-// SASISHO:
-// - `disapproveListingAsync` inaita `/disapprove/` kama ipo.
-//   La sivyo, tumia PATCH /listings/{id}/ na `status: "REJECTED"`.
 // ============================================================
 import { useEffect, useState } from "react";
 import { moderationApi } from "../api/moderation.js";
 import { listingsApi } from "../api/listings.js";
+import { api } from "../api/client.js";
 import {
   normalizeListingFromApi,
   decideListing,
@@ -102,7 +101,7 @@ function recordDecision(entry) {
 }
 
 // ============================================================
-// APPROVE — idhinisha listing
+// APPROVE — idhinisha listing (legacy — fee haijalipwa bado)
 // ============================================================
 export async function approveListingFromQueueAsync(
   listingId,
@@ -136,7 +135,7 @@ export async function approveListingFromQueueAsync(
 }
 
 // ============================================================
-// REJECT — kataa listing (in_review pekee)
+// REJECT — kataa listing kabisa
 // ============================================================
 export async function rejectListingFromQueueAsync(
   listingId,
@@ -174,10 +173,117 @@ export async function rejectListingFromQueueAsync(
 }
 
 // ============================================================
+// REQUEST EDIT — admin ameomba uhariri
+// ============================================================
+export async function requestEditListingAsync(
+  listingId,
+  reason,
+  { adminName = "Admin" } = {}
+) {
+  const cleanReason = (reason || "").trim();
+  if (cleanReason.length < 5) {
+    return {
+      ok: false,
+      error: new Error("Sababu inahitajika (herufi 5+)."),
+    };
+  }
+  const target = findInQueue(listingId);
+  try {
+    await api.post(`/listings/${listingId}/request-edit/`, {
+      reason: cleanReason,
+    });
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+  removeFromQueue(listingId);
+  decideListing(listingId, "needs_edit", cleanReason);
+  recordDecision({
+    listingId,
+    listingTitle: target?.title,
+    action: "requested_edit",
+    reason: cleanReason,
+    adminName,
+  });
+  return {
+    ok: true,
+    listing: {
+      ...(target || {}),
+      id: listingId,
+      status: "needs_edit",
+      rejectionReason: cleanReason,
+    },
+  };
+}
+
+// ============================================================
+// REQUEST PAYMENT — admin ameona ni nzuri, mwambie alipe
+// ============================================================
+export async function requestPaymentListingAsync(
+  listingId,
+  reason = "",
+  { adminName = "Admin" } = {}
+) {
+  const target = findInQueue(listingId);
+  try {
+    await api.post(`/listings/${listingId}/request-payment/`, {
+      reason: (reason || "").trim(),
+    });
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+  removeFromQueue(listingId);
+  decideListing(listingId, "approved_pending_payment");
+  recordDecision({
+    listingId,
+    listingTitle: target?.title,
+    action: "requested_payment",
+    reason: (reason || "").trim(),
+    adminName,
+  });
+  return {
+    ok: true,
+    listing: {
+      ...(target || {}),
+      id: listingId,
+      status: "approved_pending_payment",
+    },
+  };
+}
+
+// ============================================================
+// FINALIZE APPROVAL — idhinisha mwisho baada ya malipo
+// ============================================================
+export async function finalizeApprovalListingAsync(
+  listingId,
+  { adminName = "Admin" } = {}
+) {
+  const target = findInQueue(listingId);
+  try {
+    await api.post(`/listings/${listingId}/finalize-approval/`, {});
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+  removeFromQueue(listingId);
+  decideListing(listingId, "live");
+  recordDecision({
+    listingId,
+    listingTitle: target?.title,
+    action: "finalized",
+    adminName,
+  });
+  return {
+    ok: true,
+    listing: {
+      ...(target || {}),
+      id: listingId,
+      status: "live",
+      approvedAt: new Date().toISOString(),
+    },
+  };
+}
+
+// ============================================================
 // DISAPPROVE — rudisha listing iliyoidhinishwa kuwa rejected
-//
-// SASISHO: Jaribu `/disapprove/` endpoint kwanza. Kama haipo
-// (404/405), tumia PATCH /listings/{id}/ na `status: "REJECTED"`.
 // ============================================================
 export async function disapproveListingAsync(
   listingId,
@@ -187,18 +293,16 @@ export async function disapproveListingAsync(
   const cleanReason =
     (reason || "").trim() || "Disapproved by admin";
 
-  // Jaribu `/disapprove/` endpoint kwanza
   try {
     await moderationApi.disapprove(listingId, cleanReason);
   } catch (err) {
     if (err?.status === 404 || err?.status === 405) {
-      // Endpoint haipo — tumia PATCH kwa listing
       console.warn(
         "[moderationStore] /disapprove/ haipo — tumia PATCH /listings/{id}/"
       );
       try {
         await listingsApi.update(listingId, {
-          status: "REJECTED",              // backend inatarajia uppercase
+          status: "REJECTED",
           rejection_reason: cleanReason,
         });
       } catch (patchErr) {
@@ -209,10 +313,7 @@ export async function disapproveListingAsync(
     }
   }
 
-  // Sasisha cache ya listingsStore
   decideListing(listingId, "rejected", cleanReason);
-
-  // Sasisha history ya moderation (kama ipo)
   setHistoryEntry(listingId, {
     status: "rejected",
     rejectionReason: cleanReason,
@@ -237,9 +338,6 @@ export async function disapproveListingAsync(
   };
 }
 
-// ── Helper: sasisha history (kwa ModerationSection) ───────
-// Inaruhusu `disapproveListingAsync` kurudisha data ambayo
-// ModerationSection inaweza kutumia kusasisha UI.
 function setHistoryEntry(listingId, patch) {
   if (typeof window === "undefined") return;
   const HIST_KEY = "sokomkononi_moderation_history_v1";
@@ -259,7 +357,6 @@ function setHistoryEntry(listingId, patch) {
 
 // ============================================================
 // DELETE — futa listing kabisa (kwa scam)
-// Inatumia ListingViewSet.destroy + ?hard=true (admin pekee)
 // ============================================================
 export async function deleteListingFromModerationAsync(
   listingId,
@@ -271,7 +368,6 @@ export async function deleteListingFromModerationAsync(
   try {
     await moderationApi.delete(listingId, cleanReason);
   } catch (err) {
-    // Fallback: listingsApi.remove + hard=true
     if (err?.status === 404 || err?.status === 405) {
       console.warn(
         "[moderationStore] /delete/ haipo — tumia listingsApi.remove"
@@ -289,7 +385,6 @@ export async function deleteListingFromModerationAsync(
     }
   }
 
-  // Ondoa kwenye cache zote
   removeFromQueue(listingId);
   try {
     removeListing(listingId);
@@ -366,6 +461,9 @@ export function getModerationStats() {
     approved: d.filter((x) => x.action === "approved").length,
     rejected: d.filter((x) => x.action === "rejected").length,
     disapproved: d.filter((x) => x.action === "disapproved").length,
+    requestedEdit: d.filter((x) => x.action === "requested_edit").length,
+    requestedPayment: d.filter((x) => x.action === "requested_payment").length,
+    finalized: d.filter((x) => x.action === "finalized").length,
     deleted: d.filter((x) => x.action === "deleted").length,
     todayApproved: td.filter((x) => x.action === "approved").length,
     todayRejected: td.filter((x) => x.action === "rejected").length,

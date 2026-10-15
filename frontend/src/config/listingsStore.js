@@ -31,6 +31,9 @@ export const LISTING_STATUS_MAP = {
   in_review: "PENDING_APPROVAL",
   pending_payment: "DRAFT",
   rejected: "REJECTED",
+  needs_edit: "NEEDS_EDIT",
+  approved_pending_payment: "APPROVED_PENDING_PAYMENT",
+  paid_pending_approval: "PAID_PENDING_APPROVAL",
 };
 
 const API_TO_FRONTEND_STATUS = {
@@ -42,6 +45,9 @@ const API_TO_FRONTEND_STATUS = {
   in_review: "in_review",
   pending_payment: "pending_payment",
   rejected: "rejected",
+  needs_edit: "needs_edit",
+  approved_pending_payment: "approved_pending_payment",
+  paid_pending_approval: "paid_pending_approval",
   active: "live",
   archived: "paused",
   draft: "pending_payment",
@@ -59,6 +65,9 @@ const API_TO_FRONTEND_STATUS = {
   DRAFT: "pending_payment",
   PENDING_APPROVAL: "in_review",
   REJECT: "rejected",
+  NEEDS_EDIT: "needs_edit",
+  APPROVED_PENDING_PAYMENT: "approved_pending_payment",
+  PAID_PENDING_APPROVAL: "paid_pending_approval",
 };
 
 function toApiPatch(patch) {
@@ -553,6 +562,9 @@ const _SELLER_STATUS_CANDIDATES = [
   "PENDING_APPROVAL",
   "REJECTED",
   "PAUSED",
+  "NEEDS_EDIT",
+  "APPROVED_PENDING_PAYMENT",
+  "PAID_PENDING_APPROVAL",
 ];
 
 async function _fetchMyListingsImpl({ refreshUser = false } = {}) {

@@ -3,6 +3,13 @@
 // Dedicated page for paying a single listing's fee.
 // Route: /dashboard/pay-listing?id=<listingId>
 //
+// Chaguo B flow:
+//   • Admin anaona listing kwenye moderation
+//   • Admin → "Omba Malipo" → listing.status = APPROVED_PENDING_PAYMENT
+//   • Seller anaona notification → PayListingFee
+//   • Seller analipa → listing.status = PAID_PENDING_APPROVAL
+//   • Admin analidhinisha mwisho → LIVE
+//
 // Reads ?id= from the query string, fetches that listing + its fee,
 // shows the amount, offers credits (if any) or FimiPay, then routes
 // the seller back to My Listings on success.
@@ -74,7 +81,8 @@ export default function PayListingFee() {
           const cached = getListing(listingId);
           if (cached) {
             console.warn(
-              "[PayListingFee] API 404 — using cached listing", listingId
+              "[PayListingFee] API 404 — using cached listing",
+              listingId
             );
             listingData = cached;
             listingFromCache = true;
@@ -109,14 +117,23 @@ export default function PayListingFee() {
       // ── Step 2: guard against already-paid / not-payable ───
       const apiStatus = String(listingData?.status || "").toUpperCase();
       const localStatus = String(listingData?.status || "").toLowerCase();
+
+      // Paid already?
       const isPaid =
         listingData?.isPaid === true ||
         listingData?.is_paid === true ||
-        apiStatus === "PENDING_APPROVAL" ||
+        apiStatus === "PAID_PENDING_APPROVAL" ||
         apiStatus === "LIVE" ||
         apiStatus === "RESERVED" ||
         apiStatus === "SOLD" ||
-        ["live", "reserved", "sold", "in_review", "paused"].includes(localStatus);
+        [
+          "live",
+          "reserved",
+          "sold",
+          "in_review",
+          "paused",
+          "paid_pending_approval",
+        ].includes(localStatus);
       if (isPaid) {
         setStage("already_paid");
         return;
@@ -128,7 +145,6 @@ export default function PayListingFee() {
         feeData = await api.get(`/listings/${listingId}/fee/`);
       } catch (err) {
         if (err?.status === 404 && listingFromCache) {
-          // Derive from cached listing
           const amount =
             listingData?.feeAmount ??
             listingData?.fee_amount ??
@@ -140,11 +156,10 @@ export default function PayListingFee() {
             payment_status: listingData?.paymentStatus || "PENDING",
           };
           console.warn(
-            "[PayListingFee] fee endpoint 404 — using cached fee", amount
+            "[PayListingFee] fee endpoint 404 — using cached fee",
+            amount
           );
         } else if (err?.status === 404) {
-          // Listing is available but fee endpoint is missing — try
-          // to read fee from the listing payload itself.
           const amount =
             listingData?.feeAmount ??
             listingData?.fee_amount ??
@@ -177,14 +192,23 @@ export default function PayListingFee() {
         return;
       }
 
-      // If status isn't payable AND it's not a draft/pending_payment,
-      // flag it.
-      if (
-        apiStatus &&
-        apiStatus !== "PENDING_PAYMENT" &&
-        apiStatus !== "DRAFT" &&
-        !["pending_payment", "draft"].includes(localStatus)
-      ) {
+      // ── Step 4: payable state check ─────────────────────────
+      // Chaguo B: seller anaweza kulipa tu ikiwa:
+      //   • DRAFT / PENDING_PAYMENT (legacy — seller anaunda, analipa papo)
+      //   • APPROVED_PENDING_PAYMENT (admin ameomba malipo)
+      const isPayable =
+        apiStatus === "PENDING_PAYMENT" ||
+        apiStatus === "DRAFT" ||
+        apiStatus === "APPROVED_PENDING_PAYMENT" ||
+        apiStatus === "REJECTED" || // retry after rejection
+        [
+          "pending_payment",
+          "draft",
+          "approved_pending_payment",
+          "rejected",
+        ].includes(localStatus);
+
+      if (apiStatus && !isPayable) {
         setFee(feeData);
         setStage("not_payable");
         return;
@@ -194,7 +218,9 @@ export default function PayListingFee() {
       setStage("ready");
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listingId]);
 
@@ -203,15 +229,14 @@ export default function PayListingFee() {
     if (!listing || !user) return;
     const ownerId =
       listing.sellerId ?? listing.seller_id ?? listing.seller?.id ?? null;
-    // Only enforce when the owner id is present. Cached listings sometimes
-    // lack a seller id; in that case we trust the router (they clicked
-    // Pay Now from their own My Listings page).
     if (ownerId != null && String(ownerId) !== String(user.id)) {
       setStage("error");
-      setError(t(
-        "Hili si tangazo lako — huwezi kulipia ada yake.",
-        "This isn\'t your listing — you cannot pay its fee."
-      ));
+      setError(
+        t(
+          "Hili si tangazo lako — huwezi kulipia ada yake.",
+          "This isn't your listing — you cannot pay its fee."
+        )
+      );
     }
   }, [listing, user]);
 
@@ -234,14 +259,18 @@ export default function PayListingFee() {
         phone: phone || "",
       });
       const candidates = [
-        res?.fimipay, res?.data?.fimipay, res?.data, res,
+        res?.fimipay,
+        res?.data?.fimipay,
+        res?.data,
+        res,
       ].filter(Boolean);
       const payload =
         candidates.find((c) => c && (c.order_id || c.payment_status)) || {};
       return {
         ok: true,
         orderId: payload.order_id || null,
-        paymentStatus: (payload.payment_status || "").toUpperCase() || null,
+        paymentStatus:
+          (payload.payment_status || "").toUpperCase() || null,
         transid: payload.transid || null,
         gatewayUrl: payload.payment_gateway_url || null,
         simulated: !!payload.simulated,
@@ -255,7 +284,7 @@ export default function PayListingFee() {
   // Called by PaymentGateway when the poll returns SUCCESS
   const handleGatewaySuccess = () => {
     setStage("success");
-    setTimeout(() => navigate("/dashboard/listings"), 2600);
+    setTimeout(() => navigate("/dashboard/listings"), 3000);
   };
 
   // Credits path
@@ -266,10 +295,12 @@ export default function PayListingFee() {
     try {
       const consume = await consumeCreditAsync(user?.id, "listing");
       if (!consume.success) {
-        setError(t(
-          "Credit haitoshi au imeisha muda.",
-          "Credit not available or expired."
-        ));
+        setError(
+          t(
+            "Credit haitoshi au imeisha muda.",
+            "Credit not available or expired."
+          )
+        );
         setBusy(false);
         return;
       }
@@ -277,12 +308,12 @@ export default function PayListingFee() {
         payment_reference: "credits",
       });
       setStage("success");
-      setTimeout(() => navigate("/dashboard/listings"), 2600);
+      setTimeout(() => navigate("/dashboard/listings"), 3000);
     } catch (err) {
       setError(
         err?.data?.detail ||
-        err?.message ||
-        t("Imeshindwa kutumia credit.", "Failed to use credit.")
+          err?.message ||
+          t("Imeshindwa kutumia credit.", "Failed to use credit.")
       );
     } finally {
       setBusy(false);
@@ -299,12 +330,12 @@ export default function PayListingFee() {
         payment_reference: "free",
       });
       setStage("success");
-      setTimeout(() => navigate("/dashboard/listings"), 2600);
+      setTimeout(() => navigate("/dashboard/listings"), 3000);
     } catch (err) {
       setError(
         err?.data?.detail ||
-        err?.message ||
-        t("Imeshindwa kuwasilisha.", "Failed to submit.")
+          err?.message ||
+          t("Imeshindwa kuwasilisha.", "Failed to submit.")
       );
     } finally {
       setBusy(false);
@@ -344,8 +375,8 @@ export default function PayListingFee() {
         </h1>
         <p className="text-sm text-secondary mb-4">
           {t(
-            "Listing yako imewasilishwa kwa admin kuidhinisha. Utapata taarifa mara itakapoidhinishwa.",
-            "Your listing has been submitted to admin for approval. You will be notified once it is reviewed."
+            "Tangazo lako sasa linasubiri idhini ya mwisho kutoka kwa admin. Utapata taarifa mara litakapoidhinishwa.",
+            "Your listing is now awaiting final admin approval. You'll be notified once it's approved."
           )}
         </p>
         <div className="flex flex-col sm:flex-row gap-2 justify-center">
@@ -369,23 +400,28 @@ export default function PayListingFee() {
   }
 
   // ── ALREADY PAID / NOT PAYABLE / ERROR ─────────────────────
-  if (stage === "already_paid" || stage === "not_payable" || stage === "error") {
+  if (
+    stage === "already_paid" ||
+    stage === "not_payable" ||
+    stage === "error"
+  ) {
     const title =
       stage === "already_paid"
         ? t("Ada Imelipwa Tayari", "Fee Already Paid")
         : stage === "not_payable"
           ? t("Listing Hailipiki", "Listing Not Payable")
           : t("Hitilafu", "Error");
+
     const message =
       stage === "already_paid"
         ? t(
             "Listing hii imelipwa ada. Haihitaji malipo zaidi.",
-            "This listing\'s fee is already paid. No further payment needed."
+            "This listing's fee is already paid. No further payment needed."
           )
         : stage === "not_payable"
           ? t(
-              "Listing hii ipo katika hali isiyoruhusu kulipia ada sasa.",
-              "This listing is not in a state where the fee can be paid now."
+              "Listing hii ipo katika hali isiyoruhusu kulipia ada sasa. Subiri admin akague kwanza.",
+              "This listing is not in a state where the fee can be paid now. Wait for admin review."
             )
           : error;
 
@@ -424,6 +460,9 @@ export default function PayListingFee() {
   const CatIcon = getCategoryIcon(category?.iconKey);
   const imageUrl = (listing?.photos || [])[0] || listing?.imageUrl || null;
   const isFree = feeAmount === 0;
+  const isApprovedByAdmin =
+    String(listing?.status || "").toLowerCase() ===
+    "approved_pending_payment";
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6">
@@ -436,6 +475,34 @@ export default function PayListingFee() {
         <ArrowLeft size={16} />
         {t("Rudi kwenye Mali Zangu", "Back to My Listings")}
       </button>
+
+      {/* Approved-by-admin banner */}
+      {isApprovedByAdmin && (
+        <div
+          className="rounded-xl px-4 py-3 mb-4 flex items-start gap-2 text-sm"
+          style={{
+            background: "rgba(47,109,79,0.08)",
+            border: "1px solid rgba(47,109,79,0.25)",
+            color: COLORS.green,
+          }}
+        >
+          <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">
+              {t(
+                "Admin amekagua tangazo lako",
+                "Admin reviewed your listing"
+              )}
+            </p>
+            <p className="text-xs mt-0.5 opacity-90">
+              {t(
+                "Tangazo ni zuri. Lipa ada ili liidhinishwe na lionekane kwenye jukwaa.",
+                "It looks good. Pay the fee so it can be published to the marketplace."
+              )}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="text-center mb-5">
@@ -450,8 +517,8 @@ export default function PayListingFee() {
         </h1>
         <p className="text-sm text-secondary mt-1 max-w-lg mx-auto">
           {t(
-            "Lipa ada ili listing yako iwasilishwe kwa admin kuidhinisha.",
-            "Pay the fee so your listing is submitted to admin for approval."
+            "Lipa ada ili listing yako iidhinishwe kwa mwisho na ionekane kwenye jukwaa.",
+            "Pay the fee so your listing is finalized and published to the marketplace."
           )}
         </p>
       </div>
@@ -491,7 +558,10 @@ export default function PayListingFee() {
             {listing?.location ? ` · ${listing.location}` : ""}
           </p>
           {listing?.price > 0 && (
-            <p className="text-base font-bold mt-1" style={{ color: COLORS.night }}>
+            <p
+              className="text-base font-bold mt-1"
+              style={{ color: COLORS.night }}
+            >
               {formatTZS(listing.price)}
             </p>
           )}
@@ -541,7 +611,7 @@ export default function PayListingFee() {
           ) : (
             <CheckCircle2 size={16} />
           )}
-          {t("Tuma kwa Admin", "Submit to Admin")}
+          {t("Tuma kwa Idhini ya Mwisho", "Submit for Final Approval")}
         </button>
       )}
 

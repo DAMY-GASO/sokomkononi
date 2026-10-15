@@ -84,6 +84,7 @@ export default function OverviewSection({ onNavigate }) {
     totalUsers: 0, totalSellers: 0, totalBuyers: 0,
     sellersOnly: 0, buyersOnly: 0, bothRoles: 0, neitherRole: 0, totalAdmins: 0,
   });
+  const [userStatsLoading, setUserStatsLoading] = useState(true);
 
   useEffect(() => {
     fetchPendingListingsAsync().then((res) => {
@@ -91,24 +92,39 @@ export default function OverviewSection({ onNavigate }) {
     });
   }, []);
 
+  // ── User stats: TUMIA BACKEND PEKEE ────────────────────────
+  // Backend (calculate_user_stats) inahesabu:
+  //   sellersOnly = sellers ambao SIO buyers
+  //   buyersOnly  = buyers ambao SIO sellers
+  //   bothRoles   = sellers NA buyers
+  //   neitherRole = hawana listing wala deal
+  //
+  // Kwa hiyo Overview LAZIMA itumie /finance/user-stats/ —
+  // sio kuhesabu kwa listingIds/dealIds (ambazo ni sellers WOTE,
+  // sio sellers-only) — hiyo inasababisha hesabu tofauti na
+  // User Management.
   useEffect(() => {
     let cancelled = false;
+    setUserStatsLoading(true);
     (async () => {
       try {
         const data = await api.get("/finance/user-stats/");
         if (!cancelled) setUserStats(data);
-      } catch { /* fallback */ }
+      } catch {
+        /* fallback — acha zeros */
+      } finally {
+        if (!cancelled) setUserStatsLoading(false);
+      }
     })();
     return () => { cancelled = true; };
   }, []);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const totalUsers = userStats.totalUsers || users.length;
-  const _sellerIds = new Set(listings.map((l) => String(l.sellerId ?? l.seller_id ?? "")).filter(Boolean));
-  const _buyerIds = new Set(deals.map((d) => String(d.buyerId ?? d.buyer_id ?? "")).filter(Boolean));
-  const sellersOnly = userStats.sellersOnly || _sellerIds.size;
-  const buyersOnly = userStats.buyersOnly || _buyerIds.size;
+  // ── User stats breakdown — kutoka backend pekee ────────────
+  const totalUsers = userStats.totalUsers || 0;
+  const sellersOnly = userStats.sellersOnly || 0;
+  const buyersOnly = userStats.buyersOnly || 0;
   const bothRoles = userStats.bothRoles || 0;
   const neitherRole = userStats.neitherRole || 0;
   const totalAdmins = userStats.totalAdmins || 0;
@@ -275,11 +291,11 @@ export default function OverviewSection({ onNavigate }) {
 
   /* ── Stat groups ────────────────────────────────────────── */
   const userStatsGrid = [
-    { id: "users",       label: t("Watumiaji Wote", "Total Users"),  value: totalUsers.toLocaleString(), icon: Users,      color: COLORS.gold },
-    { id: "sellersOnly", label: t("Wauzaji Pekee", "Sellers Only"),  value: sellersOnly.toLocaleString(), icon: Store,     color: "#2563EB" },
-    { id: "buyersOnly",  label: t("Wanunuzi Pekee", "Buyers Only"),  value: buyersOnly.toLocaleString(),  icon: UserCheck, color: COLORS.green },
-    { id: "bothRoles",   label: t("Wote Wawili", "Both Roles"),      value: bothRoles.toLocaleString(),   icon: User,      color: "#7C3AED" },
-    { id: "neitherRole", label: t("Wapya", "Neither"),               value: neitherRole.toLocaleString(), icon: UserPlus,  color: "#D97706" },
+    { id: "users",       label: t("Watumiaji Wote", "Total Users"),  value: userStatsLoading ? "…" : totalUsers.toLocaleString(),   icon: Users,      color: COLORS.gold },
+    { id: "sellersOnly", label: t("Wauzaji Pekee", "Sellers Only"),  value: userStatsLoading ? "…" : sellersOnly.toLocaleString(), icon: Store,     color: "#2563EB" },
+    { id: "buyersOnly",  label: t("Wanunuzi Pekee", "Buyers Only"),  value: userStatsLoading ? "…" : buyersOnly.toLocaleString(),  icon: UserCheck, color: COLORS.green },
+    { id: "bothRoles",   label: t("Wote Wawili", "Both Roles"),      value: userStatsLoading ? "…" : bothRoles.toLocaleString(),   icon: User,      color: "#7C3AED" },
+    { id: "neitherRole", label: t("Wapya", "Neither"),               value: userStatsLoading ? "…" : neitherRole.toLocaleString(), icon: UserPlus,  color: "#D97706" },
   ];
 
   const activityStats = [
@@ -396,13 +412,17 @@ export default function OverviewSection({ onNavigate }) {
           color="#2563EB"
           hint={t(`${totalUsers} watumiaji`, `${totalUsers} users`)}
         >
-          <DonutChart
-            data={usersDonut}
-            size={180}
-            thickness={26}
-            centerLabel={totalUsers.toLocaleString()}
-            centerSub={t("Watumiaji", "Users")}
-          />
+          {userStatsLoading ? (
+            <LoadingBlock />
+          ) : (
+            <DonutChart
+              data={usersDonut}
+              size={180}
+              thickness={26}
+              centerLabel={totalUsers.toLocaleString()}
+              centerSub={t("Watumiaji", "Users")}
+            />
+          )}
         </ReportCard>
 
         <ReportCard

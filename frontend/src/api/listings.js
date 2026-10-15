@@ -40,7 +40,9 @@ export const listingsApi = {
   // formData: FormData with `images` files (multiple)
   bulkUploadImages: (id, formData) =>
     api.upload(`/listings/${id}/images/bulk/`, formData),
+
   update: (id, patch) => api.patch(`/listings/${id}/`, patch),
+
   remove: (id, { hard = false, reason = "" } = {}) => {
     const qs = hard ? "?hard=true" : "";
     return api.delete(`/listings/${id}/${qs}`, reason ? { reason } : {});
@@ -55,7 +57,8 @@ export const listingsApi = {
 
   // ----- Images -----
   listImages: (id) => api.get(`/listings/${id}/images/`),
-  uploadImage: (id, formData) => api.upload(`/listings/${id}/images/`, formData),
+  uploadImage: (id, formData) =>
+    api.upload(`/listings/${id}/images/`, formData),
   updateImage: (listingId, imageId, payload) =>
     api.patch(`/listings/${listingId}/images/${imageId}/`, payload),
   deleteImage: (listingId, imageId) =>
@@ -89,11 +92,31 @@ export const listingsApi = {
   updateEquipmentDetails: (id, payload) =>
     api.patch(`/listings/${id}/equipment-details/`, payload),
 
-  // ----- Admin -----
+  // ============================================================
+  // ADMIN — Moderation
+  // ============================================================
   pending: () => api.get("/listings/admin/pending/"),
+
   approve: (id) => api.post(`/listings/${id}/approve/`, {}),
+
   reject: (id, rejection_reason) =>
     api.post(`/listings/${id}/reject/`, { rejection_reason }),
+
+  disapprove: (id, rejection_reason) =>
+    api.post(`/listings/${id}/disapprove/`, { rejection_reason }),
+
+  // ── Moderation mpya (Chaguo B) ───────────────────────────
+  // Admin ameomba uhariri — rudisha kwa seller kwa mabadiliko
+  requestEdit: (id, reason) =>
+    api.post(`/listings/${id}/request-edit/`, { reason }),
+
+  // Admin ameona ni nzuri — mwambie seller alipe fee
+  requestPayment: (id, reason = "") =>
+    api.post(`/listings/${id}/request-payment/`, { reason }),
+
+  // Admin analidhinisha mwisho baada ya fee kulipwa
+  finalizeApproval: (id) =>
+    api.post(`/listings/${id}/finalize-approval/`, {}),
 };
 
 export default listingsApi;

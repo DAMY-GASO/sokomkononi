@@ -1,39 +1,19 @@
 // ============================================================
 // MyListings.jsx
 // Seller — orodha ya mali zake (listings).
-// - Preview, boost, leading, advertise, mark sold, pause/resume
-// - EDIT — kitufe cha kuhariri kinachopeleka /dashboard/listings/edit/:id
-// - Delete (soft) + undo window + admin notification
-// - Picha: horizontal scroll ya picha zote kwenye kila card
+// + Statuses mpya: needs_edit, approved_pending_payment, paid_pending_approval
+// + Picha: horizontal scroll ya picha zote kwenye kila card
 // ============================================================
 import React, { useState, useMemo } from "react";
 import {
-  PlusCircle,
-  Edit3,
-  Trash2,
-  Pause,
-  Play,
-  CheckCircle2,
-  Rocket,
-  TrendingUp,
-  Megaphone,
-  Eye,
-  MapPin,
-  Tag,
-  Search,
-  Loader2,
-  AlertTriangle,
-  Wallet,
-  AlertCircle,
+  PlusCircle, Edit3, Trash2, Pause, Play, CheckCircle2,
+  Rocket, TrendingUp, Megaphone, Eye, MapPin, Tag, Search,
+  Loader2, AlertTriangle, Wallet, AlertCircle, Pencil,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
-  COLORS,
-  formatTZS,
-  timeAgo,
-  getCategory,
-  isBoostActive,
-  isLeadingActive,
+  COLORS, formatTZS, timeAgo, getCategory,
+  isBoostActive, isLeadingActive,
 } from "./shared.js";
 import { Link } from "react-router-dom";
 import StatusBadge from "../admin/shared/StatusBadge";
@@ -47,35 +27,32 @@ import { startUndo } from "../../../config/undoStore.js";
 import { restoreListingAsync } from "../../../config/listingsStore.js";
 
 // ============================================================
-// isUnpaid — module-scope helper so both ListingCard and MyListings
-// can use it. A listing is "unpaid" when it's still in a pre-payment
-// state OR the backend explicitly says is_paid === false.
+// isUnpaid — module-scope helper
 // ============================================================
 function isUnpaid(listing) {
   if (!listing) return false;
   const s = String(listing.status || "").toLowerCase();
 
-  // Explicit pre-payment states
-  if (s === "pending_payment" || s === "draft") return true;
-
-  // Post-payment states — even if isPaid flag is missing/stale,
-  // these listings already crossed the paywall. Never show Pay Now.
   if (
-    ["live", "reserved", "sold", "paused", "in_review", "rejected", "expired"].includes(
-      s
-    )
+    s === "pending_payment" ||
+    s === "draft" ||
+    s === "approved_pending_payment"
+  ) {
+    return true;
+  }
+
+  if (
+    ["live", "reserved", "sold", "paused", "in_review",
+     "rejected", "expired", "needs_edit", "paid_pending_approval"].includes(s)
   ) {
     return false;
   }
 
-  // Fall back to the explicit backend flag
   return listing.isPaid === false;
 }
 
 // ============================================================
-// getPhotos — chukua picha zote kwa mpangilio.
-// Inashughulikia: photos (array ya strings au objects), images,
-// imageUrl moja. Inarudisha array ya URLs.
+// getPhotos — chukua picha zote
 // ============================================================
 function getPhotos(listing) {
   if (!listing) return [];
@@ -88,12 +65,7 @@ function getPhotos(listing) {
       if (!img) return null;
       if (typeof img === "string") return img;
       return (
-        img.image_url ||
-        img.url ||
-        img.image ||
-        img.src ||
-        img.file ||
-        null
+        img.image_url || img.url || img.image || img.src || img.file || null
       );
     })
     .filter(Boolean);
@@ -103,9 +75,12 @@ function getPhotos(listing) {
 }
 
 // ============================================================
-// ACTION BUTTON — kitufe kidogo chenye icon, kina ukubwa mmoja kila mahali
+// ACTION BUTTON
 // ============================================================
-function ActionBtn({ icon: Icon, label, color, onClick, disabled, danger, spin, className = "" }) {
+function ActionBtn({
+  icon: Icon, label, color, onClick, disabled,
+  danger, spin, className = "",
+}) {
   return (
     <button
       type="button"
@@ -126,21 +101,11 @@ function ActionBtn({ icon: Icon, label, color, onClick, disabled, danger, spin, 
 }
 
 // ============================================================
-// LISTING CARD — na horizontal scroll ya picha zote
+// LISTING CARD
 // ============================================================
 function ListingCard({
-  listing,
-  lang,
-  onRemove,
-  onBoost,
-  onLeading,
-  onAdvertise,
-  onPause,
-  onResume,
-  onMarkSold,
-  onPay,
-  onEdit,
-  busy,
+  listing, lang, onRemove, onBoost, onLeading, onAdvertise,
+  onPause, onResume, onMarkSold, onPay, onEdit, busy,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const category = getCategory(listing.category);
@@ -149,7 +114,6 @@ function ListingCard({
     category?.label?.[lang] || category?.label?.sw || listing.category || "—";
   const isBusy = busy === "delete";
 
-  // ── Picha zote ─────────────────────────────────────────
   const photos = getPhotos(listing);
   const hasManyPhotos = photos.length > 1;
 
@@ -157,13 +121,16 @@ function ListingCard({
     listing.status === "live" || listing.status === "reserved";
   const featured = isBoostActive(listing);
   const leading = isLeadingActive(listing);
-  const viewable = ["live", "reserved", "paused", "sold"].includes(listing.status);
+  const viewable = ["live", "reserved", "paused", "sold"].includes(
+    listing.status
+  );
   const detailTo = `/mali/${listing.id}`;
 
-  // ── Thumb: horizontal scroll ya picha zote ────────────
   const Thumb = (
-    <div className="relative h-24 shrink-0 overflow-hidden rounded-xl sm:h-28"
-         style={{ width: hasManyPhotos ? "100%" : "6rem" }}>
+    <div
+      className="relative h-24 shrink-0 overflow-hidden rounded-xl sm:h-28"
+      style={{ width: hasManyPhotos ? "100%" : "6rem" }}
+    >
       {photos.length === 0 ? (
         <div className="flex h-full w-full items-center justify-center bg-sand">
           <CategoryIcon size={24} color={COLORS.night} />
@@ -234,7 +201,10 @@ function ListingCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             {viewable ? (
-              <Link to={detailTo} className="min-w-0 flex-1 hover:text-gold-ink">
+              <Link
+                to={detailTo}
+                className="min-w-0 flex-1 hover:text-gold-ink"
+              >
                 {Title}
               </Link>
             ) : (
@@ -247,21 +217,22 @@ function ListingCard({
             {formatTZS(listing.price)}
           </p>
 
-          {isUnpaid(listing) && listing.feeAmount > 0 && (
-            <div
-              className="mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5"
-              style={{
-                background: "rgba(193,80,46,0.10)",
-                color: COLORS.rust,
-              }}
-            >
-              <AlertCircle size={12} className="shrink-0" />
-              <span className="text-[11px] font-semibold leading-tight">
-                {t("Haijalipwa", "Unpaid")} ·{" "}
-                {formatTZS(listing.feeAmount)}
-              </span>
-            </div>
-          )}
+          {isUnpaid(listing) &&
+            listing.feeAmount > 0 &&
+            listing.status !== "approved_pending_payment" && (
+              <div
+                className="mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+                style={{
+                  background: "rgba(193,80,46,0.10)",
+                  color: COLORS.rust,
+                }}
+              >
+                <AlertCircle size={12} className="shrink-0" />
+                <span className="text-[11px] font-semibold leading-tight">
+                  {t("Haijalipwa", "Unpaid")} · {formatTZS(listing.feeAmount)}
+                </span>
+              </div>
+            )}
 
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-secondary">
             <span className="flex min-w-0 items-center gap-1">
@@ -295,6 +266,56 @@ function ListingCard({
             )}
           </div>
 
+          {/* Status-specific messages */}
+          {listing.status === "needs_edit" && (
+            <div
+              className="mt-1.5 rounded-lg px-2.5 py-1.5"
+              style={{ background: "rgba(180,83,9,0.08)" }}
+            >
+              <p
+                className="text-[11px] font-semibold leading-tight"
+                style={{ color: "#B45309" }}
+              >
+                {t("Admin ameomba uhariri:", "Admin requested edit:")}{" "}
+                {listing.rejectionReason}
+              </p>
+            </div>
+          )}
+
+          {listing.status === "approved_pending_payment" && (
+            <div
+              className="mt-1.5 rounded-lg px-2.5 py-1.5"
+              style={{ background: "rgba(47,109,79,0.08)" }}
+            >
+              <p
+                className="text-[11px] font-semibold leading-tight"
+                style={{ color: COLORS.green }}
+              >
+                {t(
+                  "Admin amekagua — lipa ada ili liidhinishwe",
+                  "Admin reviewed — pay fee to publish"
+                )}
+              </p>
+            </div>
+          )}
+
+          {listing.status === "paid_pending_approval" && (
+            <div
+              className="mt-1.5 rounded-lg px-2.5 py-1.5"
+              style={{ background: "rgba(37,99,235,0.08)" }}
+            >
+              <p
+                className="text-[11px] font-semibold leading-tight"
+                style={{ color: "#2563EB" }}
+              >
+                {t(
+                  "Umelipa — inasubiri idhini ya mwisho",
+                  "Paid — awaiting final approval"
+                )}
+              </p>
+            </div>
+          )}
+
           {listing.status === "rejected" && listing.rejectionReason && (
             <p
               style={{ color: COLORS.rust }}
@@ -308,7 +329,8 @@ function ListingCard({
 
       {/* Actions */}
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-sandline pt-2.5">
-        {isUnpaid(listing) && (
+        {/* approved_pending_payment — Pay Now kikubwa */}
+        {listing.status === "approved_pending_payment" && (
           <button
             type="button"
             onClick={() => onPay?.(listing.id, listing)}
@@ -321,7 +343,35 @@ function ListingCard({
           </button>
         )}
 
-        {/* ✅ EDIT — kitufe cha kuhariri */}
+        {/* needs_edit — Hariri Sasa kikubwa */}
+        {listing.status === "needs_edit" && (
+          <button
+            type="button"
+            onClick={() => onEdit?.(listing.id)}
+            disabled={isBusy}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
+            style={{ background: "#B45309", color: "white" }}
+          >
+            <Pencil size={12} />
+            {t("Hariri Sasa", "Edit Now")}
+          </button>
+        )}
+
+        {/* unpaid legacy — Pay Now */}
+        {isUnpaid(listing) &&
+          listing.status !== "approved_pending_payment" && (
+            <button
+              type="button"
+              onClick={() => onPay?.(listing.id, listing)}
+              disabled={isBusy}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
+              style={{ background: COLORS.rust, color: "white" }}
+            >
+              <Wallet size={12} />
+              {t("Lipa Sasa", "Pay Now")}
+            </button>
+          )}
+
         <ActionBtn
           icon={Edit3}
           label={t("Hariri", "Edit")}
@@ -332,20 +382,56 @@ function ListingCard({
 
         {isLiveOrReserved && (
           <>
-            <ActionBtn icon={Rocket} label={t("Angaza", "Boost")} color={COLORS.goldInk} onClick={() => onBoost(listing.id)} disabled={isBusy} />
-            <ActionBtn icon={TrendingUp} label={t("Kipaumbele", "Priority")} color={COLORS.green} onClick={() => onLeading(listing.id)} disabled={isBusy} />
-            <ActionBtn icon={Megaphone} label={t("Tangaza", "Advertise")} color={COLORS.rust} onClick={() => onAdvertise(listing.id)} disabled={isBusy} />
+            <ActionBtn
+              icon={Rocket}
+              label={t("Angaza", "Boost")}
+              color={COLORS.goldInk}
+              onClick={() => onBoost(listing.id)}
+              disabled={isBusy}
+            />
+            <ActionBtn
+              icon={TrendingUp}
+              label={t("Kipaumbele", "Priority")}
+              color={COLORS.green}
+              onClick={() => onLeading(listing.id)}
+              disabled={isBusy}
+            />
+            <ActionBtn
+              icon={Megaphone}
+              label={t("Tangaza", "Advertise")}
+              color={COLORS.rust}
+              onClick={() => onAdvertise(listing.id)}
+              disabled={isBusy}
+            />
           </>
         )}
 
         {listing.status === "live" && (
-          <ActionBtn icon={Pause} label={t("Simamisha", "Pause")} color={COLORS.night} onClick={() => onPause(listing.id)} disabled={isBusy} />
+          <ActionBtn
+            icon={Pause}
+            label={t("Simamisha", "Pause")}
+            color={COLORS.night}
+            onClick={() => onPause(listing.id)}
+            disabled={isBusy}
+          />
         )}
         {listing.status === "paused" && (
-          <ActionBtn icon={Play} label={t("Endelea", "Resume")} color={COLORS.green} onClick={() => onResume(listing.id)} disabled={isBusy} />
+          <ActionBtn
+            icon={Play}
+            label={t("Endelea", "Resume")}
+            color={COLORS.green}
+            onClick={() => onResume(listing.id)}
+            disabled={isBusy}
+          />
         )}
         {isLiveOrReserved && (
-          <ActionBtn icon={CheckCircle2} label={t("Imeuzwa", "Sold")} color={COLORS.green} onClick={() => onMarkSold(listing.id)} disabled={isBusy} />
+          <ActionBtn
+            icon={CheckCircle2}
+            label={t("Imeuzwa", "Sold")}
+            color={COLORS.green}
+            onClick={() => onMarkSold(listing.id)}
+            disabled={isBusy}
+          />
         )}
 
         <ActionBtn
@@ -388,9 +474,11 @@ export default function MyListings({
 
   const goToPayment = (id) => {
     if (String(id).startsWith("temp_")) {
-      alert(lang === "sw"
-        ? "Tangazo lako bado halijathibitishwa. Subiri sekunde chache."
-        : "Your listing hasn't synced yet. Please wait.");
+      alert(
+        lang === "sw"
+          ? "Tangazo lako bado halijathibitishwa. Subiri sekunde chache."
+          : "Your listing hasn't synced yet. Please wait."
+      );
       return;
     }
     navigate(`/dashboard/pay-listing?id=${id}`);
@@ -400,7 +488,6 @@ export default function MyListings({
   const [searchQuery, setSearchQuery] = useState("");
   const [busy, setBusy] = useState({});
 
-  // ── Kichujio + utafutaji ────────────────────────────────
   const filtered = useMemo(() => {
     let list = [...listings];
 
@@ -430,7 +517,16 @@ export default function MyListings({
   const filters = [
     { key: "all", label: { sw: "Zote", en: "All" } },
     { key: "unpaid", label: { sw: "Haijalipwa", en: "Unpaid" } },
-    { key: "in_review", label: { sw: "Inasubiri", en: "In Review" } },
+    { key: "needs_edit", label: { sw: "Inahitaji Uhariri", en: "Needs Edit" } },
+    {
+      key: "approved_pending_payment",
+      label: { sw: "Lipa Sasa", en: "Pay Now" },
+    },
+    {
+      key: "paid_pending_approval",
+      label: { sw: "Inasubiri Idhini", en: "Pending Approval" },
+    },
+    { key: "in_review", label: { sw: "Inasubiri Admin", en: "Admin Review" } },
     { key: "live", label: { sw: "Hai", en: "Live" } },
     { key: "reserved", label: { sw: "Imehifadhiwa", en: "Reserved" } },
     { key: "sold", label: { sw: "Imeuzwa", en: "Sold" } },
@@ -438,9 +534,6 @@ export default function MyListings({
     { key: "rejected", label: { sw: "Imekataliwa", en: "Rejected" } },
   ];
 
-  // ============================================================
-  // HANDLE REMOVE — undo window + admin notification
-  // ============================================================
   const handleRemove = async (id) => {
     if (busy[id]) return;
     const listing = listings.find((l) => String(l.id) === String(id));
@@ -491,43 +584,28 @@ export default function MyListings({
       },
     });
 
-    // NOTE: Admin notification is emitted server-side on soft-delete.
-    // Do NOT create it from the client — that would let any user spam
-    // the admin notification feed.
-
     toast.success(t("Tangazo limefutwa", "Listing deleted"), {
       duration: 2000,
     });
   };
 
-  // ============================================================
-  // HANDLE EDIT — peleka kwenye edit route
-  // ============================================================
   const handleEdit = (id) => {
     if (onEdit) {
       onEdit(id);
     } else {
-      // Fallback: navigate moja kwa moja
       navigate(`/dashboard/listings/edit/${id}`);
     }
   };
 
-  // ============================================================
-  // RENDER
-  // ============================================================
   return (
     <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
-      {/* ── Header ───────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-lg sm:text-xl font-bold text-primary">
             {t("Mali Zangu", "My Listings")}
           </h1>
           <p className="text-xs sm:text-sm text-secondary mt-0.5">
-            {t(
-              `${listings.length} matangazo`,
-              `${listings.length} listings`
-            )}
+            {t(`${listings.length} matangazo`, `${listings.length} listings`)}
           </p>
         </div>
         <button
@@ -539,11 +617,12 @@ export default function MyListings({
         </button>
       </div>
 
-      {/* ── Filters + Search ─────────────────────────────── */}
       {listings.length > 0 && (
         <>
-          <div className="flex items-center gap-2 bg-white border rounded-lg px-3 py-2 mb-3 w-full"
-               style={{ borderColor: COLORS.sandLine }}>
+          <div
+            className="flex items-center gap-2 bg-white border rounded-lg px-3 py-2 mb-3 w-full"
+            style={{ borderColor: COLORS.sandLine }}
+          >
             <Search size={14} className="text-muted shrink-0" />
             <input
               value={searchQuery}
@@ -583,7 +662,6 @@ export default function MyListings({
         </>
       )}
 
-      {/* ── List ─────────────────────────────────────────── */}
       {filtered.length === 0 ? (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
