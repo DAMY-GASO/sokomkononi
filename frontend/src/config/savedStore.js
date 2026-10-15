@@ -1,29 +1,34 @@
 // ============================================================
-// savedStore.js — API-only via /api/saved/
+// savedStore.js — API-backed favourites.
+// Endpoints (per backend guide):
+//   GET    /saved/                     list my saves (paginated)
+//   POST   /saved/                     {listing} — idempotent save
+//   POST   /saved/toggle/              {listing} — flip; returns {saved, saved_ids, data}
+//   DELETE /saved/listing/{listing_id}/ remove by listing id
+//   DELETE /saved/{saved_id}/          remove by saved record id
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import { getListing } from "./listingsStore.js";
 
 const IDS_KEY = "sokomkononi_saved_v1";
 const SNAP_KEY = "sokomkononi_saved_snapshots_v1";
 const EV = "sokomkononi:saved-updated";
 const SNAP_EV = "sokomkononi:saved-snapshots-updated";
 
+/* ── Storage helpers ─────────────────────────────────────── */
 function readIds() {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(IDS_KEY);
     if (!raw) return [];
     const p = JSON.parse(raw);
-    return Array.isArray(p) ? p : [];
-  } catch {
-    return [];
-  }
+    return Array.isArray(p) ? p.map(String) : [];
+  } catch { return []; }
 }
 function writeIds(ids) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(IDS_KEY, JSON.stringify(ids));
+  const unique = Array.from(new Set((ids || []).map(String)));
+  window.localStorage.setItem(IDS_KEY, JSON.stringify(unique));
   window.dispatchEvent(new Event(EV));
 }
 function readSnaps() {
@@ -33,112 +38,168 @@ function readSnaps() {
     if (!raw) return {};
     const p = JSON.parse(raw);
     return p && typeof p === "object" ? p : {};
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }
 function writeSnaps(s) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(SNAP_KEY, JSON.stringify(s));
   window.dispatchEvent(new Event(SNAP_EV));
 }
-
-export function getSavedIds() {
-  return readIds();
-}
-export function getSnapshots() {
-  return readSnaps();
-}
-export function getSnapshot(id) {
-  return readSnaps()[id] || null;
-}
-export function isSaved(id) {
-  return readIds().includes(id);
-}
-
-async function _hydrateSavedFromApi_impl() {
+function dispatchToast(type, message) {
   try {
-    const data = await api.get("/saved/?page_size=200");
-    const list = Array.isArray(data) ? data : data?.results || [];
-    const serverIds = list.map((s) => s.listing?.id).filter(Boolean);
-    const snaps = {};
-    for (const item of list) {
-      if (!item.listing?.id) continue;
-      snaps[item.listing.id] = {
-        price: item.snapshot_price ?? item.listing.price,
-        status: item.snapshot_status ?? item.listing.status,
-        title: item.listing.title,
-        savedAt: item.saved_at,
-      };
-    }
-    // Server is the source of truth. Locally-saved ids that the server
-    // doesn't know about are almost always from another device where the
-    // user already removed the save — do NOT resurrect them.
-    const mergedSnaps = { ...snaps };
-    writeIds(serverIds);
-    writeSnaps(mergedSnaps);
-    return { ok: true, count: serverIds.length };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+    window.dispatchEvent(
+      new CustomEvent("sokomkononi:toast", { detail: { type, message } })
+    );
+  } catch { /* noop */ }
+}
+function isAuthed() {
+  try { return Boolean(localStorage.getItem("sokomkononi_access")); }
+  catch { return false; }
 }
 
+/* ── Sync reads ──────────────────────────────────────────── */
+export function getSavedIds() { return readIds(); }
+export function getSnapshots() { return readSnaps(); }
+export function getSnapshot(id) { return readSnaps()[String(id)] || null; }
+export function isSaved(id) { return readIds().some((x) => x === String(id)); }
+
+/* ── Hydrate from API ────────────────────────────────────── */
+let _hydratePromise = null;
+export async function hydrateSavedFromApi() {
+  if (_hydratePromise) return _hydratePromise;
+  _hydratePromise = (async () => {
+    if (!isAuthed()) {
+      writeIds([]);
+      writeSnaps({});
+      return { ok: true, count: 0, source: "unauthenticated" };
+    }
+    try {
+      const data = await api.get("/saved/?page_size=200");
+      const list = Array.isArray(data) ? data : data?.results || [];
+      const ids = [];
+      const snaps = {};
+      for (const item of list) {
+        const listing = item?.listing || {};
+        const lid = listing.id ?? item?.listing_id;
+        if (lid == null) continue;
+        ids.push(lid);
+        snaps[String(lid)] = {
+          price: item.snapshot_price ?? listing.price,
+          status: item.snapshot_status ?? listing.status,
+          title: item.snapshot_title ?? listing.title,
+          savedAt: item.saved_at,
+        };
+      }
+      writeIds(ids);
+      writeSnaps(snaps);
+      return { ok: true, count: ids.length, source: "api" };
+    } catch (err) {
+      if (err?.status === 401 || err?.status === 403) {
+        writeIds([]);
+        writeSnaps({});
+        return { ok: true, count: 0, source: "unauthenticated" };
+      }
+      console.warn("[savedStore] hydrate failed:", err);
+      return { ok: false, error: err, count: getSavedIds().length };
+    } finally {
+      _hydratePromise = null;
+    }
+  })();
+  return _hydratePromise;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOGGLE — uses /toggle/ as primary, falls back gracefully
+   ═══════════════════════════════════════════════════════════ */
 export async function toggleSaved(id, listing = null) {
   if (id == null) return { ok: false, error: new Error("No listing id") };
 
-  // ── 1. Auth check: hit login-required path early ─────────
-  let hasToken = false;
-  try { hasToken = Boolean(localStorage.getItem("sokomkononi_access")); } catch { /* noop */ }
-  if (!hasToken) {
+  // ── Auth gate ────────────────────────────────────────────
+  if (!isAuthed()) {
     dispatchToast("info",
       "Ingia kwanza ili kuhifadhi / Please log in to save listings.");
     return { ok: false, error: new Error("Not authenticated"), code: "NOT_AUTHENTICATED" };
   }
 
-  const current = readIds();
-  const wasSaved = current.some((x) => String(x) === String(id));
-  const nextIds = wasSaved
-    ? current.filter((x) => String(x) !== String(id))
-    : [...current, id];
+  const listingId = String(id);
+  const before = readIds();
+  const wasSaved = before.includes(listingId);
 
-  // ── 2. Optimistic flip: instant visual feedback ──────────
-  writeIds(nextIds);
+  // ── Optimistic flip ──────────────────────────────────────
+  const next = wasSaved
+    ? before.filter((x) => x !== listingId)
+    : [...before, listingId];
+  writeIds(next);
 
+  // If we have a listing object, remember the snapshot immediately
+  if (listing && !wasSaved) {
+    const snaps = readSnaps();
+    snaps[listingId] = {
+      price: listing.price,
+      status: listing.status,
+      title: listing.title,
+      savedAt: new Date().toISOString(),
+    };
+    writeSnaps(snaps);
+  }
+
+  // ── Call /toggle/ ────────────────────────────────────────
   try {
-    if (wasSaved) {
-      await api.delete(`/saved/listing/${id}/`);
-      const snaps = readSnaps();
-      delete snaps[id];
-      writeSnaps(snaps);
-    } else {
-      await api.post("/saved/", { listing: id });
-      const target = listing || getListing(id) || null;
-      if (target) {
-        const snaps = readSnaps();
-        snaps[id] = {
-          price: target.price,
-          status: target.status,
-          title: target.title,
-          savedAt: new Date().toISOString(),
-        };
-        writeSnaps(snaps);
-      }
-    }
-    return { ok: true, saved: !wasSaved };
-  } catch (err) {
-    // ── 3. Rollback on failure ─────────────────────────────
-    writeIds(current);
-    console.warn("[savedStore] toggleSaved failed:", err);
+    const raw = await api.post("/saved/toggle/", { listing: Number(id) });
 
-    if (err?.status === 401 || err?.status === 403) {
+    // Backend returns:
+    //   { saved: true|false, saved_ids?: [...], data?: {...} }
+    const serverSaved = raw?.saved;
+
+    // If the server explicitly tells us its full list, use it — this
+    // heals any local drift (e.g. another device saved/unsaved).
+    if (Array.isArray(raw?.saved_ids)) {
+      writeIds(raw.saved_ids);
+    } else if (typeof serverSaved === "boolean" && serverSaved !== !wasSaved) {
+      // Server disagreed with our optimistic guess — correct it
+      writeIds(
+        serverSaved
+          ? [...before, listingId]
+          : before.filter((x) => x !== listingId)
+      );
+    }
+
+    // Remove snapshot when unsaved
+    if (serverSaved === false) {
+      const snaps = readSnaps();
+      delete snaps[listingId];
+      writeSnaps(snaps);
+    }
+
+    return { ok: true, saved: !!serverSaved };
+  } catch (err) {
+    // ── Rollback on failure ────────────────────────────────
+    writeIds(before);
+    if (listing && !wasSaved) {
+      // Undo snapshot
+      const snaps = readSnaps();
+      delete snaps[listingId];
+      writeSnaps(snaps);
+    }
+
+    const status = err?.status;
+    if (status === 401 || status === 403) {
       dispatchToast("info",
         "Kipindi kimeisha. Ingia tena / Session expired. Please log in again.");
       return { ok: false, error: err, code: "SESSION_EXPIRED" };
     }
-    if (err?.status === 404) {
-      dispatchToast("error",
-        "Hifadhi haipatikani kwa sasa. Jaribu tena / Save is not available right now.");
-      return { ok: false, error: err, code: "ENDPOINT_MISSING" };
+    if (status === 404) {
+      // Endpoint missing on backend — fall back to POST + DELETE
+      return await toggleSavedFallback(id, listing, wasSaved, before);
+    }
+    if (status === 400) {
+      const detail =
+        err?.data?.detail ||
+        err?.data?.error?.message ||
+        (Array.isArray(err?.data?.listing) ? err.data.listing[0] : null) ||
+        "Tangazo hili haliwezi kuhifadhiwa / This listing can't be saved.";
+      dispatchToast("warning", detail);
+      return { ok: false, error: err };
     }
     dispatchToast("error",
       err?.data?.detail || err?.message ||
@@ -147,44 +208,104 @@ export async function toggleSaved(id, listing = null) {
   }
 }
 
-/* Fire a toast through the global event bus (see Toast.jsx) */
-function dispatchToast(type, message) {
+/* ── Fallback path (only used if /toggle/ returns 404) ──── */
+async function toggleSavedFallback(id, listing, wasSaved, before) {
+  const listingId = String(id);
   try {
-    window.dispatchEvent(new CustomEvent("sokomkononi:toast", {
-      detail: { type, message },
-    }));
-  } catch { /* noop */ }
+    if (wasSaved) {
+      await api.delete(`/saved/listing/${id}/`);
+      const snaps = readSnaps();
+      delete snaps[listingId];
+      writeSnaps(snaps);
+    } else {
+      await api.post("/saved/", { listing: Number(id) });
+      if (listing) {
+        const snaps = readSnaps();
+        snaps[listingId] = {
+          price: listing.price,
+          status: listing.status,
+          title: listing.title,
+          savedAt: new Date().toISOString(),
+        };
+        writeSnaps(snaps);
+      }
+    }
+    return { ok: true, saved: !wasSaved };
+  } catch (err2) {
+    writeIds(before);
+    dispatchToast("error",
+      err2?.data?.detail || err2?.message ||
+      "Imeshindwa kuhifadhi. Jaribu tena / Could not save. Try again.");
+    return { ok: false, error: err2 };
+  }
 }
 
+/* ── Remove by listing id (dedicated, idempotent) ────────── */
+export async function removeSavedAsync(id) {
+  if (id == null) return { ok: false, error: new Error("No listing id") };
+  if (!isAuthed()) return { ok: false, error: new Error("Not authenticated") };
 
+  const listingId = String(id);
+  const before = readIds();
+  writeIds(before.filter((x) => x !== listingId));
+  const snaps = readSnaps();
+  delete snaps[listingId];
+  writeSnaps(snaps);
+
+  try {
+    await api.delete(`/saved/listing/${id}/`);
+    return { ok: true };
+  } catch (err) {
+    // Treat 404 as success — already removed
+    if (err?.status === 404) return { ok: true };
+    writeIds(before);
+    return { ok: false, error: err };
+  }
+}
+
+/* ── Snapshots ───────────────────────────────────────────── */
+export function saveSnapshot(listing) {
+  if (!listing?.id) return;
+  const snaps = readSnaps();
+  snaps[String(listing.id)] = {
+    price: listing.price,
+    status: listing.status,
+    title: listing.title,
+    savedAt: new Date().toISOString(),
+  };
+  writeSnaps(snaps);
+}
+export function removeSnapshot(id) {
+  const snaps = readSnaps();
+  delete snaps[String(id)];
+  writeSnaps(snaps);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HOOKS
+   ═══════════════════════════════════════════════════════════ */
 export function useSavedIds() {
   const [ids, setIds] = useState(() => readIds());
+
   useEffect(() => {
-    // Only hydrate when a user is actually signed in.
-    let hasToken = false;
-    try { hasToken = Boolean(localStorage.getItem("sokomkononi_access")); } catch {}
-    if (!hasToken) return undefined;
-    // Throttle price-drop detection to once per hour; otherwise every
-    // mount of useSavedIds (which is every listing card) triggers a
-    // listings fetch.
-    const LAST_KEY = "sokomkononi_price_drops_last_v1";
-    const ONE_HOUR = 60 * 60 * 1000;
-    hydrateSavedFromApi().then(() => {
-      try {
-        const last = Number(localStorage.getItem(LAST_KEY) || 0);
-        if (Date.now() - last < ONE_HOUR) return;
-        localStorage.setItem(LAST_KEY, String(Date.now()));
-      } catch { /* noop */ }
-      detectPriceDropsAsync().catch(() => {});
-    });
+    // Hydrate once on mount if logged in
+    if (isAuthed()) hydrateSavedFromApi();
+
     const sync = () => setIds(readIds());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);
+
+    // Re-hydrate when the tab regains focus (catches other devices)
+    const onVisible = () => { if (!document.hidden && isAuthed()) hydrateSavedFromApi(); };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       window.removeEventListener("storage", sync);
       window.removeEventListener(EV, sync);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
+
   return ids;
 }
 
@@ -202,95 +323,8 @@ export function useSavedSnapshots() {
   return snaps;
 }
 
-export function saveSnapshot(listing) {
-  if (!listing?.id) return;
-  const snaps = readSnaps();
-  snaps[listing.id] = {
-    price: listing.price,
-    status: listing.status,
-    title: listing.title,
-    savedAt: new Date().toISOString(),
-  };
-  writeSnaps(snaps);
+export function useIsSaved(id) {
+  const ids = useSavedIds();
+  if (id == null) return false;
+  return ids.some((x) => x === String(id));
 }
-export function removeSnapshot(id) {
-  const snaps = readSnaps();
-  delete snaps[id];
-  writeSnaps(snaps);
-}
-export function saveSavedIds(ids) {
-  writeIds(ids);
-}
-
-
-// ============================================================
-// PRICE ALERTS
-// Compare each saved snapshot's price against the current
-// listing price. When the price drops, emit a local notification.
-// ============================================================
-import { notificationsApi } from "../api/notifications.js";
-import { guarded } from "./hydrateGuard.js";
-
-export async function detectPriceDropsAsync() {
-  const snaps = readSnaps();
-  const ids = Object.keys(snaps);
-  if (ids.length === 0) return { ok: true, drops: [] };
-
-  // Fetch each saved listing individually — avoids the
-  // undocumented ?id__in= query param.
-  const results = await Promise.allSettled(
-    ids.map((id) => api.get(`/listings/${id}/`))
-  );
-  const current = results
-    .filter((r) => r.status === "fulfilled" && r.value)
-    .map((r) => r.value);
-
-  const drops = [];
-  for (const l of current) {
-    const snap = snaps[l.id];
-    if (!snap) continue;
-    const oldPrice = Number(snap.price) || 0;
-    const newPrice = Number(l.price) || 0;
-    if (oldPrice > 0 && newPrice > 0 && newPrice < oldPrice) {
-      drops.push({
-        listingId: l.id,
-        title: l.title || snap.title || "",
-        oldPrice,
-        newPrice,
-      });
-    }
-  }
-
-  if (drops.length === 0) return { ok: true, drops: [] };
-
-  // Emit a local notification for each drop (also reachable via the badge)
-  const { notificationsApi: NA } = await import("../api/notifications.js");
-  for (const d of drops) {
-    try {
-      await NA.create({
-        notification_type: "PRICE_DROP",
-        audience: "user",
-        title: "Bei imeshuka! / Price dropped!",
-        message: `${d.title}: TZS ${d.oldPrice.toLocaleString("en-US")} → TZS ${d.newPrice.toLocaleString("en-US")}`,
-        related_object_type: "listing",
-        related_object_id: d.listingId,
-        action_url: `/mali/${d.listingId}`,
-        priority: "normal",
-      });
-    } catch (e) {
-      // Silent — will retry on next hydrate
-      console.warn("[savedStore] price-drop notify failed:", e);
-    }
-  }
-
-  // Update snapshots to the new prices so we don't alert twice
-  const updated = { ...snaps };
-  drops.forEach((d) => {
-    updated[d.listingId] = { ...updated[d.listingId], price: d.newPrice };
-  });
-  writeSnaps(updated);
-
-  return { ok: true, drops };
-}
-
-export const hydrateSavedFromApi = guarded(_hydrateSavedFromApi_impl, { key: "hydrateSavedFromApi" });
