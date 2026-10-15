@@ -1,159 +1,53 @@
-// ============================================================
-// StatusBadge.jsx
-// Badge ya status — kwa users, listings, deals.
-// Bilingual — inasoma `lang` prop.
-// Responsive: inaepuka kuvunja layout kwenye simu.
-// ============================================================
-
 import React from "react";
 
+const CONFIG = {
+  active:      { label: { sw: "Hai", en: "Active" },     tone: "success" },
+  pending:     { label: { sw: "Inasubiri", en: "Pending" }, tone: "warn" },
+  inactive:    { label: { sw: "Haifanyi Kazi", en: "Inactive" }, tone: "muted" },
+  suspended:   { label: { sw: "Amesimamishwa", en: "Suspended" }, tone: "danger" },
+  verified:    { label: { sw: "Imethibitishwa", en: "Verified" }, tone: "success" },
+  rejected:    { label: { sw: "Imekataliwa", en: "Rejected" }, tone: "danger" },
+  live:            { label: { sw: "Hai", en: "Live" },              tone: "success" },
+  reserved:        { label: { sw: "Ina Reservation", en: "Reserved" }, tone: "gold" },
+  in_review:       { label: { sw: "Inakaguliwa", en: "In Review" }, tone: "warn" },
+  pending_payment: { label: { sw: "Inasubiri Malipo", en: "Pending Payment" }, tone: "warn" },
+  sold:            { label: { sw: "Imeuzwa", en: "Sold" },          tone: "royal" },
+  expired:         { label: { sw: "Muda Umeisha", en: "Expired" },  tone: "muted" },
+  completed:                 { label: { sw: "Imekamilika", en: "Completed" }, tone: "success" },
+  negotiating:               { label: { sw: "Inajadiliwa", en: "Negotiating" }, tone: "warn" },
+  offer_sent:                { label: { sw: "Ofa Imetumwa", en: "Offer Sent" }, tone: "warn" },
+  accepted:                  { label: { sw: "Imekubaliwa", en: "Accepted" }, tone: "success" },
+  declined:                  { label: { sw: "Imekataliwa", en: "Declined" }, tone: "danger" },
+  awaiting_final_payment:    { label: { sw: "Malipo ya Mwisho", en: "Final Payment" }, tone: "royal" },
+  payment_proof_submitted:   { label: { sw: "Uthibitisho Umetumwa", en: "Proof Submitted" }, tone: "warn" },
+  disputed:                  { label: { sw: "Mgogoro", en: "Disputed" }, tone: "danger" },
+  cancelled:                 { label: { sw: "Imeghairiwa", en: "Cancelled" }, tone: "muted" },
+  open:        { label: { sw: "Wazi", en: "Open" },        tone: "danger" },
+  in_progress: { label: { sw: "Inaendelea", en: "In Progress" }, tone: "warn" },
+  resolved:    { label: { sw: "Imetatuliwa", en: "Resolved" }, tone: "success" },
+  closed:      { label: { sw: "Imefungwa", en: "Closed" }, tone: "muted" },
+  approved:    { label: { sw: "Imeidhinishwa", en: "Approved" }, tone: "success" },
+  reserved_paid:         { label: { sw: "Reservation Imelipwa", en: "Reservation Paid" }, tone: "success" },
+  inspecting:            { label: { sw: "Inakaguliwa", en: "Inspecting" }, tone: "royal" },
+  decided_accept:        { label: { sw: "Imekubaliwa", en: "Accepted" }, tone: "success" },
+  decided_reject:        { label: { sw: "Imekataliwa", en: "Rejected" }, tone: "danger" },
+  awaiting_confirmation: { label: { sw: "Inasubiri Uthibitisho", en: "Awaiting Confirmation" }, tone: "royal" },
+};
+
+const TONES = {
+  success: "bg-[#2F6D4F]/12 text-[#2F6D4F] border-[#2F6D4F]/25",
+  warn:    "bg-[#B45309]/12 text-[#B45309] border-[#B45309]/25",
+  danger:  "bg-[#C1502E]/12 text-[#C1502E] border-[#C1502E]/25",
+  gold:    "bg-[#FEA406]/15 text-[#A35F00] border-[#FEA406]/30",
+  royal:   "bg-[#0062FD]/12 text-[#0062FD] border-[#0062FD]/25",
+  muted:   "bg-[color:rgb(var(--c-hairline))]/60 text-secondary border-[color:rgb(var(--c-hairline))]",
+};
+
 export default function StatusBadge({ status, lang = "sw" }) {
-  const config = {
-    // ===== User statuses =====
-    active: {
-      label: lang === "sw" ? "Hai" : "Active",
-      color: "bg-green-100 text-green-700",
-    },
-    pending: {
-      label: lang === "sw" ? "Inasubiri" : "Pending",
-      color: "bg-yellow-100 text-yellow-700",
-    },
-    inactive: {
-      label: lang === "sw" ? "Haifanyi Kazi" : "Inactive",
-      color: "bg-gray-100 text-gray-500",
-    },
-    suspended: {
-      label: lang === "sw" ? "Amesimamishwa" : "Suspended",
-      color: "bg-red-100 text-red-700",
-    },
-    verified: {
-      label: lang === "sw" ? "Imethibitishwa" : "Verified",
-      color: "bg-green-100 text-green-700",
-    },
-    rejected: {
-      label: lang === "sw" ? "Imekataliwa" : "Rejected",
-      color: "bg-red-100 text-red-700",
-    },
-
-    // ===== Listing statuses =====
-    live: {
-      label: lang === "sw" ? "Hai" : "Live",
-      color: "bg-green-100 text-green-700",
-    },
-    reserved: {
-      label: lang === "sw" ? "Ina Reservation" : "Reserved",
-      color: "bg-yellow-100 text-yellow-700",
-    },
-    // ✅ FIX #15: Tofautisha `in_review` na `pending`
-    in_review: {
-      label: lang === "sw" ? "Inakaguliwa" : "In Review",
-      color: "bg-yellow-100 text-yellow-700",
-    },
-    pending_payment: {
-      label: lang === "sw" ? "Inasubiri Malipo" : "Pending Payment",
-      color: "bg-yellow-100 text-yellow-700",
-    },
-    sold: {
-      label: lang === "sw" ? "Imeuzwa" : "Sold",
-      color: "bg-blue-100 text-blue-700",
-    },
-    expired: {
-      label: lang === "sw" ? "Muda Umeisha" : "Expired",
-      color: "bg-gray-100 text-gray-500",
-    },
-
-    // ===== Deal statuses =====
-    completed: {
-      label: lang === "sw" ? "Imekamilika" : "Completed",
-      color: "bg-green-100 text-green-700",
-    },
-    negotiating: {
-      label: lang === "sw" ? "Inajadiliwa" : "Negotiating",
-      color: "bg-yellow-100 text-yellow-700",
-    },
-    offer_sent: {
-      label: lang === "sw" ? "Ofa Imetumwa" : "Offer Sent",
-      color: "bg-yellow-100 text-yellow-700",
-    },
-    accepted: {
-      label: lang === "sw" ? "Imekubaliwa" : "Accepted",
-      color: "bg-green-100 text-green-700",
-    },
-    declined: {
-      label: lang === "sw" ? "Imekataliwa" : "Declined",
-      color: "bg-red-100 text-red-700",
-    },
-    awaiting_final_payment: {
-      label: lang === "sw" ? "Malipo ya Mwisho" : "Final Payment",
-      color: "bg-blue-100 text-blue-700",
-    },
-    payment_proof_submitted: {
-      label: lang === "sw" ? "Uthibitisho Umetumwa" : "Proof Submitted",
-      color: "bg-yellow-100 text-yellow-700",
-    },
-    disputed: {
-      label: lang === "sw" ? "Mgogoro" : "Disputed",
-      color: "bg-red-100 text-red-700",
-    },
-    cancelled: {
-      label: lang === "sw" ? "Imeghairiwa" : "Cancelled",
-      color: "bg-gray-100 text-gray-500",
-    },
-
-    // ===== Ticket statuses =====
-    open: {
-      label: lang === "sw" ? "Wazi" : "Open",
-      color: "bg-red-100 text-red-700",
-    },
-    in_progress: {
-      label: lang === "sw" ? "Inaendelea" : "In Progress",
-      color: "bg-yellow-100 text-yellow-700",
-    },
-    resolved: {
-      label: lang === "sw" ? "Imetatuliwa" : "Resolved",
-      color: "bg-green-100 text-green-700",
-    },
-    closed: {
-      label: lang === "sw" ? "Imefungwa" : "Closed",
-      color: "bg-gray-100 text-gray-500",
-    },
-
-    // ===== Verification statuses =====
-    approved: {
-      label: lang === "sw" ? "Imeidhinishwa" : "Approved",
-      color: "bg-green-100 text-green-700",
-    },
-
-    // ===== Transaction statuses =====
-    reserved_paid: {
-      label: lang === "sw" ? "Reservation Imelipwa" : "Reservation Paid",
-      color: "bg-green-100 text-green-700",
-    },
-    inspecting: {
-      label: lang === "sw" ? "Inakaguliwa" : "Inspecting",
-      color: "bg-blue-100 text-blue-700",
-    },
-    decided_accept: {
-      label: lang === "sw" ? "Imekubaliwa" : "Accepted",
-      color: "bg-green-100 text-green-700",
-    },
-    decided_reject: {
-      label: lang === "sw" ? "Imekataliwa" : "Rejected",
-      color: "bg-red-100 text-red-700",
-    },
-    awaiting_confirmation: {
-      label: lang === "sw" ? "Inasubiri Uthibitisho" : "Awaiting Confirmation",
-      color: "bg-blue-100 text-blue-700",
-    },
-  };
-
-  const s = config[status] || config.pending;
-
+  const c = CONFIG[status] || CONFIG.pending;
   return (
-    <span
-      className={`inline-flex items-center justify-center text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 ${s.color}`}
-    >
-      {s.label}
+    <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none ${TONES[c.tone] || TONES.muted}`}>
+      {c.label?.[lang] || c.label?.sw || status}
     </span>
   );
 }

@@ -1,86 +1,37 @@
-// ============================================================
-// ConfirmDialog.jsx — promise-based confirm() replacement
-// ============================================================
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
-import { COLORS } from "../pages/dashboard/components/shared";
+import { Button } from "./ui";
 
 const ConfirmContext = createContext(null);
 
 export function ConfirmProvider({ children }) {
   const [state, setState] = useState(null);
-
-  const confirm = useCallback((opts = {}) => {
-    return new Promise((resolve) => {
-      setState({
-        title: opts.title || "Are you sure?",
-        description: opts.description || "",
-        confirmLabel: opts.confirmLabel || "Confirm",
-        cancelLabel: opts.cancelLabel || "Cancel",
-        danger: !!opts.danger,
-        resolve,
-      });
-    });
-  }, []);
-
-  const finish = (result) =>
-    setState((prev) => { prev?.resolve?.(result); return null; });
-
-  // Close on Escape — dismisses with `false` for safety.
+  const confirm = useCallback((opts = {}) => new Promise((resolve) => {
+    setState({ title: opts.title || "Are you sure?", description: opts.description || "", confirmLabel: opts.confirmLabel || "Confirm", cancelLabel: opts.cancelLabel || "Cancel", danger: !!opts.danger, resolve });
+  }), []);
+  const finish = (r) => setState((p) => { p?.resolve?.(r); return null; });
   useEffect(() => {
     if (!state) return undefined;
     const onKey = (e) => { if (e.key === "Escape") finish(false); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
-
   return (
     <ConfirmContext.Provider value={confirm}>
       {children}
       {state && (
-        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5">
-            <div className="text-center mb-4">
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
-                style={{
-                  background: state.danger
-                    ? "rgba(193,80,46,0.12)"
-                    : "rgba(232,163,61,0.12)",
-                }}
-              >
-                <AlertTriangle
-                  size={26}
-                  color={state.danger ? COLORS.rust : COLORS.gold}
-                />
+        <div className="fixed inset-0 z-[10001] grid place-items-center p-4 bg-black/55 backdrop-blur-sm animate-fade-in">
+          <div className="bg-card rounded-2xl max-w-md w-full p-6 shadow-2xl animate-scale-in border border-[color:rgb(var(--c-hairline))]">
+            <div className="text-center mb-5">
+              <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full" style={{ background: state.danger ? "rgb(193 80 46 / .12)" : "rgb(254 164 6 / .14)" }}>
+                <AlertTriangle size={26} color={state.danger ? "#C1502E" : "#A35F00"} />
               </div>
-              <h3 className="text-base font-bold text-primary">{state.title}</h3>
-              {state.description && (
-                <p className="text-sm text-secondary mt-2 whitespace-pre-line">
-                  {state.description}
-                </p>
-              )}
+              <h3 className="text-[17px] font-semibold text-primary">{state.title}</h3>
+              {state.description && <p className="mt-2 text-sm text-secondary whitespace-pre-line leading-relaxed">{state.description}</p>}
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => finish(false)}
-                autoFocus={state.danger}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
-              >
-                {state.cancelLabel}
-              </button>
-              <button
-                onClick={() => finish(true)}
-                autoFocus={!state.danger}
-                className="flex-1 py-2.5 rounded-lg text-sm font-semibold"
-                style={{
-                  background: state.danger ? COLORS.rust : COLORS.gold,
-                  color: state.danger ? "white" : COLORS.night,
-                }}
-              >
-                {state.confirmLabel}
-              </button>
+              <Button variant="outline" className="flex-1" onClick={() => finish(false)} autoFocus={state.danger}>{state.cancelLabel}</Button>
+              <Button variant={state.danger ? "danger" : "primary"} className="flex-1" onClick={() => finish(true)} autoFocus={!state.danger}>{state.confirmLabel}</Button>
             </div>
           </div>
         </div>
@@ -91,11 +42,6 @@ export function ConfirmProvider({ children }) {
 
 export function useConfirm() {
   const ctx = useContext(ConfirmContext);
-  if (!ctx) {
-    return (opts = {}) => {
-      const text = [opts.title, opts.description].filter(Boolean).join("\n");
-      return Promise.resolve(window.confirm(text));
-    };
-  }
+  if (!ctx) return (o = {}) => Promise.resolve(window.confirm([o.title, o.description].filter(Boolean).join("\n")));
   return ctx;
 }
