@@ -70,6 +70,8 @@ import {
   toggleBoostPackageActiveAsync,
   removeBoostPackageAsync,
   renameBoostPackageAsync,
+  addBoostPackageAsync,
+  updateBoostPackageAsync,
 } from "../../../../config/boostPackagesStore.js";
 import {
   useBoostFee,
@@ -423,6 +425,34 @@ export default function RevenueSection() {
   const toggleBoostFee = () =>
     withBusy("boost-fee-toggle", async () => {
       const res = await toggleBoostFeeAsync();
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  // ═══════════════════════════════════════════════════════════
+  // BOOST PACKAGES — ADD / UPDATE
+  // ═══════════════════════════════════════════════════════════
+  const handleAddBoostPackage = () =>
+    withBusy("boost-add-pkg", async () => {
+      const nextOrder =
+        boostPackages.length > 0
+          ? Math.max(...boostPackages.map((p) => p.ordering || 0)) + 1
+          : 1;
+      const res = await addBoostPackageAsync({
+        name: t("Package Mpya", "New Package"),
+        hours: 24,
+        price: 3000,
+        ordering: nextOrder,
+      });
+      if (res.ok) flashSaved();
+      return res;
+    });
+
+  const updateBoostPackageHours = (key, hours) =>
+    withBusy(`boost-hours-${key}`, async () => {
+      const target = boostPackages.find((p) => p.key === key);
+      if (!target) return { ok: false, error: new Error("Not found") };
+      const res = await updateBoostPackageAsync(target.id, { hours });
       if (res.ok) flashSaved();
       return res;
     });
@@ -1197,6 +1227,25 @@ export default function RevenueSection() {
             </p>
           )}
           <EditHint lang={lang} accentColor={COLORS.gold} />
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <span className="text-[11px] font-semibold text-secondary">
+              {t("Packages", "Packages")} ({boostPackages.length})
+            </span>
+            <button
+              type="button"
+              onClick={handleAddBoostPackage}
+              disabled={!!busy["boost-add-pkg"]}
+              style={{ background: COLORS.gold, color: COLORS.night }}
+              className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+            >
+              {busy["boost-add-pkg"] ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Plus size={12} />
+              )}
+              {t("Ongeza Package", "Add Package")}
+            </button>
+          </div>
           {boostPackages.length === 0 ? (
             <p className="text-xs text-muted text-center py-3">
               {t("Hakuna boost packages.", "No boost packages.")}

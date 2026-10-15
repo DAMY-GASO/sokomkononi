@@ -1,6 +1,8 @@
 // ============================================================
 // boostPackagesStore.js — API-only via /api/boosting/packages/
 // No seeds. Update requires a real backend id.
+// + addBoostPackageAsync — ongeza package mpya
+// + updateBoostPackageAsync — generic updater
 // ============================================================
 import { useEffect, useState } from "react";
 import { boostingApi } from "../api/boosting.js";
@@ -77,6 +79,62 @@ export async function hydrateBoostPackagesFromApi() {
   return _boostPkgsHydratePromise;
 }
 
+// ============================================================
+// ADD — ongeza boost package mpya
+// ============================================================
+export async function addBoostPackageAsync({ name, hours, price, ordering }) {
+  const cleanName = (name || "").trim();
+  if (!cleanName) {
+    return { ok: false, error: new Error("Name required") };
+  }
+  const cleanHours = Number(hours) || 24;
+  const cleanPrice = Number(price) || 0;
+  if (cleanPrice < 0) {
+    return { ok: false, error: new Error("Price must be >= 0") };
+  }
+  try {
+    const raw = await boostPackagesApi.create({
+      name: cleanName,
+      duration_hours: cleanHours,
+      price: cleanPrice,
+      is_active: true,
+      ordering: Number(ordering) || 0,
+    });
+    const created = norm(raw);
+    if (created) {
+      write([...read(), created]);
+    }
+    return { ok: true, package: created };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// UPDATE — generic updater kwa fields zozote
+// ============================================================
+export async function updateBoostPackageAsync(id, patch) {
+  try {
+    const body = {};
+    if (patch.name != null) body.name = patch.name;
+    if (patch.hours != null) body.duration_hours = Number(patch.hours);
+    if (patch.price != null) body.price = Number(patch.price);
+    if (patch.ordering != null) body.ordering = Number(patch.ordering);
+    if (patch.isActive != null) body.is_active = patch.isActive;
+    const raw = await boostPackagesApi.update(id, body);
+    const updated = norm(raw);
+    if (updated) {
+      write(read().map((p) => (p.id === id ? updated : p)));
+    }
+    return { ok: true, package: updated };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// UPDATE PRICE — update price pekee
+// ============================================================
 export async function updateBoostPackagePriceAsync(key, price) {
   const num = Number(price);
   if (!Number.isFinite(num) || num < 0) {

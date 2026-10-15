@@ -1,6 +1,7 @@
 // ============================================================
 // BoostSasa.jsx (production + bundle + credits support)
 // + Inaonyesha discount ya campaign kwenye packages
+// + Bei 0 → inaonyesha "Bure" (sio "TZS 0")
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -94,15 +95,27 @@ function ListingPicker({ listings, selectedId, onSelect, lang }) {
 
 // ============================================================
 // FLAT PACKAGE CARD — inaonyesha discount kama ipo
+// Bei 0 au fee imezimwa → inaonyesha "Bure" (sio "TZS 0")
 // ============================================================
 function FlatPackageCard({ pkg, selected, onSelect, lang, free = false }) {
   const isFeatured = pkg.key === "featured";
   const label = getLocalized(pkg.label, lang);
   const benefits = getLocalizedArray(pkg.benefits, lang);
 
-  const hasDiscount = !free && pkg.pricing && Number(pkg.pricing.discount_percent) > 0;
+  const hasDiscount =
+    !free && pkg.pricing && Number(pkg.pricing.discount_percent) > 0;
   const basePrice = hasDiscount ? pkg.pricing.base_price : pkg.price;
   const finalPrice = hasDiscount ? pkg.pricing.final_price : pkg.price;
+
+  // ── Chagua jinsi ya kuonyesha bei ──
+  // Kama fee imezimwa (free === true) AU bei ni 0 → "Bure"
+  const isActuallyFree = free || !finalPrice || Number(finalPrice) <= 0;
+
+  const priceDisplay = isActuallyFree
+    ? (lang === "sw" ? "Bure" : "Free")
+    : formatTZS(finalPrice);
+
+  const priceColor = isActuallyFree ? COLORS.green : COLORS.rust;
 
   return (
     <button
@@ -134,7 +147,10 @@ function FlatPackageCard({ pkg, selected, onSelect, lang, free = false }) {
       <div className="flex items-center justify-center gap-2 w-full">
         <span className="text-primary text-sm font-bold">{label}</span>
         <span
-          style={{ background: selected ? COLORS.gold : COLORS.sandLine, borderColor: COLORS.gold }}
+          style={{
+            background: selected ? COLORS.gold : COLORS.sandLine,
+            borderColor: COLORS.gold,
+          }}
           className="w-5 h-5 rounded-full border flex items-center justify-center shrink-0"
         >
           {selected && <Check size={12} color={COLORS.night} />}
@@ -142,25 +158,30 @@ function FlatPackageCard({ pkg, selected, onSelect, lang, free = false }) {
       </div>
 
       <div className="flex flex-col items-center gap-0.5">
-        {hasDiscount && (
+        {hasDiscount && !isActuallyFree && (
           <span className="text-secondary text-body-sm line-through">
             {formatTZS(basePrice)}
           </span>
         )}
         <div className="flex items-baseline justify-center gap-1.5">
-          <span style={{ color: COLORS.rust }} className="text-lg font-bold">
-            {free ? (lang === "sw" ? "Bure" : "Free") : formatTZS(finalPrice)}
+          <span style={{ color: priceColor }} className="text-lg font-bold">
+            {priceDisplay}
           </span>
-          <span className="text-secondary text-body-sm">
-            / {lang === "sw" ? `siku ${pkg.days}` : `${pkg.days} days`}
-          </span>
+          {!isActuallyFree && (
+            <span className="text-secondary text-body-sm">
+              / {lang === "sw" ? `siku ${pkg.days}` : `${pkg.days} days`}
+            </span>
+          )}
         </div>
       </div>
 
       {benefits.length > 0 && (
         <ul className="flex flex-col gap-1.5 w-full text-left">
           {benefits.map((b, i) => (
-            <li key={i} className="text-secondary flex items-start gap-1.5 text-body-sm">
+            <li
+              key={i}
+              className="text-secondary flex items-start gap-1.5 text-body-sm"
+            >
               <TrendingUp size={12} className="shrink-0 mt-0.5" color={COLORS.green} />
               {b}
             </li>
@@ -203,7 +224,10 @@ function BoostBundleCard({ bundle, selected, onSelect, lang }) {
         <Package size={16} color={COLORS.gold} />
         <span className="text-primary text-sm font-bold">{name}</span>
         <span
-          style={{ background: selected ? COLORS.gold : COLORS.sandLine, borderColor: COLORS.gold }}
+          style={{
+            background: selected ? COLORS.gold : COLORS.sandLine,
+            borderColor: COLORS.gold,
+          }}
           className="w-5 h-5 rounded-full border flex items-center justify-center shrink-0"
         >
           {selected && <Check size={12} color={COLORS.night} />}
@@ -311,6 +335,11 @@ export default function BoostSasa({
   const creditInfo = checkCredit(user?.id, "boost");
   const hasCredit = !feeFree && creditInfo.hasCredit;
   const boostCreditRemaining = creditInfo.remaining || 0;
+
+  // Kama fee imezimwa, package yoyote inatosha (hata kama bei yake ni 0)
+  const packageIsFree = flatPackage
+    ? feeFree || !flatPackage.price || Number(flatPackage.price) <= 0
+    : false;
 
   const canBoost =
     feeLoaded &&
@@ -625,6 +654,16 @@ export default function BoostSasa({
           </div>
         )}
 
+        {feeFree && stage !== "paying" && (
+          <div className="rounded-xl border px-4 py-3 mb-4 flex items-center gap-2 text-sm"
+               style={{ background: "rgba(47,109,79,0.10)", borderColor: "rgba(47,109,79,0.35)", color: COLORS.green }}>
+            <Check size={16} />
+            <span className="font-semibold">
+              {t("Angaza ni BURE kwa sasa!", "Boost is FREE right now!")}
+            </span>
+          </div>
+        )}
+
         {stage !== "paying" && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
@@ -720,9 +759,16 @@ export default function BoostSasa({
             <div className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"
                  style={{ borderColor: COLORS.sandLine, background: "white" }}>
               <div>
-                <p className="text-secondary text-body-sm mb-0.5">{t("Jumla ya Malipo", "Total Payment")}</p>
-                <p className="text-lg font-bold" style={{ color: COLORS.rust }}>
-                  {feeFree
+                <p className="text-secondary text-body-sm mb-0.5">
+                  {t("Jumla ya Malipo", "Total Payment")}
+                </p>
+                <p
+                  className="text-lg font-bold"
+                  style={{
+                    color: feeFree || packageIsFree ? COLORS.green : COLORS.rust,
+                  }}
+                >
+                  {feeFree || packageIsFree
                     ? t("Bure", "Free")
                     : formatTZS(
                         paymentMode === "flat"
@@ -735,7 +781,7 @@ export default function BoostSasa({
               </div>
               <button
                 onClick={
-                  feeFree
+                  feeFree || packageIsFree
                     ? handleFreeBoost
                     : paymentMode === "flat"
                       ? handleBeginFlatPayment
@@ -755,7 +801,7 @@ export default function BoostSasa({
                 ) : (
                   <Package size={15} />
                 )}
-                {feeFree
+                {feeFree || packageIsFree
                   ? t("Angaza Bure", "Boost for Free")
                   : paymentMode === "flat"
                     ? t("Endelea Kulipa", "Continue to Payment")
