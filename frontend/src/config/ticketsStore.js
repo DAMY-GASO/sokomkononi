@@ -1,5 +1,6 @@
 // ============================================================
 // ticketsStore.js — API-only via /api/tickets/
+// + Attachments support
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -29,11 +30,10 @@ export const TICKET_STATUSES = [
 ];
 
 const CAT_API_TO_KEY = { PAYMENT: "payment", VERIFICATION: "verification", DISPUTE: "dispute", LISTING: "listing", ACCOUNT: "account", OTHER: "other" };
-const CAT_KEY_TO_API = { payment: "PAYMENT", verification: "VERIFICATION", dispute: "DISPUTE", listing: "LISTING", account: "ACCOUNT", other: "OTHER" };
 const PRI_FROM = { LOW: "low", MEDIUM: "medium", HIGH: "high", URGENT: "urgent" };
 const PRI_TO = { low: "LOW", medium: "MEDIUM", high: "HIGH", urgent: "URGENT" };
-const ST_FROM = { OPEN: "open", IN_PROGRESS: "in_progress", RESOLVED: "resolved", CLOSED: "closed" };
-const ST_TO = { open: "OPEN", in_progress: "IN_PROGRESS", resolved: "RESOLVED", closed: "CLOSED" };
+const ST_FROM = { OPEN: "open", IN_PROGRESS: "in_progress", RESOLVED: "resolved", COMPLETED: "closed", CLOSED: "closed" };
+const ST_TO = { open: "OPEN", in_progress: "IN_PROGRESS", resolved: "RESOLVED", closed: "COMPLETED" };
 
 function read() {
   if (typeof window === "undefined") return [];
@@ -49,23 +49,47 @@ function write(list) {
   window.localStorage.setItem(KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(EV));
 }
-function norm(raw) {
+
+function normAttachment(raw) {
   if (!raw) return null;
   return {
-    id: raw.id, code: raw.code,
-    subject: raw.subject, description: raw.description,
-    userId: raw.user, userName: raw.user_name, userEmail: raw.user_email,
-    category: CAT_API_TO_KEY[raw.category] || CAT_API_TO_KEY[String(raw.category || "").toUpperCase()] || "other",
+    id: raw.id,
+    name: raw.name || "attachment",
+    url: raw.url,
+    isImage: !!raw.is_image,
+    uploadedByName: raw.uploaded_by_name || "",
+    createdAt: raw.created_at,
+  };
+}
+
+function norm(raw) {
+  if (!raw) return null;
+  const normMsg = (m) => ({
+    id: m.id,
+    from: (m.sender || "USER").toLowerCase(),
+    senderName: m.sender_name,
+    text: m.text,
+    attachments: (m.attachments || []).map(normAttachment).filter(Boolean),
+    at: m.created_at,
+  });
+  return {
+    id: raw.id,
+    code: raw.code,
+    subject: raw.subject,
+    description: raw.description,
+    userId: raw.user,
+    userName: raw.user_name,
+    userEmail: raw.user_email,
+    category: CAT_API_TO_KEY[raw.category] || "other",
     priority: PRI_FROM[raw.priority] || raw.priority,
     status: ST_FROM[raw.status] || raw.status,
-    assignedTo: raw.assigned_to, assignedToName: raw.assigned_to_name,
-    messages: (raw.messages || []).map((m) => ({
-      id: m.id,
-      from: (m.sender || "USER").toLowerCase(),
-      senderName: m.sender_name,
-      text: m.text,
-      at: m.created_at,
-    })),
+    assignedTo: raw.assigned_to,
+    assignedToName: raw.assigned_to_name,
+    messages: (raw.messages || []).map(normMsg),
+    attachments: (raw.attachments || []).map(normAttachment).filter(Boolean),
+    slaDeadline: raw.sla_deadline,
+    slaRemindedAt: raw.sla_reminded_at,
+    slaOverdue: !!raw.sla_overdue,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
     resolvedAt: raw.resolved_at,
@@ -84,27 +108,77 @@ export async function hydrateTicketsFromApi() {
   } catch (err) { return { ok: false, error: err }; }
 }
 
-export async function addTicketMessageAsync(id, { text, sender = "user" }) {
-  if (!text?.trim()) return { ok: false, error: new Error("text required") };
-  const fbFrom = String(sender).toLowerCase() === "admin" ? "admin" : "user";
-  const fbName = fbFrom === "admin" ? "Admin" : "You";
+// ============================================================
+// ADD MESSAGE (+ files, kama zipo)
+// ============================================================
+export async function addTicketMessageAsync(id, { text, files } = {}) {
+  const cleanText = (text || "").trim();
+  const fileList = Array.isArray(files) ? files.filter(Boolean) : [];
+  if (!cleanText && fileList.length === 0) {
+    return { ok: false, error: new Error("text au files inahitajika") };
+  }
   try {
-    const raw = await api.post(`/tickets/${id}/messages/`, { text: text.trim() });
-    const msg = raw && raw.id ? {
+    let raw;
+    if (fileList.length > 0) {
+      const fd = new FormData();
+      fd.append("text", cleanText);
+      for (const f of fileList) fd.append("attachments", f);
+      raw = await api.upload(`/tickets/${id}/messages/`, fd);
+    } else {
+      raw = await api.post(`/tickets/${id}/messages/`, { text: cleanText });
+    }
+    const msg = raw && raw.id ? norm({
       id: raw.id,
-      from: (raw.sender || fbFrom).toLowerCase(),
-      senderName: raw.sender_name || fbName,
+      sender: raw.sender,
+      sender_name: raw.sender_name,
       text: raw.text,
-      time: raw.created_at,
-      at: raw.created_at,
-    } : {
-      id: `msg_${Date.now()}`, from: fbFrom, senderName: fbName,
-      text: text.trim(), at: new Date().toISOString(),
+      attachments: raw.attachments,
+      created_at: raw.created_at,
+    })?.messages?.[0] : null;
+
+    const finalMsg = msg || {
+      id: `msg_${Date.now()}`,
+      from: "user",
+      senderName: "You",
+      text: cleanText || "[attachment]",
+      attachments: fileList.map((f, i) => ({
+        id: `att_${Date.now()}_${i}`,
+        name: f.name,
+        url: URL.createObjectURL(f),
+        isImage: f.type?.startsWith("image/"),
+        uploadedByName: "You",
+        createdAt: new Date().toISOString(),
+      })),
+      at: new Date().toISOString(),
     };
+
     const current = getTickets();
-    write(current.map((t) => t.id === id ? { ...t, messages: [...t.messages, msg], updatedAt: new Date().toISOString() } : t));
-    return { ok: true, message: msg };
-  } catch (err) { return { ok: false, error: err }; }
+    write(current.map((t) =>
+      t.id === id
+        ? { ...t, messages: [...t.messages, finalMsg], updatedAt: new Date().toISOString() }
+        : t
+    ));
+    return { ok: true, message: finalMsg };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export async function uploadTicketAttachmentsAsync(id, files) {
+  const fileList = Array.isArray(files) ? files.filter(Boolean) : [];
+  if (fileList.length === 0) {
+    return { ok: false, error: new Error("files required") };
+  }
+  try {
+    const fd = new FormData();
+    for (const f of fileList) fd.append("attachments", f);
+    const raw = await api.upload(`/tickets/${id}/attachments/`, fd);
+    // Refresh kwa sababu attachments zina IDs za backend
+    await hydrateTicketsFromApi();
+    return { ok: true, count: raw?.count || fileList.length };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function updateTicketStatusAsync(id, status) {
@@ -166,4 +240,6 @@ export function useTickets() {
   }, []);
   return list;
 }
-export function useOpenTicketsCount() { return useTickets().filter((t) => t.status === "open" || t.status === "in_progress").length; }
+export function useOpenTicketsCount() {
+  return useTickets().filter((t) => t.status === "open" || t.status === "in_progress").length;
+}

@@ -5,11 +5,13 @@
 //
 // SASISHO:
 //   - Tabs mbili: "Tickets" na "Feedback"
+//   - Attachments upload + preview kwenye tickets
+//   - SLA badge (⏰ SLA IMEPITA) kwa tickets zilizopita muda
 //   - Feedback tab inaonyesha feedback zote za users
 //   - Admin anaweza kujibu feedback na kuona wastani wa rating
 // ============================================================
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   Search,
   Trash2,
@@ -93,13 +95,48 @@ const FEEDBACK_STATUS_META = {
 };
 
 // ============================================================
+// ATTACHMENT PREVIEW
+// ============================================================
+function AttachmentPreview({ att, lang }) {
+  if (!att?.url) return null;
+  return (
+    <a
+      href={att.url}
+      target="_blank"
+      rel="noreferrer"
+      className="flex items-center gap-2 text-xs text-primary bg-white rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors w-full min-w-0"
+    >
+      {att.isImage ? (
+        <img
+          src={att.url}
+          alt={att.name}
+          className="w-9 h-9 rounded object-cover shrink-0"
+        />
+      ) : (
+        <Paperclip size={12} className="text-muted shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="truncate font-medium text-[11px]">{att.name}</p>
+        {att.uploadedByName && (
+          <p className="text-[10px] text-muted truncate">
+            {att.uploadedByName}
+          </p>
+        )}
+      </div>
+    </a>
+  );
+}
+
+// ============================================================
 // TICKET CARD
 // ============================================================
 function TicketCard({ ticket, lang }) {
   const [expanded, setExpanded] = useState(false);
   const [replyText, setReplyText] = useState("");
+  const [replyFiles, setReplyFiles] = useState([]);
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
+  const fileInputRef = useRef(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -114,15 +151,15 @@ function TicketCard({ ticket, lang }) {
   const isBusy = (key) => !!busy[key];
 
   const handleSendReply = async () => {
-    if (!replyText.trim() || isBusy("reply")) return;
-    const message = replyText.trim();
+    const hasText = replyText.trim().length > 0;
+    const hasFiles = replyFiles.length > 0;
+    if ((!hasText && !hasFiles) || isBusy("reply")) return;
     setBusy((b) => ({ ...b, reply: true }));
     setError("");
 
     const res = await addTicketMessageAsync(ticket.id, {
-      from: "admin",
-      senderName: "Admin",
-      text: message,
+      text: replyText.trim(),
+      files: replyFiles,
     });
 
     setBusy((b) => {
@@ -131,12 +168,25 @@ function TicketCard({ ticket, lang }) {
       return next;
     });
 
-    if (res.ok) setReplyText("");
-    else
+    if (res.ok) {
+      setReplyText("");
+      setReplyFiles([]);
+    } else {
       setError(
         res.error?.message ||
           t("Imeshindwa kutuma jibu.", "Failed to send reply.")
       );
+    }
+  };
+
+  const handleFilesPicked = (e) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = "";
+    setReplyFiles((prev) => [...prev, ...picked].slice(0, 5));
+  };
+
+  const removeReplyFile = (i) => {
+    setReplyFiles((prev) => prev.filter((_, idx) => idx !== i));
   };
 
   const handleStatusChange = async (newStatus) => {
@@ -211,41 +261,37 @@ function TicketCard({ ticket, lang }) {
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
               <span className="text-[10px] font-bold text-muted shrink-0 whitespace-nowrap">
-                {ticket.id}
+                {ticket.code || ticket.id}
               </span>
               <span
-                style={{
-                  background: catColors?.bg || "#F5F3EC",
-                  color: catColors?.fg || "#101A2E",
-                }}
+                style={{ background: catColors?.bg, color: catColors?.fg }}
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
-                {category?.label?.[lang] || category?.label?.sw || ticket.category}
+                {category?.label?.[lang] || ticket.category}
               </span>
               <span
-                style={{
-                  background: priColors?.bg || "#F5F3EC",
-                  color: priColors?.fg || "#101A2E",
-                }}
+                style={{ background: priColors?.bg, color: priColors?.fg }}
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
-                {priority?.label?.[lang] || priority?.label?.sw}
+                {priority?.label?.[lang] || ticket.priority}
               </span>
               <span
-                style={{
-                  background: statusColors?.bg || "#F5F3EC",
-                  color: statusColors?.fg || "#101A2E",
-                }}
+                style={{ background: statusColors?.bg, color: statusColors?.fg }}
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
-                {status?.label?.[lang] || status?.label?.sw}
+                {status?.label?.[lang] || ticket.status}
               </span>
+              {ticket.slaOverdue && (
+                <span
+                  style={{ background: "rgba(193,80,46,0.2)", color: COLORS.rust }}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                >
+                  ⏰ SLA IMEPITA
+                </span>
+              )}
             </div>
 
-            <p
-              style={{ color: "var(--text-primary)" }}
-              className="text-sm font-semibold truncate w-full"
-            >
+            <p className="text-sm font-semibold truncate w-full">
               {ticket.subject}
             </p>
 
@@ -259,12 +305,12 @@ function TicketCard({ ticket, lang }) {
                 <Clock size={11} />
                 {timeAgo(ticket.createdAt, lang)}
               </span>
-              {ticket.assignedTo && (
+              {ticket.assignedToName && (
                 <>
                   <span className="text-muted shrink-0">•</span>
                   <span className="flex items-center gap-1 min-w-0">
                     <UserCheck size={11} className="shrink-0" />
-                    <span className="truncate">{ticket.assignedTo}</span>
+                    <span className="truncate">{ticket.assignedToName}</span>
                   </span>
                 </>
               )}
@@ -288,21 +334,19 @@ function TicketCard({ ticket, lang }) {
         >
           {error && (
             <div
-              style={{
-                background: "rgba(193,80,46,0.1)",
-                color: COLORS.rust,
-              }}
+              style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
               className="text-xs font-semibold px-3 py-2 rounded-lg"
             >
               {error}
             </div>
           )}
 
+          {/* Conversation */}
           <div className="min-w-0 w-full">
             <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
               {t("Mazungumzo", "Conversation")}
             </p>
-            <div className="flex flex-col gap-2 max-h-64 sm:max-h-72 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
               {ticket.messages?.map((msg) => {
                 const isAdmin = msg.from === "admin";
                 return (
@@ -328,12 +372,21 @@ function TicketCard({ ticket, lang }) {
                       >
                         {msg.senderName}
                       </p>
-                      <p
-                        className="leading-relaxed break-words"
-                        style={{ color: "inherit" }}
-                      >
-                        {msg.text}
-                      </p>
+                      {msg.text && msg.text !== "[attachment]" && (
+                        <p
+                          className="leading-relaxed break-words"
+                          style={{ color: "inherit" }}
+                        >
+                          {msg.text}
+                        </p>
+                      )}
+                      {msg.attachments?.length > 0 && (
+                        <div className="mt-1.5 flex flex-col gap-1">
+                          {msg.attachments.map((att) => (
+                            <AttachmentPreview key={att.id} att={att} lang={lang} />
+                          ))}
+                        </div>
+                      )}
                       <p
                         className="text-[10px] mt-1"
                         style={{
@@ -351,31 +404,29 @@ function TicketCard({ ticket, lang }) {
             </div>
           </div>
 
-          {ticket.attachments && ticket.attachments.length > 0 && (
-            <div className="min-w-0 w-full">
-              <p className="text-[10px] font-semibold text-secondary uppercase mb-1">
-                {t("Viambatisho", "Attachments")}
-              </p>
-              <div className="flex flex-col gap-1.5 w-full">
-                {ticket.attachments.map((att, i) => (
-                  <a
-                    key={i}
-                    href={att.url || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-2 text-xs text-primary bg-white rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors w-full min-w-0"
-                  >
-                    <Paperclip size={12} className="text-muted shrink-0" />
-                    <span className="truncate flex-1 min-w-0">{att.name}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
+          {/* Actions (open / in_progress / resolved) */}
           {ticket.status !== "closed" && (
             <>
+              {/* Reply input + file picker */}
               <div className="flex items-center gap-2 min-w-0 w-full">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf,.doc,.docx,.txt"
+                  className="hidden"
+                  onChange={handleFilesPicked}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isBusy("reply")}
+                  title={t("Ambatisha faili", "Attach files")}
+                  className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-muted hover:text-secondary border"
+                  style={{ borderColor: COLORS.sandLine, background: "white" }}
+                >
+                  <Paperclip size={14} />
+                </button>
                 <input
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
@@ -387,14 +438,19 @@ function TicketCard({ ticket, lang }) {
                 />
                 <button
                   onClick={handleSendReply}
-                  disabled={!replyText.trim() || isBusy("reply")}
+                  disabled={
+                    (!replyText.trim() && replyFiles.length === 0) ||
+                    isBusy("reply")
+                  }
                   style={{
                     background:
-                      replyText.trim() && !isBusy("reply")
+                      (replyText.trim() || replyFiles.length > 0) &&
+                      !isBusy("reply")
                         ? COLORS.gold
                         : COLORS.sandLine,
                     color:
-                      replyText.trim() && !isBusy("reply")
+                      (replyText.trim() || replyFiles.length > 0) &&
+                      !isBusy("reply")
                         ? COLORS.night
                         : "var(--text-muted)",
                   }}
@@ -409,6 +465,38 @@ function TicketCard({ ticket, lang }) {
                 </button>
               </div>
 
+              {/* Reply file previews */}
+              {replyFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {replyFiles.map((f, i) => (
+                    <div
+                      key={i}
+                      className="relative flex items-center gap-1.5 text-xs bg-white border rounded-lg px-2 py-1.5"
+                      style={{ borderColor: COLORS.sandLine }}
+                    >
+                      {f.type?.startsWith("image/") ? (
+                        <img
+                          src={URL.createObjectURL(f)}
+                          alt={f.name}
+                          className="w-8 h-8 rounded object-cover"
+                        />
+                      ) : (
+                        <Paperclip size={12} className="text-muted" />
+                      )}
+                      <span className="truncate max-w-[100px]">{f.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeReplyFile(i)}
+                        className="text-muted hover:text-[#C1502E]"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Status buttons */}
               <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
                 {ticket.status === "open" && (
                   <button
@@ -440,17 +528,22 @@ function TicketCard({ ticket, lang }) {
                   </button>
                 )}
 
-                <button
-                  onClick={handleClose}
-                  disabled={isBusy("status-closed")}
-                  style={{ color: "var(--text-primary)" }}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isBusy("status-closed") && (
-                    <Loader2 size={12} className="animate-spin" />
-                  )}
-                  {t("Funga", "Close")}
-                </button>
+                {ticket.status === "resolved" && (
+                  <button
+                    onClick={handleClose}
+                    disabled={isBusy("status-closed")}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      color: "var(--text-primary)",
+                      borderColor: COLORS.sandLine,
+                    }}
+                  >
+                    {isBusy("status-closed") && (
+                      <Loader2 size={12} className="animate-spin" />
+                    )}
+                    {t("Funga", "Close")}
+                  </button>
+                )}
 
                 <select
                   value={ticket.priority}
@@ -482,6 +575,7 @@ function TicketCard({ ticket, lang }) {
             </>
           )}
 
+          {/* Closed ticket — reopen only */}
           {ticket.status === "closed" && (
             <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
               <button
@@ -789,7 +883,9 @@ export default function SupportSection() {
     const open = tickets.filter((t) => t.status === "open").length;
     const inProgress = tickets.filter((t) => t.status === "in_progress").length;
     const resolved = tickets.filter((t) => t.status === "resolved").length;
-    return { total, open, inProgress, resolved };
+    const closed = tickets.filter((t) => t.status === "closed").length;
+    const overdue = tickets.filter((t) => t.slaOverdue).length;
+    return { total, open, inProgress, resolved, closed, overdue };
   }, [tickets]);
 
   const ticketCategoryCounts = useMemo(() => {
@@ -813,11 +909,15 @@ export default function SupportSection() {
           t.subject?.toLowerCase().includes(q) ||
           t.userName?.toLowerCase().includes(q) ||
           t.userEmail?.toLowerCase().includes(q) ||
-          t.id?.toLowerCase().includes(q)
+          t.code?.toLowerCase().includes(q) ||
+          String(t.id).includes(q)
       );
     }
     const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
     result.sort((a, b) => {
+      // SLA overdue kwanza
+      if (a.slaOverdue && !b.slaOverdue) return -1;
+      if (!a.slaOverdue && b.slaOverdue) return 1;
       const aPrio = priorityOrder[a.priority] ?? 99;
       const bPrio = priorityOrder[b.priority] ?? 99;
       if (aPrio !== bPrio) return aPrio - bPrio;
@@ -953,7 +1053,7 @@ export default function SupportSection() {
       {tab === "tickets" && (
         <>
           {/* Summary Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5 w-full">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mb-5 w-full">
             <div
               style={{ borderColor: COLORS.sandLine, background: "white" }}
               className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
@@ -1010,6 +1110,20 @@ export default function SupportSection() {
                 {ticketCounts.resolved}
               </p>
             </div>
+            <div
+              style={{ borderColor: COLORS.sandLine, background: "white" }}
+              className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full col-span-2 sm:col-span-1"
+            >
+              <p className="text-[10px] font-semibold text-secondary uppercase truncate">
+                {t("SLA Imepita", "SLA Overdue")}
+              </p>
+              <p
+                className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
+                style={{ color: ticketCounts.overdue > 0 ? COLORS.rust : COLORS.green }}
+              >
+                {ticketCounts.overdue}
+              </p>
+            </div>
           </div>
 
           {/* Status Tabs */}
@@ -1035,6 +1149,8 @@ export default function SupportSection() {
                     ? "open"
                     : s.key === "in_progress"
                     ? "inProgress"
+                    : s.key === "closed"
+                    ? "closed"
                     : s.key;
                 const count = ticketCounts[countKey] || 0;
                 return (
