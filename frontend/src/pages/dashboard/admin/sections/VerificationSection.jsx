@@ -1,17 +1,20 @@
 // ============================================================
 // VerificationSection.jsx (admin)
-// - A: Admin anaona maombi, approve/reject
-// - B: Admin anaweza kuomba documents zaidi
+// - Admin anaona maombi, approve/reject
+// - Admin anaweza kuomba documents zaidi
+// - Admin anaweza kuona UserDrawer (muktadha kamili)
+// - Documents zinaonyeshwa kama preview (image/PDF)
 // ============================================================
 
 import React, { useState, useMemo } from "react";
 import {
-  ShieldCheck, User, UserCheck, Building2, CarFront, Building,
+  ShieldCheck, User, UserCheck,
   Check, X, FileText, ChevronDown, ChevronUp, Search, Trash2,
-  Loader2, MessageSquare, AlertCircle,
+  Loader2, MessageSquare, ExternalLink, Eye,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
+import UserDrawer from "../shared/UserDrawer.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
   useVerifications,
@@ -26,9 +29,6 @@ import {
 const TYPE_ICONS = {
   seller: User,
   buyer: UserCheck,
-  property: Building2,
-  vehicle: CarFront,
-  business: Building,
 };
 
 function StatusBadge({ status, lang }) {
@@ -60,9 +60,144 @@ function StatusBadge({ status, lang }) {
   );
 }
 
+function RoleBadge({ role, lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  if (role === "both") {
+    return (
+      <span
+        style={{ background: "rgba(124,58,237,0.14)", color: "#7C3AED" }}
+        className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+      >
+        {t("Wote Wawili", "Both Roles")}
+      </span>
+    );
+  }
+  if (role === "seller") {
+    return (
+      <span
+        style={{ background: "rgba(232,163,61,0.16)", color: "#8A5A16" }}
+        className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+      >
+        {t("Muuzaji", "Seller")}
+      </span>
+    );
+  }
+  if (role === "buyer") {
+    return (
+      <span
+        style={{ background: "rgba(47,109,79,0.14)", color: COLORS.green }}
+        className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+      >
+        {t("Mnunuzi", "Buyer")}
+      </span>
+    );
+  }
+  return null;
+}
+
 const MIN_REASON = 5;
 
-function VerificationCard({ request, lang }) {
+// ============================================================
+// DOCUMENT PREVIEW
+// ============================================================
+function DocumentPreview({ doc, lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [expanded, setExpanded] = useState(false);
+
+  const isImage = doc.is_image;
+  const isPdf = doc.is_pdf;
+  const url = doc.url || doc.preview_url;
+
+  if (!url) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted bg-white rounded-lg px-3 py-2">
+        <FileText size={12} className="shrink-0" />
+        <span className="truncate flex-1">{doc.name || t("Document", "Document")}</span>
+        <span className="text-[10px] text-muted italic">
+          {t("Hakuna URL", "No URL")}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="bg-white rounded-lg overflow-hidden"
+      style={{ borderColor: COLORS.sandLine }}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: COLORS.sandLine }}>
+        <FileText size={12} className="shrink-0 text-muted" />
+        <span className="truncate flex-1 text-xs text-primary">
+          {doc.name || t("Document", "Document")}
+        </span>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="text-[10px] font-semibold text-muted hover:text-secondary flex items-center gap-1"
+        >
+          <Eye size={11} />
+          {expanded ? t("Funga", "Close") : t("Onyesha", "Show")}
+        </button>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[10px] font-semibold hover:underline flex items-center gap-1"
+          style={{ color: COLORS.rust }}
+        >
+          <ExternalLink size={11} />
+          {t("Fungua", "Open")}
+        </a>
+      </div>
+
+      {/* Preview body */}
+      {expanded && (
+        <div className="p-2">
+          {isImage ? (
+            <img
+              src={url}
+              alt={doc.name || "Document"}
+              className="w-full max-h-96 object-contain rounded"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+                e.currentTarget.insertAdjacentHTML(
+                  "afterend",
+                  `<p class="text-xs text-center text-muted py-4">${t(
+                    "Picha haipatikani — bofya 'Fungua' ili kuiona kwenye tab mpya.",
+                    "Image not available — click 'Open' to view in new tab."
+                  )}</p>`
+                );
+              }}
+            />
+          ) : isPdf ? (
+            <iframe
+              src={url}
+              title={doc.name || "PDF"}
+              className="w-full h-96 rounded"
+              style={{ border: "none" }}
+            />
+          ) : (
+            <div className="text-center py-6">
+              <FileText size={32} className="mx-auto text-muted mb-2" />
+              <p className="text-xs text-secondary mb-3">
+                {t(
+                  "Aina ya faili haijulikani — bofya 'Fungua' ili kuipakua.",
+                  "Unknown file type — click 'Open' to download."
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// VERIFICATION CARD
+// ============================================================
+function VerificationCard({ request, lang, onOpenUser }) {
   const [expanded, setExpanded] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -177,6 +312,9 @@ function VerificationCard({ request, lang }) {
                   request.type}
               </span>
               <StatusBadge status={request.status} lang={lang} />
+              {request.isBothRoles && (
+                <RoleBadge role="both" lang={lang} />
+              )}
               {hasDocsRequest && (
                 <span
                   style={{ background: "rgba(232,163,61,0.20)", color: "#8A5A16" }}
@@ -195,12 +333,30 @@ function VerificationCard({ request, lang }) {
             </p>
           </div>
 
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="p-1.5 text-muted hover:text-secondary shrink-0"
-          >
-            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {request.userId && onOpenUser && (
+              <button
+                onClick={() =>
+                  onOpenUser({
+                    id: request.userId,
+                    name: request.userName,
+                    email: request.userEmail,
+                    isVerified: request.status === "approved",
+                  })
+                }
+                title={t("Angalia mtumiaji", "View user")}
+                className="p-1.5 text-muted hover:text-secondary transition-colors"
+              >
+                <User size={16} />
+              </button>
+            )}
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="p-1.5 text-muted hover:text-secondary"
+            >
+              {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -230,24 +386,19 @@ function VerificationCard({ request, lang }) {
             </div>
           )}
 
-          {/* Documents */}
+          {/* Documents — sasa na preview */}
           {request.documents && request.documents.length > 0 && (
             <div>
               <p className="text-[10px] font-semibold text-secondary uppercase mb-1">
                 {t("Nyaraka", "Documents")} ({request.documents.length})
               </p>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 {request.documents.map((doc, i) => (
-                  <a
-                    key={i}
-                    href={doc.url || doc.file || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-2 text-xs text-primary bg-white rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors"
-                  >
-                    <FileText size={12} className="text-muted shrink-0" />
-                    <span className="truncate flex-1">{doc.name || `Document ${i + 1}`}</span>
-                  </a>
+                  <DocumentPreview
+                    key={doc.id || i}
+                    doc={doc}
+                    lang={lang}
+                  />
                 ))}
               </div>
             </div>
@@ -363,9 +514,7 @@ function VerificationCard({ request, lang }) {
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border disabled:opacity-50"
               >
                 {busy && rejecting ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                {rejecting
-                  ? t("Thibitisha", "Confirm")
-                  : t("Kataa", "Reject")}
+                {rejecting ? t("Thibitisha", "Confirm") : t("Kataa", "Reject")}
               </button>
 
               {rejecting && (
@@ -381,7 +530,6 @@ function VerificationCard({ request, lang }) {
                 </button>
               )}
 
-              {/* Omba docs */}
               <button
                 onClick={handleRequestDocs}
                 disabled={busy}
@@ -397,9 +545,7 @@ function VerificationCard({ request, lang }) {
                 ) : (
                   <MessageSquare size={12} />
                 )}
-                {requestingDocs
-                  ? t("Tuma Ombi", "Send Request")
-                  : t("Omba Docs", "Request Docs")}
+                {requestingDocs ? t("Tuma Ombi", "Send Request") : t("Omba Docs", "Request Docs")}
               </button>
 
               {requestingDocs && (
@@ -431,12 +577,16 @@ function VerificationCard({ request, lang }) {
   );
 }
 
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
 export default function VerificationSection() {
   const { lang } = useLanguage();
   const requests = useVerifications();
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [query, setQuery] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -482,8 +632,8 @@ export default function VerificationSection() {
       <SectionHeader
         title={t("Uthibitisho", "Verification")}
         subtitle={t(
-          "Idhinisha, kataa, au omba documents zaidi kwa wauzaji, wanunuzi, mali, magari, na biashara.",
-          "Approve, reject, or request more documents from sellers, buyers, properties, vehicles, and businesses."
+          "Idhinisha, kataa, au omba documents zaidi kwa wauzaji na wanunuzi.",
+          "Approve, reject, or request more documents from sellers and buyers."
         )}
       />
 
@@ -510,7 +660,7 @@ export default function VerificationSection() {
         ))}
       </div>
 
-      {/* Type Tabs */}
+      {/* Type Tabs — 2 pekee */}
       <div className="flex gap-2 mb-3 overflow-x-auto pb-2 sm:justify-center">
         <button
           onClick={() => setTypeFilter("all")}
@@ -595,18 +745,29 @@ export default function VerificationSection() {
                   "Jaribu kubadilisha vichujio au utafutaji.",
                   "Try changing filters or search."
                 )
-              : t(
-                  "Maombi yataonekana hapa.",
-                  "Requests will appear here."
-                )}
+              : t("Maombi yataonekana hapa.", "Requests will appear here.")}
           </p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
           {filtered.map((request) => (
-            <VerificationCard key={request.id} request={request} lang={lang} />
+            <VerificationCard
+              key={request.id}
+              request={request}
+              lang={lang}
+              onOpenUser={setSelectedUser}
+            />
           ))}
         </div>
+      )}
+
+      {/* USER DRAWER */}
+      {selectedUser && (
+        <UserDrawer
+          user={selectedUser}
+          onClose={() => setSelectedUser(null)}
+          lang={lang}
+        />
       )}
     </div>
   );

@@ -4,6 +4,7 @@
 // Bilingual + Async actions na rollback + loading state.
 // + Status filter, Verified filter, Pagination
 // + UserDrawer inachukua data yake yenyewe (/full/ endpoint)
+// + Event listeners: refresh kwenye users-updated/verifications-updated
 // ============================================================
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -147,6 +148,21 @@ export default function UserManagementSection() {
     fetchPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, roleFilter, statusFilter, verifiedFilter]);
+
+  // ── Sikiliza events ili refresh list ───────────────────────
+  // (mfano: admin ana-approve verification kwenye tab nyingine)
+  useEffect(() => {
+    const onUpdate = () => {
+      fetchPage(page);
+    };
+    window.addEventListener("sokomkononi:users-updated", onUpdate);
+    window.addEventListener("sokomkononi:verifications-updated", onUpdate);
+    return () => {
+      window.removeEventListener("sokomkononi:users-updated", onUpdate);
+      window.removeEventListener("sokomkononi:verifications-updated", onUpdate);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, query, roleFilter, statusFilter, verifiedFilter]);
 
   // ── HANDLERS ───────────────────────────────────────────────
   const handleToggle = (userId) => {

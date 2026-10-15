@@ -1,7 +1,8 @@
 // ============================================================
 // verificationsStore.js — API-only via /api/verifications/
-// + Admin: request documents
-// + Upload documents (mtumiaji mwenyewe — admin HAIPASWI)
+// User verification (SELLER, BUYER) pekee.
+// Chaguo B: Both inahesabiwa automatically kutoka listings + deals.
+// Events zinatumwa: auth-updated, users-updated, verifications-updated
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -12,10 +13,8 @@ const EV = "sokomkononi:verifications-updated";
 export const VERIFICATION_TYPES = [
   { key: "seller", label: { sw: "Wauzaji", en: "Sellers" } },
   { key: "buyer", label: { sw: "Wanunuzi", en: "Buyers" } },
-  { key: "property", label: { sw: "Mali", en: "Properties" } },
-  { key: "vehicle", label: { sw: "Magari", en: "Vehicles" } },
-  { key: "business", label: { sw: "Biashara", en: "Businesses" } },
 ];
+
 export const VERIFICATION_STATUSES = [
   { key: "pending", label: { sw: "Zinasubiri", en: "Pending" } },
   { key: "approved", label: { sw: "Zimeidhinishwa", en: "Approved" } },
@@ -25,16 +24,11 @@ export const VERIFICATION_STATUSES = [
 const API_TO_KEY = {
   SELLER: "seller",
   BUYER: "buyer",
-  PROPERTY: "property",
-  VEHICLE: "vehicle",
-  BUSINESS: "business",
 };
+
 const KEY_TO_API = {
   seller: "SELLER",
   buyer: "BUYER",
-  property: "PROPERTY",
-  vehicle: "VEHICLE",
-  business: "BUSINESS",
 };
 
 function read() {
@@ -48,6 +42,7 @@ function read() {
     return [];
   }
 }
+
 function write(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(list));
@@ -72,9 +67,12 @@ function norm(raw) {
     reviewedBy: raw.reviewed_by,
     reviewedByName: raw.reviewed_by_name,
     rejectionReason: raw.rejection_reason,
-    // ⬇️ Admin request documents
+    // Admin request documents
     documentsRequestedAt: raw.documents_requested_at,
     documentsRequestMessage: raw.documents_request_message,
+    // Chaguo B — auto-detect roles
+    isBothRoles: !!(raw.is_both_roles ?? raw.isBothRoles),
+    currentRole: raw.current_role || raw.currentRole || "neither",
   };
 }
 
@@ -96,10 +94,8 @@ export async function hydrateVerificationsFromApi() {
   }
 }
 
-
 // ============================================================
-// CREATE-time whitelist — backend only accepts SELLER / BUYER
-// on POST /verifications/.
+// CREATE — SELLER au BUYER pekee
 // ============================================================
 export const VERIFICATION_CREATE_TYPES = [
   { key: "seller", label: { sw: "Muuzaji", en: "Seller" } },
@@ -120,7 +116,7 @@ export async function addVerificationAsync({
     return {
       ok: false,
       error: new Error(
-        `Verification type "${type}" is not supported for creation. ` +
+        `Verification type "${type}" is not supported. ` +
         `Allowed: ${Array.from(_CREATABLE).join(", ")}.`
       ),
     };
@@ -140,6 +136,9 @@ export async function addVerificationAsync({
   }
 }
 
+// ============================================================
+// APPROVE — inatuma events 3 ili components zote zi-refresh
+// ============================================================
 export async function approveVerificationAsync(id) {
   try {
     const raw = await api.post(`/verifications/${id}/approve/`, {});
@@ -151,12 +150,26 @@ export async function approveVerificationAsync(id) {
         reviewedAt: new Date().toISOString(),
       };
     write(read().map((v) => (v.id === id ? updated : v)));
+
+    // 🔔 Trigger auth + users refresh ili mtumiaji aone "Verified" papo hapo
+    // na admin aone mabadiliko kwenye User Management
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("sokomkononi:auth-updated"));
+      window.dispatchEvent(new Event("sokomkononi:users-updated"));
+      // EV tayari imetumwa na write(), lakini tunaituma tena ili
+      // kuhakikisha components zote zina-refresh
+      window.dispatchEvent(new Event(EV));
+    }
+
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err };
   }
 }
 
+// ============================================================
+// REJECT — inatuma events 3
+// ============================================================
 export async function rejectVerificationAsync(id, reason = "") {
   try {
     const raw = await api.post(`/verifications/${id}/reject/`, {
@@ -171,6 +184,14 @@ export async function rejectVerificationAsync(id, reason = "") {
         reviewedAt: new Date().toISOString(),
       };
     write(read().map((v) => (v.id === id ? updated : v)));
+
+    // 🔔 Trigger auth + users refresh
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("sokomkononi:auth-updated"));
+      window.dispatchEvent(new Event("sokomkononi:users-updated"));
+      window.dispatchEvent(new Event(EV));
+    }
+
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err };
@@ -187,9 +208,9 @@ export async function removeVerificationAsync(id) {
   }
 }
 
-// ══════════════════════════════════════════════════════════
+// ============================================================
 // ADMIN: Omba documents zaidi
-// ══════════════════════════════════════════════════════════
+// ============================================================
 export async function requestDocumentsAsync(id, message) {
   const clean = (message || "").trim();
   if (!clean) return { ok: false, error: new Error("Message required") };
@@ -211,10 +232,10 @@ export async function requestDocumentsAsync(id, message) {
   }
 }
 
-// ══════════════════════════════════════════════════════════
+// ============================================================
 // UPLOAD document — MTUMIAJI MWENYEWE (sio admin)
 // Inatumika kwenye MyVerificationsPanel.jsx (dashboard ya mtumiaji)
-// ══════════════════════════════════════════════════════════
+// ============================================================
 export async function uploadVerificationDocumentAsync(id, file) {
   if (!file) return { ok: false, error: new Error("File required") };
   try {
@@ -229,6 +250,9 @@ export async function uploadVerificationDocumentAsync(id, file) {
   }
 }
 
+// ============================================================
+// HOOKS
+// ============================================================
 let _verificationsHydratePromise = null;
 function _dedupedVerificationsHydrate() {
   if (_verificationsHydratePromise) return _verificationsHydratePromise;

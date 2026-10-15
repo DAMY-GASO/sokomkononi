@@ -1,8 +1,5 @@
 // ============================================================
 // usersStore.js — API-only via /api/admin/users/
-// + Futa Permanently (hard delete) yenye reason + "DELETE"
-// + Suspend inahitaji sababu
-// + Pagination + filters (role, status, verified, q)
 // ============================================================
 import { useEffect, useState, useCallback } from "react";
 import { api } from "../api/client";
@@ -234,7 +231,6 @@ export async function permanentDeleteUserAsync(id, { reason, confirmText } = {})
     write(read().filter((x) => x.id !== id));
     return { ok: true, deleted: true };
   } catch (err) {
-    // Fallback: kama /permanent/ haipo, tumia delete ya kawaida
     if (err?.status === 404 || err?.status === 405) {
       console.warn(
         "[usersStore] /permanent/ haipo — tumia delete ya kawaida"
@@ -248,8 +244,6 @@ export async function permanentDeleteUserAsync(id, { reason, confirmText } = {})
 // ============================================================
 // HOOKS
 // ============================================================
-
-// Cache ya hydration ili kuzuia requests nyingi kwa wakati mmoja
 let _usersHydratePromise = null;
 function _dedupedUsersHydrate(opts) {
   if (_usersHydratePromise) return _usersHydratePromise;
@@ -261,10 +255,6 @@ function _dedupedUsersHydrate(opts) {
 
 /**
  * useUsers — inasikiliza cache + inarudisha list ya users.
- *
- * Kwa default, inafanya hydrate mara moja kwa page 1, pageSize 20.
- * Kama unataka filters/pagination, tumia `hydrateUsersFromApi` moja
- * kwa moja (kama inavyofanyika kwenye UserManagementSection).
  */
 export function useUsers() {
   const [list, setList] = useState(() => read());
@@ -291,10 +281,6 @@ export function useUser(id) {
 
 /**
  * useUsersPaged — hook kamili yenye pagination + filters.
- *
- * Matumizi:
- *   const { users, page, totalPages, count, loading, error, setFilters, goToPage, refresh } =
- *     useUsersPaged({ role: "all", status: "all", verified: "all", q: "" });
  */
 export function useUsersPaged(initial = {}) {
   const [users, setUsers] = useState(() => read());
@@ -349,10 +335,9 @@ export function useUsersPaged(initial = {}) {
     };
   }, []);
 
-  // Fetch kila filter/page inabadilika
+
   useEffect(() => {
     fetchPage(page, filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, filters]);
 
   const goToPage = useCallback((p) => setPage(p), []);
@@ -362,7 +347,6 @@ export function useUsersPaged(initial = {}) {
     filters,
   ]);
 
-  // setFilters — inaruhusu ku-update kimoja au zaidi, inarudisha page 1
   const updateFilters = useCallback((partial) => {
     setFilters((prev) => ({ ...prev, ...partial }));
     setPage(1);
@@ -381,4 +365,16 @@ export function useUsersPaged(initial = {}) {
     goToPage,
     refresh,
   };
+}
+
+// ============================================================
+// AUTO-REFRESH: sikiliza events ili list ya users i-refresh
+// ============================================================
+if (typeof window !== "undefined") {
+  window.addEventListener("sokomkononi:users-updated", () => {
+  });
+
+  window.addEventListener("sokomkononi:verifications-updated", () => {
+    hydrateUsersFromApi().catch(() => {});
+  });
 }

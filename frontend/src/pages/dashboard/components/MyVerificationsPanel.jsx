@@ -1,10 +1,11 @@
 // ============================================================
 // MyVerificationsPanel.jsx (mtumiaji)
-// - C: Mtumiaji anaomba uthibitisho
+// - Mtumiaji anaomba uthibitisho
 // - Upload documents
 // - Anaona status ya maombi yake
+// + Hydrate kutoka API kwenye mount
 // ============================================================
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck, Loader2, Upload, FileText, Plus, X,
 } from "lucide-react";
@@ -12,6 +13,7 @@ import { COLORS, timeAgo } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import {
   useVerifications,
+  hydrateVerificationsFromApi,
   addVerificationAsync,
   uploadVerificationDocumentAsync,
   VERIFICATION_TYPES,
@@ -32,6 +34,20 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  // Hydrate kutoka backend kwenye mount
+  useEffect(() => {
+    hydrateVerificationsFromApi();
+  }, []);
+
+  // Sikiliza event ya verification ili refresh
+  useEffect(() => {
+    const onUpdate = () => hydrateVerificationsFromApi();
+    window.addEventListener("sokomkononi:verifications-updated", onUpdate);
+    return () => {
+      window.removeEventListener("sokomkononi:verifications-updated", onUpdate);
+    };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.type || !form.subject.trim()) {
@@ -47,7 +63,11 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
     });
     setBusy(false);
     if (res.ok) {
-      setForm({ type: side === "seller" ? "seller" : "buyer", subject: "", notes: "" });
+      setForm({
+        type: side === "seller" ? "seller" : "buyer",
+        subject: "",
+        notes: "",
+      });
       setShowForm(false);
     } else {
       setError(res.error?.message || t("Imeshindwa.", "Failed."));
@@ -65,11 +85,16 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
   };
 
   return (
-    <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full p-4 sm:p-6">
+    <div
+      style={{ background: COLORS.sand, minHeight: "600px" }}
+      className="w-full p-4 sm:p-6"
+    >
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-6">
           <ShieldCheck size={32} color={COLORS.gold} className="mx-auto mb-2" />
-          <h1 className="h-title">{t("Uthibitisho Wangu", "My Verifications")}</h1>
+          <h1 className="h-title">
+            {t("Uthibitisho Wangu", "My Verifications")}
+          </h1>
           <p className="text-secondary text-sm mt-2">
             {t(
               "Omba uthibitisho na ufuatilie hali ya maombi yako.",
@@ -93,7 +118,9 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
           className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 mb-4"
         >
           <Plus size={16} />
-          {showForm ? t("Funga Form", "Close Form") : t("Omba Uthibitisho Mpya", "Request New Verification")}
+          {showForm
+            ? t("Funga Form", "Close Form")
+            : t("Omba Uthibitisho Mpya", "Request New Verification")}
         </button>
 
         {showForm && (
@@ -126,7 +153,10 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
               <input
                 value={form.subject}
                 onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                placeholder={t("mfano: Jina lako kamili", "e.g. Your full name")}
+                placeholder={t(
+                  "mfano: Jina lako kamili",
+                  "e.g. Your full name"
+                )}
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
               />
             </label>
@@ -155,7 +185,6 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
           </form>
         )}
 
-        {/* Requests list */}
         <div className="flex flex-col gap-3">
           {requests.length === 0 ? (
             <div
@@ -175,18 +204,25 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
               >
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#FEA406]/20 text-[#8A5A16]">
-                    {VERIFICATION_TYPES.find((v) => v.key === r.type)?.label?.[lang] || r.type}
+                    {VERIFICATION_TYPES.find((v) => v.key === r.type)?.label?.[
+                      lang
+                    ] || r.type}
                   </span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  <span
+                    className="text-xs font-bold px-2 py-0.5 rounded-full"
                     style={{
                       background:
-                        r.status === "approved" ? "rgba(47,109,79,0.16)" :
-                        r.status === "rejected" ? "rgba(193,80,46,0.16)" :
-                        "rgba(232,163,61,0.16)",
+                        r.status === "approved"
+                          ? "rgba(47,109,79,0.16)"
+                          : r.status === "rejected"
+                            ? "rgba(193,80,46,0.16)"
+                            : "rgba(232,163,61,0.16)",
                       color:
-                        r.status === "approved" ? COLORS.green :
-                        r.status === "rejected" ? COLORS.rust :
-                        "#8A5A16",
+                        r.status === "approved"
+                          ? COLORS.green
+                          : r.status === "rejected"
+                            ? COLORS.rust
+                            : "#8A5A16",
                     }}
                   >
                     {r.status}
@@ -194,24 +230,33 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                 </div>
                 <p className="text-sm font-semibold mb-1">{r.subject}</p>
                 <p className="text-xs text-muted mb-2">
-                  {t("Iliwasilishwa", "Submitted")} {timeAgo(r.submittedAt, lang)}
+                  {t("Iliwasilishwa", "Submitted")}{" "}
+                  {timeAgo(r.submittedAt, lang)}
                 </p>
 
                 {r.documentsRequestMessage && (
                   <div
-                    style={{ background: "rgba(232,163,61,0.10)", color: "#8A5A16" }}
+                    style={{
+                      background: "rgba(232,163,61,0.10)",
+                      color: "#8A5A16",
+                    }}
                     className="rounded-lg px-2.5 py-2 text-xs mb-2"
                   >
-                    <strong>{t("Admin:", "Admin:")}</strong> {r.documentsRequestMessage}
+                    <strong>{t("Admin:", "Admin:")}</strong>{" "}
+                    {r.documentsRequestMessage}
                   </div>
                 )}
 
                 {r.rejectionReason && (
                   <div
-                    style={{ background: "rgba(193,80,46,0.08)", color: COLORS.rust }}
+                    style={{
+                      background: "rgba(193,80,46,0.08)",
+                      color: COLORS.rust,
+                    }}
                     className="rounded-lg px-2.5 py-2 text-xs mb-2"
                   >
-                    <strong>{t("Sababu:", "Reason:")}</strong> {r.rejectionReason}
+                    <strong>{t("Sababu:", "Reason:")}</strong>{" "}
+                    {r.rejectionReason}
                   </div>
                 )}
 
@@ -225,16 +270,23 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                         rel="noreferrer"
                         className="flex items-center gap-1.5 text-xs text-primary hover:text-[#FEA406]"
                       >
-                        <FileText size={11} /> {doc.name || `Document ${i + 1}`}
+                        <FileText size={11} />{" "}
+                        {doc.name || `Document ${i + 1}`}
                       </a>
                     ))}
                   </div>
                 )}
 
                 {r.status === "pending" && (
-                  <label className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border cursor-pointer"
-                    style={{ borderColor: COLORS.sandLine }}>
-                    {busy ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                  <label
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border cursor-pointer"
+                    style={{ borderColor: COLORS.sandLine }}
+                  >
+                    {busy ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Upload size={12} />
+                    )}
                     {t("Pakia Document", "Upload Document")}
                     <input
                       type="file"

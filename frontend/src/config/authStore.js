@@ -2,6 +2,8 @@
 // authStore.js — API-backed via /api/auth/
 // FIX: clears BOTH user and JWT tokens when login/me() fails.
 // FIX: updateProfileAsync reads raw.profile (backend returns {message, profile})
+// FIX: normalizeUserFromApi inasoma current_role
+// FIX: auto-refresh kwenye event ya verifications
 // ============================================================
 import { useEffect, useState } from "react";
 import { authApi, setUnauthorizedHandler } from "../api/index.js";
@@ -10,7 +12,6 @@ import { getSessionScope } from "./adminPath.js";
 import { resetMyListingsUserCache } from "./listingsStore.js";
 import { resetDealsUserCache } from "./dealsStore.js";
 
-// User wa admin na wa kawaida wanahifadhiwa kwenye keys tofauti (angalia adminPath.getSessionScope)
 const USER_KEYS = {
   user: "sokomkononi_current_user_v1",
   admin: "sokomkononi_admin_user_v1",
@@ -67,7 +68,6 @@ function saveUser(user) {
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
 
-/** Force the next useAuth() mount to refetch /auth/me/. */
 export function invalidateAuthCache() {
   resetHydrateCache();
 }
@@ -93,12 +93,6 @@ function wipeUserScopedCaches() {
   } catch { /* noop */ }
 }
 
-
-// ============================================================
-// LOGIN HYGIENE — wipe cached data when a new user logs in.
-// Protects shared browsers from leaking user A's data into
-// user B's session (deals, notifications, messages, leads).
-// ============================================================
 function wipeDataCachesOnLogin() {
   if (typeof window === "undefined") return;
   try {
@@ -122,7 +116,7 @@ function hardReset() {
   saveUser(null);
   clearJWT();
   resetHydrateCache();
-  wipeUserScopedCaches();   // 🔒 Prevent user-A data leaking into user-B session
+  wipeUserScopedCaches();
   resetMyListingsUserCache();
   resetDealsUserCache();
   if (typeof window === "undefined") return;
@@ -190,6 +184,7 @@ function normalizeUserFromApi(raw) {
     emailVerified: !!(raw.email_verified ?? raw.emailVerified),
     phoneVerified: !!(raw.phone_verified ?? raw.phoneVerified),
     verified: !!(raw.is_verified ?? raw.verified),
+    currentRole: raw.current_role || raw.currentRole || "neither",
     isActive: raw.is_active !== false,
     isDeleted: !!raw.is_deleted,
     avatarUrl: raw.avatar || raw.avatar_url || raw.avatarUrl || raw.picture || null,
@@ -360,10 +355,6 @@ export async function registerAsync(payload) {
   }
 }
 
-
-// ============================================================
-// RESEND REGISTRATION OTP — dedicated endpoint (not re-register)
-// ============================================================
 export async function resendRegistrationOtpAsync(identifier) {
   if (!identifier) {
     return { ok: false, error: new Error("identifier inahitajika") };
@@ -425,11 +416,6 @@ export async function sendOtpAsync(_email) {
   return { ok: true, note: "OTP imetumwa na register" };
 }
 
-// ============================================================
-// UPDATE PROFILE
-// SASISHO: Backend inarudisha { message, profile }
-// Hivyo tunasoma raw.profile kabla ya normalize.
-// ============================================================
 export async function updateProfileAsync(patch) {
   const previous = getCurrentUser();
   if (!previous) {
@@ -439,7 +425,6 @@ export async function updateProfileAsync(patch) {
   saveUser(optimistic);
   try {
     const raw = await authApi.updateProfile(patch);
-    // ⬇️ Backend inarudisha { message, profile: {...} }
     const data = raw?.profile || raw;
     const updated = normalizeUserFromApi(data);
     if (updated?.id) {
@@ -456,7 +441,6 @@ export async function updateProfileAsync(patch) {
 
 export async function refreshProfileAsync() {
   try {
-    // Use /auth/me/ — always exists. /auth/profile/ is only documented for PATCH.
     const raw = await authApi.me();
     const user = normalizeUserFromApi(raw);
     if (user) saveUser(user);
@@ -662,8 +646,6 @@ export function useAuth() {
 
   useEffect(() => {
     let cancelled = false;
-    // Only show the loader when we have nothing cached. Cached users see
-    // their state immediately and the fetch refreshes in the background.
     if (!getCurrentUser()) setIsLoading(true);
     hydrateCurrentUserFromApi().finally(() => {
       if (!cancelled) setIsLoading(false);
@@ -743,4 +725,18 @@ export async function socialLoginAsync({
     console.warn("[authStore] socialLogin failed:", err);
     return { ok: false, error: err };
   }
+}
+
+// ============================================================
+// AUTO-REFRESH: sikiliza events ili is_verified iwe live
+// ============================================================
+if (typeof window !== "undefined") {
+  window.addEventListener("sokomkononi:verifications-updated", () => {
+    refreshProfileAsync().catch(() => {});
+  });
+
+  window.addEventListener("sokomkononi:users-updated", () => {
+    // Kama mtumiaji ame-approve kupitia admin, refresh user
+    refreshProfileAsync().catch(() => {});
+  });
 }

@@ -2,9 +2,11 @@
 // ProfilePage.jsx
 // Wasifu — bilingual kamili + PageLoader.
 // + Delete Account (API)
-// + 2FA (bado "Inakuja hivi karibuni" — inahitaji backend)
+// + 2FA
 // + Data halisi: taarifa, mapendeleo (profileApi.js)
 // + Guard: Admin hawezi kujifuta
+// + Auto-refresh: refreshUserAsync kwenye mount + event listeners
+// + Badge ya currentRole (Seller / Buyer / Both)
 // ============================================================
 
 import { COLORS } from "./dashboard/components/shared.js";
@@ -17,6 +19,7 @@ import {
   changePasswordAsync,
   deleteAccountAsync,
   updateAvatarAsync,
+  refreshUserAsync,   // ← MPYA
 } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Navbar from "../components/Navbar.jsx";
@@ -503,6 +506,7 @@ function EditProfileTab({ user, lang }) {
     </form>
   );
 }
+
 // ============================================================
 // SESSIONS CARD
 // ============================================================
@@ -629,7 +633,6 @@ function DataExportButton({ lang }) {
     setBusy(true); setError(""); setDone(false);
     try {
       const res = await securityApi.exportData();
-      // Backend may return { url } or { job_id } — if url, trigger download.
       if (res?.url) {
         window.open(res.url, "_blank", "noopener,noreferrer");
       }
@@ -1337,6 +1340,28 @@ export default function ProfilePage() {
     setViewModeState(dashboardSide);
   }, [dashboardSide]);
 
+  // ── Refresh user kutoka backend ili isVerified iwe live ─────
+  useEffect(() => {
+    if (user?.id) {
+      refreshUserAsync();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Sikiliza events ili refresh mara moja ──────────────────
+  useEffect(() => {
+    const onRefresh = () => {
+      if (user?.id) refreshUserAsync();
+    };
+    window.addEventListener("sokomkononi:verifications-updated", onRefresh);
+    window.addEventListener("sokomkononi:auth-updated", onRefresh);
+    return () => {
+      window.removeEventListener("sokomkononi:verifications-updated", onRefresh);
+      window.removeEventListener("sokomkononi:auth-updated", onRefresh);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   const setViewMode = (mode) => {
     setViewModeState(mode);
     setDashboardSide(mode);
@@ -1372,6 +1397,24 @@ export default function ProfilePage() {
 
   const avatarUrl = user.avatar || user.avatarUrl || user.avatar_url || null;
 
+  // Verified badge text kulingana na currentRole
+  const verifiedLabel = (() => {
+    if (!user.isVerified) return null;
+    const role = user.currentRole || "neither";
+    if (role === "both") {
+      return lang === "sw"
+        ? "Amethibitishwa (Seller & Buyer)"
+        : "Verified (Seller & Buyer)";
+    }
+    if (role === "seller") {
+      return lang === "sw" ? "Amethibitishwa kama Muuzaji" : "Verified Seller";
+    }
+    if (role === "buyer") {
+      return lang === "sw" ? "Amethibitishwa kama Mnunuzi" : "Verified Buyer";
+    }
+    return lang === "sw" ? "Amethibitishwa" : "Verified";
+  })();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -1404,10 +1447,10 @@ export default function ProfilePage() {
               </h1>
               <p className="text-white/60 text-sm mt-1">{user.email || "—"}</p>
               <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
-                {user.isVerified && (
+                {user.isVerified && verifiedLabel && (
                   <span className="text-body-sm font-medium bg-[#2F6D4F]/20 text-[#2F6D4F] px-3 py-1 rounded-full flex items-center gap-1">
                     <Shield size={12} />
-                    {lang === "sw" ? "Amethibitishwa" : "Verified"}
+                    {verifiedLabel}
                   </span>
                 )}
               </div>
