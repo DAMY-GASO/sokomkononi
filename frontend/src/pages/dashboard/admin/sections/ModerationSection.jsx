@@ -3,7 +3,7 @@
 // FIX: approved listings no longer linger in "All" as Pending.
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
-import { CheckCircle, XCircle, MoreVertical, Loader2, Trash2, RotateCcw } from "lucide-react";
+import { CheckCircle, XCircle, MoreVertical, Loader2, Trash2, RotateCcw, Image } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
@@ -17,6 +17,7 @@ import {
   deleteListingFromModerationAsync,
 } from "../../../../config/moderationStore.js";
 import { fetchListingsByStatusAsync } from "../../../../config/listingsStore.js";
+import AdminListingImageManager from "../components/AdminListingImageManager.jsx";
 
 export default function ModerationSection() {
   const { lang } = useLanguage();
@@ -29,6 +30,7 @@ export default function ModerationSection() {
   const [rejectModal, setRejectModal] = useState(null);
   const [disapproveModal, setDisapproveModal] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
+  const [imageListing, setImageListing] = useState(null);
   // Track decisions made in this session so an approved/rejected id never
   // re-appears as Pending in the "All" tab.
   const [decided, setDecided] = useState({}); // { [id]: "live" | "rejected" | "deleted" }
@@ -254,6 +256,20 @@ export default function ModerationSection() {
     }
   };
 
+  const ManageImagesBtn = ({ listing, fullWidth }) => (
+    <button
+      type="button"
+      onClick={() => setImageListing(listing)}
+      title={t("Simamia picha", "Manage images")}
+      style={{ color: COLORS.gold, borderColor: `${COLORS.gold}55` }}
+      className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-amber-50 ${fullWidth ? "flex-1" : ""}`}
+    >
+      <Image size={13} />
+      {t("Picha", "Images")}
+    </button>
+  );
+
+
   const renderActions = (listing, fullWidth = false) => {
     const isBusy = !!busy[listing.id];
     const currentAction = busy[listing.id];
@@ -273,6 +289,7 @@ export default function ModerationSection() {
             {currentAction === "reject" ? <Loader2 size={13} className="animate-spin" /> : <XCircle size={13} />}
             {t("Kataa", "Reject")}
           </button>
+          <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
         </div>
       );
     }
@@ -286,6 +303,7 @@ export default function ModerationSection() {
             {currentAction === "disapprove" ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
             {t("Disapprove", "Disapprove")}
           </button>
+          <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
           <button onClick={() => openDeleteModal(listing.id)} disabled={isBusy}
             style={{ color: "#DC2626", borderColor: "rgba(220,38,38,0.4)" }}
             className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 ${fullWidth ? "flex-1" : ""}`}>
@@ -305,6 +323,7 @@ export default function ModerationSection() {
             {currentAction === "approve" ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
             {t("Idhinisha", "Approve")}
           </button>
+          <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
           <button onClick={() => openDeleteModal(listing.id)} disabled={isBusy}
             style={{ color: "#DC2626", borderColor: "rgba(220,38,38,0.4)" }}
             className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 ${fullWidth ? "flex-1" : ""}`}>
@@ -495,6 +514,18 @@ export default function ModerationSection() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Admin: Listing image manager modal ─────────────── */}
+      {imageListing && (
+        <AdminListingImageManager
+          listing={imageListing}
+          onClose={() => setImageListing(null)}
+          onUpdated={() => {
+            // Refresh any open history view; harmless if not used.
+            setHistory((prev) => ({ ...prev }));
+          }}
+        />
       )}
     </>
   );
