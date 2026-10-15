@@ -4,6 +4,7 @@
 // - Admin anaweza kuomba documents zaidi
 // - Admin anaweza kuona UserDrawer (muktadha kamili)
 // - Documents zinaonyeshwa kama preview (image/PDF)
+// - Filter ya type (Seller/Buyer) iko ndani ya search bar
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -125,8 +126,10 @@ function DocumentPreview({ doc, lang }) {
       className="bg-white rounded-lg overflow-hidden"
       style={{ borderColor: COLORS.sandLine }}
     >
-      {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: COLORS.sandLine }}>
+      <div
+        className="flex items-center gap-2 px-3 py-2 border-b"
+        style={{ borderColor: COLORS.sandLine }}
+      >
         <FileText size={12} className="shrink-0 text-muted" />
         <span className="truncate flex-1 text-xs text-primary">
           {doc.name || t("Document", "Document")}
@@ -151,7 +154,6 @@ function DocumentPreview({ doc, lang }) {
         </a>
       </div>
 
-      {/* Preview body */}
       {expanded && (
         <div className="p-2">
           {isImage ? (
@@ -161,13 +163,6 @@ function DocumentPreview({ doc, lang }) {
               className="w-full max-h-96 object-contain rounded"
               onError={(e) => {
                 e.currentTarget.style.display = "none";
-                e.currentTarget.insertAdjacentHTML(
-                  "afterend",
-                  `<p class="text-xs text-center text-muted py-4">${t(
-                    "Picha haipatikani — bofya 'Fungua' ili kuiona kwenye tab mpya.",
-                    "Image not available — click 'Open' to view in new tab."
-                  )}</p>`
-                );
               }}
             />
           ) : isPdf ? (
@@ -212,10 +207,15 @@ function VerificationCard({ request, lang, onOpenUser }) {
   const hasDocsRequest = !!request.documentsRequestedAt;
 
   const handleApprove = async () => {
-    if (!window.confirm(t(
-      `Idhinisha uthibitisho wa "${request.subject}"?`,
-      `Approve verification for "${request.subject}"?`
-    ))) return;
+    if (
+      !window.confirm(
+        t(
+          `Idhinisha uthibitisho wa "${request.subject}"?`,
+          `Approve verification for "${request.subject}"?`
+        )
+      )
+    )
+      return;
 
     setBusy(true);
     setError("");
@@ -304,17 +304,19 @@ function VerificationCard({ request, lang, onOpenUser }) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
-              <span
-                style={{ background: `${COLORS.gold}20`, color: "#8A5A16" }}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
-              >
-                {VERIFICATION_TYPES.find((v) => v.key === request.type)?.label?.[lang] ||
-                  request.type}
-              </span>
-              <StatusBadge status={request.status} lang={lang} />
-              {request.isBothRoles && (
+              {/* Badge ya type — kama ni both, onyesha "Wote Wawili" pekee */}
+              {request.isBothRoles ? (
                 <RoleBadge role="both" lang={lang} />
+              ) : (
+                <span
+                  style={{ background: `${COLORS.gold}20`, color: "#8A5A16" }}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                >
+                  {VERIFICATION_TYPES.find((v) => v.key === request.type)?.label?.[lang] ||
+                    request.type}
+                </span>
               )}
+              <StatusBadge status={request.status} lang={lang} />
               {hasDocsRequest && (
                 <span
                   style={{ background: "rgba(232,163,61,0.20)", color: "#8A5A16" }}
@@ -374,7 +376,6 @@ function VerificationCard({ request, lang, onOpenUser }) {
             </div>
           )}
 
-          {/* Notes */}
           {request.notes && (
             <div>
               <p className="text-[10px] font-semibold text-secondary uppercase mb-1">
@@ -386,7 +387,6 @@ function VerificationCard({ request, lang, onOpenUser }) {
             </div>
           )}
 
-          {/* Documents — sasa na preview */}
           {request.documents && request.documents.length > 0 && (
             <div>
               <p className="text-[10px] font-semibold text-secondary uppercase mb-1">
@@ -394,17 +394,12 @@ function VerificationCard({ request, lang, onOpenUser }) {
               </p>
               <div className="flex flex-col gap-2">
                 {request.documents.map((doc, i) => (
-                  <DocumentPreview
-                    key={doc.id || i}
-                    doc={doc}
-                    lang={lang}
-                  />
+                  <DocumentPreview key={doc.id || i} doc={doc} lang={lang} />
                 ))}
               </div>
             </div>
           )}
 
-          {/* Docs request message */}
           {hasDocsRequest && request.documentsRequestMessage && (
             <div
               style={{
@@ -425,7 +420,6 @@ function VerificationCard({ request, lang, onOpenUser }) {
             </div>
           )}
 
-          {/* Rejection reason */}
           {request.status === "rejected" && request.rejectionReason && (
             <div
               style={{ background: "rgba(193,80,46,0.08)", color: COLORS.rust }}
@@ -438,7 +432,6 @@ function VerificationCard({ request, lang, onOpenUser }) {
             </div>
           )}
 
-          {/* Reviewed info */}
           {request.reviewedAt && (
             <p className="text-[11px] text-muted">
               {request.status === "approved"
@@ -449,7 +442,6 @@ function VerificationCard({ request, lang, onOpenUser }) {
             </p>
           )}
 
-          {/* Reject reason input */}
           {rejecting && (
             <div>
               <textarea
@@ -472,7 +464,6 @@ function VerificationCard({ request, lang, onOpenUser }) {
             </div>
           )}
 
-          {/* Docs request message input */}
           {requestingDocs && (
             <textarea
               value={docsMessage}
@@ -487,7 +478,6 @@ function VerificationCard({ request, lang, onOpenUser }) {
             />
           )}
 
-          {/* Actions */}
           {request.status === "pending" && (
             <div className="flex items-center gap-2 flex-wrap">
               <button
@@ -503,8 +493,7 @@ function VerificationCard({ request, lang, onOpenUser }) {
               <button
                 onClick={handleReject}
                 disabled={
-                  busy ||
-                  (rejecting && rejectReason.trim().length < MIN_REASON)
+                  busy || (rejecting && rejectReason.trim().length < MIN_REASON)
                 }
                 style={{
                   background: rejecting ? COLORS.rust : "transparent",
@@ -513,7 +502,11 @@ function VerificationCard({ request, lang, onOpenUser }) {
                 }}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border disabled:opacity-50"
               >
-                {busy && rejecting ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                {busy && rejecting ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <X size={12} />
+                )}
                 {rejecting ? t("Thibitisha", "Confirm") : t("Kataa", "Reject")}
               </button>
 
@@ -545,7 +538,9 @@ function VerificationCard({ request, lang, onOpenUser }) {
                 ) : (
                   <MessageSquare size={12} />
                 )}
-                {requestingDocs ? t("Tuma Ombi", "Send Request") : t("Omba Docs", "Request Docs")}
+                {requestingDocs
+                  ? t("Tuma Ombi", "Send Request")
+                  : t("Omba Docs", "Request Docs")}
               </button>
 
               {requestingDocs && (
@@ -583,8 +578,8 @@ function VerificationCard({ request, lang, onOpenUser }) {
 export default function VerificationSection() {
   const { lang } = useLanguage();
   const requests = useVerifications();
-  const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
 
@@ -598,18 +593,20 @@ export default function VerificationSection() {
     return { total, pending, approved, rejected };
   }, [requests]);
 
-  const typeCounts = useMemo(() => {
-    const counts = { all: requests.length };
-    VERIFICATION_TYPES.forEach((v) => {
-      counts[v.key] = requests.filter((r) => r.type === v.key).length;
-    });
-    return counts;
-  }, [requests]);
-
   const filtered = useMemo(() => {
     let result = [...requests];
-    if (typeFilter !== "all") result = result.filter((r) => r.type === typeFilter);
-    if (statusFilter !== "all") result = result.filter((r) => r.status === statusFilter);
+
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter((r) => r.status === statusFilter);
+    }
+
+    // Type filter (inaonekana kama search bar filter)
+    if (typeFilter !== "all") {
+      result = result.filter((r) => r.type === typeFilter);
+    }
+
+    // Search query
     if (query.trim()) {
       const q = query.toLowerCase();
       result = result.filter(
@@ -619,13 +616,16 @@ export default function VerificationSection() {
           r.userEmail?.toLowerCase().includes(q)
       );
     }
+
+    // Sort: pending kwanza, kisha by date
     result.sort((a, b) => {
       if (a.status === "pending" && b.status !== "pending") return -1;
       if (a.status !== "pending" && b.status === "pending") return 1;
       return new Date(b.submittedAt) - new Date(a.submittedAt);
     });
+
     return result;
-  }, [requests, typeFilter, statusFilter, query]);
+  }, [requests, statusFilter, typeFilter, query]);
 
   return (
     <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
@@ -640,10 +640,26 @@ export default function VerificationSection() {
       {/* Summary Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5 w-full">
         {[
-          { label: t("Zote", "Total"), value: counts.total, color: "var(--text-primary)" },
-          { label: t("Zinasubiri", "Pending"), value: counts.pending, color: "#8A5A16" },
-          { label: t("Zimeidhinishwa", "Approved"), value: counts.approved, color: COLORS.green },
-          { label: t("Zimekataliwa", "Rejected"), value: counts.rejected, color: COLORS.rust },
+          {
+            label: t("Zote", "Total"),
+            value: counts.total,
+            color: "var(--text-primary)",
+          },
+          {
+            label: t("Zinasubiri", "Pending"),
+            value: counts.pending,
+            color: "#8A5A16",
+          },
+          {
+            label: t("Zimeidhinishwa", "Approved"),
+            value: counts.approved,
+            color: COLORS.green,
+          },
+          {
+            label: t("Zimekataliwa", "Rejected"),
+            value: counts.rejected,
+            color: COLORS.rust,
+          },
         ].map((stat, i) => (
           <div
             key={i}
@@ -653,43 +669,17 @@ export default function VerificationSection() {
             <p className="text-[10px] font-semibold text-secondary uppercase truncate">
               {stat.label}
             </p>
-            <p style={{ color: stat.color }} className="text-base sm:text-lg lg:text-xl font-bold mt-0.5">
+            <p
+              style={{ color: stat.color }}
+              className="text-base sm:text-lg lg:text-xl font-bold mt-0.5"
+            >
               {stat.value}
             </p>
           </div>
         ))}
       </div>
 
-      {/* Type Tabs — 2 pekee */}
-      <div className="flex gap-2 mb-3 overflow-x-auto pb-2 sm:justify-center">
-        <button
-          onClick={() => setTypeFilter("all")}
-          style={{
-            background: typeFilter === "all" ? COLORS.night : "white",
-            color: typeFilter === "all" ? COLORS.sand : "var(--text-primary)",
-            borderColor: COLORS.sandLine,
-          }}
-          className="text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
-        >
-          {t("Zote", "All")} ({typeCounts.all})
-        </button>
-        {VERIFICATION_TYPES.map((type) => (
-          <button
-            key={type.key}
-            onClick={() => setTypeFilter(type.key)}
-            style={{
-              background: typeFilter === type.key ? COLORS.night : "white",
-              color: typeFilter === type.key ? COLORS.sand : "var(--text-primary)",
-              borderColor: COLORS.sandLine,
-            }}
-            className="text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
-          >
-            {type.label?.[lang] || type.label?.sw} ({typeCounts[type.key]})
-          </button>
-        ))}
-      </div>
-
-      {/* Status Tabs */}
+      {/* Status Tabs — 4 pekee */}
       <div className="flex gap-2 mb-3 overflow-x-auto pb-2 sm:justify-center">
         <button
           onClick={() => setStatusFilter("all")}
@@ -700,7 +690,7 @@ export default function VerificationSection() {
           }}
           className="text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
         >
-          {t("Zote", "All")}
+          {t("Zote", "All")} ({counts.total})
         </button>
         {VERIFICATION_STATUSES.map((status) => (
           <button
@@ -718,15 +708,30 @@ export default function VerificationSection() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 mb-4">
-        <Search size={14} className="text-muted shrink-0" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("Tafuta...", "Search...")}
-          className="outline-none text-xs flex-1 min-w-0"
-        />
+      {/* Search + Type filter */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 min-w-0">
+          <Search size={14} className="text-muted shrink-0" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("Tafuta...", "Search...")}
+            className="outline-none text-xs flex-1 min-w-0"
+          />
+        </div>
+
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-primary shrink-0"
+        >
+          <option value="all">{t("Aina: Zote", "Type: All")}</option>
+          {VERIFICATION_TYPES.map((type) => (
+            <option key={type.key} value={type.key}>
+              {type.label?.[lang] || type.label?.sw}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* List */}

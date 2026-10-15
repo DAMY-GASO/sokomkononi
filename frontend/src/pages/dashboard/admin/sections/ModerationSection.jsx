@@ -1145,14 +1145,14 @@ export default function ModerationSection() {
 
       {/* ── Admin image manager ──────────────────────────── */}
       {imageListing && (
-        <AdminListingImageManager
-          listing={imageListing}
-          onClose={() => setImageListing(null)}
-          onUpdated={() => {
-            setHistory((prev) => ({ ...prev }));
-          }}
-        />
-      )}
+  <AdminListingImageManager
+    listing={imageListing}
+    onClose={() => setImageListing(null)}
+    onUpdated={() => {
+      setHistory((prev) => ({ ...prev }));
+    }}
+  />
+)}
     </>
   );
 }
