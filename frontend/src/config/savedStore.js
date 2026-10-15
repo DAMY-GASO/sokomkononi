@@ -84,23 +84,34 @@ async function _hydrateSavedFromApi_impl() {
 }
 
 export async function toggleSaved(id, listing = null) {
+  if (id == null) return { ok: false, error: new Error("No listing id") };
+
+  // ── 1. Auth check: hit login-required path early ─────────
+  let hasToken = false;
+  try { hasToken = Boolean(localStorage.getItem("sokomkononi_access")); } catch { /* noop */ }
+  if (!hasToken) {
+    dispatchToast("info",
+      "Ingia kwanza ili kuhifadhi / Please log in to save listings.");
+    return { ok: false, error: new Error("Not authenticated"), code: "NOT_AUTHENTICATED" };
+  }
+
   const current = readIds();
-  const wasSaved = current.includes(id);
+  const wasSaved = current.some((x) => String(x) === String(id));
+  const nextIds = wasSaved
+    ? current.filter((x) => String(x) !== String(id))
+    : [...current, id];
+
+  // ── 2. Optimistic flip: instant visual feedback ──────────
+  writeIds(nextIds);
+
   try {
     if (wasSaved) {
       await api.delete(`/saved/listing/${id}/`);
-      writeIds(current.filter((i) => i !== id));
       const snaps = readSnaps();
       delete snaps[id];
       writeSnaps(snaps);
-      return { ok: true, saved: false };
     } else {
       await api.post("/saved/", { listing: id });
-      writeIds([...current, id]);
-
-      // If the caller didn't pass the listing object, look it up from the
-      // listings store so the price/status snapshot is always recorded.
-      // Without this, "we'll notify you when the price changes" never works.
       const target = listing || getListing(id) || null;
       if (target) {
         const snaps = readSnaps();
@@ -112,12 +123,39 @@ export async function toggleSaved(id, listing = null) {
         };
         writeSnaps(snaps);
       }
-      return { ok: true, saved: true };
     }
+    return { ok: true, saved: !wasSaved };
   } catch (err) {
+    // ── 3. Rollback on failure ─────────────────────────────
+    writeIds(current);
+    console.warn("[savedStore] toggleSaved failed:", err);
+
+    if (err?.status === 401 || err?.status === 403) {
+      dispatchToast("info",
+        "Kipindi kimeisha. Ingia tena / Session expired. Please log in again.");
+      return { ok: false, error: err, code: "SESSION_EXPIRED" };
+    }
+    if (err?.status === 404) {
+      dispatchToast("error",
+        "Hifadhi haipatikani kwa sasa. Jaribu tena / Save is not available right now.");
+      return { ok: false, error: err, code: "ENDPOINT_MISSING" };
+    }
+    dispatchToast("error",
+      err?.data?.detail || err?.message ||
+      "Imeshindwa kuhifadhi. Jaribu tena / Could not save. Try again.");
     return { ok: false, error: err };
   }
 }
+
+/* Fire a toast through the global event bus (see Toast.jsx) */
+function dispatchToast(type, message) {
+  try {
+    window.dispatchEvent(new CustomEvent("sokomkononi:toast", {
+      detail: { type, message },
+    }));
+  } catch { /* noop */ }
+}
+
 
 export function useSavedIds() {
   const [ids, setIds] = useState(() => readIds());
