@@ -1,6 +1,7 @@
 // ============================================================
 // usersStore.js — API-only via /api/admin/users/
 // + Futa Permanently (hard delete)
+// + Suspend inahitaji sababu
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -52,12 +53,21 @@ export async function hydrateUsersFromApi() {
   } catch (err) { return { ok: false, error: err }; }
 }
 
-export async function suspendUserAsync(id) {
+// ============================================================
+// SUSPEND — inahitaji sababu (herufi 5+)
+// ============================================================
+export async function suspendUserAsync(id, { reason } = {}) {
   const u = getUser(id);
   if (!u) return { ok: false, error: new Error("User not found") };
   if (u.status === "suspended") return { ok: true, warning: "already_suspended" };
+
+  const cleanReason = (reason || "").trim();
+  if (cleanReason.length < 5) {
+    return { ok: false, error: new Error("Sababu inahitajika (herufi 5+).") };
+  }
+
   try {
-    await api.post(`/admin/users/${id}/suspend/`, {});
+    await api.post(`/admin/users/${id}/suspend/`, { reason: cleanReason });
     write(read().map((x) => (x.id === id ? { ...x, status: "suspended" } : x)));
     return { ok: true };
   } catch (err) { return { ok: false, error: err }; }
@@ -74,10 +84,12 @@ export async function activateUserAsync(id) {
   } catch (err) { return { ok: false, error: err }; }
 }
 
-export async function toggleUserStatusAsync(id) {
+export async function toggleUserStatusAsync(id, opts) {
   const u = getUser(id);
   if (!u) return { ok: false, error: new Error("User not found") };
-  return u.status === "suspended" ? activateUserAsync(id) : suspendUserAsync(id);
+  return u.status === "suspended"
+    ? activateUserAsync(id)
+    : suspendUserAsync(id, opts);
 }
 
 export async function verifyUserAsync(id) {
@@ -100,13 +112,12 @@ export async function deleteUserAsync(id) {
 }
 
 // ============================================================
-// PERMANENT DELETE — hard delete, hairudishwi
+// PERMANENT DELETE — inahitaji sababu + "DELETE"
 // ============================================================
-export async function permanentDeleteUserAsync(id) {
+export async function permanentDeleteUserAsync(id, { reason, confirmText } = {}) {
   const u = getUser(id);
   if (!u) return { ok: false, error: new Error("User not found") };
 
-  // Zuia kumfuta admin
   if (u.isStaff) {
     return {
       ok: false,
@@ -114,13 +125,23 @@ export async function permanentDeleteUserAsync(id) {
     };
   }
 
+  const cleanReason = (reason || "").trim();
+  const cleanConfirm = (confirmText || "").trim();
+
+  if (cleanReason.length < 5) {
+    return { ok: false, error: new Error("Sababu inahitajika (herufi 5+).") };
+  }
+  if (cleanConfirm !== "DELETE") {
+    return { ok: false, error: new Error('Lazima uandike "DELETE" kuthibitisha.') };
+  }
+
   try {
-    // Endpoint maalum kwa hard delete
-    await api.delete(`/admin/users/${id}/permanent/`);
+    await api.delete(`/admin/users/${id}/permanent/`, {
+      data: { reason: cleanReason, confirm_text: cleanConfirm },
+    });
     write(read().filter((x) => x.id !== id));
     return { ok: true, deleted: true };
   } catch (err) {
-    // Fallback: kama /permanent/ haipo, tumia delete ya kawaida
     if (err?.status === 404 || err?.status === 405) {
       console.warn("[usersStore] /permanent/ haipo — tumia delete ya kawaida");
       return deleteUserAsync(id);

@@ -2,20 +2,32 @@
 // UserManagementSection.jsx
 // Usimamizi wa watumiaji — table (desktop) + card list (mobile).
 // Bilingual + Async actions na rollback + loading state.
-// + Futa Permanently (hard delete) kwa admin.
-// + Role inatoka backend (u.role) — inahesabiwa kutoka listings + deals
+// + Futa Permanently (modal yenye "DELETE" + sababu)
+// + Suspend (modal yenye sababu)
+// + Verify (kitufe cha kuthibitisha)
 // ============================================================
 
 import React, { useState } from "react";
-import { Search, RotateCcw, Ban, Loader2, Trash2 } from "lucide-react";
+import {
+  Search,
+  RotateCcw,
+  Ban,
+  Loader2,
+  Trash2,
+  ShieldCheck,
+} from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
 import UserDrawer from "../shared/UserDrawer.jsx";
+import DeleteUserModal from "../shared/DeleteUserModal.jsx";
+import SuspendUserModal from "../shared/SuspendUserModal.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
   useUsers,
-  toggleUserStatusAsync,
+  activateUserAsync,
+  suspendUserAsync,
+  verifyUserAsync,
   permanentDeleteUserAsync,
 } from "../../../../config/usersStore.js";
 import { useListings } from "../../../../config/listingsStore.js";
@@ -81,12 +93,13 @@ export default function UserManagementSection() {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [suspendTarget, setSuspendTarget] = useState(null);
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // Role inatoka backend (`u.role`) — sio kuhesabu locally
   const getUserRole = (user) => user.role || "Neither";
 
   const filtered = users.filter((u) => {
@@ -100,85 +113,145 @@ export default function UserManagementSection() {
     return matchesQuery && matchesRole;
   });
 
-  // ── HANDLE TOGGLE ─────────────────────────────────────────
-  const handleToggle = async (userId) => {
-    if (busy[userId]) return;
+  // ── HANDLE TOGGLE (suspend → modal; activate → moja kwa moja) ──
+  const handleToggle = (userId) => {
+    const u = users.find((x) => x.id === userId);
+    if (!u) return;
 
-    setBusy((b) => ({ ...b, [userId]: "toggle" }));
-    setError("");
-
-    const res = await toggleUserStatusAsync(userId);
-
-    setBusy((b) => {
-      const next = { ...b };
-      delete next[userId];
-      return next;
-    });
-
-    if (!res.ok) {
-      setError(
-        res.error?.message ||
-          t(
-            "Imeshindwa kubadilisha hali ya mtumiaji.",
-            "Failed to change user status."
-          )
-      );
+    if (u.status === "suspended") {
+      // Activate — hakuna sababu inahitajika
+      (async () => {
+        setBusy((b) => ({ ...b, [userId]: "toggle" }));
+        setError("");
+        const res = await activateUserAsync(userId);
+        setBusy((b) => {
+          const n = { ...b };
+          delete n[userId];
+          return n;
+        });
+        if (!res.ok) {
+          setError(
+            res.error?.message ||
+              t("Imeshindwa kumwasha mtumiaji.", "Failed to activate user.")
+          );
+        }
+      })();
+    } else {
+      // Suspend — fungua modal
+      setSuspendTarget(u);
     }
   };
 
-  // ── HANDLE PERMANENT DELETE ───────────────────────────────
-  const handleDelete = async (userId, userName) => {
-    if (busy[userId]) return;
-
-    const confirmed = window.confirm(
-      lang === "sw"
-        ? `Futa mtumiaji "${userName}" KABISA?\n\nHatua hii haiwezi kurudishwa. Data yote itaondolewa.`
-        : `Permanently delete user "${userName}"?\n\nThis cannot be undone. All data will be removed.`
-    );
-    if (!confirmed) return;
-
-    const doubleConfirm = window.confirm(
-      lang === "sw"
-        ? "Una uhakika KABISA? Bonyeza OK kuthibitisha."
-        : "Are you ABSOLUTELY sure? Click OK to confirm."
-    );
-    if (!doubleConfirm) return;
-
-    setBusy((b) => ({ ...b, [userId]: "delete" }));
+  // ── HANDLE SUSPEND CONFIRM ────────────────────────────────
+  const handleSuspendConfirm = async ({ reason }) => {
+    const u = suspendTarget;
+    if (!u) return;
+    setBusy((b) => ({ ...b, [u.id]: "toggle" }));
     setError("");
-
-    const res = await permanentDeleteUserAsync(userId);
-
+    const res = await suspendUserAsync(u.id, { reason });
     setBusy((b) => {
-      const next = { ...b };
-      delete next[userId];
-      return next;
+      const n = { ...b };
+      delete n[u.id];
+      return n;
     });
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kumsimamisha mtumiaji.", "Failed to suspend user.")
+      );
+    } else {
+      setSuspendTarget(null);
+    }
+  };
 
+  // ── HANDLE DELETE (fungua modal) ──────────────────────────
+  const handleDelete = (userId) => {
+    const u = users.find((x) => x.id === userId);
+    if (!u) return;
+    setDeleteTarget(u);
+  };
+
+  // ── HANDLE DELETE CONFIRM ─────────────────────────────────
+  const handleDeleteConfirm = async ({ reason, confirmText }) => {
+    const u = deleteTarget;
+    if (!u) return;
+    setBusy((b) => ({ ...b, [u.id]: "delete" }));
+    setError("");
+    const res = await permanentDeleteUserAsync(u.id, { reason, confirmText });
+    setBusy((b) => {
+      const n = { ...b };
+      delete n[u.id];
+      return n;
+    });
     if (!res.ok) {
       setError(
         res.error?.message ||
           t("Imeshindwa kumfuta mtumiaji.", "Failed to delete user.")
       );
     } else {
-      if (selectedUser?.id === userId) {
-        setSelectedUser(null);
-      }
+      setDeleteTarget(null);
+      if (selectedUser?.id === u.id) setSelectedUser(null);
+    }
+  };
+
+  // ── HANDLE VERIFY ─────────────────────────────────────────
+  const handleVerify = async (userId) => {
+    setBusy((b) => ({ ...b, [userId]: "verify" }));
+    setError("");
+    const res = await verifyUserAsync(userId);
+    setBusy((b) => {
+      const n = { ...b };
+      delete n[userId];
+      return n;
+    });
+    if (!res.ok) {
+      setError(
+        res.error?.message ||
+          t("Imeshindwa kuthibitisha mtumiaji.", "Failed to verify user.")
+      );
     }
   };
 
   // ── ACTION BUTTONS ────────────────────────────────────────
   const ActionButtons = ({ user, fullWidth = false }) => {
     const isSuspended = user.status === "suspended";
+    const isVerified = user.isVerified;
     const isBusy = !!busy[user.id];
     const busyAction = busy[user.id];
 
     return (
       <div
-        className={`flex items-center gap-1.5 ${
+        className={`flex items-center gap-1.5 flex-wrap ${
           fullWidth ? "w-full" : "justify-end"
         }`}
       >
+        {/* VERIFY — tu kama hajathibitishwa */}
+        {!isVerified && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleVerify(user.id);
+            }}
+            disabled={isBusy}
+            style={{
+              color: COLORS.green,
+              borderColor: `${COLORS.green}33`,
+            }}
+            className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              fullWidth ? "flex-1" : ""
+            }`}
+            title={t("Thibitisha", "Verify")}
+          >
+            {busyAction === "verify" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <ShieldCheck size={13} />
+            )}
+            {fullWidth && t("Thibitisha", "Verify")}
+          </button>
+        )}
+
+        {/* SUSPEND / ACTIVATE */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -198,25 +271,26 @@ export default function UserManagementSection() {
           {busyAction === "toggle" ? (
             <>
               <Loader2 size={13} className="animate-spin" />
-              {t("Inafanya...", "Working...")}
+              {fullWidth && t("Inafanya...", "Working...")}
             </>
           ) : isSuspended ? (
             <>
               <RotateCcw size={13} />
-              {t("Washa Tena", "Activate")}
+              {fullWidth && t("Washa Tena", "Activate")}
             </>
           ) : (
             <>
               <Ban size={13} />
-              {t("Simamisha", "Suspend")}
+              {fullWidth && t("Simamisha", "Suspend")}
             </>
           )}
         </button>
 
+        {/* DELETE */}
         <button
           onClick={(e) => {
             e.stopPropagation();
-            handleDelete(user.id, user.name);
+            handleDelete(user.id);
           }}
           disabled={isBusy || user.isStaff}
           title={
@@ -253,8 +327,8 @@ export default function UserManagementSection() {
       <SectionHeader
         title={t("Usimamizi wa Watumiaji", "User Management")}
         subtitle={t(
-          "Dhibiti akaunti za watumiaji — simamisha, washa, au futa",
-          "Manage user accounts — suspend, activate, or delete"
+          "Dhibiti akaunti za watumiaji — thibitisha, simamisha, washa, au futa",
+          "Manage user accounts — verify, suspend, activate, or delete"
         )}
       />
 
@@ -429,6 +503,26 @@ export default function UserManagementSection() {
           deals={deals}
           onClose={() => setSelectedUser(null)}
           lang={lang}
+        />
+      )}
+
+      {/* DELETE MODAL */}
+      {deleteTarget && (
+        <DeleteUserModal
+          user={deleteTarget}
+          onClose={() => !busy[deleteTarget.id] && setDeleteTarget(null)}
+          onConfirm={handleDeleteConfirm}
+          busy={busy[deleteTarget.id] === "delete"}
+        />
+      )}
+
+      {/* SUSPEND MODAL */}
+      {suspendTarget && (
+        <SuspendUserModal
+          user={suspendTarget}
+          onClose={() => !busy[suspendTarget.id] && setSuspendTarget(null)}
+          onConfirm={handleSuspendConfirm}
+          busy={busy[suspendTarget.id] === "toggle"}
         />
       )}
     </>
