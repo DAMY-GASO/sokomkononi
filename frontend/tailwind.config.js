@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['"Inter"', "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+        sans: ['"Open Sans"', "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
       },
       fontWeight: {
         regular: "400",
