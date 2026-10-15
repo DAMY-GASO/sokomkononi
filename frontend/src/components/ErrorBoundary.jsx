@@ -1,117 +1,43 @@
-// ============================================================
-// ErrorBoundary.jsx — catches render-time errors so the whole
-// SPA does not go blank.
-//
-// FIXED:
-//   - Added "Clear cache and restart" to break reload loops caused
-//     by deterministic errors from poisoned localStorage.
-// ============================================================
 import React from "react";
-import { COLORS } from "../pages/dashboard/components/shared.js";
+import { Button } from "./ui";
 
 export default class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null, clearing: false };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, info) {
-    console.error("[ErrorBoundary] Render error:", error, info);
-  }
-
-  handleReload = () => {
-    window.location.href = "/";
-  };
-
-  handleReset = () => {
-    window.location.reload();
-  };
-
-  handleClearAndReload = () => {
+  constructor(props) { super(props); this.state = { hasError: false, error: null, clearing: false }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, info) { console.error("[ErrorBoundary]", error, info); }
+  handleReload = () => { window.location.href = "/"; };
+  handleRetry  = () => { window.location.reload(); };
+  handleClear  = () => {
     this.setState({ clearing: true });
     try {
       const kill = [];
-      for (let i = 0; i < window.localStorage.length; i++) {
-        const k = window.localStorage.key(i);
-        if (k && k.startsWith("sokomkononi_")) kill.push(k);
-      }
-      kill.forEach((k) => {
-        try { window.localStorage.removeItem(k); } catch {}
-      });
-      try { window.sessionStorage.clear(); } catch {}
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("sokomkononi_")) kill.push(k); }
+      kill.forEach((k) => localStorage.removeItem(k));
+      sessionStorage.clear();
     } catch {}
     window.location.href = "/";
   };
-
   render() {
     if (!this.state.hasError) return this.props.children;
-
     return (
-      <div
-        style={{ background: COLORS.sand, minHeight: "100vh" }}
-        className="flex items-center justify-center p-6"
-      >
-        <div className="max-w-md w-full text-center bg-white rounded-2xl border border-gray-100 p-8">
-          <div
-            style={{ background: `${COLORS.rust}15` }}
-            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-          >
-            <span style={{ color: COLORS.rust }} className="text-2xl font-bold">
-              !
-            </span>
+      <div className="min-h-screen grid place-items-center p-6 bg-[color:rgb(var(--c-page))]">
+        <div className="max-w-md w-full text-center card p-8">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-[rgb(193,80,46,0.12)]">
+            <span className="text-2xl font-bold text-[#C1502E]">!</span>
           </div>
-          <h1 className="text-xl font-bold text-primary mb-2">
-            Kuna hitilafu imetokea / Something went wrong
-          </h1>
-          <p className="text-sm text-secondary mb-5 leading-relaxed">
-            Samahani kwa usumbufu. Jaribu kurudisha ukurasa, au safisha data ya mfumo.
-            <br />
-            Sorry for the trouble. Reload the page, or clear app data.
-          </p>
-
+          <h1 className="text-[17px] font-semibold text-primary mb-2">Kuna hitilafu imetokea / Something went wrong</h1>
+          <p className="text-sm text-secondary mb-5 leading-relaxed">Samahani kwa usumbufu. Jaribu kurudisha ukurasa, au safisha data ya mfumo.<br />Sorry for the trouble. Reload, or clear app data.</p>
           {this.state.error?.message && (
-            <pre
-              style={{
-                background: COLORS.sand,
-                color: COLORS.rust,
-                fontSize: "11px",
-              }}
-              className="text-left p-3 rounded-lg overflow-auto max-h-32 mb-4 whitespace-pre-wrap break-words"
-            >
-              {this.state.error.message}
-            </pre>
+            <pre className="text-left p-3 rounded-lg overflow-auto max-h-32 mb-4 whitespace-pre-wrap break-words bg-[color:rgb(var(--c-page))] text-[11px] text-[#C1502E]">{this.state.error.message}</pre>
           )}
-
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
-              <button
-                onClick={this.handleReset}
-                className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold text-secondary"
-              >
-                Jaribu tena / Retry
-              </button>
-              <button
-                onClick={this.handleReload}
-                style={{ background: COLORS.gold, color: COLORS.night }}
-                className="flex-1 py-2.5 rounded-lg text-sm font-semibold"
-              >
-                Rudi Nyumbani / Home
-              </button>
+              <Button variant="outline" className="flex-1" onClick={this.handleRetry}>Jaribu tena / Retry</Button>
+              <Button variant="primary" className="flex-1" onClick={this.handleReload}>Rudi Nyumbani</Button>
             </div>
-            <button
-              onClick={this.handleClearAndReload}
-              disabled={this.state.clearing}
-              style={{ borderColor: COLORS.rust, color: COLORS.rust }}
-              className="w-full py-2.5 rounded-lg border text-xs font-semibold disabled:opacity-50"
-            >
-              {this.state.clearing
-                ? "Inasafisha... / Clearing..."
-                : "Safisha data na anza upya / Clear data & restart"}
-            </button>
+            <Button variant="ghost" className="w-full text-xs" onClick={this.handleClear} disabled={this.state.clearing}>
+              {this.state.clearing ? "Inasafisha…" : "Safisha data na anza upya"}
+            </Button>
           </div>
         </div>
       </div>

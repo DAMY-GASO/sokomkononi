@@ -13,18 +13,12 @@ import {
   markAllNotificationsReadAsync,
   clearNotificationsAsync,
 } from "../../config/notificationsStore.js";
-import {
-  Menu,
-  X,
-  Bell,
-  LogOut,
-  User as UserIcon,
-  Settings,
-  Lock,
-} from "lucide-react";
+import { Menu, X, Bell, LogOut, User as UserIcon, Settings, Lock, Home as HomeIcon } from "lucide-react";
 
 // ⬇️ Secret admin path
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "../../config/adminPath.js";
+import ThemeToggle from "../../components/ThemeToggle.jsx";
+import { Home as HomeIcon } from "lucide-react";
 
 import {
   COLORS,
@@ -445,34 +439,59 @@ export default function AdminDashboard() {
       className="bg-page min-h-screen w-full overflow-x-hidden"
     >
       <header
-        style={{ background: COLORS.night }}
-        className="sticky top-0 z-50 w-full flex items-center justify-between px-4 sm:px-6 py-3"
+        style={{ background: "#011957" }}
+        className="sticky top-0 z-50 w-full border-b border-white/[0.08] text-white"
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-3 px-3 sm:px-5">
+        <div className="flex shrink-0 items-center gap-2.5 min-w-0">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            className="text-white/70 hover:text-white md:hidden shrink-0"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white transition-colors hover:bg-white/[0.08] md:hidden"
             aria-label={lang === "sw" ? "Fungua menyu" : "Open menu"}
           >
-            <Menu size={20} />
+            <Menu size={22} />
           </button>
-          <span
-            style={{ color: COLORS.sand }}
-            className="text-lg sm:text-xl font-semibold tracking-tight truncate"
-          >
-            SokoMkononi
-          </span>
-          <span className="text-[10px] font-semibold bg-[#FEA406]/20 text-[#FEA406] px-2.5 py-0.5 rounded-full shrink-0">
-            ADMIN
-          </span>
+
+          <a href="/" className="flex shrink-0 select-none items-center gap-2.5">
+            <img
+              src="/logo.webp"
+              alt="SokoMkononi"
+              width={32}
+              height={32}
+              className="h-8 w-8 shrink-0 rounded-full"
+            />
+            <span className="text-[16px] font-bold tracking-tight">
+              Soko<span className="text-[#FEA406]">Mkononi</span>
+            </span>
+            <span
+              className="hidden shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider sm:inline-block"
+              style={{ background: "#FEA406", color: "#011957" }}
+            >
+              {lang === "sw" ? "Msimamizi" : "Administrator"}
+            </span>
+          </a>
+
           {staffRole && staffRole.key !== "super_admin" && (
-            <span className="hidden sm:inline text-[10px] font-semibold bg-white/10 text-white/70 px-2 py-0.5 rounded-full truncate">
+            <span className="hidden shrink-0 truncate rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/70 md:inline">
               {staffRole.label?.[lang] || staffRole.label?.sw}
             </span>
           )}
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* ── Admin: Theme toggle ───────────────────────── */}
+          <ThemeToggle variant="onNavy" />
+
+          {/* ── Admin: Go to public site ─────────────────── */}
+          <a
+            href="/"
+            className="grid h-10 w-10 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
+            aria-label={lang === "sw" ? "Nenda kwenye tovuti ya umma" : "Go to public site"}
+            title={lang === "sw" ? "Nenda kwenye tovuti" : "Go to site"}
+          >
+            <HomeIcon size={18} />
+          </a>
+
           <LanguageSwitcher lang={lang} setLang={setLang} />
 
           {/* Notifications */}
@@ -658,6 +677,7 @@ export default function AdminDashboard() {
               </>
             )}
           </div>
+        </div>
         </div>
       </header>
 

@@ -9,6 +9,7 @@ import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import ListingImage from "../components/ListingImage.jsx";
+import ListingMap from "../components/ListingMap.jsx";
 import BenefitTiles from "../components/shop/BenefitTiles.jsx";
 import {
   MapPin, Bed, Bath, Maximize, Calendar, Heart, Share2, Phone,
@@ -919,13 +920,46 @@ export default function PropertyDetailPage() {
                 {activeTab === "location" && (
                   <div>
                     <h3 className="font-semibold text-primary mb-4">{t(lang, "Mahali", "Location")}</h3>
-                    <div className="w-full h-64 bg-gray-100 rounded-xl flex items-center justify-center">
-                      <div className="text-center">
-                        <MapPin size={32} className="text-muted mx-auto" />
-                        <p className="text-secondary text-sm mt-2">{property.location}</p>
-                        <p className="text-muted text-body-sm">{t(lang, "Ramani itaonekana hapa", "Map will appear here")}</p>
-                      </div>
+                    <div className="mb-4 flex items-center gap-2 text-sm text-secondary">
+                      <MapPin size={14} className="text-[#FEA406] shrink-0" />
+                      <span>{property.location}</span>
                     </div>
+                    {property.latitude != null && property.longitude != null ? (
+                      <>
+                        {property.address_text && (
+                          <p className="mb-3 text-xs text-secondary leading-snug">
+                            {property.address_text}
+                          </p>
+                        )}
+                        <ListingMap
+                          latitude={property.latitude}
+                          longitude={property.longitude}
+                          title={property.title}
+                          location={property.location}
+                        />
+                        <a
+                          href={`https://www.openstreetmap.org/?mlat=${property.latitude}&mlon=${property.longitude}#map=16/${property.latitude}/${property.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 inline-block text-xs font-semibold text-[color:rgb(var(--c-royal))] hover:underline"
+                        >
+                          {t(lang, "Fungua kwenye ramani →", "Open in map →")}
+                        </a>
+                      </>
+                    ) : (
+                      <div className="w-full h-64 rounded-xl border border-dashed border-[color:rgb(var(--c-hairline))]
+                                      bg-[color:rgb(var(--c-page))] flex items-center justify-center">
+                        <div className="text-center px-4">
+                          <MapPin size={32} className="text-muted mx-auto" />
+                          <p className="mt-2 text-sm text-secondary">
+                            {t(lang, "Muuzaji hajaweka eneo halisi kwenye ramani.", "Seller hasn't pinned an exact location.")}
+                          </p>
+                          <p className="mt-1 text-xs text-muted">
+                            {property.location}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -4,6 +4,7 @@ import App from "./App.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { applyTheme, getTheme } from "./config/themeStore.js";
 import "./index.css";
+import "leaflet/dist/leaflet.css";
 
 // SokoMkononi uses Bearer tokens, not cookies. Any leftover `sessionid`
 // or `csrftoken` cookie (from an admin session or a previous backend

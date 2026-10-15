@@ -24,6 +24,22 @@ export const listingsApi = {
 
   // ----- Mutations -----
   create: (payload) => api.post("/listings/", payload),
+
+  // ── Multipart: create listing + images in a single request ──
+  // body: FormData with category/title/description/price/location,
+  // optional latitude/longitude/address_text/attributes, plus `images` files.
+  createWithImages: (formData) =>
+    api.upload("/listings/create-with-images/", formData),
+
+  // ── Update only location fields (JSON) ──
+  // payload: { latitude?, longitude?, location?, address_text? }
+  updateLocation: (id, payload) =>
+    api.patch(`/listings/${id}/location/`, payload),
+
+  // ── Bulk image upload to an existing listing ──
+  // formData: FormData with `images` files (multiple)
+  bulkUploadImages: (id, formData) =>
+    api.upload(`/listings/${id}/images/bulk/`, formData),
   update: (id, patch) => api.patch(`/listings/${id}/`, patch),
   remove: (id, { hard = false, reason = "" } = {}) => {
     const qs = hard ? "?hard=true" : "";

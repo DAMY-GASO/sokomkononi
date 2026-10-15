@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { Home, Search, PlusCircle, MessageSquare, LayoutGrid, Heart } from "lucide-react";
 import { useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useDashboardSide } from "../config/dashboardSideStore.js";
@@ -54,6 +55,8 @@ export default function BottomNav() {
   const { user } = useAuth();
   const { t, lang } = useLanguage();
   const side = useDashboardSide();
+  const isActive = (p) => (p === "/" ? location.pathname === "/" : location.pathname.startsWith(p));
+  const isBuyer = side === "buyer";
 
   const isActive = (path) => {
     if (!path) return false;
