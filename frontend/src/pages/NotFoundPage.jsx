@@ -14,7 +14,7 @@ export default function NotFoundPage() {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-page flex flex-col">
       <Navbar />
       <main className="flex-1 flex items-center justify-center px-4 py-20">
         <div className="max-w-md w-full text-center">

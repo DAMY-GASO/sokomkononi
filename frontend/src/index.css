@@ -1838,3 +1838,264 @@ html:not(.dark) [data-surface="sand"] > header svg {
   stroke: currentColor;
 }
 
+
+/* ============================================================
+   HERO / DARK-SURFACE TEXT — ALWAYS WHITE
+   Fixes the bug where headings like "Nunua na uza mali kwa
+   urahisi na uhakika." disappear in LIGHT mode.
+
+   Specificity math:
+     html:not(.dark) h1           = (0,1,2)
+     html .surface-night h1       = (0,1,2)  ← this file, later = wins
+
+   Scope is intentionally limited to:
+     • .surface-night  (HeroSection + auth left panel + custom sections)
+     • .bg-night / .bg-night-deep / .bg-night-soft  (Tailwind navy utilities)
+     • any section with inline navy gradient
+     • <header> and <footer>  (the app chrome bars)
+   ============================================================ */
+
+html .surface-night h1,
+html .surface-night h2,
+html .surface-night h3,
+html .surface-night h4,
+html .surface-night h5,
+html .surface-night h6,
+html .surface-night p,
+html .surface-night li,
+html .surface-night .text-primary,
+html .surface-night .text-secondary,
+html .surface-night .text-muted,
+
+html .bg-night h1,
+html .bg-night h2,
+html .bg-night h3,
+html .bg-night h4,
+html .bg-night h5,
+html .bg-night h6,
+html .bg-night p,
+html .bg-night li,
+html .bg-night .text-primary,
+
+html .bg-night-deep h1,
+html .bg-night-deep h2,
+html .bg-night-deep h3,
+html .bg-night-deep h4,
+html .bg-night-deep h5,
+html .bg-night-deep h6,
+html .bg-night-deep p,
+html .bg-night-deep li,
+html .bg-night-deep .text-primary,
+
+html .bg-night-soft h1,
+html .bg-night-soft h2,
+html .bg-night-soft h3,
+html .bg-night-soft h4,
+html .bg-night-soft h5,
+html .bg-night-soft h6,
+html .bg-night-soft p,
+html .bg-night-soft li,
+
+html header h1, html header h2, html header h3,
+html header h4, html header h5, html header h6,
+
+html footer h1, html footer h2, html footer h3,
+html footer h4, html footer h5, html footer h6,
+
+/* Sections with inline navy gradient backgrounds (React serializes
+   #011957 → rgb(1, 25, 87), #010F3A → rgb(1, 15, 58), etc.) */
+html section[style*="rgb(1, 25, 87)"] h1,
+html section[style*="rgb(1, 25, 87)"] h2,
+html section[style*="rgb(1,25,87)"] h1,
+html section[style*="rgb(1,25,87)"] h2,
+html section[style*="rgb(1, 15, 58)"] h1,
+html section[style*="rgb(1, 15, 58)"] h2,
+html section[style*="rgb(1,15,58)"] h1,
+html section[style*="rgb(1,15,58)"] h2,
+html section[style*="rgb(4, 36, 117)"] h1,
+html section[style*="rgb(4, 36, 117)"] h2,
+html section[style*="rgb(4,36,117)"] h1,
+html section[style*="rgb(4,36,117)"] h2,
+
+/* Paragraphs inside a nav-gradient section */
+html section[style*="linear-gradient"][style*="rgb(1, 25, 87)"] p,
+html section[style*="linear-gradient"][style*="rgb(1, 15, 58)"] p,
+html section[style*="linear-gradient"][style*="rgb(4, 36, 117)"] p {
+  color: #FFFFFF !important;
+}
+
+/* Slightly softer white for paragraphs / muted text on dark surfaces */
+html .surface-night p,
+html .surface-night .text-secondary {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+html .surface-night .text-muted {
+  color: rgba(255, 255, 255, 0.60) !important;
+}
+
+/* Headings stay pure white */
+html .surface-night h1,
+html .surface-night h2,
+html .surface-night h3,
+html .surface-night h4,
+html .surface-night h5,
+html .surface-night h6 {
+  color: #FFFFFF !important;
+}
+
+/* Links inside dark surfaces */
+html .surface-night a {
+  color: inherit;
+}
+html .surface-night a:hover {
+  color: #FEA406;
+}
+
+/* Icons inside dark surfaces: keep their authored color (gold, white, etc.) */
+html .surface-night svg[stroke="currentColor"] {
+  color: inherit;
+}
+
+
+/* ============================================================
+   PUBLIC PAGES — THEME + STYLING UNIFICATION
+   Applies to: About, Contact, Terms, Privacy, Help (Jinsi),
+   Ads (BrowseProperties), Invite, NotFound.
+   Does NOT affect dashboards ([data-surface="sand"]) or chrome
+   (header, footer, .surface-night).
+   ============================================================ */
+
+/* ── 1. Dark mode: arbitrary + inline light backgrounds ──── */
+html.dark body .bg-\[\#F5F3EC\],
+html.dark body .bg-\[\#F5F3EC\]\/40,
+html.dark body .bg-\[\#F5F3EC\]\/60,
+html.dark body .bg-\[\#F4F7FC\],
+html.dark body .bg-\[\#FAFAFA\] {
+  background-color: rgb(var(--c-page)) !important;
+}
+html.dark body [style*="#F4F7FC"],
+html.dark body [style*="#F5F3EC"],
+html.dark body [style*="rgb(244, 247, 252)"],
+html.dark body [style*="rgb(244,247,252)"],
+html.dark body [style*="rgb(245, 243, 236)"],
+html.dark body [style*="rgb(245,243,236)"] {
+  background-color: rgb(var(--c-page)) !important;
+}
+html.dark body [style*="background: white" i],
+html.dark body [style*="background:white" i],
+html.dark body [style*="background: #FFF" i],
+html.dark body [style*="background:#FFF" i],
+html.dark body [style*="background: #FFFFFF" i],
+html.dark body [style*="background:#FFFFFF" i],
+html.dark body [style*="background: rgb(255, 255, 255)"],
+html.dark body [style*="background:rgb(255,255,255)"],
+html.dark body [style*="background-color: white" i],
+html.dark body [style*="background-color: #FFFFFF" i] {
+  background-color: rgb(var(--c-card)) !important;
+  background-image: none !important;
+}
+html.dark body [style*="#DCE4F2"],
+html.dark body [style*="rgb(220, 228, 242)"],
+html.dark body [style*="rgb(220,228,242)"] {
+  border-color: rgb(var(--c-hairline)) !important;
+}
+
+/* ── 2. Light mode: no solid navy on content areas ───────── */
+/* Flip inline navy backgrounds... */
+html:not(.dark) body [style*="background: rgb(1, 25, 87)"],
+html:not(.dark) body [style*="background:rgb(1,25,87)"],
+html:not(.dark) body [style*="background: #011957" i],
+html:not(.dark) body [style*="background:#011957"],
+html:not(.dark) body [style*="background: rgb(1, 15, 58)"],
+html:not(.dark) body [style*="background:rgb(1,15,58)"],
+html:not(.dark) body [style*="background: #010F3A" i],
+html:not(.dark) body [style*="background:#010F3A"],
+html:not(.dark) body [style*="background: rgb(4, 36, 117)"],
+html:not(.dark) body [style*="background:rgb(4,36,117)"],
+html:not(.dark) body [style*="background: #042475" i],
+html:not(.dark) body [style*="background:#042475"] {
+  background-color: rgb(var(--c-card)) !important;
+  background-image: none !important;
+  color: #0B1220 !important;
+}
+/* ...but keep chrome + .surface-night navy */
+html:not(.dark) body > header,
+html:not(.dark) body > header *,
+html:not(.dark) body > footer,
+html:not(.dark) body > footer *,
+html:not(.dark) body .surface-night,
+html:not(.dark) body .surface-night * {
+  /* preserve authored */
+}
+html:not(.dark) body > header,
+html:not(.dark) body > header [style*="background: rgb(1, 25, 87)"],
+html:not(.dark) body > header [style*="background: #011957" i],
+html:not(.dark) body > footer,
+html:not(.dark) body .surface-night {
+  background-color: #011957 !important;
+  color: #FFFFFF !important;
+}
+
+/* Tailwind navy utilities on content (not chrome) */
+html:not(.dark) body > section .bg-night:not(.surface-night),
+html:not(.dark) body > main .bg-night,
+html:not(.dark) body > section [class*="bg-[#011957]"]:not(.surface-night):not(header *):not(footer *) {
+  background-color: rgb(var(--c-card)) !important;
+  color: #0B1220 !important;
+}
+
+/* ── 3. Text always readable in both themes ──────────────── */
+html:not(.dark) body .text-primary,
+html:not(.dark) body .text-secondary,
+html:not(.dark) body .text-muted {
+  /* handled globally already */
+}
+
+/* Keep header/footer text white in both themes */
+html:not(.dark) body > header .text-primary,
+html:not(.dark) body > header .text-secondary,
+html:not(.dark) body > header .text-muted,
+html:not(.dark) body > footer .text-primary,
+html:not(.dark) body > footer .text-secondary,
+html:not(.dark) body > footer .text-muted,
+html:not(.dark) body .surface-night .text-primary,
+html:not(.dark) body .surface-night .text-secondary,
+html:not(.dark) body .surface-night .text-muted {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+html:not(.dark) body > header h1, html:not(.dark) body > header h2,
+html:not(.dark) body > header h3, html:not(.dark) body > header h4,
+html:not(.dark) body > footer h1, html:not(.dark) body > footer h2,
+html:not(.dark) body > footer h3, html:not(.dark) body > footer h4,
+html:not(.dark) body .surface-night h1,
+html:not(.dark) body .surface-night h2,
+html:not(.dark) body .surface-night h3,
+html:not(.dark) body .surface-night h4 {
+  color: #FFFFFF !important;
+}
+
+/* ── 4. Cards, borders, chips inside content ─────────────── */
+html.dark body .border-gray-100,
+html.dark body .border-gray-200,
+html.dark body .border-gray-300 {
+  border-color: rgb(var(--c-hairline)) !important;
+}
+html.dark body .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+html.dark body .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(var(--c-hairline)) !important;
+}
+
+/* ── 5. Forms ────────────────────────────────────────────── */
+html.dark body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark body textarea,
+html.dark body select {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+html.dark body input::placeholder,
+html.dark body textarea::placeholder {
+  color: rgba(255, 255, 255, 0.42) !important;
+}
+html.dark body select option { background-color: #011957; color: #FFFFFF; }
+

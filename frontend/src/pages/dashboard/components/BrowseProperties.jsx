@@ -1,25 +1,12 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Search,
-  Grid3x3,
-  List,
-  SlidersHorizontal,
-  X,
-  ChevronDown,
-  Home as HomeIcon,
-  ChevronLeft,
-  ChevronRight,
+  Search, Grid3x3, List, SlidersHorizontal, X, ChevronDown,
+  Home as HomeIcon, ChevronLeft, ChevronRight,
 } from "lucide-react";
-import {
-  COLORS,
-  getCategory,
-  isBoostActive,
-  isLeadingActive,
-} from "./shared";
+import { isBoostActive, isLeadingActive } from "./shared";
 import { usePublicListings } from "../../../config/listingsStore.js";
 import ListingCard from "../../../components/ListingCard.jsx";
-import ListingCardShop from "../../../components/shop/ListingCardShop.jsx";
 import {
   useSavedIds,
   toggleSaved,
@@ -27,6 +14,7 @@ import {
 import {
   useActiveCategories,
   getCategoryIcon,
+  getCategoryLabel,
 } from "../../../config/categoriesStore.js";
 
 const REGIONS = [
@@ -38,100 +26,80 @@ const REGIONS = [
   "Mjini Magharibi",
 ];
 
-// ============================================================
-// FILTER SIDEBAR
-// ============================================================
+const PRICE_RANGES = [
+  { label: { sw: "Chini ya TZS 20M", en: "Under TZS 20M" }, min: 0, max: 20_000_000 },
+  { label: { sw: "TZS 20M - 50M", en: "TZS 20M - 50M" }, min: 20_000_000, max: 50_000_000 },
+  { label: { sw: "TZS 50M - 100M", en: "TZS 50M - 100M" }, min: 50_000_000, max: 100_000_000 },
+  { label: { sw: "TZS 100M - 200M", en: "TZS 100M - 200M" }, min: 100_000_000, max: 200_000_000 },
+  { label: { sw: "Juu ya TZS 200M", en: "Above TZS 200M" }, min: 200_000_000, max: Infinity },
+];
+
+/* ═══════════════════════════════════════════════════════════
+   FILTER SIDEBAR
+   ═══════════════════════════════════════════════════════════ */
 function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
-  const [localFilters, setLocalFilters] = useState(filters);
-  const allCategories = useActiveCategories();
+  const [local, setLocal] = useState(filters);
+  const categories = useActiveCategories();
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const priceRanges = [
-    { label: "Chini ya TZS 20M", en: "Under TZS 20M", min: 0, max: 20000000 },
-    { label: "TZS 20M - 50M", en: "TZS 20M - 50M", min: 20000000, max: 50000000 },
-    { label: "TZS 50M - 100M", en: "TZS 50M - 100M", min: 50000000, max: 100000000 },
-    { label: "TZS 100M - 200M", en: "TZS 100M - 200M", min: 100000000, max: 200000000 },
-    { label: "Juu ya TZS 200M", en: "Above TZS 200M", min: 200000000, max: Infinity },
-  ];
+  useEffect(() => { setLocal(filters); }, [filters]);
 
-  const handleApply = () => {
-    setFilters(localFilters);
-    onClose();
+  const toggleCat = (key) => {
+    setLocal((p) => ({
+      ...p,
+      categories: p.categories.includes(key)
+        ? p.categories.filter((c) => c !== key)
+        : [...p.categories, key],
+    }));
   };
-
-  const handleReset = () => {
-    const reset = {
-      categories: [],
-      priceRange: null,
-      regions: [],
-      verified: false,
-      featured: false,
-    };
-    setLocalFilters(reset);
-  };
-
-  const toggleCategory = (cat) => {
-    setLocalFilters((prev) => ({
-      ...prev,
-      categories: prev.categories.includes(cat)
-        ? prev.categories.filter((c) => c !== cat)
-        : [...prev.categories, cat],
+  const toggleRegion = (r) => {
+    setLocal((p) => ({
+      ...p,
+      regions: p.regions.includes(r)
+        ? p.regions.filter((x) => x !== r)
+        : [...p.regions, r],
     }));
   };
 
-  const toggleRegion = (region) => {
-    setLocalFilters((prev) => ({
-      ...prev,
-      regions: prev.regions.includes(region)
-        ? prev.regions.filter((r) => r !== region)
-        : [...prev.regions, region],
-    }));
-  };
+  const reset = () => setLocal({
+    categories: [], priceRange: null, regions: [], verified: false, featured: false,
+  });
 
   const content = (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-primary flex items-center gap-2">
-          <SlidersHorizontal size={16} />
-          {lang === "sw" ? "Vichujio" : "Filters"}
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-primary">
+          <SlidersHorizontal size={15} />
+          {t("Vichujio", "Filters")}
         </h3>
         <button
           onClick={onClose}
-          className="lg:hidden text-muted hover:text-secondary"
+          className="grid h-8 w-8 place-items-center rounded-full text-secondary hover:bg-[color:rgb(var(--c-page))] lg:hidden"
+          aria-label={t("Funga", "Close")}
         >
-          <X size={20} />
+          <X size={18} />
         </button>
       </div>
 
       <div>
-        <h4 className="text-sm font-medium text-secondary mb-3">
-          {lang === "sw" ? "Kategoria" : "Category"}
+        <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
+          {t("Kategoria", "Category")}
         </h4>
-        <div className="space-y-2">
-          {allCategories.map((cat) => {
-            const CatIcon = getCategoryIcon(cat.iconKey);
+        <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+          {categories.map((cat) => {
+            const Icon = getCategoryIcon(cat.iconKey);
+            const label = cat.label?.[lang] || cat.label?.sw || cat.key;
+            const checked = local.categories.includes(cat.key);
             return (
-              <label
-                key={cat.key}
-                className="flex items-center gap-2 cursor-pointer"
-              >
+              <label key={cat.key} className="flex cursor-pointer items-center gap-2">
                 <input
                   type="checkbox"
-                  checked={localFilters.categories.includes(cat.key)}
-                  onChange={() => toggleCategory(cat.key)}
-                  className="w-4 h-4 rounded text-gold-ink focus:ring-gold"
+                  checked={checked}
+                  onChange={() => toggleCat(cat.key)}
+                  className="h-4 w-4 rounded accent-[color:rgb(var(--c-gold))]"
                 />
-                {cat.imageUrl ? (
-                  <img
-                    src={cat.imageUrl}
-                    alt=""
-                    className="w-5 h-5 rounded object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <CatIcon size={16} className="text-muted flex-shrink-0" />
-                )}
-                <span className="text-sm text-secondary">
-                  {cat.label?.[lang] || cat.label?.sw}
-                </span>
+                <Icon size={14} className="shrink-0 text-secondary" />
+                <span className="truncate text-sm text-primary">{label}</span>
               </label>
             );
           })}
@@ -139,94 +107,87 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
       </div>
 
       <div>
-        <h4 className="text-sm font-medium text-secondary mb-3">
-          {lang === "sw" ? "Bei" : "Price"}
+        <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
+          {t("Bei", "Price")}
         </h4>
         <div className="space-y-2">
-          {priceRanges.map((range, idx) => (
-            <label key={idx} className="flex items-center gap-2 cursor-pointer">
+          {PRICE_RANGES.map((r, i) => (
+            <label key={i} className="flex cursor-pointer items-center gap-2">
               <input
                 type="radio"
                 name="priceRange"
-                checked={localFilters.priceRange === idx}
-                onChange={() =>
-                  setLocalFilters({ ...localFilters, priceRange: idx })
-                }
-                className="w-4 h-4 text-gold-ink focus:ring-gold"
+                checked={local.priceRange === i}
+                onChange={() => setLocal({ ...local, priceRange: i })}
+                className="h-4 w-4 accent-[color:rgb(var(--c-gold))]"
               />
-              <span className="text-sm text-secondary">
-                {lang === "sw" ? range.label : range.en}
-              </span>
+              <span className="text-sm text-primary">{r.label[lang] || r.label.sw}</span>
             </label>
           ))}
         </div>
       </div>
 
       <div>
-        <h4 className="text-sm font-medium text-secondary mb-3">
-          {lang === "sw" ? "Mkoa" : "Region"}
+        <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
+          {t("Mkoa", "Region")}
         </h4>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
-          {REGIONS.map((region) => (
-            <label key={region} className="flex items-center gap-2 cursor-pointer">
+        <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+          {REGIONS.map((r) => (
+            <label key={r} className="flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
-                checked={localFilters.regions.includes(region)}
-                onChange={() => toggleRegion(region)}
-                className="w-4 h-4 rounded text-gold-ink focus:ring-gold"
+                checked={local.regions.includes(r)}
+                onChange={() => toggleRegion(r)}
+                className="h-4 w-4 rounded accent-[color:rgb(var(--c-gold))]"
               />
-              <span className="text-sm text-secondary">{region}</span>
+              <span className="text-sm text-primary">{r}</span>
             </label>
           ))}
         </div>
       </div>
 
       <div>
-        <h4 className="text-sm font-medium text-secondary mb-3">
-          {lang === "sw" ? "Vigezo Vingine" : "Other"}
+        <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
+          {t("Vigezo Vingine", "Other")}
         </h4>
         <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
-              checked={localFilters.verified}
-              onChange={(e) =>
-                setLocalFilters({ ...localFilters, verified: e.target.checked })
-              }
-              className="w-4 h-4 rounded text-gold-ink focus:ring-gold"
+              checked={local.verified}
+              onChange={(e) => setLocal({ ...local, verified: e.target.checked })}
+              className="h-4 w-4 rounded accent-[color:rgb(var(--c-gold))]"
             />
-            <span className="text-sm text-secondary">
-              {lang === "sw" ? "Zilizothibitishwa tu" : "Verified only"}
+            <span className="text-sm text-primary">
+              {t("Zilizothibitishwa tu", "Verified only")}
             </span>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
-              checked={localFilters.featured}
-              onChange={(e) =>
-                setLocalFilters({ ...localFilters, featured: e.target.checked })
-              }
-              className="w-4 h-4 rounded text-gold-ink focus:ring-gold"
+              checked={local.featured}
+              onChange={(e) => setLocal({ ...local, featured: e.target.checked })}
+              className="h-4 w-4 rounded accent-[color:rgb(var(--c-gold))]"
             />
-            <span className="text-sm text-secondary">
-              {lang === "sw" ? "Featured tu" : "Featured only"}
+            <span className="text-sm text-primary">
+              {t("Featured tu", "Featured only")}
             </span>
           </label>
         </div>
       </div>
 
-      <div className="space-y-2 pt-4 border-t border-gray-100">
+      <div className="space-y-2 border-t border-[color:rgb(var(--c-hairline))] pt-4">
         <button
-          onClick={handleApply}
-          className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-lg font-semibold text-sm transition-colors"
+          onClick={() => { setFilters(local); onClose(); }}
+          className="w-full rounded-lg py-2.5 text-sm font-semibold text-[#011957] hover:opacity-90"
+          style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
         >
-          {lang === "sw" ? "Tumia Vichujio" : "Apply Filters"}
+          {t("Tumia Vichujio", "Apply Filters")}
         </button>
         <button
-          onClick={handleReset}
-          className="w-full border border-gray-200 text-secondary hover:bg-gray-50 py-2.5 rounded-lg font-medium text-sm transition-colors"
+          onClick={reset}
+          className="w-full rounded-lg border border-[color:rgb(var(--c-hairline))] py-2.5 text-sm font-medium text-secondary hover:bg-[color:rgb(var(--c-page))]"
         >
-          {lang === "sw" ? "Safisha" : "Reset"}
+          {t("Safisha", "Reset")}
         </button>
       </div>
     </div>
@@ -234,16 +195,16 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
 
   return (
     <>
-      <aside className="hidden lg:block w-64 flex-shrink-0">
-        <div className="bg-white rounded-xl border border-gray-100 p-5 lg:sticky lg:top-20">
+      <aside className="hidden w-64 shrink-0 lg:block">
+        <div className="rounded-xl border border-[color:rgb(var(--c-hairline))] bg-card p-5 lg:sticky lg:top-24">
           {content}
         </div>
       </aside>
 
       {isOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
+        <div className="fixed inset-0 z-50 flex lg:hidden">
           <div className="flex-1 bg-black/50" onClick={onClose} />
-          <div className="w-80 max-w-[85%] bg-white h-full overflow-y-auto p-5">
+          <div className="h-full w-80 max-w-[85%] overflow-y-auto bg-card p-5">
             {content}
           </div>
         </div>
@@ -252,60 +213,45 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, lang }) {
   );
 }
 
-// ============================================================
-// MAIN COMPONENT
-// ============================================================
-export default function BrowseProperties({
-  lang = "sw",
-  excludeSellerId = null,
-}) {
+/* ═══════════════════════════════════════════════════════════
+   MAIN
+   ═══════════════════════════════════════════════════════════ */
+export default function BrowseProperties({ lang = "sw", excludeSellerId = null }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [searchQuery, setSearchQuery] = useState(
-    searchParams.get("tafuta") || ""
-  );
-
-  useEffect(() => {
-    setSearchQuery(searchParams.get("tafuta") || "");
-  }, [searchParams]);
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("tafuta") || "");
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("newest");
   const [filters, setFilters] = useState({
-    categories: [],
-    priceRange: null,
-    regions: [],
-    verified: false,
-    featured: false,
+    categories: [], priceRange: null, regions: [], verified: false, featured: false,
   });
+  const [mobileFilters, setMobileFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 12;
   const savedIds = useSavedIds();
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 9;
 
-  const allPropertiesRaw = usePublicListings();
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const allProperties = useMemo(() => {
-    if (!excludeSellerId) return allPropertiesRaw;
-    return allPropertiesRaw.filter(
-      (p) => String(p.sellerId) !== String(excludeSellerId)
-    );
-  }, [allPropertiesRaw, excludeSellerId]);
+  useEffect(() => { setSearchQuery(searchParams.get("tafuta") || ""); }, [searchParams]);
 
-  const filteredProperties = useMemo(() => {
-    let result = [...allProperties];
+  const allRaw = usePublicListings();
+  const all = useMemo(() => {
+    if (!excludeSellerId) return allRaw;
+    return allRaw.filter((p) => String(p.sellerId) !== String(excludeSellerId));
+  }, [allRaw, excludeSellerId]);
+
+  const filtered = useMemo(() => {
+    let result = [...all];
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter((p) => {
-        const category = getCategory(p.category);
-        const catLabelSw = category?.label?.sw?.toLowerCase() || "";
-        const catLabelEn = category?.label?.en?.toLowerCase() || "";
+        const cat = getCategoryLabel(p.category, lang).toLowerCase();
         return (
-          p.title.toLowerCase().includes(q) ||
-          p.location.toLowerCase().includes(q) ||
-          (p.region && p.region.toLowerCase().includes(q)) ||
-          catLabelSw.includes(q) ||
-          catLabelEn.includes(q)
+          p.title?.toLowerCase().includes(q) ||
+          p.location?.toLowerCase().includes(q) ||
+          p.region?.toLowerCase().includes(q) ||
+          cat.includes(q)
         );
       });
     }
@@ -313,95 +259,57 @@ export default function BrowseProperties({
     if (filters.categories.length > 0) {
       result = result.filter((p) => filters.categories.includes(p.category));
     }
-
     if (filters.regions.length > 0) {
       result = result.filter((p) => filters.regions.includes(p.region));
     }
-
-    if (filters.verified) {
-      result = result.filter((p) => p.verified);
-    }
-
-    if (filters.featured) {
-      result = result.filter((p) => isBoostActive(p));
-    }
+    if (filters.verified) result = result.filter((p) => p.verified);
+    if (filters.featured) result = result.filter((p) => isBoostActive(p));
 
     if (filters.priceRange !== null) {
-      const ranges = [
-        [0, 20000000],
-        [20000000, 50000000],
-        [50000000, 100000000],
-        [100000000, 200000000],
-        [200000000, Infinity],
-      ];
-      const [min, max] = ranges[filters.priceRange];
-      result = result.filter((p) => p.price >= min && p.price < max);
+      const r = PRICE_RANGES[filters.priceRange];
+      result = result.filter((p) => p.price >= r.min && p.price < r.max);
     }
 
-    const sortComparator = (a, b) => {
+    const cmp = (a, b) => {
       switch (sortBy) {
-        case "price_low":
-          return a.price - b.price;
-        case "price_high":
-          return b.price - a.price;
-        case "popular":
-          return b.views - a.views;
-        case "newest":
-        default:
-          return new Date(b.postedAt) - new Date(a.postedAt);
+        case "price_low":  return a.price - b.price;
+        case "price_high": return b.price - a.price;
+        case "popular":    return (b.views || 0) - (a.views || 0);
+        default:           return new Date(b.postedAt) - new Date(a.postedAt);
       }
     };
 
-    const statusRank = (p) => {
-      if (p.status === "live") return 0;
-      if (p.status === "reserved") return 1;
-      if (p.status === "sold") return 2;
-      return 3;
-    };
+    const rank = (p) => p.status === "live" ? 0 : p.status === "reserved" ? 1 : 2;
 
     result.sort((a, b) => {
-      const aLeading = isLeadingActive(a) ? 1 : 0;
-      const bLeading = isLeadingActive(b) ? 1 : 0;
-      if (aLeading !== bLeading) return bLeading - aLeading;
-      const aRank = statusRank(a);
-      const bRank = statusRank(b);
-      if (aRank !== bRank) return aRank - bRank;
-      return sortComparator(a, b);
+      const aL = isLeadingActive(a) ? 1 : 0;
+      const bL = isLeadingActive(b) ? 1 : 0;
+      if (aL !== bL) return bL - aL;
+      const aR = rank(a);
+      const bR = rank(b);
+      if (aR !== bR) return aR - bR;
+      return cmp(a, b);
     });
 
     return result;
-  }, [allProperties, searchQuery, filters, sortBy]);
+  }, [all, searchQuery, filters, sortBy, lang]);
 
-  const totalPages = Math.ceil(filteredProperties.length / ITEMS_PER_PAGE);
-  const paginatedProperties = filteredProperties.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const pageItems = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  const toggleSave = (id, _property) => {
-    return toggleSaved(id);
-  };
+  useEffect(() => { setPage(1); }, [searchQuery, filters, sortBy]);
 
-  const handleSearchSubmit = (e) => {
+  const submitSearch = (e) => {
     e.preventDefault();
-    setCurrentPage(1);
-    if (searchQuery.trim()) {
-      navigate(`/tafuta?tafuta=${encodeURIComponent(searchQuery.trim())}`);
-    }
+    setPage(1);
   };
 
   const clearFilters = () => {
-    setFilters({
-      categories: [],
-      priceRange: null,
-      regions: [],
-      verified: false,
-      featured: false,
-    });
+    setFilters({ categories: [], priceRange: null, regions: [], verified: false, featured: false });
     setSearchQuery("");
   };
 
-  const hasActiveFilters =
+  const hasFilters =
     filters.categories.length > 0 ||
     filters.priceRange !== null ||
     filters.regions.length > 0 ||
@@ -409,129 +317,160 @@ export default function BrowseProperties({
     filters.featured;
 
   return (
-    <div
-      style={{
-        background: COLORS.sand,
-        minHeight: "100%",
-      }}
-      className="w-full p-4 sm:p-6"
-    >
-      <div className="max-w-7xl mx-auto">
-        {/* HEADER — CENTERED */}
-        <div className="mb-5 text-center">
-          <h1 className="h-title">
-            {lang === "sw" ? "Tafuta Mali" : "Browse Listings"}
-          </h1>
-          <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
-            {lang === "sw"
-              ? "Pata mali unayoitafuta kutoka kwa wauzaji walioidhinishwa."
-              : "Find the property you're looking for from verified sellers."}
-          </p>
-        </div>
+    <div className="min-h-screen bg-page">
+      {/* ═══════════════════════════════════════════════════════
+          HERO HEADER — matches CategoryPage / HomePage style
+          ═══════════════════════════════════════════════════════ */}
+      <section className="surface-night relative isolate overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10"
+          style={{
+            background:
+              "linear-gradient(135deg, #010F3A 0%, #011957 55%, #042475 100%)",
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 opacity-[0.05]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+            backgroundSize: "64px 64px",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+            WebkitMaskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-32 left-1/4 -z-10 h-72 w-72 rounded-full opacity-25 blur-3xl"
+          style={{ background: "radial-gradient(circle, #FEA406 0%, transparent 70%)" }}
+        />
 
-        {/* SEARCH BAR — CENTERED */}
-        <form onSubmit={handleSearchSubmit} className="mb-5">
-          <div className="relative max-w-2xl mx-auto">
-            <Search
-              size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                lang === "sw"
-                  ? "Tafuta mali kwa jina, mahali, au kategoria..."
-                  : "Search listings by title, location, or category..."
-              }
+        <div className="container relative py-12 sm:py-16">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <span
+              className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl"
               style={{
-                background: "white",
-                borderColor: COLORS.sandLine,
-                color: COLORS.night,
+                background: "rgba(254,164,6,0.20)",
+                border: "1px solid rgba(254,164,6,0.35)",
               }}
-              className="w-full rounded-full border pl-12 pr-32 py-3.5 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all"
-            />
-            <button
-              type="submit"
-              style={{ background: COLORS.gold, color: COLORS.night }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-2.5 rounded-full font-semibold text-sm hover:opacity-90 transition-opacity"
             >
-              {lang === "sw" ? "Tafuta" : "Search"}
-            </button>
+              <Search size={26} color="#FEA406" />
+            </span>
+            <div>
+              <h1 className="text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight tracking-tight text-white">
+                {t("Tafuta Mali", "Browse Listings")}
+              </h1>
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-white/80 sm:text-base">
+                {t(
+                  "Pata mali unayoitafuta kutoka kwa wauzaji walioidhinishwa.",
+                  "Find the property you're looking for from verified sellers."
+                )}
+              </p>
+            </div>
           </div>
-        </form>
 
+          <form onSubmit={submitSearch} className="mx-auto mt-8 max-w-2xl">
+            <div className="relative flex items-center">
+              <Search size={18} className="pointer-events-none absolute left-4 text-white/50" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t(
+                  "Tafuta kwa jina, mahali, au kategoria...",
+                  "Search by title, location, or category..."
+                )}
+                className="h-12 w-full rounded-full pl-12 pr-32 text-sm outline-none sm:text-base"
+                style={{
+                  background: "rgba(255,255,255,0.10)",
+                  border: "1px solid rgba(255,255,255,0.20)",
+                  color: "#FFFFFF",
+                  backdropFilter: "blur(10px)",
+                }}
+              />
+              <button
+                type="submit"
+                className="absolute right-1.5 top-1/2 h-9 -translate-y-1/2 rounded-full px-4 text-xs font-semibold transition-transform active:translate-y-px sm:px-5 sm:text-sm"
+                style={{
+                  background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)",
+                  color: "#011957",
+                }}
+              >
+                {t("Tafuta", "Search")}
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════
+          BODY
+          ═══════════════════════════════════════════════════════ */}
+      <div className="container py-6">
         <div className="flex gap-6">
           <FilterSidebar
             filters={filters}
             setFilters={setFilters}
-            isOpen={showMobileFilters}
-            onClose={() => setShowMobileFilters(false)}
+            isOpen={mobileFilters}
+            onClose={() => setMobileFilters(false)}
             lang={lang}
           />
 
-          <div className="flex-1 min-w-0">
-            <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            {/* Toolbar */}
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[color:rgb(var(--c-hairline))] bg-card p-3 sm:p-4">
               <p className="text-sm text-secondary">
                 <span className="font-semibold text-primary">
-                  {filteredProperties.length}
+                  {filtered.length}
                 </span>{" "}
-                {lang === "sw" ? "mali zimepatikana" : "Listings found"}
+                {t("mali zimepatikana", "listings found")}
               </p>
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowMobileFilters(true)}
-                  className="lg:hidden flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-secondary hover:bg-gray-50 transition-colors"
+                  onClick={() => setMobileFilters(true)}
+                  className="flex items-center gap-1.5 rounded-lg border border-[color:rgb(var(--c-hairline))] px-3 py-2 text-sm font-medium text-primary hover:bg-[color:rgb(var(--c-page))] lg:hidden"
                 >
                   <SlidersHorizontal size={14} />
-                  {lang === "sw" ? "Vichujio" : "Filters"}
+                  {t("Vichujio", "Filters")}
                 </button>
 
                 <div className="relative">
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 pr-8 text-sm font-medium text-secondary focus:outline-none focus:border-gold cursor-pointer"
+                    className="cursor-pointer appearance-none rounded-lg border border-[color:rgb(var(--c-hairline))] bg-card px-3 py-2 pr-8 text-sm font-medium text-primary outline-none focus:border-[color:rgb(var(--c-gold))]"
                   >
-                    <option value="newest">
-                      {lang === "sw" ? "Mpya Kwanza" : "Newest First"}
-                    </option>
-                    <option value="price_low">
-                      {lang === "sw" ? "Bei: Chini → Juu" : "Price: Low → High"}
-                    </option>
-                    <option value="price_high">
-                      {lang === "sw" ? "Bei: Juu → Chini" : "Price: High → Low"}
-                    </option>
-                    <option value="popular">
-                      {lang === "sw" ? "Maarufu" : "Popular"}
-                    </option>
+                    <option value="newest">{t("Mpya Kwanza", "Newest First")}</option>
+                    <option value="price_low">{t("Bei: Chini → Juu", "Price: Low → High")}</option>
+                    <option value="price_high">{t("Bei: Juu → Chini", "Price: High → Low")}</option>
+                    <option value="popular">{t("Maarufu", "Popular")}</option>
                   </select>
-                  <ChevronDown
-                    size={14}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
-                  />
+                  <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted" />
                 </div>
 
-                <div className="hidden sm:flex border border-gray-200 rounded-lg overflow-hidden">
+                <div className="hidden overflow-hidden rounded-lg border border-[color:rgb(var(--c-hairline))] sm:flex">
                   <button
                     onClick={() => setViewMode("grid")}
-                    className={`p-2 transition-colors ${
-                      viewMode === "grid"
-                        ? "bg-gold text-night"
-                        : "text-secondary hover:bg-gray-50"
-                    }`}
+                    aria-label={t("Grid", "Grid")}
+                    className="grid h-9 w-9 place-items-center"
+                    style={{
+                      background: viewMode === "grid" ? "#FEA406" : "transparent",
+                      color: viewMode === "grid" ? "#011957" : "var(--text-secondary)",
+                    }}
                   >
                     <Grid3x3 size={16} />
                   </button>
                   <button
                     onClick={() => setViewMode("list")}
-                    className={`p-2 transition-colors ${
-                      viewMode === "list"
-                        ? "bg-gold text-night"
-                        : "text-secondary hover:bg-gray-50"
-                    }`}
+                    aria-label={t("Orodha", "List")}
+                    className="grid h-9 w-9 place-items-center"
+                    style={{
+                      background: viewMode === "list" ? "#FEA406" : "transparent",
+                      color: viewMode === "list" ? "#011957" : "var(--text-secondary)",
+                    }}
                   >
                     <List size={16} />
                   </button>
@@ -539,106 +478,90 @@ export default function BrowseProperties({
               </div>
             </div>
 
-            {hasActiveFilters && (
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                <span className="text-body-sm text-secondary">
-                  {lang === "sw" ? "Vichujio:" : "Filters:"}
+            {/* Active filters */}
+            {hasFilters && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-secondary">
+                  {t("Vichujio:", "Filters:")}
                 </span>
-                {filters.categories.map((cat) => {
-                  const catObj = getCategory(cat);
-                  const catImg = catObj?.imageUrl;
+                {filters.categories.map((key) => {
+                  const cat = useActiveCategories().find((c) => c.key === key);
+                  const label = cat?.label?.[lang] || cat?.label?.sw || key;
                   return (
-                    <span
-                      key={cat}
-                      className="inline-flex items-center gap-1.5 bg-gold/10 text-gold-ink text-body-sm px-2.5 py-1 rounded-full"
-                    >
-                      {catImg && (
-                        <img
-                          src={catImg}
-                          alt=""
-                          className="w-4 h-4 rounded-full object-cover"
-                        />
-                      )}
-                      {catObj?.label?.[lang] || cat}
+                    <span key={key} className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-[#FEA406]">
+                      {label}
                       <button
-                        onClick={() =>
-                          setFilters({
-                            ...filters,
-                            categories: filters.categories.filter(
-                              (c) => c !== cat
-                            ),
-                          })
-                        }
+                        onClick={() => setFilters({ ...filters, categories: filters.categories.filter((c) => c !== key) })}
+                        aria-label={t("Ondoa", "Remove")}
                       >
                         <X size={12} />
                       </button>
                     </span>
                   );
                 })}
-                <button
-                  onClick={clearFilters}
-                  className="text-body-sm text-rust hover:underline font-medium"
-                >
-                  {lang === "sw" ? "Safisha zote" : "Clear all"}
+                <button onClick={clearFilters} className="text-xs font-medium text-[#C1502E] hover:underline">
+                  {t("Safisha zote", "Clear all")}
                 </button>
               </div>
             )}
 
-            {paginatedProperties.length > 0 ? (
+            {/* Grid */}
+            {pageItems.length > 0 ? (
               <>
                 <div
                   className={
                     viewMode === "grid"
-                      ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"
+                      ? "grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4"
                       : "flex flex-col gap-3"
                   }
                 >
-                  {paginatedProperties.map((property) => {
-                    const cat = getCategory(property.category);
+                  {pageItems.map((p) => {
+                    const cat = useActiveCategories().find((c) => c.key === p.category);
+                    const Icon = getCategoryIcon(cat?.iconKey || "Home");
                     return (
-                      <ListingCardShop
-                        key={property.id}
-                        listing={property}
+                      <ListingCard
+                        key={p.id}
+                        listing={p}
                         category={cat}
-                        Icon={getCategoryIcon(cat?.iconKey)}
+                        Icon={Icon}
                         lang={lang}
-                        isSaved={savedIds.includes(property.id)}
-                        onToggleSave={toggleSave}
+                        viewMode={viewMode}
+                        isSaved={savedIds.includes(p.id)}
+                        onToggleSave={(id) => toggleSaved(id, p)}
                       />
                     );
                   })}
                 </div>
 
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-8">
+                  <div className="mt-8 flex items-center justify-center gap-2">
                     <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                      onClick={() => setPage((n) => Math.max(1, n - 1))}
+                      disabled={page === 1}
+                      aria-label={t("Nyuma", "Previous")}
+                      className="grid h-9 w-9 place-items-center rounded-lg border border-[color:rgb(var(--c-hairline))] text-primary hover:bg-[color:rgb(var(--c-page))] disabled:opacity-40"
                     >
                       <ChevronLeft size={16} />
                     </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                      (page) => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
-                            currentPage === page
-                              ? "bg-gold text-night"
-                              : "border border-gray-200 text-secondary hover:bg-gray-50"
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      )
-                    )}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setPage(n)}
+                        className="grid h-9 w-9 place-items-center rounded-lg text-sm font-medium"
+                        style={
+                          page === n
+                            ? { background: "#FEA406", color: "#011957" }
+                            : { border: "1px solid rgb(var(--c-hairline))", color: "var(--text-primary)" }
+                        }
+                      >
+                        {n}
+                      </button>
+                    ))}
                     <button
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                      className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                      onClick={() => setPage((n) => Math.min(totalPages, n + 1))}
+                      disabled={page === totalPages}
+                      aria-label={t("Mbele", "Next")}
+                      className="grid h-9 w-9 place-items-center rounded-lg border border-[color:rgb(var(--c-hairline))] text-primary hover:bg-[color:rgb(var(--c-page))] disabled:opacity-40"
                     >
                       <ChevronRight size={16} />
                     </button>
@@ -646,23 +569,22 @@ export default function BrowseProperties({
                 )}
               </>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
-                <Search size={48} className="mx-auto text-muted mb-3" />
+              <div className="rounded-xl border border-[color:rgb(var(--c-hairline))] bg-card p-10 text-center sm:p-14">
+                <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[color:rgb(var(--c-page))]">
+                  <HomeIcon size={24} className="text-muted" />
+                </div>
                 <h3 className="font-semibold text-primary">
-                  {lang === "sw"
-                    ? "Hakuna mali iliyopatikana"
-                    : "No listing found"}
+                  {t("Hakuna mali iliyopatikana", "No listings found")}
                 </h3>
-                <p className="text-secondary text-sm mt-1">
-                  {lang === "sw"
-                    ? "Jaribu kubadilisha vichujio au utafutaji wako"
-                    : "Try changing your filters or search"}
+                <p className="mt-1 text-sm text-secondary">
+                  {t("Jaribu kubadilisha vichujio au utafutaji wako.", "Try changing your filters or search.")}
                 </p>
                 <button
                   onClick={clearFilters}
-                  className="mt-4 px-5 py-2 bg-gold text-night rounded-lg text-sm font-semibold hover:bg-flame transition-colors"
+                  className="mt-4 rounded-lg px-5 py-2 text-sm font-semibold text-[#011957]"
+                  style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
                 >
-                  {lang === "sw" ? "Safisha Vichujio" : "Clear Filters"}
+                  {t("Safisha Vichujio", "Clear Filters")}
                 </button>
               </div>
             )}

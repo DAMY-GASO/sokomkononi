@@ -51,7 +51,7 @@ export default function AllListingsPage() {
   const hasMore = visibleCount < liveListings.length;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-page">
       <Navbar lang={lang} setLang={setLang} categories={categories} />
 
       <section className="py-8 sm:py-10 px-4 max-w-7xl mx-auto">
@@ -70,7 +70,7 @@ export default function AllListingsPage() {
 
         {/* GRID */}
         {liveListings.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-gray-200 p-10 sm:p-16 text-center bg-sand">
+          <div className="rounded-2xl border-2 border-dashed border-gray-200 p-10 sm:p-16 text-center bg-page">
             <HomeIcon size={44} className="mx-auto text-muted mb-3" />
             <p className="text-sm text-secondary">
               {t("Hakuna mali kwa sasa.", "No listings yet.")}
@@ -101,7 +101,7 @@ export default function AllListingsPage() {
                   onClick={() =>
                     setVisibleCount((prev) => prev + PAGE_SIZE)
                   }
-                  className="px-6 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-primary hover:bg-sand transition-colors"
+                  className="px-6 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-primary hover:bg-page transition-colors"
                 >
                   {t("Onyesha Zaidi", "Load More")}
                 </button>

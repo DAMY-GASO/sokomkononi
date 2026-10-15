@@ -1,221 +1,334 @@
-// ============================================================
-// ContactPage.jsx
-// Wasiliana Nasi — bilingual kamili + PageLoader + API submit.
-// ============================================================
-
-import { COLORS } from "./dashboard/components/shared.js";
-import React, { useState, useEffect } from "react";
-import { useLanguage } from "../context/LanguageContext.jsx";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  Mail, Phone, MapPin, Send, CheckCircle2, Loader2, AlertTriangle,
+  MessageSquare, Clock,
+} from "lucide-react";
+import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
-import Navbar from "../components/Navbar.jsx";
-import { Loader2, AlertTriangle } from "lucide-react";
+import NewsletterStrip from "../components/NewsletterStrip.jsx";
+import { useLanguage } from "../context/LanguageContext.jsx";
 import { contactApi } from "../api/contact.js";
 
-import PageLoader from "../components/PageLoader.jsx";
-import FaqAccordion from "../components/FaqAccordion.jsx";
-import { faqs } from "../config/FaqsData.js";
-import NewsletterStrip from "../components/NewsletterStrip.jsx";
-
 export default function ContactPage() {
-  const { t, lang } = useLanguage();
-
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const id = setTimeout(() => setReady(true), 300);
-    return () => clearTimeout(id);
-  }, []);
+  const { lang } = useLanguage();
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
-  // ⬇️ MPYA: sending + error
-  const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (sending) return;
-
-    // Validation
+    if (busy) return;
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
-      setError(
-        lang === "sw"
-          ? "Tafadhali jaza sehemu zote."
-          : "Please fill all fields."
-      );
+      setError(t("Jaza sehemu zote tatu.", "Please fill in all three fields."));
       return;
     }
     if (!form.email.includes("@")) {
-      setError(
-        lang === "sw" ? "Barua pepe si sahihi." : "Invalid email address."
-      );
+      setError(t("Barua pepe si sahihi.", "That email doesn't look right."));
       return;
     }
-
-    setSending(true);
+    setBusy(true);
     setError("");
-
     try {
-      await contactApi.submit(form);
+      await contactApi.submit({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        message: form.message.trim(),
+      });
       setSent(true);
+      setForm({ name: "", email: "", message: "" });
     } catch (err) {
       setError(
         err?.data?.detail ||
           err?.message ||
-          (lang === "sw"
-            ? "Imeshindwa kutuma ujumbe. Jaribu tena."
-            : "Failed to send message. Try again.")
+          t("Imeshindwa kutuma ujumbe. Jaribu tena.", "Couldn't send. Please try again.")
       );
     } finally {
-      setSending(false);
+      setBusy(false);
     }
   };
 
-  if (!ready) {
-    return <PageLoader lang={lang} />;
-  }
+  const channels = [
+    {
+      Icon: Mail,
+      title: t("Barua Pepe", "Email"),
+      value: "support@sokomkononi.co.tz",
+      href: "mailto:support@sokomkononi.co.tz",
+      color: "#0062FD",
+    },
+    {
+      Icon: Phone,
+      title: t("Simu", "Phone"),
+      value: "+255 743 895 038",
+      href: "tel:+255743895038",
+      color: "#2F6D4F",
+    },
+    {
+      Icon: MapPin,
+      title: t("Ofisi", "Office"),
+      value: "Dar es Salaam, Tanzania",
+      href: null,
+      color: "#FEA406",
+    },
+    {
+      Icon: Clock,
+      title: t("Muda wa Kazi", "Business Hours"),
+      value: t("Jumatatu–Jumamosi · 08:00–18:00", "Mon–Sat · 8am–6pm"),
+      href: null,
+      color: "#7C3AED",
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-page">
       <Navbar />
 
-      {/* HERO */}
-      <section className="dark-surface bg-[#101A2E] text-white py-14 px-4 text-center">
-        <h1 className="text-white">
-          {t("contact_heading")}
-        </h1>
-        <p className="text-white/70 text-body mt-3 max-w-xl mx-auto">
-          {t("contact_subtext")}
-        </p>
-      </section>
+      {/* ═══════════════════════════════════════════════════════
+          HERO — navy header matching the rest of the site
+          ═══════════════════════════════════════════════════════ */}
+      <section className="surface-night relative isolate overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10"
+          style={{
+            background:
+              "linear-gradient(135deg, #010F3A 0%, #011957 55%, #042475 100%)",
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 opacity-[0.05]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+            backgroundSize: "64px 64px",
+            maskImage:
+              "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-32 left-1/4 -z-10 h-72 w-72 rounded-full opacity-25 blur-3xl"
+          style={{ background: "radial-gradient(circle, #FEA406 0%, transparent 70%)" }}
+        />
 
-      {/* CONTACT SECTION */}
-      <section className="py-14 px-4 max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
-        {/* Contact details */}
-        <div className="space-y-6 text-center">
-          <div className="flex flex-col items-center text-center gap-2">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FEA406" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-              <rect x="3" y="5" width="18" height="14" rx="2" />
-              <path d="m3 7 9 6 9-6" />
-            </svg>
+        <div className="container relative py-12 sm:py-16">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <span
+              className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl"
+              style={{
+                background: "rgba(254,164,6,0.20)",
+                border: "1px solid rgba(254,164,6,0.35)",
+              }}
+            >
+              <MessageSquare size={26} color="#FEA406" />
+            </span>
             <div>
-              <p className="font-semibold text-primary text-body-sm">
-                {t("contact_email_label")}
-              </p>
-              <p className="text-secondary text-body-sm">
-                support@sokomkononi.co.tz
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center text-center gap-2">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FEA406" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-              <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 2 .6 2.9a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.5 2.9.6a2 2 0 0 1 1.8 2.1Z" />
-            </svg>
-            <div>
-              <p className="font-semibold text-primary text-body-sm">
-                {t("contact_phone_label")}
-              </p>
-              <p className="text-secondary text-body-sm flex items-center justify-center gap-2 flex-wrap"><a href="tel:+255743895038" className="hover:text-night underline">+255 743 895 038</a><a href="https://wa.me/255743895038" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 bg-[#25D366] text-white text-[11px] font-semibold px-2 py-0.5 rounded-full hover:opacity-90">WhatsApp</a></p>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center text-center gap-2">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FEA406" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-            <div>
-              <p className="font-semibold text-primary text-body-sm">
-                {t("contact_office_label")}
-              </p>
-              <p className="text-secondary text-body-sm">Dar es Salaam, Tanzania</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Contact form */}
-        <div>
-          {!sent ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input
-                required
-                disabled={sending}
-                className="w-full border border-gray-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#FEA406] focus:border-transparent transition-colors text-center disabled:opacity-50"
-                placeholder={t("contact_name_placeholder")}
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-              <input
-                required
-                type="email"
-                disabled={sending}
-                className="w-full border border-gray-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#FEA406] focus:border-transparent transition-colors text-center disabled:opacity-50"
-                placeholder={t("contact_email_placeholder")}
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-              />
-              <textarea
-                required
-                rows={4}
-                disabled={sending}
-                className="w-full border border-gray-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#FEA406] focus:border-transparent transition-colors resize-none text-center disabled:opacity-50"
-                placeholder={t("contact_message_placeholder")}
-                value={form.message}
-                onChange={(e) => setForm({ ...form, message: e.target.value })}
-              />
-
-              {error && (
-                <p className="text-sm text-[#C1502E] flex items-center justify-center gap-1.5">
-                  <AlertTriangle size={14} />
-                  {error}
-                </p>
-              )}
-
-              <button
-                disabled={sending}
-                className="w-full bg-[#FEA406] hover:bg-[#D98706] text-[#101A2E] font-semibold py-2.5 rounded-md text-btn transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {sending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    {lang === "sw" ? "Inatuma..." : "Sending..."}
-                  </>
-                ) : (
-                  t("contact_submit")
+              <h1 className="text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-tight tracking-tight text-white">
+                {t("Wasiliana Nasi", "Contact Us")}
+              </h1>
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-white/80 sm:text-base">
+                {t(
+                  "Una swali au changamoto? Timu yetu iko tayari kukusaidia.",
+                  "Have a question or an issue? Our team is here to help."
                 )}
-              </button>
-            </form>
-          ) : (
-            <div className="bg-[#F5F3EC] rounded-xl p-6 text-center">
-              <p className="font-semibold text-primary">
-                {t("contact_success_heading")}
-              </p>
-              <p className="text-secondary text-body-sm mt-2">
-                {t("contact_success_subtext")}
               </p>
             </div>
-          )}
+          </div>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section id="faq" className="scroll-mt-20 py-14 px-4 max-w-3xl mx-auto border-t border-gray-100">
-        <h2 className="text-center mb-4">
-          {lang === "sw" ? "Maswali Yanayoulizwa Mara kwa Mara" : "Frequently Asked Questions"}
-        </h2>
-        <p className="text-secondary text-body-sm text-center mb-10">
-          {lang === "sw"
-            ? "Majibu ya maswali yanayoulizwa sana kuhusu SokoMkononi"
-            : "Answers to the most frequently asked questions about SokoMkononi"}
-        </p>
-        <FaqAccordion items={faqs} lang={lang} />
+      {/* ═══════════════════════════════════════════════════════
+          CONTACT CHANNELS
+          ═══════════════════════════════════════════════════════ */}
+      <section className="container py-8 sm:py-10">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {channels.map(({ Icon, title, value, href, color }) => {
+            const inner = (
+              <>
+                <span
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+                  style={{
+                    background: `${color}15`,
+                    color,
+                    border: `1px solid ${color}30`,
+                  }}
+                >
+                  <Icon size={18} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-secondary">
+                    {title}
+                  </p>
+                  <p className="mt-1 break-words text-sm font-semibold text-primary">
+                    {value}
+                  </p>
+                </div>
+              </>
+            );
+
+            return href ? (
+              <a
+                key={title}
+                href={href}
+                className="flex items-start gap-3 rounded-2xl border border-[color:rgb(var(--c-hairline))] bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-5"
+              >
+                {inner}
+              </a>
+            ) : (
+              <div
+                key={title}
+                className="flex items-start gap-3 rounded-2xl border border-[color:rgb(var(--c-hairline))] bg-card p-4 sm:p-5"
+              >
+                {inner}
+              </div>
+            );
+          })}
+        </div>
       </section>
 
-      <BottomNav />
+      {/* ═══════════════════════════════════════════════════════
+          MESSAGE FORM
+          ═══════════════════════════════════════════════════════ */}
+      <section className="container pb-14 sm:pb-16">
+        <div className="mx-auto max-w-2xl">
+          <div className="rounded-2xl border border-[color:rgb(var(--c-hairline))] bg-card p-6 sm:p-8">
+            {sent ? (
+              <div className="py-8 text-center">
+                <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[#2F6D4F]/12">
+                  <CheckCircle2 size={32} className="text-[#2F6D4F]" />
+                </div>
+                <h2 className="text-xl font-bold text-primary">
+                  {t("Ujumbe Umetumwa!", "Message Sent!")}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-secondary">
+                  {t(
+                    "Asante kwa kuwasiliana nasi. Tutakujibu haraka iwezekanavyo.",
+                    "Thanks for reaching out. We'll get back to you as soon as possible."
+                  )}
+                </p>
+                <button
+                  onClick={() => setSent(false)}
+                  className="mt-6 text-sm font-semibold text-[color:rgb(var(--c-royal))] hover:underline"
+                >
+                  {t("Tuma ujumbe mwingine", "Send another message")}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="mb-6 text-center">
+                  <h2 className="text-lg font-bold text-primary sm:text-xl">
+                    {t("Tuandikie Ujumbe", "Drop Us a Message")}
+                  </h2>
+                  <p className="mt-1 text-sm text-secondary">
+                    {t(
+                      "Tutakujibu ndani ya saa 24 za kazi.",
+                      "We'll reply within 24 business hours."
+                    )}
+                  </p>
+                </div>
+
+                <form onSubmit={submit} className="space-y-4">
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-primary">
+                      {t("Jina", "Name")}
+                    </span>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder={t("Jina lako", "Your name")}
+                      className="input"
+                      disabled={busy}
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-primary">
+                      {t("Barua Pepe", "Email")}
+                    </span>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      placeholder={t("Barua pepe yako", "Your email")}
+                      className="input"
+                      disabled={busy}
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-primary">
+                      {t("Ujumbe", "Message")}
+                    </span>
+                    <textarea
+                      value={form.message}
+                      onChange={(e) => setForm({ ...form, message: e.target.value })}
+                      placeholder={t("Andika ujumbe wako...", "Write your message...")}
+                      className="textarea min-h-[140px]"
+                      disabled={busy}
+                    />
+                  </label>
+
+                  {error && (
+                    <div className="flex items-start gap-2 rounded-lg border border-[#C1502E]/30 bg-[#C1502E]/10 px-3 py-2 text-xs text-[#C1502E]">
+                      <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-[#011957] transition-transform active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+                    style={{
+                      background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)",
+                      boxShadow: "0 8px 22px -8px rgba(254,164,6,0.55)",
+                    }}
+                  >
+                    {busy ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <Send size={15} />
+                    )}
+                    {busy
+                      ? t("Inatuma...", "Sending...")
+                      : t("Tuma Ujumbe", "Send Message")}
+                  </button>
+
+                  <p className="text-center text-[11px] leading-snug text-muted">
+                    {t("Kwa msaada wa haraka, angalia", "For quick help, see our")}{" "}
+                    <Link
+                      to="/jinsi-ya-kununua"
+                      className="font-semibold text-[color:rgb(var(--c-royal))] hover:underline"
+                    >
+                      {t("Jinsi Inavyofanya Kazi", "How It Works")}
+                    </Link>{" "}
+                    {t("au", "or")}{" "}
+                    <Link
+                      to="/mawasiliano#faq"
+                      className="font-semibold text-[color:rgb(var(--c-royal))] hover:underline"
+                    >
+                      FAQ
+                    </Link>
+                    .
+                  </p>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
       <NewsletterStrip variant="compact" />
-      <Footer selectedLang={lang}  />
+      <Footer selectedLang={lang} />
+      <BottomNav />
     </div>
   );
 }

@@ -208,7 +208,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
 
   return (
     <section
-      className="relative isolate overflow-hidden"
+      className="surface-night relative isolate overflow-hidden"
       style={{ background: "linear-gradient(90deg, #010F3A 0%, #011957 55%, #042475 100%)" }}
     >
       <img

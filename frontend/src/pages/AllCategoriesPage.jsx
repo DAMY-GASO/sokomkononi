@@ -41,7 +41,7 @@ export default function AllCategoriesPage() {
   }, [allCategories, allListings]);
 
   return (
-    <div className="min-h-screen bg-sand">
+    <div className="min-h-screen bg-page">
       <Navbar />
 
       {/* ============================================================ */}
