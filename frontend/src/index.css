@@ -609,3 +609,43 @@ html.dark button:not([class*="text-"]):not([class*="bg-"]) {
   color: #FFFFFF;
 }
 
+
+/* ============================================================
+   LEAFLET MAP — brand styling + dark-mode tiles
+   ============================================================ */
+.smk-map .leaflet-tile { filter: none; }
+html.dark .smk-map .leaflet-tile {
+  filter: brightness(0.7) invert(1) contrast(0.9) hue-rotate(180deg) saturate(0.7);
+}
+html.dark .smk-map .leaflet-container {
+  background: #010F3A;
+}
+html.dark .smk-map .leaflet-control-attribution {
+  background: rgba(1, 15, 58, 0.85) !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+html.dark .smk-map .leaflet-control-attribution a {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+html.dark .smk-map .leaflet-bar,
+html.dark .smk-map .leaflet-bar a {
+  background: rgb(var(--c-card)) !important;
+  color: rgb(var(--text-primary)) !important;
+  border-color: rgb(var(--c-hairline)) !important;
+}
+html.dark .smk-map .leaflet-bar a:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+.smk-map .leaflet-popup-content-wrapper,
+.smk-map .leaflet-popup-tip {
+  background: rgb(var(--c-card));
+  color: rgb(var(--text-primary));
+  border: 1px solid rgb(var(--c-hairline));
+  border-radius: 10px;
+}
+.smk-map .leaflet-popup-content { margin: 10px 12px; }
+/* Ensure the map sits above the bottom nav but below modals */
+.smk-map { z-index: 0; }
+.smk-map .leaflet-pane { z-index: 1; }
+.smk-map .leaflet-top,
+.smk-map .leaflet-bottom { z-index: 5; }

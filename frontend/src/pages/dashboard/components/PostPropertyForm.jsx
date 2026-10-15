@@ -20,6 +20,7 @@ import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 import ImageCropper from "../../../components/ImageCropper.jsx";
+import LocationPicker from "../../../components/LocationPicker.jsx";
 import {
   getPostingConfig,
   getVisibleFields,
@@ -180,6 +181,20 @@ export default function PostPropertyForm({
     }
     return { mkoa: "", wilaya: "", eneo: "" };
   });
+  const [lat, setLat] = useState(
+    isEdit && initialData
+      ? (initialData.latitude != null ? Number(initialData.latitude) : null)
+      : null
+  );
+  const [lng, setLng] = useState(
+    isEdit && initialData
+      ? (initialData.longitude != null ? Number(initialData.longitude) : null)
+      : null
+  );
+  const [addressText, setAddressText] = useState(
+    isEdit && initialData ? (initialData.address_text || "") : ""
+  );
+
   const [photos, setPhotos] = useState(() => {
     if (!isEdit || !initialData) return [];
     const urls = Array.isArray(initialData.photos) ? initialData.photos : [];
@@ -494,77 +509,44 @@ export default function PostPropertyForm({
     }
 
     try {
-      const created = await api.post("/listings/", {
-        category_id: categoryId,
-        title: effectiveTitle,
-        description: [base.description.trim(), buildSummary()]
-          .filter(Boolean)
-          .join("\n\n"),
-        price: Number(cleanPriceInput(base.price)) || 0,
-        location: locationString,
-        attributes: {
-          ...extra,
-          ...(categoryMode ? { mode: categoryMode } : {}),
-          region: loc.mkoa,
-          district: loc.wilaya.trim(),
-          area: loc.eneo.trim(),
+      // ── Single-call: create + upload images in one POST ──
+      const { createListingWithImagesAsync } = await import("../../../config/listingsStore.js");
+      const createRes = await createListingWithImagesAsync({
+        payload: {
+          category: categoryId,
+          category_key: categoryKey,
+          title: effectiveTitle,
+          description: [base.description.trim(), buildSummary()]
+            .filter(Boolean)
+            .join("\n\n"),
+          price: Number(cleanPriceInput(base.price)) || 0,
+          location: locationString,
+          latitude: lat,
+          longitude: lng,
+          address_text: addressText,
+          attributes: {
+            ...extra,
+            ...(categoryMode ? { mode: categoryMode } : {}),
+            region: loc.mkoa,
+            district: loc.wilaya.trim(),
+            area: loc.eneo.trim(),
+          },
         },
+        images: photos.filter((p) => p.file && !p.existing),
       });
-      saveFreshlyCreatedListing(created);
+
+      if (!createRes.ok) {
+        throw createRes.error;
+      }
+
+      const created = createRes.raw;
+      const listingId = createRes.listing.id;
+
+      // The multipart endpoint already uploaded the images — skip the loop.
 
       const inlineFee = Number(created?.fee_amount ?? 0);
-      let listingId =
-        created?.id ?? created?.pk ?? created?.listing_id ?? created?.listingId;
 
-      if (!listingId) {
-        try {
-          const me = await api.get("/auth/me/");
-          const mine = await api.get(
-            `/listings/?seller=${me.id}&ordering=-created_at&page_size=10`
-          );
-          const list = Array.isArray(mine) ? mine : mine?.results || [];
-          const match = list.find((l) => l.title === effectiveTitle);
-          listingId = match?.id;
-        } catch (lookupErr) {
-          console.warn("[PostPropertyForm] id lookup failed:", lookupErr);
-        }
-      }
-
-      if (!listingId) {
-        throw new Error(
-          t(
-            "Backend haikurudisha listing id na hatukuweza kuipata. Wasiliana na support.",
-            "Backend did not return a listing id and we couldn't resolve it. Contact support."
-          )
-        );
-      }
-
-      created.id = listingId;
-
-      // Upload picha — kila moja kwenye try/catch yake
-      const failedUploads = [];
-      for (let idx = 0; idx < photos.length; idx++) {
-        const p = photos[idx];
-        if (p.existing || !p.file) continue; // ruka zilizopo
-        const fd = new FormData();
-        fd.append("image", p.file);
-        fd.append("is_primary", idx === 0 ? "true" : "false");
-        fd.append("ordering", String(idx));
-        try {
-          // eslint-disable-next-line no-await-in-loop
-          await api.upload(`/listings/${listingId}/images/`, fd);
-        } catch (imgErr) {
-          console.warn("[PostPropertyForm] image upload failed:", imgErr);
-          failedUploads.push(idx + 1);
-        }
-      }
-      if (failedUploads.length > 0) {
-        const msg = t(
-          `Picha ${failedUploads.join(", ")} hazikupakiwa. Unaweza kuziongeza kwenye Mali Zangu.`,
-          `Photos ${failedUploads.join(", ")} failed to upload. You can add them later from My Listings.`
-        );
-        setWarnings((w) => (w.includes(msg) ? w : [...w, msg]));
-      }
+      // (images already uploaded in the create call)
 
       // Category details
       const detailEndpoint = CATEGORY_DETAIL_ENDPOINT[categoryKey];
@@ -1497,6 +1479,30 @@ export default function PostPropertyForm({
                     onChange={(e) => setLoc({ ...loc, eneo: e.target.value })}
                   />
                 </Field>
+              </div>
+
+              {/* Map picker — replaces/augments the text-only location */}
+              <div className="mt-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-secondary block mb-2">
+                  {t(
+                    "Mahali halisi kwenye ramani (hiari, lakini inashauriwa)",
+                    "Exact location on the map (optional, but recommended)"
+                  )}
+                </span>
+                <LocationPicker
+                  value={{ latitude: lat, longitude: lng }}
+                  onChange={(newLat, newLng) => {
+                    setLat(newLat);
+                    setLng(newLng);
+                  }}
+                  onAddressResolved={(addr) => setAddressText(addr)}
+                  compact
+                />
+                {addressText && (
+                  <p className="mt-2 text-[11px] text-secondary leading-snug">
+                    <span className="font-semibold">{t("Anwani:", "Address:")}</span> {addressText}
+                  </p>
+                )}
               </div>
             </div>
 

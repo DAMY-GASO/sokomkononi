@@ -1110,3 +1110,130 @@ export async function payListingFeeWithFimiPayAsync(
     return { ok: false, error: err };
   }
 }
+
+// ============================================================
+// CREATE LISTING WITH IMAGES (multipart, single request)
+// Backend: POST /listings/create-with-images/
+// ============================================================
+export async function createListingWithImagesAsync({ payload, images = [] }) {
+  if (!payload) {
+    return { ok: false, error: new Error("payload is required") };
+  }
+  const tempId = `temp_${Date.now()}`;
+  const optimistic = {
+    id: tempId,
+    title: payload.title,
+    category: payload.category_key || payload.category,
+    price: Number(payload.price) || 0,
+    location: payload.location,
+    description: payload.description,
+    latitude: payload.latitude ?? null,
+    longitude: payload.longitude ?? null,
+    address_text: payload.address_text || "",
+    status: "pending_payment",
+    postedAt: new Date().toISOString(),
+    photos: [],
+  };
+  const snap = snapshot();
+  saveMyListings([optimistic, ...snap.mine]);
+
+  try {
+    const fd = new FormData();
+    fd.append("category", String(payload.category));
+    fd.append("title", payload.title);
+    fd.append("description", payload.description);
+    fd.append("price", String(payload.price));
+    fd.append("location", payload.location);
+
+    if (payload.latitude != null && payload.longitude != null) {
+      fd.append("latitude", String(payload.latitude));
+      fd.append("longitude", String(payload.longitude));
+    }
+    if (payload.address_text) {
+      fd.append("address_text", payload.address_text);
+    }
+    fd.append("attributes", JSON.stringify(payload.attributes || {}));
+
+    for (const f of images) {
+      if (f && (f.file || f instanceof File || f instanceof Blob)) {
+        fd.append("images", f.file || f);
+      }
+    }
+
+    const created = await api.upload("/listings/create-with-images/", fd);
+    const normalized = normalizeListingFromApi(created, "pending_payment");
+    if (!normalized || !normalized.id) {
+      throw new Error("Backend haikurudisha listing id (createListingWithImagesAsync)");
+    }
+    saveMyListings([
+      normalized,
+      ...readKey(MINE_KEY).filter((l) => l.id !== tempId && l.id !== normalized.id),
+    ]);
+    return { ok: true, listing: normalized, raw: created };
+  } catch (err) {
+    restore(snap);
+    console.warn("[listingsStore] createListingWithImages failed:", err);
+    return { ok: false, error: err, listing: null };
+  }
+}
+
+// ============================================================
+// UPDATE LOCATION (lat/lng + text)
+// Backend: PATCH /listings/{id}/location/
+// ============================================================
+export async function updateListingLocationAsync(id, payload) {
+  const snap = snapshot();
+  mutateBoth((list) =>
+    list.map((l) =>
+      String(l.id) === String(id)
+        ? {
+            ...l,
+            latitude: payload.latitude ?? l.latitude,
+            longitude: payload.longitude ?? l.longitude,
+            location: payload.location ?? l.location,
+            address_text: payload.address_text ?? l.address_text,
+            location_updated_at: new Date().toISOString(),
+          }
+        : l
+    )
+  );
+
+  try {
+    const raw = await listingsApi.updateLocation(id, payload);
+    const normalized = normalizeListingFromApi(raw);
+    if (normalized) {
+      mutateBoth((list) =>
+        list.map((l) => (String(l.id) === String(id) ? normalized : l))
+      );
+    }
+    return { ok: true, listing: normalized || raw };
+  } catch (err) {
+    restore(snap);
+    console.warn("[listingsStore] updateLocation failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// BULK UPLOAD IMAGES to an existing listing
+// Backend: POST /listings/{id}/images/bulk/
+// ============================================================
+export async function bulkUploadListingImagesAsync(id, files = []) {
+  if (!Array.isArray(files) || files.length === 0) {
+    return { ok: false, error: new Error("No files provided") };
+  }
+  try {
+    const fd = new FormData();
+    for (const f of files) {
+      fd.append("images", f.file || f);
+    }
+    const raw = await listingsApi.bulkUploadImages(id, fd);
+    // Refetch detail so the new image variants land in the store
+    await fetchListingDetailAsync(id);
+    return { ok: true, data: raw, count: raw?.count ?? files.length };
+  } catch (err) {
+    console.warn("[listingsStore] bulkUploadImages failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
