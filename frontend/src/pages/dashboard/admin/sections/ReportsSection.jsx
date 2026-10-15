@@ -1,7 +1,7 @@
 // ============================================================
 // ReportsSection.jsx
 // Admin — Reports & Analytics (stats, graphs, top lists).
-// Bilingual + mobile-responsive (imeboreshwa).
+// + Download ripoti (CSV/PDF/DOC) kwa today/week/month/year/all
 // ============================================================
 
 import React, { useMemo, useEffect, useState } from "react";
@@ -16,8 +16,11 @@ import {
   Eye,
   MapPin,
   Tag,
-  CheckCircle,
-  AlertTriangle,
+  Download,
+  FileText,
+  FileSpreadsheet,
+  File,
+  Loader2,
 } from "lucide-react";
 import { COLORS, formatTZS, getCategory } from "../shared/constants.js";
 import { getCategoryIcon } from "../../../../config/categoriesStore.js";
@@ -25,13 +28,177 @@ import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useReports } from "../../../../config/reportsStore.js";
 import { useUsers } from "../../../../config/usersStore.js";
-import { useListings, useHydratePublicListings } from "../../../../config/listingsStore.js";
+import {
+  useListings,
+  useHydratePublicListings,
+} from "../../../../config/listingsStore.js";
 import { useDeals } from "../../../../config/dealsStore.js";
 import { usePlatformRevenue, localDayKey } from "../shared/revenue.js";
 import { api } from "../../../../api/client.js";
 
+// ── PDF/CSV/DOC download via client.js ──
+async function downloadReport(format, period) {
+  const base = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
+  const path = `/finance/reports/export/?format=${format}&period=${period}`;
+  const blob = await api.download ? await api.download(path) : null;
+  // Fallback: use raw fetch with auth
+  const { getAccessToken } = await import("../../../../api/client.js");
+  const token = getAccessToken?.();
+  const res = await fetch(`${base}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || `Download failed (${res.status})`);
+  }
+  const data = await res.blob();
+  const url = window.URL.createObjectURL(data);
+  const a = document.createElement("a");
+  a.href = url;
+  const ext = format === "doc" ? "docx" : format;
+  a.download = `ripoti_${period}_${new Date().toISOString().slice(0, 10)}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 // ============================================================
-// STAT TILE — responsive
+// DOWNLOAD PANEL
+// ============================================================
+function DownloadPanel({ lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [period, setPeriod] = useState("month");
+  const [busy, setBusy] = useState(null);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const periods = [
+    { key: "today", label: t("Leo", "Today") },
+    { key: "week", label: t("Wiki Hii", "This Week") },
+    { key: "month", label: t("Mwezi Huu", "This Month") },
+    { key: "year", label: t("Mwaka Huu", "This Year") },
+    { key: "all", label: t("Zote", "All Time") },
+  ];
+
+  const formats = [
+    { key: "csv", label: "CSV", icon: FileSpreadsheet, color: COLORS.green },
+    { key: "pdf", label: "PDF", icon: FileText, color: COLORS.rust },
+    { key: "doc", label: "DOC", icon: File, color: "#2563EB" },
+  ];
+
+  const handleDownload = async (format) => {
+    setBusy(format);
+    setError("");
+    setSuccess("");
+    try {
+      await downloadReport(format, period);
+      setSuccess(t("Ripoti imepakuliwa", "Report downloaded"));
+      setTimeout(() => setSuccess(""), 2500);
+    } catch (err) {
+      setError(err?.message || t("Imeshindwa kupakua.", "Download failed."));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div
+      className="rounded-xl border-2 p-4 sm:p-5 mb-5"
+      style={{ borderColor: `${COLORS.gold}40`, background: `${COLORS.gold}05` }}
+    >
+      <div className="flex items-start gap-3 mb-4">
+        <div
+          style={{ background: `${COLORS.gold}20` }}
+          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+        >
+          <Download size={18} color={COLORS.gold} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-primary">
+            {t("Pakua Ripoti", "Download Report")}
+          </p>
+          <p className="text-xs text-secondary mt-0.5">
+            {t(
+              "Chagua kipindi na muundo — ripoti itapakuliwa kwenye kifaa chako.",
+              "Choose period and format — report will download to your device."
+            )}
+          </p>
+        </div>
+      </div>
+
+      {/* Period selector */}
+      <p className="text-[11px] font-semibold text-secondary uppercase tracking-wide mb-1.5">
+        {t("Kipindi", "Period")}
+      </p>
+      <div className="flex flex-wrap gap-1.5 mb-4">
+        {periods.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            onClick={() => setPeriod(p.key)}
+            style={{
+              background: period === p.key ? COLORS.night : "white",
+              color: period === p.key ? COLORS.sand : "var(--text-primary)",
+              borderColor: COLORS.sandLine,
+            }}
+            className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors"
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Format buttons */}
+      <p className="text-[11px] font-semibold text-secondary uppercase tracking-wide mb-1.5">
+        {t("Muundo", "Format")}
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        {formats.map(({ key, label, icon: Icon, color }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => handleDownload(key)}
+            disabled={!!busy}
+            style={{
+              background: "white",
+              borderColor: `${color}40`,
+              color,
+            }}
+            className="flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-60"
+          >
+            {busy === key ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Icon size={14} />
+            )}
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <p
+          className="text-xs mt-3 px-3 py-2 rounded-lg"
+          style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
+        >
+          {error}
+        </p>
+      )}
+      {success && (
+        <p
+          className="text-xs mt-3 px-3 py-2 rounded-lg"
+          style={{ background: "rgba(47,109,79,0.1)", color: COLORS.green }}
+        >
+          {success}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// STAT TILE
 // ============================================================
 function ReportTile({ label, value, icon: Icon, color, subtext }) {
   return (
@@ -64,24 +231,18 @@ function ReportTile({ label, value, icon: Icon, color, subtext }) {
 }
 
 // ============================================================
-// BAR CHART — responsive
+// BAR CHART
 // ============================================================
-function BarChart({ data, maxValue, color, lang, emptyText, formatValue }) {
+function BarChart({ data, maxValue, color, emptyText, formatValue }) {
   if (!data || data.length === 0 || maxValue === 0) {
-    return (
-      <p className="text-xs text-muted text-center py-6 sm:py-8">{emptyText}</p>
-    );
+    return <p className="text-xs text-muted text-center py-6 sm:py-8">{emptyText}</p>;
   }
-
   return (
     <div className="flex items-end justify-between gap-0.5 sm:gap-1 h-32 sm:h-40">
       {data.map((d, i) => {
         const height = maxValue > 0 ? (d.value / maxValue) * 100 : 0;
         return (
-          <div
-            key={i}
-            className="flex flex-col items-center gap-1 flex-1 min-w-0"
-          >
+          <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-0">
             <div className="w-full flex items-end justify-center h-full">
               <div
                 style={{
@@ -104,15 +265,12 @@ function BarChart({ data, maxValue, color, lang, emptyText, formatValue }) {
 }
 
 // ============================================================
-// LINE CHART — responsive
+// LINE CHART
 // ============================================================
-function LineChart({ data, color, maxValue, lang, emptyText }) {
+function LineChart({ data, color, maxValue, emptyText }) {
   if (!data || data.length === 0 || maxValue === 0) {
-    return (
-      <p className="text-xs text-muted text-center py-6 sm:py-8">{emptyText}</p>
-    );
+    return <p className="text-xs text-muted text-center py-6 sm:py-8">{emptyText}</p>;
   }
-
   const width = 600;
   const height = 120;
   const padding = 8;
@@ -121,56 +279,25 @@ function LineChart({ data, color, maxValue, lang, emptyText }) {
     const y = height - padding - (d.value / maxValue) * (height - 2 * padding);
     return { x, y, ...d };
   });
-
-  const pathData = points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
-    .join(" ");
-
+  const pathData = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
   const areaData = `${pathData} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
-
   return (
     <div className="w-full overflow-hidden">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-24 sm:h-32"
-        preserveAspectRatio="none"
-      >
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-24 sm:h-32" preserveAspectRatio="none">
         <path d={areaData} fill={`${color}20`} />
-        <path
-          d={pathData}
-          stroke={color}
-          strokeWidth={2}
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <path d={pathData} stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
         {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={3}
-            fill="white"
-            stroke={color}
-            strokeWidth={2}
-          />
+          <circle key={i} cx={p.x} cy={p.y} r={3} fill="white" stroke={color} strokeWidth={2} />
         ))}
       </svg>
       <div className="flex justify-between mt-1 px-1">
-        <span className="text-[9px] text-muted truncate">
-          {data[0]?.label}
-        </span>
-        <span className="text-[9px] text-muted truncate">
-          {data[data.length - 1]?.label}
-        </span>
+        <span className="text-[9px] text-muted truncate">{data[0]?.label}</span>
+        <span className="text-[9px] text-muted truncate">{data[data.length - 1]?.label}</span>
       </div>
     </div>
   );
 }
 
-// ============================================================
-// CHART CARD — responsive
-// ============================================================
 function ChartCard({ title, icon: Icon, iconColor, children }) {
   return (
     <div
@@ -187,7 +314,7 @@ function ChartCard({ title, icon: Icon, iconColor, children }) {
 }
 
 // ============================================================
-// MAIN SECTION
+// MAIN
 // ============================================================
 export default function ReportsSection() {
   const { lang } = useLanguage();
@@ -199,24 +326,17 @@ export default function ReportsSection() {
   const deals = useDeals();
 
   const [userStats, setUserStats] = useState({
-    totalUsers: 0,
-    totalSellers: 0,
-    totalBuyers: 0,
-    bothRoles: 0,
-    neitherRole: 0,
-    totalAdmins: 0,
+    totalUsers: 0, totalSellers: 0, totalBuyers: 0,
+    bothRoles: 0, neitherRole: 0, totalAdmins: 0,
   });
 
-  // Fetch accurate user stats kutoka backend
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const data = await api.get("/finance/user-stats/");
         if (!cancelled) setUserStats(data);
-      } catch {
-        /* noop — fallback inatumika */
-      }
+      } catch { /* noop */ }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -224,15 +344,10 @@ export default function ReportsSection() {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const locale = lang === "sw" ? "sw-TZ" : "en-US";
 
-  // Mapato ya Jumla
   const totalRevenueText = platformRevenue.loading
     ? "…"
-    : platformRevenue.error
-      ? "—"
-      : formatTZS(platformRevenue.total);
+    : platformRevenue.error ? "—" : formatTZS(platformRevenue.total);
 
-  // Data ya API ikiwa na thamani hutumika; ikiwa 0/tupu tunatumia
-  // hesabu halisi kutoka stores zile zile zinazotumiwa na Overview.
   const reports = useMemo(() => {
     const num = (v) => Number(v) || 0;
     const apiHasLoaded = apiReports?.source === "api";
@@ -241,11 +356,10 @@ export default function ReportsSection() {
       if (apiHasLoaded && Number.isFinite(n)) return n;
       return Number(local) || 0;
     };
-    const pickList = (api, local) => (Array.isArray(api) && api.length > 0 ? api : local);
+    const pickList = (api, local) =>
+      Array.isArray(api) && api.length > 0 ? api : local;
     const dayLabel = (d) => d.toLocaleDateString(locale, { day: "numeric", month: "short" });
 
-    // ── User counts ─────────────────────────────────────
-    // Priorities: userStats (API) > apiReports (reports API) > local fallback
     const sellerIds = new Set(
       listings.map((l) => String(l.sellerId ?? l.seller_id)).filter(Boolean)
     );
@@ -253,18 +367,14 @@ export default function ReportsSection() {
       deals.map((d) => String(d.buyerId ?? d.buyer_id)).filter(Boolean)
     );
 
-    const totalUsers = userStats.totalUsers
-      || num(apiReports.totalUsers)
-      || users.length;
-    const totalSellers = userStats.totalSellers
-      || num(apiReports.totalSellers)
-      || sellerIds.size;
-    const totalBuyers = userStats.totalBuyers
-      || num(apiReports.totalBuyers)
-      || buyerIds.size;
+    // ── User counts — API KAMILI, sio fallback ──
+    const totalUsers = userStats.totalUsers || num(apiReports.totalUsers) || users.length;
+    const totalSellers = userStats.totalSellers || num(apiReports.totalSellers) || 0;
+    const totalBuyers = userStats.totalBuyers || num(apiReports.totalBuyers) || 0;
     const bothRoles = userStats.bothRoles || num(apiReports.bothRoles) || 0;
+    const neitherRole = userStats.neitherRole || num(apiReports.neitherRole) || 0;
 
-    // ---- Deals ----
+    // ── Deals ──
     const apiStatus = apiReports.dealsByStatus || {};
     const byStatus = (st) => deals.filter((d) => d.status === st).length;
     const dealsByStatus = Object.values(apiStatus).some((v) => num(v) > 0)
@@ -279,14 +389,11 @@ export default function ReportsSection() {
         };
     const totalDeals = pick(apiReports.totalDeals, deals.length);
     const completedDeals = pick(apiReports.completedDeals, byStatus("completed"));
-    const conversionRate =
-      num(apiReports.conversionRate) > 0
-        ? num(apiReports.conversionRate)
-        : totalDeals > 0
-          ? (completedDeals / totalDeals) * 100
-          : 0;
+    const conversionRate = num(apiReports.conversionRate) > 0
+      ? num(apiReports.conversionRate)
+      : totalDeals > 0 ? (completedDeals / totalDeals) * 100 : 0;
 
-    // ---- Users Growth ----
+    // ── Users Growth ──
     const usersGrowthLocal = [];
     if (users.length > 0) {
       for (let i = 29; i >= 0; i--) {
@@ -301,7 +408,7 @@ export default function ReportsSection() {
       }
     }
 
-    // ---- Listings ----
+    // ── Listings ──
     const lsStatus = (st) => listings.filter((l) => l.status === st).length;
     const perDay = {};
     listings.forEach((l) => {
@@ -333,19 +440,11 @@ export default function ReportsSection() {
         e.views += num(l.views);
         m.set(k, e);
       });
-      return Array.from(m.values())
-        .sort((a, b) => b.views - a.views || b.count - a.count)
-        .slice(0, 5);
+      return Array.from(m.values()).sort((a, b) => b.views - a.views || b.count - a.count).slice(0, 5);
     };
-    const topSellersLocal = group(sellerOf).map((g) => ({
-      name: g.key, listings: g.count, views: g.views,
-    }));
-    const topCategoriesLocal = group((l) => l.category).map((g) => ({
-      key: g.key, count: g.count, views: g.views,
-    }));
-    const topLocationsLocal = group((l) => String(l.location || "").trim()).map((g) => ({
-      name: g.key, count: g.count, views: g.views,
-    }));
+    const topSellersLocal = group(sellerOf).map((g) => ({ name: g.key, listings: g.count, views: g.views }));
+    const topCategoriesLocal = group((l) => l.category).map((g) => ({ key: g.key, count: g.count, views: g.views }));
+    const topLocationsLocal = group((l) => String(l.location || "").trim()).map((g) => ({ name: g.key, count: g.count, views: g.views }));
     const mostViewedLocal = listings
       .filter((l) => num(l.views) > 0)
       .sort((a, b) => num(b.views) - num(a.views))
@@ -354,18 +453,14 @@ export default function ReportsSection() {
 
     return {
       ...apiReports,
-      totalUsers,
-      totalSellers,
-      totalBuyers,
-      bothRoles,
+      totalUsers, totalSellers, totalBuyers,
+      bothRoles, neitherRole,
       totalListings: pick(apiReports.totalListings, listings.length),
       liveListings: pick(apiReports.liveListings, lsStatus("live")),
       soldListings: pick(apiReports.soldListings, lsStatus("sold")),
-      totalDeals,
-      completedDeals,
+      totalDeals, completedDeals,
       disputedDeals: pick(apiReports.disputedDeals, byStatus("disputed")),
-      conversionRate,
-      dealsByStatus,
+      conversionRate, dealsByStatus,
       usersGrowth: pickList(apiReports.usersGrowth, usersGrowthLocal),
       listingsGrowth: pickList(apiReports.listingsGrowth, listingsGrowthLocal),
       topSellers: pickList(apiReports.topSellers, topSellersLocal),
@@ -375,19 +470,9 @@ export default function ReportsSection() {
     };
   }, [apiReports, userStats, users, listings, deals, locale]);
 
-  // Compute max values for charts
-  const usersMax = Math.max(
-    ...(reports.usersGrowth?.map((d) => d.cumulative) || [0]),
-    1
-  );
-  const listingsMax = Math.max(
-    ...(reports.listingsGrowth?.map((d) => d.count) || [0]),
-    1
-  );
-  const revenueMax = Math.max(
-    ...(reports.revenueByMonth?.map((d) => d.total) || [0]),
-    1
-  );
+  const usersMax = Math.max(...(reports.usersGrowth?.map((d) => d.cumulative) || [0]), 1);
+  const listingsMax = Math.max(...(reports.listingsGrowth?.map((d) => d.count) || [0]), 1);
+  const revenueMax = Math.max(...(reports.revenueByMonth?.map((d) => d.total) || [0]), 1);
 
   return (
     <div className="w-full max-w-7xl mx-auto">
@@ -399,7 +484,10 @@ export default function ReportsSection() {
         )}
       />
 
-      {/* PRIMARY STATS — responsive */}
+      {/* DOWNLOAD PANEL */}
+      <DownloadPanel lang={lang} />
+
+      {/* PRIMARY STATS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-5">
         <ReportTile
           label={t("Watumiaji Wote", "Total Users")}
@@ -407,8 +495,8 @@ export default function ReportsSection() {
           icon={Users}
           color={COLORS.gold}
           subtext={t(
-            `${reports.totalSellers} wauzaji · ${reports.totalBuyers} wanunuzi · ${reports.bothRoles} wote wawili`,
-            `${reports.totalSellers} sellers · ${reports.totalBuyers} buyers · ${reports.bothRoles} both`
+            `${reports.totalSellers} wauzaji · ${reports.totalBuyers} wanunuzi · ${reports.bothRoles} wote wawili · ${reports.neitherRole} wapya`,
+            `${reports.totalSellers} sellers · ${reports.totalBuyers} buyers · ${reports.bothRoles} both · ${reports.neitherRole} neither`
           )}
         />
         <ReportTile
@@ -443,69 +531,37 @@ export default function ReportsSection() {
         />
       </div>
 
-      {/* CHARTS — responsive */}
+      {/* CHARTS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-5">
-        {/* Users Growth */}
-        <ChartCard
-          title={t("Ukuaji wa Watumiaji (Siku 30)", "Users Growth (Last 30 Days)")}
-          icon={TrendingUp}
-          iconColor={COLORS.gold}
-        >
+        <ChartCard title={t("Ukuaji wa Watumiaji (Siku 30)", "Users Growth (Last 30 Days)")} icon={TrendingUp} iconColor={COLORS.gold}>
           <LineChart
-            data={(reports.usersGrowth || []).map((d) => ({
-              label: d.label,
-              value: d.cumulative,
-            }))}
+            data={(reports.usersGrowth || []).map((d) => ({ label: d.label, value: d.cumulative }))}
             color={COLORS.gold}
             maxValue={usersMax}
-            lang={lang}
             emptyText={t("Hakuna data bado", "No data yet")}
           />
         </ChartCard>
 
-        {/* Listings Growth */}
-        <ChartCard
-          title={t("Ukuaji wa Mali (Siku 30)", "Listings Growth (Last 30 Days)")}
-          icon={Home}
-          iconColor={COLORS.green}
-        >
+        <ChartCard title={t("Ukuaji wa Mali (Siku 30)", "Listings Growth (Last 30 Days)")} icon={Home} iconColor={COLORS.green}>
           <BarChart
-            data={(reports.listingsGrowth || []).map((d) => ({
-              label: d.label,
-              value: d.count,
-            }))}
+            data={(reports.listingsGrowth || []).map((d) => ({ label: d.label, value: d.count }))}
             maxValue={listingsMax}
             color={COLORS.green}
-            lang={lang}
             emptyText={t("Hakuna data bado", "No data yet")}
           />
         </ChartCard>
 
-        {/* Revenue by Month */}
-        <ChartCard
-          title={t("Mapato kwa Mwezi (Miezi 6)", "Revenue by Month (Last 6 Months)")}
-          icon={BarChart3}
-          iconColor={COLORS.rust}
-        >
+        <ChartCard title={t("Mapato kwa Mwezi (Miezi 6)", "Revenue by Month (Last 6 Months)")} icon={BarChart3} iconColor={COLORS.rust}>
           <BarChart
-            data={(reports.revenueByMonth || []).map((d) => ({
-              label: d.label,
-              value: d.total,
-            }))}
+            data={(reports.revenueByMonth || []).map((d) => ({ label: d.label, value: d.total }))}
             maxValue={revenueMax}
             formatValue={formatTZS}
             color={COLORS.rust}
-            lang={lang}
             emptyText={t("Hakuna data bado", "No data yet")}
           />
         </ChartCard>
 
-        {/* Deals Breakdown */}
-        <ChartCard
-          title={t("Mgawanyo wa Deals", "Deals Breakdown")}
-          icon={Handshake}
-          iconColor="#2563EB"
-        >
+        <ChartCard title={t("Mgawanyo wa Deals", "Deals Breakdown")} icon={Handshake} iconColor="#2563EB">
           <div className="flex flex-col gap-2">
             {[
               { key: "negotiating", label: t("Inajadiliwa", "Negotiating"), color: "#2563EB" },
@@ -527,10 +583,7 @@ export default function ReportsSection() {
                     </span>
                   </div>
                   <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      style={{ background: color, width: `${pct}%` }}
-                      className="h-full rounded-full transition-all"
-                    />
+                    <div style={{ background: color, width: `${pct}%` }} className="h-full rounded-full transition-all" />
                   </div>
                 </div>
               );
@@ -539,48 +592,28 @@ export default function ReportsSection() {
         </ChartCard>
       </div>
 
-      {/* TOP LISTS — responsive */}
+      {/* TOP LISTS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        {/* Top Sellers */}
-        <ChartCard
-          title={t("Wauzaji Bora (kwa Views)", "Top Sellers (by Views)")}
-          icon={Award}
-          iconColor={COLORS.gold}
-        >
+        <ChartCard title={t("Wauzaji Bora (kwa Views)", "Top Sellers (by Views)")} icon={Award} iconColor={COLORS.gold}>
           {reports.topSellers?.length === 0 ? (
-            <p className="text-xs text-muted text-center py-6">
-              {t("Hakuna data bado", "No data yet")}
-            </p>
+            <p className="text-xs text-muted text-center py-6">{t("Hakuna data bado", "No data yet")}</p>
           ) : (
             <div className="flex flex-col gap-2">
               {(reports.topSellers || []).map((seller, i) => (
-                <div
-                  key={seller.name}
-                  className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0"
-                >
+                <div key={seller.name} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0">
                   <span
                     style={{
-                      background:
-                        i === 0
-                          ? COLORS.gold
-                          : i === 1
-                            ? "#C0C0C0"
-                            : i === 2
-                              ? "#CD7F32"
-                              : COLORS.sandLine,
-                      color: i <= 2 ? COLORS.night : COLORS.night,
+                      background: i === 0 ? COLORS.gold : i === 1 ? "#C0C0C0" : i === 2 ? "#CD7F32" : COLORS.sandLine,
+                      color: COLORS.night,
                     }}
                     className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold shrink-0"
                   >
                     {i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-primary truncate">
-                      {seller.name}
-                    </p>
+                    <p className="text-sm font-semibold text-primary truncate">{seller.name}</p>
                     <p className="text-[11px] text-secondary truncate">
-                      {seller.listings} {t("mali", "listings")} ·{" "}
-                      {seller.views.toLocaleString()} {t("views", "views")}
+                      {seller.listings} {t("mali", "listings")} · {seller.views.toLocaleString()} {t("views", "views")}
                     </p>
                   </div>
                 </div>
@@ -589,33 +622,18 @@ export default function ReportsSection() {
           )}
         </ChartCard>
 
-        {/* Most Viewed Listings */}
-        <ChartCard
-          title={t("Mali Zinazoonekana Zaidi", "Most Viewed Listings")}
-          icon={Eye}
-          iconColor={COLORS.green}
-        >
+        <ChartCard title={t("Mali Zinazoonekana Zaidi", "Most Viewed Listings")} icon={Eye} iconColor={COLORS.green}>
           {reports.mostViewedListings?.length === 0 ? (
-            <p className="text-xs text-muted text-center py-6">
-              {t("Hakuna data bado", "No data yet")}
-            </p>
+            <p className="text-xs text-muted text-center py-6">{t("Hakuna data bado", "No data yet")}</p>
           ) : (
             <div className="flex flex-col gap-2">
               {(reports.mostViewedListings || []).map((l, i) => (
-                <div
-                  key={l.id}
-                  className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0"
-                >
-                  <span className="text-xs font-bold text-muted w-5 shrink-0">
-                    #{i + 1}
-                  </span>
+                <div key={l.id} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0">
+                  <span className="text-xs font-bold text-muted w-5 shrink-0">#{i + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-primary truncate">
-                      {l.title}
-                    </p>
+                    <p className="text-sm font-medium text-primary truncate">{l.title}</p>
                     <p className="text-[11px] text-secondary truncate">
-                      {l.views || 0} {t("views", "views")} ·{" "}
-                      {formatTZS(l.price)}
+                      {l.views || 0} {t("views", "views")} · {formatTZS(l.price)}
                     </p>
                   </div>
                 </div>
@@ -624,41 +642,24 @@ export default function ReportsSection() {
           )}
         </ChartCard>
 
-        {/* Top Categories */}
-        <ChartCard
-          title={t("Kategoria Zinazoonekana Zaidi", "Most Viewed Categories")}
-          icon={Tag}
-          iconColor="#2563EB"
-        >
+        <ChartCard title={t("Kategoria Zinazoonekana Zaidi", "Most Viewed Categories")} icon={Tag} iconColor="#2563EB">
           {reports.topCategories?.length === 0 ? (
-            <p className="text-xs text-muted text-center py-6">
-              {t("Hakuna data bado", "No data yet")}
-            </p>
+            <p className="text-xs text-muted text-center py-6">{t("Hakuna data bado", "No data yet")}</p>
           ) : (
             <div className="flex flex-col gap-2">
               {(reports.topCategories || []).map((cat) => {
                 const category = getCategory(cat.key);
                 const CatIcon = getCategoryIcon(category?.iconKey);
-                const catLabel =
-                  category?.label?.[lang] || category?.label?.sw || cat.key;
+                const catLabel = category?.label?.[lang] || category?.label?.sw || cat.key;
                 return (
-                  <div
-                    key={cat.key}
-                    className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0"
-                  >
-                    <div
-                      style={{ background: `${COLORS.night}0D` }}
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0"
-                    >
+                  <div key={cat.key} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0">
+                    <div style={{ background: `${COLORS.night}0D` }} className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0">
                       <CatIcon size={13} color={COLORS.night} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-primary truncate">
-                        {catLabel}
-                      </p>
+                      <p className="text-sm font-medium text-primary truncate">{catLabel}</p>
                       <p className="text-[11px] text-secondary truncate">
-                        {cat.count} {t("mali", "listings")} ·{" "}
-                        {cat.views.toLocaleString()} {t("views", "views")}
+                        {cat.count} {t("mali", "listings")} · {cat.views.toLocaleString()} {t("views", "views")}
                       </p>
                     </div>
                   </div>
@@ -668,36 +669,20 @@ export default function ReportsSection() {
           )}
         </ChartCard>
 
-        {/* Top Locations */}
-        <ChartCard
-          title={t("Maeneo Yanayoonekana Zaidi", "Most Active Locations")}
-          icon={MapPin}
-          iconColor={COLORS.rust}
-        >
+        <ChartCard title={t("Maeneo Yanayoonekana Zaidi", "Most Active Locations")} icon={MapPin} iconColor={COLORS.rust}>
           {reports.topLocations?.length === 0 ? (
-            <p className="text-xs text-muted text-center py-6">
-              {t("Hakuna data bado", "No data yet")}
-            </p>
+            <p className="text-xs text-muted text-center py-6">{t("Hakuna data bado", "No data yet")}</p>
           ) : (
             <div className="flex flex-col gap-2">
               {(reports.topLocations || []).map((loc) => (
-                <div
-                  key={loc.name}
-                  className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0"
-                >
-                  <div
-                    style={{ background: `${COLORS.rust}15` }}
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0"
-                  >
+                <div key={loc.name} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0">
+                  <div style={{ background: `${COLORS.rust}15` }} className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0">
                     <MapPin size={13} color={COLORS.rust} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-primary truncate">
-                      {loc.name}
-                    </p>
+                    <p className="text-sm font-medium text-primary truncate">{loc.name}</p>
                     <p className="text-[11px] text-secondary truncate">
-                      {loc.count} {t("mali", "listings")} ·{" "}
-                      {loc.views.toLocaleString()} {t("views", "views")}
+                      {loc.count} {t("mali", "listings")} · {loc.views.toLocaleString()} {t("views", "views")}
                     </p>
                   </div>
                 </div>

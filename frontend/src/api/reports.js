@@ -11,13 +11,26 @@ function toQuery(params = {}) {
 
 export const reportsApi = {
   overview: () => api.get("/admin/reports/overview/"),
-  usersGrowth: (days = 30) => api.get(`/admin/reports/users-growth/${toQuery({ days })}`),
-  listingsGrowth: (days = 30) => api.get(`/admin/reports/listings-growth/${toQuery({ days })}`),
-  revenueByMonth: (months = 6) => api.get(`/admin/reports/revenue-by-month/${toQuery({ months })}`),
+  usersGrowth: (days = 30) =>
+    api.get(`/admin/reports/users-growth/${toQuery({ days })}`),
+  listingsGrowth: (days = 30) =>
+    api.get(`/admin/reports/listings-growth/${toQuery({ days })}`),
+  revenueByMonth: (months = 6) =>
+    api.get(`/admin/reports/revenue-by-month/${toQuery({ months })}`),
   dealsStatus: () => api.get("/admin/reports/deals-status/"),
-  topSellers: (limit = 5) => api.get(`/admin/reports/top-sellers/${toQuery({ limit })}`),
-  mostViewedListings: (limit = 5) => api.get(`/admin/reports/most-viewed-listings/${toQuery({ limit })}`),
-  topCategories: (limit = 5) => api.get(`/admin/reports/top-categories/${toQuery({ limit })}`),
-  topLocations: (limit = 5) => api.get(`/admin/reports/top-locations/${toQuery({ limit })}`),
+  topSellers: (limit = 5) =>
+    api.get(`/admin/reports/top-sellers/${toQuery({ limit })}`),
+  mostViewedListings: (limit = 5) =>
+    api.get(`/admin/reports/most-viewed-listings/${toQuery({ limit })}`),
+  topCategories: (limit = 5) =>
+    api.get(`/admin/reports/top-categories/${toQuery({ limit })}`),
+  topLocations: (limit = 5) =>
+    api.get(`/admin/reports/top-locations/${toQuery({ limit })}`),
   conversionRate: () => api.get("/admin/reports/conversion-rate/"),
+
+  // ── Export ripoti ──
+  exportUrl: ({ format = "csv", period = "month" } = {}) => {
+    const base = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
+    return `${base}/finance/reports/export/${toQuery({ format, period })}`;
+  },
 };
