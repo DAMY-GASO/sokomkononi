@@ -18,7 +18,6 @@ import { Menu, X, Bell, LogOut, User as UserIcon, Settings, Lock, Home as HomeIc
 // ⬇️ Secret admin path
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "../../config/adminPath.js";
 import ThemeToggle from "../../components/ThemeToggle.jsx";
-import { Home as HomeIcon } from "lucide-react";
 
 import {
   COLORS,
@@ -404,7 +403,7 @@ export default function AdminDashboard() {
         return <SupportSection />;
       case "content":
         return <ContentSection />;
-      case "categories":                         // ⬅️ MPYA
+      case "categories":                         
         return <CategoriesSection />;
       case "audit":
         return <AuditLogsSection />;
