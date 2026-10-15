@@ -200,8 +200,8 @@ export default function LeadsSection({ onNavigate }) {
             <Inbox size={48} className="mx-auto text-muted mb-3" />
             <h3 className="text-primary font-semibold mb-1">
               {filter === "new"
-                ? t("Hakuna Maulizo mapya", "No new leads")
-                : t("Hakuna Maulizo", "No leads")}
+                ? t("Hakuna Maulizo mapya", "No new enquiries")
+                : t("Hakuna Maulizo", "No enquiries")}
             </h3>
             <p className="text-secondary text-body-sm">
               {t(

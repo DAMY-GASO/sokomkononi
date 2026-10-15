@@ -4,7 +4,7 @@
 // - Preview, boost, leading, advertise, mark sold, pause/resume
 // - EDIT — kitufe cha kuhariri kinachopeleka /dashboard/listings/edit/:id
 // - Delete (soft) + undo window + admin notification
-// - Picha za mraba (aspect-square) kwa grid na cards
+// - Picha: horizontal scroll ya picha zote kwenye kila card
 // ============================================================
 import React, { useState, useMemo } from "react";
 import {
@@ -73,6 +73,36 @@ function isUnpaid(listing) {
 }
 
 // ============================================================
+// getPhotos — chukua picha zote kwa mpangilio.
+// Inashughulikia: photos (array ya strings au objects), images,
+// imageUrl moja. Inarudisha array ya URLs.
+// ============================================================
+function getPhotos(listing) {
+  if (!listing) return [];
+  const arr =
+    (Array.isArray(listing.photos) && listing.photos) ||
+    (Array.isArray(listing.images) && listing.images) ||
+    [];
+  const urls = arr
+    .map((img) => {
+      if (!img) return null;
+      if (typeof img === "string") return img;
+      return (
+        img.image_url ||
+        img.url ||
+        img.image ||
+        img.src ||
+        img.file ||
+        null
+      );
+    })
+    .filter(Boolean);
+  if (urls.length) return urls;
+  if (listing.imageUrl) return [listing.imageUrl];
+  return [];
+}
+
+// ============================================================
 // ACTION BUTTON — kitufe kidogo chenye icon, kina ukubwa mmoja kila mahali
 // ============================================================
 function ActionBtn({ icon: Icon, label, color, onClick, disabled, danger, spin, className = "" }) {
@@ -96,7 +126,7 @@ function ActionBtn({ icon: Icon, label, color, onClick, disabled, danger, spin, 
 }
 
 // ============================================================
-// LISTING CARD
+// LISTING CARD — na horizontal scroll ya picha zote
 // ============================================================
 function ListingCard({
   listing,
@@ -119,11 +149,9 @@ function ListingCard({
     category?.label?.[lang] || category?.label?.sw || listing.category || "—";
   const isBusy = busy === "delete";
 
-  // Pass the object form when available so variant picking works.
-  const imageUrl =
-    (listing.photos && listing.photos[0]) ||
-    listing.imageUrl ||
-    null;
+  // ── Picha zote ─────────────────────────────────────────
+  const photos = getPhotos(listing);
+  const hasManyPhotos = photos.length > 1;
 
   const isLiveOrReserved =
     listing.status === "live" || listing.status === "reserved";
@@ -132,15 +160,48 @@ function ListingCard({
   const viewable = ["live", "reserved", "paused", "sold"].includes(listing.status);
   const detailTo = `/mali/${listing.id}`;
 
+  // ── Thumb: horizontal scroll ya picha zote ────────────
   const Thumb = (
-    <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl sm:h-28 sm:w-28">
-      <ListingImage
-        src={imageUrl}
-        variant="thumb"
-        alt={listing.title}
-        ratio="aspect-square"
-        fallback={<CategoryIcon size={24} color={COLORS.night} />}
-      />
+    <div className="relative h-24 shrink-0 overflow-hidden rounded-xl sm:h-28"
+         style={{ width: hasManyPhotos ? "100%" : "6rem" }}>
+      {photos.length === 0 ? (
+        <div className="flex h-full w-full items-center justify-center bg-sand">
+          <CategoryIcon size={24} color={COLORS.night} />
+        </div>
+      ) : hasManyPhotos ? (
+        <div className="no-scrollbar flex h-full w-full snap-x snap-mandatory gap-1 overflow-x-auto scroll-smooth">
+          {photos.map((url, idx) => (
+            <div
+              key={idx}
+              className="relative h-full shrink-0 snap-center overflow-hidden rounded-xl"
+              style={{ width: "6.5rem" }}
+            >
+              <ListingImage
+                src={url}
+                variant="thumb"
+                alt={`${listing.title} — ${idx + 1}`}
+                ratio="aspect-square"
+                fallback={
+                  idx === 0 ? (
+                    <CategoryIcon size={24} color={COLORS.night} />
+                  ) : null
+                }
+              />
+              <span className="pointer-events-none absolute bottom-1 right-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                {idx + 1}/{photos.length}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <ListingImage
+          src={photos[0]}
+          variant="thumb"
+          alt={listing.title}
+          ratio="aspect-square"
+          fallback={<CategoryIcon size={24} color={COLORS.night} />}
+        />
+      )}
     </div>
   );
 
@@ -157,7 +218,18 @@ function ListingCard({
       } ${listing.status === "sold" ? "opacity-80" : ""}`}
     >
       <div className="flex min-w-0 items-start gap-3">
-        {viewable ? <Link to={detailTo} className="shrink-0">{Thumb}</Link> : Thumb}
+        {viewable ? (
+          <Link
+            to={detailTo}
+            className={hasManyPhotos ? "min-w-0 flex-1" : "shrink-0"}
+          >
+            {Thumb}
+          </Link>
+        ) : (
+          <div className={hasManyPhotos ? "min-w-0 flex-1" : "shrink-0"}>
+            {Thumb}
+          </div>
+        )}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
