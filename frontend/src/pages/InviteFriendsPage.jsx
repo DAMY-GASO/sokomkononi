@@ -153,10 +153,26 @@ export default function InviteFriendsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-page">
       <Navbar />
 
-      <section className="dark-surface bg-[#101A2E] text-white py-12 px-4">
+      <section className="surface-night relative isolate overflow-hidden text-white py-12 px-4"><section className="surface-night relative isolate overflow-hidden text-white py-12 px-4">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 opacity-[0.05]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+            backgroundSize: "64px 64px",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+            WebkitMaskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-32 left-1/4 -z-10 h-72 w-72 rounded-full opacity-25 blur-3xl"
+          style={{ background: "radial-gradient(circle, #FEA406 0%, transparent 70%)" }}
+        />
         <div className="max-w-md mx-auto text-center">
           <h1 className="text-2xl md:text-3xl font-bold">
             {t("Alika Marafiki", "Invite Friends")}
@@ -206,12 +222,12 @@ export default function InviteFriendsPage() {
                 readOnly
                 value={link}
                 onFocus={(e) => e.target.select()}
-                className="flex-1 min-w-0 border border-gray-300 rounded-lg px-3 py-2 text-sm text-secondary bg-gray-50"
+                className="flex-1 min-w-0 border border-gray-300 rounded-lg px-3 py-2 text-sm text-secondary bg-page"
               />
               <button
                 type="button"
                 onClick={copyLink}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 text-sm font-semibold hover:bg-page transition-colors"
               >
                 {copied ? <Check size={15} className="text-[#2F6D4F]" /> : <Copy size={15} />}
                 {copied ? t("Imenakiliwa", "Copied") : t("Nakili", "Copy")}

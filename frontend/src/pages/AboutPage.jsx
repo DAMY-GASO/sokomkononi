@@ -266,13 +266,29 @@ export default function AboutPage() {
   if (!ready) return <PageLoader lang={lang} />;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-page">
       <Navbar />
 
       {/* ============================================================ */}
       {/* HERO — CENTERED */}
       {/* ============================================================ */}
-      <section className="dark-surface bg-[#101A2E] text-white py-12 px-4">
+      <section className="surface-night relative isolate overflow-hidden text-white py-12 px-4"><section className="surface-night relative isolate overflow-hidden text-white py-12 px-4">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 opacity-[0.05]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+            backgroundSize: "64px 64px",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+            WebkitMaskImage: "radial-gradient(ellipse at center, black 40%, transparent 80%)",
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-32 left-1/4 -z-10 h-72 w-72 rounded-full opacity-25 blur-3xl"
+          style={{ background: "radial-gradient(circle, #FEA406 0%, transparent 70%)" }}
+        />
         <div className="max-w-4xl mx-auto text-center">
           <Link
             to="/"
