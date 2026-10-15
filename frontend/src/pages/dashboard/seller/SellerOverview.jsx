@@ -92,7 +92,7 @@ export default function SellerOverview({ onNavigate }) {
     },
     {
       key: "leads",
-      label: t("Maulizio", "Leads"),
+      label: t("Maulizio", "Enquiries"),
       icon: Inbox,
       color: COLORS.green,
     },
