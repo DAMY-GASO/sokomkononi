@@ -2,12 +2,11 @@
 // UserManagementSection.jsx
 // Usimamizi wa watumiaji — table (desktop) + card list (mobile).
 // Bilingual + Async actions na rollback + loading state.
-// + Futa Permanently (modal yenye "DELETE" + sababu)
-// + Suspend (modal yenye sababu)
-// + Verify (kitufe cha kuthibitisha)
+// + Status filter, Verified filter, Pagination
+// + UserDrawer inachukua data yake yenyewe (/full/ endpoint)
 // ============================================================
 
-import React, { useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Search,
   RotateCcw,
@@ -15,6 +14,8 @@ import {
   Loader2,
   Trash2,
   ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -25,13 +26,12 @@ import SuspendUserModal from "../shared/SuspendUserModal.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
   useUsers,
+  hydrateUsersFromApi,
   activateUserAsync,
   suspendUserAsync,
   verifyUserAsync,
   permanentDeleteUserAsync,
 } from "../../../../config/usersStore.js";
-import { useListings } from "../../../../config/listingsStore.js";
-import { useDeals } from "../../../../config/dealsStore.js";
 
 // ============================================================
 // ROLE BADGE
@@ -85,13 +85,21 @@ function RoleBadge({ role, lang }) {
   );
 }
 
+const PAGE_SIZE = 20;
+
 export default function UserManagementSection() {
   const { lang } = useLanguage();
   const users = useUsers();
-  const listings = useListings();
-  const deals = useDeals();
+
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [verifiedFilter, setVerifiedFilter] = useState("all");
+
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [count, setCount] = useState(0);
+
   const [selectedUser, setSelectedUser] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [suspendTarget, setSuspendTarget] = useState(null);
@@ -102,24 +110,50 @@ export default function UserManagementSection() {
 
   const getUserRole = (user) => user.role || "Neither";
 
-  const filtered = users.filter((u) => {
-    const matchesQuery =
-      u.name.toLowerCase().includes(query.toLowerCase()) ||
-      u.email.toLowerCase().includes(query.toLowerCase());
-    const role = getUserRole(u);
-    const matchesRole =
-      roleFilter === "all" ||
-      role.toLowerCase() === roleFilter.toLowerCase();
-    return matchesQuery && matchesRole;
-  });
+  // ── Fetch with filters + pagination ────────────────────────
+  const fetchPage = useCallback(
+    async (p = 1) => {
+      const res = await hydrateUsersFromApi({
+        page: p,
+        pageSize: PAGE_SIZE,
+        q: query.trim(),
+        role: roleFilter,
+        status: statusFilter,
+        verified: verifiedFilter,
+      });
+      if (res.ok) {
+        setPage(res.page || p);
+        setTotalPages(res.totalPages || 1);
+        setCount(res.count || 0);
+      } else {
+        setError(
+          res.error?.message ||
+            t("Imeshindwa kupakia watumiaji.", "Failed to load users.")
+        );
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [query, roleFilter, statusFilter, verifiedFilter]
+  );
 
-  // ── HANDLE TOGGLE (suspend → modal; activate → moja kwa moja) ──
+  // Initial load
+  useEffect(() => {
+    fetchPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reset to page 1 + refetch kama filter imebadilika
+  useEffect(() => {
+    fetchPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, roleFilter, statusFilter, verifiedFilter]);
+
+  // ── HANDLERS ───────────────────────────────────────────────
   const handleToggle = (userId) => {
     const u = users.find((x) => x.id === userId);
     if (!u) return;
 
     if (u.status === "suspended") {
-      // Activate — hakuna sababu inahitajika
       (async () => {
         setBusy((b) => ({ ...b, [userId]: "toggle" }));
         setError("");
@@ -134,15 +168,15 @@ export default function UserManagementSection() {
             res.error?.message ||
               t("Imeshindwa kumwasha mtumiaji.", "Failed to activate user.")
           );
+        } else {
+          fetchPage(page);
         }
       })();
     } else {
-      // Suspend — fungua modal
       setSuspendTarget(u);
     }
   };
 
-  // ── HANDLE SUSPEND CONFIRM ────────────────────────────────
   const handleSuspendConfirm = async ({ reason }) => {
     const u = suspendTarget;
     if (!u) return;
@@ -161,17 +195,16 @@ export default function UserManagementSection() {
       );
     } else {
       setSuspendTarget(null);
+      fetchPage(page);
     }
   };
 
-  // ── HANDLE DELETE (fungua modal) ──────────────────────────
   const handleDelete = (userId) => {
     const u = users.find((x) => x.id === userId);
     if (!u) return;
     setDeleteTarget(u);
   };
 
-  // ── HANDLE DELETE CONFIRM ─────────────────────────────────
   const handleDeleteConfirm = async ({ reason, confirmText }) => {
     const u = deleteTarget;
     if (!u) return;
@@ -191,10 +224,10 @@ export default function UserManagementSection() {
     } else {
       setDeleteTarget(null);
       if (selectedUser?.id === u.id) setSelectedUser(null);
+      fetchPage(page);
     }
   };
 
-  // ── HANDLE VERIFY ─────────────────────────────────────────
   const handleVerify = async (userId) => {
     setBusy((b) => ({ ...b, [userId]: "verify" }));
     setError("");
@@ -209,10 +242,12 @@ export default function UserManagementSection() {
         res.error?.message ||
           t("Imeshindwa kuthibitisha mtumiaji.", "Failed to verify user.")
       );
+    } else {
+      fetchPage(page);
     }
   };
 
-  // ── ACTION BUTTONS ────────────────────────────────────────
+  // ── ActionButtons ──────────────────────────────────────────
   const ActionButtons = ({ user, fullWidth = false }) => {
     const isSuspended = user.status === "suspended";
     const isVerified = user.isVerified;
@@ -225,7 +260,6 @@ export default function UserManagementSection() {
           fullWidth ? "w-full" : "justify-end"
         }`}
       >
-        {/* VERIFY — tu kama hajathibitishwa */}
         {!isVerified && (
           <button
             onClick={(e) => {
@@ -251,7 +285,6 @@ export default function UserManagementSection() {
           </button>
         )}
 
-        {/* SUSPEND / ACTIVATE */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -286,7 +319,6 @@ export default function UserManagementSection() {
           )}
         </button>
 
-        {/* DELETE */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -322,6 +354,78 @@ export default function UserManagementSection() {
     );
   };
 
+  // ── Pagination controls ────────────────────────────────────
+  const PaginationControls = () => {
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, start + 4);
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    return (
+      <div className="flex items-center justify-center gap-2 mt-6">
+        <button
+          onClick={() => page > 1 && fetchPage(page - 1)}
+          disabled={page <= 1}
+          className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
+          aria-label={t("Nyuma", "Previous")}
+        >
+          <ChevronLeft size={16} />
+        </button>
+
+        {start > 1 && (
+          <>
+            <button
+              onClick={() => fetchPage(1)}
+              className="w-9 h-9 rounded-lg border border-gray-200 text-sm font-medium text-secondary hover:bg-gray-50"
+            >
+              1
+            </button>
+            {start > 2 && <span className="text-muted px-1">…</span>}
+          </>
+        )}
+
+        {pages.map((p) => (
+          <button
+            key={p}
+            onClick={() => fetchPage(p)}
+            className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+              p === page
+                ? "bg-gold text-night"
+                : "border border-gray-200 text-secondary hover:bg-gray-50"
+            }`}
+          >
+            {p}
+          </button>
+        ))}
+
+        {end < totalPages && (
+          <>
+            {end < totalPages - 1 && (
+              <span className="text-muted px-1">…</span>
+            )}
+            <button
+              onClick={() => fetchPage(totalPages)}
+              className="w-9 h-9 rounded-lg border border-gray-200 text-sm font-medium text-secondary hover:bg-gray-50"
+            >
+              {totalPages}
+            </button>
+          </>
+        )}
+
+        <button
+          onClick={() => page < totalPages && fetchPage(page + 1)}
+          disabled={page >= totalPages}
+          className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
+          aria-label={t("Mbele", "Next")}
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    );
+  };
+
   return (
     <>
       <SectionHeader
@@ -345,8 +449,8 @@ export default function UserManagementSection() {
       )}
 
       {/* FILTERS */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 flex-wrap">
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 min-w-[200px]">
           <Search size={16} className="text-muted shrink-0" />
           <input
             value={query}
@@ -358,19 +462,45 @@ export default function UserManagementSection() {
             className="outline-none text-sm flex-1 min-w-0"
           />
         </div>
+
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
           className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary"
         >
-          <option value="all">{t("Zote", "All")}</option>
+          <option value="all">{t("Nafasi: Zote", "Role: All")}</option>
           <option value="Admin">Admin</option>
           <option value="Seller">{t("Wauzaji", "Sellers")}</option>
           <option value="Buyer">{t("Wanunuzi", "Buyers")}</option>
           <option value="Both">{t("Wote Wawili", "Both")}</option>
           <option value="Neither">{t("Wapya", "Neither")}</option>
         </select>
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary"
+        >
+          <option value="all">{t("Hali: Zote", "Status: All")}</option>
+          <option value="active">{t("Hai", "Active")}</option>
+          <option value="suspended">{t("Amesimamishwa", "Suspended")}</option>
+        </select>
+
+        <select
+          value={verifiedFilter}
+          onChange={(e) => setVerifiedFilter(e.target.value)}
+          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary"
+        >
+          <option value="all">{t("Uthibitisho: Zote", "Verified: All")}</option>
+          <option value="verified">{t("Imethibitishwa", "Verified")}</option>
+          <option value="unverified">{t("Haijathibitishwa", "Unverified")}</option>
+        </select>
       </div>
+
+      {/* Count */}
+      <p className="text-xs text-muted mb-2">
+        {t(`Watumiaji ${count}`, `${count} users`)}
+      </p>
 
       {/* DESKTOP — TABLE */}
       <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -399,7 +529,7 @@ export default function UserManagementSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((u) => {
+              {users.map((u) => {
                 const role = getUserRole(u);
                 return (
                   <tr
@@ -408,7 +538,16 @@ export default function UserManagementSection() {
                     onClick={() => setSelectedUser(u)}
                   >
                     <td className="px-5 py-3 text-sm font-medium text-primary">
-                      {u.name}
+                      <div className="flex items-center gap-1.5">
+                        <span>{u.name}</span>
+                        {u.isVerified && (
+                          <ShieldCheck
+                            size={13}
+                            style={{ color: COLORS.green }}
+                            className="shrink-0"
+                          />
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3 text-sm text-secondary">
                       {u.email}
@@ -428,7 +567,7 @@ export default function UserManagementSection() {
                   </tr>
                 );
               })}
-              {filtered.length === 0 && (
+              {users.length === 0 && (
                 <tr>
                   <td
                     colSpan={6}
@@ -445,7 +584,7 @@ export default function UserManagementSection() {
 
       {/* MOBILE — CARD LIST */}
       <div className="sm:hidden flex flex-col gap-3">
-        {filtered.map((u) => {
+        {users.map((u) => {
           const role = getUserRole(u);
           return (
             <div
@@ -455,9 +594,18 @@ export default function UserManagementSection() {
             >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-primary truncate">
-                    {u.name}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold text-primary truncate">
+                      {u.name}
+                    </p>
+                    {u.isVerified && (
+                      <ShieldCheck
+                        size={13}
+                        style={{ color: COLORS.green }}
+                        className="shrink-0"
+                      />
+                    )}
+                  </div>
                   <p className="text-xs text-secondary truncate mt-0.5">
                     {u.email}
                   </p>
@@ -488,19 +636,20 @@ export default function UserManagementSection() {
           );
         })}
 
-        {filtered.length === 0 && (
+        {users.length === 0 && (
           <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-sm text-muted">
             {t("Hakuna matokeo", "No results")}
           </div>
         )}
       </div>
 
-      {/* DRAWER */}
+      {/* PAGINATION */}
+      <PaginationControls />
+
+      {/* DRAWER — inachukua data yenyewe kutoka /full/ */}
       {selectedUser && (
         <UserDrawer
           user={selectedUser}
-          listings={listings}
-          deals={deals}
           onClose={() => setSelectedUser(null)}
           lang={lang}
         />

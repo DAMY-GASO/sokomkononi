@@ -1,14 +1,18 @@
 // ============================================================
 // usersStore.js — API-only via /api/admin/users/
-// + Futa Permanently (hard delete)
+// + Futa Permanently (hard delete) yenye reason + "DELETE"
 // + Suspend inahitaji sababu
+// + Pagination + filters (role, status, verified, q)
 // ============================================================
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api } from "../api/client";
 
 const KEY = "sokomkononi_users_v1";
 const EV = "sokomkononi:users-updated";
 
+// ============================================================
+// LOCAL STORAGE (cache ya ukurasa wa sasa)
+// ============================================================
 function read() {
   if (typeof window === "undefined") return [];
   try {
@@ -16,13 +20,20 @@ function read() {
     if (!raw) return [];
     const p = JSON.parse(raw);
     return Array.isArray(p) ? p : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
+
 function write(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(EV));
 }
+
+// ============================================================
+// NORMALIZE — kutoka backend → frontend shape
+// ============================================================
 function norm(raw) {
   if (!raw) return null;
   return {
@@ -30,9 +41,12 @@ function norm(raw) {
     name: raw.name || "",
     email: raw.email || "",
     phone: raw.phone || "",
+    avatar: raw.avatar || null,
     role: raw.is_staff || raw.is_superuser
       ? "Admin"
-      : (raw.account_type === "BUSINESS" || raw.is_seller ? "Seller" : "Buyer"),
+      : raw.account_type === "BUSINESS" || raw.is_seller
+        ? "Seller"
+        : "Buyer",
     status: raw.is_active === false ? "suspended" : "active",
     joined: raw.date_joined || raw.created_at,
     isStaff: !!raw.is_staff,
@@ -40,17 +54,60 @@ function norm(raw) {
   };
 }
 
-export function getUsers() { return read(); }
-export function getUser(id) { return read().find((u) => u.id === id) || null; }
-export function getUserByEmail(email) { return email ? read().find((u) => u.email === email) || null : null; }
+// ============================================================
+// READS (kutoka cache ya sasa)
+// ============================================================
+export function getUsers() {
+  return read();
+}
+export function getUser(id) {
+  return read().find((u) => u.id === id) || null;
+}
+export function getUserByEmail(email) {
+  return email ? read().find((u) => u.email === email) || null : null;
+}
 
-export async function hydrateUsersFromApi() {
+// ============================================================
+// HYDRATE — inarudisha { ok, count, page, totalPages, hasNext, hasPrev }
+// ============================================================
+export async function hydrateUsersFromApi(opts = {}) {
+  const {
+    page = 1,
+    pageSize = 20,
+    q = "",
+    role = "all",
+    status = "all",
+    verified = "all",
+  } = opts;
+
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("page_size", String(pageSize));
+  if (q) params.set("q", q);
+  if (role && role !== "all") params.set("role", role);
+  if (status && status !== "all") params.set("status", status);
+  if (verified && verified !== "all") params.set("verified", verified);
+
   try {
-    const d = await api.get("/admin/users/?page_size=200");
+    const d = await api.get(`/admin/users/?${params.toString()}`);
     const list = Array.isArray(d) ? d : d?.results || [];
+    const count = Array.isArray(d) ? list.length : d?.count ?? list.length;
+    const totalPages = Math.max(1, Math.ceil(count / pageSize));
+
     write(list.map(norm).filter(Boolean));
-    return { ok: true, count: list.length };
-  } catch (err) { return { ok: false, error: err }; }
+
+    return {
+      ok: true,
+      count,
+      page,
+      pageSize,
+      totalPages,
+      hasNext: !!d?.next,
+      hasPrev: !!d?.previous,
+    };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 // ============================================================
@@ -59,31 +116,49 @@ export async function hydrateUsersFromApi() {
 export async function suspendUserAsync(id, { reason } = {}) {
   const u = getUser(id);
   if (!u) return { ok: false, error: new Error("User not found") };
-  if (u.status === "suspended") return { ok: true, warning: "already_suspended" };
+  if (u.status === "suspended")
+    return { ok: true, warning: "already_suspended" };
 
   const cleanReason = (reason || "").trim();
   if (cleanReason.length < 5) {
-    return { ok: false, error: new Error("Sababu inahitajika (herufi 5+).") };
+    return {
+      ok: false,
+      error: new Error("Sababu inahitajika (herufi 5+)."),
+    };
   }
 
   try {
     await api.post(`/admin/users/${id}/suspend/`, { reason: cleanReason });
-    write(read().map((x) => (x.id === id ? { ...x, status: "suspended" } : x)));
+    write(
+      read().map((x) => (x.id === id ? { ...x, status: "suspended" } : x))
+    );
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
+// ============================================================
+// ACTIVATE
+// ============================================================
 export async function activateUserAsync(id) {
   const u = getUser(id);
   if (!u) return { ok: false, error: new Error("User not found") };
   if (u.status === "active") return { ok: true, warning: "already_active" };
   try {
     await api.post(`/admin/users/${id}/activate/`, {});
-    write(read().map((x) => (x.id === id ? { ...x, status: "active" } : x)));
+    write(
+      read().map((x) => (x.id === id ? { ...x, status: "active" } : x))
+    );
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
+// ============================================================
+// TOGGLE — moja kwa moja
+// ============================================================
 export async function toggleUserStatusAsync(id, opts) {
   const u = getUser(id);
   if (!u) return { ok: false, error: new Error("User not found") };
@@ -92,12 +167,19 @@ export async function toggleUserStatusAsync(id, opts) {
     : suspendUserAsync(id, opts);
 }
 
+// ============================================================
+// VERIFY
+// ============================================================
 export async function verifyUserAsync(id) {
   try {
     await api.post(`/admin/users/${id}/verify/`, {});
-    write(read().map((x) => (x.id === id ? { ...x, isVerified: true } : x)));
+    write(
+      read().map((x) => (x.id === id ? { ...x, isVerified: true } : x))
+    );
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 // ============================================================
@@ -108,7 +190,9 @@ export async function deleteUserAsync(id) {
     await api.delete(`/admin/users/${id}/`);
     write(read().filter((x) => x.id !== id));
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 // ============================================================
@@ -121,7 +205,9 @@ export async function permanentDeleteUserAsync(id, { reason, confirmText } = {})
   if (u.isStaff) {
     return {
       ok: false,
-      error: new Error("Hauwezi kumfuta admin. Wasiliana na Super Admin."),
+      error: new Error(
+        "Hauwezi kumfuta admin. Wasiliana na Super Admin."
+      ),
     };
   }
 
@@ -129,10 +215,16 @@ export async function permanentDeleteUserAsync(id, { reason, confirmText } = {})
   const cleanConfirm = (confirmText || "").trim();
 
   if (cleanReason.length < 5) {
-    return { ok: false, error: new Error("Sababu inahitajika (herufi 5+).") };
+    return {
+      ok: false,
+      error: new Error("Sababu inahitajika (herufi 5+)."),
+    };
   }
   if (cleanConfirm !== "DELETE") {
-    return { ok: false, error: new Error('Lazima uandike "DELETE" kuthibitisha.') };
+    return {
+      ok: false,
+      error: new Error('Lazima uandike "DELETE" kuthibitisha.'),
+    };
   }
 
   try {
@@ -142,23 +234,38 @@ export async function permanentDeleteUserAsync(id, { reason, confirmText } = {})
     write(read().filter((x) => x.id !== id));
     return { ok: true, deleted: true };
   } catch (err) {
+    // Fallback: kama /permanent/ haipo, tumia delete ya kawaida
     if (err?.status === 404 || err?.status === 405) {
-      console.warn("[usersStore] /permanent/ haipo — tumia delete ya kawaida");
+      console.warn(
+        "[usersStore] /permanent/ haipo — tumia delete ya kawaida"
+      );
       return deleteUserAsync(id);
     }
     return { ok: false, error: err };
   }
 }
 
+// ============================================================
+// HOOKS
+// ============================================================
+
+// Cache ya hydration ili kuzuia requests nyingi kwa wakati mmoja
 let _usersHydratePromise = null;
-function _dedupedUsersHydrate() {
+function _dedupedUsersHydrate(opts) {
   if (_usersHydratePromise) return _usersHydratePromise;
-  _usersHydratePromise = hydrateUsersFromApi().finally(() => {
+  _usersHydratePromise = hydrateUsersFromApi(opts).finally(() => {
     _usersHydratePromise = null;
   });
   return _usersHydratePromise;
 }
 
+/**
+ * useUsers — inasikiliza cache + inarudisha list ya users.
+ *
+ * Kwa default, inafanya hydrate mara moja kwa page 1, pageSize 20.
+ * Kama unataka filters/pagination, tumia `hydrateUsersFromApi` moja
+ * kwa moja (kama inavyofanyika kwenye UserManagementSection).
+ */
 export function useUsers() {
   const [list, setList] = useState(() => read());
   useEffect(() => {
@@ -173,7 +280,105 @@ export function useUsers() {
   }, []);
   return list;
 }
+
+/**
+ * useUser — inarudisha user mmoja kwa id.
+ */
 export function useUser(id) {
   const list = useUsers();
   return id ? list.find((u) => u.id === id) || null : null;
+}
+
+/**
+ * useUsersPaged — hook kamili yenye pagination + filters.
+ *
+ * Matumizi:
+ *   const { users, page, totalPages, count, loading, error, setFilters, goToPage, refresh } =
+ *     useUsersPaged({ role: "all", status: "all", verified: "all", q: "" });
+ */
+export function useUsersPaged(initial = {}) {
+  const [users, setUsers] = useState(() => read());
+  const [page, setPage] = useState(initial.page || 1);
+  const [pageSize] = useState(initial.pageSize || 20);
+  const [totalPages, setTotalPages] = useState(1);
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [filters, setFilters] = useState({
+    role: initial.role || "all",
+    status: initial.status || "all",
+    verified: initial.verified || "all",
+    q: initial.q || "",
+  });
+
+  const fetchPage = useCallback(
+    async (p = page, f = filters) => {
+      setLoading(true);
+      setError(null);
+      const res = await hydrateUsersFromApi({
+        page: p,
+        pageSize,
+        q: f.q,
+        role: f.role,
+        status: f.status,
+        verified: f.verified,
+      });
+      setLoading(false);
+      if (res.ok) {
+        setUsers(read());
+        setPage(res.page);
+        setTotalPages(res.totalPages);
+        setCount(res.count);
+      } else {
+        setError(res.error);
+      }
+      return res;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pageSize]
+  );
+
+  // Sinc cache
+  useEffect(() => {
+    const sync = () => setUsers(read());
+    window.addEventListener("storage", sync);
+    window.addEventListener(EV, sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener(EV, sync);
+    };
+  }, []);
+
+  // Fetch kila filter/page inabadilika
+  useEffect(() => {
+    fetchPage(page, filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, filters]);
+
+  const goToPage = useCallback((p) => setPage(p), []);
+  const refresh = useCallback(() => fetchPage(page, filters), [
+    fetchPage,
+    page,
+    filters,
+  ]);
+
+  // setFilters — inaruhusu ku-update kimoja au zaidi, inarudisha page 1
+  const updateFilters = useCallback((partial) => {
+    setFilters((prev) => ({ ...prev, ...partial }));
+    setPage(1);
+  }, []);
+
+  return {
+    users,
+    page,
+    pageSize,
+    totalPages,
+    count,
+    loading,
+    error,
+    filters,
+    setFilters: updateFilters,
+    goToPage,
+    refresh,
+  };
 }
