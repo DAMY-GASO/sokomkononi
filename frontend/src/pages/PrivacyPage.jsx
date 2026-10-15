@@ -431,7 +431,7 @@ export default function PrivacyPage() {
       <Navbar />
 
       {/* HERO — CENTERED */}
-      <section className="surface-night relative isolate overflow-hidden text-white py-12 px-4"><section className="surface-night relative isolate overflow-hidden text-white py-12 px-4">
+      <section className="surface-night relative isolate overflow-hidden text-white py-12 px-4">
         <div
           aria-hidden="true"
           className="absolute inset-0 -z-10 opacity-[0.05]"
