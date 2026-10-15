@@ -51,6 +51,23 @@ export function ToastProvider({ children }) {
 
   useEffect(() => () => Object.values(timersRef.current).forEach(clearTimeout), []);
 
+  // ── Global toast listener ──────────────────────────────
+  // Any module can fire:
+  //   window.dispatchEvent(new CustomEvent("sokomkononi:toast", {
+  //     detail: { type: "success" | "error" | "info" | "warning", message: "..." }
+  //   }));
+  // This is how savedStore, undoStore, etc. surface errors to the user.
+  useEffect(() => {
+    const handler = (e) => {
+      const { type, message, title } = e?.detail || {};
+      if (!message) return;
+      const fn = api[type] || api.info;
+      try { fn(message, { title }); } catch (err) { console.warn("[toast]", err); }
+    };
+    window.addEventListener("sokomkononi:toast", handler);
+    return () => window.removeEventListener("sokomkononi:toast", handler);
+  }, [api]);
+
   return (
     <ToastContext.Provider value={api}>
       {children}

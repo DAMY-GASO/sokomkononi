@@ -1602,3 +1602,239 @@ footer h1, footer h2, footer h3, footer h4, footer h5, footer h6 {
 }
 footer p, footer span, footer li, footer a { color: inherit; }
 
+
+/* ============================================================
+   FINAL PASS — dark/light correctness for all dashboards
+   Scope: [data-surface="sand"] (roots of AdminDashboard and
+          DashboardShell — every admin/seller/buyer page).
+
+   Root causes fixed:
+     1. Icons use inline stroke="#011957" (navy) which becomes
+        invisible on dark backgrounds.
+     2. Text uses inline color="#011957" (navy) → same problem.
+     3. Light mode keeps inline navy backgrounds → text invisible.
+   ============================================================ */
+
+/* ── 1. Base text color follows the theme ─────────────────── */
+html:not(.dark) [data-surface="sand"] { color: #0B1220 !important; }
+html.dark       [data-surface="sand"] { color: #FFFFFF !important; }
+
+/* ── 2. Headings ──────────────────────────────────────────── */
+html:not(.dark) [data-surface="sand"] h1,
+html:not(.dark) [data-surface="sand"] h2,
+html:not(.dark) [data-surface="sand"] h3,
+html:not(.dark) [data-surface="sand"] h4,
+html:not(.dark) [data-surface="sand"] h5,
+html:not(.dark) [data-surface="sand"] h6,
+html:not(.dark) [data-surface="sand"] .h-title,
+html:not(.dark) [data-surface="sand"] .h-card,
+html:not(.dark) [data-surface="sand"] .h-section,
+html:not(.dark) [data-surface="sand"] .h-display {
+  color: #0B1220 !important;
+}
+html.dark [data-surface="sand"] h1,
+html.dark [data-surface="sand"] h2,
+html.dark [data-surface="sand"] h3,
+html.dark [data-surface="sand"] h4,
+html.dark [data-surface="sand"] h5,
+html.dark [data-surface="sand"] h6,
+html.dark [data-surface="sand"] .h-title,
+html.dark [data-surface="sand"] .h-card,
+html.dark [data-surface="sand"] .h-section,
+html.dark [data-surface="sand"] .h-display {
+  color: #FFFFFF !important;
+}
+
+/* ── 3. Utility text classes ──────────────────────────────── */
+html:not(.dark) [data-surface="sand"] .text-primary   { color: #0B1220 !important; }
+html:not(.dark) [data-surface="sand"] .text-secondary { color: #455068 !important; }
+html:not(.dark) [data-surface="sand"] .text-muted     { color: #6B7280 !important; }
+
+html.dark [data-surface="sand"] .text-primary   { color: #FFFFFF !important; }
+html.dark [data-surface="sand"] .text-secondary { color: rgba(255, 255, 255, 0.75) !important; }
+html.dark [data-surface="sand"] .text-muted     { color: rgba(255, 255, 255, 0.55) !important; }
+
+/* ── 4. Inline text colors — navy → white in dark ─────────── */
+html.dark [data-surface="sand"] [style*="color: #011957"],
+html.dark [data-surface="sand"] [style*="color:#011957"],
+html.dark [data-surface="sand"] [style*="color: rgb(1, 25, 87)"],
+html.dark [data-surface="sand"] [style*="color:rgb(1,25,87)"],
+html.dark [data-surface="sand"] [style*="color: #010F3A"],
+html.dark [data-surface="sand"] [style*="color:#010F3A"],
+html.dark [data-surface="sand"] [style*="color: rgb(1, 15, 58)"],
+html.dark [data-surface="sand"] [style*="color:rgb(1,15,58)"],
+html.dark [data-surface="sand"] [style*="color: #042475"],
+html.dark [data-surface="sand"] [style*="color:#042475"],
+html.dark [data-surface="sand"] [style*="color: #111827"],
+html.dark [data-surface="sand"] [style*="color:#111827"],
+html.dark [data-surface="sand"] [style*="color: rgb(17, 24, 39)"],
+html.dark [data-surface="sand"] [style*="color:rgb(17,24,39)"] {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* Inline near-white → dark in light mode */
+html:not(.dark) [data-surface="sand"] [style*="color: #F4F7FC"],
+html:not(.dark) [data-surface="sand"] [style*="color:#F4F7FC"],
+html:not(.dark) [data-surface="sand"] [style*="color: rgb(244, 247, 252)"],
+html:not(.dark) [data-surface="sand"] [style*="color:rgb(244,247,252)"],
+html:not(.dark) [data-surface="sand"] [style*="color: #DCE4F2"],
+html:not(.dark) [data-surface="sand"] [style*="color:#DCE4F2"],
+html:not(.dark) [data-surface="sand"] [style*="color: #F5F3EC"],
+html:not(.dark) [data-surface="sand"] [style*="color:#F5F3EC"],
+html:not(.dark) [data-surface="sand"] [style*="color: white"],
+html:not(.dark) [data-surface="sand"] [style*="color:white"],
+html:not(.dark) [data-surface="sand"] [style*="color: #FFFFFF"],
+html:not(.dark) [data-surface="sand"] [style*="color:#FFFFFF"],
+html:not(.dark) [data-surface="sand"] [style*="color: #FFF"],
+html:not(.dark) [data-surface="sand"] [style*="color:#FFF"] {
+  color: #0B1220 !important;
+}
+
+/* ── 5. Icons — the MAIN FIX ──────────────────────────────── */
+/* Lucide renders <Icon color={X} /> as <svg stroke="#X">. When X is
+   navy the icon vanishes in dark mode. Force navy strokes → white. */
+html.dark [data-surface="sand"] svg[stroke="#011957"],
+html.dark [data-surface="sand"] svg[stroke="#010F3A"],
+html.dark [data-surface="sand"] svg[stroke="#042475"],
+html.dark [data-surface="sand"] svg[stroke="rgb(1, 25, 87)"],
+html.dark [data-surface="sand"] svg[stroke="rgb(1,25,87)"],
+html.dark [data-surface="sand"] svg[stroke="rgb(1, 15, 58)"],
+html.dark [data-surface="sand"] svg[stroke="rgb(1,15,58)"],
+html.dark [data-surface="sand"] svg[stroke="rgb(4, 36, 117)"],
+html.dark [data-surface="sand"] svg[stroke="rgb(4,36,117)"],
+html.dark [data-surface="sand"] svg[stroke="#111827"],
+html.dark [data-surface="sand"] svg[stroke="rgb(17, 24, 39)"],
+html.dark [data-surface="sand"] svg[stroke="rgb(17,24,39)"],
+html.dark [data-surface="sand"] svg[style*="stroke: #011957"],
+html.dark [data-surface="sand"] svg[style*="stroke:#011957"],
+html.dark [data-surface="sand"] svg[style*="stroke: rgb(1, 25, 87)"],
+html.dark [data-surface="sand"] svg[style*="stroke:rgb(1,25,87)"] {
+  stroke: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* Inverse: white strokes → dark in light mode */
+html:not(.dark) [data-surface="sand"] svg[stroke="#FFFFFF"],
+html:not(.dark) [data-surface="sand"] svg[stroke="#FFF"],
+html:not(.dark) [data-surface="sand"] svg[stroke="white"],
+html:not(.dark) [data-surface="sand"] svg[stroke="rgb(255, 255, 255)"],
+html:not(.dark) [data-surface="sand"] svg[stroke="rgb(255,255,255)"],
+html:not(.dark) [data-surface="sand"] svg[stroke="#F4F7FC"],
+html:not(.dark) [data-surface="sand"] svg[stroke="#F5F3EC"] {
+  stroke: #0B1220 !important;
+}
+
+/* Any SVG icon using stroke="currentColor" inherits its parent
+   color. If the parent color is unreadable, force a safe floor. */
+html.dark [data-surface="sand"] svg[stroke="currentColor"] {
+  color: rgba(255, 255, 255, 0.88);
+}
+html:not(.dark) [data-surface="sand"] svg[stroke="currentColor"] {
+  color: #0B1220;
+}
+
+/* Preserve ACTIVE sidebar / nav icons — they use gold on purpose. */
+html.dark [data-surface="sand"] svg[stroke="#FEA406"],
+html.dark [data-surface="sand"] svg[stroke="rgb(254, 164, 6)"],
+html.dark [data-surface="sand"] svg[stroke="rgb(254,164,6)"] {
+  stroke: #FEA406 !important;
+}
+
+/* Preserve SEMANTIC icon colors in dark mode. */
+html.dark [data-surface="sand"] svg[stroke="#2F6D4F"],
+html.dark [data-surface="sand"] svg[stroke="#C1502E"],
+html.dark [data-surface="sand"] svg[stroke="#0062FD"],
+html.dark [data-surface="sand"] svg[stroke="#7C3AED"],
+html.dark [data-surface="sand"] svg[stroke="#2563EB"] {
+  stroke: currentColor;
+}
+
+/* ── 6. Danger button text stays white even in light mode ── */
+html [data-surface="sand"] .btn-primary { color: #011957 !important; }
+html [data-surface="sand"] .btn-danger  { color: #FFFFFF !important; }
+html [data-surface="sand"] .btn-secondary { color: #FFFFFF !important; }
+
+/* ── 7. Input fields ──────────────────────────────────────── */
+html:not(.dark) [data-surface="sand"] input:not([type="checkbox"]):not([type="radio"]),
+html:not(.dark) [data-surface="sand"] textarea,
+html:not(.dark) [data-surface="sand"] select {
+  background-color: #FFFFFF !important;
+  color: #0B1220 !important;
+  border-color: #DCE4F2 !important;
+}
+html.dark [data-surface="sand"] input:not([type="checkbox"]):not([type="radio"]),
+html.dark [data-surface="sand"] textarea,
+html.dark [data-surface="sand"] select {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+html:not(.dark) [data-surface="sand"] input::placeholder,
+html:not(.dark) [data-surface="sand"] textarea::placeholder {
+  color: #6B7280 !important;
+  opacity: 1;
+}
+html.dark [data-surface="sand"] input::placeholder,
+html.dark [data-surface="sand"] textarea::placeholder {
+  color: rgba(255, 255, 255, 0.42) !important;
+  opacity: 1;
+}
+
+/* ── 8. Tables ────────────────────────────────────────────── */
+html:not(.dark) [data-surface="sand"] table thead {
+  background-color: #F4F7FC !important;
+}
+html:not(.dark) [data-surface="sand"] table thead th { color: #455068 !important; }
+html:not(.dark) [data-surface="sand"] table tbody tr { border-color: #DCE4F2 !important; }
+html:not(.dark) [data-surface="sand"] table tbody td { color: #0B1220 !important; }
+
+html.dark [data-surface="sand"] table thead {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+html.dark [data-surface="sand"] table thead th { color: rgba(255, 255, 255, 0.68) !important; }
+html.dark [data-surface="sand"] table tbody tr { border-color: rgb(var(--c-hairline)) !important; }
+html.dark [data-surface="sand"] table tbody td { color: rgba(255, 255, 255, 0.92) !important; }
+html.dark [data-surface="sand"] table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* ── 9. Cards (bg-white / bg-card) keep their own text color ── */
+html.dark [data-surface="sand"] .bg-white,
+html.dark [data-surface="sand"] [class*="bg-card"] {
+  color: #FFFFFF;
+}
+
+/* ── 10. Header / sidebars with inline navy backgrounds ──── */
+/* Light mode: flip navy → white so text is readable */
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1, 25, 87)"],
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(1,25,87)"],
+html:not(.dark) [data-surface="sand"] [style*="background: #011957"],
+html:not(.dark) [data-surface="sand"] [style*="background:#011957"],
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1,15,58)"],
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(1,15,58)"],
+html:not(.dark) [data-surface="sand"] [style*="background: #010F3A"],
+html:not(.dark) [data-surface="sand"] [style*="background:#010F3A"],
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(4, 36, 117)"],
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(4,36,117)"],
+html:not(.dark) [data-surface="sand"] [style*="background: #042475"],
+html:not(.dark) [data-surface="sand"] [style*="background:#042475"] {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+}
+/* But NOT the top header — it stays navy in both modes */
+html:not(.dark) [data-surface="sand"] > header {
+  background-color: #011957 !important;
+  background-image: none !important;
+  color: #FFFFFF !important;
+}
+html:not(.dark) [data-surface="sand"] > header * {
+  /* re-assert light colors inside header */
+}
+html:not(.dark) [data-surface="sand"] > header .text-primary,
+html:not(.dark) [data-surface="sand"] > header .text-white {
+  color: #FFFFFF !important;
+}
+html:not(.dark) [data-surface="sand"] > header svg {
+  color: inherit;
+  stroke: currentColor;
+}
+
