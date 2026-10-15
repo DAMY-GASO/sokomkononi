@@ -2,48 +2,26 @@
 // UserDrawer.jsx
 // Drawer ya mtumiaji (kwa User Management) — inaonyesha
 // listings zake na deals zake.
+// Inachukua data yenyewe kutoka /api/admin/users/{id}/full/
 // Mobile-responsive.
 // + Simu, Avatar, Verified badge
 // ============================================================
 
-import React from "react";
-import { X, Phone, Mail, Calendar, ShieldCheck, CheckCircle2 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import {
+  X,
+  Phone,
+  Calendar,
+  ShieldCheck,
+  Loader2,
+} from "lucide-react";
 import { COLORS, FONTS } from "./constants.js";
 import StatusBadge from "./StatusBadge.jsx";
+import { api } from "../../../../api/client.js";
 
 // ============================================================
 // HELPERS
 // ============================================================
-function getSellerName(listing) {
-  if (!listing) return "";
-  return (
-    listing.seller_name ||
-    listing.seller?.name ||
-    (typeof listing.seller === "string" ? listing.seller : "") ||
-    ""
-  );
-}
-
-function getBuyerName(deal) {
-  if (!deal) return "";
-  return (
-    deal.buyerName ||
-    deal.buyer_name ||
-    deal.buyer?.name ||
-    ""
-  );
-}
-
-function getSellerNameFromDeal(deal) {
-  if (!deal) return "";
-  return (
-    deal.sellerName ||
-    deal.seller_name ||
-    deal.seller?.name ||
-    ""
-  );
-}
-
 function getUserInitial(user) {
   const name = user?.name || user?.email || "U";
   return String(name).charAt(0).toUpperCase();
@@ -67,43 +45,51 @@ function formatJoined(date) {
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-export default function UserDrawer({
-  user,
-  listings = [],
-  deals = [],
-  onClose,
-  lang = "sw",
-}) {
+export default function UserDrawer({ user, onClose, lang = "sw" }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    (async () => {
+      try {
+        const res = await api.get(`/admin/users/${user.id}/full/`);
+        if (cancelled) return;
+        setData(res);
+      } catch (err) {
+        if (cancelled) return;
+        setError(
+          err?.message ||
+            t("Imeshindwa kupakia data.", "Failed to load data.")
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   if (!user) return null;
 
-  const t = (sw, en) => (lang === "sw" ? sw : en);
-  const userName = user.name || user.email || "";
+  const fullUser = data?.user || user;
+  const listings = data?.listings || [];
+  const deals = data?.deals || [];
+  const hasAvatar = !!fullUser.avatar;
 
-  // ── Listings: kama tuna userId, tumia; la sivyo, tumia jina ──
-  const userListings = listings.filter((l) => {
-    if (user.id != null) {
-      const sellerId =
-        l.sellerId ?? l.seller_id ?? l.seller?.id;
-      if (sellerId != null) return String(sellerId) === String(user.id);
-    }
-    return getSellerName(l) === userName;
-  });
-
-  // ── Deals: kama tuna userId, tumia; la sivyo, tumia jina ──
-  const userDeals = deals.filter((d) => {
-    if (user.id != null) {
-      const buyerId = d.buyerId ?? d.buyer_id ?? d.buyer?.id;
-      const sellerId = d.sellerId ?? d.seller_id ?? d.seller?.id;
-      if (String(buyerId) === String(user.id)) return true;
-      if (String(sellerId) === String(user.id)) return true;
-    }
-    return (
-      getBuyerName(d) === userName ||
-      getSellerNameFromDeal(d) === userName
-    );
-  });
-
-  const hasAvatar = !!user.avatar;
+  // StatusBadge inatarajia "active" au "suspended" — tengeneza kutoka is_active
+  const userStatus =
+    fullUser.is_active === false
+      ? "suspended"
+      : fullUser.status || "active";
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -137,8 +123,8 @@ export default function UserDrawer({
           <div className="flex items-center gap-3">
             {hasAvatar ? (
               <img
-                src={user.avatar}
-                alt={userName}
+                src={fullUser.avatar}
+                alt={fullUser.name}
                 className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover shrink-0"
               />
             ) : (
@@ -146,15 +132,15 @@ export default function UserDrawer({
                 className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-base sm:text-lg font-bold shrink-0"
                 style={{ background: `${COLORS.gold}20`, color: COLORS.gold }}
               >
-                {getUserInitial(user)}
+                {getUserInitial(fullUser)}
               </div>
             )}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <p className="font-semibold text-gray-800 truncate">
-                  {user.name || "—"}
+                  {fullUser.name || "—"}
                 </p>
-                {user.isVerified && (
+                {fullUser.is_verified && (
                   <ShieldCheck
                     size={14}
                     style={{ color: COLORS.green }}
@@ -164,26 +150,26 @@ export default function UserDrawer({
                 )}
               </div>
               <p className="text-xs text-gray-500 truncate">
-                {user.email || "—"}
+                {fullUser.email || "—"}
               </p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <StatusBadge status={user.status} lang={lang} />
+                <StatusBadge status={userStatus} lang={lang} />
                 <span className="text-xs text-gray-400 capitalize">
-                  {user.role}
+                  {fullUser.role}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Simu */}
-          {user.phone && (
+          {fullUser.phone && (
             <a
-              href={`tel:${user.phone}`}
+              href={`tel:${fullUser.phone}`}
               className="flex items-center gap-2 text-sm text-gray-700 rounded-lg border px-3 py-2 hover:bg-gray-50 transition-colors"
               style={{ borderColor: COLORS.sandLine }}
             >
               <Phone size={14} style={{ color: COLORS.night }} />
-              <span className="font-medium">{user.phone}</span>
+              <span className="font-medium">{fullUser.phone}</span>
             </a>
           )}
 
@@ -198,19 +184,19 @@ export default function UserDrawer({
                 {t("Alijiunga:", "Joined:")}
               </span>
               <span className="font-medium text-gray-700 text-right">
-                {formatJoined(user.joined)}
+                {formatJoined(fullUser.date_joined || fullUser.joined)}
               </span>
             </div>
             <div className="flex justify-between gap-2">
               <span className="text-gray-500">Listings:</span>
               <span className="font-medium text-gray-700">
-                {userListings.length}
+                {loading ? "…" : listings.length}
               </span>
             </div>
             <div className="flex justify-between gap-2">
               <span className="text-gray-500">Deals:</span>
               <span className="font-medium text-gray-700">
-                {userDeals.length}
+                {loading ? "…" : deals.length}
               </span>
             </div>
             <div className="flex justify-between gap-2">
@@ -220,79 +206,110 @@ export default function UserDrawer({
               <span
                 className="font-medium"
                 style={{
-                  color: user.isVerified ? COLORS.green : "#6B7280",
+                  color: fullUser.is_verified ? COLORS.green : "#6B7280",
                 }}
               >
-                {user.isVerified
+                {fullUser.is_verified
                   ? t("Ndiyo", "Yes")
                   : t("Hapana", "No")}
               </span>
             </div>
           </div>
 
-          {/* Listings */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
-              {t(
-                `Listings Zake (${userListings.length})`,
-                `Listings (${userListings.length})`
-              )}
-            </p>
-            {userListings.length === 0 ? (
-              <p className="text-xs text-gray-400">
-                {t("Hakuna listings.", "No listings.")}
-              </p>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                {userListings.map((l) => (
-                  <div
-                    key={l.id}
-                    className="flex items-center justify-between gap-2 text-xs border rounded-lg px-3 py-2"
-                    style={{ borderColor: COLORS.sandLine }}
-                  >
-                    <span className="truncate text-gray-700 min-w-0 flex-1">
-                      {l.title}
-                    </span>
-                    <div className="shrink-0">
-                      <StatusBadge status={l.status} lang={lang} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Loading state */}
+          {loading && (
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-500">
+              <Loader2 size={16} className="animate-spin" />
+              {t("Inapakia...", "Loading...")}
+            </div>
+          )}
 
-          {/* Deals */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
-              {t(
-                `Deals Zake (${userDeals.length})`,
-                `Deals (${userDeals.length})`
-              )}
-            </p>
-            {userDeals.length === 0 ? (
-              <p className="text-xs text-gray-400">
-                {t("Hakuna deals.", "No deals.")}
-              </p>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                {userDeals.map((d) => (
-                  <div
-                    key={d.id}
-                    className="flex items-center justify-between gap-2 text-xs border rounded-lg px-3 py-2"
-                    style={{ borderColor: COLORS.sandLine }}
-                  >
-                    <span className="truncate text-gray-700 min-w-0 flex-1">
-                      {d.listingTitle || d.listing?.title || "—"}
-                    </span>
-                    <div className="shrink-0">
-                      <StatusBadge status={d.status} lang={lang} />
-                    </div>
+          {/* Error state */}
+          {error && !loading && (
+            <div
+              className="text-xs text-center py-3 rounded-lg"
+              style={{
+                color: COLORS.rust,
+                background: "rgba(193,80,46,0.08)",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {/* Listings + Deals — onyesha tu kama hatuna loading/error */}
+          {!loading && !error && (
+            <>
+              {/* Listings */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                  {t(
+                    `Listings Zake (${listings.length})`,
+                    `Listings (${listings.length})`
+                  )}
+                </p>
+                {listings.length === 0 ? (
+                  <p className="text-xs text-gray-400">
+                    {t("Hakuna listings.", "No listings.")}
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {listings.map((l) => (
+                      <div
+                        key={l.id}
+                        className="flex items-center justify-between gap-2 text-xs border rounded-lg px-3 py-2"
+                        style={{ borderColor: COLORS.sandLine }}
+                      >
+                        <span className="truncate text-gray-700 min-w-0 flex-1">
+                          {l.title}
+                        </span>
+                        <div className="shrink-0">
+                          <StatusBadge status={l.status} lang={lang} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
+
+              {/* Deals */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                  {t(
+                    `Deals Zake (${deals.length})`,
+                    `Deals (${deals.length})`
+                  )}
+                </p>
+                {deals.length === 0 ? (
+                  <p className="text-xs text-gray-400">
+                    {t("Hakuna deals.", "No deals.")}
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {deals.map((d) => (
+                      <div
+                        key={d.id}
+                        className="flex items-center justify-between gap-2 text-xs border rounded-lg px-3 py-2"
+                        style={{ borderColor: COLORS.sandLine }}
+                      >
+                        <span className="truncate text-gray-700 min-w-0 flex-1">
+                          {d.listingTitle || "—"}
+                          {d.role && (
+                            <span className="ml-1 text-gray-400">
+                              ({d.role})
+                            </span>
+                          )}
+                        </span>
+                        <div className="shrink-0">
+                          <StatusBadge status={d.status} lang={lang} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
