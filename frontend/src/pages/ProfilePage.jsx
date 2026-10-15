@@ -285,7 +285,6 @@ function EditProfileTab({ user, lang }) {
     setError("");
     setSaving(true);
 
-    // ✅ Tuma bio/location kama STRING (sio object)
     const res = await updateProfileAsync({
       name: form.name,
       phone: form.phone,

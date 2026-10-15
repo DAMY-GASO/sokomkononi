@@ -120,7 +120,7 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
             </p>
           </div>
           <span
-            // ✅
+          
 style={{ background: status?.bg || "#F5F3EC", color: status?.color || "#101A2E" }}
             className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full shrink-0"
           >
@@ -313,7 +313,7 @@ export default function WaitingListPage({
               style={{ color: "var(--text-primary)" }}
               className="text-2xl sm:text-3xl font-semibold"
             >
-              {lang === "sw" ? "Orodha ya Kusubiri" : "Waiting List"}
+              {lang === "sw" ? "Orodha ya Kusubiri" : "Reservation List"}
             </h1>
           </div>
           <p
@@ -321,8 +321,8 @@ export default function WaitingListPage({
             className="text-sm max-w-xl mx-auto"
           >
             {lang === "sw"
-              ? "Mali ambazo tayari zina Reservation/zimeuzwa — utapata taarifa endapo nafasi itafunguka tena."
-              : "Properties currently Reserved/Sold — you'll be notified if a slot opens up."}
+              ? "Mali ambazo tayari zimeshikiliwa — utapata taarifa endapo nafasi itafunguka tena."
+              : "Properties currently Reserved— you'll be notified if a slot opens up."}
           </p>
         </div>
 
@@ -393,16 +393,16 @@ export default function WaitingListPage({
               className="font-semibold mb-1"
             >
               {lang === "sw"
-                ? "Hujajiunga na waiting list yoyote"
-                : "You haven't joined any waiting list"}
+                ? "Hujajiunga na orodha yoyote ya kushikilia mali"
+                : "You haven't joined any reservation list"}
             </h3>
             <p
               style={{ color: "var(--text-secondary)" }}
               className="text-sm max-w-md mx-auto"
             >
               {lang === "sw"
-                ? 'Ukiona mali iliyo na Reservation/imeuzwa, bofya "Jiunge na Waiting List" kwenye tangazo lake ili tukutaarifu nafasi ikifunguka.'
-                : 'When you see a Reserved/Sold property, click "Join Waiting List" on its listing so we can notify you if a slot opens up.'}
+                ? 'Ukiona mali iliyoshikiliwa, bofya "Jiunge na orodha ya kushikilia" kwenye tangazo lake ili tukutaarifu nafasi ikifunguka.'
+                : 'When you see a Reserved listing, click "Join reservation List" on its listing so we can notify you if a slot opens up.'}
             </p>
           </div>
         ) : (
