@@ -1,27 +1,11 @@
-// ============================================================
-// OverviewSection.jsx
-// Muhtasari wa mfumo — stats + live transactions.
-// Mapato ya Jumla = jumla ya njia zote 7 za mapato.
-// ============================================================
 import React, { useMemo, useEffect, useState } from "react";
 import {
-  Users,
-  Home,
-  ShoppingBag,
-  Wallet,
-  Clock,
-  ArrowRight,
-  UserCheck,
-  Store,
-  ClipboardList,
-  CheckCircle2,
-  AlertTriangle,
-  UserPlus,
-  CreditCard,
-  TrendingUp,
-  User,
+  Users, Home, ShoppingBag, Wallet, Clock, ArrowRight,
+  UserCheck, Store, ClipboardList, CheckCircle2, AlertTriangle,
+  UserPlus, CreditCard, TrendingUp, User, BarChart3, Tag, MapPin, Award, Eye,
 } from "lucide-react";
-import { COLORS } from "../shared/constants.js";
+import { COLORS, formatTZS, getCategory } from "../shared/constants.js";
+import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import StatCard from "../shared/StatCard.jsx";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
@@ -33,24 +17,57 @@ import {
 } from "../../../../config/listingsStore.js";
 import { useDeals } from "../../../../config/dealsStore.js";
 import { useTransactions } from "../../../../config/transactionsStore.js";
+import { useReports } from "../../../../config/reportsStore.js";
 import {
   usePlatformRevenue,
   isRevenueTransaction,
   localDayKey,
 } from "../shared/revenue.js";
 import { api } from "../../../../api/client.js";
+import {
+  DonutChart,
+  HBarChart,
+  VBarChart,
+  LineChart,
+  MiniRow,
+} from "../shared/Charts.jsx";
 
 const NEW_REGISTRATION_WINDOW_DAYS = 7;
 
-// Rangi za kila njia ya mapato
+/* Revenue stream colors */
 const STREAM_COLORS = {
-  listing: COLORS.gold,
-  reservation: COLORS.green,
-  boost: "#2563EB",
-  leading: "#7C3AED",
-  advertise: COLORS.rust,
-  success: "#0891B2",
-  bundle: "#DB2777",
+  listing:     "#0891B2",
+  reservation: "#2F6D4F",
+  boost:       "#FEA406",
+  leading:     "#7C3AED",
+  advertise:   "#C1502E",
+  success:     "#2563EB",
+  bundle:      "#DB2777",
+};
+
+/* Deal status colors */
+const DEAL_STATUS_COLORS = {
+  negotiating:            "#FEA406",
+  offer_sent:             "#D97706",
+  accepted:               "#2F6D4F",
+  reserved:               "#0062FD",
+  awaiting_final_payment: "#2563EB",
+  payment_proof_submitted:"#7C3AED",
+  completed:              "#059669",
+  disputed:               "#C1502E",
+  cancelled:              "#6B7280",
+};
+
+/* Listing status colors */
+const LISTING_STATUS_COLORS = {
+  live:            "#2F6D4F",
+  reserved:        "#FEA406",
+  sold:            "#7C3AED",
+  pending_payment: "#D97706",
+  in_review:       "#0062FD",
+  rejected:        "#C1502E",
+  paused:          "#6B7280",
+  expired:         "#9CA3AF",
 };
 
 export default function OverviewSection({ onNavigate }) {
@@ -60,17 +77,12 @@ export default function OverviewSection({ onNavigate }) {
   const deals = useDeals();
   const transactions = useTransactions();
   const revenue = usePlatformRevenue("all");
+  const reports = useReports(lang);
 
   const [pendingCount, setPendingCount] = useState(0);
   const [userStats, setUserStats] = useState({
-    totalUsers: 0,
-    totalSellers: 0,
-    totalBuyers: 0,
-    sellersOnly: 0,
-    buyersOnly: 0,
-    bothRoles: 0,
-    neitherRole: 0,
-    totalAdmins: 0,
+    totalUsers: 0, totalSellers: 0, totalBuyers: 0,
+    sellersOnly: 0, buyersOnly: 0, bothRoles: 0, neitherRole: 0, totalAdmins: 0,
   });
 
   useEffect(() => {
@@ -79,19 +91,18 @@ export default function OverviewSection({ onNavigate }) {
     });
   }, []);
 
-  // Fetch accurate user stats kutoka backend
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const data = await api.get("/finance/user-stats/");
         if (!cancelled) setUserStats(data);
-      } catch {
-        /* noop */
-      }
+      } catch { /* fallback */ }
     })();
     return () => { cancelled = true; };
   }, []);
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const totalUsers = userStats.totalUsers || users.length;
   const _sellerIds = new Set(listings.map((l) => String(l.sellerId ?? l.seller_id ?? "")).filter(Boolean));
@@ -100,35 +111,28 @@ export default function OverviewSection({ onNavigate }) {
   const buyersOnly = userStats.buyersOnly || _buyerIds.size;
   const bothRoles = userStats.bothRoles || 0;
   const neitherRole = userStats.neitherRole || 0;
+  const totalAdmins = userStats.totalAdmins || 0;
 
   const newRegistrations = useMemo(() => {
     const cutoff = Date.now() - NEW_REGISTRATION_WINDOW_DAYS * 86400000;
     return users.filter((u) => {
-      const t = new Date(u.joined).getTime();
-      return !Number.isNaN(t) && t >= cutoff;
+      const ts = new Date(u.joined).getTime();
+      return !Number.isNaN(ts) && ts >= cutoff;
     }).length;
   }, [users]);
 
   const totalListings = listings.length;
 
   const pendingPayments = useMemo(
-    () => transactions.filter((t) => t.status === "pending").length,
+    () => transactions.filter((tr) => tr.status === "pending").length,
     [transactions]
   );
 
   const activeDeals = useMemo(
-    () =>
-      deals.filter((d) =>
-        [
-          "negotiating",
-          "offer_sent",
-          "accepted",
-          "reserved",
-          "awaiting_final_payment",
-          "payment_proof_submitted",
-          "disputed",
-        ].includes(d.status)
-      ),
+    () => deals.filter((d) =>
+      ["negotiating","offer_sent","accepted","reserved",
+       "awaiting_final_payment","payment_proof_submitted","disputed"].includes(d.status)
+    ),
     [deals]
   );
   const completedDeals = useMemo(
@@ -140,9 +144,69 @@ export default function OverviewSection({ onNavigate }) {
     [deals]
   );
 
-  const formatTZS = (amount) =>
-    "TZS " + Math.round(amount || 0).toLocaleString("en-US");
+  /* ── Donut: Users breakdown ──────────────────────────────── */
+  const usersDonut = useMemo(() => [
+    { label: t("Wauzaji Pekee", "Sellers Only"), value: sellersOnly, color: "#FEA406" },
+    { label: t("Wanunuzi Pekee", "Buyers Only"), value: buyersOnly, color: "#2F6D4F" },
+    { label: t("Wote Wawili", "Both"),          value: bothRoles,   color: "#7C3AED" },
+    { label: t("Wapya", "Neither"),             value: neitherRole, color: "#9CA3AF" },
+    { label: t("Admins", "Admins"),             value: totalAdmins, color: "#011957" },
+  ], [sellersOnly, buyersOnly, bothRoles, neitherRole, totalAdmins, lang]);
 
+  /* ── Donut: Listings by status ───────────────────────────── */
+  const listingsDonut = useMemo(() => {
+    const statuses = ["live","reserved","sold","pending_payment","in_review","rejected","paused","expired"];
+    const labels = {
+      live: t("Hai","Live"), reserved: t("Imehifadhiwa","Reserved"),
+      sold: t("Imeuzwa","Sold"), pending_payment: t("Haijalipwa","Unpaid"),
+      in_review: t("Inakaguliwa","In Review"), rejected: t("Imekataliwa","Rejected"),
+      paused: t("Imesimamishwa","Paused"), expired: t("Imeisha Muda","Expired"),
+    };
+    return statuses
+      .map((s) => ({
+        label: labels[s],
+        value: listings.filter((l) => l.status === s).length,
+        color: LISTING_STATUS_COLORS[s],
+      }))
+      .filter((d) => d.value > 0);
+  }, [listings, lang]);
+
+  /* ── Donut: Deals by status ──────────────────────────────── */
+  const dealsDonut = useMemo(() => {
+    const keys = Object.keys(DEAL_STATUS_COLORS);
+    const labels = {
+      negotiating: t("Inajadiliwa","Negotiating"),
+      offer_sent: t("Ofa Imetumwa","Offer Sent"),
+      accepted: t("Imekubaliwa","Accepted"),
+      reserved: t("Imehifadhiwa","Reserved"),
+      awaiting_final_payment: t("Malipo ya Mwisho","Final Payment"),
+      payment_proof_submitted: t("Uthibitisho","Proof Sent"),
+      completed: t("Imekamilika","Completed"),
+      disputed: t("Mgogoro","Disputed"),
+      cancelled: t("Imeghairiwa","Cancelled"),
+    };
+    return keys
+      .map((k) => ({
+        label: labels[k],
+        value: deals.filter((d) => d.status === k).length,
+        color: DEAL_STATUS_COLORS[k],
+      }))
+      .filter((d) => d.value > 0);
+  }, [deals, lang]);
+
+  /* ── Revenue donut ──────────────────────────────────────── */
+  const revenueDonut = useMemo(() => {
+    return revenue.streams
+      .map((s) => ({
+        label: s.label,
+        value: revenue.byType[s.key] || 0,
+        color: STREAM_COLORS[s.key] || "#9CA3AF",
+        display: formatTZS(revenue.byType[s.key] || 0),
+      }))
+      .filter((d) => d.value > 0);
+  }, [revenue]);
+
+  /* ── 7-day revenue line ──────────────────────────────────── */
   const revenueByDay = useMemo(() => {
     const days = [];
     for (let i = NEW_REGISTRATION_WINDOW_DAYS - 1; i >= 0; i--) {
@@ -151,321 +215,391 @@ export default function OverviewSection({ onNavigate }) {
       d.setDate(d.getDate() - i);
       days.push({
         key: localDayKey(d),
-        label: d.toLocaleDateString(lang === "sw" ? "sw-TZ" : "en-US", {
-          weekday: "short",
-        }),
-        total: 0,
+        label: d.toLocaleDateString(lang === "sw" ? "sw-TZ" : "en-US", { weekday: "short" }),
+        value: 0,
       });
     }
     const byKey = Object.fromEntries(days.map((d) => [d.key, d]));
-    transactions.forEach((t) => {
-      if (!isRevenueTransaction(t)) return;
-      const tDate = new Date(t.at);
-      if (Number.isNaN(tDate.getTime())) return;
-      const key = localDayKey(tDate);
-      if (byKey[key]) byKey[key].total += Number(t.amount) || 0;
+    transactions.forEach((tr) => {
+      if (!isRevenueTransaction(tr)) return;
+      const dt = new Date(tr.at);
+      if (Number.isNaN(dt.getTime())) return;
+      const key = localDayKey(dt);
+      if (byKey[key]) byKey[key].value += Number(tr.amount) || 0;
     });
     return days;
   }, [transactions, lang]);
 
-  const maxDayRevenue = Math.max(...revenueByDay.map((d) => d.total), 1);
+  /* ── Monthly revenue (last 6 months) ─────────────────────── */
+  const monthlyRevenue = useMemo(() => {
+    const out = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+      const label = start.toLocaleDateString(
+        lang === "sw" ? "sw-TZ" : "en-US",
+        { month: "short" }
+      );
+      let total = 0;
+      transactions.forEach((tr) => {
+        if (!isRevenueTransaction(tr)) return;
+        const dt = new Date(tr.at);
+        if (dt >= start && dt <= end) total += Number(tr.amount) || 0;
+      });
+      out.push({ label, value: total });
+    }
+    return out;
+  }, [transactions, lang]);
 
-  // Kikundi cha kwanza — user breakdown
-  const userStats_grid = [
-    {
-      id: "users",
-      label: lang === "sw" ? "Watumiaji Wote" : "Total Users",
-      value: totalUsers.toLocaleString(),
-      icon: Users,
-      color: COLORS.gold,
-    },
-    {
-      id: "sellersOnly",
-      label: lang === "sw" ? "Wauzaji Pekee" : "Sellers Only",
-      value: sellersOnly.toLocaleString(),
-      icon: Store,
-      color: "#2563EB",
-    },
-    {
-      id: "buyersOnly",
-      label: lang === "sw" ? "Wanunuzi Pekee" : "Buyers Only",
-      value: buyersOnly.toLocaleString(),
-      icon: UserCheck,
-      color: COLORS.green,
-    },
-    {
-      id: "bothRoles",
-      label: lang === "sw" ? "Wote Wawili" : "Both Roles",
-      value: bothRoles.toLocaleString(),
-      icon: User,
-      color: "#7C3AED",
-    },
-    {
-      id: "neitherRole",
-      label: lang === "sw" ? "Hawana" : "Neither",
-      value: neitherRole.toLocaleString(),
-      icon: UserPlus,
-      color: "#D97706",
-    },
+  /* ── Top lists from reportsStore (falls back to local) ───── */
+  const topCategories = reports.topCategories?.length
+    ? reports.topCategories.slice(0, 5)
+    : buildTopCategories(listings);
+
+  const topLocations = reports.topLocations?.length
+    ? reports.topLocations.slice(0, 5)
+    : buildTopLocations(listings);
+
+  const topSellers = reports.topSellers?.length
+    ? reports.topSellers.slice(0, 5)
+    : buildTopSellers(listings);
+
+  const mostViewed = reports.mostViewedListings?.length
+    ? reports.mostViewedListings.slice(0, 5)
+    : listings
+        .filter((l) => (l.views || 0) > 0)
+        .sort((a, b) => (b.views || 0) - (a.views || 0))
+        .slice(0, 5)
+        .map((l) => ({ id: l.id, title: l.title, views: l.views, price: l.price }));
+
+  /* ── Stat groups ────────────────────────────────────────── */
+  const userStatsGrid = [
+    { id: "users",       label: t("Watumiaji Wote", "Total Users"),  value: totalUsers.toLocaleString(), icon: Users,      color: COLORS.gold },
+    { id: "sellersOnly", label: t("Wauzaji Pekee", "Sellers Only"),  value: sellersOnly.toLocaleString(), icon: Store,     color: "#2563EB" },
+    { id: "buyersOnly",  label: t("Wanunuzi Pekee", "Buyers Only"),  value: buyersOnly.toLocaleString(),  icon: UserCheck, color: COLORS.green },
+    { id: "bothRoles",   label: t("Wote Wawili", "Both Roles"),      value: bothRoles.toLocaleString(),   icon: User,      color: "#7C3AED" },
+    { id: "neitherRole", label: t("Wapya", "Neither"),               value: neitherRole.toLocaleString(), icon: UserPlus,  color: "#D97706" },
   ];
 
-  // Kikundi cha pili — shughuli
   const activityStats = [
-    {
-      id: "listings",
-      label: lang === "sw" ? "Mali Zote" : "Total Listings",
-      value: totalListings.toLocaleString(),
-      icon: Home,
-      color: COLORS.green,
-    },
-    {
-      id: "pendingListings",
-      label: lang === "sw" ? "Mali Zinazosubiri" : "Pending Listings",
-      value: pendingCount.toLocaleString(),
-      icon: ClipboardList,
-      color: "#D97706",
-    },
-    {
-      id: "activeDeals",
-      label: lang === "sw" ? "Deals Hai" : "Active Deals",
-      value: activeDeals.length.toLocaleString(),
-      icon: ShoppingBag,
-      color: "#2563EB",
-    },
-    {
-      id: "completedDeals",
-      label: lang === "sw" ? "Deals Zilizokamilika" : "Completed Deals",
-      value: completedDeals.toLocaleString(),
-      icon: CheckCircle2,
-      color: COLORS.green,
-    },
-    {
-      id: "pendingPayments",
-      label: lang === "sw" ? "Malipo Yanayosubiri" : "Pending Payments",
-      value: pendingPayments.toLocaleString(),
-      icon: CreditCard,
-      color: "#D97706",
-    },
-    {
-      id: "disputes",
-      label: lang === "sw" ? "Migogoro" : "Disputes",
-      value: disputes.toLocaleString(),
-      icon: AlertTriangle,
-      color: "#DC2626",
-    },
-    {
-      id: "newRegistrations",
-      label:
-        lang === "sw"
-          ? `Usajili Mpya (Siku ${NEW_REGISTRATION_WINDOW_DAYS})`
-          : `New Registrations (${NEW_REGISTRATION_WINDOW_DAYS}d)`,
-      value: newRegistrations.toLocaleString(),
-      icon: UserPlus,
-      color: COLORS.gold,
-    },
+    { id: "listings",        label: t("Mali Zote", "Total Listings"),   value: totalListings.toLocaleString(), icon: Home,          color: COLORS.green },
+    { id: "pendingListings", label: t("Mali Zinazosubiri", "Pending"),  value: pendingCount.toLocaleString(),  icon: ClipboardList, color: "#D97706" },
+    { id: "activeDeals",     label: t("Deals Hai", "Active Deals"),     value: activeDeals.length.toLocaleString(), icon: ShoppingBag, color: "#2563EB" },
+    { id: "completedDeals",  label: t("Deals Zilizokamilika", "Completed"), value: completedDeals.toLocaleString(), icon: CheckCircle2, color: COLORS.green },
+    { id: "pendingPayments", label: t("Malipo Yanayosubiri", "Pending Pay"), value: pendingPayments.toLocaleString(), icon: CreditCard, color: "#D97706" },
+    { id: "disputes",        label: t("Migogoro", "Disputes"),         value: disputes.toLocaleString(), icon: AlertTriangle, color: "#DC2626" },
+    { id: "newRegistrations",label: t(`Usajili Mpya (${NEW_REGISTRATION_WINDOW_DAYS}d)`, `New Users (${NEW_REGISTRATION_WINDOW_DAYS}d)`), value: newRegistrations.toLocaleString(), icon: UserPlus, color: COLORS.gold },
   ];
 
   return (
     <>
       <SectionHeader
-        title={
-          lang === "sw" ? "Muhtasari & Uchanganuzi" : "Overview & Analytics"
-        }
-        subtitle={
-          lang === "sw"
-            ? "Muhtasari wa mfumo mzima wa SokoMkononi"
-            : "Overview of the entire SokoMkononi system"
-        }
+        title={t("Muhtasari & Uchanganuzi", "Overview & Analytics")}
+        subtitle={t("Muhtasari wa mfumo mzima wa SokoMkononi", "Overview of the entire SokoMkononi system")}
       />
 
-      {/* Kikundi 1 — User Breakdown */}
+      {/* ── Users stat group ────────────────────────────── */}
       <div className="mb-4">
-        <h3 className="text-xs font-semibold text-secondary uppercase tracking-wide mb-2">
-          {lang === "sw" ? "Watumiaji" : "Users"}
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+          {t("Watumiaji", "Users")}
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          {userStats_grid.map((stat) => (
-            <StatCard key={stat.id} {...stat} />
-          ))}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+          {userStatsGrid.map((s) => <StatCard key={s.id} {...s} />)}
         </div>
       </div>
 
-      {/* Kikundi 2 — Shughuli */}
+      {/* ── Activity stat group ─────────────────────────── */}
       <div className="mb-6">
-        <h3 className="text-xs font-semibold text-secondary uppercase tracking-wide mb-2">
-          {lang === "sw" ? "Shughuli" : "Activity"}
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+          {t("Shughuli", "Activity")}
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-          {activityStats.map((stat) => (
-            <StatCard key={stat.id} {...stat} />
-          ))}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+          {activityStats.map((s) => <StatCard key={s.id} {...s} />)}
         </div>
       </div>
 
-      {/* Total Revenue — kadi kubwa */}
+      {/* ═══════════════════════════════════════════════════════
+          TOTAL REVENUE — hero card
+          ═══════════════════════════════════════════════════════ */}
       <div
-        className="rounded-2xl p-5 sm:p-7 lg:p-8 mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 lg:gap-8"
+        className="mb-6 rounded-2xl p-5 sm:p-7 lg:p-8"
         style={{
-          background: `linear-gradient(135deg, ${COLORS.night} 0%, #1a2842 100%)`,
+          background: "linear-gradient(135deg, #011957 0%, #1a2842 100%)",
           color: "#FFFFFF",
         }}
       >
-        <div className="flex items-center gap-4 min-w-0">
-          <div
-            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0"
-            style={{ background: "rgba(232,163,61,0.25)" }}
-          >
-            <Wallet size={28} color={COLORS.gold} />
-          </div>
-          <div className="min-w-0">
-            <p
-              className="text-xs sm:text-sm font-semibold uppercase tracking-wider"
-              style={{ color: "rgba(255,255,255,0.75)" }}
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+          <div className="flex items-center gap-4 min-w-0">
+            <div
+              className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl sm:h-16 sm:w-16"
+              style={{ background: "rgba(232,163,61,0.25)" }}
             >
-              {lang === "sw" ? "Mapato ya Jumla" : "Total Revenue"}
-            </p>
-            <p
-              className="text-[clamp(1.75rem,6vw,3rem)] font-bold mt-1 break-words leading-tight tabular-nums"
-              style={{ color: "#FFFFFF" }}
-            >
-              {revenue.loading ? "…" : revenue.error ? "—" : formatTZS(revenue.total)}
-            </p>
-            {revenue.error ? (
-              <p
-                className="text-[11px] sm:text-xs mt-2 inline-block px-2 py-0.5 rounded"
-                style={{ background: "rgba(232,163,61,0.25)", color: "#FEA406" }}
-              >
-                {lang === "sw"
-                  ? "⚠️ Imeshindwa kupakia mapato ya jukwaa"
-                  : "⚠️ Could not load platform revenue"}
+              <Wallet size={28} color={COLORS.gold} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wider sm:text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+                {t("Mapato ya Jumla", "Total Revenue")}
               </p>
-            ) : (
-              <p
-                className="text-xs sm:text-sm mt-2"
-                style={{ color: "rgba(255,255,255,0.7)" }}
-              >
-                {lang === "sw"
-                  ? "Jumla ya njia zote za mapato za jukwaa"
-                  : "Sum of all platform revenue streams"}
+              <p className="mt-1 text-[clamp(1.75rem,6vw,3rem)] font-bold leading-tight tabular-nums" style={{ color: "#FFFFFF" }}>
+                {revenue.loading ? "…" : revenue.error ? "—" : formatTZS(revenue.total)}
               </p>
-            )}
+              <p className="mt-2 text-xs sm:text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+                {t("Jumla ya njia zote za mapato za jukwaa", "Sum of all platform revenue streams")}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 w-full lg:w-auto shrink-0">
-          {revenue.streams.map(({ key, label }) => (
-            <RevenueBreakdown
-              key={key}
-              label={label}
-              value={revenue.byType[key]}
-              color={STREAM_COLORS[key]}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Chart ya mapato ya siku 7 */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
-        <h3 className="font-semibold text-primary flex items-center gap-2 text-sm sm:text-base mb-4">
-          <TrendingUp size={16} color={COLORS.gold} className="shrink-0" />
-          {lang === "sw"
-            ? "Mapato ya SokoMkononi — Siku 7 Zilizopita"
-            : "SokoMkononi Revenue — Last 7 Days"}
-        </h3>
-        <div className="flex items-end gap-2 sm:gap-3 h-36 sm:h-44">
-          {revenueByDay.map((d) => {
-            const heightPct = Math.max((d.total / maxDayRevenue) * 100, 2);
-            return (
-              <div
-                key={d.key}
-                className="flex-1 flex flex-col items-center justify-end gap-1.5 h-full"
-              >
-                <span className="text-[9px] sm:text-[10px] text-muted truncate max-w-full">
-                  {d.total > 0 ? formatTZS(d.total) : ""}
-                </span>
-                <div
-                  title={formatTZS(d.total)}
-                  style={{ height: `${heightPct}%`, background: COLORS.gold }}
-                  className="w-full rounded-t-md min-h-[2px]"
-                />
-                <span className="text-[10px] sm:text-xs text-secondary">
-                  {d.label}
-                </span>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:w-auto lg:grid-cols-4 lg:gap-5">
+            {revenue.streams.map(({ key, label }) => (
+              <div key={key} className="min-w-0">
+                <div className="mb-0.5 truncate text-[10px] font-semibold uppercase tracking-wide sm:text-xs" style={{ color: STREAM_COLORS[key], opacity: 0.9 }}>
+                  {label}
+                </div>
+                <div className="whitespace-nowrap text-sm font-bold tabular-nums sm:text-base" style={{ color: "#FFFFFF" }}>
+                  {formatTZS(revenue.byType[key] || 0)}
+                </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Live Transactions */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
-        <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-          <h3 className="font-semibold text-primary flex items-center gap-2 text-sm sm:text-base">
+      {/* ═══════════════════════════════════════════════════════
+          FULL REPORTS GRID — everything below the revenue card
+          ═══════════════════════════════════════════════════════ */}
+
+      {/* Row 1: Revenue donut + Users donut + Listings donut */}
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <ReportCard
+          title={t("Mapato kwa Njia", "Revenue by Stream")}
+          icon={Wallet}
+          color={COLORS.gold}
+          hint={t(`Jumla: ${formatTZS(revenue.total)}`, `Total: ${formatTZS(revenue.total)}`)}
+        >
+          {revenue.loading ? (
+            <LoadingBlock />
+          ) : (
+            <DonutChart
+              data={revenueDonut}
+              size={180}
+              thickness={26}
+              centerLabel={formatTZS(revenue.total).replace("TZS ", "")}
+              centerSub="TZS"
+            />
+          )}
+        </ReportCard>
+
+        <ReportCard
+          title={t("Mgawanyo wa Watumiaji", "User Breakdown")}
+          icon={Users}
+          color="#2563EB"
+          hint={t(`${totalUsers} watumiaji`, `${totalUsers} users`)}
+        >
+          <DonutChart
+            data={usersDonut}
+            size={180}
+            thickness={26}
+            centerLabel={totalUsers.toLocaleString()}
+            centerSub={t("Watumiaji", "Users")}
+          />
+        </ReportCard>
+
+        <ReportCard
+          title={t("Mali kwa Hali", "Listings by Status")}
+          icon={Home}
+          color={COLORS.green}
+          hint={t(`${totalListings} mali`, `${totalListings} listings`)}
+        >
+          <DonutChart
+            data={listingsDonut}
+            size={180}
+            thickness={26}
+            centerLabel={totalListings.toLocaleString()}
+            centerSub={t("Mali", "Listings")}
+          />
+        </ReportCard>
+      </div>
+
+      {/* Row 2: Deals donut + 7-day revenue + monthly revenue */}
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <ReportCard
+          title={t("Mgawanyo wa Deals", "Deals Breakdown")}
+          icon={ShoppingBag}
+          color="#7C3AED"
+          hint={t(`${deals.length} deals`, `${deals.length} deals`)}
+        >
+          {dealsDonut.length === 0 ? (
+            <p className="py-6 text-center text-xs text-muted">
+              {t("Hakuna deals bado", "No deals yet")}
+            </p>
+          ) : (
+            <DonutChart
+              data={dealsDonut}
+              size={180}
+              thickness={26}
+              centerLabel={deals.length}
+              centerSub={t("Deals", "Deals")}
+            />
+          )}
+        </ReportCard>
+
+        <ReportCard
+          title={t("Mapato — Siku 7", "Revenue — Last 7 Days")}
+          icon={TrendingUp}
+          color={COLORS.gold}
+          hint={t("Mwenendo wa kila siku", "Daily trend")}
+        >
+          <LineChart
+            data={revenueByDay}
+            color={COLORS.gold}
+            valueFormat={formatTZS}
+          />
+        </ReportCard>
+
+        <ReportCard
+          title={t("Mapato — Miezi 6", "Revenue — Last 6 Months")}
+          icon={BarChart3}
+          color={COLORS.rust}
+          hint={t("Kwa mwezi", "Per month")}
+        >
+          <VBarChart
+            data={monthlyRevenue.map((m) => ({ ...m, color: COLORS.rust }))}
+            height={180}
+            valueFormat={(v) => (v >= 1_000_000 ? `${Math.round(v / 1_000_000)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v)}
+          />
+        </ReportCard>
+      </div>
+
+      {/* Row 3: Top categories, Top locations, Top sellers, Most viewed */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <ReportCard
+          title={t("Kategoria Zinazoonekana Zaidi", "Top Categories")}
+          icon={Tag}
+          color="#0891B2"
+        >
+          {topCategories.length === 0 ? (
+            <EmptyBlock label={t("Hakuna data bado", "No data yet")} />
+          ) : (
+            <HBarChart
+              data={topCategories.map((c) => {
+                const cat = getCategory(c.key || c.slug || c.name);
+                return {
+                  label: cat?.label?.[lang] || c.name || c.key,
+                  value: c.count || 0,
+                  color: "#0891B2",
+                };
+              })}
+            />
+          )}
+        </ReportCard>
+
+        <ReportCard
+          title={t("Maeneo Yanayoonekana Zaidi", "Top Locations")}
+          icon={MapPin}
+          color={COLORS.rust}
+        >
+          {topLocations.length === 0 ? (
+            <EmptyBlock label={t("Hakuna data bado", "No data yet")} />
+          ) : (
+            <HBarChart
+              data={topLocations.map((loc) => ({
+                label: loc.name || loc.location || "—",
+                value: loc.count || 0,
+                color: COLORS.rust,
+              }))}
+            />
+          )}
+        </ReportCard>
+
+        <ReportCard
+          title={t("Wauzaji Bora (kwa Views)", "Top Sellers (by Views)")}
+          icon={Award}
+          color={COLORS.gold}
+        >
+          {topSellers.length === 0 ? (
+            <EmptyBlock label={t("Hakuna data bado", "No data yet")} />
+          ) : (
+            <div>
+              {topSellers.slice(0, 5).map((s, i) => (
+                <MiniRow
+                  key={s.name + i}
+                  rank={i + 1}
+                  label={s.name}
+                  sub={t(
+                    `${s.listings || 0} mali · ${(s.views || 0).toLocaleString()} views`,
+                    `${s.listings || 0} listings · ${(s.views || 0).toLocaleString()} views`
+                  )}
+                  value={(s.views || 0).toLocaleString()}
+                  color={i === 0 ? COLORS.gold : i === 1 ? "#9CA3AF" : i === 2 ? "#CD7F32" : COLORS.gold}
+                />
+              ))}
+            </div>
+          )}
+        </ReportCard>
+
+        <ReportCard
+          title={t("Mali Zinazoonekana Zaidi", "Most Viewed Listings")}
+          icon={Eye}
+          color={COLORS.green}
+        >
+          {mostViewed.length === 0 ? (
+            <EmptyBlock label={t("Hakuna data bado", "No data yet")} />
+          ) : (
+            <div>
+              {mostViewed.slice(0, 5).map((l, i) => (
+                <MiniRow
+                  key={l.id || i}
+                  rank={i + 1}
+                  label={l.title}
+                  sub={formatTZS(l.price)}
+                  value={`${(l.views || 0).toLocaleString()}`}
+                  color={COLORS.green}
+                />
+              ))}
+            </div>
+          )}
+        </ReportCard>
+      </div>
+
+      {/* ── Live deals list (kept from original) ─────────── */}
+      <div className="card mb-6 p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-primary sm:text-base">
             <Clock size={16} color={COLORS.gold} className="shrink-0" />
-            {lang === "sw"
-              ? "Live Transactions Zinazoendelea"
-              : "Live Transactions in Progress"}
+            {t("Live Transactions Zinazoendelea", "Live Transactions in Progress")}
           </h3>
           <button
             onClick={() => onNavigate("deals")}
-            className="text-xs font-semibold hover:underline flex items-center gap-1 shrink-0"
+            className="flex items-center gap-1 text-xs font-semibold hover:underline"
             style={{ color: COLORS.gold }}
           >
-            {lang === "sw" ? "Nenda Deal Rooms" : "Go to Deal Rooms"}
+            {t("Nenda Deal Rooms", "Go to Deal Rooms")}
             <ArrowRight size={12} />
           </button>
         </div>
         {activeDeals.length === 0 ? (
-          <p className="text-sm text-muted text-center py-6">
-            {lang === "sw"
-              ? "Hakuna deals zinazoendelea kwa sasa."
-              : "No active deals right now."}
+          <p className="py-6 text-center text-sm text-muted">
+            {t("Hakuna deals zinazoendelea kwa sasa.", "No active deals right now.")}
           </p>
         ) : (
           <div className="flex flex-col gap-2">
             {activeDeals.slice(0, 5).map((d) => (
               <div
                 key={d.id}
-                className="border rounded-lg px-3 py-3"
-                style={{ borderColor: COLORS.sandLine }}
+                className="rounded-lg border border-[color:rgb(var(--c-hairline))] px-3 py-3"
               >
-                <div className="sm:hidden">
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <p className="text-sm font-semibold text-primary min-w-0 flex-1 line-clamp-2">
-                      {d.listingTitle}
-                    </p>
-                    <div className="shrink-0">
-                      <StatusBadge status={d.status} lang={lang} />
-                    </div>
-                  </div>
-                  <p className="text-xs text-secondary truncate mb-2">
-                    {d.buyerName} ← → {d.sellerName}
-                  </p>
-                  <p
-                    className="text-sm font-bold"
-                    style={{ color: COLORS.rust }}
-                  >
-                    {formatTZS(d.currentOffer ?? d.askingPrice)}
-                  </p>
-                </div>
-                <div className="hidden sm:flex items-center justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-primary truncate">
-                      {d.listingTitle}
-                    </p>
-                    <p className="text-xs text-secondary truncate">
+                    <p className="truncate text-sm font-semibold text-primary">{d.listingTitle}</p>
+                    <p className="truncate text-xs text-secondary">
                       {d.buyerName} ← → {d.sellerName}
                     </p>
                   </div>
-                  <span
-                    className="text-sm font-bold shrink-0"
-                    style={{ color: COLORS.rust }}
-                  >
+                  <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: COLORS.rust }}>
                     {formatTZS(d.currentOffer ?? d.askingPrice)}
                   </span>
-                  <div className="shrink-0">
-                    <StatusBadge status={d.status} lang={lang} />
-                  </div>
+                  <StatusBadge status={d.status} lang={lang} />
                 </div>
               </div>
             ))}
@@ -476,24 +610,92 @@ export default function OverviewSection({ onNavigate }) {
   );
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
-function RevenueBreakdown({ label, value, color }) {
+/* ═══════════════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════════════ */
+
+function ReportCard({ title, icon: Icon, color, hint, children }) {
   return (
-    <div className="flex flex-col items-start gap-0.5 min-w-0">
-      <span
-        className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide"
-        style={{ color: color, opacity: 0.85 }}
-      >
-        {label}
-      </span>
-      <span
-        className="text-sm sm:text-base font-bold whitespace-nowrap tabular-nums"
-        style={{ color: "#FFFFFF" }}
-      >
-        {"TZS " + Math.round(value || 0).toLocaleString("en-US")}
-      </span>
+    <div className="card p-4 sm:p-5">
+      <div className="mb-4 flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
+            style={{ background: `${color}18`, color }}
+          >
+            <Icon size={15} />
+          </span>
+          <h3 className="truncate text-sm font-semibold text-primary">{title}</h3>
+        </div>
+        {hint && (
+          <span className="shrink-0 text-[10px] font-medium text-muted">
+            {hint}
+          </span>
+        )}
+      </div>
+      <div className="min-w-0">{children}</div>
     </div>
   );
+}
+
+function LoadingBlock() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-8">
+      <div className="h-32 w-32 rounded-full skeleton" />
+      <div className="h-3 w-24 rounded skeleton" />
+    </div>
+  );
+}
+
+function EmptyBlock({ label }) {
+  return <p className="py-6 text-center text-xs text-muted">{label}</p>;
+}
+
+/* Fallback builders when reports API hasn't loaded */
+function buildTopCategories(listings) {
+  const m = new Map();
+  listings.forEach((l) => {
+    const k = l.category;
+    if (!k) return;
+    const e = m.get(k) || { key: k, count: 0, views: 0 };
+    e.count += 1;
+    e.views += Number(l.views) || 0;
+    m.set(k, e);
+  });
+  return Array.from(m.values())
+    .sort((a, b) => b.views - a.views || b.count - a.count)
+    .slice(0, 5);
+}
+
+function buildTopLocations(listings) {
+  const m = new Map();
+  listings.forEach((l) => {
+    const k = String(l.location || l.region || "").trim();
+    if (!k) return;
+    const e = m.get(k) || { name: k, count: 0, views: 0 };
+    e.count += 1;
+    e.views += Number(l.views) || 0;
+    m.set(k, e);
+  });
+  return Array.from(m.values())
+    .sort((a, b) => b.views - a.views || b.count - a.count)
+    .slice(0, 5);
+}
+
+function buildTopSellers(listings) {
+  const m = new Map();
+  listings.forEach((l) => {
+    const name =
+      (typeof l.seller_name === "string" && l.seller_name) ||
+      (typeof l.seller === "string" ? l.seller : "") ||
+      "";
+    if (!name) return;
+    const e = m.get(name) || { name, listings: 0, views: 0 };
+    e.listings += 1;
+    e.views += Number(l.views) || 0;
+    m.set(name, e);
+  });
+  return Array.from(m.values())
+    .sort((a, b) => b.views - a.views || b.listings - a.listings)
+    .slice(0, 5);
 }

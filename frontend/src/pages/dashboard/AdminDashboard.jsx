@@ -25,6 +25,8 @@ import {
 
 // ⬇️ Secret admin path
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "../../config/adminPath.js";
+import ThemeToggle from "../../components/ThemeToggle.jsx";
+import { Home as HomeIcon } from "lucide-react";
 
 import {
   COLORS,
@@ -473,6 +475,19 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* ── Admin: Theme toggle ───────────────────────── */}
+          <ThemeToggle variant="onNavy" />
+
+          {/* ── Admin: Go to public site ─────────────────── */}
+          <a
+            href="/"
+            className="grid h-10 w-10 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
+            aria-label={lang === "sw" ? "Nenda kwenye tovuti ya umma" : "Go to public site"}
+            title={lang === "sw" ? "Nenda kwenye tovuti" : "Go to site"}
+          >
+            <HomeIcon size={18} />
+          </a>
+
           <LanguageSwitcher lang={lang} setLang={setLang} />
 
           {/* Notifications */}

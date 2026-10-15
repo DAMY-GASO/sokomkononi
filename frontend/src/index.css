@@ -649,3 +649,956 @@ html.dark .smk-map .leaflet-bar a:hover {
 .smk-map .leaflet-pane { z-index: 1; }
 .smk-map .leaflet-top,
 .smk-map .leaflet-bottom { z-index: 5; }
+
+/* ============================================================
+   USER PAGE THEME ENFORCEMENT
+   Scope: [data-surface="sand"] — used by AdminDashboard.jsx
+          and DashboardShell.jsx (the roots of every user page).
+
+   Rules:
+     1. Dark mode  → NO white/light surfaces anywhere.
+     2. Light mode → NO navy content backgrounds (chrome header
+                     is exempt — it stays navy like an OS bar).
+     3. Text is ALWAYS readable relative to its surface.
+     4. Icons are ALWAYS visible.
+   ============================================================ */
+
+/* ═══════════════════════════════════════════════════════════
+   1. DARK MODE — kill every white / near-white surface
+   ═══════════════════════════════════════════════════════════ */
+
+/* Tailwind bg-white variants */
+html.dark [data-surface="sand"] .bg-white,
+html.dark [data-surface="sand"] .bg-white\/50,
+html.dark [data-surface="sand"] .bg-white\/60,
+html.dark [data-surface="sand"] .bg-white\/70,
+html.dark [data-surface="sand"] .bg-white\/80,
+html.dark [data-surface="sand"] .bg-white\/90,
+html.dark [data-surface="sand"] .bg-white\/95 {
+  background-color: rgb(var(--c-card)) !important;
+}
+
+/* Light gray surfaces */
+html.dark [data-surface="sand"] .bg-gray-50,
+html.dark [data-surface="sand"] .bg-neutral-50,
+html.dark [data-surface="sand"] .bg-slate-50,
+html.dark [data-surface="sand"] .bg-stone-50 {
+  background-color: rgba(255, 255, 255, 0.035) !important;
+}
+html.dark [data-surface="sand"] .bg-gray-100,
+html.dark [data-surface="sand"] .bg-neutral-100,
+html.dark [data-surface="sand"] .bg-slate-100 {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+html.dark [data-surface="sand"] .bg-gray-200,
+html.dark [data-surface="sand"] .bg-neutral-200,
+html.dark [data-surface="sand"] .bg-slate-200 {
+  background-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+/* Brand sand */
+html.dark [data-surface="sand"] .bg-sand,
+html.dark [data-surface="sand"] .bg-sandline {
+  background-color: rgb(var(--c-page)) !important;
+}
+
+/* Inline styles (React serializes hex → rgb()) */
+html.dark [data-surface="sand"] [style*="background: white" i],
+html.dark [data-surface="sand"] [style*="background:white" i],
+html.dark [data-surface="sand"] [style*="background: #FFF" i],
+html.dark [data-surface="sand"] [style*="background:#FFF" i],
+html.dark [data-surface="sand"] [style*="background: #FFFFFF" i],
+html.dark [data-surface="sand"] [style*="background:#FFFFFF" i],
+html.dark [data-surface="sand"] [style*="background: rgb(255, 255, 255)"],
+html.dark [data-surface="sand"] [style*="background:rgb(255,255,255)"],
+html.dark [data-surface="sand"] [style*="background-color: white" i],
+html.dark [data-surface="sand"] [style*="background-color: #FFFFFF" i],
+html.dark [data-surface="sand"] [style*="background-color:#FFFFFF" i] {
+  background-color: rgb(var(--c-card)) !important;
+  background-image: none !important;
+}
+
+/* Inline sand (COLORS.sand = #F4F7FC) */
+html.dark [data-surface="sand"] [style*="background: #F4F7FC" i],
+html.dark [data-surface="sand"] [style*="background:#F4F7FC"],
+html.dark [data-surface="sand"] [style*="background: rgb(244, 247, 252)"],
+html.dark [data-surface="sand"] [style*="background: rgb(244,247,252)"],
+html.dark [data-surface="sand"] [style*="background: #DCE4F2" i],
+html.dark [data-surface="sand"] [style*="background:#DCE4F2"],
+html.dark [data-surface="sand"] [style*="background: rgb(220, 228, 242)"],
+html.dark [data-surface="sand"] [style*="background: rgb(220,228,242)"] {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Force light borders in dark */
+html.dark [data-surface="sand"] .border-gray-100,
+html.dark [data-surface="sand"] .border-gray-200,
+html.dark [data-surface="sand"] .border-gray-300,
+html.dark [data-surface="sand"] .border-sandline,
+html.dark [data-surface="sand"] [style*="border-color: #DCE4F2" i],
+html.dark [data-surface="sand"] [style*="border: 1px solid #DCE4F2" i],
+html.dark [data-surface="sand"] [style*="borderColor: rgb(220, 228, 242)"],
+html.dark [data-surface="sand"] [style*="border-color: rgb(220, 228, 242)"] {
+  border-color: rgb(var(--c-hairline)) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   2. LIGHT MODE — no navy content backgrounds
+   Chrome header is protected separately (section 5).
+   ═══════════════════════════════════════════════════════════ */
+
+/* React serializes #011957 → rgb(1, 25, 87). Catch every form. */
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1, 25, 87)"],
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(1,25,87)"],
+html:not(.dark) [data-surface="sand"] [style*="background: #011957" i],
+html:not(.dark) [data-surface="sand"] [style*="background:#011957"],
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1,15,58)"],
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(1,15,58)"],
+html:not(.dark) [data-surface="sand"] [style*="background: #010F3A" i],
+html:not(.dark) [data-surface="sand"] [style*="background:#010F3A"],
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(4, 36, 117)"],
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(4,36,117)"],
+html:not(.dark) [data-surface="sand"] [style*="background: #042475" i],
+html:not(.dark) [data-surface="sand"] [style*="background:#042475"] {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+  color: #0B1220 !important;
+  border-color: #E5E7EB !important;
+}
+
+/* Every descendant text node inside those flipped elements */
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1, 25, 87)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(1,25,87)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background: #011957" i] *,
+html:not(.dark) [data-surface="sand"] [style*="background:#011957"] *,
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1,15,58)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(1,15,58)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background: #010F3A" i] *,
+html:not(.dark) [data-surface="sand"] [style*="background:#010F3A"] *,
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(4, 36, 117)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(4,36,117)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background: #042475" i] *,
+html:not(.dark) [data-surface="sand"] [style*="background:#042475"] * {
+  color: #0B1220 !important;
+}
+
+/* SVG stroke must follow too (icons using currentColor) */
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1, 25, 87)"] svg,
+html:not(.dark) [data-surface="sand"] [style*="background: #011957" i] svg,
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1,15,58)"] svg,
+html:not(.dark) [data-surface="sand"] [style*="background: #010F3A" i] svg {
+  color: #011957 !important;
+}
+
+/* Tailwind navy utilities in light mode → flip to white card */
+html:not(.dark) [data-surface="sand"] .bg-night,
+html:not(.dark) [data-surface="sand"] .bg-night-deep,
+html:not(.dark) [data-surface="sand"] .bg-night-soft {
+  background-color: #FFFFFF !important;
+  color: #0B1220 !important;
+  border-color: #E5E7EB !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   3. TEXT VISIBILITY — the core fix
+   ═══════════════════════════════════════════════════════════ */
+
+/* LIGHT MODE: dark text */
+html:not(.dark) [data-surface="sand"] .text-primary,
+html:not(.dark) [data-surface="sand"] [style*="color: #111827" i],
+html:not(.dark) [data-surface="sand"] [style*="color: #0B1220" i],
+html:not(.dark) [data-surface="sand"] [style*="color: rgb(17, 24, 39)"],
+html:not(.dark) [data-surface="sand"] [style*="color:rgb(17,24,39)"] {
+  color: #0B1220 !important;
+}
+html:not(.dark) [data-surface="sand"] .text-secondary,
+html:not(.dark) [data-surface="sand"] [style*="color: #6B7280" i],
+html:not(.dark) [data-surface="sand"] [style*="color: rgb(107, 114, 128)"],
+html:not(.dark) [data-surface="sand"] [style*="color:rgb(107,114,128)"] {
+  color: #455068 !important;
+}
+html:not(.dark) [data-surface="sand"] .text-muted,
+html:not(.dark) [data-surface="sand"] [style*="color: #9CA3AF" i],
+html:not(.dark) [data-surface="sand"] [style*="color: rgb(156, 163, 175)"],
+html:not(.dark) [data-surface="sand"] [style*="color:rgb(156,163,175)"] {
+  color: #6B7280 !important;
+}
+
+/* DARK MODE: white text */
+html.dark [data-surface="sand"] .text-primary,
+html.dark [data-surface="sand"] [style*="color: #111827" i],
+html.dark [data-surface="sand"] [style*="color: #0B1220" i],
+html.dark [data-surface="sand"] [style*="color: rgb(17, 24, 39)"],
+html.dark [data-surface="sand"] [style*="color:rgb(17,24,39)"] {
+  color: #FFFFFF !important;
+}
+html.dark [data-surface="sand"] .text-secondary,
+html.dark [data-surface="sand"] [style*="color: #6B7280" i],
+html.dark [data-surface="sand"] [style*="color: rgb(107, 114, 128)"],
+html.dark [data-surface="sand"] [style*="color:rgb(107,114,128)"] {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+html.dark [data-surface="sand"] .text-muted,
+html.dark [data-surface="sand"] [style*="color: #9CA3AF" i],
+html.dark [data-surface="sand"] [style*="color: rgb(156, 163, 175)"],
+html.dark [data-surface="sand"] [style*="color:rgb(156,163,175)"] {
+  color: rgba(255, 255, 255, 0.58) !important;
+}
+
+/* A bulletproof safety net: any bare text in the dashboard is themed */
+html:not(.dark) [data-surface="sand"] { color: #0B1220; }
+html.dark [data-surface="sand"] { color: #FFFFFF; }
+
+/* ═══════════════════════════════════════════════════════════
+   4. ICONS — never invisible
+   ═══════════════════════════════════════════════════════════ */
+
+/* Any lucide icon defaults to inheriting its parent's color. If the
+   parent lost its color, the icon disappears. Enforce per theme. */
+html:not(.dark) [data-surface="sand"] svg[stroke="currentColor"],
+html:not(.dark) [data-surface="sand"] svg:not([class*="fill-"]):not([style*="fill"]) {
+  color: #0B1220;
+}
+html.dark [data-surface="sand"] svg[stroke="currentColor"] {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+/* Force at least 70% visibility on any icon that has a hardcoded
+   stroke value equal to a muted color */
+html.dark [data-surface="sand"] svg[stroke="#9CA3AF"],
+html.dark [data-surface="sand"] svg[stroke="#6B7280"],
+html.dark [data-surface="sand"] svg[stroke="#111827"],
+html.dark [data-surface="sand"] svg[stroke="#0B1220"] {
+  stroke: rgba(255, 255, 255, 0.72) !important;
+}
+html:not(.dark) [data-surface="sand"] svg[stroke="#FFFFFF"],
+html:not(.dark) [data-surface="sand"] svg[stroke="white"],
+html:not(.dark) [data-surface="sand"] svg[stroke="#F5F3EC"] {
+  stroke: #0B1220 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   5. CHROME HEADER — stays navy in both modes
+   ═══════════════════════════════════════════════════════════ */
+
+/* Header is a direct child of [data-surface="sand"] in both shells.
+   Restore its intended dark chrome regardless of light mode. */
+html:not(.dark) [data-surface="sand"] > header {
+  background-color: #011957 !important;
+  background-image: none !important;
+  color: #FFFFFF !important;
+}
+html:not(.dark) [data-surface="sand"] > header * {
+  /* children keep authored colors */
+}
+/* Re-assert white utility classes inside header (they were overridden) */
+html:not(.dark) [data-surface="sand"] > header .text-primary,
+html:not(.dark) [data-surface="sand"] > header .text-white,
+html:not(.dark) [data-surface="sand"] > header [class*="text-white"] {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+html:not(.dark) [data-surface="sand"] > header .text-secondary {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+html:not(.dark) [data-surface="sand"] > header .text-muted {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+/* Header SVG icons stay light */
+html:not(.dark) [data-surface="sand"] > header svg {
+  color: currentColor !important;
+  stroke: currentColor;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   6. FORMS — inputs, selects, textareas, checkboxes
+   ═══════════════════════════════════════════════════════════ */
+
+/* All inputs inside dashboards: readable in both themes */
+html:not(.dark) [data-surface="sand"] input:not([type="checkbox"]):not([type="radio"]),
+html:not(.dark) [data-surface="sand"] textarea,
+html:not(.dark) [data-surface="sand"] select {
+  background-color: #FFFFFF !important;
+  color: #0B1220 !important;
+  border-color: #DCE4F2 !important;
+}
+html:not(.dark) [data-surface="sand"] input::placeholder,
+html:not(.dark) [data-surface="sand"] textarea::placeholder {
+  color: #6B7280 !important;
+  opacity: 1;
+}
+
+html.dark [data-surface="sand"] input:not([type="checkbox"]):not([type="radio"]),
+html.dark [data-surface="sand"] textarea,
+html.dark [data-surface="sand"] select {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+html.dark [data-surface="sand"] input::placeholder,
+html.dark [data-surface="sand"] textarea::placeholder {
+  color: rgba(255, 255, 255, 0.42) !important;
+  opacity: 1;
+}
+html.dark [data-surface="sand"] select option {
+  background-color: #011957;
+  color: #FFFFFF;
+}
+html.dark [data-surface="sand"] input[type="checkbox"],
+html.dark [data-surface="sand"] input[type="radio"] {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+html.dark [data-surface="sand"] input[type="checkbox"]:checked,
+html.dark [data-surface="sand"] input[type="radio"]:checked {
+  background-color: #FEA406;
+  border-color: #FEA406;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   7. BUTTONS — always readable
+   ═══════════════════════════════════════════════════════════ */
+
+/* Ghost and outline buttons in dark mode */
+html.dark [data-surface="sand"] .btn-ghost {
+  color: rgba(255, 255, 255, 0.82);
+}
+html.dark [data-surface="sand"] .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #FFFFFF;
+}
+html.dark [data-surface="sand"] .btn-outline {
+  color: #FFFFFF;
+  border-color: rgb(var(--c-hairline));
+}
+html.dark [data-surface="sand"] .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgb(var(--c-gold) / 0.6);
+}
+
+/* Primary button always has dark navy text on the gold gradient */
+html.dark [data-surface="sand"] .btn-primary,
+html:not(.dark) [data-surface="sand"] .btn-primary {
+  color: #011957 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   8. TABLES — headers, rows, dividers
+   ═══════════════════════════════════════════════════════════ */
+
+html:not(.dark) [data-surface="sand"] table thead {
+  background-color: #F4F7FC !important;
+}
+html:not(.dark) [data-surface="sand"] table thead th {
+  color: #455068 !important;
+}
+html:not(.dark) [data-surface="sand"] table tbody tr {
+  border-color: #DCE4F2 !important;
+}
+html:not(.dark) [data-surface="sand"] table tbody tr:hover {
+  background-color: rgba(244, 247, 252, 0.7) !important;
+}
+html:not(.dark) [data-surface="sand"] table tbody td {
+  color: #0B1220;
+}
+
+html.dark [data-surface="sand"] table thead {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+html.dark [data-surface="sand"] table thead th {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+html.dark [data-surface="sand"] table tbody tr {
+  border-color: rgb(var(--c-hairline)) !important;
+}
+html.dark [data-surface="sand"] table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+html.dark [data-surface="sand"] table tbody td {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   9. SIDEBAR / NAV — active state uses gold accent
+   ═══════════════════════════════════════════════════════════ */
+
+/* When light mode flips a navy "active" nav item to white, keep
+   the active signal clear with a gold left border. */
+html:not(.dark) [data-surface="sand"] aside [style*="background: rgb(1, 25, 87)"],
+html:not(.dark) [data-surface="sand"] aside [style*="background: #011957" i] {
+  box-shadow: inset 3px 0 0 0 #FEA406 !important;
+  font-weight: 600 !important;
+}
+html.dark [data-surface="sand"] aside [style*="background: rgb(1, 25, 87)"],
+html.dark [data-surface="sand"] aside [style*="background: #011957" i] {
+  box-shadow: inset 3px 0 0 0 #FEA406 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   10. MODALS + DROPDOWNS
+   ═══════════════════════════════════════════════════════════ */
+
+html:not(.dark) [data-surface="sand"] [role="dialog"] > *,
+html:not(.dark) [data-surface="sand"] [role="menu"] {
+  background-color: #FFFFFF !important;
+  color: #0B1220 !important;
+  border-color: #DCE4F2 !important;
+}
+html.dark [data-surface="sand"] [role="dialog"] > *,
+html.dark [data-surface="sand"] [role="menu"] {
+  background-color: rgb(var(--c-card)) !important;
+  color: #FFFFFF !important;
+  border-color: rgb(var(--c-hairline)) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   11. BADGES + CHIPS
+   ═══════════════════════════════════════════════════════════ */
+
+html.dark [data-surface="sand"] .badge {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+html.dark [data-surface="sand"] .badge-gold {
+  background: rgba(254, 164, 6, 0.15);
+  color: #FEA406;
+  border-color: rgba(254, 164, 6, 0.3);
+}
+html.dark [data-surface="sand"] .badge-night {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   12. UNIVERSAL — apply to any element, anywhere
+   ═══════════════════════════════════════════════════════════ */
+
+/* Any element inside a flipped container must have readable text */
+html:not(.dark) [data-surface="sand"] [class*="bg-white"] {
+  color: #0B1220;
+}
+html.dark [data-surface="sand"] [class*="bg-card"] {
+  color: #FFFFFF;
+}
+
+/* Content-links */
+html:not(.dark) [data-surface="sand"] a:not([class*="text-"]):not(.btn) {
+  color: #0062FD;
+}
+html.dark [data-surface="sand"] a:not([class*="text-"]):not(.btn) {
+  color: #3D8BFF;
+}
+
+/* Placeholder opacity fix */
+html [data-surface="sand"] ::placeholder { opacity: 1 !important; }
+
+
+/* ============================================================
+   USER PAGE THEME ENFORCEMENT
+   Scope: [data-surface="sand"] — used by AdminDashboard.jsx
+          and DashboardShell.jsx (the roots of every user page).
+
+   Rules:
+     1. Dark mode  → NO white/light surfaces anywhere.
+     2. Light mode → NO navy content backgrounds (chrome header
+                     is exempt — it stays navy like an OS bar).
+     3. Text is ALWAYS readable relative to its surface.
+     4. Icons are ALWAYS visible.
+   ============================================================ */
+
+/* ═══════════════════════════════════════════════════════════
+   1. DARK MODE — kill every white / near-white surface
+   ═══════════════════════════════════════════════════════════ */
+
+/* Tailwind bg-white variants */
+html.dark [data-surface="sand"] .bg-white,
+html.dark [data-surface="sand"] .bg-white\/50,
+html.dark [data-surface="sand"] .bg-white\/60,
+html.dark [data-surface="sand"] .bg-white\/70,
+html.dark [data-surface="sand"] .bg-white\/80,
+html.dark [data-surface="sand"] .bg-white\/90,
+html.dark [data-surface="sand"] .bg-white\/95 {
+  background-color: rgb(var(--c-card)) !important;
+}
+
+/* Light gray surfaces */
+html.dark [data-surface="sand"] .bg-gray-50,
+html.dark [data-surface="sand"] .bg-neutral-50,
+html.dark [data-surface="sand"] .bg-slate-50,
+html.dark [data-surface="sand"] .bg-stone-50 {
+  background-color: rgba(255, 255, 255, 0.035) !important;
+}
+html.dark [data-surface="sand"] .bg-gray-100,
+html.dark [data-surface="sand"] .bg-neutral-100,
+html.dark [data-surface="sand"] .bg-slate-100 {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+html.dark [data-surface="sand"] .bg-gray-200,
+html.dark [data-surface="sand"] .bg-neutral-200,
+html.dark [data-surface="sand"] .bg-slate-200 {
+  background-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+/* Brand sand */
+html.dark [data-surface="sand"] .bg-sand,
+html.dark [data-surface="sand"] .bg-sandline {
+  background-color: rgb(var(--c-page)) !important;
+}
+
+/* Inline styles (React serializes hex → rgb()) */
+html.dark [data-surface="sand"] [style*="background: white" i],
+html.dark [data-surface="sand"] [style*="background:white" i],
+html.dark [data-surface="sand"] [style*="background: #FFF" i],
+html.dark [data-surface="sand"] [style*="background:#FFF" i],
+html.dark [data-surface="sand"] [style*="background: #FFFFFF" i],
+html.dark [data-surface="sand"] [style*="background:#FFFFFF" i],
+html.dark [data-surface="sand"] [style*="background: rgb(255, 255, 255)"],
+html.dark [data-surface="sand"] [style*="background:rgb(255,255,255)"],
+html.dark [data-surface="sand"] [style*="background-color: white" i],
+html.dark [data-surface="sand"] [style*="background-color: #FFFFFF" i],
+html.dark [data-surface="sand"] [style*="background-color:#FFFFFF" i] {
+  background-color: rgb(var(--c-card)) !important;
+  background-image: none !important;
+}
+
+/* Inline sand (COLORS.sand = #F4F7FC) */
+html.dark [data-surface="sand"] [style*="background: #F4F7FC" i],
+html.dark [data-surface="sand"] [style*="background:#F4F7FC"],
+html.dark [data-surface="sand"] [style*="background: rgb(244, 247, 252)"],
+html.dark [data-surface="sand"] [style*="background: rgb(244,247,252)"],
+html.dark [data-surface="sand"] [style*="background: #DCE4F2" i],
+html.dark [data-surface="sand"] [style*="background:#DCE4F2"],
+html.dark [data-surface="sand"] [style*="background: rgb(220, 228, 242)"],
+html.dark [data-surface="sand"] [style*="background: rgb(220,228,242)"] {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Force light borders in dark */
+html.dark [data-surface="sand"] .border-gray-100,
+html.dark [data-surface="sand"] .border-gray-200,
+html.dark [data-surface="sand"] .border-gray-300,
+html.dark [data-surface="sand"] .border-sandline,
+html.dark [data-surface="sand"] [style*="border-color: #DCE4F2" i],
+html.dark [data-surface="sand"] [style*="border: 1px solid #DCE4F2" i],
+html.dark [data-surface="sand"] [style*="borderColor: rgb(220, 228, 242)"],
+html.dark [data-surface="sand"] [style*="border-color: rgb(220, 228, 242)"] {
+  border-color: rgb(var(--c-hairline)) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   2. LIGHT MODE — no navy content backgrounds
+   Chrome header is protected separately (section 5).
+   ═══════════════════════════════════════════════════════════ */
+
+/* React serializes #011957 → rgb(1, 25, 87). Catch every form. */
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1, 25, 87)"],
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(1,25,87)"],
+html:not(.dark) [data-surface="sand"] [style*="background: #011957" i],
+html:not(.dark) [data-surface="sand"] [style*="background:#011957"],
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1,15,58)"],
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(1,15,58)"],
+html:not(.dark) [data-surface="sand"] [style*="background: #010F3A" i],
+html:not(.dark) [data-surface="sand"] [style*="background:#010F3A"],
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(4, 36, 117)"],
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(4,36,117)"],
+html:not(.dark) [data-surface="sand"] [style*="background: #042475" i],
+html:not(.dark) [data-surface="sand"] [style*="background:#042475"] {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+  color: #0B1220 !important;
+  border-color: #E5E7EB !important;
+}
+
+/* Every descendant text node inside those flipped elements */
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1, 25, 87)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(1,25,87)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background: #011957" i] *,
+html:not(.dark) [data-surface="sand"] [style*="background:#011957"] *,
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1,15,58)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(1,15,58)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background: #010F3A" i] *,
+html:not(.dark) [data-surface="sand"] [style*="background:#010F3A"] *,
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(4, 36, 117)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background:rgb(4,36,117)"] *,
+html:not(.dark) [data-surface="sand"] [style*="background: #042475" i] *,
+html:not(.dark) [data-surface="sand"] [style*="background:#042475"] * {
+  color: #0B1220 !important;
+}
+
+/* SVG stroke must follow too (icons using currentColor) */
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1, 25, 87)"] svg,
+html:not(.dark) [data-surface="sand"] [style*="background: #011957" i] svg,
+html:not(.dark) [data-surface="sand"] [style*="background: rgb(1,15,58)"] svg,
+html:not(.dark) [data-surface="sand"] [style*="background: #010F3A" i] svg {
+  color: #011957 !important;
+}
+
+/* Tailwind navy utilities in light mode → flip to white card */
+html:not(.dark) [data-surface="sand"] .bg-night,
+html:not(.dark) [data-surface="sand"] .bg-night-deep,
+html:not(.dark) [data-surface="sand"] .bg-night-soft {
+  background-color: #FFFFFF !important;
+  color: #0B1220 !important;
+  border-color: #E5E7EB !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   3. TEXT VISIBILITY — the core fix
+   ═══════════════════════════════════════════════════════════ */
+
+/* LIGHT MODE: dark text */
+html:not(.dark) [data-surface="sand"] .text-primary,
+html:not(.dark) [data-surface="sand"] [style*="color: #111827" i],
+html:not(.dark) [data-surface="sand"] [style*="color: #0B1220" i],
+html:not(.dark) [data-surface="sand"] [style*="color: rgb(17, 24, 39)"],
+html:not(.dark) [data-surface="sand"] [style*="color:rgb(17,24,39)"] {
+  color: #0B1220 !important;
+}
+html:not(.dark) [data-surface="sand"] .text-secondary,
+html:not(.dark) [data-surface="sand"] [style*="color: #6B7280" i],
+html:not(.dark) [data-surface="sand"] [style*="color: rgb(107, 114, 128)"],
+html:not(.dark) [data-surface="sand"] [style*="color:rgb(107,114,128)"] {
+  color: #455068 !important;
+}
+html:not(.dark) [data-surface="sand"] .text-muted,
+html:not(.dark) [data-surface="sand"] [style*="color: #9CA3AF" i],
+html:not(.dark) [data-surface="sand"] [style*="color: rgb(156, 163, 175)"],
+html:not(.dark) [data-surface="sand"] [style*="color:rgb(156,163,175)"] {
+  color: #6B7280 !important;
+}
+
+/* DARK MODE: white text */
+html.dark [data-surface="sand"] .text-primary,
+html.dark [data-surface="sand"] [style*="color: #111827" i],
+html.dark [data-surface="sand"] [style*="color: #0B1220" i],
+html.dark [data-surface="sand"] [style*="color: rgb(17, 24, 39)"],
+html.dark [data-surface="sand"] [style*="color:rgb(17,24,39)"] {
+  color: #FFFFFF !important;
+}
+html.dark [data-surface="sand"] .text-secondary,
+html.dark [data-surface="sand"] [style*="color: #6B7280" i],
+html.dark [data-surface="sand"] [style*="color: rgb(107, 114, 128)"],
+html.dark [data-surface="sand"] [style*="color:rgb(107,114,128)"] {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+html.dark [data-surface="sand"] .text-muted,
+html.dark [data-surface="sand"] [style*="color: #9CA3AF" i],
+html.dark [data-surface="sand"] [style*="color: rgb(156, 163, 175)"],
+html.dark [data-surface="sand"] [style*="color:rgb(156,163,175)"] {
+  color: rgba(255, 255, 255, 0.58) !important;
+}
+
+/* A bulletproof safety net: any bare text in the dashboard is themed */
+html:not(.dark) [data-surface="sand"] { color: #0B1220; }
+html.dark [data-surface="sand"] { color: #FFFFFF; }
+
+/* ═══════════════════════════════════════════════════════════
+   4. ICONS — never invisible
+   ═══════════════════════════════════════════════════════════ */
+
+/* Any lucide icon defaults to inheriting its parent's color. If the
+   parent lost its color, the icon disappears. Enforce per theme. */
+html:not(.dark) [data-surface="sand"] svg[stroke="currentColor"],
+html:not(.dark) [data-surface="sand"] svg:not([class*="fill-"]):not([style*="fill"]) {
+  color: #0B1220;
+}
+html.dark [data-surface="sand"] svg[stroke="currentColor"] {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+/* Force at least 70% visibility on any icon that has a hardcoded
+   stroke value equal to a muted color */
+html.dark [data-surface="sand"] svg[stroke="#9CA3AF"],
+html.dark [data-surface="sand"] svg[stroke="#6B7280"],
+html.dark [data-surface="sand"] svg[stroke="#111827"],
+html.dark [data-surface="sand"] svg[stroke="#0B1220"] {
+  stroke: rgba(255, 255, 255, 0.72) !important;
+}
+html:not(.dark) [data-surface="sand"] svg[stroke="#FFFFFF"],
+html:not(.dark) [data-surface="sand"] svg[stroke="white"],
+html:not(.dark) [data-surface="sand"] svg[stroke="#F5F3EC"] {
+  stroke: #0B1220 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   5. CHROME HEADER — stays navy in both modes
+   ═══════════════════════════════════════════════════════════ */
+
+/* Header is a direct child of [data-surface="sand"] in both shells.
+   Restore its intended dark chrome regardless of light mode. */
+html:not(.dark) [data-surface="sand"] > header {
+  background-color: #011957 !important;
+  background-image: none !important;
+  color: #FFFFFF !important;
+}
+html:not(.dark) [data-surface="sand"] > header * {
+  /* children keep authored colors */
+}
+/* Re-assert white utility classes inside header (they were overridden) */
+html:not(.dark) [data-surface="sand"] > header .text-primary,
+html:not(.dark) [data-surface="sand"] > header .text-white,
+html:not(.dark) [data-surface="sand"] > header [class*="text-white"] {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+html:not(.dark) [data-surface="sand"] > header .text-secondary {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+html:not(.dark) [data-surface="sand"] > header .text-muted {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+/* Header SVG icons stay light */
+html:not(.dark) [data-surface="sand"] > header svg {
+  color: currentColor !important;
+  stroke: currentColor;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   6. FORMS — inputs, selects, textareas, checkboxes
+   ═══════════════════════════════════════════════════════════ */
+
+/* All inputs inside dashboards: readable in both themes */
+html:not(.dark) [data-surface="sand"] input:not([type="checkbox"]):not([type="radio"]),
+html:not(.dark) [data-surface="sand"] textarea,
+html:not(.dark) [data-surface="sand"] select {
+  background-color: #FFFFFF !important;
+  color: #0B1220 !important;
+  border-color: #DCE4F2 !important;
+}
+html:not(.dark) [data-surface="sand"] input::placeholder,
+html:not(.dark) [data-surface="sand"] textarea::placeholder {
+  color: #6B7280 !important;
+  opacity: 1;
+}
+
+html.dark [data-surface="sand"] input:not([type="checkbox"]):not([type="radio"]),
+html.dark [data-surface="sand"] textarea,
+html.dark [data-surface="sand"] select {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+html.dark [data-surface="sand"] input::placeholder,
+html.dark [data-surface="sand"] textarea::placeholder {
+  color: rgba(255, 255, 255, 0.42) !important;
+  opacity: 1;
+}
+html.dark [data-surface="sand"] select option {
+  background-color: #011957;
+  color: #FFFFFF;
+}
+html.dark [data-surface="sand"] input[type="checkbox"],
+html.dark [data-surface="sand"] input[type="radio"] {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+html.dark [data-surface="sand"] input[type="checkbox"]:checked,
+html.dark [data-surface="sand"] input[type="radio"]:checked {
+  background-color: #FEA406;
+  border-color: #FEA406;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   7. BUTTONS — always readable
+   ═══════════════════════════════════════════════════════════ */
+
+/* Ghost and outline buttons in dark mode */
+html.dark [data-surface="sand"] .btn-ghost {
+  color: rgba(255, 255, 255, 0.82);
+}
+html.dark [data-surface="sand"] .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #FFFFFF;
+}
+html.dark [data-surface="sand"] .btn-outline {
+  color: #FFFFFF;
+  border-color: rgb(var(--c-hairline));
+}
+html.dark [data-surface="sand"] .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgb(var(--c-gold) / 0.6);
+}
+
+/* Primary button always has dark navy text on the gold gradient */
+html.dark [data-surface="sand"] .btn-primary,
+html:not(.dark) [data-surface="sand"] .btn-primary {
+  color: #011957 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   8. TABLES — headers, rows, dividers
+   ═══════════════════════════════════════════════════════════ */
+
+html:not(.dark) [data-surface="sand"] table thead {
+  background-color: #F4F7FC !important;
+}
+html:not(.dark) [data-surface="sand"] table thead th {
+  color: #455068 !important;
+}
+html:not(.dark) [data-surface="sand"] table tbody tr {
+  border-color: #DCE4F2 !important;
+}
+html:not(.dark) [data-surface="sand"] table tbody tr:hover {
+  background-color: rgba(244, 247, 252, 0.7) !important;
+}
+html:not(.dark) [data-surface="sand"] table tbody td {
+  color: #0B1220;
+}
+
+html.dark [data-surface="sand"] table thead {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+html.dark [data-surface="sand"] table thead th {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+html.dark [data-surface="sand"] table tbody tr {
+  border-color: rgb(var(--c-hairline)) !important;
+}
+html.dark [data-surface="sand"] table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+html.dark [data-surface="sand"] table tbody td {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   9. SIDEBAR / NAV — active state uses gold accent
+   ═══════════════════════════════════════════════════════════ */
+
+/* When light mode flips a navy "active" nav item to white, keep
+   the active signal clear with a gold left border. */
+html:not(.dark) [data-surface="sand"] aside [style*="background: rgb(1, 25, 87)"],
+html:not(.dark) [data-surface="sand"] aside [style*="background: #011957" i] {
+  box-shadow: inset 3px 0 0 0 #FEA406 !important;
+  font-weight: 600 !important;
+}
+html.dark [data-surface="sand"] aside [style*="background: rgb(1, 25, 87)"],
+html.dark [data-surface="sand"] aside [style*="background: #011957" i] {
+  box-shadow: inset 3px 0 0 0 #FEA406 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   10. MODALS + DROPDOWNS
+   ═══════════════════════════════════════════════════════════ */
+
+html:not(.dark) [data-surface="sand"] [role="dialog"] > *,
+html:not(.dark) [data-surface="sand"] [role="menu"] {
+  background-color: #FFFFFF !important;
+  color: #0B1220 !important;
+  border-color: #DCE4F2 !important;
+}
+html.dark [data-surface="sand"] [role="dialog"] > *,
+html.dark [data-surface="sand"] [role="menu"] {
+  background-color: rgb(var(--c-card)) !important;
+  color: #FFFFFF !important;
+  border-color: rgb(var(--c-hairline)) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   11. BADGES + CHIPS
+   ═══════════════════════════════════════════════════════════ */
+
+html.dark [data-surface="sand"] .badge {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+html.dark [data-surface="sand"] .badge-gold {
+  background: rgba(254, 164, 6, 0.15);
+  color: #FEA406;
+  border-color: rgba(254, 164, 6, 0.3);
+}
+html.dark [data-surface="sand"] .badge-night {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   12. UNIVERSAL — apply to any element, anywhere
+   ═══════════════════════════════════════════════════════════ */
+
+/* Any element inside a flipped container must have readable text */
+html:not(.dark) [data-surface="sand"] [class*="bg-white"] {
+  color: #0B1220;
+}
+html.dark [data-surface="sand"] [class*="bg-card"] {
+  color: #FFFFFF;
+}
+
+/* Content-links */
+html:not(.dark) [data-surface="sand"] a:not([class*="text-"]):not(.btn) {
+  color: #0062FD;
+}
+html.dark [data-surface="sand"] a:not([class*="text-"]):not(.btn) {
+  color: #3D8BFF;
+}
+
+/* Placeholder opacity fix */
+html [data-surface="sand"] ::placeholder { opacity: 1 !important; }
+
+
+/* ============================================================
+   GLOBAL TEXT TOKEN FIX
+   Tailwind compiles `.text-primary` to a fixed hex, which does
+   not respond to html.dark. This block makes every text token
+   follow the active theme.
+
+   Exception: inside `.surface-night` (hero, footer, auth-left),
+   text stays white because those are always-dark surfaces.
+   ============================================================ */
+
+/* ── LIGHT MODE (default) ─────────────────────────────────── */
+html:not(.dark) .text-primary   { color: #0B1220 !important; }
+html:not(.dark) .text-secondary { color: #455068 !important; }
+html:not(.dark) .text-muted     { color: #6B7280 !important; }
+
+/* ── DARK MODE ────────────────────────────────────────────── */
+html.dark .text-primary   { color: #FFFFFF !important; }
+html.dark .text-secondary { color: rgba(255, 255, 255, 0.78) !important; }
+html.dark .text-muted     { color: rgba(255, 255, 255, 0.58) !important; }
+
+/* ── PRESERVE WHITE TEXT on always-dark surfaces ──────────── */
+.surface-night .text-primary,
+.surface-night .text-secondary,
+.surface-night .text-muted,
+.bg-night .text-primary,
+.bg-night .text-secondary,
+.bg-night .text-muted,
+[class*="bg-[#011957]"] .text-primary,
+[class*="bg-[#011957]"] .text-secondary,
+[class*="bg-[#011957]"] .text-muted,
+[class*="bg-[#010F3A]"] .text-primary,
+[class*="bg-[#010F3A]"] .text-secondary,
+[class*="bg-[#010F3A]"] .text-muted {
+  color: inherit !important;
+}
+.surface-night h1, .surface-night h2, .surface-night h3,
+.surface-night h4, .surface-night h5, .surface-night h6 {
+  color: #FFFFFF !important;
+}
+.surface-night p, .surface-night span, .surface-night li, .surface-night div {
+  /* keep authored — many use white utility classes */
+}
+
+/* ── HEADINGS always follow theme ────────────────────────── */
+html:not(.dark) h1, html:not(.dark) h2, html:not(.dark) h3,
+html:not(.dark) h4, html:not(.dark) h5, html:not(.dark) h6 {
+  color: #0B1220 !important;
+}
+html.dark h1, html.dark h2, html.dark h3,
+html.dark h4, html.dark h5, html.dark h6 {
+  color: #FFFFFF !important;
+}
+/* ...unless inside an always-dark surface */
+.surface-night h1, .surface-night h2, .surface-night h3,
+.surface-night h4, .surface-night h5, .surface-night h6,
+.bg-night h1, .bg-night h2, .bg-night h3,
+.bg-night h4, .bg-night h5, .bg-night h6 {
+  color: #FFFFFF !important;
+}
+footer h1, footer h2, footer h3, footer h4, footer h5, footer h6 {
+  color: #FFFFFF !important;
+}
+footer p, footer span, footer li, footer a { color: inherit; }
+
