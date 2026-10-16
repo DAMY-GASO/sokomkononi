@@ -1,6 +1,4 @@
 // src/api/deals.js
-// Deal Rooms API — deals, messages, offers, payment proof
-// Backend: /api/deals/  +  /api/admin/deals/
 import { api } from "./client";
 
 function toQuery(params = {}) {
@@ -41,6 +39,14 @@ export const dealsApi = {
   // ── Payment proof ────────────────────────────────────────
   paymentProof: (dealRoomId) =>
     api.get(`/deals/${dealRoomId}/payment-proof/`),
+
+  // ── Report buyer/seller (MPYA) ───────────────────────────
+  report: (dealRoomId, { reported_user_id, reason, details }) =>
+    api.post(`/deals/${dealRoomId}/report/`, {
+      reported_user_id,
+      reason,
+      details,
+    }),
 
   // ── ADMIN — list all deals (paginated) ───────────────────
   admin: {

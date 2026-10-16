@@ -15,7 +15,6 @@ export const transactionsApi = {
   createReservation: (id, duration_hours = 48) =>
     api.post(`/transactions/${id}/reservation/`, { duration_hours }),
 
-  // ⬇️ MPYA — pitisha payload kamili (payment_reference: "credits" au hakuna)
   payReservation: (id, payload = {}) =>
     api.post(`/transactions/${id}/reservation/pay/`, payload),
 
@@ -51,4 +50,11 @@ export const transactionsApi = {
 
   expireInspection: (id) =>
     api.post(`/transactions/${id}/expire-inspection/`, {}),
+
+  // ── MPYA ─────────────────────────────────────────────────
+  extendReservation: (id, additional_hours) =>
+    api.post(`/transactions/${id}/extend-reservation/`, { additional_hours }),
+
+  removeReservation: (id) =>
+    api.post(`/transactions/${id}/remove-reservation/`, {}),
 };

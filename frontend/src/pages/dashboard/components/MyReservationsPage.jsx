@@ -2,8 +2,13 @@
 // MyReservationsPage.jsx — Mali alizolipia Reservation (buyer)
 // Chanzo cha data: deals za mnunuzi huyu ambazo reservation
 // imeshalipwa (reserved → completed, au disputed).
+//
+// SASISHO: Ongeza vitendo vitatu kwa kila reservation:
+//   - Extend Reservation Time (ongeza muda)
+//   - Finalize Deal (nenda Deal Room ku-upload payment proof)
+//   - Remove from Reservation (ondoa — fee HAIREJESHWI)
 // ============================================================
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CalendarCheck,
@@ -13,12 +18,16 @@ import {
   Inbox,
   CheckCircle2,
   AlertTriangle,
+  Plus,
+  XCircle,
+  Loader2,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS } from "./shared.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
-import { useDeals } from "../../../config/dealsStore.js";
+import { useDeals, updateDeal as updateDealInStore } from "../../../config/dealsStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
+import { transactionsApi } from "../../../api/transactions.js";
 
 const RESERVED_STATUSES = [
   "reserved",
@@ -60,7 +69,8 @@ function countdown(expiresAt, lang) {
   if (!expiresAt) return null;
   const ms = new Date(expiresAt).getTime() - Date.now();
   if (Number.isNaN(ms)) return null;
-  if (ms <= 0) return { text: lang === "sw" ? "Muda umeisha" : "Expired", expired: true };
+  if (ms <= 0)
+    return { text: lang === "sw" ? "Muda umeisha" : "Expired", expired: true };
   const hrs = Math.floor(ms / 3600000);
   const mins = Math.floor((ms % 3600000) / 60000);
   const d = Math.floor(hrs / 24);
@@ -75,12 +85,110 @@ function countdown(expiresAt, lang) {
   return { text, expired: false };
 }
 
-function ReservationCard({ deal, lang, onOpen }) {
+function ReservationCard({ deal, lang, onOpen, onRefresh }) {
   const category = getCategory(deal.category);
   const Icon = getCategoryIcon(category?.iconKey);
   const status = getStatus(lang)[deal.status];
-  const cd = deal.status === "reserved" ? countdown(deal.reservationExpiresAt, lang) : null;
+  const cd =
+    deal.status === "reserved"
+      ? countdown(deal.reservationExpiresAt, lang)
+      : null;
   const price = deal.agreedPrice || deal.currentOffer || deal.askingPrice || 0;
+
+  const [actionBusy, setActionBusy] = useState(null);
+  const [error, setError] = useState("");
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ── Extend Reservation ──
+  const handleExtend = async () => {
+    setError("");
+    const input = prompt(
+      t(
+        "Ongeza saa ngapi? (mf. 24, 48, 72)",
+        "Add how many hours? (e.g. 24, 48, 72)"
+      ),
+      "24"
+    );
+    if (!input) return;
+    const additionalHours = parseInt(input, 10);
+    if (!additionalHours || additionalHours < 1) {
+      setError(t("Muda si sahihi.", "Invalid duration."));
+      return;
+    }
+
+    if (!deal.transactionId) {
+      setError(t("Transaction haipatikani.", "Transaction not found."));
+      return;
+    }
+
+    setActionBusy("extend");
+    try {
+      const res = await transactionsApi.extendReservation(
+        deal.transactionId,
+        additionalHours
+      );
+      alert(
+        t(
+          `Muda umeongezwa kwa saa ${additionalHours}.`,
+          `Extended by ${additionalHours} hours.`
+        )
+      );
+      onRefresh?.();
+    } catch (err) {
+      setError(
+        err?.data?.detail ||
+          err?.message ||
+          t("Imeshindwa kuongeza muda.", "Failed to extend.")
+      );
+    } finally {
+      setActionBusy(null);
+    }
+  };
+
+  // ── Finalize Deal → nenda Deal Room ──
+  const handleFinalize = () => {
+    onOpen(deal.id);
+  };
+
+  // ── Remove Reservation ──
+  const handleRemove = async () => {
+    setError("");
+    if (
+      !confirm(
+        t(
+          "Una uhakika unataka kuondoa reservation hii? Reservation Fee HAITAREJESHWA.",
+          "Are you sure you want to remove this reservation? The Reservation Fee is NON-REFUNDABLE."
+        )
+      )
+    )
+      return;
+
+    if (!deal.transactionId) {
+      setError(t("Transaction haipatikani.", "Transaction not found."));
+      return;
+    }
+
+    setActionBusy("remove");
+    try {
+      await transactionsApi.removeReservation(deal.transactionId);
+      alert(
+        t(
+          "Reservation imeondolewa. Mali imerudi sokoni.",
+          "Reservation removed. The listing is back on the market."
+        )
+      );
+      onRefresh?.();
+    } catch (err) {
+      setError(
+        err?.data?.detail ||
+          err?.message ||
+          t("Imeshindwa kuondoa.", "Failed to remove.")
+      );
+    } finally {
+      setActionBusy(null);
+    }
+  };
 
   return (
     <div
@@ -136,25 +244,91 @@ function ReservationCard({ deal, lang, onOpen }) {
         </div>
         <div>
           <p className="text-[11px] font-semibold text-secondary uppercase">
-            {lang === "sw" ? "Reservation Fee" : "Reservation Fee"}
+            {t("Reservation Fee", "Reservation Fee")}
           </p>
           <p className="text-sm font-semibold text-primary">
             {deal.reservationFee > 0
               ? formatTZS(deal.reservationFee)
-              : lang === "sw"
-                ? "Bure"
-                : "Free"}
+              : t("Bure", "Free")}
           </p>
         </div>
       </div>
 
+      {error && (
+        <div
+          className="mt-3 text-xs font-semibold px-3 py-2 rounded-lg"
+          style={{
+            background: "rgba(193,80,46,0.1)",
+            color: COLORS.rust,
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Primary action — Open Deal Room */}
       <button
         onClick={() => onOpen(deal.id)}
         style={{ background: COLORS.gold, color: COLORS.night }}
         className="mt-3 w-full flex items-center justify-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg"
       >
-        {lang === "sw" ? "Fungua Deal Room" : "Open Deal Room"} <ArrowRight size={13} />
+        {t("Fungua Deal Room", "Open Deal Room")} <ArrowRight size={13} />
       </button>
+
+      {/* ── MPYA: vitendo vya reservation (status = reserved pekee) ── */}
+      {deal.status === "reserved" && deal.transactionId && (
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          <button
+            onClick={handleExtend}
+            disabled={!!actionBusy}
+            style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
+            className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 disabled:opacity-50"
+            title={t("Ongeza muda", "Extend time")}
+          >
+            {actionBusy === "extend" ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <Plus size={12} />
+            )}
+            <span className="hidden sm:inline">
+              {t("Ongeza", "Extend")}
+            </span>
+          </button>
+
+          <button
+            onClick={handleFinalize}
+            disabled={!!actionBusy}
+            style={{ background: COLORS.green, color: "white" }}
+            className="text-xs font-semibold px-2 py-2 rounded-lg flex items-center justify-center gap-1 disabled:opacity-50"
+            title={t("Kamilisha deal", "Finalize deal")}
+          >
+            <CheckCircle2 size={12} />
+            <span className="hidden sm:inline">
+              {t("Kamilisha", "Finalize")}
+            </span>
+          </button>
+
+          <button
+            onClick={handleRemove}
+            disabled={!!actionBusy}
+            style={{
+              borderColor: "rgba(193,80,46,0.35)",
+              color: COLORS.rust,
+            }}
+            className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 disabled:opacity-50"
+            title={t("Ondoa reservation", "Remove reservation")}
+          >
+            {actionBusy === "remove" ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <XCircle size={12} />
+            )}
+            <span className="hidden sm:inline">
+              {t("Ondoa", "Remove")}
+            </span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -172,19 +346,33 @@ export default function MyReservationsPage() {
         (d.reservationPaidAt || RESERVED_STATUSES.includes(d.status))
     );
     const stamp = (d) =>
-      new Date(d.reservationPaidAt || d.reservationExpiresAt || d.agreedAt || 0).getTime() || 0;
+      new Date(
+        d.reservationPaidAt || d.reservationExpiresAt || d.agreedAt || 0
+      ).getTime() || 0;
     return mine.sort((a, b) => stamp(b) - stamp(a));
   }, [deals, user?.id]);
 
   const active = reservations.filter((d) =>
-    ["reserved", "awaiting_final_payment", "payment_proof_submitted"].includes(d.status)
+    ["reserved", "awaiting_final_payment", "payment_proof_submitted"].includes(
+      d.status
+    )
   );
   const past = reservations.filter((d) => !active.includes(d));
 
   const openDeal = (id) => navigate(`/dashboard/buyer/deals?deal=${id}`);
 
+  const handleRefresh = () => {
+    // Force re-render — dealsStore ina-update yenyewe kupitia event
+    // Kama unataka full refetch, unaweza kuita hydrateDealsFromApi()
+    // hapa. Kwa sasa, tunategemea store event.
+    updateDealInStore(0, (d) => d);
+  };
+
   return (
-    <div style={{ background: COLORS.sand, minHeight: "100%" }} className="w-full p-4 sm:p-6">
+    <div
+      style={{ background: COLORS.sand, minHeight: "100%" }}
+      className="w-full p-4 sm:p-6"
+    >
       <div className="max-w-3xl mx-auto">
         <div className="mb-6 text-center">
           <h1 className="h-title">
@@ -219,7 +407,13 @@ export default function MyReservationsPage() {
                 </h2>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {active.map((d) => (
-                    <ReservationCard key={d.id} deal={d} lang={lang} onOpen={openDeal} />
+                    <ReservationCard
+                      key={d.id}
+                      deal={d}
+                      lang={lang}
+                      onOpen={openDeal}
+                      onRefresh={handleRefresh}
+                    />
                   ))}
                 </div>
               </section>
@@ -236,7 +430,13 @@ export default function MyReservationsPage() {
                 </h2>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {past.map((d) => (
-                    <ReservationCard key={d.id} deal={d} lang={lang} onOpen={openDeal} />
+                    <ReservationCard
+                      key={d.id}
+                      deal={d}
+                      lang={lang}
+                      onOpen={openDeal}
+                      onRefresh={handleRefresh}
+                    />
                   ))}
                 </div>
               </section>

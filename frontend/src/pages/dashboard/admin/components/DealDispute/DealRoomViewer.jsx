@@ -2,7 +2,7 @@
 // DealRoomViewer.jsx
 // ============================================================
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Shield,
   User,
@@ -15,9 +15,15 @@ import {
   Calendar,
   CreditCard,
   Loader2,
+  Download,
+  Flag,
+  AlertTriangle,
+  MessageSquare,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../../shared/constants.js";
 import MessageBubble from "../../shared/MessageBubble.jsx";
+import { getDealTranscript } from "../../../../../config/dealsStore.js";
+import { exportTranscript } from "../../../../../utils/exportDealTranscript.js";
 
 // ============================================================
 // INFO ROW
@@ -30,6 +36,84 @@ function InfoRow({ icon: Icon, label, value, color = COLORS.night }) {
       <span className="text-primary font-medium min-w-0 break-words">
         {value}
       </span>
+    </div>
+  );
+}
+
+// ============================================================
+// DOWNLOAD BAR (MPYA)
+// ============================================================
+function DownloadBar({ dealId, lang }) {
+  const [downloading, setDownloading] = useState(null);
+  const [error, setError] = useState("");
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  const handleDownload = async (format) => {
+    if (!dealId) return;
+    setError("");
+    setDownloading(format);
+
+    try {
+      const transcript = getDealTranscript(dealId, null, lang);
+      if (!transcript) {
+        throw new Error(t("Deal haipatikani.", "Deal not found."));
+      }
+      await exportTranscript(transcript, format);
+      setDownloading(null);
+    } catch (err) {
+      console.error("[DealRoomViewer] download failed:", err);
+      setError(
+        err?.message || t("Imeshindwa kupakua.", "Failed to download.")
+      );
+      setDownloading(null);
+    }
+  };
+
+  return (
+    <div
+      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      className="border rounded-lg px-3 py-2.5"
+    >
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <Download size={12} color={COLORS.night} />
+          <p className="text-[11px] font-semibold text-secondary uppercase">
+            {t("Pakua Mazungumzo", "Download Transcript")}
+          </p>
+        </div>
+        <p className="text-[10px] text-muted">
+          {t("Admin view", "Admin view")}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {["TXT", "PDF", "CSV"].map((fmt) => (
+          <button
+            key={fmt}
+            onClick={() => handleDownload(fmt)}
+            disabled={!!downloading}
+            style={{
+              borderColor: COLORS.sandLine,
+              color: COLORS.night,
+            }}
+            className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+          >
+            {downloading === fmt ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <Download size={12} />
+            )}
+            {fmt}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <p className="text-[11px] mt-2" style={{ color: COLORS.rust }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -61,6 +145,10 @@ export default function DealRoomViewer({
 
   const hasReservation =
     (deal.reservationFee ?? 0) > 0 || Boolean(deal.reservationPaidAt);
+
+  // ── Report context (kama ipo) ──
+  const reports = Array.isArray(deal.reports) ? deal.reports : [];
+  const hasReports = reports.length > 0;
 
   if (loading) {
     return (
@@ -98,6 +186,54 @@ export default function DealRoomViewer({
           {t("Funga", "Close")}
         </button>
       </div>
+
+      {/* ── MPYA: Report alert (kama deal ina reports) ── */}
+      {hasReports && (
+        <div
+          style={{
+            borderColor: "rgba(193,80,46,0.3)",
+            background: "rgba(193,80,46,0.06)",
+          }}
+          className="border rounded-lg px-3 py-2.5"
+        >
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Flag size={12} color={COLORS.rust} />
+            <p
+              className="text-[11px] font-semibold uppercase"
+              style={{ color: COLORS.rust }}
+            >
+              {t("Ripoti Zilizowasilishwa", "Submitted Reports")} (
+              {reports.length})
+            </p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {reports.map((r) => (
+              <div
+                key={r.id}
+                className="text-[11px] text-secondary flex items-start gap-2"
+              >
+                <AlertTriangle
+                  size={11}
+                  color={COLORS.rust}
+                  className="shrink-0 mt-0.5"
+                />
+                <div className="min-w-0">
+                  <p className="font-semibold text-primary">
+                    {r.reporter_role === "buyer"
+                      ? t("Mnunuzi", "Buyer")
+                      : t("Muuzaji", "Seller")}
+                    {" → "}
+                    {r.reported_user_name || "—"}
+                  </p>
+                  <p className="text-muted">
+                    {r.report_reason} · {r.code}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Parties */}
       <div
@@ -175,6 +311,9 @@ export default function DealRoomViewer({
           />
         )}
       </div>
+
+      {/* ── MPYA: Download transcript (admin) ── */}
+      <DownloadBar dealId={deal.id} lang={lang} />
 
       {/* Payment Proof */}
       {paymentProof && (
@@ -257,8 +396,8 @@ export default function DealRoomViewer({
       {/* Footer */}
       <p className="text-[10px] text-muted text-center">
         {t(
-          "Hii ni admin view — read-only. Admin hawezi kutuma ujumbe kama mnunuzi/muuzaji.",
-          "This is admin view — read-only. Admin cannot send messages as buyer/seller."
+          "Hii ni admin view — read-only. Admin hawezi kutuma ujumbe kama mnunuzi/muuzaji, lakini anaweza kupakua transcript.",
+          "This is admin view — read-only. Admin cannot send messages as buyer/seller, but can download the transcript."
         )}
       </p>
     </div>

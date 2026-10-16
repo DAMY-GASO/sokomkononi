@@ -6,6 +6,8 @@
 //  - Ondoa disputeNote, disputeReason, disputeResolution
 //  - Ondoa DISPUTED kutoka status mapping
 //  - Ongeza pagination support
+//  - Ongeza canSeeContact + inspection fields (MPYA)
+//  - Ongeza getDealTranscript helper (MPYA) — kwa download
 // ============================================================
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { dealsApi } from "../api/deals.js";
@@ -309,8 +311,13 @@ function normalizeDealFromApi(raw, currentUserId) {
     inspectionHours: raw.inspection_hours ?? null,
     inspectionStartedAt: raw.inspection_started_at || null,
     inspectionExpiresAt: raw.inspection_expires_at || null,
+    inspectionStatus: raw.inspection_status || null,
     buyerDecision: raw.buyer_decision || null,
     buyerDecisionNote: raw.buyer_decision_note || "",
+
+    // ── Contact visibility (MPYA) ──────────────────────────
+    // True kama reservation imelipwa — mawasiliano yanafunguliwa
+    canSeeContact: !!raw.can_see_contact,
 
     // ── Payment proof ──────────────────────────────────────
     paymentProof: raw.payment_proof
@@ -352,6 +359,8 @@ function normalizeDealFromApi(raw, currentUserId) {
       ...(raw.messages || []).map((m) => ({
         id: m.id,
         sender: sameId(m.sender_id ?? m.sender, currentUserId) ? "me" : "them",
+        senderName: m.sender_name || "",
+        senderId: m.sender_id ?? m.sender ?? null,
         text: m.text || "",
         offerAmount: null,
         at: m.created_at,
@@ -360,6 +369,8 @@ function normalizeDealFromApi(raw, currentUserId) {
       ...(raw.offers || []).map((o) => ({
         id: o.id,
         sender: sameId(o.offered_by, currentUserId) ? "me" : "them",
+        senderName: o.offered_by_name || "",
+        senderId: o.offered_by ?? null,
         text: o.message || "",
         offerAmount: Number(o.amount) || null,
         at: o.created_at,
@@ -700,6 +711,72 @@ export async function cancelDealAsync(dealId, reason = "") {
     saveDeals(previous);
     return { ok: false, error: err };
   }
+}
+
+// ============================================================
+// TRANSCRIPT — kwa download (MPYA)
+// Inarudisha data tayari kwa export (TXT / PDF / CSV).
+// Inatumika na buyer, seller, na admin.
+// ============================================================
+export function getDealTranscript(dealId, currentUserId = null, lang = "sw") {
+  const deal = getDeal(dealId);
+  if (!deal) return null;
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const messages = Array.isArray(deal.messages) ? deal.messages : [];
+
+  return {
+    deal,
+    meta: {
+      dealRoomId: deal.id,
+      listingId: deal.listingId,
+      listingTitle: deal.listingTitle || "—",
+      location: deal.location || "—",
+      category: deal.category || "—",
+      buyerName: deal.buyerName || "—",
+      buyerId: deal.buyerId,
+      sellerName: deal.sellerName || "—",
+      sellerId: deal.sellerId,
+      status: deal.status,
+      askingPrice: deal.askingPrice || 0,
+      currentOffer: deal.currentOffer || 0,
+      agreedPrice: deal.agreedPrice || 0,
+      agreedAt: deal.agreedAt || null,
+      reservationFee: deal.reservationFee || 0,
+      reservationHours: deal.reservationHours || null,
+      reservationMethod: deal.reservationMethod || "",
+      reservationExpiresAt: deal.reservationExpiresAt || null,
+      createdAt: deal.createdAt || null,
+      updatedAt: deal.updatedAt || null,
+      exportedAt: new Date().toISOString(),
+      exportedBy:
+        currentUserId != null
+          ? String(currentUserId) === String(deal.buyerId)
+            ? "buyer"
+            : String(currentUserId) === String(deal.sellerId)
+              ? "seller"
+              : "admin"
+          : "guest",
+      exportedByUserId: currentUserId,
+      labels: {
+        title: t("Ripoti ya Mazungumzo — Deal Room", "Deal Room Transcript"),
+        dealInfo: t("Taarifa za Deal", "Deal Info"),
+        participants: t("Washiriki", "Participants"),
+        listing: t("Mali", "Listing"),
+        timeline: t("Muda", "Timeline"),
+        conversation: t("Mazungumzo", "Conversation"),
+        offer: t("Ofa", "Offer"),
+        message: t("Ujumbe", "Message"),
+        from: t("Kutoka", "From"),
+        to: t("Kwa", "To"),
+        date: t("Tarehe", "Date"),
+        you: t("Wewe", "You"),
+        other: t("Mwingine", "Other"),
+        admin: t("Admin", "Admin"),
+      },
+    },
+    messages,
+  };
 }
 
 // ============================================================

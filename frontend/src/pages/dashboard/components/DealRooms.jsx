@@ -5,12 +5,14 @@
 // - handleSendMessage → POST /deals/{id}/messages/
 // - Block phone numbers kwenye chat hadi reservation ilipwe
 // - REQUEST_NEGOTIATION → submitDecisionAsync
+// - MPYA: Report buyer/seller, ContactDrawer (kwa seller), download
 // ============================================================
 
 import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
+  ArrowRight,
   Send,
   Check,
   X,
@@ -34,6 +36,9 @@ import {
   Phone,
   Mail,
   Lock,
+  Flag,
+  MessageSquare,
+  Download,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS, timeAgo } from "./shared";
 import {
@@ -48,6 +53,7 @@ import {
   acceptOfferAsync,
   cancelDealAsync,
   getDeals,
+  getDealTranscript,
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -55,6 +61,7 @@ import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
 import { dealsApi } from "../../../api/deals.js";
+import ContactDrawer from "../../../components/ContactDrawer.jsx";
 
 // ⬇️ Transaction lifecycle (API + fallback)
 import {
@@ -92,28 +99,18 @@ function cleanMoneyInput(value) {
 
 // ============================================================
 // PHONE NUMBER DETECTION
-// Block messages containing phone-like numbers (local + international).
-// Buyer must pay reservation fee before sharing contact details.
 // ============================================================
 const PHONE_PATTERNS = [
-  // Tanzania local mobile: 07XXXXXXXX, 06XXXXXXXX, 05XXXXXXXX, 04XXXXXXXX
   /\b0[4-9]\d{7,8}\b/,
-  // Tanzania international with +: +255 XXXXXXXXX (8-9 digits after)
   /\+255\d{7,9}\b/,
-  // Tanzania international without +: 255 XXXXXXXXX
   /\b255\d{7,9}\b/,
-  // Kenya: +254 / 254 / 07XX
   /\+254\d{7,9}\b/,
   /\b254\d{7,9}\b/,
   /\b07\d{8}\b/,
-  // Uganda: +256 / 256
   /\+256\d{7,9}\b/,
   /\b256\d{7,9}\b/,
-  // Generic international: + followed by 8-15 digits
   /\+\d{8,15}\b/,
-  // Generic long digit sequences (8+ digits) — likely phone / account numbers
   /\b\d{9,15}\b/,
-  // Email addresses
   /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
 ];
 
@@ -125,7 +122,7 @@ function containsContactInfo(text) {
 }
 
 // ============================================================
-// API FALLBACK — LOG TU (hakuna local fallback)
+// API FALLBACK
 // ============================================================
 async function callApiOrFallback(apiCall) {
   try {
@@ -869,7 +866,6 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
   const tiers = useActiveReservationTiers();
   const isFeeDisabled = settings?.is_enabled === false;
 
-  // Default: chagua tier ya kwanza ikiwa hakuna
   useEffect(() => {
     if (selectedHours == null && tiers.length > 0) {
       setSelectedHours(tiers[0].hours);
@@ -1236,6 +1232,13 @@ function DealDetail({
   const [offerAmount, setOfferAmount] = useState("");
   const [reserveOpen, setReserveOpen] = useState(false);
   const [chatError, setChatError] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("FRAUD");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportBusy, setReportBusy] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
+  const [contactDrawerOpen, setContactDrawerOpen] = useState(false);
+
   const category = getCategory(deal.category);
   const CategoryIcon = getCategoryIcon(category?.iconKey);
   const status =
@@ -1250,17 +1253,12 @@ function DealDetail({
         ? "Muuzaji"
         : "Seller";
 
-  // ═══════════════════════════════════════════════════════════
-  // CHAGUO A: buyer NA seller wote wanaweza kutuma offers na kukubali
-  // ═══════════════════════════════════════════════════════════
   const isBuyer = side === "buyer";
   const isSeller = side === "seller";
   const lastOffer = [...(deal.messages || [])]
     .reverse()
     .find((m) => m.offerAmount);
   const iMadeLastOffer = lastOffer?.sender === "me";
-
-  // Yeyote aliye upande wa pili wa offer ya mwisho anaweza kukubali/kukataa
   const canRespond = deal.currentOffer > 0 && !iMadeLastOffer;
 
   const waitingText = iMadeLastOffer
@@ -1283,18 +1281,13 @@ function DealDetail({
         ? "Hakuna ofa bado — toa ofa yako ya kwanza."
         : "No offer yet — make your first offer.";
 
-  // ═══════════════════════════════════════════════════════════
-  // SELLER CONTACT VISIBILITY
-  // Inaonekana tu kama:
-  //   - ni seller mwenyewe, AU
-  //   - ni buyer NA reservation imelipwa (status ipo kwenye
-  //     reserved/awaiting_final_payment/payment_proof_submitted/completed)
-  //   - AU deal.status ni completed
-  // ═══════════════════════════════════════════════════════════
+  // ── Contact visibility ──
   const sellerPhone =
     deal.sellerPhone ?? deal.seller_phone ?? deal.counterpartyPhone ?? null;
   const sellerEmail =
     deal.sellerEmail ?? deal.seller_email ?? deal.counterpartyEmail ?? null;
+  const buyerPhone = deal.buyerPhone ?? null;
+  const buyerEmail = deal.buyerEmail ?? null;
 
   const reservationPaidStatuses = [
     "reserved",
@@ -1304,19 +1297,13 @@ function DealDetail({
   ];
   const reservationPaid = reservationPaidStatuses.includes(deal.status);
 
-  // Seller anaweza kuona contact yake mwenyewe; buyer anaiona tu baada ya
-  // kulipia reservation.
-  const showSellerContact = isSeller || (isBuyer && reservationPaid);
+  // ── MPYA: canSeeContact inatoka kwa backend (can_see_contact) ──
+  const canSeeContact = !!deal.canSeeContact;
 
   // Phone lock: buyer haioni mpaka reservation ilipwe
   const phoneLocked = isBuyer && !reservationPaid;
 
-  // ═══════════════════════════════════════════════════════════
-  // AUTO-OPEN RESERVATION
-  // Negotiation inakamilika pale upande mmoja unapokubali ofa ya mwisho
-  // (status → "accepted"). Mnunuzi anaona ReservationPanel ikifunguka
-  // yenyewe. Kama malipo yameshaanzishwa (pendingPayment), usifungue tena.
-  // ═══════════════════════════════════════════════════════════
+  // ── Auto-open ReservationPanel kwa buyer ──
   useEffect(() => {
     setReserveOpen(
       deal.status === "accepted" && isBuyer && !deal.pendingPayment
@@ -1327,7 +1314,6 @@ function DealDetail({
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    // Block contact info (phone / email) kama reservation haijalipwa
     if (!isSeller && !reservationPaid) {
       if (containsContactInfo(trimmed)) {
         setChatError(
@@ -1352,8 +1338,39 @@ function DealDetail({
     setOfferOpen(false);
   };
 
+  // ── MPYA: Report handler ──
+  const handleReportSubmit = async () => {
+    if (reportDetails.trim().length < 10) return;
+    setReportBusy(true);
+    try {
+      const reportedUserId =
+        side === "buyer" ? deal.sellerId : deal.buyerId;
+      await dealsApi.report(deal.dealRoomId || deal.id, {
+        reported_user_id: reportedUserId,
+        reason: reportReason,
+        details: reportDetails.trim(),
+      });
+      setReportSuccess(true);
+      setTimeout(() => {
+        setReportOpen(false);
+        setReportSuccess(false);
+        setReportDetails("");
+        setReportReason("FRAUD");
+      }, 2500);
+    } catch (err) {
+      alert(
+        err?.message ||
+          (lang === "sw"
+            ? "Imeshindwa kutuma ripoti. Jaribu tena."
+            : "Failed to send report. Try again.")
+      );
+    } finally {
+      setReportBusy(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       {/* Header */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -1401,6 +1418,24 @@ function DealDetail({
         >
           {status?.label || deal.status || "—"}
         </span>
+
+        {/* ── MPYA: Report button ── */}
+        <button
+          onClick={() => setReportOpen(true)}
+          style={{ color: COLORS.rust }}
+          className="shrink-0 p-1.5 rounded-full hover:bg-red-50 transition-colors"
+          title={
+            side === "buyer"
+              ? lang === "sw"
+                ? "Ripoti Muuzaji"
+                : "Report Seller"
+              : lang === "sw"
+                ? "Ripoti Mnunuzi"
+                : "Report Buyer"
+          }
+        >
+          <Flag size={15} />
+        </button>
       </div>
 
       {/* Price strip */}
@@ -1418,52 +1453,25 @@ function DealDetail({
         </span>
       </div>
 
-      {/* Seller contact strip — inaonekana tu kama reservation imelipwa */}
-      {showSellerContact && (sellerPhone || sellerEmail) && (
-        <div
-          style={{
-            background: "rgba(47,109,79,0.08)",
-            borderColor: COLORS.sandLine,
-          }}
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-2 border-b text-body-sm"
+      {/* ── Wasiliana na upande wa pili (buyer ↔ seller) baada ya reservation ── */}
+      {canSeeContact && (
+        <button
+          onClick={() => setContactDrawerOpen(true)}
+          style={{ background: COLORS.green, color: "white" }}
+          className="mx-4 mt-2 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
         >
-          <div className="flex flex-col gap-1 min-w-0">
-            {sellerPhone && (
-              <span
-                style={{ color: COLORS.green }}
-                className="flex items-center gap-1.5 min-w-0"
-              >
-                <Phone size={13} className="shrink-0" />
-                <span className="font-semibold shrink-0">
-                  {lang === "sw" ? "Simu" : "Phone"}:
-                </span>
-                <span className="font-mono truncate">{sellerPhone}</span>
-              </span>
-            )}
-            {sellerEmail && (
-              <span
-                style={{ color: COLORS.green }}
-                className="flex items-center gap-1.5 min-w-0"
-              >
-                <Mail size={13} className="shrink-0" />
-                <span className="font-semibold shrink-0">
-                  {lang === "sw" ? "Barua pepe" : "Email"}:
-                </span>
-                <span className="truncate">{sellerEmail}</span>
-              </span>
-            )}
-          </div>
-          {sellerPhone && (
-            <a
-              href={`tel:${sellerPhone}`}
-              style={{ background: COLORS.green, color: "white" }}
-              className="shrink-0 rounded-lg px-3 py-1.5 text-body-sm font-semibold text-center"
-            >
-              {lang === "sw" ? "Piga Simu" : "Call"}
-            </a>
-          )}
-        </div>
+          <MessageSquare size={14} />
+          {isBuyer
+            ? lang === "sw"
+              ? "Wasiliana na Muuzaji"
+              : "Contact Seller"
+            : lang === "sw"
+              ? "Wasiliana na Mnunuzi"
+              : "Contact Buyer"}
+        </button>
       )}
+
+      {/* ── Phone lock kwa buyer ── */}
       {phoneLocked && (
         <div
           style={{
@@ -1534,7 +1542,7 @@ function DealDetail({
         })}
       </div>
 
-      {/* Negotiation actions — CHAGUO A */}
+      {/* Negotiation actions */}
       {(deal.status === "negotiating" || deal.status === "offer_sent") && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -1571,7 +1579,6 @@ function DealDetail({
               {waitingText}
             </span>
           )}
-          {/* CHAGUO A: wote wanaweza kutuma offers (buyer NA seller) */}
           {(isBuyer || isSeller) && (
             <button
               onClick={() => setOfferOpen((v) => !v)}
@@ -1595,7 +1602,7 @@ function DealDetail({
         </div>
       )}
 
-      {/* Offer input — CHAGUO A: buyer NA seller */}
+      {/* Offer input */}
       {(isBuyer || isSeller) && offerOpen && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -1789,6 +1796,7 @@ function DealDetail({
         </div>
       )}
 
+      {/* ── MPYA: Completed + Seller button ya kwenda kwenye tangazo ── */}
       {deal.status === "completed" && (
         <div
           style={{
@@ -1806,6 +1814,17 @@ function DealDetail({
               ? "Muamala umekamilika! Malipo yamethibitishwa — angalia My Transactions kwa risiti."
               : "Transaction completed! Payment confirmed — check My Transactions for the receipt."}
           </span>
+
+          {isSeller && deal.listingId && (
+            <Link
+              to={`/mali/${deal.listingId}`}
+              style={{ background: COLORS.green, color: "white" }}
+              className="mt-1 flex items-center gap-1.5 text-body-sm font-semibold px-4 py-2 rounded-lg"
+            >
+              {lang === "sw" ? "Nenda kwenye Tangazo" : "Go to Listing"}
+              <ArrowRight size={13} />
+            </Link>
+          )}
         </div>
       )}
 
@@ -1846,7 +1865,7 @@ function DealDetail({
         </div>
       )}
 
-      {/* Chat error — phone / email blocked */}
+      {/* Chat error */}
       {chatError && (
         <div
           style={{
@@ -1893,6 +1912,168 @@ function DealDetail({
           </button>
         </div>
       )}
+
+      {/* ── MPYA: Floating button "Lipia Reservation" ── */}
+      {isBuyer &&
+        deal.status === "accepted" &&
+        !reserveOpen &&
+        !deal.pendingPayment && (
+          <button
+            onClick={() => setReserveOpen(true)}
+            style={{
+              background: COLORS.green,
+              color: "white",
+              boxShadow: "0 8px 24px rgba(47,109,79,0.35)",
+            }}
+            className="fixed bottom-24 right-4 z-40 flex items-center gap-2 text-sm font-bold px-5 py-3 rounded-full animate-pulse"
+          >
+            <CreditCard size={16} />
+            {lang === "sw" ? "Lipia Reservation" : "Pay Reservation"}
+          </button>
+        )}
+
+      {/* ── MPYA: Report Modal ── */}
+      {reportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div
+            style={{ background: "white", borderColor: COLORS.sandLine }}
+            className="rounded-2xl border w-full max-w-md p-5"
+          >
+            <h3 className="text-primary text-base font-bold mb-3 flex items-center gap-2">
+              <Flag size={16} color={COLORS.rust} />
+              {side === "buyer"
+                ? lang === "sw"
+                  ? "Ripoti Muuzaji"
+                  : "Report this Seller"
+                : lang === "sw"
+                  ? "Ripoti Mnunuzi"
+                  : "Report this Buyer"}
+            </h3>
+
+            {reportSuccess ? (
+              <div
+                style={{
+                  color: COLORS.green,
+                  background: "rgba(47,109,79,0.1)",
+                }}
+                className="rounded-lg p-3 text-sm text-center mb-3"
+              >
+                {lang === "sw"
+                  ? "Ripoti yako imetumwa. Timu yetu itachukua hatua ndani ya saa 24."
+                  : "Your report has been sent. Our team will act within 24 hours."}
+              </div>
+            ) : (
+              <>
+                <label className="text-xs font-semibold text-secondary">
+                  {lang === "sw" ? "Sababu" : "Reason"}
+                </label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm mb-3 mt-1"
+                  style={{ borderColor: COLORS.sandLine }}
+                >
+                  <option value="FRAUD">
+                    {lang === "sw" ? "Utapeli / Uongo" : "Fraud / Dishonesty"}
+                  </option>
+                  <option value="HARASSMENT">
+                    {lang === "sw" ? "Unyanyasaji / Vitisho" : "Harassment / Threats"}
+                  </option>
+                  <option value="NO_SHOW">
+                    {lang === "sw" ? "Hakufika kwenye Ukaguzi" : "No-show at inspection"}
+                  </option>
+                  <option value="FAKE_DOCS">
+                    {lang === "sw" ? "Hati za Uongo" : "Fake documents"}
+                  </option>
+                  <option value="OFF_PLATFORM">
+                    {lang === "sw" ? "Kutaka Malipo Nje ya Jukwaa" : "Off-platform payment request"}
+                  </option>
+                  <option value="OTHER">
+                    {lang === "sw" ? "Nyingine" : "Other"}
+                  </option>
+                </select>
+
+                <label className="text-xs font-semibold text-secondary">
+                  {lang === "sw" ? "Maelezo" : "Details"}
+                </label>
+                <textarea
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  rows={4}
+                  placeholder={
+                    lang === "sw"
+                      ? "Eleza kwa ufupi tatizo (angalau herufi 10)..."
+                      : "Describe the issue briefly (at least 10 chars)..."
+                  }
+                  className="w-full border rounded-lg px-3 py-2 text-sm mb-3 mt-1 resize-none"
+                  style={{ borderColor: COLORS.sandLine }}
+                />
+
+                {reportDetails.trim().length > 0 &&
+                  reportDetails.trim().length < 10 && (
+                    <p className="text-xs mb-2" style={{ color: COLORS.rust }}>
+                      {lang === "sw"
+                        ? "Tafadhali toa maelezo ya kutosha (angalau herufi 10)."
+                        : "Please provide enough details (at least 10 chars)."}
+                    </p>
+                  )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setReportOpen(false);
+                      setReportDetails("");
+                      setReportReason("FRAUD");
+                    }}
+                    disabled={reportBusy}
+                    style={{ borderColor: COLORS.sandLine }}
+                    className="flex-1 border text-sm font-semibold px-3 py-2 rounded-lg disabled:opacity-50"
+                  >
+                    {lang === "sw" ? "Ghairi" : "Cancel"}
+                  </button>
+                  <button
+                    onClick={handleReportSubmit}
+                    disabled={reportDetails.trim().length < 10 || reportBusy}
+                    style={{
+                      background:
+                        reportDetails.trim().length >= 10
+                          ? COLORS.rust
+                          : COLORS.sandLine,
+                      color: "white",
+                    }}
+                    className="flex-1 text-sm font-semibold px-3 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {reportBusy
+                      ? lang === "sw"
+                        ? "Inatuma..."
+                        : "Sending..."
+                      : lang === "sw"
+                        ? "Tuma Ripoti"
+                        : "Send Report"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+
+      {/* ── Contact Drawer — buyer ↔ seller ── */}
+      <ContactDrawer
+        open={contactDrawerOpen}
+        onClose={() => setContactDrawerOpen(false)}
+        lang={lang}
+        dealId={deal.dealRoomId || deal.id}
+        currentUserId={user?.id}
+        contact={{
+          name: deal.counterpartyName,
+          phone: isBuyer ? sellerPhone : buyerPhone,
+          email: isBuyer ? sellerEmail : buyerEmail,
+          role: isBuyer ? "seller" : "buyer",
+          userId: isBuyer ? deal.sellerId : deal.buyerId,
+        }}
+      />
     </div>
   );
 }
@@ -1925,7 +2106,6 @@ export default function DealRooms({
 
   const selectedDeal = deals.find((d) => d.id === selectedId) || deals[0];
   const updateDeal = (id, patchOrUpdater) => {
-    // Store handles both shapes now.
     updateDealInStore(id, patchOrUpdater);
   };
 
@@ -1960,7 +2140,6 @@ export default function DealRooms({
     return txId;
   };
 
-  // ⬇️ handleSendMessage — POST /deals/{id}/messages/
   const handleSendMessage = async (id, text) => {
     const deal = deals.find((d) => String(d.id) === String(id));
     if (!deal) return;
@@ -1972,7 +2151,6 @@ export default function DealRooms({
       text,
       at: new Date().toISOString(),
     };
-    // Optimistic append using functional update against current store.
     updateDeal(id, (prev) => ({
       ...prev,
       messages: [...(prev.messages || []), optimisticMsg],
@@ -2001,7 +2179,6 @@ export default function DealRooms({
     }
   };
 
-  // ⬇️ CHAGUO A: buyer NA seller wote wanaweza kutuma offers
   const handleSendOffer = async (id, amount) => {
     const res = await sendOfferAsync(id, amount, "", null, user?.id);
     if (!res.ok) {
@@ -2015,7 +2192,6 @@ export default function DealRooms({
     }
   };
 
-  // ⬇️ CHAGUO A: yeyote aliye upande wa pili anaweza kukubali
   const handleRespond = async (id, newStatus) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
@@ -2025,7 +2201,6 @@ export default function DealRooms({
       .find((m) => m.offerAmount);
     if (!lastOffer) return;
 
-    // Kama ofa ya mwisho ilitoka upande wako, hauwezi kukubali
     if (lastOffer.sender === "me") return;
 
     if (newStatus === "accepted") {
@@ -2043,10 +2218,6 @@ export default function DealRooms({
     }
 
     if (newStatus === "declined") {
-      // Sending a counter-offer of 0 would be semantically wrong; the
-      // backend has no "reject-offer-only" endpoint. We instead post a
-      // system message and stop here, leaving the deal OPEN for a
-      // renegotiation. Cancelling the whole deal was destroying it.
       try {
         await dealsApi.sendDealMessage(
           deal.dealRoomId || deal.id,
@@ -2057,7 +2228,6 @@ export default function DealRooms({
                 : `The offer of ${formatTZS(lastOffer.offerAmount)} was declined. Please make another offer.`,
           }
         );
-        // Unlock respond logic — clear the offered amount locally.
         updateDeal(id, { currentOffer: 0 });
       } catch (msgErr) {
         console.warn("[DealRooms] decline message failed:", msgErr);
@@ -2066,7 +2236,6 @@ export default function DealRooms({
     }
   };
 
-  // ── finalizeLocalReservation ────────────────────────────
   const finalizeLocalReservation = (
     id,
     deal,
@@ -2111,7 +2280,6 @@ export default function DealRooms({
     onReservationPaid?.(deal, { hours, fee, method, expiresAt: nowExpiresAt });
   };
 
-  // ⬇️ RESERVE CONFIRM
   const handleReserveConfirm = async (id, { hours, fee, method }) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
@@ -2139,7 +2307,6 @@ export default function DealRooms({
       return;
     }
 
-    // Free activation
     const activatedStatus = reserveRes.transaction?.status;
     if (activatedStatus === TX_STATUS.RESERVED_PAID) {
       const expiresAt =
@@ -2153,7 +2320,6 @@ export default function DealRooms({
       });
     }
 
-    // PENDING_PAYMENT → lipa
     const payRes = await callApiOrFallback(() =>
       payReservationAsync(txId, {
         paymentReference: method === "credits" ? "credits" : null,
@@ -2170,7 +2336,6 @@ export default function DealRooms({
       return;
     }
 
-    // FimiPay
     if (payRes.pending) {
       updateDeal(id, {
         status: "accepted",
@@ -2227,7 +2392,6 @@ export default function DealRooms({
       return;
     }
 
-    // Credits au free
     const expiresAt =
       payRes.transaction?.reservationExpiresAt ||
       new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
@@ -2258,7 +2422,6 @@ export default function DealRooms({
         })
       );
     } else if (outcome === "REQUEST_NEGOTIATION") {
-      // Backend itaweka status DISPUTED (kulingana na transaction.py)
       apiRes = await callApiOrFallback(() =>
         submitDecisionAsync(txId, {
           buyerDecision: "REQUEST_NEGOTIATION",
@@ -2391,8 +2554,6 @@ export default function DealRooms({
 
     updateDeal(id, {
       status: "payment_proof_submitted",
-      // Store only metadata — the file itself lives on the backend.
-      // Keeping a base64 dataUrl bloats localStorage across many deals.
       paymentProof: {
         method: proof.method,
         reference: proof.reference,
