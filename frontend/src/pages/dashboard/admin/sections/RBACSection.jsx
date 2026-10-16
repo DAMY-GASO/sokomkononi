@@ -805,9 +805,9 @@ export default function RBACSection() {
   return (
     <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
       <SectionHeader
-        title={t("Roles & Ruhusa", "Roles & Permissions")}
+        title={t("Wadhifa & Ruhusa", "Roles & Permissions")}
         subtitle={t(
-          "Simamia roles za wafanyakazi na ruhusa zao kwenye mfumo.",
+          "Simamia nyadhifa za wafanyakazi na ruhusa zao kwenye mfumo.",
           "Manage staff roles and their permissions in the system.",
         )}
       />
