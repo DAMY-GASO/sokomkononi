@@ -27,6 +27,7 @@ export const PERMISSIONS = [
   { key: "trash", label: { sw: "Trash", en: "Trash" } },
   { key: "system", label: { sw: "Mipangilio", en: "Settings" } },
   { key: "staff", label: { sw: "Wafanyakazi", en: "Staff" } },
+  { key: "profile", label: { sw: "Wasifu", en: "Profile" } },
 ];
 
 function read(key, fb) {

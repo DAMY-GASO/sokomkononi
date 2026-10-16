@@ -4,6 +4,9 @@
 // Bilingual kamili + mobile-responsive.
 // Types: listing, reservation, success, package, boost, leading,
 //        ads, premium
+//
+// Marekebisho:
+//  - TYPE_LABELS.success → "Mafanikio" / "Success"
 // ============================================================
 
 import React, { useState, useRef } from "react";
@@ -34,7 +37,7 @@ import { useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { api } from "../api/client.js";
 
-// Icon resolver — lazima iwe na icons zote zinazotumika kwenye bundles
+// Icon resolver
 const ICON_MAP = {
   ListChecks,
   Rocket,
@@ -57,20 +60,19 @@ const CREDIT_LABELS = {
   leading: { sw: "Kuongoza", en: "Leading" },
   boost: { sw: "Kukuza", en: "Boost" },
   reservation: { sw: "Kuhifadhi", en: "Reservation" },
-  success: { sw: "Ripoti", en: "Reports" },
+  success: { sw: "Mafanikio", en: "Success" }, // ⬅️ Badilishwa
   ads: { sw: "Matangazo", en: "Ads" },
   premium: { sw: "Hadhi ya Juu", en: "Premium" },
 };
 
 // ============================================================
 // BILINGUAL — bundle type labels
-// Mpangilio: msingi → combo → mwonekano → combo ya mwonekano
 // ============================================================
 const TYPE_LABELS = {
   all: { sw: "Zote", en: "All" },
   listing: { sw: "Kuweka Mali", en: "Listings" },
   reservation: { sw: "Kuhifadhi", en: "Reservation" },
-  success: { sw: "Ripoti", en: "Reports" },
+  success: { sw: "Mafanikio", en: "Success" }, // ⬅️ Badilishwa
   package: { sw: "Vifurushi Maalum", en: "Packages" },
   boost: { sw: "Kukuza", en: "Boost" },
   leading: { sw: "Kuongoza", en: "Leading" },
@@ -87,7 +89,6 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
   const description =
     bundle.description?.[lang] || bundle.description?.[other] || "";
 
-  // Credits display — inaonyesha credits zote zilizomo kwenye bundle
   const creditsList =
     bundle.credits && typeof bundle.credits === "object"
       ? Object.entries(bundle.credits)
@@ -124,7 +125,6 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
         </p>
       </div>
 
-      {/* Credits breakdown — kwa combo bundles */}
       {creditsList.length > 0 && (
         <div className="w-full flex flex-wrap justify-center gap-1.5">
           {creditsList.map((c, i) => (
@@ -206,9 +206,6 @@ export default function BundlesPage() {
 
   const handlePaymentSuccess = async () => {
     if (!user || !payingBundle) return;
-    // FimiPay's webhook to the backend may land a few seconds after the
-    // poll reports SUCCESS. Retry up to 4 times with 2s gaps so the
-    // user actually sees their new balance.
     const delays = [0, 2000, 4000, 6000];
     for (const ms of delays) {
       if (ms) await new Promise((r) => setTimeout(r, ms));
@@ -228,7 +225,6 @@ export default function BundlesPage() {
     setPayingBundle(null);
   };
 
-  // Credits zote zilizo na balance > 0
   const activeCredits = userCredits
     ? Object.entries(CREDIT_LABELS)
         .filter(([key]) => key !== "premium")
@@ -249,9 +245,7 @@ export default function BundlesPage() {
       className="w-full p-3 sm:p-4 md:p-6"
     >
       <div className="max-w-6xl mx-auto">
-        {/* ============================================================ */}
         {/* HEADER — CENTERED */}
-        {/* ============================================================ */}
         <div className="mb-5 sm:mb-6 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Sparkles size={20} color={COLORS.gold} className="sm:w-6 sm:h-6" />
@@ -273,9 +267,7 @@ export default function BundlesPage() {
           </p>
         </div>
 
-        {/* ============================================================ */}
-        {/* CREDITS BALANCE — responsive grid */}
-        {/* ============================================================ */}
+        {/* CREDITS BALANCE */}
         {activeCredits.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 mb-5 sm:mb-6 max-w-lg mx-auto">
             <div className="flex items-center justify-center gap-2 mb-3">
@@ -302,9 +294,7 @@ export default function BundlesPage() {
           </div>
         )}
 
-        {/* ============================================================ */}
-        {/* TYPE FILTER — centered, scrollable kwenye mobile */}
-        {/* ============================================================ */}
+        {/* TYPE FILTER */}
         <div className="flex justify-start sm:justify-center gap-2 mb-4 sm:mb-5 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
           {types.map((ty) => (
             <button
@@ -321,9 +311,7 @@ export default function BundlesPage() {
           ))}
         </div>
 
-        {/* ============================================================ */}
         {/* BUNDLES GRID */}
-        {/* ============================================================ */}
         {filtered.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-200 p-8 sm:p-12 text-center bg-white">
             <Package
@@ -352,9 +340,7 @@ export default function BundlesPage() {
         )}
       </div>
 
-      {/* ============================================================ */}
-      {/* PAYMENT MODAL — responsive */}
-      {/* ============================================================ */}
+      {/* PAYMENT MODAL */}
       {payingBundle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50">
           <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">

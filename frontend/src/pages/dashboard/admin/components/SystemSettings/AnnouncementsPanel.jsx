@@ -2,13 +2,17 @@
 // AnnouncementsPanel.jsx
 // System/Marketplace announcements — Admin.
 // Bilingual + mobile-responsive + Async actions na rollback.
+//
+// Marekebisho:
+//  - lg:col-span-3 imeondolewa (parent inashughulikia layout)
+//  - `busy` na `error` state zinafanya kazi vizuri
+//  - scheduledFor inaonyeshwa kwenye list
 // ============================================================
 
 import React, { useState } from "react";
 import { Megaphone, Plus, Trash2, Loader2 } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
-// ⬇️ MABADILIKO: tumia async variants
 import {
   useAnnouncements,
   addAnnouncementAsync,
@@ -28,7 +32,6 @@ export default function AnnouncementsPanel() {
     scheduledFor: "",
   });
   const [expanded, setExpanded] = useState(false);
-  // ⬇️ MPYA: busy + error
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
@@ -121,7 +124,7 @@ export default function AnnouncementsPanel() {
   const canSend = form.title.trim() && form.message.trim() && !busy.sending;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-4 lg:col-span-3 min-w-0">
+    <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-4 w-full min-w-0">
       {/* Header */}
       <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
@@ -213,7 +216,11 @@ export default function AnnouncementsPanel() {
           <input
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
-            placeholder={lang === "sw" ? "Kichwa cha tangazo (SW)" : "Announcement title (SW)"}
+            placeholder={
+              lang === "sw"
+                ? "Kichwa cha tangazo (SW)"
+                : "Announcement title (SW)"
+            }
             disabled={busy.sending}
             className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
           />
@@ -222,9 +229,11 @@ export default function AnnouncementsPanel() {
           <input
             value={form.titleEn}
             onChange={(e) => setForm({ ...form, titleEn: e.target.value })}
-            placeholder={lang === "sw"
-              ? "Kichwa cha tangazo (EN) — hiari"
-              : "Announcement title (EN) — optional"}
+            placeholder={
+              lang === "sw"
+                ? "Kichwa cha tangazo (EN) — hiari"
+                : "Announcement title (EN) — optional"
+            }
             disabled={busy.sending}
             className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
           />
@@ -233,7 +242,9 @@ export default function AnnouncementsPanel() {
           <textarea
             value={form.message}
             onChange={(e) => setForm({ ...form, message: e.target.value })}
-            placeholder={lang === "sw" ? "Ujumbe kamili (SW)..." : "Full message (SW)..."}
+            placeholder={
+              lang === "sw" ? "Ujumbe kamili (SW)..." : "Full message (SW)..."
+            }
             rows={3}
             disabled={busy.sending}
             className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none resize-none focus:border-[#FEA406] disabled:opacity-50"
@@ -243,9 +254,11 @@ export default function AnnouncementsPanel() {
           <textarea
             value={form.messageEn}
             onChange={(e) => setForm({ ...form, messageEn: e.target.value })}
-            placeholder={lang === "sw"
-              ? "Ujumbe kamili (EN) — hiari"
-              : "Full message (EN) — optional"}
+            placeholder={
+              lang === "sw"
+                ? "Ujumbe kamili (EN) — hiari"
+                : "Full message (EN) — optional"
+            }
             rows={3}
             disabled={busy.sending}
             className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none resize-none focus:border-[#FEA406] disabled:opacity-50"
@@ -259,7 +272,9 @@ export default function AnnouncementsPanel() {
             <input
               type="datetime-local"
               value={form.scheduledFor}
-              onChange={(e) => setForm({ ...form, scheduledFor: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, scheduledFor: e.target.value })
+              }
               disabled={busy.sending}
               className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none flex-1 min-w-0 focus:border-[#FEA406] disabled:opacity-50"
             />
@@ -312,7 +327,7 @@ export default function AnnouncementsPanel() {
                   >
                     {getTypeLabel(a.typeId)}
                   </span>
-                  {!a.sent && (
+                  {!a.sent && a.scheduledFor && (
                     <span
                       style={{
                         background: `${COLORS.green}15`,
@@ -322,6 +337,17 @@ export default function AnnouncementsPanel() {
                     >
                       {lang === "sw" ? "Imepangwa:" : "Scheduled:"}{" "}
                       {formatScheduled(a.scheduledFor)}
+                    </span>
+                  )}
+                  {a.sent && (
+                    <span
+                      style={{
+                        background: `${COLORS.night}0D`,
+                        color: COLORS.night,
+                      }}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    >
+                      {lang === "sw" ? "Imetumwa" : "Sent"}
                     </span>
                   )}
                 </div>

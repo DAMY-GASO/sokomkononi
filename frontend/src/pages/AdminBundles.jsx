@@ -4,13 +4,17 @@
 // FIXED: uses async CRUD (API-backed) — no more local-only writes.
 // Types: listing, leading, boost, reservation, success, ads,
 //        premium, package
+//
+// Marekebisho:
+//  - TYPE_LABELS.success → "Mafanikio" / "Success"
+//  - credits default → {} (sio { listing: 1 })
+//  - code value → form.code (sio form.code || form.id)
 // ============================================================
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   Plus,
   Pencil,
   Trash2,
-  Check,
   X,
   Package,
   Eye,
@@ -32,7 +36,7 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 const TYPE_LABELS = {
   listing: { sw: "Kuweka Mali", en: "Listing" },
   reservation: { sw: "Kuhifadhi", en: "Reservation" },
-  success: { sw: "Ripoti", en: "Reports" },
+  success: { sw: "Mafanikio", en: "Success" }, // ⬅️ Badilishwa
   package: { sw: "Kifurushi Maalum", en: "Package" },
   boost: { sw: "Kukuza", en: "Boost" },
   leading: { sw: "Kuongoza", en: "Leading" },
@@ -45,7 +49,7 @@ const CREDIT_LABELS = {
   leading: { sw: "Kuongoza", en: "Leading" },
   boost: { sw: "Kukuza", en: "Boost" },
   reservation: { sw: "Kuhifadhi", en: "Reservation" },
-  success: { sw: "Ripoti", en: "Reports" },
+  success: { sw: "Mafanikio", en: "Success" },
   ads: { sw: "Matangazo", en: "Ads" },
   premium: { sw: "Hadhi ya Juu", en: "Premium" },
 };
@@ -67,7 +71,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
       name: { sw: "", en: "" },
       description: { sw: "", en: "" },
       price: 0,
-      credits: { listing: 1 },
+      credits: {}, // ⬅️ Badilishwa kutoka { listing: 1 }
       validityDays: 90,
       services: [],
       discountPercent: 0,
@@ -90,8 +94,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
     e.preventDefault();
 
     const missing = [];
-    if (!form.code?.trim() && !form.id?.trim())
-      missing.push(t("Kitambulisho (ID)", "Identifier (ID)"));
+    if (!form.code?.trim()) missing.push(t("Kitambulisho (ID)", "Identifier (ID)"));
     if (!form.name?.sw?.trim()) missing.push(t("Jina (SW)", "Name (SW)"));
     if (!form.name?.en?.trim()) missing.push(t("Jina (EN)", "Name (EN)"));
     if (!form.description?.sw?.trim())
@@ -146,7 +149,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
               <span className="text-[#C1502E]">*</span>
             </label>
             <input
-              value={form.code || form.id || ""}
+              value={form.code || ""} // ⬅️ Badilishwa
               onChange={(e) => updateField("code", e.target.value)}
               disabled={!!bundle || saving}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-secondary"
@@ -454,7 +457,7 @@ export default function AdminBundles() {
       !q ||
       (b.name?.sw || "").toLowerCase().includes(q) ||
       (b.name?.en || "").toLowerCase().includes(q) ||
-      String(b.id || "").toLowerCase().includes(q);
+      String(b.code || "").toLowerCase().includes(q);
     return matchesType && matchesSearch;
   });
 
@@ -586,10 +589,13 @@ export default function AdminBundles() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-xs sm:text-sm text-primary truncate">
-                        {pickLang(b.name, lang) || b.id}
+                        {pickLang(b.name, lang) || b.code}
                       </p>
                       <p className="text-[10px] sm:text-xs text-secondary capitalize">
                         {pickLang(TYPE_LABELS[b.type], lang) || b.type}
+                      </p>
+                      <p className="text-[10px] text-muted font-mono truncate">
+                        {b.code}
                       </p>
                     </div>
                     <span

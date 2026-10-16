@@ -3,10 +3,9 @@
 // No seeds, no local fallback. Every mutation surfaces errors.
 //
 // SASISHO:
-//   - Sub-admins zimeondolewa kutoka store (tumia RBACSection).
-//     Backend still supports /system-settings/sub-admins/ (alias to
-//     RBAC StaffViewSet) lakini frontend haitumi.
-//   - Webhooks, AppStoreLinks, PlatformPolicy zimebaki.
+//   - Sub-admins zimeondolewa (tumia RBACSection).
+//   - Webhooks: events zimeongezwa (7 total).
+//   - Webhooks: active normalization (raw.active !== false).
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -16,6 +15,9 @@ export const WEBHOOK_EVENTS = [
   { id: "Payment Failed", label: { sw: "Malipo Yameshindikana", en: "Payment Failed" } },
   { id: "SMS Notification", label: { sw: "Taarifa ya SMS", en: "SMS Notification" } },
   { id: "New Listing", label: { sw: "Listing Mpya", en: "New Listing" } },
+  { id: "User Registered", label: { sw: "Mtumiaji Mpya", en: "User Registered" } },
+  { id: "Verification Approved", label: { sw: "Uthibitisho Umeidhinishwa", en: "Verification Approved" } },
+  { id: "Dispute Opened", label: { sw: "Mgogoro Umefunguliwa", en: "Dispute Opened" } },
 ];
 
 function makeSlice(key, event, initial) {
@@ -63,6 +65,17 @@ const webhooks = makeSlice(
   []
 );
 
+function normWebhook(raw) {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    event: raw.event || "",
+    url: raw.url || "",
+    active: raw.active !== false,
+    created_at: raw.created_at,
+  };
+}
+
 export function getWebhooks() {
   return webhooks.read();
 }
@@ -71,7 +84,7 @@ export async function hydrateWebhooksFromApi() {
   try {
     const d = await api.get("/system-settings/webhooks/?page_size=200");
     const list = Array.isArray(d) ? d : d?.results || [];
-    webhooks.save(list);
+    webhooks.save(list.map(normWebhook).filter(Boolean));
     return { ok: true, count: list.length };
   } catch (err) {
     return { ok: false, error: err };
@@ -88,8 +101,9 @@ export async function addWebhookAsync({ event, url, active = true }) {
       url,
       active,
     });
-    webhooks.save([raw, ...getWebhooks()]);
-    return { ok: true, webhook: raw };
+    const created = normWebhook(raw);
+    webhooks.save([created, ...getWebhooks()]);
+    return { ok: true, webhook: created };
   } catch (err) {
     return { ok: false, error: err };
   }
@@ -111,7 +125,7 @@ export async function toggleWebhookAsync(id) {
   const nextActive = !cur.active;
   try {
     const raw = await api.post(`/system-settings/webhooks/${id}/toggle/`, {});
-    const updated = raw && raw.id ? raw : { ...cur, active: nextActive };
+    const updated = raw && raw.id ? normWebhook(raw) : { ...cur, active: nextActive };
     webhooks.save(getWebhooks().map((w) => (w.id === id ? updated : w)));
     return { ok: true, active: updated.active };
   } catch (err) {
@@ -220,4 +234,3 @@ export async function hydrateAllSystemSettings() {
   ]);
   return { webhooks: w, appStore: a, policy: p };
 }
-

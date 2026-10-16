@@ -1,6 +1,12 @@
 // ============================================================
 // bundlesStore.js — API-only via /api/bundles/
 // No seeds. Backend is the single source of truth.
+//
+// Marekebisho:
+//  - norm(): code haitumiwi id tena
+//  - toApi(): validityDays, discountPercent, active (sio validity_days,
+//    discount_percent, is_active)
+//  - TYPE_FROM_API: SUCCESS → success (Mafanikio)
 // ============================================================
 import { useEffect, useState } from "react";
 import { bundlesApi } from "../api/bundles.js";
@@ -38,7 +44,7 @@ const TYPE_FROM_API = {
   LEADING: "leading",
   BOOST: "boost",
   RESERVATION: "reservation",
-  SUCCESS: "success",          // ⬅️ MPYA
+  SUCCESS: "success",
   ADS: "ads",
   PREMIUM: "premium",
   PACKAGE: "package",
@@ -48,7 +54,7 @@ function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
-    code: raw.code || raw.id,
+    code: raw.code || "", // ⬅️ USIWE raw.id
     type: TYPE_FROM_API[raw.type] || (raw.type || "package").toLowerCase(),
     name: raw.name || { sw: "", en: "" },
     description: raw.description || { sw: "", en: "" },
@@ -76,12 +82,12 @@ function toApi(form) {
     description: form.description,
     price: Number(form.price) || 0,
     credits,
-    validity_days: Number(form.validityDays) || 90,
+    validityDays: Number(form.validityDays) || 90, // ⬅️ camelCase
     services: form.services || [],
-    discount_percent: Number(form.discountPercent) || 0,
+    discountPercent: Number(form.discountPercent) || 0, // ⬅️ camelCase
     icon: form.icon || "Package",
     color: form.color || "night",
-    is_active: form.active !== false,
+    active: form.active !== false, // ⬅️ active (sio is_active)
     featured: !!form.featured,
   };
 }
@@ -230,13 +236,12 @@ export function useBundlesByType(type) {
 }
 
 // ============================================================
-// Backwards-compat: bundles are API-only (no local seed),
-// but older callers expect initializeBundles() to exist.
+// Backwards-compat
 // ============================================================
 export function initializeBundles() {
-  // No-op — bundles hydrate from the backend via
-  // hydrateBundlesFromApi(). Kept for backward compatibility.
   return [];
 }
 
-export const hydrateBundlesFromApi = guarded(_hydrateBundlesFromApi_impl, { key: "hydrateBundlesFromApi" });
+export const hydrateBundlesFromApi = guarded(_hydrateBundlesFromApi_impl, {
+  key: "hydrateBundlesFromApi",
+});

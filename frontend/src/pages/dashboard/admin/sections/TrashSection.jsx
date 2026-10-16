@@ -1,9 +1,12 @@
 // ============================================================
 // TrashSection.jsx
 // Admin — Trash / Recycle Bin.
-// Inaonyesha items zilizofutwa kwa kila aina, na kuruhusu
-// restore, permanent delete, na empty.
-// Bilingual + mobile-responsive + Async actions na rollback.
+//
+// Marekebisho:
+//  - TrashItemCard inapokea `isProtected` prop
+//  - Delete button inafichwa kwa protected types
+//  - Message ya "inalindwa" inaonyeshwa
+//  - TrashTypeItems inasoma `isProtected` kutoka type config
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -25,6 +28,7 @@ import {
   FileText,
   Clock,
   User as UserIcon,
+  ShieldAlert,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -59,7 +63,7 @@ function getTypeConfig(typeKey) {
 }
 
 // ============================================================
-// CONFIRM MODAL — generic confirmation
+// CONFIRM MODAL
 // ============================================================
 function ConfirmModal({ open, title, description, confirmLabel, danger, busy, onConfirm, onClose, lang }) {
   if (!open) return null;
@@ -116,7 +120,7 @@ function ConfirmModal({ open, title, description, confirmLabel, danger, busy, on
 // ============================================================
 // ITEM CARD
 // ============================================================
-function TrashItemCard({ item, lang, onRestore, onDelete, busyState }) {
+function TrashItemCard({ item, lang, onRestore, onDelete, busyState, isProtected }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const typeConfig = getTypeConfig(item.type);
   const Icon = ICON_MAP[typeConfig.iconKey] || FileText;
@@ -168,6 +172,23 @@ function TrashItemCard({ item, lang, onRestore, onDelete, busyState }) {
               </>
             )}
           </div>
+
+          {/* Protected notice */}
+          {isProtected && (
+            <div
+              style={{
+                background: `${COLORS.gold}15`,
+                color: "#8A5A16",
+              }}
+              className="mt-2 text-[10px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 w-fit"
+            >
+              <ShieldAlert size={11} />
+              {t(
+                "Inalindwa — haiwezi kufutwa kabisa",
+                "Protected — cannot be permanently deleted"
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -187,19 +208,22 @@ function TrashItemCard({ item, lang, onRestore, onDelete, busyState }) {
               {t("Rudisha", "Restore")}
             </span>
           </button>
-          <button
-            onClick={onDelete}
-            disabled={isBusy}
-            style={{ color: COLORS.rust }}
-            className="p-2 rounded-lg border transition-colors hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label={t("Futa Kabisa", "Delete Permanently")}
-          >
-            {isDeleting ? (
-              <Loader2 size={13} className="animate-spin" />
-            ) : (
-              <Trash2 size={13} />
-            )}
-          </button>
+
+          {!isProtected && (
+            <button
+              onClick={onDelete}
+              disabled={isBusy}
+              style={{ color: COLORS.rust }}
+              className="p-2 rounded-lg border transition-colors hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label={t("Futa Kabisa", "Delete Permanently")}
+            >
+              {isDeleting ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Trash2 size={13} />
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -213,9 +237,12 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const { items, loading, error: loadError, reload } = useTrashItemsState(type);
 
-  const [busy, setBusy] = useState({}); // { [id]: { restore: bool, delete: bool } }
+  const typeConfig = getTypeConfig(type);
+  const isProtected = typeConfig?.isProtected;
+
+  const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(null); // item
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirming, setConfirming] = useState(false);
 
   const setItemBusy = (id, key, value) => {
@@ -250,9 +277,12 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
     setConfirming(false);
     setConfirmDelete(null);
     if (!res.ok) {
+      const detail = res.error?.data?.detail || res.error?.message;
+      const protObjs = res.error?.data?.protected_objects;
       setError(
-        res.error?.message ||
-          t("Imeshindwa kufuta item.", "Failed to delete item.")
+        protObjs && protObjs.length
+          ? `${detail} (${protObjs.join(", ")})`
+          : detail || t("Imeshindwa kufuta item.", "Failed to delete item.")
       );
     }
   };
@@ -332,19 +362,19 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-xs text-secondary">
           {items.length}{" "}
-          {items.length === 1
-            ? t("item", "item")
-            : t("items", "items")}
+          {items.length === 1 ? t("item", "item") : t("items", "items")}
         </p>
-        <button
-          onClick={() => onEmptyType(type)}
-          disabled={confirming}
-          style={{ color: COLORS.rust }}
-          className="flex items-center gap-1 text-xs font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Trash2 size={12} />
-          {t("Futa Zote za Aina Hii", "Empty This Type")}
-        </button>
+        {!isProtected && (
+          <button
+            onClick={() => onEmptyType(type)}
+            disabled={confirming}
+            style={{ color: COLORS.rust }}
+            className="flex items-center gap-1 text-xs font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 size={12} />
+            {t("Futa Zote za Aina Hii", "Empty This Type")}
+          </button>
+        )}
       </div>
 
       {items.map((item) => (
@@ -353,6 +383,7 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
           item={item}
           lang={lang}
           busyState={busy[item.id]}
+          isProtected={isProtected}
           onRestore={() => handleRestore(item)}
           onDelete={() => setConfirmDelete(item)}
         />
@@ -391,16 +422,13 @@ export default function TrashSection() {
 
   const [activeType, setActiveType] = useState(null);
   const [query, setQuery] = useState("");
-  const [busy, setBusy] = useState({}); // { emptyAll, emptyType: bool }
+  const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
   const [confirmEmptyAll, setConfirmEmptyAll] = useState(false);
   const [confirmEmptyType, setConfirmEmptyType] = useState(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ============================================================
-  // TYPE FILTERS + counts
-  // ============================================================
   const typesWithCounts = useMemo(() => {
     return getAllTrashTypes(overview).filter(
       (ty) => ty.count > 0 || activeType === ty.key
@@ -409,9 +437,6 @@ export default function TrashSection() {
 
   const totalItems = Number(overview.total) || 0;
 
-  // ============================================================
-  // HANDLERS — empty all
-  // ============================================================
   const handleEmptyAllConfirm = async () => {
     setBusy((b) => ({ ...b, emptyAll: true }));
     setError("");
@@ -430,9 +455,6 @@ export default function TrashSection() {
     }
   };
 
-  // ============================================================
-  // HANDLERS — empty type
-  // ============================================================
   const handleEmptyTypeConfirm = async () => {
     if (!confirmEmptyType) return;
     const type = confirmEmptyType;
@@ -473,7 +495,6 @@ export default function TrashSection() {
         )}
       />
 
-      {/* Error banner */}
       {error && (
         <div
           style={{
@@ -486,7 +507,6 @@ export default function TrashSection() {
         </div>
       )}
 
-      {/* Summary Card */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="rounded-xl border p-3 sm:p-4 mb-5 flex items-start gap-3 flex-wrap w-full min-w-0"
@@ -528,7 +548,6 @@ export default function TrashSection() {
         )}
       </div>
 
-      {/* Empty state */}
       {!hasTrash && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -547,10 +566,8 @@ export default function TrashSection() {
         </div>
       )}
 
-      {/* Types + items */}
       {hasTrash && (
         <>
-          {/* Search */}
           <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 mb-4 w-full min-w-0">
             <Search size={14} className="text-muted shrink-0" />
             <input
@@ -561,7 +578,6 @@ export default function TrashSection() {
             />
           </div>
 
-          {/* Type tabs */}
           <div className="flex gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0 sm:justify-center">
             <button
               onClick={() => setActiveType(null)}
@@ -590,6 +606,7 @@ export default function TrashSection() {
                 >
                   <Icon size={12} />
                   {ty.label[lang] || ty.label.sw}
+                  {ty.isProtected && <ShieldAlert size={10} />}
                   <span
                     style={{
                       background: isActive
@@ -606,7 +623,6 @@ export default function TrashSection() {
             })}
           </div>
 
-          {/* Overview — breakdown grid */}
           {activeType === null && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 w-full min-w-0">
               {typesWithCounts.map((ty) => {
@@ -636,13 +652,18 @@ export default function TrashSection() {
                     <p className="text-[11px] text-secondary mt-0.5 truncate">
                       {ty.label[lang] || ty.label.sw}
                     </p>
+                    {ty.isProtected && (
+                      <p className="text-[9px] text-muted mt-1 flex items-center gap-1">
+                        <ShieldAlert size={9} />
+                        {t("Inalindwa", "Protected")}
+                      </p>
+                    )}
                   </button>
                 );
               })}
             </div>
           )}
 
-          {/* Items for active type */}
           {activeType !== null && (
             <TrashTypeItems
               type={activeType}
@@ -653,7 +674,6 @@ export default function TrashSection() {
         </>
       )}
 
-      {/* Confirm — Empty All */}
       <ConfirmModal
         open={confirmEmptyAll}
         busy={!!busy.emptyAll}
@@ -674,7 +694,6 @@ export default function TrashSection() {
         lang={lang}
       />
 
-      {/* Confirm — Empty Type */}
       <ConfirmModal
         open={!!confirmEmptyType}
         busy={!!busy[`emptyType-${confirmEmptyType}`]}

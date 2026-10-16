@@ -1,5 +1,10 @@
 // ============================================================
 // trashStore.js — API-only via /api/trash/
+//
+// Marekebisho:
+//  - normOverview: inasoma `protected` flag kutoka backend
+//  - getTrashTypeConfig: inarudisha `isProtected`
+//  - normItem: inasoma `protected` flag kwa kila item
 // ============================================================
 import { useEffect, useState } from "react";
 import { trashApi } from "../api/trash.js";
@@ -10,17 +15,15 @@ const ITEMS_KEY = "sokomkononi_trash_items_v1";
 const EV = "sokomkononi:trash-updated";
 
 export const TRASH_TYPES = [
-  { key: "listings",      label: { sw: "Mali ", en: "Listings" },      iconKey: "Home",       color: "#FEA406" },
-  { key: "users",         label: { sw: "Watumiaji", en: "Users" },                iconKey: "Users",      color: "#2563EB" },
-  { key: "verifications", label: { sw: "Uthibitisho", en: "Verifications" },      iconKey: "ShieldCheck", color: "#2F6D4F" },
-  { key: "tickets",       label: { sw: "Tiketi", en: "Tickets" },                iconKey: "Headphones", color: "#C1502E" },
-  { key: "banners",       label: { sw: "Banner", en: "Banners" },                iconKey: "Image",      color: "#D97706" },
-  { key: "announcements", label: { sw: "Matangazo", en: "Announcements" },       iconKey: "Megaphone",  color: "#7C3AED" },
-  { key: "deals",         label: { sw: "Deals", en: "Deals" },                   iconKey: "Handshake",  color: "#059669" },
+  { key: "listings",      label: { sw: "Mali", en: "Listings" },          iconKey: "Home",        color: "#FEA406" },
+  { key: "users",         label: { sw: "Watumiaji", en: "Users" },        iconKey: "Users",       color: "#2563EB" },
+  { key: "verifications", label: { sw: "Uthibitisho", en: "Verifications" }, iconKey: "ShieldCheck", color: "#2F6D4F" },
+  { key: "tickets",       label: { sw: "Tiketi", en: "Tickets" },          iconKey: "Headphones",  color: "#C1502E" },
+  { key: "banners",       label: { sw: "Banner", en: "Banners" },          iconKey: "Image",       color: "#D97706" },
+  { key: "announcements", label: { sw: "Matangazo", en: "Announcements" }, iconKey: "Megaphone",   color: "#7C3AED" },
+  { key: "deals",         label: { sw: "Deals", en: "Deals" },             iconKey: "Handshake",   color: "#059669" },
 ];
 
-// Backend inatuma aina kama "app_label.ModelName" (mf. "verifications.VerificationRequest").
-// Hii inalinganisha jina la model na funguo za TRASH_TYPES.
 const TYPE_ALIASES = {
   listing: "listings", listings: "listings",
   user: "users", users: "users",
@@ -43,8 +46,9 @@ function prettyName(n) {
 const EMPTY_OVERVIEW = {
   listings: 0, users: 0, verifications: 0, tickets: 0,
   banners: 0, announcements: 0, deals: 0, total: 0, lastUpdated: null,
-  others: [],     
-  backendTypes: {}, 
+  others: [],
+  backendTypes: {},
+  protectedTypes: [],  // ⬅️ MPYA
 };
 
 function readOverview() {
@@ -83,6 +87,7 @@ function normOverview(raw) {
       ...EMPTY_OVERVIEW,
       others: [],
       backendTypes: {},
+      protectedTypes: [],
       lastUpdated: new Date().toISOString(),
     };
     for (const t of raw.totals) {
@@ -94,18 +99,21 @@ function normOverview(raw) {
       if (key && !o.backendTypes[key]) {
         o[key] = count;
         o.backendTypes[key] = type;
+        if (t.protected) {
+          o.protectedTypes.push(key);  // ⬅️ MPYA
+        }
       } else if (count > 0) {
         o.others.push({
           key: type,
           name: prettyName(t.model || String(type).split(".").pop()),
           count,
+          protected: !!t.protected,  // ⬅️ MPYA
         });
       }
     }
     return o;
   }
 
-  // Legacy shapes (counts | flat)
   const src = raw.counts && typeof raw.counts === "object" ? raw.counts : raw;
   const o = {
     listings: Number(src.listings) || 0,
@@ -121,6 +129,7 @@ function normOverview(raw) {
     o.listings + o.users + o.verifications + o.tickets + o.banners + o.announcements + o.deals;
   return o;
 }
+
 function normItem(raw, fallbackType) {
   if (!raw) return null;
   return {
@@ -132,6 +141,7 @@ function normItem(raw, fallbackType) {
     deletedBy: raw.deleted_by_name || "—",
     details: raw.details || raw.reason || "",
     thumbnail: raw.thumbnail || raw.image_url || null,
+    protected: !!raw.protected,  // ⬅️ MPYA
   };
 }
 
@@ -163,20 +173,25 @@ function adjustCount(o, type, delta) {
   return next;
 }
 export function getAllTrashTypes(o = readOverview()) {
-  const base = TRASH_TYPES.map((t) => ({ ...t, count: Number(o[t.key]) || 0 }));
+  const base = TRASH_TYPES.map((t) => ({
+    ...t,
+    count: Number(o[t.key]) || 0,
+    isProtected: (o.protectedTypes || []).includes(t.key),  // ⬅️ MPYA
+  }));
   const extra = (o.others || []).map((x) => ({
     key: x.key,
     label: { sw: x.name, en: x.name },
     iconKey: "File",
     color: "#6B7280",
     count: Number(x.count) || 0,
+    isProtected: !!x.protected,  // ⬅️ MPYA
   }));
   return [...base, ...extra];
 }
 export function getTrashTypeConfig(key) {
   return (
     getAllTrashTypes().find((t) => t.key === key) || {
-      key, label: { sw: key, en: key }, iconKey: "File", color: "#6B7280", count: 0,
+      key, label: { sw: key, en: key }, iconKey: "File", color: "#6B7280", count: 0, isProtected: false,
     }
   );
 }
@@ -188,7 +203,14 @@ export function hasTrashItems() { return readOverview().total > 0; }
 export function getTrashCountByType(type) { return Number(readOverview()[type]) || 0; }
 export function getTrashBreakdown() {
   const o = readOverview();
-  return TRASH_TYPES.map((t) => ({ key: t.key, label: t.label, iconKey: t.iconKey, color: t.color, count: Number(o[t.key]) || 0 }));
+  return TRASH_TYPES.map((t) => ({
+    key: t.key,
+    label: t.label,
+    iconKey: t.iconKey,
+    color: t.color,
+    count: Number(o[t.key]) || 0,
+    isProtected: (o.protectedTypes || []).includes(t.key),  // ⬅️ MPYA
+  }));
 }
 export function getTrashItemsByType(type) {
   const all = readItems();
@@ -259,6 +281,7 @@ export async function emptyTrashAsync() {
       ...EMPTY_OVERVIEW,
       others: [],
       backendTypes: readOverview().backendTypes || {},
+      protectedTypes: readOverview().protectedTypes || [],
       lastUpdated: new Date().toISOString(),
     });
     hydrateTrashOverviewFromApi();
@@ -319,8 +342,9 @@ export function useTrashItemsState(type) {
   return { items, loading, error, reload };
 }
 export function useTrashItems(type) { return useTrashItemsState(type).items; }
+
 // ============================================================
-// RECYCLE BIN — action history (recycled / restored / permanent)
+// RECYCLE BIN — action history
 // ============================================================
 const HISTORY_KEY = "sokomkononi_recycle_history_v1";
 const HISTORY_EV = "sokomkononi:recycle-history-updated";
@@ -348,7 +372,7 @@ export function recordRecycleAction({ type, id, name, action, actor }) {
   const entry = {
     id: `rh_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     type, itemId: id, name,
-    action,               
+    action,
     actor: actor || "Admin",
     at: new Date().toISOString(),
   };
@@ -360,7 +384,6 @@ export function clearRecycleHistory() {
   _writeHistory([]);
 }
 
-// Patch mutations to record history
 const _origRestore = restoreTrashItemAsync;
 export async function restoreTrashItemAsyncWithHistory(type, id) {
   const item = getTrashItem(type, id);
