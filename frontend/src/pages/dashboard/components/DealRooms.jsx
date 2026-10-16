@@ -5,7 +5,9 @@
 // - handleSendMessage → POST /deals/{id}/messages/
 // - Block phone numbers kwenye chat hadi reservation ilipwe
 // - REQUEST_NEGOTIATION → submitDecisionAsync
-// - MPYA: Report buyer/seller, ContactDrawer (kwa seller), download
+// - MPYA: Report buyer/seller, ContactDrawer (buyer+seller), download
+// - MPYA: Input ya namba ya simu / kadi kwenye ReservationPanel
+// - MPYA: Floating "Lipia Reservation" button
 // ============================================================
 
 import React, { useState, useRef, useEffect } from "react";
@@ -54,7 +56,7 @@ import {
   cancelDealAsync,
   getDeals,
   getDealTranscript,
-  fetchDealDetailAsync,  
+  fetchDealDetailAsync,   // ⬅️ MPYA
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -64,6 +66,7 @@ import { api } from "../../../api/client.js";
 import { dealsApi } from "../../../api/deals.js";
 import ContactDrawer from "../../../components/ContactDrawer.jsx";
 
+// ⬇️ Transaction lifecycle (API + fallback)
 import {
   createTransactionAsync,
   createReservationAsync,
@@ -98,7 +101,41 @@ function cleanMoneyInput(value) {
 }
 
 // ============================================================
-// PHONE NUMBER DETECTION
+// PHONE / CARD HELPERS
+// ============================================================
+function cleanPhoneInput(value) {
+  return String(value || "")
+    .replace(/[^\d+]/g, "")
+    .slice(0, 15);
+}
+
+function cleanCardInput(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 19);
+  // Group kwa nafasi kila tarakimu 4 (kwa display tu)
+  return digits.replace(/(.{4})/g, "$1 ").trim();
+}
+
+function isMobileMoneyMethod(m) {
+  return (
+    m === "M-Pesa" ||
+    m === "Mixx by Yas" ||
+    m === "Airtel Money" ||
+    m === "HaloPesa"
+  );
+}
+
+function isBankMethod(m) {
+  const s = String(m || "").toLowerCase();
+  return (
+    s.includes("benki") ||
+    s.includes("bank") ||
+    s.includes("card") ||
+    s.includes("kadi")
+  );
+}
+
+// ============================================================
+// PHONE NUMBER DETECTION (chat only)
 // ============================================================
 const PHONE_PATTERNS = [
   /\b0[4-9]\d{7,8}\b/,
@@ -862,6 +899,10 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
   const [paymentMode, setPaymentMode] = useState("flat");
   const [error, setError] = useState("");
 
+  // ── MPYA: phone + cardNumber ──
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [cardNumber, setCardNumber] = useState("");
+
   const settings = useReservationSettings();
   const tiers = useActiveReservationTiers();
   const isFeeDisabled = settings?.is_enabled === false;
@@ -884,6 +925,7 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
   const handlePay = async () => {
     if (!validSelection) return;
 
+    // Free / credits
     if (isFeeDisabled && paymentMode !== "credit") {
       setPaying(true);
       try {
@@ -905,9 +947,42 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
       return;
     }
 
+    // ── Validate mobile money (phone) ──
+    if (isMobileMoneyMethod(method)) {
+      const cleanPhone = String(phone || "").replace(/\D/g, "");
+      if (cleanPhone.length < 9) {
+        setError(
+          lang === "sw"
+            ? "Tafadhali ingiza namba ya simu sahihi (mfano 0712345678)."
+            : "Please enter a valid phone number (e.g. 0712345678)."
+        );
+        return;
+      }
+    }
+
+    // ── Validate bank/card ──
+    if (isBankMethod(method)) {
+      const cleanCard = String(cardNumber || "").replace(/\D/g, "");
+      if (cleanCard.length < 12) {
+        setError(
+          lang === "sw"
+            ? "Tafadhali ingiza namba ya kadi sahihi (tarakimu 12+)."
+            : "Please enter a valid card number (12+ digits)."
+        );
+        return;
+      }
+    }
+
     setPaying(true);
+    setError("");
     try {
-      await onConfirm({ hours, fee, method });
+      await onConfirm({
+        hours,
+        fee,
+        method,
+        phone: isMobileMoneyMethod(method) ? phone.trim() : undefined,
+        cardNumber: isBankMethod(method) ? cardNumber.trim() : undefined,
+      });
     } finally {
       setPaying(false);
     }
@@ -1157,11 +1232,72 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
                   </button>
                 ))}
               </div>
-              <p className="text-muted text-body-sm text-center">
-                {lang === "sw"
-                  ? "Utapokea ombi la malipo kwenye simu yako (FimiPay)."
-                  : "You'll receive a payment prompt on your phone (FimiPay)."}
-              </p>
+
+              {/* ── MPYA: Input ya namba ya simu (mobile money) ── */}
+              {isMobileMoneyMethod(method) && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-secondary text-center">
+                    {lang === "sw"
+                      ? `Namba ya Simu ya ${method}`
+                      : `${method} Phone Number`}
+                  </label>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(cleanPhoneInput(e.target.value))}
+                    placeholder={
+                      lang === "sw" ? "mfano 0712345678" : "e.g. 0712345678"
+                    }
+                    style={{
+                      background: COLORS.sand,
+                      borderColor: COLORS.sandLine,
+                      color: COLORS.night,
+                    }}
+                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none text-center font-mono"
+                  />
+                  <p className="text-muted text-[11px] text-center">
+                    {lang === "sw"
+                      ? "Utapokea ombi la malipo kwenye simu yako."
+                      : "You'll receive a payment prompt on your phone."}
+                  </p>
+                </div>
+              )}
+
+              {/* ── MPYA: Input ya namba ya kadi (Benki / Card) ── */}
+              {isBankMethod(method) && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold text-secondary text-center">
+                    {lang === "sw"
+                      ? "Namba ya Kadi / Akaunti"
+                      : "Card / Account Number"}
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={cardNumber}
+                    onChange={(e) =>
+                      setCardNumber(cleanCardInput(e.target.value))
+                    }
+                    placeholder={
+                      lang === "sw"
+                        ? "4000 1234 5678 9010"
+                        : "4000 1234 5678 9010"
+                    }
+                    style={{
+                      background: COLORS.sand,
+                      borderColor: COLORS.sandLine,
+                      color: COLORS.night,
+                    }}
+                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none text-center font-mono"
+                  />
+                  <p className="text-muted text-[11px] text-center">
+                    {lang === "sw"
+                      ? "Utahamishwa kwenye ukurasa salama wa benki kulipia."
+                      : "You'll be redirected to a secure bank page to pay."}
+                  </p>
+                </div>
+              )}
             </>
           )}
 
@@ -1232,6 +1368,8 @@ function DealDetail({
   const [offerAmount, setOfferAmount] = useState("");
   const [reserveOpen, setReserveOpen] = useState(false);
   const [chatError, setChatError] = useState("");
+
+  // ── Report + contact drawer ──
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("FRAUD");
   const [reportDetails, setReportDetails] = useState("");
@@ -1296,11 +1434,7 @@ function DealDetail({
     "completed",
   ];
   const reservationPaid = reservationPaidStatuses.includes(deal.status);
-
-  // ── MPYA: canSeeContact inatoka kwa backend (can_see_contact) ──
   const canSeeContact = !!deal.canSeeContact;
-
-  // Phone lock: buyer haioni mpaka reservation ilipwe
   const phoneLocked = isBuyer && !reservationPaid;
 
   // ── Auto-open ReservationPanel kwa buyer ──
@@ -1338,7 +1472,7 @@ function DealDetail({
     setOfferOpen(false);
   };
 
-  // ── MPYA: Report handler ──
+  // ── Report handler ──
   const handleReportSubmit = async () => {
     if (reportDetails.trim().length < 10) return;
     setReportBusy(true);
@@ -1419,7 +1553,6 @@ function DealDetail({
           {status?.label || deal.status || "—"}
         </span>
 
-        {/* ── MPYA: Report button ── */}
         <button
           onClick={() => setReportOpen(true)}
           style={{ color: COLORS.rust }}
@@ -1453,7 +1586,7 @@ function DealDetail({
         </span>
       </div>
 
-      {/* ── Wasiliana na upande wa pili (buyer ↔ seller) baada ya reservation ── */}
+      {/* ── Contact button kwa wote (buyer + seller) baada ya reservation ── */}
       {canSeeContact && (
         <button
           onClick={() => setContactDrawerOpen(true)}
@@ -1796,7 +1929,6 @@ function DealDetail({
         </div>
       )}
 
-      {/* ── MPYA: Completed + Seller button ya kwenda kwenye tangazo ── */}
       {deal.status === "completed" && (
         <div
           style={{
@@ -1913,7 +2045,7 @@ function DealDetail({
         </div>
       )}
 
-      {/* ── MPYA: Floating button "Lipia Reservation" ── */}
+      {/* ── Floating button "Lipia Reservation" ── */}
       {isBuyer &&
         deal.status === "accepted" &&
         !reserveOpen &&
@@ -1932,7 +2064,7 @@ function DealDetail({
           </button>
         )}
 
-      {/* ── MPYA: Report Modal ── */}
+      {/* ── Report Modal ── */}
       {reportOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div
@@ -2058,8 +2190,7 @@ function DealDetail({
         </div>
       )}
 
-
-      {/* ── Contact Drawer — buyer ↔ seller ── */}
+      {/* ── Contact Drawer (buyer + seller) ── */}
       <ContactDrawer
         open={contactDrawerOpen}
         onClose={() => setContactDrawerOpen(false)}
@@ -2104,7 +2235,7 @@ export default function DealRooms({
     }
   }, [initialDealId]);
 
-    const selectedDeal = deals.find((d) => d.id === selectedId) || deals[0];
+  const selectedDeal = deals.find((d) => d.id === selectedId) || deals[0];
   const updateDeal = (id, patchOrUpdater) => {
     updateDealInStore(id, patchOrUpdater);
   };
@@ -2114,15 +2245,14 @@ export default function DealRooms({
     setMobileShowDetail(true);
   };
 
-  // ── MPYA: Fetch detail (messages, offers) kila deal inachaguliwa ──
-  const [detailFetching, setDetailFetching] = useState({});
+  // ── MPYA: Fetch detail (messages, offers, canSeeContact) kila deal inachaguliwa ──
+  const [detailFetchedAt, setDetailFetchedAt] = useState({});
   useEffect(() => {
     if (!selectedDeal?.id) return;
-    // Skip kama tumefetch hivi karibuni (cache ya sekunde 5)
-    const fetchedAt = detailFetching[selectedDeal.id];
-    if (fetchedAt && Date.now() - fetchedAt < 5000) return;
+    const lastFetch = detailFetchedAt[selectedDeal.id];
+    if (lastFetch && Date.now() - lastFetch < 5000) return;
 
-    setDetailFetching((prev) => ({
+    setDetailFetchedAt((prev) => ({
       ...prev,
       [selectedDeal.id]: Date.now(),
     }));
@@ -2130,7 +2260,6 @@ export default function DealRooms({
     fetchDealDetailAsync(selectedDeal.dealRoomId || selectedDeal.id)
       .then((res) => {
         if (res?.ok && res.deal) {
-          // updateDeal ina-store merged deal (messages + offers)
           updateDealInStore(selectedDeal.id, res.deal);
         }
       })
@@ -2155,6 +2284,39 @@ export default function DealRooms({
     }
 
     if (!res.ok) {
+      // ── Kama transaction tayari ipo (400), fetch detail kupata ID ──
+      const errMsg = String(
+        res.error?.message || res.error?.data?.detail || ""
+      );
+      if (
+        errMsg.toLowerCase().includes("tayari imeundwa") ||
+        errMsg.toLowerCase().includes("already") ||
+        res.error?.status === 400
+      ) {
+        console.warn(
+          "[DealRooms] Transaction tayari imeundwa — fetching detail..."
+        );
+        try {
+          const detailRes = await dealsApi.detail(
+            deal.dealRoomId || deal.id
+          );
+          const existingTxId =
+            detailRes?.transaction_id ?? detailRes?.transaction?.id;
+          if (existingTxId) {
+            setTransactionIds((prev) => ({
+              ...prev,
+              [deal.id]: existingTxId,
+            }));
+            updateDeal(deal.id, { transactionId: existingTxId });
+            return existingTxId;
+          }
+        } catch (fetchErr) {
+          console.error(
+            "[DealRooms] fetch detail failed after 400:",
+            fetchErr
+          );
+        }
+      }
       console.error("[DealRooms] createTransaction failed:", res.error);
       return null;
     }
@@ -2183,7 +2345,9 @@ export default function DealRooms({
     }));
 
     try {
-      const res = await dealsApi.sendDealMessage(deal.dealRoomId || deal.id, { text });
+      const res = await dealsApi.sendDealMessage(deal.dealRoomId || deal.id, {
+        text,
+      });
       updateDeal(id, (prev) => ({
         ...prev,
         messages: (prev.messages || []).map((m) =>
@@ -2200,7 +2364,9 @@ export default function DealRooms({
       }));
       alert(
         err?.message ||
-          (lang === "sw" ? "Imeshindwa kutuma ujumbe." : "Failed to send message.")
+          (lang === "sw"
+            ? "Imeshindwa kutuma ujumbe."
+            : "Failed to send message.")
       );
     }
   };
@@ -2245,15 +2411,16 @@ export default function DealRooms({
 
     if (newStatus === "declined") {
       try {
-        await dealsApi.sendDealMessage(
-          deal.dealRoomId || deal.id,
-          {
-            text:
-              lang === "sw"
-                ? `Ofa ya ${formatTZS(lastOffer.offerAmount)} ilikataliwa. Tafadhali toa ofa nyingine.`
-                : `The offer of ${formatTZS(lastOffer.offerAmount)} was declined. Please make another offer.`,
-          }
-        );
+        await dealsApi.sendDealMessage(deal.dealRoomId || deal.id, {
+          text:
+            lang === "sw"
+              ? `Ofa ya ${formatTZS(
+                  lastOffer.offerAmount
+                )} ilikataliwa. Tafadhali toa ofa nyingine.`
+              : `The offer of ${formatTZS(
+                  lastOffer.offerAmount
+                )} was declined. Please make another offer.`,
+        });
         updateDeal(id, { currentOffer: 0 });
       } catch (msgErr) {
         console.warn("[DealRooms] decline message failed:", msgErr);
@@ -2274,15 +2441,37 @@ export default function DealRooms({
     const note =
       method === "free"
         ? lang === "sw"
-          ? `Reservation imewekwa BURE — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.`
-          : `Reservation placed for FREE — duration: ${formatHours(hours, lang)}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`
+          ? `Reservation imewekwa BURE — muda: ${formatHours(
+              hours,
+              lang
+            )}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.`
+          : `Reservation placed for FREE — duration: ${formatHours(
+              hours,
+              lang
+            )}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`
         : method === "credits"
           ? lang === "sw"
-            ? `Reservation Deposit imelipwa kwa CREDITS — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.`
-            : `Reservation Deposit paid with CREDITS — duration: ${formatHours(hours, lang)}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`
+            ? `Reservation Deposit imelipwa kwa CREDITS — muda: ${formatHours(
+                hours,
+                lang
+              )}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.`
+            : `Reservation Deposit paid with CREDITS — duration: ${formatHours(
+                hours,
+                lang
+              )}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`
           : lang === "sw"
-            ? `Reservation Deposit ya ${formatTZS(fee)} imelipwa (${method}) — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.`
-            : `Reservation Deposit of ${formatTZS(fee)} paid (${method}) — duration: ${formatHours(hours, lang)}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`;
+            ? `Reservation Deposit ya ${formatTZS(
+                fee
+              )} imelipwa (${method}) — muda: ${formatHours(
+                hours,
+                lang
+              )}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.`
+            : `Reservation Deposit of ${formatTZS(
+                fee
+              )} paid (${method}) — duration: ${formatHours(
+                hours,
+                lang
+              )}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`;
 
     updateDeal(id, {
       status: "reserved",
@@ -2306,7 +2495,10 @@ export default function DealRooms({
     onReservationPaid?.(deal, { hours, fee, method, expiresAt: nowExpiresAt });
   };
 
-  const handleReserveConfirm = async (id, { hours, fee, method }) => {
+  const handleReserveConfirm = async (
+    id,
+    { hours, fee, method, phone, cardNumber }
+  ) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
 
@@ -2346,9 +2538,16 @@ export default function DealRooms({
       });
     }
 
+    // ── Amua payment_method kwa backend ──
+    const isMobile = isMobileMoneyMethod(method);
+    const isBank = isBankMethod(method);
+    const paymentMethodKey = isBank ? "card" : isMobile ? "mobile" : "";
+
     const payRes = await callApiOrFallback(() =>
       payReservationAsync(txId, {
         paymentReference: method === "credits" ? "credits" : null,
+        paymentMethod: paymentMethodKey,
+        phone: isMobile ? phone || "" : "",
       })
     );
 
@@ -2396,8 +2595,14 @@ export default function DealRooms({
 
       alert(
         lang === "sw"
-          ? `Malipo yameanzishwa.\n\nKumbukumbu: ${payRes.reference}\nKiasi: ${formatTZS(fee)}\n\nTafadhali kamilisha malipo. Reservation itawashwa mara moja baada ya malipo kuthibitishwa.`
-          : `Payment initiated.\n\nReference: ${payRes.reference}\nAmount: ${formatTZS(fee)}\n\nPlease complete the payment. The reservation will activate as soon as payment is confirmed.`
+          ? `Malipo yameanzishwa.\n\nKumbukumbu: ${payRes.reference}\nKiasi: ${formatTZS(
+              fee
+            )}\n\nTafadhali kamilisha malipo. Reservation itawashwa mara moja baada ya malipo kuthibitishwa.`
+          : `Payment initiated.\n\nReference: ${
+              payRes.reference
+            }\nAmount: ${formatTZS(
+              fee
+            )}\n\nPlease complete the payment. The reservation will activate as soon as payment is confirmed.`
       );
 
       const pollRes = await pollReservationStatusAsync(txId, {
