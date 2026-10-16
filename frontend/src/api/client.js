@@ -262,7 +262,7 @@ async function request(path, {
     ...headers,
   };
 
-  // ⬇️ MPYA: CSRF token kwa unsafe methods
+  // CSRF token kwa unsafe methods
   const methodUpper = String(method || "GET").toUpperCase();
   if (["POST", "PUT", "PATCH", "DELETE"].includes(methodUpper)) {
     const csrf = getCsrfToken();
@@ -278,7 +278,7 @@ async function request(path, {
         headers: finalHeaders,
         body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
         signal: signal || undefined,
-        credentials: "include",  // ⬅️ MPYA: tuma cookies
+        // ⬇️ credentials IMEONDOLEWA — JWT-only, no cookies
       }, timeoutMs);
       if (RETRYABLE_METHODS.has(method.toUpperCase()) && (r.status === 408 || r.status === 429 || (r.status >= 500 && r.status < 600))) {
         const data = await parseResponse(r);
@@ -333,7 +333,7 @@ export async function downloadFile(path, { signal } = {}) {
 
   let res = await fetchWithTimeout(
     `${getBaseUrl()}${path}`,
-    { method: "GET", headers, signal, credentials: "include" }
+    { method: "GET", headers, signal }  // ⬅️ credentials IMEONDOLEWA
   );
 
   if (res.status === 401 && !isPublic && getRefreshToken()) {
@@ -342,7 +342,7 @@ export async function downloadFile(path, { signal } = {}) {
       headers.Authorization = `Bearer ${getAccessToken()}`;
       res = await fetchWithTimeout(
         `${getBaseUrl()}${path}`,
-        { method: "GET", headers, signal, credentials: "include" }
+        { method: "GET", headers, signal }
       );
     } catch (err) {
       onUnauthorized?.();
