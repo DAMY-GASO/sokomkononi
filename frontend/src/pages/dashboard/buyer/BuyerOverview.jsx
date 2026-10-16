@@ -3,6 +3,9 @@
 // Muhtasari wa mnunuzi — search, categories, listings, quick actions.
 // Bilingual kamili + mobile-responsive.
 // KILA KITU CENTERED.
+//
+// Marekebisho:
+//  - Ongeza "Uthibitisho Wangu" (My Verification) kwenye quick actions
 // ============================================================
 
 import React, { useMemo, useState } from "react";
@@ -19,6 +22,7 @@ import {
   Star,
   Bell,
   Shield,
+  ShieldCheck,
   ArrowRight,
   Lock,
   X,
@@ -144,6 +148,12 @@ export default function BuyerOverview({ onNavigate }) {
       label: t("Vyumba vya Majadiliano", "Deal Rooms"),
       icon: MessagesSquare,
       color: COLORS.gold,
+    },
+    {
+      key: "verification",
+      label: t("Uthibitisho Wangu", "My Verification"),
+      icon: ShieldCheck,
+      color: "#7C3AED",
     },
     {
       key: "safety",

@@ -42,7 +42,7 @@ import {
 // TABS
 // ============================================================
 const TABS = [
-  { key: "roles", label: { sw: "Roles", en: "Roles" }, icon: ShieldCheck },
+  { key: "roles", label: { sw: "Wadhifa", en: "Roles" }, icon: ShieldCheck },
   { key: "staff", label: { sw: "Wafanyakazi", en: "Staff" }, icon: UserCog },
 ];
 
@@ -207,7 +207,7 @@ function RoleForm({ initial, lang, onSave, onCancel, saving }) {
         <span className="text-[10px] text-muted">
           {isEditing
             ? t(
-                "Key haiwezi kubadilishwa baada ya kuunda.",
+                "Funguo haiwezi kubadilishwa baada ya kuunda.",
                 "Key cannot be changed after creation.",
               )
             : t(
@@ -549,7 +549,7 @@ function StaffForm({ initial, roles, lang, onSave, onCancel, saving }) {
         >
           {roles.length === 0 && (
             <option value="">
-              {t("Hakuna roles. Unda role kwanza.", "No roles. Create one first.")}
+              {t("Hakuna wadhifa. Unda wadhifa kwanza.", "No roles. Create one first.")}
             </option>
           )}
           {roles.map((role) => (
@@ -641,7 +641,7 @@ export default function RBACSection() {
 
     // Validate BEFORE setting busy
     if (!form.key || !form.key.trim()) {
-      setError(t("Key inahitajika.", "Key is required."));
+      setError(t("Funguo inahitajika.", "Key is required."));
       return;
     }
     if (!form.permissions || form.permissions.length === 0) {

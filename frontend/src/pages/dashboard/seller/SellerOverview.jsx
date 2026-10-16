@@ -2,6 +2,9 @@
 // SellerOverview.jsx
 // Muhtasari wa muuzaji — stats, quick actions, recent activity.
 // Bilingual kamili + mobile-responsive + KILA KITU CENTERED.
+//
+// Marekebisho:
+//  - Ongeza "Uthibitisho Wangu" (My Verification) kwenye quick actions
 // ============================================================
 
 import React, { useMemo, useState } from "react";
@@ -19,6 +22,7 @@ import {
   ArrowRight,
   X,
   Shield,
+  ShieldCheck,
   MessageSquarePlus,
 } from "lucide-react";
 import { COLORS } from "../components/shared";
@@ -80,8 +84,6 @@ export default function SellerOverview({ onNavigate }) {
 
   // ============================================================
   // QUICK ACTIONS — bilingual kamili
-  // NOTE: "support" inapeleka "safety" (SafetySupportSection side=seller)
-  //       "feedback" inapeleka "feedback" (SellerFeedback)
   // ============================================================
   const quickActions = [
     {
@@ -101,6 +103,12 @@ export default function SellerOverview({ onNavigate }) {
       label: t("Vyumba vya Majadiliano", "Deal Rooms"),
       icon: MessagesSquare,
       color: COLORS.rust,
+    },
+    {
+      key: "verification",
+      label: t("Uthibitisho Wangu", "My Verification"),
+      icon: ShieldCheck,
+      color: "#7C3AED",
     },
     {
       key: "safety",
@@ -137,7 +145,7 @@ export default function SellerOverview({ onNavigate }) {
       </div>
 
       {/* ============================================================ */}
-      {/* JINSI YA KUUZA — onboarding guide, inaonekana mara ya kwanza */}
+      {/* JINSI YA KUUZA — onboarding guide */}
       {/* ============================================================ */}
       <HowToSellGuide lang={lang} />
 
