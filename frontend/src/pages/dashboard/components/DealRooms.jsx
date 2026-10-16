@@ -5,9 +5,10 @@
 // - handleSendMessage → POST /deals/{id}/messages/
 // - Block phone numbers kwenye chat hadi reservation ilipwe
 // - REQUEST_NEGOTIATION → submitDecisionAsync
-// - MPYA: Report buyer/seller, ContactDrawer (buyer+seller), download
-// - MPYA: Input ya namba ya simu / kadi kwenye ReservationPanel
-// - MPYA: Floating "Lipia Reservation" button
+// - Report buyer/seller, ContactDrawer (buyer+seller), download
+// - Input ya namba ya simu / kadi kwenye ReservationPanel
+// - Floating "Lipia Reservation" button
+// - Silent 404 handling kwa deals zisizopo backend
 // ============================================================
 
 import React, { useState, useRef, useEffect } from "react";
@@ -56,7 +57,7 @@ import {
   cancelDealAsync,
   getDeals,
   getDealTranscript,
-  fetchDealDetailAsync,   // ⬅️ MPYA
+  fetchDealDetailAsync,
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -111,7 +112,6 @@ function cleanPhoneInput(value) {
 
 function cleanCardInput(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 19);
-  // Group kwa nafasi kila tarakimu 4 (kwa display tu)
   return digits.replace(/(.{4})/g, "$1 ").trim();
 }
 
@@ -899,7 +899,7 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
   const [paymentMode, setPaymentMode] = useState("flat");
   const [error, setError] = useState("");
 
-  // ── MPYA: phone + cardNumber ──
+  // ── Phone + cardNumber ──
   const [phone, setPhone] = useState(user?.phone || "");
   const [cardNumber, setCardNumber] = useState("");
 
@@ -1233,7 +1233,7 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
                 ))}
               </div>
 
-              {/* ── MPYA: Input ya namba ya simu (mobile money) ── */}
+              {/* ── Input ya namba ya simu (mobile money) ── */}
               {isMobileMoneyMethod(method) && (
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-secondary text-center">
@@ -1264,7 +1264,7 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
                 </div>
               )}
 
-              {/* ── MPYA: Input ya namba ya kadi (Benki / Card) ── */}
+              {/* ── Input ya namba ya kadi (Benki / Card) ── */}
               {isBankMethod(method) && (
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-secondary text-center">
@@ -2245,12 +2245,21 @@ export default function DealRooms({
     setMobileShowDetail(true);
   };
 
-  // ── MPYA: Fetch detail (messages, offers, canSeeContact) kila deal inachaguliwa ──
+  // ═══════════════════════════════════════════════════════════
+  // Fetch detail (messages, offers, canSeeContact) kila deal inachaguliwa
+  // ═══════════════════════════════════════════════════════════
   const [detailFetchedAt, setDetailFetchedAt] = useState({});
+  const [detailError, setDetailError] = useState({});
+
   useEffect(() => {
     if (!selectedDeal?.id) return;
+
+    // Skip kama tumefetch hivi karibuni
     const lastFetch = detailFetchedAt[selectedDeal.id];
     if (lastFetch && Date.now() - lastFetch < 5000) return;
+
+    // Skip kama deal haipo kwenye backend (404 mara ya kwanza)
+    if (detailError[selectedDeal.id] === "not_found") return;
 
     setDetailFetchedAt((prev) => ({
       ...prev,
@@ -2261,14 +2270,31 @@ export default function DealRooms({
       .then((res) => {
         if (res?.ok && res.deal) {
           updateDealInStore(selectedDeal.id, res.deal);
+        } else if (res?.error) {
+          const status = res.error?.status;
+          if (status === 404) {
+            setDetailError((prev) => ({
+              ...prev,
+              [selectedDeal.id]: "not_found",
+            }));
+            console.info(
+              `[DealRooms] Deal #${selectedDeal.id} haipo kwenye backend — skip fetch`
+            );
+          }
         }
       })
       .catch((err) => {
-        console.warn("[DealRooms] detail fetch failed:", err);
+        console.info(
+          `[DealRooms] detail fetch for deal #${selectedDeal.id} failed:`,
+          err?.message || err
+        );
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDeal?.id]);
 
+  // ═══════════════════════════════════════════════════════════
+  // ensureTransactionId
+  // ═══════════════════════════════════════════════════════════
   const ensureTransactionId = async (deal) => {
     let txId = transactionIds[deal.id] || deal.transactionId;
     if (txId) return txId;
@@ -2284,24 +2310,26 @@ export default function DealRooms({
     }
 
     if (!res.ok) {
-      // ── Kama transaction tayari ipo (400), fetch detail kupata ID ──
       const errMsg = String(
         res.error?.message || res.error?.data?.detail || ""
       );
-      if (
+      const isAlreadyCreated =
         errMsg.toLowerCase().includes("tayari imeundwa") ||
         errMsg.toLowerCase().includes("already") ||
-        res.error?.status === 400
-      ) {
-        console.warn(
+        res.error?.status === 400;
+
+      if (isAlreadyCreated) {
+        console.info(
           "[DealRooms] Transaction tayari imeundwa — fetching detail..."
         );
+
         try {
           const detailRes = await dealsApi.detail(
             deal.dealRoomId || deal.id
           );
           const existingTxId =
             detailRes?.transaction_id ?? detailRes?.transaction?.id;
+
           if (existingTxId) {
             setTransactionIds((prev) => ({
               ...prev,
@@ -2311,13 +2339,33 @@ export default function DealRooms({
             return existingTxId;
           }
         } catch (fetchErr) {
-          console.error(
-            "[DealRooms] fetch detail failed after 400:",
-            fetchErr
-          );
+          const fetchStatus = fetchErr?.status;
+          if (fetchStatus === 404) {
+            setDetailError((prev) => ({
+              ...prev,
+              [deal.id]: "not_found",
+            }));
+            console.info(
+              `[DealRooms] Deal #${deal.id} haipo kwenye backend — cannot recover transaction`
+            );
+            alert(
+              lang === "sw"
+                ? "Deal hii haipo kwenye mfumo. Tafadhali refresh ukurasa."
+                : "This deal no longer exists. Please refresh the page."
+            );
+          } else {
+            console.warn(
+              "[DealRooms] fetch detail failed after 400:",
+              fetchErr?.message || fetchErr
+            );
+          }
         }
       }
-      console.error("[DealRooms] createTransaction failed:", res.error);
+
+      console.warn(
+        "[DealRooms] createTransaction failed:",
+        res.error?.message
+      );
       return null;
     }
 
@@ -2501,6 +2549,16 @@ export default function DealRooms({
   ) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
+
+    // ── Zuia kama deal haipo kwenye backend ──
+    if (detailError[id] === "not_found") {
+      alert(
+        lang === "sw"
+          ? "Deal hii haipo kwenye mfumo. Tafadhali refresh ukurasa."
+          : "This deal no longer exists. Please refresh the page."
+      );
+      return;
+    }
 
     const txId = await ensureTransactionId(deal);
     if (!txId) {
