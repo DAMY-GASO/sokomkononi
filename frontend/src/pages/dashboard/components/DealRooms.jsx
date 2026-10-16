@@ -54,6 +54,7 @@ import {
   cancelDealAsync,
   getDeals,
   getDealTranscript,
+  fetchDealDetailAsync,  
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -63,7 +64,6 @@ import { api } from "../../../api/client.js";
 import { dealsApi } from "../../../api/deals.js";
 import ContactDrawer from "../../../components/ContactDrawer.jsx";
 
-// ⬇️ Transaction lifecycle (API + fallback)
 import {
   createTransactionAsync,
   createReservationAsync,
@@ -2104,7 +2104,7 @@ export default function DealRooms({
     }
   }, [initialDealId]);
 
-  const selectedDeal = deals.find((d) => d.id === selectedId) || deals[0];
+    const selectedDeal = deals.find((d) => d.id === selectedId) || deals[0];
   const updateDeal = (id, patchOrUpdater) => {
     updateDealInStore(id, patchOrUpdater);
   };
@@ -2113,6 +2113,32 @@ export default function DealRooms({
     setSelectedId(id);
     setMobileShowDetail(true);
   };
+
+  // ── MPYA: Fetch detail (messages, offers) kila deal inachaguliwa ──
+  const [detailFetching, setDetailFetching] = useState({});
+  useEffect(() => {
+    if (!selectedDeal?.id) return;
+    // Skip kama tumefetch hivi karibuni (cache ya sekunde 5)
+    const fetchedAt = detailFetching[selectedDeal.id];
+    if (fetchedAt && Date.now() - fetchedAt < 5000) return;
+
+    setDetailFetching((prev) => ({
+      ...prev,
+      [selectedDeal.id]: Date.now(),
+    }));
+
+    fetchDealDetailAsync(selectedDeal.dealRoomId || selectedDeal.id)
+      .then((res) => {
+        if (res?.ok && res.deal) {
+          // updateDeal ina-store merged deal (messages + offers)
+          updateDealInStore(selectedDeal.id, res.deal);
+        }
+      })
+      .catch((err) => {
+        console.warn("[DealRooms] detail fetch failed:", err);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeal?.id]);
 
   const ensureTransactionId = async (deal) => {
     let txId = transactionIds[deal.id] || deal.transactionId;
