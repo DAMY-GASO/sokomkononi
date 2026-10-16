@@ -202,7 +202,7 @@ export default function DealsSection() {
       }
       setError(
         res.error?.message ||
-          t("Imeshindwa kupakia deal room.", "Failed to load deal room.")
+          t("Imeshindwa kupakia chumba cha makubaliano.", "Failed to load deal room.")
       );
       return null;
     })();
@@ -262,9 +262,9 @@ export default function DealsSection() {
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0 flex-1">
           <SectionHeader
-            title={t("Deal Rooms", "Deal Rooms")}
+            title={t("Vyumba vya Majadiliano", "Deal Rooms")}
             subtitle={t(
-              "Fuatilia deals za watumiaji wote. Unaweza kuona kilichojiri bila kuandika.",
+              "Fuatilia makubaliano ya watumiaji wote. Unaweza kuona kilichojiri bila kuandika.",
               "Monitor all users' deals. You can view activity without writing."
             )}
           />

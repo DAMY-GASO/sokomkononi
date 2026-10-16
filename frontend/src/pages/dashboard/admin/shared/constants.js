@@ -39,7 +39,7 @@ export const NAV = [
   { key: "content",      label: { sw: "Usimamizi wa Maudhui",      en: "Content Management" },        icon: FileText },
   { key: "categories",   label: { sw: "Kategoria",                 en: "Categories" },                icon: Tags },
   { key: "audit",        label: { sw: "Kumbukumbu za Matendo",     en: "Audit Logs" },                icon: History },
-  { key: "trash",        label: { sw: "Recycle Bin",               en: "Recycle Bin" },               icon: Trash2 },
+  { key: "trash",        label: { sw: "Sanduku la Kurejesha",               en: "Recycle Bin" },               icon: Trash2 },
   { key: "system",       label: { sw: "Mipangilio ya Mfumo",       en: "System Settings" },           icon: SettingsIcon },
   { key: "staff",        label: { sw: "Roles & Wafanyakazi",       en: "Roles & Staff" },             icon: Lock },
   { key: "profile",      label: { sw: "Wasifu Wangu",              en: "My Profile" },                icon: User },

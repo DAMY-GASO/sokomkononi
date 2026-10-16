@@ -1,14 +1,5 @@
 // ============================================================
 // RefundsSection.jsx
-// Admin — Refunds za promotions zilizofutwa.
-//
-// Flow:
-//  1. Admin anaona refunds zote (Not Paid / Paid)
-//  2. Akibofya refund → UserDrawer inafunguka (refund mode)
-//  3. Admin anaona payment details za mtumiaji
-//  4. Admin anamlipa nje ya mfumo
-//  5. Admin anarudi → bofya "Paid"
-//  6. Mtumiaji anapata notification
 // ============================================================
 import React, { useState, useMemo } from "react";
 import {
@@ -217,7 +208,7 @@ function RefundCard({ refund, lang, onComplete, onFail, onOpen, isBusy }) {
           style={{ borderColor: COLORS.sandLine, color: COLORS.green }}
         >
           <CheckCircle2 size={14} className="inline mr-1" />
-          {t("Refund imelipwa", "Refund paid")}
+          {t("Rejesho imelipwa", "Refund paid")}
           {refund.completedAt && (
             <span className="text-muted font-normal ml-1">
               · {timeAgo(refund.completedAt, lang)}
@@ -232,7 +223,7 @@ function RefundCard({ refund, lang, onComplete, onFail, onOpen, isBusy }) {
           style={{ borderColor: COLORS.sandLine, color: COLORS.rust }}
         >
           <XCircle size={14} className="inline mr-1" />
-          {t("Refund imeshindwa", "Refund failed")}
+          {t("Rejesho imeshindwa", "Refund failed")}
         </div>
       )}
     </div>
@@ -317,11 +308,11 @@ export default function RefundsSection() {
     setSelectedRefund(null);
 
     if (res.ok) {
-      toast.success(t("Refund imelipwa.", "Refund marked as paid."));
+      toast.success(t("Rejesho imelipwa.", "Refund marked as paid."));
     } else {
       setError(
         res.error?.message ||
-          t("Imeshindwa kukamilisha refund.", "Failed to complete refund.")
+          t("Imeshindwa kukamilisha rejesho.", "Failed to complete refund.")
       );
     }
   };
@@ -340,11 +331,11 @@ export default function RefundsSection() {
     setSelectedRefund(null);
 
     if (res.ok) {
-      toast.warning(t("Refund imewekwa kama imeshindwa.", "Refund marked as failed."));
+      toast.warning(t("Rejesho imewekwa kama imeshindwa.", "Refund marked as failed."));
     } else {
       setError(
         res.error?.message ||
-          t("Imeshindwa kuweka refund kama imeshindwa.", "Failed to fail refund.")
+          t("Imeshindwa kuweka rejesho kama imeshindwa.", "Failed to fail refund.")
       );
     }
   };
@@ -353,7 +344,7 @@ export default function RefundsSection() {
   return (
     <div className="w-full max-w-7xl mx-auto min-w-0">
       <SectionHeader
-        title={t("Refunds", "Refunds")}
+        title={t("Marejesho", "Refunds")}
         subtitle={t(
           "Watumiaji wanaosubiri kurejeshewa pesa. Bofya ili kuona taarifa za malipo.",
           "Users waiting for refunds. Click to view payment details."
@@ -386,7 +377,7 @@ export default function RefundsSection() {
           </p>
           <p className="text-xs text-secondary mt-0.5">
             {t(
-              "Bofya refund ili kuona taarifa za malipo za mtumiaji.",
+              "Bofya rejesho ili kuona taarifa za malipo za mtumiaji.",
               "Click a refund to view the user's payment details."
             )}
           </p>
@@ -455,7 +446,7 @@ export default function RefundsSection() {
           <h3 className="font-semibold text-primary mb-1">
             {query || statusFilter !== "all"
               ? t("Hakuna matokeo", "No results")
-              : t("Hakuna refunds", "No refunds")}
+              : t("Hakuna Marejesho", "No refunds")}
           </h3>
           <p className="text-sm text-secondary">
             {query || statusFilter !== "all"
@@ -464,7 +455,7 @@ export default function RefundsSection() {
                   "Try changing filters or search."
                 )
               : t(
-                  "Refunds zitaonekana hapa promotions zikifutwa.",
+                  "Marejesho yataonekana hapa kama matangazo yakifutwa.",
                   "Refunds will appear here when promotions are cancelled."
                 )}
           </p>
@@ -509,14 +500,14 @@ export default function RefundsSection() {
                 <CheckCircle2 size={26} color={COLORS.green} />
               </div>
               <h3 className="text-lg font-bold text-primary">
-                {t("Nimelipa Refund?", "I've Paid the Refund?")}
+                {t("Nimelipa Rejesho?", "I've Paid the Refund?")}
               </h3>
               <p className="text-sm text-secondary mt-2">
                 {formatTZS(confirmComplete.amountPaid)} — {confirmComplete.userName}
               </p>
               <p className="text-xs text-muted mt-2">
                 {t(
-                  "Hii itaweka refund kama imelipwa. Mtumiaji atapata taarifa.",
+                  "Hii itaweka rejesho kama imelipwa. Mtumiaji atapata taarifa.",
                   "This will mark the refund as paid. The user will be notified."
                 )}
               </p>
@@ -559,7 +550,7 @@ export default function RefundsSection() {
                 <XCircle size={26} color={COLORS.rust} />
               </div>
               <h3 className="text-lg font-bold text-primary">
-                {t("Weka Refund kama Imeshindwa?", "Mark Refund as Failed?")}
+                {t("Weka Rejesho kama Imeshindwa?", "Mark Refund as Failed?")}
               </h3>
               <p className="text-sm text-secondary mt-2">
                 {formatTZS(confirmFail.amountPaid)} — {confirmFail.userName}

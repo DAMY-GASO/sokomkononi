@@ -225,7 +225,7 @@ export default function AdminProfile() {
   return (
     <div>
       <SectionHeader
-        title={t("Wasifu wa Admin", "Admin Profile")}
+        title={t("Wasifu wa Msimamizi", "Admin Profile")}
         subtitle={t(
           "Badilisha taarifa zako, picha, na nenosiri.",
           "Update your info, photo, and password."
