@@ -15,15 +15,15 @@ import {
   Download,
   Loader2,
 } from "lucide-react";
-import { COLORS } from "./constants.js";
+import { COLORS } from "../pages/dashboard/components/shared.js";
 import { getDealTranscript } from "../config/dealsStore.js";
 
 export default function ContactDrawer({
   open,
   onClose,
-  contact,          // { name, phone, email, role, userId }
-  dealId,           // kwa download transcript
-  currentUserId,    // kwa download transcript
+  contact,         
+  dealId,           
+  currentUserId,    
   lang = "sw",
 }) {
   const [downloading, setDownloading] = useState(false);
