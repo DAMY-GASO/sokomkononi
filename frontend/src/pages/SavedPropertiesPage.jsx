@@ -66,7 +66,7 @@ export default function SavedPropertiesPage() {
               style={{ color: "var(--text-primary)" }}
               className="text-2xl sm:text-3xl font-semibold"
             >
-              {t("Zilizohifadhiwa", "Saved Properties")}
+              {t("Mali Zilizohifadhiwa", "Saved Properties")}
             </h1>
             <span
               style={{ background: COLORS.night, color: COLORS.sand }}
@@ -100,7 +100,7 @@ export default function SavedPropertiesPage() {
           <Bell size={14} />
           <span>
             {t(
-              "Utapata taarifa listings hizi zinapobadilika (bei, sold, reserved).",
+              "Utapata taarifa listings hizi zinapobadilika (bei, kuuzwa, au kushikiliwa).",
               "You'll be notified when these listings change (price, sold, reserved)."
             )}
           </span>
@@ -121,7 +121,7 @@ export default function SavedPropertiesPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t(
-                  "Tafuta kwenye zilizohifadhiwa...",
+                  "Tafuta kwenye Mali zilizohifadhiwa...",
                   "Search in saved..."
                 )}
                 style={{
@@ -177,7 +177,7 @@ export default function SavedPropertiesPage() {
             >
               {searchQuery
                 ? t("Hakuna matokeo", "No results")
-                : t("Hakuna mali iliyohifadhiwa", "No saved properties")}
+                : t("Hakuna mali iliyohifadhiwa", "No saved listings")}
             </h3>
             <p
               style={{ color: "var(--text-secondary)" }}
