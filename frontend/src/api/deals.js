@@ -1,8 +1,6 @@
-// ============================================================
-// api/deals.js
+// src/api/deals.js
 // Deal Rooms API — deals, messages, offers, payment proof
-// Backend: /api/deals/
-// ============================================================
+// Backend: /api/deals/  +  /api/admin/deals/
 import { api } from "./client";
 
 function toQuery(params = {}) {
@@ -12,7 +10,7 @@ function toQuery(params = {}) {
 }
 
 export const dealsApi = {
-  // ── Deals ────────────────────────────────────────────────
+  // ── Seller/Buyer deals ───────────────────────────────────
   list: (params = {}) => api.get(`/deals/${toQuery(params)}`),
   detail: (id) => api.get(`/deals/${id}/`),
   create: (listingId) => api.post("/deals/", { listing_id: listingId }),
@@ -34,15 +32,19 @@ export const dealsApi = {
   // ── Messages ─────────────────────────────────────────────
   messages: (dealRoomId, params = {}) =>
     api.get(`/deals/${dealRoomId}/messages/${toQuery(params)}`),
-
-  // ⬇️ MPYA — Tuma ujumbe (POST)
   sendDealMessage: (dealRoomId, { text }) =>
     api.post(`/deals/${dealRoomId}/messages/`, { text }),
 
-  // ── Offers list (kwa admin view) ─────────────────────────
+  // ── Offers list ──────────────────────────────────────────
   offers: (dealRoomId) => api.get(`/deals/${dealRoomId}/offers/`),
 
-  // ── Payment proof (kwa admin view) ───────────────────────
+  // ── Payment proof ────────────────────────────────────────
   paymentProof: (dealRoomId) =>
     api.get(`/deals/${dealRoomId}/payment-proof/`),
+
+  // ── ADMIN — list all deals (paginated) ───────────────────
+  admin: {
+    list: (params = {}) => api.get(`/admin/deals/${toQuery(params)}`),
+    detail: (id) => api.get(`/admin/deals/${id}/`),
+  },
 };

@@ -1,11 +1,16 @@
 // ============================================================
 // DealsSection.jsx
-// Admin — Deal Rooms (read-only view)
-// Ona deals zote za watumiaji. Admin HAWEZI kuandika.
-// Data inatoka API + localStorage cleanup.
 // ============================================================
 import React, { useState, useEffect, useRef } from "react";
-import { Eye, Loader2, RefreshCw } from "lucide-react";
+import {
+  Eye,
+  Loader2,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  X,
+} from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import { getCategory } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -19,22 +24,22 @@ import {
   useDeals,
   hydrateDealsFromApi,
   fetchDealDetailAsync,
+  fetchAdminDealsAsync,
 } from "../../../../config/dealsStore.js";
 import {
   fetchDealRoomDetailAsync,
 } from "../../../../config/transactionLifecycleStore.js";
 
 // ============================================================
-// localStorage CLEANUP — ondoa data za zamani
+// localStorage CLEANUP
 // ============================================================
 const LEGACY_DEALS_KEY = "sokomkononi_deals_v1";
-const CLEANUP_FLAG = "sokomkononi_deals_cleaned_v2";
+const CLEANUP_FLAG = "sokomkononi_deals_cleaned_v3";
 
 function cleanupLegacyDealsOnce() {
   if (typeof window === "undefined") return;
   try {
     if (window.localStorage.getItem(CLEANUP_FLAG)) return;
-    // Futa cache ya zamani — itajazwa upya kutoka API
     window.localStorage.removeItem(LEGACY_DEALS_KEY);
     window.localStorage.setItem(CLEANUP_FLAG, "1");
   } catch {
@@ -42,26 +47,91 @@ function cleanupLegacyDealsOnce() {
   }
 }
 
+const PAGE_SIZE = 20;
+
+const STATUS_FILTERS = [
+  { key: "", label: { sw: "Zote", en: "All" } },
+  { key: "NEGOTIATING", label: { sw: "Inajadiliwa", en: "Negotiating" } },
+  { key: "ACCEPTED", label: { sw: "Imekubaliwa", en: "Accepted" } },
+  { key: "RESERVED", label: { sw: "Imehifadhiwa", en: "Reserved" } },
+  { key: "COMPLETED", label: { sw: "Imekamilika", en: "Completed" } },
+  { key: "CANCELLED", label: { sw: "Imeghairiwa", en: "Cancelled" } },
+];
+
 export default function DealsSection() {
   const { lang } = useLanguage();
   const { user } = useAuth();
-  const deals = useDeals();   // admin needs ALL deals, not just own
 
-  // Cleanup mara moja tu kwenye mwanzo wa app
+  // Cleanup
   useEffect(() => {
     cleanupLegacyDealsOnce();
   }, []);
 
-  // Pre-hydrate users + listings so:
-  //  1. deal.buyerName / deal.sellerName resolve even when the backend
-  //     only sends flat ids, and
-  //  2. deal.listingTitle / deal.listingPrice resolve from listings cache.
+  // Pre-hydrate users + listings
   useEffect(() => {
     hydrateUsersFromApi().catch(() => {});
     hydrateListingsFromApi().catch(() => {});
   }, []);
 
-  // Enrich deals zinazokosekana data — capped at 3 attempts each.
+  // ── Admin paginated state ────────────────────────────────
+  const [deals, setDeals] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [expandedId, setExpandedId] = useState(null);
+  const [dealRooms, setDealRooms] = useState({});
+  const [loadingRoom, setLoadingRoom] = useState({});
+  const inflightRoomRef = useRef(new Map());
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ── Fetch admin deals (paginated) ────────────────────────
+  const loadDeals = async (targetPage = page, opts = {}) => {
+    if (opts.silent) setRefreshing(true);
+    else setLoading(true);
+    setError("");
+    try {
+      const res = await fetchAdminDealsAsync({
+        page: targetPage,
+        pageSize: PAGE_SIZE,
+        status: statusFilter,
+        search: query.trim(),
+      });
+      if (res.ok) {
+        setDeals(res.deals);
+        setTotal(res.total);
+        setPage(targetPage);
+      } else {
+        setError(
+          res.error?.message ||
+            t("Imeshindwa kupakia deals.", "Failed to load deals.")
+        );
+      }
+    } catch (err) {
+      setError(
+        err?.message || t("Imeshindwa kupakia deals.", "Failed to load deals.")
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Reload on filter/search change
+  useEffect(() => {
+    setPage(1);
+    setExpandedId(null);
+    loadDeals(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, query]);
+
+  // Enrich deals zinazokosekana data
   const enrichedRef = useRef(new Set());
   const enrichmentAttemptsRef = useRef(new Map());
   useEffect(() => {
@@ -86,15 +156,13 @@ export default function DealsSection() {
     });
   }, [deals, user?.id]);
 
-  const [expandedId, setExpandedId] = useState(null);
-  const [error, setError] = useState("");
-  const [dealRooms, setDealRooms] = useState({});
-  const [loadingRoom, setLoadingRoom] = useState({});
-  const [refreshing, setRefreshing] = useState(false);
-  const inflightRoomRef = useRef(new Map());
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setDealRooms({});
+    await loadDeals(page, { silent: true });
+  };
 
-  const t = (sw, en) => (lang === "sw" ? sw : en);
-
+  // ── Display helpers ──────────────────────────────────────
   const displayDealAmount = (d) => {
     const amt =
       d?.currentOffer > 0 ? d.currentOffer :
@@ -113,21 +181,7 @@ export default function DealsSection() {
     return cat?.label?.[lang] || cat?.label?.sw || d.category;
   };
 
-  const handleRefresh = async () => {
-    if (!user?.id || refreshing) return;
-    setRefreshing(true);
-    setError("");
-    try {
-      await hydrateDealsFromApi(user.id);
-      setDealRooms({});
-    } catch (err) {
-      setError(t("Imeshindwa kusasisha deals.", "Failed to refresh deals."));
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  // ── Load deal room data (messages, payment proof) ─────────
+  // ── Load deal room data (messages, payment proof) ────────
   const ensureRoomData = async (dealId, { force = false } = {}) => {
     if (!force && dealRooms[dealId]) return dealRooms[dealId];
     if (inflightRoomRef.current.has(dealId)) {
@@ -142,7 +196,6 @@ export default function DealsSection() {
           messages: res.messages || [],
           paymentProof: res.paymentProof || null,
           reservation: res.reservation || null,
-          disputeNote: res.disputeNote || "",
         };
         setDealRooms((prev) => ({ ...prev, [dealId]: entry }));
         return entry;
@@ -178,7 +231,6 @@ export default function DealsSection() {
     await ensureRoomData(dealId);
   };
 
-  // ── Action button (View Room only) ────────────────────────
   const ActionButtons = ({ deal, fullWidth = false }) => {
     const isRoomOpen = expandedId === deal.id;
     const isLoading = !!loadingRoom[deal.id];
@@ -219,7 +271,7 @@ export default function DealsSection() {
         </div>
         <button
           onClick={handleRefresh}
-          disabled={!user?.id || refreshing}
+          disabled={refreshing}
           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors shrink-0 disabled:opacity-50"
           style={{
             borderColor: COLORS.sandLine,
@@ -245,242 +297,299 @@ export default function DealsSection() {
         </div>
       )}
 
-      {/* DESKTOP — TABLE */}
-      <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                  {t("Mali", "Listing")}
-                </th>
-                <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                  {t("Kategoria", "Category")}
-                </th>
-                <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                  {t("Mahali", "Location")}
-                </th>
-                <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                  {t("Mnunuzi", "Buyer")}
-                </th>
-                <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                  {t("Muuzaji", "Seller")}
-                </th>
-                <th className="px-5 py-2.5 text-right text-xs font-medium text-secondary uppercase">
-                  {t("Bei / Ofa", "Price / Offer")}
-                </th>
-                <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                  Status
-                </th>
-                <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                  {t("Ilianzishwa", "Created")}
-                </th>
-                <th className="px-5 py-2.5 text-right text-xs font-medium text-secondary uppercase">
-                  {t("Kitendo", "Action")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {deals.map((d) => {
-                const isDisputed = d.status === "disputed";
-                const isExpanded = expandedId === d.id;
-                return (
-                  <React.Fragment key={d.id}>
-                    <tr className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-5 py-3 text-sm font-medium text-primary">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate">{displayListing(d)}</span>
-                          {isDisputed && (
-                            <span
-                              style={{
-                                background: `${COLORS.rust}15`,
-                                color: COLORS.rust,
-                              }}
-                              className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
-                            >
-                              {t("MGOGORO", "DISPUTE")}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-secondary">
-                        {displayCategory(d)}
-                      </td>
-                      <td
-                        className="px-5 py-3 text-sm text-secondary truncate max-w-[180px]"
-                        title={d.location || ""}
-                      >
-                        {d.location || "—"}
-                      </td>
-                      <td className="px-5 py-3 text-sm text-secondary">
-                        <div className="min-w-0">
-                          <div>{displayDealName(d.buyerName, d.buyerId)}</div>
-                          {d.buyerEmail && (
-                            <div className="text-[11px] text-muted truncate">
-                              {d.buyerEmail}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-secondary">
-                        <div className="min-w-0">
-                          <div>
-                            {displayDealName(d.sellerName, d.sellerId)}
-                          </div>
-                          {d.sellerEmail && (
-                            <div className="text-[11px] text-muted truncate">
-                              {d.sellerEmail}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td
-                        className="px-5 py-3 text-sm font-semibold text-right"
-                        style={{ color: COLORS.rust }}
-                      >
-                        {displayDealAmount(d)}
-                      </td>
-                      <td className="px-5 py-3">
-                        <StatusBadge status={d.status} lang={lang} />
-                      </td>
-                      <td className="px-5 py-3 text-[11px] text-muted whitespace-nowrap">
-                        {d.createdAt ? timeAgo(d.createdAt, lang) : "—"}
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <ActionButtons deal={d} />
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan={9} className="p-0">
-                          <DealRoomViewer
-                            deal={d}
-                            roomData={dealRooms[d.id]}
-                            loading={!!loadingRoom[d.id]}
-                            onClose={() => setExpandedId(null)}
-                            lang={lang}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-              {deals.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={9}
-                    className="px-5 py-8 text-center text-sm text-muted"
-                  >
-                    {t("Hakuna deals", "No deals")}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {/* Search + Filter */}
+      <div className="flex flex-col sm:flex-row gap-2 mb-4 w-full min-w-0">
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 min-w-0">
+          <Search size={14} className="text-muted shrink-0" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t(
+              "Tafuta mali, mnunuzi, muuzaji...",
+              "Search listing, buyer, seller..."
+            )}
+            className="outline-none text-xs flex-1 min-w-0"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="text-muted hover:text-secondary shrink-0"
+              aria-label={t("Futa", "Clear")}
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 shrink-0">
+          {STATUS_FILTERS.map((tab) => {
+            const isActive = statusFilter === tab.key;
+            return (
+              <button
+                key={tab.key || "all"}
+                onClick={() => setStatusFilter(tab.key)}
+                style={{
+                  background: isActive ? COLORS.night : "white",
+                  color: isActive ? COLORS.sand : "var(--text-primary)",
+                  borderColor: COLORS.sandLine,
+                }}
+                className="text-[11px] font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
+              >
+                {tab.label?.[lang] || tab.label?.sw}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* MOBILE — CARD LIST */}
-      <div className="sm:hidden flex flex-col gap-3">
-        {deals.map((d) => {
-          const isDisputed = d.status === "disputed";
-          const isExpanded = expandedId === d.id;
-          return (
-            <div
-              key={d.id}
-              className="bg-white rounded-xl border border-gray-100 overflow-hidden"
-            >
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-primary line-clamp-2">
-                      {displayListing(d)}
-                    </p>
-                    {isDisputed && (
-                      <span
-                        style={{
-                          background: `${COLORS.rust}15`,
-                          color: COLORS.rust,
-                        }}
-                        className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1"
-                      >
-                        {t("MGOGORO", "DISPUTE")}
-                      </span>
-                    )}
-                  </div>
-                  <div className="shrink-0">
-                    <StatusBadge status={d.status} lang={lang} />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1 text-xs text-secondary mb-2">
-                  <span className="truncate">
-                    {t("Kategoria", "Category")}:{" "}
-                    <span className="font-medium text-primary">
-                      {displayCategory(d)}
-                    </span>
-                  </span>
-                  {d.location && (
-                    <span className="truncate">
-                      {t("Mahali", "Location")}:{" "}
-                      <span className="font-medium text-primary">
-                        {d.location}
-                      </span>
-                    </span>
-                  )}
-                  <span className="truncate">
-                    {t("Mnunuzi", "Buyer")}:{" "}
-                    <span className="font-medium text-primary">
-                      {displayDealName(d.buyerName, d.buyerId)}
-                    </span>
-                    {d.buyerEmail && (
-                      <span className="text-muted"> · {d.buyerEmail}</span>
-                    )}
-                  </span>
-                  <span className="truncate">
-                    {t("Muuzaji", "Seller")}:{" "}
-                    <span className="font-medium text-primary">
-                      {displayDealName(d.sellerName, d.sellerId)}
-                    </span>
-                    {d.sellerEmail && (
-                      <span className="text-muted"> · {d.sellerEmail}</span>
-                    )}
-                  </span>
-                  {d.createdAt && (
-                    <span className="text-[11px] text-muted">
-                      {t("Ilianzishwa", "Created")}:{" "}
-                      {timeAgo(d.createdAt, lang)}
-                    </span>
-                  )}
-                </div>
-                <p
-                  className="text-sm font-bold mb-3"
-                  style={{ color: COLORS.rust }}
-                >
-                  {displayDealAmount(d)}
-                </p>
-                <ActionButtons deal={d} fullWidth />
-              </div>
-              {isExpanded && (
-                <div className="border-t border-gray-100">
-                  <DealRoomViewer
-                    deal={d}
-                    roomData={dealRooms[d.id]}
-                    loading={!!loadingRoom[d.id]}
-                    onClose={() => setExpandedId(null)}
-                    lang={lang}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {deals.length === 0 && (
-          <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-sm text-muted">
-            {t("Hakuna deals", "No deals")}
+      {/* Loading */}
+      {loading && deals.length === 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 p-8 flex items-center justify-center gap-2">
+          <Loader2 size={18} className="animate-spin text-muted" />
+          <span className="text-xs text-muted">
+            {t("Inapakia deals...", "Loading deals...")}
+          </span>
+        </div>
+      )}
+
+      {/* DESKTOP — TABLE */}
+      {deals.length > 0 && (
+        <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
+                    {t("Mali", "Listing")}
+                  </th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
+                    {t("Kategoria", "Category")}
+                  </th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
+                    {t("Mahali", "Location")}
+                  </th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
+                    {t("Mnunuzi", "Buyer")}
+                  </th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
+                    {t("Muuzaji", "Seller")}
+                  </th>
+                  <th className="px-5 py-2.5 text-right text-xs font-medium text-secondary uppercase">
+                    {t("Bei / Ofa", "Price / Offer")}
+                  </th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
+                    Status
+                  </th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
+                    {t("Ilianzishwa", "Created")}
+                  </th>
+                  <th className="px-5 py-2.5 text-right text-xs font-medium text-secondary uppercase">
+                    {t("Kitendo", "Action")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {deals.map((d) => {
+                  const isExpanded = expandedId === d.id;
+                  return (
+                    <React.Fragment key={d.id}>
+                      <tr className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-5 py-3 text-sm font-medium text-primary">
+                          <span className="truncate">{displayListing(d)}</span>
+                        </td>
+                        <td className="px-5 py-3 text-sm text-secondary">
+                          {displayCategory(d)}
+                        </td>
+                        <td
+                          className="px-5 py-3 text-sm text-secondary truncate max-w-[180px]"
+                          title={d.location || ""}
+                        >
+                          {d.location || "—"}
+                        </td>
+                        <td className="px-5 py-3 text-sm text-secondary">
+                          <div className="min-w-0">
+                            <div>{displayDealName(d.buyerName, d.buyerId)}</div>
+                            {d.buyerEmail && (
+                              <div className="text-[11px] text-muted truncate">
+                                {d.buyerEmail}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-sm text-secondary">
+                          <div className="min-w-0">
+                            <div>{displayDealName(d.sellerName, d.sellerId)}</div>
+                            {d.sellerEmail && (
+                              <div className="text-[11px] text-muted truncate">
+                                {d.sellerEmail}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td
+                          className="px-5 py-3 text-sm font-semibold text-right"
+                          style={{ color: COLORS.rust }}
+                        >
+                          {displayDealAmount(d)}
+                        </td>
+                        <td className="px-5 py-3">
+                          <StatusBadge status={d.status} lang={lang} />
+                        </td>
+                        <td className="px-5 py-3 text-[11px] text-muted whitespace-nowrap">
+                          {d.createdAt ? timeAgo(d.createdAt, lang) : "—"}
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <ActionButtons deal={d} />
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={9} className="p-0">
+                            <DealRoomViewer
+                              deal={d}
+                              roomData={dealRooms[d.id]}
+                              loading={!!loadingRoom[d.id]}
+                              onClose={() => setExpandedId(null)}
+                              lang={lang}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* MOBILE — CARD LIST */}
+      {deals.length > 0 && (
+        <div className="sm:hidden flex flex-col gap-3">
+          {deals.map((d) => {
+            const isExpanded = expandedId === d.id;
+            return (
+              <div
+                key={d.id}
+                className="bg-white rounded-xl border border-gray-100 overflow-hidden"
+              >
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-primary line-clamp-2">
+                        {displayListing(d)}
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      <StatusBadge status={d.status} lang={lang} />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 text-xs text-secondary mb-2">
+                    <span className="truncate">
+                      {t("Kategoria", "Category")}:{" "}
+                      <span className="font-medium text-primary">
+                        {displayCategory(d)}
+                      </span>
+                    </span>
+                    {d.location && (
+                      <span className="truncate">
+                        {t("Mahali", "Location")}:{" "}
+                        <span className="font-medium text-primary">
+                          {d.location}
+                        </span>
+                      </span>
+                    )}
+                    <span className="truncate">
+                      {t("Mnunuzi", "Buyer")}:{" "}
+                      <span className="font-medium text-primary">
+                        {displayDealName(d.buyerName, d.buyerId)}
+                      </span>
+                      {d.buyerEmail && (
+                        <span className="text-muted"> · {d.buyerEmail}</span>
+                      )}
+                    </span>
+                    <span className="truncate">
+                      {t("Muuzaji", "Seller")}:{" "}
+                      <span className="font-medium text-primary">
+                        {displayDealName(d.sellerName, d.sellerId)}
+                      </span>
+                      {d.sellerEmail && (
+                        <span className="text-muted"> · {d.sellerEmail}</span>
+                      )}
+                    </span>
+                    {d.createdAt && (
+                      <span className="text-[11px] text-muted">
+                        {t("Ilianzishwa", "Created")}:{" "}
+                        {timeAgo(d.createdAt, lang)}
+                      </span>
+                    )}
+                  </div>
+                  <p
+                    className="text-sm font-bold mb-3"
+                    style={{ color: COLORS.rust }}
+                  >
+                    {displayDealAmount(d)}
+                  </p>
+                  <ActionButtons deal={d} fullWidth />
+                </div>
+                {isExpanded && (
+                  <div className="border-t border-gray-100">
+                    <DealRoomViewer
+                      deal={d}
+                      roomData={dealRooms[d.id]}
+                      loading={!!loadingRoom[d.id]}
+                      onClose={() => setExpandedId(null)}
+                      lang={lang}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty */}
+      {!loading && deals.length === 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 p-8 text-center">
+          <p className="text-sm text-muted">
+            {query || statusFilter
+              ? t("Hakuna matokeo", "No results")
+              : t("Hakuna deals", "No deals")}
+          </p>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {total > 0 && (
+        <div className="flex items-center justify-between gap-3 mt-4 flex-wrap">
+          <p className="text-xs text-secondary">
+            {t("Ukurasa", "Page")} {page} / {totalPages} ·{" "}
+            {t("Jumla", "Total")}: {total}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => loadDeals(page - 1)}
+              disabled={page <= 1 || loading}
+              style={{ borderColor: COLORS.sandLine }}
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={13} />
+              {t("Nyuma", "Prev")}
+            </button>
+            <button
+              onClick={() => loadDeals(page + 1)}
+              disabled={page >= totalPages || loading}
+              style={{ borderColor: COLORS.sandLine }}
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {t("Mbele", "Next")}
+              <ChevronRight size={13} />
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

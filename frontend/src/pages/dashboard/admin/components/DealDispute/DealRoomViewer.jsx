@@ -1,12 +1,5 @@
 // ============================================================
 // DealRoomViewer.jsx
-// Admin — Anaona kilichojiri kwenye deal room yoyote.
-// Bilingual + mobile-responsive.
-//
-// SASISHO:
-//   - currentOffer: check ya > 0 (sio ?? tu)
-//   - reservationFee: onyesha tu kama > 0 au reservationPaidAt ipo
-//   - resolveSender: inategemea shared.js (inashughulikia IDs pia)
 // ============================================================
 
 import React from "react";
@@ -18,7 +11,6 @@ import {
   DollarSign,
   FileText,
   Paperclip,
-  AlertTriangle,
   HandCoins,
   Calendar,
   CreditCard,
@@ -55,32 +47,21 @@ export default function DealRoomViewer({
   const t = (sw, en) => (lang === "sw" ? sw : en);
   if (!deal) return null;
 
-  // Tumia roomData kama ipo, la sivyo deal.messages (fallback)
   const messages =
     (Array.isArray(roomData?.messages) && roomData.messages.length > 0
       ? roomData.messages
       : deal.messages) || [];
   const messageCount = messages.length;
-  const isDisputed = deal.status === "disputed";
   const paymentProof = roomData?.paymentProof ?? deal.paymentProof ?? null;
 
-  // ─────────────────────────────────────────────────────────
-  // Compute current offer safely
-  // ─────────────────────────────────────────────────────────
   const currentOffer =
     deal.currentOffer && deal.currentOffer > 0
       ? deal.currentOffer
       : deal.askingPrice || 0;
 
-  // ─────────────────────────────────────────────────────────
-  // Reservation visibility
-  // ─────────────────────────────────────────────────────────
   const hasReservation =
     (deal.reservationFee ?? 0) > 0 || Boolean(deal.reservationPaidAt);
 
-  // ============================================================
-  // LOADING STATE
-  // ============================================================
   if (loading) {
     return (
       <div
@@ -117,26 +98,6 @@ export default function DealRoomViewer({
           {t("Funga", "Close")}
         </button>
       </div>
-
-      {/* Dispute Alert */}
-      {isDisputed && (
-        <div
-          style={{
-            background: "rgba(193,80,46,0.08)",
-            color: COLORS.rust,
-            borderColor: "rgba(193,80,46,0.2)",
-          }}
-          className="flex items-start gap-2 text-xs rounded-lg border px-3 py-2.5"
-        >
-          <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-          <span>
-            {t(
-              "Deal hii ina mgogoro. Admin anaweza kutatua kupitia sehemu ya 'Kagua Mgogoro'.",
-              "This deal has a dispute. Admin can resolve it via the 'Review Dispute' section."
-            )}
-          </span>
-        </div>
-      )}
 
       {/* Parties */}
       <div
@@ -254,21 +215,6 @@ export default function DealRoomViewer({
               </a>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Dispute Reason */}
-      {deal.disputeNote && (
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold text-secondary uppercase mb-1.5">
-            {t("Sababu ya Mgogoro", "Dispute Reason")}
-          </p>
-          <p
-            style={{ borderColor: COLORS.sandLine }}
-            className="text-sm text-primary bg-white border rounded-lg px-3 py-2.5 break-words"
-          >
-            {deal.disputeNote}
-          </p>
         </div>
       )}
 
