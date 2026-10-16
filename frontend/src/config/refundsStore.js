@@ -1,6 +1,5 @@
 // ============================================================
 // refundsStore.js — API-only via /api/payments/refunds/
-// Refunds za promotions zilizofutwa.
 // ============================================================
 import { useEffect, useState } from "react";
 import { paymentsApi } from "../api/payments.js";
@@ -40,6 +39,9 @@ function norm(raw) {
     promotionId: raw.promotion_id,
     userId: raw.user,
     userName: raw.user_name || "",
+    userPhone: raw.user_phone || "",
+    userEmail: raw.user_email || "",
+    userPaymentMethod: raw.user_payment_method || "",
     amountPaid: Number(raw.amount_paid) || 0,
     amountRefunded: Number(raw.amount_refunded) || 0,
     status: raw.status,

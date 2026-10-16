@@ -9,18 +9,23 @@
 //  - Ongeza tabs: Wasifu / Mali / Deals / Zilizouzwa
 //  - Tab "Zilizouzwa" inaonyesha sold listings pekee
 //  - Inasoma URL params (?tab=listings&filter=sold) kwa deep link
-//    kutoka notification
+//  - REFUND MODE: kama `refund` prop ipo, inaonyesha payment
+//    details za mtumiaji + button "Paid"
 // ============================================================
 
 import React, { useEffect, useState } from "react";
 import {
   X,
   Phone,
+  Mail,
   Calendar,
   ShieldCheck,
   Loader2,
   CheckCircle2,
-  Package,
+  XCircle,
+  Wallet,
+  CreditCard,
+  User as UserIcon,
 } from "lucide-react";
 import { COLORS, FONTS } from "./constants.js";
 import StatusBadge from "./StatusBadge.jsx";
@@ -49,6 +54,10 @@ function formatJoined(date) {
   }
 }
 
+function formatTZS(amount) {
+  return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
+}
+
 // ============================================================
 // TABS
 // ============================================================
@@ -58,6 +67,180 @@ const TABS = [
   { key: "deals", label: { sw: "Deals", en: "Deals" } },
   { key: "sold", label: { sw: "Zilizouzwa", en: "Sold" } },
 ];
+
+// ============================================================
+// REFUND SECTION — payment details + "Paid" button
+// ============================================================
+function RefundSection({ refund, lang, onComplete, onFail, busy }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  if (!refund) return null;
+
+  const isPending =
+    refund.status === "PENDING" || refund.status === "PROCESSING";
+
+  return (
+    <div className="space-y-4">
+      {/* Refund amount */}
+      <div
+        style={{ background: "rgba(37,99,235,0.06)", borderColor: "rgba(37,99,235,0.2)" }}
+        className="rounded-xl border p-4"
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <Wallet size={14} color="#2563EB" />
+          <p className="text-xs font-semibold text-secondary uppercase">
+            {t("Kiasi cha Refund", "Refund Amount")}
+          </p>
+        </div>
+        <p className="text-2xl font-bold text-primary">
+          {formatTZS(refund.amountPaid)}
+        </p>
+        <p className="text-xs text-muted mt-1">
+          {refund.promotionType} #{refund.promotionId}
+        </p>
+      </div>
+
+      {/* Payment details */}
+      <div
+        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        className="rounded-xl border p-4 space-y-3"
+      >
+        <p className="text-xs font-semibold text-secondary uppercase">
+          {t("Taarifa za Malipo", "Payment Details")}
+        </p>
+
+        {/* Phone */}
+        <div className="flex items-start gap-3">
+          <div
+            style={{ background: `${COLORS.green}15` }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+          >
+            <Phone size={14} color={COLORS.green} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] text-muted uppercase">
+              {t("Namba ya Simu", "Phone Number")}
+            </p>
+            <p className="text-sm font-semibold text-primary break-words">
+              {refund.userPhone || "—"}
+            </p>
+          </div>
+        </div>
+
+        {/* Email */}
+        {refund.userEmail && (
+          <div className="flex items-start gap-3">
+            <div
+              style={{ background: `${COLORS.gold}15` }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+            >
+              <Mail size={14} color={COLORS.gold} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-muted uppercase">
+                {t("Barua Pepe", "Email")}
+              </p>
+              <p className="text-sm font-semibold text-primary break-words">
+                {refund.userEmail}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Payment method */}
+        {refund.userPaymentMethod && (
+          <div className="flex items-start gap-3">
+            <div
+              style={{ background: "rgba(37,99,235,0.1)" }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+            >
+              <CreditCard size={14} color="#2563EB" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-muted uppercase">
+                {t("Njia ya Malipo", "Payment Method")}
+              </p>
+              <p className="text-sm font-semibold text-primary">
+                {refund.userPaymentMethod}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Reason */}
+        {refund.reason && (
+          <div>
+            <p className="text-[10px] text-muted uppercase mb-1">
+              {t("Sababu", "Reason")}
+            </p>
+            <p className="text-xs text-secondary break-words">
+              {refund.reason}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      {isPending && (
+        <div className="space-y-2">
+          <button
+            onClick={onComplete}
+            disabled={busy}
+            style={{ background: COLORS.green, color: "white" }}
+            className="w-full flex items-center justify-center gap-2 text-sm font-semibold px-4 py-3 rounded-xl disabled:opacity-50"
+          >
+            {busy ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <CheckCircle2 size={16} />
+            )}
+            {t("Nimelipa — Weka kama Imelipwa", "I've Paid — Mark as Paid")}
+          </button>
+          <button
+            onClick={onFail}
+            disabled={busy}
+            style={{ color: COLORS.rust, borderColor: COLORS.sandLine }}
+            className="w-full flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl border disabled:opacity-50"
+          >
+            <XCircle size={14} />
+            {t("Imeshindwa", "Failed")}
+          </button>
+        </div>
+      )}
+
+      {/* Completed */}
+      {refund.status === "COMPLETED" && (
+        <div
+          style={{ background: "rgba(47,109,79,0.08)", color: COLORS.green }}
+          className="rounded-xl p-4 text-center"
+        >
+          <CheckCircle2 size={22} className="mx-auto mb-2" />
+          <p className="text-sm font-semibold">
+            {t("Refund imelipwa", "Refund paid")}
+          </p>
+          {refund.refundReference && (
+            <p className="text-xs mt-1 font-mono">
+              {refund.refundReference}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Failed */}
+      {refund.status === "FAILED" && (
+        <div
+          style={{ background: "rgba(193,80,46,0.08)", color: COLORS.rust }}
+          className="rounded-xl p-4 text-center"
+        >
+          <XCircle size={22} className="mx-auto mb-2" />
+          <p className="text-sm font-semibold">
+            {t("Refund imeshindwa", "Refund failed")}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ============================================================
 // TAB CONTENT — Listings
@@ -163,7 +346,6 @@ function SoldTab({ listings, lang, loading }) {
     );
   }
 
-  // Chuja sold listings pekee
   const soldListings = (listings || []).filter((l) => {
     const s = String(l.status || "").toLowerCase();
     return s === "sold" || s === "SOLD";
@@ -226,7 +408,15 @@ function SoldTab({ listings, lang, loading }) {
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-export default function UserDrawer({ user, onClose, lang = "sw" }) {
+export default function UserDrawer({
+  user,
+  onClose,
+  lang = "sw",
+  refund = null,        // ⬅️ REFUND MODE
+  onComplete,           // callback wakati refund imelipwa
+  onFail,               // callback wakati refund imeshindwa
+  busy = false,
+}) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const [data, setData] = useState(null);
@@ -290,7 +480,6 @@ export default function UserDrawer({ user, onClose, lang = "sw" }) {
   const deals = data?.deals || [];
   const hasAvatar = !!fullUser.avatar;
 
-  // StatusBadge inatarajia "active" au "suspended" — tengeneza kutoka is_active
   const userStatus =
     fullUser.is_active === false
       ? "suspended"
@@ -301,17 +490,79 @@ export default function UserDrawer({ user, onClose, lang = "sw" }) {
     return s === "sold";
   }).length;
 
+  // ── Kama ni refund mode, onyesha RefundSection pekee ──
+  if (refund) {
+    return (
+      <div className="fixed inset-0 z-50 flex justify-end">
+        {/* Overlay */}
+        <div className="flex-1 bg-black/40" onClick={onClose} />
+
+        {/* Drawer */}
+        <div
+          className="w-full sm:w-96 sm:max-w-md h-full bg-white shadow-2xl overflow-y-auto flex flex-col"
+          style={{ fontFamily: FONTS.body }}
+        >
+          {/* Header — sticky */}
+          <div
+            className="sticky top-0 z-10 p-4 flex items-center justify-between border-b"
+            style={{ borderColor: COLORS.sandLine, background: "white" }}
+          >
+            <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
+              {t("Malipo ya Refund", "Refund Payment")}
+            </h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 p-1 -mr-1"
+              aria-label={t("Funga", "Close")}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* User header */}
+          <div className="p-4 sm:p-5 border-b" style={{ borderColor: COLORS.sandLine }}>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold shrink-0"
+                style={{ background: `${COLORS.gold}20`, color: COLORS.gold }}
+              >
+                {getUserInitial(fullUser)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-gray-800 truncate">
+                  {refund.userName || fullUser.name || "—"}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {refund.userEmail || fullUser.email || "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Refund content */}
+          <div className="p-4 sm:p-5">
+            <RefundSection
+              refund={refund}
+              lang={lang}
+              onComplete={onComplete}
+              onFail={onFail}
+              busy={busy}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Kawaida (user management mode) ──
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Overlay */}
       <div className="flex-1 bg-black/40" onClick={onClose} />
 
-      {/* Drawer */}
       <div
         className="w-full sm:w-96 sm:max-w-md h-full bg-white shadow-2xl overflow-y-auto flex flex-col"
         style={{ fontFamily: FONTS.body }}
       >
-        {/* Header — sticky */}
         <div
           className="sticky top-0 z-10 p-4 flex items-center justify-between border-b"
           style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -328,7 +579,6 @@ export default function UserDrawer({ user, onClose, lang = "sw" }) {
           </button>
         </div>
 
-        {/* User header — avatar + jina + badges */}
         <div className="p-4 sm:p-5 border-b" style={{ borderColor: COLORS.sandLine }}>
           <div className="flex items-center gap-3">
             {hasAvatar ? (
@@ -371,7 +621,6 @@ export default function UserDrawer({ user, onClose, lang = "sw" }) {
             </div>
           </div>
 
-          {/* Simu */}
           {fullUser.phone && (
             <a
               href={`tel:${fullUser.phone}`}
@@ -384,7 +633,6 @@ export default function UserDrawer({ user, onClose, lang = "sw" }) {
           )}
         </div>
 
-        {/* TABS */}
         <div
           className="flex gap-1 px-4 sm:px-5 border-b overflow-x-auto"
           style={{ borderColor: COLORS.sandLine }}
@@ -421,9 +669,7 @@ export default function UserDrawer({ user, onClose, lang = "sw" }) {
           })}
         </div>
 
-        {/* CONTENT */}
         <div className="p-4 sm:p-5 space-y-5 flex-1">
-          {/* Loading state */}
           {loading && !data && (
             <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-500">
               <Loader2 size={16} className="animate-spin" />
@@ -431,7 +677,6 @@ export default function UserDrawer({ user, onClose, lang = "sw" }) {
             </div>
           )}
 
-          {/* Error state */}
           {error && !loading && (
             <div
               className="text-xs text-center py-3 rounded-lg"
@@ -444,7 +689,6 @@ export default function UserDrawer({ user, onClose, lang = "sw" }) {
             </div>
           )}
 
-          {/* TAB: PROFILE */}
           {activeTab === "profile" && !loading && !error && (
             <div
               className="rounded-xl p-3 text-xs space-y-1.5"
@@ -495,17 +739,14 @@ export default function UserDrawer({ user, onClose, lang = "sw" }) {
             </div>
           )}
 
-          {/* TAB: LISTINGS */}
           {activeTab === "listings" && (
             <ListingsTab listings={listings} lang={lang} loading={loading} />
           )}
 
-          {/* TAB: DEALS */}
           {activeTab === "deals" && (
             <DealsTab deals={deals} lang={lang} loading={loading} />
           )}
 
-          {/* TAB: SOLD */}
           {activeTab === "sold" && (
             <SoldTab listings={listings} lang={lang} loading={loading} />
           )}

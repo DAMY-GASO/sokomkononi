@@ -1,6 +1,14 @@
 // ============================================================
 // RefundsSection.jsx
 // Admin — Refunds za promotions zilizofutwa.
+//
+// Flow:
+//  1. Admin anaona refunds zote (Not Paid / Paid)
+//  2. Akibofya refund → UserDrawer inafunguka (refund mode)
+//  3. Admin anaona payment details za mtumiaji
+//  4. Admin anamlipa nje ya mfumo
+//  5. Admin anarudi → bofya "Paid"
+//  6. Mtumiaji anapata notification
 // ============================================================
 import React, { useState, useMemo } from "react";
 import {
@@ -11,7 +19,11 @@ import {
   Search,
   X,
   Wallet,
-  AlertTriangle,
+  Phone,
+  Mail,
+  CreditCard,
+  User as UserIcon,
+  ChevronRight,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -23,17 +35,27 @@ import {
   completeRefundAsync,
   failRefundAsync,
 } from "../../../../config/refundsStore.js";
+import UserDrawer from "../shared/UserDrawer.jsx";
 
 // ============================================================
-// STATUS FILTERS
+// STATUS FILTERS — Not Paid / Paid
 // ============================================================
 const STATUS_FILTERS = [
   { key: "all", label: { sw: "Zote", en: "All" } },
-  { key: "PENDING", label: { sw: "Zinasubiri", en: "Pending" } },
-  { key: "PROCESSING", label: { sw: "Inaendelea", en: "Processing" } },
-  { key: "COMPLETED", label: { sw: "Zimekamilika", en: "Completed" } },
-  { key: "FAILED", label: { sw: "Zimeshindwa", en: "Failed" } },
+  { key: "not_paid", label: { sw: "Hazijalipwa", en: "Not Paid" } },
+  { key: "paid", label: { sw: "Zimelipwa", en: "Paid" } },
+  { key: "failed", label: { sw: "Zimeshindwa", en: "Failed" } },
 ];
+
+function matchesFilter(status, filterKey) {
+  if (filterKey === "all") return true;
+  if (filterKey === "not_paid") {
+    return status === "PENDING" || status === "PROCESSING";
+  }
+  if (filterKey === "paid") return status === "COMPLETED";
+  if (filterKey === "failed") return status === "FAILED";
+  return true;
+}
 
 // ============================================================
 // STATUS BADGE
@@ -45,7 +67,7 @@ function StatusBadge({ status, lang }) {
     PENDING: {
       bg: "rgba(232,163,61,0.12)",
       fg: "#8A5A16",
-      label: t("Inasubiri", "Pending"),
+      label: t("Haijalipwa", "Not Paid"),
     },
     PROCESSING: {
       bg: "rgba(37,99,235,0.12)",
@@ -55,7 +77,7 @@ function StatusBadge({ status, lang }) {
     COMPLETED: {
       bg: "rgba(47,109,79,0.12)",
       fg: COLORS.green,
-      label: t("Imekamilika", "Completed"),
+      label: t("Imelipwa", "Paid"),
     },
     FAILED: {
       bg: "rgba(193,80,46,0.12)",
@@ -79,19 +101,35 @@ function StatusBadge({ status, lang }) {
 // ============================================================
 // REFUND CARD
 // ============================================================
-function RefundCard({ refund, lang, onComplete, onFail, isBusy }) {
+function RefundCard({ refund, lang, onComplete, onFail, onOpen, isBusy }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const isPending = refund.status === "PENDING";
+  const isPending =
+    refund.status === "PENDING" || refund.status === "PROCESSING";
   const isCompleted = refund.status === "COMPLETED";
   const isFailed = refund.status === "FAILED";
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{
+        borderColor: isCompleted
+          ? "rgba(47,109,79,0.3)"
+          : isFailed
+            ? "rgba(193,80,46,0.3)"
+            : COLORS.sandLine,
+        background: isCompleted
+          ? "rgba(47,109,79,0.03)"
+          : isFailed
+            ? "rgba(193,80,46,0.03)"
+            : "white",
+      }}
       className="rounded-xl border p-3 sm:p-4 w-full min-w-0"
     >
-      <div className="flex items-start gap-3 w-full min-w-0">
+      <button
+        type="button"
+        onClick={() => onOpen(refund)}
+        className="w-full flex items-start gap-3 text-left min-w-0"
+      >
         <div
           style={{ background: "rgba(37,99,235,0.1)" }}
           className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
@@ -114,19 +152,20 @@ function RefundCard({ refund, lang, onComplete, onFail, isBusy }) {
             {refund.userName || `User #${refund.userId}`}
           </p>
 
+          {refund.userPhone && (
+            <p className="text-xs text-secondary mt-0.5 flex items-center gap-1">
+              <Phone size={10} />
+              {refund.userPhone}
+            </p>
+          )}
+
           <p className="text-base font-bold text-primary mt-1">
             {formatTZS(refund.amountPaid)}
           </p>
 
           {refund.reason && (
-            <p className="text-xs text-secondary mt-1 break-words">
+            <p className="text-xs text-secondary mt-1 line-clamp-2 break-words">
               {refund.reason}
-            </p>
-          )}
-
-          {refund.refundReference && (
-            <p className="text-[10px] text-muted mt-1 font-mono">
-              Ref: {refund.refundReference}
             </p>
           )}
 
@@ -134,11 +173,19 @@ function RefundCard({ refund, lang, onComplete, onFail, isBusy }) {
             {refund.createdAt ? timeAgo(refund.createdAt, lang) : "—"}
           </p>
         </div>
-      </div>
+
+        <ChevronRight
+          size={16}
+          className="shrink-0 text-muted mt-1"
+        />
+      </button>
 
       {/* Actions */}
       {isPending && (
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t" style={{ borderColor: COLORS.sandLine }}>
+        <div
+          className="flex items-center gap-2 mt-3 pt-3 border-t"
+          style={{ borderColor: COLORS.sandLine }}
+        >
           <button
             onClick={() => onComplete(refund)}
             disabled={isBusy}
@@ -150,7 +197,7 @@ function RefundCard({ refund, lang, onComplete, onFail, isBusy }) {
             ) : (
               <CheckCircle2 size={12} />
             )}
-            {t("Kamilisha Refund", "Complete Refund")}
+            {t("Nimelipa", "I've Paid")}
           </button>
           <button
             onClick={() => onFail(refund)}
@@ -166,17 +213,22 @@ function RefundCard({ refund, lang, onComplete, onFail, isBusy }) {
 
       {isCompleted && (
         <div
-          className="mt-3 pt-3 border-t text-xs text-center"
+          className="mt-3 pt-3 border-t text-xs text-center font-semibold"
           style={{ borderColor: COLORS.sandLine, color: COLORS.green }}
         >
           <CheckCircle2 size={14} className="inline mr-1" />
-          {t("Refund imekamilika", "Refund completed")}
+          {t("Refund imelipwa", "Refund paid")}
+          {refund.completedAt && (
+            <span className="text-muted font-normal ml-1">
+              · {timeAgo(refund.completedAt, lang)}
+            </span>
+          )}
         </div>
       )}
 
       {isFailed && (
         <div
-          className="mt-3 pt-3 border-t text-xs text-center"
+          className="mt-3 pt-3 border-t text-xs text-center font-semibold"
           style={{ borderColor: COLORS.sandLine, color: COLORS.rust }}
         >
           <XCircle size={14} className="inline mr-1" />
@@ -196,12 +248,13 @@ export default function RefundsSection() {
   const refunds = useRefunds();
 
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("not_paid");
   const [busy, setBusy] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [confirmComplete, setConfirmComplete] = useState(null);
   const [confirmFail, setConfirmFail] = useState(null);
+  const [selectedRefund, setSelectedRefund] = useState(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -209,15 +262,14 @@ export default function RefundsSection() {
   const filtered = useMemo(() => {
     let result = refunds;
 
-    if (statusFilter !== "all") {
-      result = result.filter((r) => r.status === statusFilter);
-    }
+    result = result.filter((r) => matchesFilter(r.status, statusFilter));
 
     if (query.trim()) {
       const q = query.toLowerCase();
       result = result.filter(
         (r) =>
           r.userName?.toLowerCase().includes(q) ||
+          r.userPhone?.toLowerCase().includes(q) ||
           r.promotionType?.toLowerCase().includes(q) ||
           r.refundReference?.toLowerCase().includes(q) ||
           String(r.promotionId).includes(q)
@@ -229,9 +281,16 @@ export default function RefundsSection() {
 
   // ── Counts ───────────────────────────────────────────────
   const counts = useMemo(() => {
-    const c = { all: refunds.length };
-    ["PENDING", "PROCESSING", "COMPLETED", "FAILED"].forEach((s) => {
-      c[s] = refunds.filter((r) => r.status === s).length;
+    const c = {
+      all: refunds.length,
+      not_paid: 0,
+      paid: 0,
+      failed: 0,
+    };
+    refunds.forEach((r) => {
+      if (r.status === "PENDING" || r.status === "PROCESSING") c.not_paid += 1;
+      else if (r.status === "COMPLETED") c.paid += 1;
+      else if (r.status === "FAILED") c.failed += 1;
     });
     return c;
   }, [refunds]);
@@ -255,9 +314,10 @@ export default function RefundsSection() {
       return n;
     });
     setConfirmComplete(null);
+    setSelectedRefund(null);
 
     if (res.ok) {
-      toast.success(t("Refund imekamilika.", "Refund completed."));
+      toast.success(t("Refund imelipwa.", "Refund marked as paid."));
     } else {
       setError(
         res.error?.message ||
@@ -277,6 +337,7 @@ export default function RefundsSection() {
       return n;
     });
     setConfirmFail(null);
+    setSelectedRefund(null);
 
     if (res.ok) {
       toast.warning(t("Refund imewekwa kama imeshindwa.", "Refund marked as failed."));
@@ -288,13 +349,14 @@ export default function RefundsSection() {
     }
   };
 
+  // ── Render ──────────────────────────────────────────────
   return (
     <div className="w-full max-w-7xl mx-auto min-w-0">
       <SectionHeader
         title={t("Refunds", "Refunds")}
         subtitle={t(
-          "Fuatilia na kamilisha refunds za promotions zilizofutwa.",
-          "Track and complete refunds for cancelled promotions."
+          "Watumiaji wanaosubiri kurejeshewa pesa. Bofya ili kuona taarifa za malipo.",
+          "Users waiting for refunds. Click to view payment details."
         )}
       />
 
@@ -320,12 +382,12 @@ export default function RefundsSection() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-primary break-words">
-            {refunds.length} {t("refunds", "refunds")}
+            {counts.not_paid} {t("wanaosubiri kulipwa", "waiting to be paid")}
           </p>
           <p className="text-xs text-secondary mt-0.5">
             {t(
-              "Refunds za promotions zilizofutwa. Zinahitaji kukamilishwa.",
-              "Refunds for cancelled promotions. They need to be completed."
+              "Bofya refund ili kuona taarifa za malipo za mtumiaji.",
+              "Click a refund to view the user's payment details."
             )}
           </p>
         </div>
@@ -349,7 +411,7 @@ export default function RefundsSection() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("Tafuta refund...", "Search refund...")}
+            placeholder={t("Tafuta kwa jina, simu, au promotion...", "Search by name, phone, or promotion...")}
             className="outline-none text-xs flex-1 min-w-0"
           />
           {query && (
@@ -417,9 +479,22 @@ export default function RefundsSection() {
               isBusy={!!busy[refund.id]}
               onComplete={(r) => setConfirmComplete(r)}
               onFail={(r) => setConfirmFail(r)}
+              onOpen={(r) => setSelectedRefund(r)}
             />
           ))}
         </div>
+      )}
+
+      {/* ── UserDrawer (refund mode) ────────────────────── */}
+      {selectedRefund && (
+        <UserDrawer
+          user={{ id: selectedRefund.userId, name: selectedRefund.userName }}
+          lang={lang}
+          refund={selectedRefund}
+          onComplete={() => setConfirmComplete(selectedRefund)}
+          onFail={() => setConfirmFail(selectedRefund)}
+          onClose={() => setSelectedRefund(null)}
+        />
       )}
 
       {/* Complete Confirm Modal */}
@@ -434,15 +509,15 @@ export default function RefundsSection() {
                 <CheckCircle2 size={26} color={COLORS.green} />
               </div>
               <h3 className="text-lg font-bold text-primary">
-                {t("Kamilisha Refund?", "Complete Refund?")}
+                {t("Nimelipa Refund?", "I've Paid the Refund?")}
               </h3>
               <p className="text-sm text-secondary mt-2">
                 {formatTZS(confirmComplete.amountPaid)} — {confirmComplete.userName}
               </p>
               <p className="text-xs text-muted mt-2">
                 {t(
-                  "Hii itaweka refund kama imekamilika. Mtumiaji atapata taarifa.",
-                  "This will mark the refund as completed. The user will be notified."
+                  "Hii itaweka refund kama imelipwa. Mtumiaji atapata taarifa.",
+                  "This will mark the refund as paid. The user will be notified."
                 )}
               </p>
             </div>
@@ -465,7 +540,7 @@ export default function RefundsSection() {
                 ) : (
                   <CheckCircle2 size={14} />
                 )}
-                {t("Kamilisha", "Complete")}
+                {t("Ndio, Nimelipa", "Yes, I've Paid")}
               </button>
             </div>
           </div>
@@ -481,7 +556,7 @@ export default function RefundsSection() {
                 style={{ background: `${COLORS.rust}15` }}
                 className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
               >
-                <AlertTriangle size={26} color={COLORS.rust} />
+                <XCircle size={26} color={COLORS.rust} />
               </div>
               <h3 className="text-lg font-bold text-primary">
                 {t("Weka Refund kama Imeshindwa?", "Mark Refund as Failed?")}
