@@ -5,7 +5,7 @@
 // - AbortController timeout
 // - DELETE supports body
 // - FIX: Always send Authorization header when token exists
-//        (backend uses IsAuthenticated as default permission)
+// - FIX: Send X-CSRFToken on unsafe methods (POST/PUT/PATCH/DELETE)
 // ============================================================
 
 import { getSessionScope } from "../config/adminPath.js";
@@ -38,17 +38,18 @@ function getBaseUrl() {
 }
 
 // ============================================================
-// FIX: We no longer classify endpoints as "public" for the
-// purpose of skipping the Authorization header. The backend
-// uses IsAuthenticated as the default permission, so even
-// endpoints that allow anonymous GET (like /categories/ and
-// /listings/) still need the header to avoid 401s.
-//
-// The `isPublicEndpoint` helper is kept only for the retry /
-// refresh logic — i.e. we don't want to trigger a token
-// refresh for a 401 on a genuinely public endpoint (like
-// /auth/login/) because that would loop forever.
+// CSRF TOKEN
 // ============================================================
+function getCsrfToken() {
+  if (typeof document === "undefined") return null;
+  try {
+    const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
 const PUBLIC_POST_PREFIX = [
   "/auth/login/",
   "/auth/register/",
@@ -61,8 +62,6 @@ const PUBLIC_POST_PREFIX = [
   "/contact/",
 ];
 
-// Endpoints where a 401 should NOT trigger a token refresh.
-// These are genuinely anonymous endpoints.
 const PUBLIC_GET_PATTERNS = [
   /^\/content\/?(\?.*)?$/,
   /^\/content\/(about|terms|privacy|help)\/?(\?.*)?$/,
@@ -250,11 +249,7 @@ async function request(path, {
   method = "GET", body, headers = {}, retry = true, isFormData = false, timeoutMs,
   idempotencyKey = null, signal = null,
 } = {}) {
-  // FIX: isPublic is now only used to decide whether a 401 should
-  // trigger a token refresh. The Authorization header is ALWAYS
-  // sent when a token exists, regardless of the endpoint.
   const isPublic = isPublicEndpoint(path, method);
-
   const accessToken = getAccessToken();
 
   const finalHeaders = {
@@ -262,12 +257,19 @@ async function request(path, {
       ? { "Idempotency-Key": idempotencyKey || makeIdempotencyKey() }
       : {}),
     ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
-    // ALWAYS send the Authorization header if we have a token.
-    // This fixes 401s on endpoints the frontend used to treat as public.
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     "X-Requested-With": "XMLHttpRequest",
     ...headers,
   };
+
+  // ⬇️ MPYA: CSRF token kwa unsafe methods
+  const methodUpper = String(method || "GET").toUpperCase();
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(methodUpper)) {
+    const csrf = getCsrfToken();
+    if (csrf && !finalHeaders["X-CSRFToken"]) {
+      finalHeaders["X-CSRFToken"] = csrf;
+    }
+  }
 
   const res = await withRetry(
     async () => {
@@ -276,6 +278,7 @@ async function request(path, {
         headers: finalHeaders,
         body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
         signal: signal || undefined,
+        credentials: "include",  // ⬅️ MPYA: tuma cookies
       }, timeoutMs);
       if (RETRYABLE_METHODS.has(method.toUpperCase()) && (r.status === 408 || r.status === 429 || (r.status >= 500 && r.status < 600))) {
         const data = await parseResponse(r);
@@ -286,11 +289,6 @@ async function request(path, {
     method
   );
 
-  // Only try to refresh the token if:
-  //  - we got a 401
-  //  - this is NOT a genuinely public endpoint
-  //  - we have a refresh token
-  //  - retry is allowed
   if (res.status === 401 && !isPublic && retry && getRefreshToken()) {
     try {
       await refreshAccessToken();
@@ -335,7 +333,7 @@ export async function downloadFile(path, { signal } = {}) {
 
   let res = await fetchWithTimeout(
     `${getBaseUrl()}${path}`,
-    { method: "GET", headers, signal }
+    { method: "GET", headers, signal, credentials: "include" }
   );
 
   if (res.status === 401 && !isPublic && getRefreshToken()) {
@@ -344,7 +342,7 @@ export async function downloadFile(path, { signal } = {}) {
       headers.Authorization = `Bearer ${getAccessToken()}`;
       res = await fetchWithTimeout(
         `${getBaseUrl()}${path}`,
-        { method: "GET", headers, signal }
+        { method: "GET", headers, signal, credentials: "include" }
       );
     } catch (err) {
       onUnauthorized?.();
