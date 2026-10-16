@@ -6,6 +6,10 @@
 //      seller kuweka listing inayofanana na iliyopo.
 // NEW: attributes (JSONField) inasomwa kutoka API na kuhifadhiwa.
 // NEW: restoreListingAsync — rejesha listing iliyofutwa (undo).
+//
+// Marekebisho ya mwisho:
+//  - usePublicListings: ondoa "sold" — haionekani public
+//  - markSoldAsync: tumia listingsApi.markSold (kwa notification)
 // ============================================================
 import { useEffect, useMemo, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
@@ -308,6 +312,11 @@ function useStoreValue(getter) {
 
 export function useListings() { return useStoreValue(getListings); }
 export function useMyListings() { return useStoreValue(getMyListings); }
+
+// ============================================================
+// usePublicListings
+// ⬇️ Marekebisho: "sold" IMEONDOLEWA — haionekani kwenye kurasa za umma.
+// ============================================================
 export function usePublicListings() {
   const listings = useStoreValue(getPublicListings);
   return useMemo(
@@ -315,12 +324,13 @@ export function usePublicListings() {
       listings.filter(
         (l) =>
           l.status === "live" ||
-          l.status === "reserved" ||
-          l.status === "sold"
+          l.status === "reserved"
+          // "sold" IMEONDOLEWA kwa makusudi — haionekani public
       ),
     [listings]
   );
 }
+
 export function useLiveListings() {
   const listings = useStoreValue(getPublicListings);
   return useMemo(() => listings.filter((l) => l.status === "live"), [listings]);
@@ -878,8 +888,31 @@ export async function pauseListingAsync(id) {
 export async function unpauseListingAsync(id) {
   return updateListingAsync(id, { status: "live", pausedAt: null });
 }
+
+// ============================================================
+// MARK AS SOLD
+// ⬇️ Marekebisho: tumia listingsApi.markSold (sio updateListingAsync)
+//    ili backend iweze kutuma notification kwa admins.
+// ============================================================
 export async function markSoldAsync(id) {
-  return updateListingAsync(id, { status: "sold", soldAt: new Date().toISOString() });
+  const snap = snapshot();
+
+  // Optimistic update — UI inaonyesha SOLD mara moja
+  updateListing(id, {
+    status: "sold",
+    soldAt: new Date().toISOString(),
+  });
+
+  try {
+    await listingsApi.markSold(id);
+    // Sync na backend ili tupate data kamili (notification, audit, n.k.)
+    await fetchMyListingsFromApi();
+    return { ok: true };
+  } catch (err) {
+    restore(snap);
+    console.warn("[listingsStore] markSold failed:", err);
+    return { ok: false, error: err };
+  }
 }
 
 export function resetMyListingsUserCache() {
@@ -1013,7 +1046,7 @@ export async function fetchListingDetailAsync(id) {
       if (
         !inPub &&
         !inMine &&
-        ["live", "reserved", "sold"].includes(normalized.status)
+        ["live", "reserved"].includes(normalized.status)  // ⬅️ "sold" imeondolewa
       ) {
         savePublicListings([normalized, ...readKey(PUBLIC_KEY)]);
       }
@@ -1248,4 +1281,3 @@ export async function bulkUploadListingImagesAsync(id, files = []) {
     return { ok: false, error: err };
   }
 }
-

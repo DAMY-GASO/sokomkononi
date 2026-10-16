@@ -1,6 +1,10 @@
 // ============================================================
 // notificationsStore.js — API-only via /api/notifications/
 // Backend ni single source of truth. Hakuna local simulations.
+//
+// Marekebisho:
+//  - resolveNotificationRoute: inashughulikia admin (audience === "admin")
+//    kwa kutumia `notif.link` (action_url) moja kwa moja.
 // ============================================================
 import { useEffect, useState } from "react";
 import { notificationsApi } from "../api/notifications.js";
@@ -350,6 +354,13 @@ export function getLocalizedField(field, lang = "sw") {
 export function resolveNotificationRoute(notif, side = "seller") {
   if (!notif) return "/dashboard/notifications";
 
+  // ⬇️ ADMIN — tumia `link` (action_url) moja kwa moja
+  if (side === "admin" || notif.audience === "admin") {
+    if (notif.link) return notif.link;
+    // Fallback kwa admin
+    return `${ADMIN_PATH}/notifications`;
+  }
+
   const prefix = side === "buyer" ? "/dashboard/buyer" : "/dashboard";
 
   const rawType = String(notif.rawType || notif.type || "").toUpperCase();
@@ -367,7 +378,6 @@ export function resolveNotificationRoute(notif, side = "seller") {
     // ── Listing-specific ──
     case "PRICE_DROP":
     case "SEARCH_ALERT":
-      // Nenda kwenye listing husika
       return relatedId != null ? `/mali/${relatedId}` : `${prefix}/notifications`;
 
     case "LISTING_CREATED":
@@ -378,9 +388,7 @@ export function resolveNotificationRoute(notif, side = "seller") {
     case "LISTING_DELETED":
     case "LISTING_RESTORED":
     case "LISTING_SUBMITTED":
-      // Seller → kwenye listing yake; Buyer → notifications
       if (side === "buyer") return `${prefix}/notifications`;
-      // Kama tuna relatedId, nenda kwenye listing detail
       if (relatedId != null) return `/mali/${relatedId}`;
       return `${prefix}/listings`;
 

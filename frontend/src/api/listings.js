@@ -1,5 +1,8 @@
 // ============================================================
 // api/listings.js
+//
+// Marekebisho:
+//  - Ongeza markSold() method — kwa seller kumark listing kama SOLD
 // ============================================================
 import { api } from "./client";
 
@@ -50,6 +53,11 @@ export const listingsApi = {
 
   // ⬇️ RESTORE — rejesha listing iliyofutwa (soft delete undo)
   restore: (id) => api.post(`/listings/${id}/restore/`, {}),
+
+  // ⬇️ MARK AS SOLD — seller ana-mark listing kama imeuzwa
+  // Backend: inabadilisha status → SOLD, inatuma notification kwa admins,
+  //          inaandika audit log
+  markSold: (id) => api.post(`/listings/${id}/mark-sold/`, {}),
 
   // ----- Fee -----
   getFee: (id) => api.get(`/listings/${id}/fee/`),

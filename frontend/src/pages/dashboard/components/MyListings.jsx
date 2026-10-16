@@ -3,6 +3,7 @@
 // Seller — orodha ya mali zake (listings).
 // + Statuses mpya: needs_edit, approved_pending_payment, paid_pending_approval
 // + Picha: horizontal scroll ya picha zote kwenye kila card
+// + Mark Sold: confirmation modal (are you sure?)
 // ============================================================
 import React, { useState, useMemo } from "react";
 import {
@@ -24,7 +25,10 @@ import { useAuth } from "../../../config/authStore.js";
 import { useToast } from "../../../components/Toast.jsx";
 import { useConfirm } from "../../../components/ConfirmDialog.jsx";
 import { startUndo } from "../../../config/undoStore.js";
-import { restoreListingAsync } from "../../../config/listingsStore.js";
+import {
+  restoreListingAsync,
+  markSoldAsync,   // ⬅️ ONGEZA
+} from "../../../config/listingsStore.js";
 
 // ============================================================
 // isUnpaid — module-scope helper
@@ -72,6 +76,69 @@ function getPhotos(listing) {
   if (urls.length) return urls;
   if (listing.imageUrl) return [listing.imageUrl];
   return [];
+}
+
+// ============================================================
+// MARK SOLD CONFIRM MODAL
+// ============================================================
+function MarkSoldConfirmModal({ listing, lang, busy, onConfirm, onClose }) {
+  if (!listing) return null;
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+        <div className="text-center mb-5">
+          <div
+            style={{ background: "rgba(47,109,79,0.12)" }}
+            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+          >
+            <CheckCircle2 size={26} color={COLORS.green} />
+          </div>
+          <h3 className="text-lg font-bold text-primary">
+            {t("Weka kama Imeuzwa?", "Mark as Sold?")}
+          </h3>
+          <p className="text-sm text-secondary mt-2 break-words">
+            {listing.title}
+          </p>
+          <p className="text-xs text-muted mt-2">
+            {t(
+              "Tangazo hili halitaonekana kwenye kurasa za umma. Litaonekana kwenye 'Mali Zangu' kama imeuzwa.",
+              "This listing will no longer appear on public pages. It will remain in 'My Listings' as sold."
+            )}
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+          >
+            {t("Ghairi", "Cancel")}
+          </button>
+          <button
+            onClick={() => onConfirm(listing)}
+            disabled={busy}
+            style={{ background: COLORS.green, color: "white" }}
+            className="flex-1 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-1.5"
+          >
+            {busy ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                {t("Inafanya...", "Working...")}
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={14} />
+                {t("Ndio, Imeuzwa", "Yes, Mark Sold")}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ============================================================
@@ -461,7 +528,7 @@ export default function MyListings({
   onPaid,
   onPause,
   onResume,
-  onMarkSold,
+  onMarkSold,   // ⬅️ Inatoka DashboardShell
   onPostNew,
   onEdit,
 }) {
@@ -471,6 +538,10 @@ export default function MyListings({
   const confirm = useConfirm();
   const navigate = useNavigate();
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ⬇️ MPYA: confirmation modal state
+  const [confirmSold, setConfirmSold] = useState(null);
+  const [markingSold, setMarkingSold] = useState(false);
 
   const goToPayment = (id) => {
     if (String(id).startsWith("temp_")) {
@@ -533,6 +604,37 @@ export default function MyListings({
     { key: "paused", label: { sw: "Imesimama", en: "Paused" } },
     { key: "rejected", label: { sw: "Imekataliwa", en: "Rejected" } },
   ];
+
+  // ⬇️ MPYA: Mark sold handlers
+  const handleMarkSold = (id) => {
+    const listing = listings.find((l) => String(l.id) === String(id));
+    if (!listing) return;
+    setConfirmSold(listing);
+  };
+
+  const handleConfirmMarkSold = async (listing) => {
+    setMarkingSold(true);
+    try {
+      const res = await markSoldAsync(listing.id);
+      if (!res?.ok) {
+        toast.error(
+          res?.error?.message ||
+            t("Imeshindwa kumark kama imeuzwa.", "Failed to mark as sold.")
+        );
+      } else {
+        toast.success(
+          t("Tangazo limewekwa kama imeuzwa.", "Listing marked as sold.")
+        );
+      }
+    } catch (err) {
+      toast.error(
+        err?.message || t("Imeshindwa kumark kama imeuzwa.", "Failed to mark as sold.")
+      );
+    } finally {
+      setMarkingSold(false);
+      setConfirmSold(null);
+    }
+  };
 
   const handleRemove = async (id) => {
     if (busy[id]) return;
@@ -708,7 +810,7 @@ export default function MyListings({
               onAdvertise={onAdvertise}
               onPause={onPause}
               onResume={onResume}
-              onMarkSold={onMarkSold}
+              onMarkSold={handleMarkSold}   // ⬅️ Badilisha — tumia handler yetu
               onPay={goToPayment}
               onEdit={handleEdit}
               busy={busy[l.id]}
@@ -716,6 +818,15 @@ export default function MyListings({
           ))}
         </div>
       )}
+
+      {/* ⬇️ MPYA: Confirmation Modal */}
+      <MarkSoldConfirmModal
+        listing={confirmSold}
+        lang={lang}
+        busy={markingSold}
+        onConfirm={handleConfirmMarkSold}
+        onClose={() => !markingSold && setConfirmSold(null)}
+      />
     </div>
   );
 }
