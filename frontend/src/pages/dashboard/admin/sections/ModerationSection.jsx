@@ -1,11 +1,15 @@
 // ============================================================
 // ModerationSection.jsx
 // Approve / Reject / Request Edit / Request Payment / Finalize
+//
+// Marekebisho:
+//  - Ongeza filter tab "Zilizouzwa" (sold)
+//  - Sold listings zinaonekana kwa admin (read-only)
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import {
   CheckCircle, XCircle, MoreVertical, Loader2, Trash2, RotateCcw,
-  Image, Pencil, Wallet, CheckCheck,
+  Image, Pencil, Wallet, CheckCheck, ShoppingBag,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -62,6 +66,8 @@ export default function ModerationSection() {
     const wantLive = statusFilter === "live" || statusFilter === "zote";
     const wantRejected =
       statusFilter === "rejected" || statusFilter === "zote";
+    const wantSold =
+      statusFilter === "sold" || statusFilter === "zote";
 
     const tasks = [];
     if (wantPending) tasks.push(hydrateModerationQueueFromApi());
@@ -72,6 +78,7 @@ export default function ModerationSection() {
       tasks.push(fetchListingsByStatusAsync("needs_edit"));
     if (wantLive) tasks.push(fetchListingsByStatusAsync("live"));
     if (wantRejected) tasks.push(fetchListingsByStatusAsync("rejected"));
+    if (wantSold) tasks.push(fetchListingsByStatusAsync("sold"));
 
     Promise.all(tasks).then((results) => {
       if (cancelled) return;
@@ -167,6 +174,7 @@ export default function ModerationSection() {
       label: { sw: "Zinahitaji Uhariri", en: "Needs Edit" },
     },
     { key: "live", label: { sw: "Zimeidhinishwa", en: "Approved" } },
+    { key: "sold", label: { sw: "Zilizouzwa", en: "Sold" } },  // ⬅️ MPYA
     { key: "rejected", label: { sw: "Zimekataliwa", en: "Rejected" } },
     { key: "zote", label: { sw: "Zote", en: "All" } },
   ];
@@ -671,6 +679,29 @@ export default function ModerationSection() {
       );
     }
 
+    // ⬇️ MPYA: Sold / Rented — read-only (admin anaweza kuona tu)
+    if (listing.status === "sold" || listing.status === "rented") {
+      return (
+        <div
+          className={`flex flex-wrap gap-2 ${
+            fullWidth ? "w-full" : "justify-end"
+          }`}
+        >
+          <span
+            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg"
+            style={{
+              background: "rgba(37,99,235,0.1)",
+              color: "#2563EB",
+            }}
+          >
+            <ShoppingBag size={13} />
+            {t("Imeuzwa", "Sold")}
+          </span>
+          <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
+        </div>
+      );
+    }
+
     return (
       <div className="flex justify-end">
         <button className="text-muted hover:text-secondary p-1">
@@ -1145,14 +1176,14 @@ export default function ModerationSection() {
 
       {/* ── Admin image manager ──────────────────────────── */}
       {imageListing && (
-  <AdminListingImageManager
-    listing={imageListing}
-    onClose={() => setImageListing(null)}
-    onUpdated={() => {
-      setHistory((prev) => ({ ...prev }));
-    }}
-  />
-)}
+        <AdminListingImageManager
+          listing={imageListing}
+          onClose={() => setImageListing(null)}
+          onUpdated={() => {
+            setHistory((prev) => ({ ...prev }));
+          }}
+        />
+      )}
     </>
   );
 }
