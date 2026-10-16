@@ -28,7 +28,7 @@ export const NAV = [
   { key: "users",        label: { sw: "Usimamizi wa Watumiaji",    en: "User Management" },           icon: Users },
   { key: "moderation",   label: { sw: "Uidhinishaji wa Mali",      en: "Listing Moderation" },        icon: ShieldCheck },
   { key: "verification", label: { sw: "Uthibitisho",               en: "Verification" },              icon: UserCheck },
-  { key: "deals",        label: { sw: "Deal Rooms & Migogoro",     en: "Deal Rooms & Disputes" },     icon: MessagesSquare },
+  { key: "deals",        label: { sw: "Vyumba vya majadiliano",     en: "Deal Rooms" },     icon: MessagesSquare },
   { key: "revenue",      label: { sw: "Mapato & Fedha",            en: "Revenue & Financial" },       icon: Wallet },
   { key: "bundles",      label: { sw: "Vifurushi vya Huduma",      en: "Service Bundles" },           icon: Package },
   { key: "promotions",   label: { sw: "Matangazo & Kampeni",       en: "Promotions & Campaigns" },    icon: Sparkles },
