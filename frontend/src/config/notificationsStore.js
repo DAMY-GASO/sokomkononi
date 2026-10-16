@@ -5,6 +5,10 @@
 // Marekebisho:
 //  - resolveNotificationRoute: inashughulikia admin (audience === "admin")
 //    kwa kutumia `notif.link` (action_url) moja kwa moja.
+//  - SASISHO: Ongeza handling ya NotificationType ZOTE kutoka
+//    apps/notifications/models.py — hakuna type inayoanguka kwenye
+//    default isivyo sahihi.
+//  - Fallback smart kwa types zisizojulikana.
 // ============================================================
 import { useEffect, useState } from "react";
 import { notificationsApi } from "../api/notifications.js";
@@ -51,25 +55,79 @@ export function clearDeletedNotifications() {
   writeDeletedSet(new Set());
 }
 
+// ============================================================
+// MAP NOTIFICATION TYPE → UI TYPE (icon + color)
+// Inashughulikia NotificationType ZOTE kutoka backend.
+// ============================================================
 function mapNotificationType(rawType) {
   const t = String(rawType || "").toUpperCase();
   if (!t) return "system";
+
+  // ── Messages ──
   if (t.includes("MESSAGE")) return "message";
-  if (t.includes("OFFER") || t.includes("TRANSACTION") ||
-      t.includes("RESERVATION") || t.includes("INSPECTION") ||
-      t.includes("BUYER_DECISION")) return "deal";
-  if (t.includes("PAYMENT_PROOF") || t.includes("PAYMENT_CONFIRMED")) return "payment";
+
+  // ── Deals / Transactions / Inspection / Reservation / Offers ──
+  if (
+    t.includes("OFFER") ||
+    t.includes("TRANSACTION") ||
+    t.includes("RESERVATION") ||
+    t.includes("INSPECTION") ||
+    t.includes("BUYER_DECISION") ||
+    t.includes("DEAL") ||
+    t === "PAYMENT_CONFIRMED"
+  )
+    return "deal";
+
+  // ── Payment proof (inaonekana kama receipt) ──
+  if (t.includes("PAYMENT_PROOF")) return "payment";
+
+  // ── Promotions ──
   if (t === "BOOST_ACTIVATED" || t === "BOOST_PURCHASED") return "boost";
   if (t === "LEADING_PURCHASED") return "leading";
   if (t === "ADVERTISEMENT_PURCHASED") return "advertisement";
+
+  // ── Listings / Fees ──
   if (t === "LISTING_FEE_PAID" || t === "SUCCESS_FEE_PAID") return "listing_fee";
-  if (t.startsWith("LISTING_")) return "listing_released";
-  if (t.includes("VERIFICATION") || t.includes("ACCOUNT_")) return "verified";
+  if (t === "LISTING_PAYMENT_REQUESTED") return "listing_fee";
+  if (
+    t.startsWith("LISTING_") ||
+    t === "PRICE_DROP" ||
+    t === "SEARCH_ALERT"
+  )
+    return "listing_released";
+
+  // ── Verification / Account ──
+  if (
+    t.includes("VERIFICATION") ||
+    t.includes("ACCOUNT_") ||
+    t === "ACCOUNT_VERIFIED" ||
+    t === "ACCOUNT_DELETED" ||
+    t === "ACCOUNT_RESTORED"
+  )
+    return "verified";
+
+  // ── Waiting list ──
   if (t.includes("WAITING_LIST")) return "reminder";
-  if (t.includes("DISPUTE")) return "dispute.resolved";
+
+  // ── Dispute / Report / Ticket / Support (MPYA) ──
+  if (
+    t.includes("DISPUTE") ||
+    t.includes("REPORT") ||
+    t.includes("TICKET") ||
+    t.includes("SUPPORT")
+  )
+    return "dispute.resolved";
+
+  // ── Feedback (MPYA) ──
+  if (t.includes("FEEDBACK")) return "feedback";
+
+  // ── System (GENERAL, n.k.) ──
   return "system";
 }
 
+// ============================================================
+// TYPE_TO_TARGET — used for admin
+// ============================================================
 const TYPE_TO_TARGET = {
   LISTING_CREATED: "moderation",
   LISTING_APPROVED: "moderation",
@@ -78,6 +136,9 @@ const TYPE_TO_TARGET = {
   LISTING_RESTORED: "moderation",
   LISTING_RELEASED: "moderation",
   LISTING_EXPIRED: "moderation",
+  LISTING_NEEDS_EDIT: "moderation",
+  LISTING_PAYMENT_REQUESTED: "moderation",
+  LISTING_FINAL_APPROVED: "moderation",
   LISTING_FEE_PAID: "revenue",
   ACCOUNT_DELETED: "users",
   ACCOUNT_RESTORED: "users",
@@ -106,6 +167,7 @@ const TYPE_TO_TARGET = {
   BUNDLE_PURCHASED: "revenue",
   DISPUTE_RESOLVED: "deals",
   VERIFICATION_REQUEST: "verification",
+  ACCOUNT_VERIFIED: "verification",
   PRICE_DROP: "listings",
   SEARCH_ALERT: "listings",
 };
@@ -350,14 +412,16 @@ export function getLocalizedField(field, lang = "sw") {
   return field?.[lang] || field?.sw || field?.en || "";
 }
 
-
+// ============================================================
+// RESOLVE NOTIFICATION ROUTE
+// Inashughulikia NotificationType ZOTE kutoka backend.
+// ============================================================
 export function resolveNotificationRoute(notif, side = "seller") {
   if (!notif) return "/dashboard/notifications";
 
-  // ⬇️ ADMIN — tumia `link` (action_url) moja kwa moja
+  // ── ADMIN — tumia `link` (action_url) moja kwa moja ──
   if (side === "admin" || notif.audience === "admin") {
     if (notif.link) return notif.link;
-    // Fallback kwa admin
     return `${ADMIN_PATH}/notifications`;
   }
 
@@ -378,7 +442,9 @@ export function resolveNotificationRoute(notif, side = "seller") {
     // ── Listing-specific ──
     case "PRICE_DROP":
     case "SEARCH_ALERT":
-      return relatedId != null ? `/mali/${relatedId}` : `${prefix}/notifications`;
+      return relatedId != null
+        ? `/mali/${relatedId}`
+        : `${prefix}/notifications`;
 
     case "LISTING_CREATED":
     case "LISTING_APPROVED":
@@ -388,8 +454,17 @@ export function resolveNotificationRoute(notif, side = "seller") {
     case "LISTING_DELETED":
     case "LISTING_RESTORED":
     case "LISTING_SUBMITTED":
+    case "LISTING_NEEDS_EDIT":
+    case "LISTING_FINAL_APPROVED":
       if (side === "buyer") return `${prefix}/notifications`;
       if (relatedId != null) return `/mali/${relatedId}`;
+      return `${prefix}/listings`;
+
+    case "LISTING_PAYMENT_REQUESTED":
+      return `${prefix}/pay-listing`;
+
+    case "LISTING_FEE_PAID":
+    case "SUCCESS_FEE_PAID":
       return `${prefix}/listings`;
 
     // ── Messages ──
@@ -414,19 +489,23 @@ export function resolveNotificationRoute(notif, side = "seller") {
     case "RESERVATION_EXPIRED":
     case "INSPECTION_STARTED":
     case "INSPECTION_COMPLETED":
+    case "INSPECTION_REMINDER":
+    case "INSPECTION_EXPIRING":
     case "BUYER_DECISION":
     case "PAYMENT_PROOF_UPLOADED":
     case "PAYMENT_PROOF_SUBMITTED":
+    case "PAYMENT_PROOF_READY":
     case "PAYMENT_CONFIRMED":
     case "TRANSACTION_CREATED":
     case "TRANSACTION_COMPLETED":
     case "TRANSACTION_CANCELLED":
     case "DISPUTE_RESOLVED":
+    case "FINAL_PAYMENT_UPLOADED":
+    case "FINAL_PAYMENT_READY":
+    case "SELLER_CONFIRMED":
       return withQuery(`${prefix}/deals`, "deal");
 
-    // ── Payments ──
-    case "LISTING_FEE_PAID":
-    case "SUCCESS_FEE_PAID":
+    // ── Payments / Bundles ──
     case "BUNDLE_PURCHASED":
       return `${prefix}/transactions`;
 
@@ -444,15 +523,78 @@ export function resolveNotificationRoute(notif, side = "seller") {
     // ── Waiting list ──
     case "WAITING_LIST_JOINED":
     case "WAITING_LIST_AVAILABLE":
-      return side === "buyer" ? "/dashboard/buyer/waiting" : `${prefix}/notifications`;
+      return side === "buyer"
+        ? "/dashboard/buyer/waiting"
+        : `${prefix}/notifications`;
 
-    // ── Verification ──
+    // ── Verification / Account ──
     case "VERIFICATION_REQUEST":
     case "ACCOUNT_VERIFIED":
     case "ACCOUNT_REJECTED":
+    case "ACCOUNT_RESTORED":
       return `${prefix}/verification`;
 
+    case "ACCOUNT_DELETED":
+      return `${prefix}/notifications`; // Hakuna sehemu maalum
+
+    // ── Reports / Tickets / Support (MPYA) ──
+    case "DEAL_REPORT":
+    case "REPORT_CREATED":
+    case "REPORT_RESOLVED":
+    case "REPORT_REPLIED":
+    case "TICKET_CREATED":
+    case "TICKET_RESOLVED":
+    case "TICKET_REPLIED":
+    case "TICKET_CLOSED":
+    case "TICKET_UPDATED":
+    case "SUPPORT_REPLIED":
+      return `${prefix}/safety`;
+
+    // ── Feedback (MPYA) ──
+    case "FEEDBACK_RECEIVED":
+    case "FEEDBACK_REPLIED":
+    case "FEEDBACK_RESOLVED":
+      return `${prefix}/feedback`;
+
+    // ── GENERAL — hakuna sehemu maalum ──
+    case "GENERAL":
+      return `${prefix}/notifications`;
+
+    // ── FALLBACK SMART kwa types zisizojulikana ──
     default:
+      if (
+        type.includes("REPORT") ||
+        type.includes("TICKET") ||
+        type.includes("SUPPORT") ||
+        type.includes("SAFETY")
+      ) {
+        return `${prefix}/safety`;
+      }
+      if (type.includes("FEEDBACK")) {
+        return `${prefix}/feedback`;
+      }
+      if (
+        type.includes("INSPECTION") ||
+        type.includes("PAYMENT") ||
+        type.includes("DEAL") ||
+        type.includes("RESERVATION") ||
+        type.includes("TRANSACTION")
+      ) {
+        return withQuery(`${prefix}/deals`, "deal");
+      }
+      if (type.includes("VERIFICATION") || type.includes("ACCOUNT")) {
+        return `${prefix}/verification`;
+      }
+      if (type.includes("WAITING")) {
+        return side === "buyer"
+          ? "/dashboard/buyer/waiting"
+          : `${prefix}/notifications`;
+      }
+      if (type.includes("LISTING")) {
+        return side === "buyer"
+          ? `${prefix}/notifications`
+          : `${prefix}/listings`;
+      }
       return `${prefix}/notifications`;
   }
 }
@@ -485,6 +627,25 @@ export function notificationCtaKey(notif) {
     case "LISTING_APPROVED":
     case "LISTING_RELEASED":
       return "view_listing";
+
+    // ── MPYA ──
+    case "DEAL_REPORT":
+    case "REPORT_CREATED":
+    case "REPORT_RESOLVED":
+    case "TICKET_CREATED":
+    case "TICKET_RESOLVED":
+    case "TICKET_REPLIED":
+    case "SUPPORT_REPLIED":
+      return "view";
+
+    case "FEEDBACK_RECEIVED":
+    case "FEEDBACK_REPLIED":
+      return "view";
+
+    case "INSPECTION_REMINDER":
+    case "FINAL_PAYMENT_UPLOADED":
+    case "SELLER_CONFIRMED":
+      return "open";
 
     default:
       return "view";
