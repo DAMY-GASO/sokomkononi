@@ -1,13 +1,20 @@
 // ============================================================
 // CategoriesPanel.jsx
-// Categories management — Add/Edit/Disable/Delete + REORDER.
-// Bilingual + mobile-responsive + image support + Async actions.
+// Categories management — Add/Edit/Disable/Delete + REORDER
+// + SEARCH FILTER + BULK ACTIONS.
+//
+// Marekebisho:
+//  - Search bar (jina SW/EN, key)
+//  - Filter tabs: Zote / Hai / Imesimamishwa / Maarufu
+//  - Bulk actions: select all, enable, disable, mark/unmark popular, delete
+//  - Bulk actions bar inaonekana kama kuna zilizochaguliwa
 // ============================================================
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ShoppingBag, Plus, Trash2, Loader2,
-  ChevronUp, ChevronDown,
+  ChevronUp, ChevronDown, Search, CheckSquare, Square,
+  Eye, EyeOff, Star, X, CheckCircle, AlertTriangle,
 } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import CategoryForm from "./CategoryForm.jsx";
@@ -21,38 +28,117 @@ import {
   toggleCategoryPopularAsync,
   getCategoryIcon,
   reorderCategoriesAsync,
+  bulkToggleActiveAsync,
+  bulkTogglePopularAsync,
+  bulkRemoveCategoriesAsync,
 } from "../../../../../config/categoriesStore.js";
 import { useListings } from "../../../../../config/listingsStore.js";
+import { useToast } from "../../../../../components/Toast.jsx";
+
+// ============================================================
+// FILTER TABS
+// ============================================================
+const FILTER_TABS = [
+  { key: "all", label: { sw: "Zote", en: "All" } },
+  { key: "active", label: { sw: "Hai", en: "Active" } },
+  { key: "inactive", label: { sw: "Imesimamishwa", en: "Inactive" } },
+  { key: "popular", label: { sw: "Maarufu", en: "Popular" } },
+];
 
 export default function CategoriesPanel() {
   const { lang } = useLanguage();
+  const toast = useToast();
   const categories = useCategories();
   const listings = useListings();
+
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
-  const [flash, setFlash] = useState(null);
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
-  // ⬇️ MPYA: reorder
   const [reordering, setReordering] = useState(false);
 
-  const t = (sw, en) => (lang === "sw" ? sw : en);
+  // ⬇️ MPYA: search + filter
+  const [query, setQuery] = useState("");
+  const [filterTab, setFilterTab] = useState("all");
 
-  const showFlash = (msg, type = "success") => {
-    setFlash({ msg, type });
-    setTimeout(() => setFlash(null), 3500);
-  };
+  // ⬇️ MPYA: bulk selection
+  const [selected, setSelected] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const listingsCountFor = (key) =>
     listings.filter((l) => l.category === key).length;
 
   // ══════════════════════════════════════════════════════════
-  // REORDER — inapanga categories
+  // SORTED + FILTERED
   // ══════════════════════════════════════════════════════════
-  const sortedCategories = [...categories].sort(
-    (a, b) => (a.ordering ?? 999) - (b.ordering ?? 999)
+  const sortedCategories = useMemo(
+    () =>
+      [...categories].sort(
+        (a, b) => (a.ordering ?? 999) - (b.ordering ?? 999)
+      ),
+    [categories]
   );
 
+  const filteredCategories = useMemo(() => {
+    let result = sortedCategories;
+
+    // Filter tab
+    if (filterTab === "active") {
+      result = result.filter((c) => c.active !== false);
+    } else if (filterTab === "inactive") {
+      result = result.filter((c) => c.active === false);
+    } else if (filterTab === "popular") {
+      result = result.filter((c) => c.isPopular === true);
+    }
+
+    // Search
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.key?.toLowerCase().includes(q) ||
+          c.label?.sw?.toLowerCase().includes(q) ||
+          c.label?.en?.toLowerCase().includes(q) ||
+          c.slug?.toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }, [sortedCategories, filterTab, query]);
+
+  // ══════════════════════════════════════════════════════════
+  // SELECTION HELPERS
+  // ══════════════════════════════════════════════════════════
+  const allVisibleSelected =
+    filteredCategories.length > 0 &&
+    filteredCategories.every((c) => selected.has(c.key));
+  const someSelected = selected.size > 0;
+
+  const toggleSelect = (key) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(filteredCategories.map((c) => c.key)));
+    }
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  // ══════════════════════════════════════════════════════════
+  // REORDER
+  // ══════════════════════════════════════════════════════════
   const handleMove = async (key, direction) => {
     if (reordering) return;
     const currentIdx = sortedCategories.findIndex((c) => c.key === key);
@@ -71,7 +157,7 @@ export default function CategoriesPanel() {
     const res = await reorderCategoriesAsync(newOrder);
 
     if (res.ok) {
-      showFlash(t("Mpangilio umebadilishwa.", "Order updated."));
+      toast.success(t("Mpangilio umebadilishwa.", "Order updated."));
     } else {
       setError(
         res.error?.message ||
@@ -82,7 +168,7 @@ export default function CategoriesPanel() {
   };
 
   // ══════════════════════════════════════════════════════════
-  // HANDLERS — async + rollback
+  // SINGLE HANDLERS
   // ══════════════════════════════════════════════════════════
   const handleAdd = async (newCat) => {
     if (busy.saving) return;
@@ -99,17 +185,12 @@ export default function CategoriesPanel() {
 
     if (res.ok) {
       setAdding(false);
-      const msg =
-        res.warning === "local_only"
-          ? t(
-              `Category "${newCat.key}" imeongezwa (local — backend haipo bado).`,
-              `Category "${newCat.key}" added (local — backend not ready).`
-            )
-          : t(
-              `Category "${newCat.key}" imeongezwa. Kumbuka kuweka Listing Fee kwenye Revenue.`,
-              `Category "${newCat.key}" added. Remember to set its Listing Fee in Revenue.`
-            );
-      showFlash(msg);
+      toast.success(
+        t(
+          `Category "${newCat.key}" imeongezwa. Kumbuka kuweka Listing Fee kwenye Revenue.`,
+          `Category "${newCat.key}" added. Remember to set its Listing Fee in Revenue.`
+        )
+      );
     } else {
       setError(
         res.error?.message ||
@@ -133,7 +214,7 @@ export default function CategoriesPanel() {
 
     if (res.ok) {
       setEditing(null);
-      showFlash(
+      toast.success(
         t(`Category "${key}" imehaririwa.`, `Category "${key}" updated.`)
       );
     } else {
@@ -189,11 +270,10 @@ export default function CategoriesPanel() {
   const handleDelete = async (key) => {
     const count = listingsCountFor(key);
     if (count > 0) {
-      showFlash(
+      toast.error(
         lang === "sw"
           ? `Kuna listings ${count} zenye category "${key}". Ondoa/kwamisha listings hizo kwanza.`
-          : `There are ${count} listings with category "${key}". Remove/disable those first.`,
-        "error"
+          : `There are ${count} listings with category "${key}". Remove/disable those first.`
       );
       return;
     }
@@ -219,9 +299,14 @@ export default function CategoriesPanel() {
     });
 
     if (res.ok) {
-      showFlash(
+      toast.success(
         t(`Category "${key}" imefutwa.`, `Category "${key}" deleted.`)
       );
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
     } else {
       setError(
         res.error?.message ||
@@ -230,6 +315,111 @@ export default function CategoriesPanel() {
     }
   };
 
+  // ══════════════════════════════════════════════════════════
+  // BULK HANDLERS
+  // ══════════════════════════════════════════════════════════
+  const selectedKeys = Array.from(selected);
+
+  const handleBulkEnable = async () => {
+    if (bulkBusy || !selectedKeys.length) return;
+    setBulkBusy(true);
+    setError("");
+    const res = await bulkToggleActiveAsync(selectedKeys, true);
+    setBulkBusy(false);
+    if (res.ok) {
+      toast.success(
+        t(`Categories ${res.count} zimewashwa.`, `${res.count} categories enabled.`)
+      );
+      clearSelection();
+    } else {
+      setError(res.error?.message || t("Bulk enable imeshindwa.", "Bulk enable failed."));
+    }
+  };
+
+  const handleBulkDisable = async () => {
+    if (bulkBusy || !selectedKeys.length) return;
+    setBulkBusy(true);
+    setError("");
+    const res = await bulkToggleActiveAsync(selectedKeys, false);
+    setBulkBusy(false);
+    if (res.ok) {
+      toast.success(
+        t(`Categories ${res.count} zimezimwa.`, `${res.count} categories disabled.`)
+      );
+      clearSelection();
+    } else {
+      setError(res.error?.message || t("Bulk disable imeshindwa.", "Bulk disable failed."));
+    }
+  };
+
+  const handleBulkMarkPopular = async () => {
+    if (bulkBusy || !selectedKeys.length) return;
+    setBulkBusy(true);
+    setError("");
+    const res = await bulkTogglePopularAsync(selectedKeys, true);
+    setBulkBusy(false);
+    if (res.ok) {
+      toast.success(
+        t(`Categories ${res.count} zimewekwa popular.`, `${res.count} categories marked popular.`)
+      );
+      clearSelection();
+    } else {
+      setError(res.error?.message || t("Bulk popular imeshindwa.", "Bulk popular failed."));
+    }
+  };
+
+  const handleBulkUnmarkPopular = async () => {
+    if (bulkBusy || !selectedKeys.length) return;
+    setBulkBusy(true);
+    setError("");
+    const res = await bulkTogglePopularAsync(selectedKeys, false);
+    setBulkBusy(false);
+    if (res.ok) {
+      toast.success(
+        t(`Categories ${res.count} zimeondolewa popular.`, `${res.count} categories unmarked.`)
+      );
+      clearSelection();
+    } else {
+      setError(res.error?.message || t("Bulk unmark imeshindwa.", "Bulk unmark failed."));
+    }
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (bulkBusy || !selectedKeys.length) return;
+    setBulkBusy(true);
+    setError("");
+
+    // Tengeneza listingsByKey
+    const listingsByKey = {};
+    for (const k of selectedKeys) {
+      listingsByKey[k] = listingsCountFor(k);
+    }
+
+    const res = await bulkRemoveCategoriesAsync(selectedKeys, listingsByKey);
+    setBulkBusy(false);
+    setConfirmBulkDelete(false);
+
+    if (res.ok) {
+      toast.success(
+        t(`Categories ${res.count} zimefutwa.`, `${res.count} categories deleted.`)
+      );
+      if (res.blocked && res.blocked.length > 0) {
+        toast.warning(
+          t(
+            `Categories ${res.blocked.length} hazikufutwa (zina listings).`,
+            `${res.blocked.length} categories not deleted (have listings).`
+          )
+        );
+      }
+      clearSelection();
+    } else {
+      setError(res.error?.message || t("Bulk delete imeshindwa.", "Bulk delete failed."));
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // RENDER
+  // ══════════════════════════════════════════════════════════
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-4 lg:col-span-3">
       {/* Header */}
@@ -276,17 +466,140 @@ export default function CategoriesPanel() {
         </div>
       )}
 
-      {/* Flash */}
-      {flash && (
+      {/* Search + Filter */}
+      {categories.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-2 w-full min-w-0">
+          {/* Search */}
+          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 min-w-0">
+            <Search size={14} className="text-muted shrink-0" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("Tafuta category...", "Search category...")}
+              className="outline-none text-xs flex-1 min-w-0"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                className="text-muted hover:text-secondary shrink-0"
+                aria-label={t("Futa", "Clear")}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* Filter tabs */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 shrink-0">
+            {FILTER_TABS.map((tab) => {
+              const isActive = filterTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setFilterTab(tab.key)}
+                  style={{
+                    background: isActive ? COLORS.night : "white",
+                    color: isActive ? COLORS.sand : "var(--text-primary)",
+                    borderColor: COLORS.sandLine,
+                  }}
+                  className="text-[11px] font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
+                >
+                  {tab.label?.[lang] || tab.label?.sw}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk actions bar */}
+      {someSelected && (
         <div
-          style={{
-            background:
-              flash.type === "error" ? `${COLORS.rust}15` : `${COLORS.green}15`,
-            color: flash.type === "error" ? COLORS.rust : COLORS.green,
-          }}
-          className="text-xs font-semibold px-3 py-2 rounded-lg"
+          style={{ background: `${COLORS.gold}15`, borderColor: COLORS.gold }}
+          className="border rounded-lg px-3 py-2.5 flex items-center gap-2 flex-wrap"
         >
-          {flash.msg}
+          <span className="text-xs font-semibold text-primary shrink-0">
+            {selected.size} {t("zimechaguliwa", "selected")}
+          </span>
+          <div className="flex gap-1.5 flex-wrap flex-1">
+            <button
+              onClick={handleBulkEnable}
+              disabled={bulkBusy}
+              style={{ color: COLORS.green, borderColor: COLORS.sandLine }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-white disabled:opacity-50 flex items-center gap-1"
+            >
+              {bulkBusy ? <Loader2 size={11} className="animate-spin" /> : <Eye size={11} />}
+              {t("Washa", "Enable")}
+            </button>
+            <button
+              onClick={handleBulkDisable}
+              disabled={bulkBusy}
+              style={{ color: COLORS.rust, borderColor: COLORS.sandLine }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-white disabled:opacity-50 flex items-center gap-1"
+            >
+              {bulkBusy ? <Loader2 size={11} className="animate-spin" /> : <EyeOff size={11} />}
+              {t("Zima", "Disable")}
+            </button>
+            <button
+              onClick={handleBulkMarkPopular}
+              disabled={bulkBusy}
+              style={{ color: COLORS.gold, borderColor: COLORS.sandLine }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-white disabled:opacity-50 flex items-center gap-1"
+            >
+              {bulkBusy ? <Loader2 size={11} className="animate-spin" /> : <Star size={11} />}
+              {t("Weka Popular", "Mark Popular")}
+            </button>
+            <button
+              onClick={handleBulkUnmarkPopular}
+              disabled={bulkBusy}
+              style={{ color: COLORS.night, borderColor: COLORS.sandLine }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-white disabled:opacity-50"
+            >
+              {t("Ondoa Popular", "Unmark")}
+            </button>
+            <button
+              onClick={() => setConfirmBulkDelete(true)}
+              disabled={bulkBusy}
+              style={{ color: COLORS.rust, borderColor: COLORS.sandLine }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-white disabled:opacity-50 flex items-center gap-1"
+            >
+              {bulkBusy ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+              {t("Futa", "Delete")}
+            </button>
+          </div>
+          <button
+            onClick={clearSelection}
+            disabled={bulkBusy}
+            className="text-muted hover:text-secondary shrink-0 disabled:opacity-50"
+            aria-label={t("Ondoa uchaguzi", "Clear selection")}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Select all + count */}
+      {categories.length > 0 && filteredCategories.length > 0 && (
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-1.5 font-semibold text-primary hover:underline"
+          >
+            {allVisibleSelected ? (
+              <CheckSquare size={14} />
+            ) : (
+              <Square size={14} />
+            )}
+            {allVisibleSelected
+              ? t("Ondoa zote", "Deselect all")
+              : t("Chagua zote", "Select all")}
+          </button>
+          <span className="text-muted">
+            {filteredCategories.length}{" "}
+            {filteredCategories.length === 1
+              ? t("category", "category")
+              : t("categories", "categories")}
+          </span>
         </div>
       )}
 
@@ -305,11 +618,37 @@ export default function CategoriesPanel() {
 
       {/* Categories list */}
       <div className="flex flex-col gap-2">
-        {sortedCategories.map((cat, idx) => {
+        {filteredCategories.length === 0 && !adding && (
+          <div
+            style={{ borderColor: COLORS.sandLine, background: "white" }}
+            className="rounded-2xl border-2 border-dashed p-8 text-center"
+          >
+            <ShoppingBag size={40} className="mx-auto text-muted mb-3" />
+            <h3 className="font-semibold text-primary mb-1">
+              {query || filterTab !== "all"
+                ? t("Hakuna matokeo", "No results")
+                : t("Hakuna categories", "No categories")}
+            </h3>
+            <p className="text-sm text-secondary">
+              {query || filterTab !== "all"
+                ? t(
+                    "Jaribu kubadilisha vichujio au utafutaji wako.",
+                    "Try changing your filters or search."
+                  )
+                : t(
+                    "Categories zilizoongezwa zitaonekana hapa.",
+                    "Added categories will appear here."
+                  )}
+            </p>
+          </div>
+        )}
+
+        {filteredCategories.map((cat) => {
           const count = listingsCountFor(cat.key);
           const Icon = getCategoryIcon(cat.iconKey);
           const isEditing = editing === cat.key;
           const hasPhoto = Boolean(cat.imageUrl);
+          const isSelected = selected.has(cat.key);
 
           const isTogglingActive = !!busy[`active-${cat.key}`];
           const isTogglingPopular = !!busy[`popular-${cat.key}`];
@@ -319,23 +658,43 @@ export default function CategoriesPanel() {
             isTogglingPopular ||
             isDeleting ||
             busy.saving ||
-            reordering;
+            reordering ||
+            bulkBusy;
 
-          const isFirst = idx === 0;
-          const isLast = idx === sortedCategories.length - 1;
+          const globalIdx = sortedCategories.findIndex((c) => c.key === cat.key);
+          const isFirst = globalIdx === 0;
+          const isLast = globalIdx === sortedCategories.length - 1;
 
           return (
             <div
               key={cat.key}
-              style={{ borderColor: COLORS.sandLine }}
+              style={{
+                borderColor: isSelected ? COLORS.gold : COLORS.sandLine,
+                background: isSelected ? `${COLORS.gold}08` : "white",
+              }}
               className="border rounded-lg overflow-hidden"
             >
               <div className="p-3 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-                {/* ⬇️ MPYA: Reorder buttons */}
+                {/* Checkbox */}
+                <button
+                  onClick={() => toggleSelect(cat.key)}
+                  disabled={isAnyBusy}
+                  className="shrink-0 self-start sm:self-center p-0.5 disabled:opacity-50"
+                  aria-label={t("Chagua", "Select")}
+                  style={{ color: isSelected ? COLORS.gold : "var(--text-muted)" }}
+                >
+                  {isSelected ? (
+                    <CheckSquare size={18} />
+                  ) : (
+                    <Square size={18} />
+                  )}
+                </button>
+
+                {/* Reorder buttons */}
                 <div className="flex sm:flex-col gap-1 shrink-0">
                   <button
                     onClick={() => handleMove(cat.key, "up")}
-                    disabled={isAnyBusy || isFirst}
+                    disabled={isAnyBusy || isFirst || !!query || filterTab !== "all"}
                     className="w-7 h-7 rounded-md border flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
                     style={{ borderColor: COLORS.sandLine }}
                     title={lang === "sw" ? "Pandisha juu" : "Move up"}
@@ -344,7 +703,7 @@ export default function CategoriesPanel() {
                   </button>
                   <button
                     onClick={() => handleMove(cat.key, "down")}
-                    disabled={isAnyBusy || isLast}
+                    disabled={isAnyBusy || isLast || !!query || filterTab !== "all"}
                     className="w-7 h-7 rounded-md border flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
                     style={{ borderColor: COLORS.sandLine }}
                     title={lang === "sw" ? "Shusha chini" : "Move down"}
@@ -385,7 +744,7 @@ export default function CategoriesPanel() {
                         }}
                         className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
                       >
-                        #{cat.ordering ?? idx}
+                        #{cat.ordering ?? 0}
                       </span>
                       {cat.isPopular && (
                         <span
@@ -526,6 +885,58 @@ export default function CategoriesPanel() {
           );
         })}
       </div>
+
+      {/* Bulk delete confirm modal */}
+      {confirmBulkDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+            <div className="text-center mb-5">
+              <div
+                style={{ background: `${COLORS.rust}15` }}
+                className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+              >
+                <AlertTriangle size={26} color={COLORS.rust} />
+              </div>
+              <h3 className="text-lg font-bold text-primary">
+                {t("Futa Categories Hizi?", "Delete These Categories?")}
+              </h3>
+              <p className="text-sm text-secondary mt-2">
+                {t(
+                  `Categories ${selected.size} zitafutwa. Categories zenye listings hazitafutwa.`,
+                  `${selected.size} categories will be deleted. Categories with listings will be skipped.`
+                )}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmBulkDelete(false)}
+                disabled={bulkBusy}
+                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+              >
+                {t("Ghairi", "Cancel")}
+              </button>
+              <button
+                onClick={handleBulkDeleteConfirm}
+                disabled={bulkBusy}
+                style={{ background: COLORS.rust, color: "white" }}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-1.5"
+              >
+                {bulkBusy ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    {t("Inafanya...", "Working...")}
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    {t("Futa", "Delete")}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

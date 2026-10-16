@@ -12,4 +12,14 @@ export const promotionsApi = {
     remove: (id) => api.delete(`/banners/campaigns/${id}/`),
     toggle: (id) => api.post(`/banners/campaigns/${id}/toggle/`, {}),
   },
+
+  // ⬇️ MPYA: Admin actions kwa promotions
+  admin: {
+    pause: (type, id, reason = "") =>
+      api.post(`/admin/promotions/${type}/${id}/pause/`, { reason }),
+    resume: (type, id, note = "") =>
+      api.post(`/admin/promotions/${type}/${id}/resume/`, { note }),
+    cancel: (type, id, reason = "", refund = false) =>
+      api.post(`/admin/promotions/${type}/${id}/cancel/`, { reason, refund }),
+  },
 };

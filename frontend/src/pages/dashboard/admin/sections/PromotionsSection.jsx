@@ -2,12 +2,13 @@
 // PromotionsSection.jsx
 // Admin — Promotions Dashboard (boosted, leading, advertised,
 // reserved, success fee, listing fee, campaigns).
-// Revenue Types zote 6: boosting, advertising, leading,
-// reservation, success, listing.
-// Bilingual + mobile-responsive + Async campaign actions.
 //
-// REVENUE: Inatoka usePlatformRevenue("all") — chanzo kimoja
-// cha ukweli kinachotumiwa na Overview na Reports pia.
+// Marekebisho:
+//  - PromotionCard ina pause/resume/cancel buttons
+//  - Modal ya confirmation (pause/resume/cancel + refund option)
+//  - Admin anaweza kusimamisha promotion kama kuna mkanganyiko
+//  - isPaused prop inaonyesha "IMESIMAMISHWA" badge
+//  - actionBusy inazuia double-click
 // ============================================================
 
 import React, { useState } from "react";
@@ -25,6 +26,10 @@ import {
   HandCoins,
   Wallet,
   CreditCard,
+  AlertTriangle,
+  Pause,
+  Play,
+  X,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../shared/constants.js";
 import { getCategory, getCategoryIcon } from "../../../../config/categoriesStore.js";
@@ -35,8 +40,10 @@ import {
   addCampaignAsync,
   updateCampaignAsync,
   removeCampaignAsync,
+  pausePromotionAsync,
+  resumePromotionAsync,
+  cancelPromotionAsync,
 } from "../../../../config/promotionsStore.js";
-// ⬇️ Chanzo kimoja cha mapato — sawa na Overview & Reports
 import { usePlatformRevenue } from "../shared/revenue.js";
 
 // ============================================================
@@ -88,9 +95,19 @@ const PROMO_TYPES = {
 };
 
 // ============================================================
-// PROMOTION CARD — inaonyesha listing/deal/transaction
+// PROMOTION CARD — na pause/resume/cancel
 // ============================================================
-function PromotionCard({ listing, lang, type: forcedType }) {
+function PromotionCard({
+  listing,
+  lang,
+  type: forcedType,
+  onPause,
+  onResume,
+  onCancel,
+  isBusy,
+  isPaused,
+  showActions = true,
+}) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const typeKey = forcedType || listing.promotionType || "boost";
   const type = PROMO_TYPES[typeKey] || PROMO_TYPES.boost;
@@ -98,13 +115,18 @@ function PromotionCard({ listing, lang, type: forcedType }) {
 
   const category = getCategory(listing.category);
   const CatIcon = getCategoryIcon(category?.iconKey);
-  const catLabel = category?.label?.[lang] || category?.label?.sw || listing.category;
+  const catLabel =
+    category?.label?.[lang] || category?.label?.sw || listing.category;
 
-  const isUrgent = listing.daysRemaining != null && listing.daysRemaining <= 2;
+  const isUrgent =
+    listing.daysRemaining != null && listing.daysRemaining <= 2;
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      style={{
+        borderColor: isPaused ? COLORS.rust : COLORS.sandLine,
+        background: isPaused ? "rgba(193,80,46,0.03)" : "white",
+      }}
       className="rounded-xl border p-3 sm:p-4 w-full max-w-full min-w-0 overflow-hidden"
     >
       <div className="flex items-start gap-2 sm:gap-3 w-full min-w-0">
@@ -118,12 +140,26 @@ function PromotionCard({ listing, lang, type: forcedType }) {
         <div className="flex-1 min-w-0 overflow-hidden">
           <div className="flex items-center gap-1.5 flex-wrap mb-1">
             <span
-              style={{ background: type?.bg || "#F5F3EC", color: type?.color || "#101A2E" }}
+              style={{
+                background: type?.bg || "#F5F3EC",
+                color: type?.color || "#101A2E",
+              }}
               className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
             >
               {type.label?.[lang] || type.label?.sw}
             </span>
-            {isUrgent && (
+            {isPaused && (
+              <span
+                style={{
+                  background: "rgba(193,80,46,0.14)",
+                  color: COLORS.rust,
+                }}
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+              >
+                {t("IMESIMAMISHWA", "PAUSED")}
+              </span>
+            )}
+            {isUrgent && !isPaused && (
               <span
                 style={{
                   background: "rgba(193,80,46,0.14)",
@@ -159,16 +195,15 @@ function PromotionCard({ listing, lang, type: forcedType }) {
           </div>
 
           <p className="text-[11px] text-muted mt-1 truncate w-full">
-            {t("Muuzaji", "Seller")}: {listing.seller_name || listing.seller || listing.user_name || "—"}
+            {t("Muuzaji", "Seller")}:{" "}
+            {listing.seller_name || listing.seller || listing.user_name || "—"}
           </p>
         </div>
 
-        {listing.daysRemaining != null && (
+        {listing.daysRemaining != null && !isPaused && (
           <div className="text-right shrink-0">
             <p
-              style={{
-                color: isUrgent ? COLORS.rust : "var(--text-primary)",
-              }}
+              style={{ color: isUrgent ? COLORS.rust : "var(--text-primary)" }}
               className="text-sm font-bold"
             >
               {listing.daysRemaining}d
@@ -187,6 +222,58 @@ function PromotionCard({ listing, lang, type: forcedType }) {
           </div>
         )}
       </div>
+
+      {/* Actions — pause/resume/cancel */}
+      {showActions && (
+        <div
+          className="flex items-center gap-1.5 mt-3 pt-3 border-t"
+          style={{ borderColor: COLORS.sandLine }}
+        >
+          {isPaused ? (
+            <button
+              onClick={() => onResume?.(listing)}
+              disabled={isBusy}
+              style={{ color: COLORS.green, borderColor: COLORS.sandLine }}
+              className="flex-1 flex items-center justify-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isBusy ? (
+                <Loader2 size={11} className="animate-spin" />
+              ) : (
+                <Play size={11} />
+              )}
+              {t("Washa", "Resume")}
+            </button>
+          ) : (
+            <button
+              onClick={() => onPause?.(listing)}
+              disabled={isBusy}
+              style={{ color: COLORS.rust, borderColor: COLORS.sandLine }}
+              className="flex-1 flex items-center justify-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isBusy ? (
+                <Loader2 size={11} className="animate-spin" />
+              ) : (
+                <Pause size={11} />
+              )}
+              {t("Simamisha", "Pause")}
+            </button>
+          )}
+          <button
+            onClick={() => onCancel?.(listing)}
+            disabled={isBusy}
+            style={{ color: COLORS.rust, borderColor: COLORS.sandLine }}
+            className="flex items-center justify-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed"
+            title={t("Futa (na refund)", "Cancel (with refund)")}
+          >
+            {isBusy ? (
+              <Loader2 size={11} className="animate-spin" />
+            ) : (
+              <Trash2 size={11} />
+            )}
+            {t("Futa", "Cancel")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -227,7 +314,10 @@ function CampaignCard({ campaign, lang, onEdit, onRemove, isBusy }) {
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
               <span
-                style={{ background: `${status.color}15`, color: status.color }}
+                style={{
+                  background: `${status.color}15`,
+                  color: status.color,
+                }}
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
               >
                 {status.label}
@@ -404,7 +494,10 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
             onChange={(e) =>
               setForm({
                 ...form,
-                discountPercent: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                discountPercent: Math.min(
+                  100,
+                  Math.max(0, Number(e.target.value) || 0)
+                ),
               })
             }
             disabled={saving}
@@ -496,41 +589,210 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
     </div>
   );
 }
+
+// ============================================================
+// CONFIRM ACTION MODAL
+// ============================================================
+function ConfirmActionModal({ action, lang, busy, onConfirm, onClose }) {
+  if (!action) return null;
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  const isPause = action.type === "pause";
+  const isResume = action.type === "resume";
+  const isCancel = action.type === "cancel";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+        <div className="text-center mb-5">
+          <div
+            style={{
+              background: isResume ? `${COLORS.green}15` : `${COLORS.rust}15`,
+            }}
+            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+          >
+            {isResume ? (
+              <Play size={26} color={COLORS.green} />
+            ) : isPause ? (
+              <Pause size={26} color={COLORS.rust} />
+            ) : (
+              <AlertTriangle size={26} color={COLORS.rust} />
+            )}
+          </div>
+          <h3 className="text-lg font-bold text-primary">
+            {isPause && t("Simamisha Promotion?", "Pause Promotion?")}
+            {isResume && t("Washa Promotion?", "Resume Promotion?")}
+            {isCancel && t("Futa Promotion?", "Cancel Promotion?")}
+          </h3>
+          <p className="text-sm text-secondary mt-2 break-words">
+            {action.title}
+          </p>
+          {isPause && (
+            <p className="text-xs text-muted mt-2">
+              {t(
+                "Itaondolewa kwenye rotation hadi utakapoiwasha.",
+                "It will be removed from rotation until you resume it."
+              )}
+            </p>
+          )}
+          {isCancel && (
+            <label className="flex items-center gap-2 mt-3 justify-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={action.refund || false}
+                onChange={(e) =>
+                  onConfirm({ ...action, refund: e.target.checked })
+                }
+                disabled={busy}
+                className="w-4 h-4"
+              />
+              <span className="text-xs text-secondary">
+                {t("Toa refund kwa muuzaji", "Refund seller")}
+              </span>
+            </label>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+          >
+            {t("Ghairi", "Cancel")}
+          </button>
+          <button
+            onClick={() => onConfirm(action)}
+            disabled={busy}
+            style={{
+              background: isResume ? COLORS.green : COLORS.rust,
+              color: "white",
+            }}
+            className="flex-1 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-1.5"
+          >
+            {busy ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                {t("Inafanya...", "Working...")}
+              </>
+            ) : (
+              <>
+                {isResume && <Play size={14} />}
+                {isPause && <Pause size={14} />}
+                {isCancel && <Trash2 size={14} />}
+                {isPause && t("Simamisha", "Pause")}
+                {isResume && t("Washa", "Resume")}
+                {isCancel && t("Futa", "Cancel")}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================
 // MAIN SECTION
 // ============================================================
 export default function PromotionsSection() {
   const { lang } = useLanguage();
   const promotions = usePromotions(lang);
-  // ⬇️ Chanzo kimoja cha mapato — sawa na Overview & Reports
   const platformRevenue = usePlatformRevenue("all");
+
   const [activeTab, setActiveTab] = useState("boost");
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [addingCampaign, setAddingCampaign] = useState(false);
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
-  const t = (sw, en) => (lang === "sw" ? sw : en);
+  // ⬇️ MPYA: pause/resume/cancel
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [actionBusy, setActionBusy] = useState({});
 
-  // ⬇️ Revenue halisi kutoka chanzo kimoja
+  const t = (sw, en) => (lang === "sw" ? sw : en);
   const revenueByType = platformRevenue.byType;
+
+  // ============================================================
+  // PROMOTION ACTION HANDLERS
+  // ============================================================
+  const handlePause = (listing, type) => {
+    setConfirmAction({
+      type: "pause",
+      promotionType: type,
+      id: listing.id,
+      title: listing.title,
+    });
+  };
+
+  const handleResume = (listing, type) => {
+    setConfirmAction({
+      type: "resume",
+      promotionType: type,
+      id: listing.id,
+      title: listing.title,
+    });
+  };
+
+  const handleCancel = (listing, type) => {
+    setConfirmAction({
+      type: "cancel",
+      promotionType: type,
+      id: listing.id,
+      title: listing.title,
+      refund: false,
+    });
+  };
+
+  const handleConfirmAction = async (action) => {
+    if (!action) return;
+    const { type, promotionType, id, refund } = action;
+
+    const busyKey = `${type}-${id}`;
+    setActionBusy((b) => ({ ...b, [busyKey]: true }));
+    setError("");
+
+    let res;
+    if (type === "pause") {
+      res = await pausePromotionAsync(promotionType, id, "");
+    } else if (type === "resume") {
+      res = await resumePromotionAsync(promotionType, id, "");
+    } else if (type === "cancel") {
+      res = await cancelPromotionAsync(promotionType, id, "", refund);
+    }
+
+    setActionBusy((b) => {
+      const next = { ...b };
+      delete next[busyKey];
+      return next;
+    });
+
+    if (res?.ok) {
+      setConfirmAction(null);
+    } else {
+      setError(
+        res?.error?.message || t("Action imeshindwa.", "Action failed.")
+      );
+    }
+  };
+
+  const isListingBusy = (id) =>
+    !!actionBusy[`pause-${id}`] ||
+    !!actionBusy[`resume-${id}`] ||
+    !!actionBusy[`cancel-${id}`];
 
   // ============================================================
   // CAMPAIGN HANDLERS
   // ============================================================
   const handleAddCampaign = async (form) => {
     if (busy.campaignSave) return;
-
     setBusy((b) => ({ ...b, campaignSave: true }));
     setError("");
-
     const res = await addCampaignAsync(form);
     setBusy((b) => {
       const next = { ...b };
       delete next.campaignSave;
       return next;
     });
-
     if (res.ok) {
       setAddingCampaign(false);
     } else {
@@ -543,17 +805,14 @@ export default function PromotionsSection() {
 
   const handleUpdateCampaign = async (id, form) => {
     if (busy.campaignSave) return;
-
     setBusy((b) => ({ ...b, campaignSave: true }));
     setError("");
-
     const res = await updateCampaignAsync(id, form);
     setBusy((b) => {
       const next = { ...b };
       delete next.campaignSave;
       return next;
     });
-
     if (res.ok) {
       setEditingCampaign(null);
     } else {
@@ -565,25 +824,16 @@ export default function PromotionsSection() {
   };
 
   const handleRemoveCampaign = async (campaign) => {
-    if (
-      !window.confirm(
-        t("Ondoa kampeni?", "Remove campaign?")
-      )
-    )
-      return;
-
+    if (!window.confirm(t("Ondoa kampeni?", "Remove campaign?"))) return;
     if (busy[`campaign-${campaign.id}`]) return;
-
     setBusy((b) => ({ ...b, [`campaign-${campaign.id}`]: true }));
     setError("");
-
     const res = await removeCampaignAsync(campaign.id);
     setBusy((b) => {
       const next = { ...b };
       delete next[`campaign-${campaign.id}`];
       return next;
     });
-
     if (!res.ok) {
       setError(
         res.error?.message ||
@@ -593,7 +843,7 @@ export default function PromotionsSection() {
   };
 
   // ============================================================
-  // TABS — REVENUE TYPES ZOTE 6 + CAMPAIGNS
+  // TABS
   // ============================================================
   const TABS = [
     {
@@ -655,9 +905,18 @@ export default function PromotionsSection() {
   ];
 
   // ============================================================
-  // TAB CONTENT RENDERER
+  // TAB CONTENT
   // ============================================================
   const renderTabContent = () => {
+    const promoListProps = (type) => ({
+      lang,
+      type,
+      onPause: (l) => handlePause(l, type),
+      onResume: (l) => handleResume(l, type),
+      onCancel: (l) => handleCancel(l, type),
+      isBusy: (l) => isListingBusy(l.id),
+    });
+
     if (activeTab === "boost") {
       return promotions.boostedListings.length === 0 ? (
         <EmptyState
@@ -671,7 +930,13 @@ export default function PromotionsSection() {
       ) : (
         <div className="flex flex-col gap-3 w-full min-w-0">
           {promotions.boostedListings.map((l) => (
-            <PromotionCard key={l.id} listing={l} lang={lang} type="boost" />
+            <PromotionCard
+              key={l.id}
+              listing={l}
+              {...promoListProps("boost")}
+              isBusy={isListingBusy(l.id)}
+              isPaused={l.paused_by_admin || l.status === "PAUSED"}
+            />
           ))}
         </div>
       );
@@ -690,7 +955,13 @@ export default function PromotionsSection() {
       ) : (
         <div className="flex flex-col gap-3 w-full min-w-0">
           {promotions.advertisedListings.map((l) => (
-            <PromotionCard key={l.id} listing={l} lang={lang} type="advertise" />
+            <PromotionCard
+              key={l.id}
+              listing={l}
+              {...promoListProps("advertise")}
+              isBusy={isListingBusy(l.id)}
+              isPaused={l.paused_by_admin || l.active === false}
+            />
           ))}
         </div>
       );
@@ -709,7 +980,13 @@ export default function PromotionsSection() {
       ) : (
         <div className="flex flex-col gap-3 w-full min-w-0">
           {promotions.leadingListings.map((l) => (
-            <PromotionCard key={l.id} listing={l} lang={lang} type="leading" />
+            <PromotionCard
+              key={l.id}
+              listing={l}
+              {...promoListProps("leading")}
+              isBusy={isListingBusy(l.id)}
+              isPaused={l.paused_by_admin || l.status === "PAUSED"}
+            />
           ))}
         </div>
       );
@@ -728,7 +1005,13 @@ export default function PromotionsSection() {
       ) : (
         <div className="flex flex-col gap-3 w-full min-w-0">
           {promotions.reservedListings.map((l) => (
-            <PromotionCard key={l.id} listing={l} lang={lang} type="reservation" />
+            <PromotionCard
+              key={l.id}
+              listing={l}
+              {...promoListProps("reservation")}
+              isBusy={isListingBusy(l.id)}
+              isPaused={l.paused_by_admin || l.status === "PAUSED"}
+            />
           ))}
         </div>
       );
@@ -747,7 +1030,13 @@ export default function PromotionsSection() {
       ) : (
         <div className="flex flex-col gap-3 w-full min-w-0">
           {promotions.successFeeDeals.map((l) => (
-            <PromotionCard key={l.id} listing={l} lang={lang} type="success" />
+            <PromotionCard
+              key={l.id}
+              listing={l}
+              lang={lang}
+              type="success"
+              showActions={false}
+            />
           ))}
         </div>
       );
@@ -766,7 +1055,13 @@ export default function PromotionsSection() {
       ) : (
         <div className="flex flex-col gap-3 w-full min-w-0">
           {promotions.listingFeeTransactions.map((l) => (
-            <PromotionCard key={l.id} listing={l} lang={lang} type="listing" />
+            <PromotionCard
+              key={l.id}
+              listing={l}
+              lang={lang}
+              type="listing"
+              showActions={false}
+            />
           ))}
         </div>
       );
@@ -804,7 +1099,9 @@ export default function PromotionsSection() {
               initial={editingCampaign}
               lang={lang}
               saving={!!busy.campaignSave}
-              onSave={(form) => handleUpdateCampaign(editingCampaign.id, form)}
+              onSave={(form) =>
+                handleUpdateCampaign(editingCampaign.id, form)
+              }
               onCancel={() => setEditingCampaign(null)}
             />
           )}
@@ -849,8 +1146,8 @@ export default function PromotionsSection() {
       <SectionHeader
         title={t("Matangazo & Kampeni", "Promotions & Campaigns")}
         subtitle={t(
-          "Fuatilia mapato kwa aina zote sita: Boost, Matangazo, Leading, Uhifadhi, Success Fee, na Listing Fee.",
-          "Track revenue across all six types: Boost, Advertisements, Leading, Reservation, Success Fee, and Listing Fee."
+          "Fuatilia na simamia promotions. Unaweza kusimamisha promotion kama kuna mkanganyiko wa malipo.",
+          "Track and manage promotions. You can pause a promotion if there's a payment conflict."
         )}
       />
 
@@ -867,7 +1164,7 @@ export default function PromotionsSection() {
         </div>
       )}
 
-      {/* Stats — 6 stats kwenye grid ya columns 6 (desktop) */}
+      {/* Stats — 6 stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-5 w-full">
         <StatBox
           label={t("Boost", "Boost")}
@@ -907,7 +1204,7 @@ export default function PromotionsSection() {
         />
       </div>
 
-      {/* Revenue Breakdown — zote sita (kadi za kila aina) */}
+      {/* Revenue Breakdown */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="rounded-xl border p-3 sm:p-4 mb-5 w-full min-w-0 overflow-hidden"
@@ -949,9 +1246,9 @@ export default function PromotionsSection() {
         </div>
       </div>
 
-      {/* Tabs — zote sita + campaigns */}
+      {/* Tabs */}
       <div className="flex justify-start sm:justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
-        {TABS.map(({ key, label, icon: Icon, count, revenue, color }) => {
+        {TABS.map(({ key, label, icon: Icon, count, color }) => {
           const isActive = activeTab === key;
           return (
             <button
@@ -984,6 +1281,15 @@ export default function PromotionsSection() {
 
       {/* Tab Content */}
       <div className="w-full min-w-0">{renderTabContent()}</div>
+
+      {/* Confirm Action Modal */}
+      <ConfirmActionModal
+        action={confirmAction}
+        lang={lang}
+        busy={!!actionBusy[`${confirmAction?.type}-${confirmAction?.id}`]}
+        onConfirm={handleConfirmAction}
+        onClose={() => !actionBusy && setConfirmAction(null)}
+      />
     </div>
   );
 }

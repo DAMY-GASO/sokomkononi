@@ -1,47 +1,31 @@
 // ============================================================
 // categoriesStore.js
-// - initializeCategories() inaseed from CATEGORY_TRANSLATIONS
-// - Label overrides (name_en, description_en) kwenye `extra`
-// - DEDUPE kwa key
-// - REORDER support (admin anaweza kupanga)
-// - AVAILABLE_ICONS — icons TOFAUTI KABISA
+//
+// Marekebisho:
+//  - Ongeza bulkToggleActiveAsync(keys, active)
+//  - Ongeza bulkTogglePopularAsync(keys, popular)
+//  - Ongeza bulkRemoveCategoriesAsync(keys, listingsByKey)
 // ============================================================
 import { useEffect, useState } from "react";
 import {
-  // Nyumba / Majengo
   Home, Building2, Store, Factory,
-  // Viwanja
   Trees, TreePine, Mountain, Waves,
-  // Magari
   Car, Truck, Bike, Bus, Ship, Plane, Tractor, Fuel,
-  // Biashara
   Briefcase, ShoppingBag, Package, Boxes, Box, Container,
-  // Huduma — TOFAUTI KABISA
   HandHelping, Wrench, Hammer, Scissors, Stethoscope,
   GraduationCap, Shield, Sparkles, BookOpen, PenTool, Palette,
-  // Vyakula
   Coffee, Utensils, UtensilsCrossed, Pizza, IceCream,
-  // Mavazi / Mapambo
   Shirt, Crown, Award, Star, Gem, Watch, Glasses, Backpack,
-  // Samani
   Sofa, Bed, Armchair, Bath, Refrigerator, Tv,
-  // Electronics
   Smartphone, Laptop, Monitor, Camera, Headphones, Cpu, Plug, Wifi,
-  // Wanyama
   PawPrint, Dog, Cat, Fish, Bird, Bug,
-  // Mimea
   Leaf, Flower, Flower2,
-  // Fedha
   Coins, CreditCard, Wallet, TrendingUp, BarChart3,
-  // Mengine
   Key, Lock, DoorOpen, Sun, Moon, Cloud, Umbrella,
   Lightbulb, Zap, Droplet, Flame, Heart, Tag,
   Layers, Grid3x3, LayoutGrid,
-  // Media
   Music, Mic, Video, Film, Gamepad2,
-  // Michezo
   Dumbbell, Activity, PersonStanding,
-  // Watu
   Users,
 } from "lucide-react";
 import { categoriesApi } from "../api/categories.js";
@@ -88,7 +72,7 @@ const CATEGORY_TRANSLATIONS = {
   "vifaa-vizito": {
     label: { sw: "Vifaa vizito", en: "Heavy Equipment" },
     description: { sw: "Vifaa vizito vya ujenzi, kilimo, na viwanda", en: "Construction, agricultural, and industrial heavy equipment" },
-    iconKey: "Tractor",   // ⬅️ TOFAUTI (sio Wrench)
+    iconKey: "Tractor",
     extra: CATEGORY_EXTRA["vifaa-vizito"] || [],
   },
   pikipiki: {
@@ -136,7 +120,7 @@ const CATEGORY_TRANSLATIONS = {
   jobs: {
     label: { sw: "Ajira", en: "Jobs" },
     description: { sw: "Nafasi za kazi na watafuta kazi Tanzania", en: "Job openings and job seekers in Tanzania" },
-    iconKey: "Users",    // ⬅️ TOFAUTI (sio Briefcase)
+    iconKey: "Users",
     extra: CATEGORY_EXTRA["jobs"] || [],
   },
   "mali-nyinginezo": {
@@ -148,7 +132,7 @@ const CATEGORY_TRANSLATIONS = {
   huduma: {
     label: { sw: "Huduma", en: "Services" },
     description: { sw: "Huduma za kitaalamu na za kila siku", en: "Professional and everyday services" },
-    iconKey: "HandHelping",   // ⬅️ TOFAUTI KABISA (sio Home)
+    iconKey: "HandHelping",
     extra: CATEGORY_EXTRA["huduma"] || [],
   },
 };
@@ -222,59 +206,25 @@ export const BACKEND_SLUG_TO_SEED_KEY = {
   "service": "huduma",
 };
 
-// ══════════════════════════════════════════════════════════
-// AVAILABLE_ICONS — icons TOFAUTI KABISA kwa kila category
-// ══════════════════════════════════════════════════════════
 export const AVAILABLE_ICONS = {
-  // Nyumba / Majengo
   Home, Building2, Store, Factory,
-
-  // Viwanja / Ardhi
   Trees, TreePine, Mountain, Waves,
-
-  // Magari
   Car, Truck, Bike, Bus, Ship, Plane, Tractor, Fuel,
-
-  // Biashara
   Briefcase, ShoppingBag, Package, Boxes, Box, Container,
-
-  // Huduma — TOFAUTI KABISA (sio Home)
   HandHelping, Wrench, Hammer, Scissors, Stethoscope,
   GraduationCap, Shield, Sparkles, BookOpen, PenTool, Palette,
-
-  // Vyakula
   Coffee, Utensils, UtensilsCrossed, Pizza, IceCream,
-
-  // Mavazi / Mapambo
   Shirt, Crown, Award, Star, Gem, Watch, Glasses, Backpack,
-
-  // Samani / Nyumbani
   Sofa, Bed, Armchair, Bath, Refrigerator, Tv,
-
-  // Electronics
   Smartphone, Laptop, Monitor, Camera, Headphones, Cpu, Plug, Wifi,
-
-  // Wanyama
   PawPrint, Dog, Cat, Fish, Bird, Bug,
-
-  // Mimea
   Leaf, Flower, Flower2,
-
-  // Fedha / Biashara
   Coins, CreditCard, Wallet, TrendingUp, BarChart3,
-
-  // Mengine
   Key, Lock, DoorOpen, Sun, Moon, Cloud, Umbrella,
   Lightbulb, Zap, Droplet, Flame, Heart, Tag,
   Layers, Grid3x3, LayoutGrid,
-
-  // Media / Burudani
   Music, Mic, Video, Film, Gamepad2,
-
-  // Michezo
   Dumbbell, Activity, PersonStanding,
-
-  // Watu
   Users,
 };
 
@@ -531,7 +481,142 @@ export async function updateCategoryImageAsync(key, imageUrl) {
 }
 
 // ══════════════════════════════════════════════════════════
-// REORDER — inatuma mpangilio mpya kwa backend
+// BULK ACTIONS
+// ══════════════════════════════════════════════════════════
+
+/**
+ * Bulk enable/disable categories.
+ * @param {string[]} keys — category keys
+ * @param {boolean} active — true = enable, false = disable
+ */
+export async function bulkToggleActiveAsync(keys, active) {
+  if (!Array.isArray(keys) || keys.length === 0) {
+    return { ok: false, error: new Error("keys tupu") };
+  }
+
+  const current = getCategories();
+  const idByKey = new Map();
+  for (const c of current) {
+    if (keys.includes(c.key) && c.id) idByKey.set(c.key, c.id);
+  }
+  const ids = Array.from(idByKey.values());
+
+  if (ids.length === 0) {
+    return { ok: false, error: new Error("Hakuna category yenye backend id") };
+  }
+
+  // Optimistic update
+  const updated = current.map((c) =>
+    keys.includes(c.key) ? { ...c, active } : c
+  );
+  saveAll(updated);
+
+  try {
+    const res = await categoriesApi.bulk(
+      active ? "enable" : "disable",
+      ids
+    );
+    return { ok: true, count: res?.count ?? ids.length };
+  } catch (err) {
+    saveAll(current); // rollback
+    return { ok: false, error: err };
+  }
+}
+
+/**
+ * Bulk mark/unmark popular categories.
+ * @param {string[]} keys
+ * @param {boolean} popular
+ */
+export async function bulkTogglePopularAsync(keys, popular) {
+  if (!Array.isArray(keys) || keys.length === 0) {
+    return { ok: false, error: new Error("keys tupu") };
+  }
+
+  const current = getCategories();
+  const idByKey = new Map();
+  for (const c of current) {
+    if (keys.includes(c.key) && c.id) idByKey.set(c.key, c.id);
+  }
+  const ids = Array.from(idByKey.values());
+
+  if (ids.length === 0) {
+    return { ok: false, error: new Error("Hakuna category yenye backend id") };
+  }
+
+  const updated = current.map((c) =>
+    keys.includes(c.key) ? { ...c, isPopular: popular } : c
+  );
+  saveAll(updated);
+
+  try {
+    const res = await categoriesApi.bulk(
+      popular ? "mark_popular" : "unmark_popular",
+      ids
+    );
+    return { ok: true, count: res?.count ?? ids.length };
+  } catch (err) {
+    saveAll(current);
+    return { ok: false, error: err };
+  }
+}
+
+/**
+ * Bulk delete categories (soft delete).
+ * @param {string[]} keys
+ * @param {object} listingsByKey — { [key]: count } — kama listings zipo, hazifutwi
+ */
+export async function bulkRemoveCategoriesAsync(keys, listingsByKey = {}) {
+  if (!Array.isArray(keys) || keys.length === 0) {
+    return { ok: false, error: new Error("keys tupu") };
+  }
+
+  // Chuja keys zenye listings — hazifutwi
+  const blocked = [];
+  const deletable = [];
+  for (const k of keys) {
+    const count = Number(listingsByKey?.[k]) || 0;
+    if (count > 0) blocked.push({ key: k, listingsCount: count });
+    else deletable.push(k);
+  }
+
+  if (deletable.length === 0) {
+    return {
+      ok: false,
+      error: new Error("Categories zote zilizochaguliwa zina listings."),
+      blocked,
+    };
+  }
+
+  const current = getCategories();
+  const idByKey = new Map();
+  for (const c of current) {
+    if (deletable.includes(c.key) && c.id) idByKey.set(c.key, c.id);
+  }
+  const ids = Array.from(idByKey.values());
+
+  // Optimistic — ondoa locally
+  saveAll(current.filter((c) => !deletable.includes(c.key)));
+
+  if (ids.length === 0) {
+    return { ok: true, count: deletable.length, blocked, warning: "local_only" };
+  }
+
+  try {
+    const res = await categoriesApi.bulk("delete", ids);
+    return {
+      ok: true,
+      count: res?.count ?? ids.length,
+      blocked,
+    };
+  } catch (err) {
+    saveAll(current); // rollback
+    return { ok: false, error: err, blocked };
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// REORDER
 // ══════════════════════════════════════════════════════════
 export async function reorderCategoriesAsync(newOrder) {
   const order = (Array.isArray(newOrder) ? newOrder : []).map((item) =>
@@ -542,7 +627,6 @@ export async function reorderCategoriesAsync(newOrder) {
 
   const current = getCategories();
 
-  // Optimistic: weka ordering kulingana na index kwenye `order`
   const updated = current.map((c) => {
     const idx = order.indexOf(c.key);
     return idx >= 0 ? { ...c, ordering: idx } : c;
@@ -719,8 +803,6 @@ export async function hydrateCategoriesFromApi() {
     });
     const normalized = Array.from(seen.values());
 
-    // Trust the backend as source of truth once it returned data.
-    // Re-injecting SEED entries would resurrect categories the admin deleted.
     const merged = normalized;
 
     merged.sort((a, b) => {
