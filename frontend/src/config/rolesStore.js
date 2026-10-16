@@ -25,6 +25,7 @@ export const PERMISSIONS = [
   { key: "content", label: { sw: "Maudhui", en: "Content" } },
   { key: "audit", label: { sw: "Kumbukumbu", en: "Audit" } },
   { key: "trash", label: { sw: "Trash", en: "Trash" } },
+  { key: "refunds", label: { sw: "Marejesho", en: "Refunds" } }, 
   { key: "system", label: { sw: "Mipangilio", en: "Settings" } },
   { key: "staff", label: { sw: "Wafanyakazi", en: "Staff" } },
   { key: "profile", label: { sw: "Wasifu", en: "Profile" } },

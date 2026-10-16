@@ -1,8 +1,9 @@
+// src/pages/dashboard/admin/shared/constants.js
 import {
   AlertTriangle, BarChart3, Bell, BellRing, BookOpen, Calendar,
   CheckCircle2, Clock3, CreditCard, Eye, FileText, Flag, HandCoins,
   Headphones, History, Home, LayoutDashboard, Lock, Megaphone,
-  MessagesSquare, Package, Rocket, Search, Settings as SettingsIcon,
+  MessagesSquare, Package, Receipt, Rocket, Search, Settings as SettingsIcon,
   ShieldCheck, Smartphone, Sparkles, Store, Tags, Trash2, User,
   UserCheck, Users, Wallet, XCircle,
 } from "lucide-react";
@@ -32,6 +33,7 @@ export const NAV = [
   { key: "revenue",      label: { sw: "Mapato & Fedha",            en: "Revenue & Financial" },       icon: Wallet },
   { key: "bundles",      label: { sw: "Vifurushi vya Huduma",      en: "Service Bundles" },           icon: Package },
   { key: "promotions",   label: { sw: "Matangazo & Kampeni",       en: "Promotions & Campaigns" },    icon: Sparkles },
+  { key: "refunds",      label: { sw: "Marejesho",                   en: "Refunds" },                   icon: Receipt },   // ⬅️ MPYA
   { key: "reports",      label: { sw: "Ripoti & Uchanganuzi",      en: "Reports & Analytics" },       icon: BarChart3 },
   { key: "support",      label: { sw: "Huduma kwa Wateja",         en: "Customer Care" },             icon: Headphones },
   { key: "content",      label: { sw: "Usimamizi wa Maudhui",      en: "Content Management" },        icon: FileText },

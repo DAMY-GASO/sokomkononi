@@ -2,6 +2,7 @@
 // AdminDashboard.jsx — SHELL PEKEE + Routes + Permissions
 // + PageLoader (mara moja tu)
 // + Secret admin path
+// + Refunds section
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -39,6 +40,7 @@ import VerificationSection from "./admin/sections/VerificationSection.jsx";
 import DealsSection from "./admin/sections/DealsSection.jsx";
 import RevenueSection from "./admin/sections/RevenueSection.jsx";
 import PromotionsSection from "./admin/sections/PromotionsSection.jsx";
+import RefundsSection from "./admin/sections/RefundsSection.jsx";   // ⬅️ MPYA
 import ReportsSection from "./admin/sections/ReportsSection.jsx";
 
 // Support & Content
@@ -80,10 +82,11 @@ const URL_TO_STATE = {
   [`${ADMIN_PATH}/deals`]: "deals",
   [`${ADMIN_PATH}/revenue`]: "revenue",
   [`${ADMIN_PATH}/promotions`]: "promotions",
+  [`${ADMIN_PATH}/refunds`]: "refunds",                    // ⬅️ MPYA
   [`${ADMIN_PATH}/reports`]: "reports",
   [`${ADMIN_PATH}/support`]: "support",
   [`${ADMIN_PATH}/content`]: "content",
-  [`${ADMIN_PATH}/categories`]: "categories",   // ⬅️ MPYA
+  [`${ADMIN_PATH}/categories`]: "categories",
   [`${ADMIN_PATH}/audit`]: "audit",
   [`${ADMIN_PATH}/system`]: "system",
   [`${ADMIN_PATH}/staff`]: "staff",
@@ -100,10 +103,11 @@ const STATE_TO_URL = {
   deals: `${ADMIN_PATH}/deals`,
   revenue: `${ADMIN_PATH}/revenue`,
   promotions: `${ADMIN_PATH}/promotions`,
+  refunds: `${ADMIN_PATH}/refunds`,                        // ⬅️ MPYA
   reports: `${ADMIN_PATH}/reports`,
   support: `${ADMIN_PATH}/support`,
   content: `${ADMIN_PATH}/content`,
-  categories: `${ADMIN_PATH}/categories`,       // ⬅️ MPYA
+  categories: `${ADMIN_PATH}/categories`,
   audit: `${ADMIN_PATH}/audit`,
   system: `${ADMIN_PATH}/system`,
   staff: `${ADMIN_PATH}/staff`,
@@ -397,13 +401,15 @@ export default function AdminDashboard() {
         return <RevenueSection />;
       case "promotions":
         return <PromotionsSection />;
+      case "refunds":                                  // ⬅️ MPYA
+        return <RefundsSection />;
       case "reports":
         return <ReportsSection />;
       case "support":
         return <SupportSection />;
       case "content":
         return <ContentSection />;
-      case "categories":                         
+      case "categories":
         return <CategoriesSection />;
       case "audit":
         return <AuditLogsSection />;

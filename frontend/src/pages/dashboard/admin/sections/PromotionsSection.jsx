@@ -9,6 +9,7 @@
 //  - Admin anaweza kusimamisha promotion kama kuna mkanganyiko
 //  - isPaused prop inaonyesha "IMESIMAMISHWA" badge
 //  - actionBusy inazuia double-click
+//  - Cancel modal inaonyesha refund preview
 // ============================================================
 
 import React, { useState } from "react";
@@ -29,7 +30,7 @@ import {
   AlertTriangle,
   Pause,
   Play,
-  X,
+  Receipt,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../shared/constants.js";
 import { getCategory, getCategoryIcon } from "../../../../config/categoriesStore.js";
@@ -636,20 +637,39 @@ function ConfirmActionModal({ action, lang, busy, onConfirm, onClose }) {
             </p>
           )}
           {isCancel && (
-            <label className="flex items-center gap-2 mt-3 justify-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={action.refund || false}
-                onChange={(e) =>
-                  onConfirm({ ...action, refund: e.target.checked })
-                }
-                disabled={busy}
-                className="w-4 h-4"
-              />
-              <span className="text-xs text-secondary">
-                {t("Toa refund kwa muuzaji", "Refund seller")}
-              </span>
-            </label>
+            <div className="mt-3">
+              <label className="flex items-center gap-2 justify-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={action.refund || false}
+                  onChange={(e) =>
+                    onConfirm({ ...action, refund: e.target.checked })
+                  }
+                  disabled={busy}
+                  className="w-4 h-4"
+                />
+                <span className="text-xs text-secondary">
+                  {t("Toa refund kwa muuzaji", "Refund seller")}
+                </span>
+              </label>
+              {action.refund && (
+                <div
+                  style={{
+                    background: "rgba(47,109,79,0.08)",
+                    color: COLORS.green,
+                  }}
+                  className="mt-3 rounded-lg px-3 py-2 text-xs flex items-start gap-2"
+                >
+                  <Receipt size={12} className="shrink-0 mt-0.5" />
+                  <span>
+                    {t(
+                      "Refund itaundwa na admin atashughulikia kwenye Refunds section.",
+                      "Refund will be created and admin will process it in Refunds section."
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
           )}
         </div>
         <div className="flex gap-2">
@@ -705,7 +725,7 @@ export default function PromotionsSection() {
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
-  // ⬇️ MPYA: pause/resume/cancel
+  // ⬇️ pause/resume/cancel
   const [confirmAction, setConfirmAction] = useState(null);
   const [actionBusy, setActionBusy] = useState({});
 
