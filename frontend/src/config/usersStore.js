@@ -372,11 +372,3 @@ export function useUsersPaged(initial = {}) {
 // ============================================================
 // AUTO-REFRESH: sikiliza events ili list ya users i-refresh
 // ============================================================
-if (typeof window !== "undefined") {
-  window.addEventListener("sokomkononi:users-updated", () => {
-  });
-
-  window.addEventListener("sokomkononi:verifications-updated", () => {
-    hydrateUsersFromApi().catch(() => {});
-  });
-}

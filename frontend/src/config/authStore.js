@@ -732,13 +732,3 @@ export async function socialLoginAsync({
 // ============================================================
 // AUTO-REFRESH: sikiliza events ili is_verified iwe live
 // ============================================================
-if (typeof window !== "undefined") {
-  window.addEventListener("sokomkononi:verifications-updated", () => {
-    refreshProfileAsync().catch(() => {});
-  });
-
-  window.addEventListener("sokomkononi:users-updated", () => {
-    // Kama mtumiaji ame-approve kupitia admin, refresh user
-    refreshProfileAsync().catch(() => {});
-  });
-}
