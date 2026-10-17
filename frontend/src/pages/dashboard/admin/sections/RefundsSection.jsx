@@ -397,22 +397,23 @@ export default function RefundsSection() {
 
       {/* Search + Filter */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 min-w-0">
-          <Search size={14} className="text-muted shrink-0" />
+        <div className="relative flex-1 min-w-0">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("Tafuta kwa jina, simu, au promotion...", "Search by name, phone, or promotion...")}
-            className="outline-none text-xs flex-1 min-w-0"
+            className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-16 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+            style={{ WebkitAppearance: "none" }}
           />
           {query && (
             <button
               onClick={() => setQuery("")}
-              className="text-muted hover:text-secondary shrink-0"
+              className="absolute right-9 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
             >
               <X size={13} />
             </button>
           )}
+          <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
         </div>
         <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 shrink-0">
           {STATUS_FILTERS.map((tab) => {

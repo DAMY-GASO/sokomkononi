@@ -643,18 +643,16 @@ export default function MyTransactionsPage() {
 
       {/* Search */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <div
-          className="flex items-center gap-2 bg-white border rounded-lg px-3 py-2 flex-1 min-w-0"
-          style={{ borderColor: COLORS.sandLine }}
-        >
-          <Search size={14} className="text-muted shrink-0" />
+        <div className="relative flex-1 min-w-0">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("Tafuta...", "Search...")}
-            className="outline-none text-xs flex-1 min-w-0"
+            className="smk-inline-search w-full rounded-lg border bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+            style={{ borderColor: COLORS.sandLine, WebkitAppearance: "none" }}
           />
+          <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
         </div>
       </div>
 

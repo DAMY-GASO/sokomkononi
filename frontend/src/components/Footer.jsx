@@ -17,14 +17,14 @@ const SOCIAL = [
   { href: "https://youtube.com",   icon: Youtube,   label: "YouTube"   },
 ];
 const PAYMENTS = [
-  { file: "mpesa.svg", alt: "M-Pesa" },
-  { file: "halopesa.svg", alt: "HaloPesa" },
-  { file: "mixx-by-yas.svg", alt: "Mixx by Yas" },
-  { file: "airtel-money.svg", alt: "Airtel Money" },
-  { file: "nmb.svg", alt: "NMB" },
-  { file: "crdb.svg", alt: "CRDB" },
-  { file: "visa.svg", alt: "Visa" },
-  { file: "mastercard.svg", alt: "Mastercard" },
+  { label: "M-Pesa",       bg: "#2E9E44", fg: "#FFFFFF" },
+  { label: "HaloPesa",     bg: "#E33C2B", fg: "#FFFFFF" },
+  { label: "Mixx by Yas",  bg: "#FFCC00", fg: "#011957" },
+  { label: "Airtel Money", bg: "#ED1C24", fg: "#FFFFFF" },
+  { label: "NMB",          bg: "#00734D", fg: "#FFFFFF" },
+  { label: "CRDB",         bg: "#0072BC", fg: "#FFFFFF" },
+  { label: "Visa",         bg: "#1A1F71", fg: "#FFFFFF" },
+  { label: "Mastercard",   bg: "#EB001B", fg: "#FFFFFF" },
 ];
 
 export default function Footer({ selectedLang: propLang }) {
@@ -146,8 +146,13 @@ export default function Footer({ selectedLang: propLang }) {
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/45">{t("Malipo yanakubaliwa", "Payments accepted")}</p>
             <div className="flex flex-wrap items-center gap-2">
               {PAYMENTS.map((p) => (
-                <span key={p.file} title={p.alt} className="flex h-7 items-center rounded bg-white/90 px-2">
-                  <img src={`/assets/payments/${p.file}`} alt={p.alt} className="h-4 w-auto object-contain" />
+                <span
+                  key={p.label}
+                  title={p.label}
+                  className="flex h-7 items-center justify-center rounded px-2 text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm"
+                  style={{ background: p.bg, color: p.fg, minWidth: 56 }}
+                >
+                  {p.label}
                 </span>
               ))}
             </div>

@@ -594,16 +594,17 @@ export default function AdminBundles() {
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
           <div className="relative flex-1">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-            />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("Tafuta kifurushi...", "Search bundle...")}
-              className="w-full rounded-xl border border-gray-200 pl-10 pr-3 py-2.5 text-sm outline-none focus:border-[#FEA406] bg-white"
+              className="smk-inline-search w-full rounded-xl border border-gray-200 bg-white pl-3 pr-10 py-2.5 text-sm outline-none focus:outline-none focus-visible:outline-none"
+              style={{ WebkitAppearance: "none" }}
+            />
+            <Search
+              size={16}
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
             />
           </div>
           <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0">

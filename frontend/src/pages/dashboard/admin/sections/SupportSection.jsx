@@ -1212,8 +1212,7 @@ export default function SupportSection() {
                 ))}
               </select>
 
-              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 min-w-0">
-                <Search size={14} className="text-muted shrink-0" />
+              <div className="relative flex-1 min-w-0">
                 <input
                   value={ticketQuery}
                   onChange={(e) => setTicketQuery(e.target.value)}
@@ -1221,8 +1220,10 @@ export default function SupportSection() {
                     "Tafuta kwa ID, mada, mtumiaji...",
                     "Search by ID, subject, user..."
                   )}
-                  className="outline-none text-xs flex-1 min-w-0"
+                  className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+                  style={{ WebkitAppearance: "none" }}
                 />
+                <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
               </div>
             </div>
           )}
@@ -1390,8 +1391,7 @@ export default function SupportSection() {
                 </option>
               </select>
 
-              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 min-w-0">
-                <Search size={14} className="text-muted shrink-0" />
+              <div className="relative flex-1 min-w-0">
                 <input
                   value={feedbackQuery}
                   onChange={(e) => setFeedbackQuery(e.target.value)}
@@ -1399,8 +1399,10 @@ export default function SupportSection() {
                     "Tafuta kwa kichwa, ujumbe, mtumiaji...",
                     "Search by subject, message, user..."
                   )}
-                  className="outline-none text-xs flex-1 min-w-0"
+                  className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+                  style={{ WebkitAppearance: "none" }}
                 />
+                <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
               </div>
             </div>
           )}

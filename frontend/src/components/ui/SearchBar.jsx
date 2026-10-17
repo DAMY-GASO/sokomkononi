@@ -50,20 +50,20 @@ export default function SearchBar({
           wrapper: "border-[color:rgba(255,255,255,0.18)] bg-[color:rgba(255,255,255,0.08)] backdrop-blur-sm",
           input: "text-white placeholder:text-white/45",
           btn: "bg-[#FEA406] hover:bg-[#FD8706] text-[#011957]",
-          ring: "focus-within:border-[#FEA406] focus-within:ring-2 focus-within:ring-[#FEA406]/25",
+          ring: "focus-within:border-[#FEA406]",
         }
       : {
           wrapper: "border-[color:rgb(var(--c-hairline))] bg-white",
           input: "text-[color:rgb(var(--text-primary))] placeholder:text-[color:rgb(var(--text-muted))]",
           btn: "bg-[#FEA406] hover:bg-[#FD8706] text-[#011957]",
-          ring: "focus-within:border-[#FEA406] focus-within:ring-2 focus-within:ring-[#FEA406]/20",
+          ring: "focus-within:border-[#FEA406]",
         };
 
   return (
     <form
       onSubmit={submit}
       role="search"
-      className={`relative w-full rounded-full border ${theme.wrapper} ${theme.ring} transition-all ${className}`}
+      className={`smk-search-pop relative w-full rounded-full border ${theme.wrapper} ${theme.ring} transition-all outline-none ${className}`}
     >
       <input
         type="search"
@@ -71,8 +71,9 @@ export default function SearchBar({
         onChange={handleChange}
         placeholder={placeholder || (lang === "sw" ? "Tafuta…" : "Search…")}
         aria-label={ariaLabel || placeholder || "Search"}
-        className={`w-full rounded-full bg-transparent outline-none ${sizes[size]} ${theme.input}`}
+        className={`w-full rounded-full bg-transparent outline-none focus:outline-none focus-visible:outline-none ${sizes[size]} ${theme.input}`}
         autoComplete="off"
+        style={{ WebkitAppearance: "none", appearance: "none" }}
       />
       <button
         type="submit"

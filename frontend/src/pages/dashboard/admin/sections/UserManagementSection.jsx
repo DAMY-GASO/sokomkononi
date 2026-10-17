@@ -466,8 +466,7 @@ export default function UserManagementSection() {
 
       {/* FILTERS */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4 flex-wrap">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 min-w-[200px]">
-          <Search size={16} className="text-muted shrink-0" />
+        <div className="relative flex-1 min-w-[200px]">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -475,8 +474,10 @@ export default function UserManagementSection() {
               "Tafuta kwa jina au email...",
               "Search by name or email..."
             )}
-            className="outline-none text-sm flex-1 min-w-0"
+            className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-sm outline-none focus:outline-none focus-visible:outline-none"
+            style={{ WebkitAppearance: "none" }}
           />
+          <Search size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
         </div>
 
         <select

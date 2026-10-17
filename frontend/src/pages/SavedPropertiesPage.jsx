@@ -112,10 +112,6 @@ export default function SavedPropertiesPage() {
         {saved.length > 0 && (
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4 max-w-md mx-auto">
             <div className="relative flex-1">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-              />
               <input
                 type="text"
                 value={searchQuery}
@@ -128,8 +124,13 @@ export default function SavedPropertiesPage() {
                   background: "white",
                   borderColor: COLORS.sandLine,
                   color: "var(--text-primary)",
+                  WebkitAppearance: "none",
                 }}
-                className="w-full rounded-xl border pl-10 pr-3 py-2.5 text-sm outline-none text-center"
+                className="smk-inline-search w-full rounded-xl border pl-3 pr-10 py-2.5 text-sm outline-none text-center focus:outline-none focus-visible:outline-none"
+              />
+              <Search
+                size={16}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
               />
             </div>
             <div

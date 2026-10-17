@@ -541,8 +541,7 @@ export default function AuditLogsSection() {
 
       {/* Search */}
       {logs.length > 0 && (
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 mb-4 w-full min-w-0">
-          <Search size={14} className="text-muted shrink-0" />
+        <div className="relative w-full mb-4 min-w-0">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -550,8 +549,10 @@ export default function AuditLogsSection() {
               "Tafuta kwa admin, target, au maelezo...",
               "Search by admin, target, or details..."
             )}
-            className="outline-none text-xs flex-1 min-w-0"
+            className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+            style={{ WebkitAppearance: "none" }}
           />
+          <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
         </div>
       )}
 

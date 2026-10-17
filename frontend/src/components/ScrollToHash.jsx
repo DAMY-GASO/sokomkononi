@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 export default function ScrollToHash() {
-  const { pathname, hash } = useLocation();
+  const { pathname, hash, key } = useLocation();
 
   useEffect(() => {
     // Kama hakuna hash, rudi juu
@@ -35,7 +35,7 @@ export default function ScrollToHash() {
     timeoutId = setTimeout(scrollToElement, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [pathname, hash]);
+  }, [pathname, hash, key]);
 
   return null;
 }

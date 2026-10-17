@@ -2116,3 +2116,63 @@ html.dark body select option { background-color: #011957; color: #FFFFFF; }
 }
 .cta-gradient:hover:not(:disabled) { filter: brightness(1.04); }
 .cta-gradient:disabled { opacity: 0.55; cursor: not-allowed; }
+
+
+/* ============================================================
+   SEARCH & TEXT INPUTS — no blue focus outline, only subtle pop
+   ============================================================ */
+
+/* Kill the browser's default blue :focus-visible ring on all
+   text-like inputs — the search bars provide their own feedback. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+
+/* Search inputs: remove webkit's default 'x' clear button and
+   any default blue decoration. */
+input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Pop slightly bigger on focus — same location, no layout shift. */
+.smk-search-pop {
+  transition: transform .18s cubic-bezier(.16,1,.3,1),
+              border-color .18s ease,
+              box-shadow .18s ease,
+              background-color .18s ease;
+  will-change: transform;
+}
+.smk-search-pop:focus-within,
+.smk-search-pop:focus {
+  transform: scale(1.02);
+}
+
+/* Inline search bars (admin / dashboard panels): gold border on focus,
+   no ring, no blue. */
+.smk-inline-search {
+  transition: transform .18s cubic-bezier(.16,1,.3,1),
+              border-color .18s ease;
+  will-change: transform;
+}
+.smk-inline-search:focus,
+.smk-inline-search:focus-visible,
+.smk-inline-search:focus-within {
+  transform: scale(1.02);
+  border-color: #FEA406 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
