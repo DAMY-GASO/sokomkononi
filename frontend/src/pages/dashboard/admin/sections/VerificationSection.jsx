@@ -132,35 +132,45 @@ function DocumentPreview({ doc, verificationId, lang }) {
 
   // ── Fungua document: fetch URL mpya kutoka backend ──
   const handleOpen = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (loading) return;
     setLoading(true);
     setLoadError(false);
 
     try {
-      // 1. Ask backend for a fresh, signed URL
       const res = await fetchDocumentUrlAsync(verificationId, doc.id);
-      let newUrl = null;
-      
-      if (res?.ok && res.document) {
-        newUrl = res.document.url || res.document.preview_url;
-      } else if (url) {
-        newUrl = url;
-      }
 
-      if (!newUrl) {
+      // Backend confirmed the file is missing in R2/S3 — bail immediately.
+      // Do NOT fall back to the cached url because it is likely the
+      // same broken signed URL that returns S3 XML.
+      const isFileMissing =
+        res?.ok === false &&
+        (res?.code === "file_missing" ||
+         res?.error?.code === "file_missing" ||
+         res?.file_missing === true ||
+         res?.error?.file_missing === true);
+
+      if (isFileMissing) {
         setLoadError(true);
+        setLoading(false);
         return;
       }
 
-      setFreshUrl(newUrl);
-      
-      // 2. Open directly in new tab. 
-      // NO fetch() here because CORS will block it on S3/R2.
-      window.open(newUrl, "_blank", "noopener,noreferrer");
-      
+      const freshUrl =
+        res?.document?.url ||
+        res?.document?.preview_url ||
+        url;   // fall back ONLY for transient network errors, not file_missing
+
+      if (!freshUrl) {
+        setLoadError(true);
+        setLoading(false);
+        return;
+      }
+
+      setFreshUrl(freshUrl);
+      window.open(freshUrl, "_blank", "noopener,noreferrer");
     } catch (err) {
-      console.error("[DocumentPreview] open failed:", err);
+      console.error("[DocumentPreview] refresh failed:", err);
       if (url) {
         window.open(url, "_blank", "noopener,noreferrer");
       } else {
@@ -169,7 +179,7 @@ function DocumentPreview({ doc, verificationId, lang }) {
     } finally {
       setLoading(false);
     }
-  };
+  };;
 
   // ── Preview: pia refresh kabla ya kuonyesha ──
   const handleExpand = async () => {
