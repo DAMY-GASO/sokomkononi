@@ -444,11 +444,12 @@ export default function AdminDashboard() {
       className="bg-page min-h-screen w-full overflow-x-hidden"
     >
       <header
-        style={{ background: "#011957" }}
-        className="sticky top-0 z-50 w-full border-b border-white/[0.08] text-white"
-      >
-        <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-3 px-3 sm:px-5">
-        <div className="flex shrink-0 items-center gap-2.5 min-w-0">
+      style={{ background: "#011957" }}
+      className="sticky top-0 z-50 w-full border-b border-white/[0.08] text-white"
+    >
+      <div className="flex h-16 w-full items-center justify-between gap-3 px-4 sm:px-6">
+        {/* LEFT: Menu + Logo */}
+        <div className="flex shrink-0 items-center gap-3">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white transition-colors hover:bg-white/[0.08] md:hidden"
@@ -456,7 +457,6 @@ export default function AdminDashboard() {
           >
             <Menu size={22} />
           </button>
-
           <a href="/" className="flex shrink-0 select-none items-center gap-2.5">
             <img
               src="/logo.webp"
@@ -468,155 +468,143 @@ export default function AdminDashboard() {
             <span className="text-[16px] font-bold tracking-tight">
               Soko<span className="text-[#FEA406]">Mkononi</span>
             </span>
-            <span
-              className="hidden shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider sm:inline-block"
-              style={{ background: "#FEA406", color: "#011957" }}
-            >
-              {lang === "sw" ? "Msimamizi" : "Administrator"}
-            </span>
           </a>
-
-          {staffRole && staffRole.key !== "super_admin" && (
-            <span className="hidden shrink-0 truncate rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/70 md:inline">
-              {staffRole.label?.[lang] || staffRole.label?.sw}
-            </span>
-          )}
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* ── Admin: Theme toggle ───────────────────────── */}
-          <ThemeToggle variant="onNavy" />
+        {/* CENTER: Administrator Title */}
+        <div className="flex flex-1 items-center justify-center min-w-0 px-2 hidden sm:flex">
+          <span className="text-[13px] sm:text-[15px] font-black uppercase tracking-[0.28em] text-[#FEA406] whitespace-nowrap">
+            {lang === "sw" ? "MSIMAMIZI" : "ADMINISTRATOR"}
+          </span>
+        </div>
 
-          {/* ── Admin: Go to public site ─────────────────── */}
+        {/* RIGHT: Actions */}
+        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+          <ThemeToggle variant="onNavy" />
           <a
             href="/"
-            className="grid h-10 w-10 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
+            className="hidden sm:grid h-10 w-10 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
             aria-label={lang === "sw" ? "Nenda kwenye tovuti ya umma" : "Go to public site"}
             title={lang === "sw" ? "Nenda kwenye tovuti" : "Go to site"}
           >
             <HomeIcon size={18} />
           </a>
-
           <LanguageSwitcher lang={lang} setLang={setLang} />
-
-          {/* Notifications */}
           <div className="relative">
             <button
               onClick={() => setNotifOpen((v) => !v)}
-              className="relative text-white/60 hover:text-white transition-colors"
+              className="relative grid h-10 w-10 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
               aria-label={lang === "sw" ? "Taarifa" : "Notifications"}
             >
               <Bell size={18} />
               {unreadCount > 0 && (
                 <span
                   style={{ background: COLORS.rust }}
-                  className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+                  className="absolute right-1 top-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
                 >
-                  {unreadCount}
+                  {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
             </button>
-
+            {/* NOTIFICATIONS DROPDOWN LOGIC */}
             {notifOpen && (
               <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setNotifOpen(false)}
-                aria-hidden="true"
-              />
-              <div
-                style={{ borderColor: COLORS.sandLine }}
-                className="absolute right-0 mt-3 w-80 max-w-[85vw] bg-white rounded-xl border shadow-xl z-50 overflow-hidden"
-              >
-                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-primary">
-                    {lang === "sw" ? "Taarifa Zangu" : "My Notifications"}
-                  </span>
-                  {unreadCount > 0 && (
-                    <span
-                      style={{ color: COLORS.rust }}
-                      className="text-xs font-semibold"
-                    >
-                      {unreadCount} {lang === "sw" ? "mpya" : "new"}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setNotifOpen(false)}
+                  aria-hidden="true"
+                />
+                <div
+                  style={{ borderColor: COLORS.sandLine }}
+                  className="absolute right-0 mt-3 w-80 max-w-[85vw] bg-white rounded-xl border shadow-xl z-50 overflow-hidden"
+                >
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-primary">
+                      {lang === "sw" ? "Taarifa Zangu" : "My Notifications"}
                     </span>
-                  )}
-                </div>
-                <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
-                  {notifications.map((n) => {
-                    const Icon = ADMIN_NOTIFICATION_ICONS[n.type] || Bell;
-                    return (
-                      <button
-                        key={n.id}
-                        onClick={() => openNotification(n)}
-                        style={{
-                          background: n.read ? "white" : `${COLORS.gold}0D`,
-                        }}
-                        className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                    {unreadCount > 0 && (
+                      <span
+                        style={{ color: COLORS.rust }}
+                        className="text-xs font-semibold"
                       >
-                        <div
-                          style={{ background: `${COLORS.night}0D` }}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                        {unreadCount} {lang === "sw" ? "mpya" : "new"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                    {notifications.map((n) => {
+                      const Icon = ADMIN_NOTIFICATION_ICONS[n.type] || Bell;
+                      return (
+                        <button
+                          key={n.id}
+                          onClick={() => openNotification(n)}
+                          style={{
+                            background: n.read ? "white" : `${COLORS.gold}0D`,
+                          }}
+                          className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
                         >
-                          <Icon size={14} color={COLORS.night} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs text-primary leading-snug">
-                            {getLocalizedField(n.title, lang)}
-                          </p>
-                          <p className="text-[11px] text-muted mt-1">
-                            {timeAgo(n.at, lang)}
-                          </p>
-                        </div>
-                        {!n.read && (
-                          <span
-                            style={{ background: COLORS.gold }}
-                            className="w-2 h-2 rounded-full shrink-0 mt-1.5"
-                          />
-                        )}
-                      </button>
-                    );
-                  })}
-                  {notifications.length === 0 && (
-                    <p className="text-xs text-muted px-4 py-6 text-center">
-                      {lang === "sw" ? "Hakuna taarifa" : "No notifications"}
-                    </p>
-                  )}
-                </div>
+                          <div
+                            style={{ background: `${COLORS.night}0D` }}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                          >
+                            <Icon size={14} color={COLORS.night} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-primary leading-snug">
+                              {getLocalizedField(n.title, lang)}
+                            </p>
+                            <p className="text-[11px] text-muted mt-1">
+                              {timeAgo(n.at, lang)}
+                            </p>
+                          </div>
+                          {!n.read && (
+                            <span
+                              style={{ background: COLORS.gold }}
+                              className="w-2 h-2 rounded-full shrink-0 mt-1.5"
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                    {notifications.length === 0 && (
+                      <p className="text-xs text-muted px-4 py-6 text-center">
+                        {lang === "sw" ? "Hakuna taarifa" : "No notifications"}
+                      </p>
+                    )}
+                  </div>
 
-                <div className="border-t border-gray-100 px-4 py-2 flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const res = await markAllNotificationsReadAsync("admin");
-                      if (!res?.ok) console.warn("markAllRead failed:", res?.error);
-                    }}
-                    className="text-[11px] font-semibold hover:underline"
-                    style={{ color: COLORS.green }}
-                  >
-                    {lang === "sw" ? "Soma Zote" : "Mark All Read"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!window.confirm(lang === "sw"
-                        ? "Futa taarifa zote za admin?"
-                        : "Delete all admin notifications?")) return;
-                      const res = await clearNotificationsAsync("admin");
-                      if (!res?.ok) console.warn("clearAll failed:", res?.error);
-                    }}
-                    className="text-[11px] font-semibold hover:underline"
-                    style={{ color: COLORS.rust }}
-                  >
-                    {lang === "sw" ? "Futa Zote" : "Delete All"}
-                  </button>
+                  <div className="border-t border-gray-100 px-4 py-2 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const res = await markAllNotificationsReadAsync("admin");
+                        if (!res?.ok) console.warn("markAllRead failed:", res?.error);
+                      }}
+                      className="text-[11px] font-semibold hover:underline"
+                      style={{ color: COLORS.green }}
+                    >
+                      {lang === "sw" ? "Soma Zote" : "Mark All Read"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!window.confirm(lang === "sw"
+                          ? "Futa taarifa zote za admin?"
+                          : "Delete all admin notifications?")) return;
+                        const res = await clearNotificationsAsync("admin");
+                        if (!res?.ok) console.warn("clearAll failed:", res?.error);
+                      }}
+                      className="text-[11px] font-semibold hover:underline"
+                      style={{ color: COLORS.rust }}
+                    >
+                      {lang === "sw" ? "Futa Zote" : "Delete All"}
+                    </button>
+                  </div>
                 </div>
-              </div>
               </>
             )}
           </div>
-
-          {/* Avatar + Profile Menu */}
-          <div className="relative">
+          <div className="relative ml-1">
             <button
               onClick={() => setProfileMenuOpen((v) => !v)}
               className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#FEA406]/40"
@@ -624,7 +612,6 @@ export default function AdminDashboard() {
             >
               <Avatar user={user} />
             </button>
-
             {profileMenuOpen && (
               <>
                 <div
@@ -683,8 +670,8 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
-        </div>
-      </header>
+      </div>
+    </header>
 
       <div className="flex w-full">
         {/* SIDEBAR — DESKTOP */}
