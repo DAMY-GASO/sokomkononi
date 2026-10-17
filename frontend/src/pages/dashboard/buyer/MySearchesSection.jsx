@@ -298,6 +298,15 @@ export default function MySearchesSection() {
               </div>
             )}
 
+            {saveError && (
+              <div
+                style={{ background: "rgba(193,80,46,0.1)", color: "#C1502E" }}
+                className="text-xs font-semibold px-3 py-2 rounded-lg"
+              >
+                {saveError}
+              </div>
+            )}
+
             <div className="flex items-center gap-2 pt-2">
               <button
                 onClick={() => setShowForm(false)}

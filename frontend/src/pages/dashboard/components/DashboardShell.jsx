@@ -1021,7 +1021,7 @@ export default function DashboardShell() {
       <div className="flex flex-1 relative">
         <aside
           style={{ borderColor: COLORS.sandLine }}
-          className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto" bg-page
+          className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto" bg-page bg-page
         >
           {nav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeKey;

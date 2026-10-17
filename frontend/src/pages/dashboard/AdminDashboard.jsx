@@ -690,7 +690,7 @@ export default function AdminDashboard() {
         {/* SIDEBAR — DESKTOP */}
         <aside
           style={{ borderColor: COLORS.sandLine }}
-          className="hidden md:flex w-64 shrink-0 border-r flex-col py-4 px-3 gap-1 min-h-[calc(100vh-56px)] overflow-y-auto" bg-page
+          className="hidden md:flex w-64 shrink-0 border-r flex-col py-4 px-3 gap-1 min-h-[calc(100vh-56px)] overflow-y-auto" bg-page bg-page
         >
           {visibleNav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeSection;
