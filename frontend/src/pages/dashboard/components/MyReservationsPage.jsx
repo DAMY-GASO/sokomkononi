@@ -3,10 +3,11 @@
 // Chanzo cha data: deals za mnunuzi huyu ambazo reservation
 // imeshalipwa (reserved → completed, au disputed).
 //
-// SASISHO: Ongeza vitendo vitatu kwa kila reservation:
-//   - Extend Reservation Time (ongeza muda)
-//   - Finalize Deal (nenda Deal Room ku-upload payment proof)
-//   - Remove from Reservation (ondoa — fee HAIREJESHWI)
+// SASISHO:
+//  - isReservationPaid() helper: inatambua reservation hata kama
+//    DealRoom.status ni "accepted" (data za zamani kabla ya fix)
+//  - Extend / Finalize / Remove vitendo
+//  - Countdown ya muda
 // ============================================================
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -24,11 +25,17 @@ import {
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS } from "./shared.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
-import { useDeals, updateDeal as updateDealInStore } from "../../../config/dealsStore.js";
+import {
+  useDeals,
+  updateDeal as updateDealInStore,
+} from "../../../config/dealsStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { transactionsApi } from "../../../api/transactions.js";
 
+// ============================================================
+// RESERVED STATUSES
+// ============================================================
 const RESERVED_STATUSES = [
   "reserved",
   "awaiting_final_payment",
@@ -37,6 +44,32 @@ const RESERVED_STATUSES = [
   "disputed",
 ];
 
+/**
+ * isReservationPaid — inatambua kama deal ina reservation iliyolipwa.
+ *
+ * Sababu: kwa data za zamani (kabla ya fix ya `_activate_reservation`),
+ * `DealRoom.status` inaweza kuwa "accepted" lakini reservation yake
+ * ni ACTIVE/PAID. Tunatumia `reservationPaidAt` au `reservationFee`
+ * kama fallback.
+ */
+function isReservationPaid(deal) {
+  if (!deal) return false;
+
+  // 1. Reservation imelipwa (tarehe ipo)
+  if (deal.reservationPaidAt) return true;
+
+  // 2. Status ya DealRoom ipo kwenye orodha ya reserved
+  if (RESERVED_STATUSES.includes(deal.status)) return true;
+
+  // 3. Reservation fee ililipwa + transaction ipo
+  if (deal.reservationFee > 0 && deal.transactionId) return true;
+
+  return false;
+}
+
+// ============================================================
+// STATUS LABELS
+// ============================================================
 const getStatus = (lang) => ({
   reserved: {
     label: lang === "sw" ? "Kipindi cha Ukaguzi" : "Inspection Period",
@@ -44,7 +77,10 @@ const getStatus = (lang) => ({
     fg: COLORS.night,
   },
   awaiting_final_payment: {
-    label: lang === "sw" ? "Tayari kwa Malipo ya Mwisho" : "Ready for Final Payment",
+    label:
+      lang === "sw"
+        ? "Tayari kwa Malipo ya Mwisho"
+        : "Ready for Final Payment",
     bg: "rgba(37,99,235,0.12)",
     fg: "#2563EB",
   },
@@ -59,12 +95,18 @@ const getStatus = (lang) => ({
     fg: COLORS.green,
   },
   disputed: {
-    label: lang === "sw" ? "Mgogoro — Chini ya Ukaguzi" : "Dispute — Under Review",
+    label:
+      lang === "sw"
+        ? "Mgogoro — Chini ya Ukaguzi"
+        : "Dispute — Under Review",
     bg: "rgba(193,80,46,0.16)",
     fg: COLORS.rust,
   },
 });
 
+// ============================================================
+// COUNTDOWN
+// ============================================================
 function countdown(expiresAt, lang) {
   if (!expiresAt) return null;
   const ms = new Date(expiresAt).getTime() - Date.now();
@@ -85,6 +127,9 @@ function countdown(expiresAt, lang) {
   return { text, expired: false };
 }
 
+// ============================================================
+// RESERVATION CARD
+// ============================================================
 function ReservationCard({ deal, lang, onOpen, onRefresh }) {
   const category = getCategory(deal.category);
   const Icon = getCategoryIcon(category?.iconKey);
@@ -124,7 +169,7 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
 
     setActionBusy("extend");
     try {
-      const res = await transactionsApi.extendReservation(
+      await transactionsApi.extendReservation(
         deal.transactionId,
         additionalHours
       );
@@ -208,7 +253,8 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
           </p>
           {deal.location && (
             <p className="text-secondary text-body-sm flex items-center gap-1 mt-0.5">
-              <MapPin size={11} /> <span className="truncate">{deal.location}</span>
+              <MapPin size={11} />{" "}
+              <span className="truncate">{deal.location}</span>
             </p>
           )}
           <div className="mt-2 flex items-center gap-2 flex-wrap">
@@ -240,7 +286,9 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
           <p className="text-[11px] font-semibold text-secondary uppercase">
             {lang === "sw" ? "Bei Mliyokubaliana" : "Agreed Price"}
           </p>
-          <p className="text-sm font-semibold text-primary">{formatTZS(price)}</p>
+          <p className="text-sm font-semibold text-primary">
+            {formatTZS(price)}
+          </p>
         </div>
         <div>
           <p className="text-[11px] font-semibold text-secondary uppercase">
@@ -275,7 +323,7 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
         {t("Fungua Deal Room", "Open Deal Room")} <ArrowRight size={13} />
       </button>
 
-      {/* ── MPYA: vitendo vya reservation (status = reserved pekee) ── */}
+      {/* ── Vitendo vya reservation (status = reserved pekee) ── */}
       {deal.status === "reserved" && deal.transactionId && (
         <div className="grid grid-cols-3 gap-2 mt-2">
           <button
@@ -333,6 +381,9 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
   );
 }
 
+// ============================================================
+// MAIN PAGE
+// ============================================================
 export default function MyReservationsPage() {
   const { lang } = useLanguage();
   const { user } = useAuth();
@@ -342,8 +393,7 @@ export default function MyReservationsPage() {
   const reservations = useMemo(() => {
     const mine = (deals || []).filter(
       (d) =>
-        String(d.buyerId) === String(user?.id) &&
-        (d.reservationPaidAt || RESERVED_STATUSES.includes(d.status))
+        String(d.buyerId) === String(user?.id) && isReservationPaid(d)
     );
     const stamp = (d) =>
       new Date(
@@ -363,8 +413,6 @@ export default function MyReservationsPage() {
 
   const handleRefresh = () => {
     // Force re-render — dealsStore ina-update yenyewe kupitia event
-    // Kama unataka full refetch, unaweza kuita hydrateDealsFromApi()
-    // hapa. Kwa sasa, tunategemea store event.
     updateDealInStore(0, (d) => d);
   };
 
@@ -403,7 +451,8 @@ export default function MyReservationsPage() {
               <section className="mb-6">
                 <h2 className="h-card mb-3 flex items-center gap-2">
                   <CalendarCheck size={16} />
-                  {lang === "sw" ? "Zinazoendelea" : "Active"} ({active.length})
+                  {lang === "sw" ? "Zinazoendelea" : "Active"} (
+                  {active.length})
                 </h2>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {active.map((d) => (
