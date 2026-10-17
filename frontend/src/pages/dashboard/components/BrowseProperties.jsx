@@ -510,7 +510,7 @@ export default function BrowseProperties({ lang = "sw", excludeSellerId = null }
                         Icon={Icon}
                         lang={lang}
                         viewMode={viewMode}
-                        isSaved={savedIds.includes(p.id)}
+                        isSaved={savedIds.some((x) => String(x) === String(p.id))}
                         onToggleSave={(id) => toggleSaved(id, p)}
                       />
                     );

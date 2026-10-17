@@ -23,7 +23,7 @@ export default function FeaturedSection({ gridCols = "grid-cols-2 sm:grid-cols-3
           {listings.map((l) => {
             const cat = categories.find((c) => c.key === l.category);
             const Icon = getCategoryIcon(cat?.iconKey || "Home");
-            return <ListingCardShop key={l.id} listing={l} category={cat} Icon={Icon} lang={lang} isSaved={savedIds.includes(l.id)} onToggleSave={onToggleSave} />;
+            return <ListingCardShop key={l.id} listing={l} category={cat} Icon={Icon} lang={lang} isSaved={savedIds.some((x) => String(x) === String(l.id))} onToggleSave={onToggleSave} />;
           })}
         </div>
       )}

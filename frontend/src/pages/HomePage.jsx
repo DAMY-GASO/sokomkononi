@@ -65,7 +65,7 @@ export default function HomePage() {
   const handleBuyNow = () => { if (user) navigate("/dashboard/buyer"); else navigate("/register?intent=buy"); };
   const handleSellNow = () => { if (user) navigate("/dashboard/post"); else navigate("/register?intent=sell"); };
   const handleSearch = (q) => { const trimmed = String(q || "").trim(); navigate(trimmed ? `/tafuta?tafuta=${encodeURIComponent(trimmed)}` : "/tafuta"); };
-  const handleToggleSave = (id) => toggleSaved(id);
+  const handleToggleSave = (id, listing) => toggleSaved(id, listing);
 
   const liveListings = useMemo(() => publicListings.filter((l) => l.status === "live"), [publicListings]);
   const featured = useMemo(() => liveListings.slice().sort((a, b) => { const aS = (a.isBoosted ? 2 : 0) + (a.views || 0) / 1000; const bS = (b.isBoosted ? 2 : 0) + (b.views || 0) / 1000; return bS - aS; }).slice(0, 8), [liveListings]);

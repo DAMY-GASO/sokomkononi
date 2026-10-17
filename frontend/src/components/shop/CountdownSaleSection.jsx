@@ -40,7 +40,7 @@ export default function CountdownSaleSection({ listings = [], savedIds = [], onT
           {listings.slice(0, 4).map((l) => {
             const cat = categories.find((c) => c.key === l.category);
             const Icon = getCategoryIcon(cat?.iconKey || "Home");
-            return <ListingCardShop key={l.id} listing={l} category={cat} Icon={Icon} lang={lang} isSaved={savedIds.includes(l.id)} onToggleSave={onToggleSave} />;
+            return <ListingCardShop key={l.id} listing={l} category={cat} Icon={Icon} lang={lang} isSaved={savedIds.some((x) => String(x) === String(l.id))} onToggleSave={onToggleSave} />;
           })}
         </div>
         <div className="relative flex justify-center mt-8">

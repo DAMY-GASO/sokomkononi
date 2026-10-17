@@ -551,7 +551,7 @@ export default function CategoryPage() {
                         Icon={getCategoryIcon(cat?.iconKey)}
                         lang={lang}
                         viewMode={viewMode}
-                        isSaved={savedIds.includes(property.id)}
+                        isSaved={savedIds.some((x) => String(x) === String(property.id))}
                         onToggleSave={handleToggleSave}
                       />
                     );
