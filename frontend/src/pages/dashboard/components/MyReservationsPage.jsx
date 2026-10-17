@@ -1,13 +1,11 @@
 // ============================================================
 // MyReservationsPage.jsx — Mali alizolipia Reservation (buyer)
-// Chanzo cha data: deals za mnunuzi huyu ambazo reservation
-// imeshalipwa (reserved → completed, au disputed).
 //
 // SASISHO:
-//  - isReservationPaid() helper: inatambua reservation hata kama
-//    DealRoom.status ni "accepted" (data za zamani kabla ya fix)
-//  - Extend / Finalize / Remove vitendo
-//  - Countdown ya muda
+//  - isReservationPaid() helper
+//  - Vitufe 4: Fungua Deal Room, Angalia Mali, Waitlist, Ondoa
+//  - Waitlist → /dashboard/buyer/waiting (WaitingListPage)
+//  - Angalia Mali → /mali/{listingId} (PropertyDetailPage)
 // ============================================================
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +20,8 @@ import {
   Plus,
   XCircle,
   Loader2,
+  ExternalLink,
+  Users,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS } from "./shared.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
@@ -44,26 +44,11 @@ const RESERVED_STATUSES = [
   "disputed",
 ];
 
-/**
- * isReservationPaid — inatambua kama deal ina reservation iliyolipwa.
- *
- * Sababu: kwa data za zamani (kabla ya fix ya `_activate_reservation`),
- * `DealRoom.status` inaweza kuwa "accepted" lakini reservation yake
- * ni ACTIVE/PAID. Tunatumia `reservationPaidAt` au `reservationFee`
- * kama fallback.
- */
 function isReservationPaid(deal) {
   if (!deal) return false;
-
-  // 1. Reservation imelipwa (tarehe ipo)
   if (deal.reservationPaidAt) return true;
-
-  // 2. Status ya DealRoom ipo kwenye orodha ya reserved
   if (RESERVED_STATUSES.includes(deal.status)) return true;
-
-  // 3. Reservation fee ililipwa + transaction ipo
   if (deal.reservationFee > 0 && deal.transactionId) return true;
-
   return false;
 }
 
@@ -131,6 +116,7 @@ function countdown(expiresAt, lang) {
 // RESERVATION CARD
 // ============================================================
 function ReservationCard({ deal, lang, onOpen, onRefresh }) {
+  const navigate = useNavigate();
   const category = getCategory(deal.category);
   const Icon = getCategoryIcon(category?.iconKey);
   const status = getStatus(lang)[deal.status];
@@ -161,12 +147,10 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
       setError(t("Muda si sahihi.", "Invalid duration."));
       return;
     }
-
     if (!deal.transactionId) {
       setError(t("Transaction haipatikani.", "Transaction not found."));
       return;
     }
-
     setActionBusy("extend");
     try {
       await transactionsApi.extendReservation(
@@ -208,12 +192,10 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
       )
     )
       return;
-
     if (!deal.transactionId) {
       setError(t("Transaction haipatikani.", "Transaction not found."));
       return;
     }
-
     setActionBusy("remove");
     try {
       await transactionsApi.removeReservation(deal.transactionId);
@@ -233,6 +215,18 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
     } finally {
       setActionBusy(null);
     }
+  };
+
+  // ── Angalia Mali → PropertyDetailPage ──
+  const handleViewListing = () => {
+    if (deal.listingId) {
+      navigate(`/mali/${deal.listingId}`);
+    }
+  };
+
+  // ── Waitlist → WaitingListPage ──
+  const handleViewWaitlist = () => {
+    navigate("/dashboard/buyer/waiting");
   };
 
   return (
@@ -323,9 +317,63 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
         {t("Fungua Deal Room", "Open Deal Room")} <ArrowRight size={13} />
       </button>
 
-      {/* ── Vitendo vya reservation (status = reserved pekee) ── */}
+      {/* ── Vitufe 3: Angalia Mali, Waitlist, Ondoa ── */}
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        {/* 1. Angalia Mali → /mali/{listingId} */}
+        <button
+          onClick={handleViewListing}
+          disabled={!deal.listingId}
+          style={{
+            borderColor: COLORS.sandLine,
+            color: COLORS.night,
+          }}
+          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          <ExternalLink size={12} />
+          <span className="hidden sm:inline">
+            {t("Angalia", "View")}
+          </span>
+        </button>
+
+        {/* 2. Waitlist → /dashboard/buyer/waiting */}
+        <button
+          onClick={handleViewWaitlist}
+          style={{
+            borderColor: COLORS.sandLine,
+            color: COLORS.night,
+          }}
+          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 hover:bg-gray-50 transition-colors"
+        >
+          <Users size={12} />
+          <span className="hidden sm:inline">
+            {t("Waitlist", "Waitlist")}
+          </span>
+        </button>
+
+        {/* 3. Ondoa → removeReservation */}
+        <button
+          onClick={handleRemove}
+          disabled={!!actionBusy || !deal.transactionId}
+          style={{
+            borderColor: "rgba(193,80,46,0.35)",
+            color: COLORS.rust,
+          }}
+          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 hover:bg-red-50 transition-colors disabled:opacity-50"
+        >
+          {actionBusy === "remove" ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <XCircle size={12} />
+          )}
+          <span className="hidden sm:inline">
+            {t("Ondoa", "Remove")}
+          </span>
+        </button>
+      </div>
+
+      {/* ── Vitendo vya reservation (status = reserved pekee): Ongeza / Kamilisha ── */}
       {deal.status === "reserved" && deal.transactionId && (
-        <div className="grid grid-cols-3 gap-2 mt-2">
+        <div className="grid grid-cols-2 gap-2 mt-2">
           <button
             onClick={handleExtend}
             disabled={!!actionBusy}
@@ -339,7 +387,7 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
               <Plus size={12} />
             )}
             <span className="hidden sm:inline">
-              {t("Ongeza", "Extend")}
+              {t("Ongeza Muda", "Extend")}
             </span>
           </button>
 
@@ -353,26 +401,6 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
             <CheckCircle2 size={12} />
             <span className="hidden sm:inline">
               {t("Kamilisha", "Finalize")}
-            </span>
-          </button>
-
-          <button
-            onClick={handleRemove}
-            disabled={!!actionBusy}
-            style={{
-              borderColor: "rgba(193,80,46,0.35)",
-              color: COLORS.rust,
-            }}
-            className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 disabled:opacity-50"
-            title={t("Ondoa reservation", "Remove reservation")}
-          >
-            {actionBusy === "remove" ? (
-              <Loader2 size={12} className="animate-spin" />
-            ) : (
-              <XCircle size={12} />
-            )}
-            <span className="hidden sm:inline">
-              {t("Ondoa", "Remove")}
             </span>
           </button>
         </div>
@@ -412,7 +440,6 @@ export default function MyReservationsPage() {
   const openDeal = (id) => navigate(`/dashboard/buyer/deals?deal=${id}`);
 
   const handleRefresh = () => {
-    // Force re-render — dealsStore ina-update yenyewe kupitia event
     updateDealInStore(0, (d) => d);
   };
 

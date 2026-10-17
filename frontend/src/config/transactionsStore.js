@@ -1,7 +1,12 @@
 // ============================================================
-// transactionsStore.js — v2
+// transactionsStore.js — v3
 // Inaunganisha finance + transactions API
 // Ina-normalize status/type kwa usahihi
+//
+// SASISHO:
+//  - rawId: hifadhi backend ID halisi (bila prefix)
+//  - id: prefixed ID kwa localStorage (fin_42, tx_7)
+//  - receipts/downloads zinatumia rawId
 // ============================================================
 import { useEffect, useState } from "react";
 import { financeApi } from "../api/finance.js";
@@ -13,15 +18,18 @@ const UPDATE_EVENT = "sokomkononi:transactions-updated";
 export const SEED_TRANSACTIONS = [];
 
 // ═══════════════════════════════════════════════════════════
-// STATUS NORMALIZER — hii ndiyo sababu kuu
+// STATUS NORMALIZER
 // ═══════════════════════════════════════════════════════════
 function normalizeStatus(raw) {
   const s = String(raw || "").toLowerCase().trim();
-  // Zote hizi zinamaanisha "completed"
-  if (["completed", "complete", "success", "succeeded", "paid", "done", "settled"].includes(s)) {
+  if (
+    ["completed", "complete", "success", "succeeded", "paid", "done", "settled"].includes(s)
+  ) {
     return "completed";
   }
-  if (["pending", "processing", "in_progress", "awaiting", "initiated"].includes(s)) {
+  if (
+    ["pending", "processing", "in_progress", "awaiting", "initiated"].includes(s)
+  ) {
     return "pending";
   }
   if (["failed", "failure", "declined", "rejected", "error"].includes(s)) {
@@ -39,50 +47,33 @@ function normalizeStatus(raw) {
 function normalizeType(raw) {
   const t = String(raw || "").toLowerCase().trim();
   const map = {
-    // listing fee
-    "listing_fee": "listing_fee",
-    "listingfee": "listing_fee",
+    listing_fee: "listing_fee",
+    listingfee: "listing_fee",
     "listing fee": "listing_fee",
-    "publication_fee": "listing_fee",
-
-    // boost
-    "boost": "boost",
-    "boost_fee": "boost",
-
-    // leading
-    "leading": "leading",
-    "lead": "leading",
-    "lead_fee": "leading",
-
-    // advertisement
-    "advertisement": "advertisement",
-    "ad": "advertisement",
-    "ads": "advertisement",
-    "advert": "advertisement",
-
-    // reservation
-    "reservation": "reservation",
-    "reservation_fee": "reservation",
-    "hold": "reservation",
-
-    // sale
-    "sale": "sale",
-    "sales": "sale",
-    "sold": "sale",
-
-    // purchase
-    "purchase": "purchase",
-    "buy": "purchase",
-    "buying": "purchase",
-
-    // bundle
-    "bundle": "bundle_purchase",
-    "bundle_purchase": "bundle_purchase",
+    publication_fee: "listing_fee",
+    boost: "boost",
+    boost_fee: "boost",
+    leading: "leading",
+    lead: "leading",
+    lead_fee: "leading",
+    advertisement: "advertisement",
+    ad: "advertisement",
+    ads: "advertisement",
+    advert: "advertisement",
+    reservation: "reservation",
+    reservation_fee: "reservation",
+    hold: "reservation",
+    sale: "sale",
+    sales: "sale",
+    sold: "sale",
+    purchase: "purchase",
+    buy: "purchase",
+    buying: "purchase",
+    bundle: "bundle_purchase",
+    bundle_purchase: "bundle_purchase",
     "bundle purchase": "bundle_purchase",
-
-    // success fee
-    "success_fee": "success_fee",
-    "successfee": "success_fee",
+    success_fee: "success_fee",
+    successfee: "success_fee",
     "success fee": "success_fee",
   };
   return map[t] || t || "other";
@@ -134,7 +125,10 @@ export function addTransaction(txn) {
   const entry = {
     ...txn,
     id: txn.id || `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    ref: txn.ref || `SM-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+    rawId: txn.rawId || txn.id || null,
+    ref:
+      txn.ref ||
+      `SM-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
     at: txn.at || new Date().toISOString(),
   };
 
@@ -149,21 +143,24 @@ export function addTransaction(txn) {
 function normalizeMyTransaction(raw) {
   if (!raw) return null;
 
-  // ✅ Tumia normalizeAmount, normalizeStatus, normalizeType
   const amount = normalizeAmount(
     raw.amount ?? raw.price ?? raw.fee_amount ?? raw.total ?? raw.value
   );
-
   const status = normalizeStatus(raw.status ?? raw.payment_status);
-
   const type = normalizeType(raw.type ?? raw.transaction_type ?? raw.source);
 
   return {
-    id: raw.id,
+    // ── MPYA: raw_id (backend PK) ──
+    rawId: raw.raw_id ?? raw.id,   // ⬅️ tumia raw_id kama ipo
+    id: raw.id,                    // prefixed (fin_42)
     ref: raw.ref || raw.reference || `TXN-${raw.id}`,
     type,
     source: raw.source || "finance",
-    title: raw.title || raw.description || raw.listing_title || `Transaction #${raw.id}`,
+    title:
+      raw.title ||
+      raw.description ||
+      raw.listing_title ||
+      `Transaction #${raw.id}`,
     property: raw.listing_title || raw.property || null,
     listingId: raw.listing_id || raw.listing || null,
     amount,
@@ -183,19 +180,27 @@ function normalizeTransactionRow(raw) {
   if (!raw) return null;
 
   const amount = normalizeAmount(
-    raw.amount ?? raw.final_price ?? raw.reservation_fee ?? raw.success_fee_amount ?? raw.price
+    raw.amount ??
+      raw.final_price ??
+      raw.reservation_fee ??
+      raw.success_fee_amount ??
+      raw.price
   );
-
   const status = normalizeStatus(raw.status ?? raw.payment_status);
-
   const type = normalizeType(raw.transaction_type ?? raw.type);
 
   return {
+    // ── MPYA: raw_id (backend PK) ──
+    rawId: raw.raw_id ?? raw.id,   // ⬅️ tumia raw_id kama ipo
     id: raw.id,
     ref: raw.reference || raw.ref || `TXN-${raw.id}`,
     type,
     source: "transactions",
-    title: raw.title || raw.listing_title || raw.description || `Transaction #${raw.id}`,
+    title:
+      raw.title ||
+      raw.listing_title ||
+      raw.description ||
+      `Transaction #${raw.id}`,
     property: raw.listing_title || null,
     listingId: raw.listing,
     amount,
@@ -234,28 +239,32 @@ async function _hydrateTxImpl() {
         : txRes.value?.results || []
       : [];
 
-  // ✅ DEBUG (ondoa baada ya kuthibitisha)
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-    console.log("[transactionsStore] finance raw:", financeList);
-    console.log("[transactionsStore] tx raw:", txList);
-  }
-
-  const normalizedFinance = financeList.map(normalizeMyTransaction).filter(Boolean);
+  const normalizedFinance = financeList
+    .map(normalizeMyTransaction)
+    .filter(Boolean);
   const normalizedTx = txList.map(normalizeTransactionRow).filter(Boolean);
-
-  // ✅ DEBUG
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-    console.log("[transactionsStore] finance normalized:", normalizedFinance);
-    console.log("[transactionsStore] tx normalized:", normalizedTx);
-  }
 
   // Prefix keys so finance txn #5 and deal txn #5 stay distinct.
   const byId = new Map();
-  normalizedFinance.forEach((tr) => byId.set(`fin_${tr.id}`, tr));
-  normalizedTx.forEach((tr) => byId.set(`tx_${tr.id}`, tr));
+  normalizedFinance.forEach((tr) =>
+    byId.set(`fin_${tr.rawId || tr.id}`, { ...tr, _prefix: "fin_" })
+  );
+  normalizedTx.forEach((tr) =>
+    byId.set(`tx_${tr.rawId || tr.id}`, { ...tr, _prefix: "tx_" })
+  );
 
-  const all = Array.from(byId.values());
-  all.sort((a, b) => new Date(b.at) - new Date(a.at));
+  const all = Array.from(byId.values())
+    .map((tr) => {
+      const prefix = tr._prefix || "fin_";
+      const backendId = tr.rawId || tr.id;
+      const { _prefix, ...rest } = tr;
+      return {
+        ...rest,
+        id: `${prefix}${backendId}`,
+        rawId: backendId,
+      };
+    })
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
 
   saveTransactions(all);
 
