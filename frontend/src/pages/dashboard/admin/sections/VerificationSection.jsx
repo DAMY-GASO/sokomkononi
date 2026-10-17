@@ -138,34 +138,29 @@ function DocumentPreview({ doc, verificationId, lang }) {
     setLoadError(false);
 
     try {
+      // 1. Ask backend for a fresh, signed URL
       const res = await fetchDocumentUrlAsync(verificationId, doc.id);
+      let newUrl = null;
+      
       if (res?.ok && res.document) {
-        const newUrl = res.document.url || res.document.preview_url;
-        if (newUrl) {
-          setFreshUrl(newUrl);
-          try {
-            const check = await fetch(newUrl, { method: "GET", headers: { Range: "bytes=0-0" } });
-            const ct = (check.headers.get("content-type") || "").toLowerCase();
-            if (!check.ok || ct.includes("xml") || ct.includes("html")) {
-              throw new Error("File missing or unreadable");
-            }
-          } catch (probeErr) {
-            console.warn("[DocumentPreview] file missing in storage:", probeErr);
-            setLoadError(true);
-            setLoading(false);
-            return;
-          }
-          window.open(newUrl, "_blank", "noopener,noreferrer");
-        } else {
-          setLoadError(true);
-        }
+        newUrl = res.document.url || res.document.preview_url;
       } else if (url) {
-        window.open(url, "_blank", "noopener,noreferrer");
-      } else {
-        setLoadError(true);
+        newUrl = url;
       }
+
+      if (!newUrl) {
+        setLoadError(true);
+        return;
+      }
+
+      setFreshUrl(newUrl);
+      
+      // 2. Open directly in new tab. 
+      // NO fetch() here because CORS will block it on S3/R2.
+      window.open(newUrl, "_blank", "noopener,noreferrer");
+      
     } catch (err) {
-      console.error("[DocumentPreview] refresh failed:", err);
+      console.error("[DocumentPreview] open failed:", err);
       if (url) {
         window.open(url, "_blank", "noopener,noreferrer");
       } else {
