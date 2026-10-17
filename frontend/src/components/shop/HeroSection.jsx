@@ -5,6 +5,7 @@ import {
   Sparkles, ChevronRight, Eye,
 } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import SearchBar from "../ui/SearchBar.jsx";
 import { usePublicListings } from "../../config/listingsStore.js";
 import { pickVariantUrl } from "../../utils/imageVariants.js";
 
@@ -292,34 +293,20 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
               <Typewriter text={subtitle} speed={22} />
             </p>
 
-            <form
-              onSubmit={submit}
-              className="mt-8 flex max-w-2xl flex-col gap-2 rounded-2xl p-1.5 backdrop-blur-md sm:flex-row sm:items-stretch"
-              style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)" }}
-            >
-              <span className="relative flex flex-1 items-center">
-                <Search size={18} className="pointer-events-none absolute left-4" style={{ color: HERO_MUTED }} />
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder={t("Tafuta nyumba, kiwanja, gari…", "Search houses, land, cars…")}
-                  className="h-12 w-full rounded-xl bg-transparent pl-11 pr-3 text-[15px] outline-none"
-                  style={{ color: "#FFFFFF" }}
-                />
-              </span>
-              <button
-                type="submit"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 text-sm font-semibold transition-transform active:translate-y-px"
-                style={{
-                  background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)",
-                  color: "#011957",
-                  boxShadow: "0 10px 30px -10px rgba(254,164,6,0.6)",
+            <div className="mt-8 max-w-2xl">
+              <SearchBar
+                value={q}
+                onChange={setQ}
+                onSubmit={(v) => {
+                  const trimmed = v.trim();
+                  if (onSearch) onSearch(trimmed);
+                  else navigate(trimmed ? `/tafuta?tafuta=${encodeURIComponent(trimmed)}` : "/tafuta");
                 }}
-              >
-                {t("Tafuta", "Search")}
-                <ArrowRight size={15} />
-              </button>
-            </form>
+                placeholder={t("Tafuta nyumba, kiwanja, gari…", "Search houses, land, cars…")}
+                size="md"
+                variant="navy"
+              />
+            </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: HERO_MUTED }}>
@@ -384,11 +371,11 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
             </div>
 
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
-              <Stat icon={<MapPin size={15} />} value={`${liveCount || stats.listings || 0}+`} label={t("Mali", "Listings")} />
+              <Stat icon={<MapPin size={15} />} value={`${Math.max(liveCount || 0, Number(stats.listings) || 0).toLocaleString()}${liveCount > 0 ? "+" : ""}`} label={t("Mali", "Listings")} />
               <span aria-hidden="true" className="hidden h-8 w-px sm:block" style={{ background: "rgba(255,255,255,0.14)" }} />
-              <Stat icon={<ShieldCheck size={15} />} value={`${boostedCount || stats.users || 0}+`} label={t("Zinazoangaziwa", "Boosted")} />
+              <Stat icon={<ShieldCheck size={15} />} value={`${Math.max(boostedCount || 0, 0).toLocaleString()}${boostedCount > 0 ? "+" : ""}`} label={t("Zinazoangaziwa", "Boosted")} />
               <span aria-hidden="true" className="hidden h-8 w-px sm:block" style={{ background: "rgba(255,255,255,0.14)" }} />
-              <Stat icon={<Star size={14} style={{ fill: HERO_ACCENT }} />} value={stats.rating || "4.7"} label={t("Rated", "Rated")} />
+              <Stat icon={<Star size={14} style={{ fill: HERO_ACCENT }} />} value={stats.rating || "—"} label={t("Rated", "Rated")} />
             </div>
           </div>
 
