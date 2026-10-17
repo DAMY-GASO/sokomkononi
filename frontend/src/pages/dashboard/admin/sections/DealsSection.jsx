@@ -342,7 +342,7 @@ export default function DealsSection() {
       {deals.length > 0 && (
         <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
           {/* Header Row */}
-          <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-secondary uppercase tracking-wider">
+          <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-page border-b border-hairline text-[11px] font-bold text-secondary uppercase tracking-wider">
             <div className="col-span-3">Listing</div>
             <div className="col-span-2">Buyer</div>
             <div className="col-span-2">Seller</div>
@@ -353,12 +353,12 @@ export default function DealsSection() {
           </div>
           
           {/* Data Rows */}
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-hairline">
             {deals.map((d) => {
               const isExpanded = expandedId === d.id;
               return (
                 <React.Fragment key={d.id}>
-                  <div className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors items-start">
+                  <div className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-page/50 transition-colors items-start">
                     {/* Listing */}
                     <div className="col-span-3 min-w-0 flex flex-col">
                       <span className="font-semibold text-primary text-sm truncate" title={displayListing(d)}>
@@ -443,7 +443,7 @@ export default function DealsSection() {
           {deals.map((d) => {
             const isExpanded = expandedId === d.id;
             return (
-              <div key={d.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div key={d.id} className="bg-card rounded-xl border border-hairline shadow-sm overflow-hidden">
                 <div className="p-4">
                   {/* Header */}
                   <div className="flex items-start justify-between gap-3 mb-3">
@@ -455,7 +455,7 @@ export default function DealsSection() {
                   </div>
                   
                   {/* Parties Grid */}
-                  <div className="grid grid-cols-2 gap-3 mb-3 bg-gray-50 rounded-lg p-3 border border-gray-100">
+                  <div className="grid grid-cols-2 gap-3 mb-3 bg-page rounded-lg p-3 border border-hairline">
                     <div className="min-w-0">
                       <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">{t("Mnunuzi", "Buyer")}</p>
                       <p className="text-xs font-semibold text-primary truncate">{displayDealName(d.buyerName, d.buyerId)}</p>
