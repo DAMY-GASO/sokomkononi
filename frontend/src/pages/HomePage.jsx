@@ -42,7 +42,7 @@ function HowItWorks() {
           <Card key={title} className="relative p-7">
             <div className="mb-5 flex items-start justify-between">
               <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[rgba(1,25,87,0.06)] text-primary dark:bg-white/[0.06]"><Icon size={22} /></span>
-              <span className="text-3xl font-black tabular-nums text-[rgba(1,25,87,0.08)] dark:text-white/[0.06]">0{idx + 1}</span>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#FEA406] text-[#011957] text-sm font-black tabular-nums shadow-sm">0{idx + 1}</span>
             </div>
             <h3 className="mb-2 text-section">{title}</h3>
             <p className="text-body-sm leading-relaxed text-secondary">{body}</p>

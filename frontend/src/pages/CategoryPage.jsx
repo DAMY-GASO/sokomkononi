@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import SearchBar from "../components/ui/SearchBar.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
@@ -398,41 +399,16 @@ export default function CategoryPage() {
           </div>
 
           {/* Search */}
-          <form onSubmit={handleSearchSubmit} className="mx-auto mt-8 max-w-2xl">
-            <div className="relative flex items-center">
-              <Search
-                size={18}
-                className="pointer-events-none absolute left-4 text-white/50"
-              />
-              <input
-                type="text"
+          <div className="mx-auto mt-8 max-w-2xl">
+              <SearchBar
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t(
-                  lang,
-                  "Tafuta kwenye category hii...",
-                  "Search in this category..."
-                )}
-                className="h-12 w-full rounded-full pl-12 pr-32 text-sm outline-none transition-colors sm:text-base"
-                style={{
-                  background: "rgba(255,255,255,0.10)",
-                  border: "1px solid rgba(255,255,255,0.20)",
-                  color: "#FFFFFF",
-                  backdropFilter: "blur(10px)",
-                }}
+                onChange={setSearchQuery}
+                onSubmit={() => setCurrentPage(1)}
+                placeholder={t(lang, "Tafuta kwenye category hii...", "Search in this category...")}
+                size="md"
+                variant="navy"
               />
-              <button
-                type="submit"
-                className="absolute right-1.5 top-1/2 h-9 -translate-y-1/2 rounded-full px-4 text-xs font-semibold transition-transform active:translate-y-px sm:px-5 sm:text-sm"
-                style={{
-                  background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)",
-                  color: "#011957",
-                }}
-              >
-                {t(lang, "Tafuta", "Search")}
-              </button>
             </div>
-          </form>
         </div>
       </section>
 

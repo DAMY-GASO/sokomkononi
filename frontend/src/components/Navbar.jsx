@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  Bell, Menu, X, Heart, MessageSquare, User as UserIcon,
+  Bell, Menu, X, Heart, MessageSquare, User as UserIcon, Share2,
   Plus, ChevronRight, Globe, Sun, Moon, LogOut, LayoutGrid, Package,
 } from "lucide-react";
 
@@ -103,6 +103,46 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
     setOpenMenu((prev) => (prev === name ? null : name));
   const handleLogoClick = (e) => { if (registerLogoTap()) e.preventDefault(); };
   const handleTheme = () => setTheme(toggleTheme());
+  const handleShare = async () => {
+    setOpenMenu(null);
+    const shareUrl =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const shareData = {
+      title: "SokoMkononi",
+      text:
+        lang === "sw"
+          ? "Nunua na uza mali kwa urahisi na usalama — SokoMkononi."
+          : "Buy and sell property easily and safely — SokoMkononi.",
+      url: shareUrl,
+    };
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch (err) {
+      if (err?.name === "AbortError") return; // user cancelled
+    }
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("sokomkononi:toast", {
+              detail: {
+                type: "success",
+                message:
+                  lang === "sw"
+                    ? "Kiungo kimenakiliwa — shiriki na marafiki!"
+                    : "Link copied — share with friends!",
+              },
+            })
+          );
+        }
+      }
+    } catch { /* noop */ }
+  };
+
   const handleLogout = async () => {
     setOpenMenu(null);
     await logoutAsync();
@@ -348,6 +388,13 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                           {label}
                         </Link>
                       ))}
+                      <button
+                        onClick={handleShare}
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-white/85 transition-colors hover:bg-white/[0.06] hover:text-white"
+                      >
+                        <Share2 size={15} className="text-white/55" />
+                        {lang === "sw" ? "Shiriki SokoMkononi" : "Share SokoMkononi"}
+                      </button>
                       <div className="my-1 border-t border-white/10" />
                       <button
                         onClick={handleLogout}

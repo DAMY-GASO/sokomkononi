@@ -393,8 +393,8 @@ function StepFlow({ steps }) {
         <React.Fragment key={i}>
           <div className="flex items-center gap-1.5 bg-sand rounded-full pl-1.5 pr-3 py-1.5">
             <span
-              style={{ background: COLORS.night, color: "white" }}
-              className="w-5 h-5 rounded-full text-body-sm font-bold flex items-center justify-center shrink-0"
+              style={{ background: "#FEA406", color: "#011957" }}
+              className="w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 shadow-sm"
             >
               {i + 1}
             </span>
