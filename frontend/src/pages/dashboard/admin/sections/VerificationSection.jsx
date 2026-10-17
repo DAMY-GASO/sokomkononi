@@ -5,13 +5,28 @@
 // - Admin anaweza kuona UserDrawer (muktadha kamili)
 // - Documents zinaonyeshwa kama preview (image/PDF)
 // - Filter ya type (Seller/Buyer) iko ndani ya search bar
+//
+// SASISHO: DocumentPreview inafetch signed URL mpya kila
+// "Fungua"/"Onyesha" (URL inaisha baada ya SIGNED_URL_EXPIRY).
 // ============================================================
 
 import React, { useState, useMemo } from "react";
 import {
-  ShieldCheck, User, UserCheck,
-  Check, X, FileText, ChevronDown, ChevronUp, Search, Trash2,
-  Loader2, MessageSquare, ExternalLink, Eye,
+  ShieldCheck,
+  User,
+  UserCheck,
+  Check,
+  X,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  Trash2,
+  Loader2,
+  MessageSquare,
+  ExternalLink,
+  Eye,
+  AlertTriangle,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -23,6 +38,7 @@ import {
   rejectVerificationAsync,
   removeVerificationAsync,
   requestDocumentsAsync,
+  fetchDocumentUrlAsync,
   VERIFICATION_TYPES,
   VERIFICATION_STATUSES,
 } from "../../../../config/verificationsStore.js";
@@ -101,21 +117,86 @@ const MIN_REASON = 5;
 // ============================================================
 // DOCUMENT PREVIEW
 // ============================================================
-function DocumentPreview({ doc, lang }) {
+function DocumentPreview({ doc, verificationId, lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [expanded, setExpanded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [freshUrl, setFreshUrl] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
   const isImage = doc.is_image;
   const isPdf = doc.is_pdf;
-  const url = doc.url || doc.preview_url;
 
-  if (!url) {
+  // Tumia freshUrl kama ipo, vinginevyo doc.url
+  const url = freshUrl || doc.url || doc.preview_url;
+
+  // ── Fungua document: fetch URL mpya kutoka backend ──
+  const handleOpen = async (e) => {
+    e.preventDefault();
+    if (loading) return;
+    setLoading(true);
+    setLoadError(false);
+
+    try {
+      const res = await fetchDocumentUrlAsync(verificationId, doc.id);
+      if (res?.ok && res.document) {
+        const newUrl = res.document.url || res.document.preview_url;
+        if (newUrl) {
+          setFreshUrl(newUrl);
+          window.open(newUrl, "_blank", "noopener,noreferrer");
+        } else {
+          setLoadError(true);
+        }
+      } else if (url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      } else {
+        setLoadError(true);
+      }
+    } catch (err) {
+      console.error("[DocumentPreview] refresh failed:", err);
+      if (url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      } else {
+        setLoadError(true);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Preview: pia refresh kabla ya kuonyesha ──
+  const handleExpand = async () => {
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+    if (!freshUrl) {
+      setLoading(true);
+      setLoadError(false);
+      try {
+        const res = await fetchDocumentUrlAsync(verificationId, doc.id);
+        if (res?.ok && res.document) {
+          const newUrl = res.document.url || res.document.preview_url;
+          if (newUrl) setFreshUrl(newUrl);
+        }
+      } catch (err) {
+        console.warn("[DocumentPreview] preview refresh failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    setExpanded(true);
+  };
+
+  if (!doc.id) {
     return (
       <div className="flex items-center gap-2 text-xs text-muted bg-white rounded-lg px-3 py-2">
         <FileText size={12} className="shrink-0" />
-        <span className="truncate flex-1">{doc.name || t("Document", "Document")}</span>
+        <span className="truncate flex-1">
+          {doc.name || t("Document", "Document")}
+        </span>
         <span className="text-[10px] text-muted italic">
-          {t("Hakuna URL", "No URL")}
+          {t("Hakuna ID", "No ID")}
         </span>
       </div>
     );
@@ -136,34 +217,57 @@ function DocumentPreview({ doc, lang }) {
         </span>
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="text-[10px] font-semibold text-muted hover:text-secondary flex items-center gap-1"
+          onClick={handleExpand}
+          disabled={loading}
+          className="text-[10px] font-semibold text-muted hover:text-secondary flex items-center gap-1 disabled:opacity-50"
         >
-          <Eye size={11} />
+          {loading ? (
+            <Loader2 size={11} className="animate-spin" />
+          ) : (
+            <Eye size={11} />
+          )}
           {expanded ? t("Funga", "Close") : t("Onyesha", "Show")}
         </button>
         <a
-          href={url}
+          href={url || "#"}
+          onClick={handleOpen}
           target="_blank"
           rel="noreferrer"
+          download={doc.name || undefined}
           className="text-[10px] font-semibold hover:underline flex items-center gap-1"
           style={{ color: COLORS.rust }}
         >
-          <ExternalLink size={11} />
+          {loading ? (
+            <Loader2 size={11} className="animate-spin" />
+          ) : (
+            <ExternalLink size={11} />
+          )}
           {t("Fungua", "Open")}
         </a>
       </div>
 
       {expanded && (
         <div className="p-2">
-          {isImage ? (
+          {loadError ? (
+            <div className="text-center py-6">
+              <AlertTriangle
+                size={32}
+                className="mx-auto mb-2"
+                color={COLORS.rust}
+              />
+              <p className="text-xs text-secondary mb-3">
+                {t(
+                  "Imeshindwa kupakia document. Bofya 'Fungua' ili kuipakua.",
+                  "Failed to load document. Click 'Open' to download."
+                )}
+              </p>
+            </div>
+          ) : isImage ? (
             <img
               src={url}
               alt={doc.name || "Document"}
               className="w-full max-h-96 object-contain rounded"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
+              onError={() => setLoadError(true)}
             />
           ) : isPdf ? (
             <iframe
@@ -171,6 +275,7 @@ function DocumentPreview({ doc, lang }) {
               title={doc.name || "PDF"}
               className="w-full h-96 rounded"
               style={{ border: "none" }}
+              onError={() => setLoadError(true)}
             />
           ) : (
             <div className="text-center py-6">
@@ -304,7 +409,6 @@ function VerificationCard({ request, lang, onOpenUser }) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
-              {/* Badge ya type — kama ni both, onyesha "Wote Wawili" pekee */}
               {request.isBothRoles ? (
                 <RoleBadge role="both" lang={lang} />
               ) : (
@@ -312,14 +416,17 @@ function VerificationCard({ request, lang, onOpenUser }) {
                   style={{ background: `${COLORS.gold}20`, color: "#8A5A16" }}
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 >
-                  {VERIFICATION_TYPES.find((v) => v.key === request.type)?.label?.[lang] ||
-                    request.type}
+                  {VERIFICATION_TYPES.find((v) => v.key === request.type)
+                    ?.label?.[lang] || request.type}
                 </span>
               )}
               <StatusBadge status={request.status} lang={lang} />
               {hasDocsRequest && (
                 <span
-                  style={{ background: "rgba(232,163,61,0.20)", color: "#8A5A16" }}
+                  style={{
+                    background: "rgba(232,163,61,0.20)",
+                    color: "#8A5A16",
+                  }}
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                 >
                   {t("Docs zimeombwa", "Docs requested")}
@@ -328,10 +435,15 @@ function VerificationCard({ request, lang, onOpenUser }) {
             </div>
 
             <p className="text-sm font-semibold truncate">{request.subject}</p>
-            <p className="text-xs text-secondary mt-0.5 truncate">{request.userName}</p>
-            <p className="text-[10px] text-muted mt-0.5 truncate">{request.userEmail}</p>
+            <p className="text-xs text-secondary mt-0.5 truncate">
+              {request.userName}
+            </p>
+            <p className="text-[10px] text-muted mt-0.5 truncate">
+              {request.userEmail}
+            </p>
             <p className="text-[11px] text-muted mt-1">
-              {t("Iliwasilishwa", "Submitted")} {timeAgo(request.submittedAt, lang)}
+              {t("Iliwasilishwa", "Submitted")}{" "}
+              {timeAgo(request.submittedAt, lang)}
             </p>
           </div>
 
@@ -394,7 +506,12 @@ function VerificationCard({ request, lang, onOpenUser }) {
               </p>
               <div className="flex flex-col gap-2">
                 {request.documents.map((doc, i) => (
-                  <DocumentPreview key={doc.id || i} doc={doc} lang={lang} />
+                  <DocumentPreview
+                    key={doc.id || i}
+                    doc={doc}
+                    verificationId={request.id}
+                    lang={lang}
+                  />
                 ))}
               </div>
             </div>
@@ -486,7 +603,11 @@ function VerificationCard({ request, lang, onOpenUser }) {
                 style={{ background: COLORS.green, color: "white" }}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-50"
               >
-                {busy ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                {busy ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <Check size={12} />
+                )}
                 {t("Idhinisha", "Approve")}
               </button>
 
@@ -596,17 +717,14 @@ export default function VerificationSection() {
   const filtered = useMemo(() => {
     let result = [...requests];
 
-    // Status filter
     if (statusFilter !== "all") {
       result = result.filter((r) => r.status === statusFilter);
     }
 
-    // Type filter (inaonekana kama search bar filter)
     if (typeFilter !== "all") {
       result = result.filter((r) => r.type === typeFilter);
     }
 
-    // Search query
     if (query.trim()) {
       const q = query.toLowerCase();
       result = result.filter(
@@ -617,7 +735,6 @@ export default function VerificationSection() {
       );
     }
 
-    // Sort: pending kwanza, kisha by date
     result.sort((a, b) => {
       if (a.status === "pending" && b.status !== "pending") return -1;
       if (a.status !== "pending" && b.status === "pending") return 1;
@@ -637,7 +754,6 @@ export default function VerificationSection() {
         )}
       />
 
-      {/* Summary Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5 w-full">
         {[
           {
@@ -679,7 +795,6 @@ export default function VerificationSection() {
         ))}
       </div>
 
-      {/* Status Tabs — 4 pekee */}
       <div className="flex gap-2 mb-3 overflow-x-auto pb-2 sm:justify-center">
         <button
           onClick={() => setStatusFilter("all")}
@@ -708,7 +823,6 @@ export default function VerificationSection() {
         ))}
       </div>
 
-      {/* Search + Type filter */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2 flex-1 min-w-0">
           <Search size={14} className="text-muted shrink-0" />
@@ -734,7 +848,6 @@ export default function VerificationSection() {
         </select>
       </div>
 
-      {/* List */}
       {filtered.length === 0 ? (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -766,7 +879,6 @@ export default function VerificationSection() {
         </div>
       )}
 
-      {/* USER DRAWER */}
       {selectedUser && (
         <UserDrawer
           user={selectedUser}

@@ -67,10 +67,8 @@ function norm(raw) {
     reviewedBy: raw.reviewed_by,
     reviewedByName: raw.reviewed_by_name,
     rejectionReason: raw.rejection_reason,
-    // Admin request documents
     documentsRequestedAt: raw.documents_requested_at,
     documentsRequestMessage: raw.documents_request_message,
-    // Chaguo B — auto-detect roles
     isBothRoles: !!(raw.is_both_roles ?? raw.isBothRoles),
     currentRole: raw.current_role || raw.currentRole || "neither",
   };
@@ -99,7 +97,7 @@ export async function hydrateVerificationsFromApi() {
 // ============================================================
 export const VERIFICATION_CREATE_TYPES = [
   { key: "seller", label: { sw: "Muuzaji", en: "Seller" } },
-  { key: "buyer",  label: { sw: "Mnunuzi", en: "Buyer" } },
+  { key: "buyer", label: { sw: "Mnunuzi", en: "Buyer" } },
 ];
 
 const _CREATABLE = new Set(VERIFICATION_CREATE_TYPES.map((v) => v.key));
@@ -117,7 +115,7 @@ export async function addVerificationAsync({
       ok: false,
       error: new Error(
         `Verification type "${type}" is not supported. ` +
-        `Allowed: ${Array.from(_CREATABLE).join(", ")}.`
+          `Allowed: ${Array.from(_CREATABLE).join(", ")}.`
       ),
     };
   }
@@ -137,27 +135,22 @@ export async function addVerificationAsync({
 }
 
 // ============================================================
-// APPROVE — inatuma events 3 ili components zote zi-refresh
+// APPROVE
 // ============================================================
 export async function approveVerificationAsync(id) {
   try {
     const raw = await api.post(`/verifications/${id}/approve/`, {});
     const updated =
-      norm(raw) ||
-      {
+      norm(raw) || {
         ...getVerification(id),
         status: "approved",
         reviewedAt: new Date().toISOString(),
       };
     write(read().map((v) => (v.id === id ? updated : v)));
 
-    // 🔔 Trigger auth + users refresh ili mtumiaji aone "Verified" papo hapo
-    // na admin aone mabadiliko kwenye User Management
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("sokomkononi:auth-updated"));
       window.dispatchEvent(new Event("sokomkononi:users-updated"));
-      // EV tayari imetumwa na write(), lakini tunaituma tena ili
-      // kuhakikisha components zote zina-refresh
       window.dispatchEvent(new Event(EV));
     }
 
@@ -168,7 +161,7 @@ export async function approveVerificationAsync(id) {
 }
 
 // ============================================================
-// REJECT — inatuma events 3
+// REJECT
 // ============================================================
 export async function rejectVerificationAsync(id, reason = "") {
   try {
@@ -176,8 +169,7 @@ export async function rejectVerificationAsync(id, reason = "") {
       rejection_reason: reason,
     });
     const updated =
-      norm(raw) ||
-      {
+      norm(raw) || {
         ...getVerification(id),
         status: "rejected",
         rejectionReason: reason,
@@ -185,7 +177,6 @@ export async function rejectVerificationAsync(id, reason = "") {
       };
     write(read().map((v) => (v.id === id ? updated : v)));
 
-    // 🔔 Trigger auth + users refresh
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("sokomkononi:auth-updated"));
       window.dispatchEvent(new Event("sokomkononi:users-updated"));
@@ -219,8 +210,7 @@ export async function requestDocumentsAsync(id, message) {
       message: clean,
     });
     const updated =
-      norm(raw) ||
-      {
+      norm(raw) || {
         ...getVerification(id),
         documentsRequestedAt: new Date().toISOString(),
         documentsRequestMessage: clean,
@@ -234,7 +224,6 @@ export async function requestDocumentsAsync(id, message) {
 
 // ============================================================
 // UPLOAD document — MTUMIAJI MWENYEWE (sio admin)
-// Inatumika kwenye MyVerificationsPanel.jsx (dashboard ya mtumiaji)
 // ============================================================
 export async function uploadVerificationDocumentAsync(id, file) {
   if (!file) return { ok: false, error: new Error("File required") };
@@ -242,8 +231,27 @@ export async function uploadVerificationDocumentAsync(id, file) {
     const fd = new FormData();
     fd.append("file", file);
     const raw = await api.upload(`/verifications/${id}/documents/`, fd);
-    // Refresh list ili documents mpya zionekane
     await hydrateVerificationsFromApi();
+    return { ok: true, document: raw };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// REFRESH DOCUMENT URL — signed URL inaisha, fetch mpya kila mara
+// ============================================================
+export async function fetchDocumentUrlAsync(verificationId, documentId) {
+  if (!verificationId || !documentId) {
+    return {
+      ok: false,
+      error: new Error("verificationId + documentId required"),
+    };
+  }
+  try {
+    const raw = await api.get(
+      `/verifications/${verificationId}/documents/${documentId}/`
+    );
     return { ok: true, document: raw };
   } catch (err) {
     return { ok: false, error: err };
