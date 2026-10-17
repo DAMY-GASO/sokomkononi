@@ -312,7 +312,7 @@ export default function AdminDashboard() {
   const openNotification = (n) => {
     markRead(n.id);
     const target = n?.target && STATE_TO_URL[n.target] ? n.target : "overview";
-    navigate(STATE_TO_URL[target]);
+    navigate(STATE_TO_URL[target] || `${ADMIN_PATH}/overview`);
     setNotifOpen(false);
   };
 

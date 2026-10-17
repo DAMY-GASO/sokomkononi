@@ -39,15 +39,6 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
     hydrateVerificationsFromApi();
   }, []);
 
-  // Sikiliza event ya verification ili refresh
-  useEffect(() => {
-    const onUpdate = () => hydrateVerificationsFromApi();
-    window.addEventListener("sokomkononi:verifications-updated", onUpdate);
-    return () => {
-      window.removeEventListener("sokomkononi:verifications-updated", onUpdate);
-    };
-  }, []);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.type || !form.subject.trim()) {
