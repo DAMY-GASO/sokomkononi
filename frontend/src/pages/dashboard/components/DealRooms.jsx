@@ -2219,7 +2219,7 @@ export default function DealRooms({
   onFinalPaymentConfirmed,
 }) {
   const { user } = useAuth();
-  const deals = useDeals(user?.id);
+  const deals = useDeals(user?.id, side);
   const { lang } = useLanguage();
   const [selectedId, setSelectedId] = useState(initialDealId);
   const [mobileShowDetail, setMobileShowDetail] = useState(

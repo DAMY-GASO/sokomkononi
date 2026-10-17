@@ -1,13 +1,5 @@
 // ============================================================
 // dealsStore.js — Backend: /api/deals/ + /api/admin/deals/
-//
-// Marekebisho:
-//  - Ondoa resolveDisputeAsync (dispute inashughulikiwa Support)
-//  - Ondoa disputeNote, disputeReason, disputeResolution
-//  - Ondoa DISPUTED kutoka status mapping
-//  - Ongeza pagination support
-//  - Ongeza canSeeContact + inspection fields (MPYA)
-//  - Ongeza getDealTranscript helper (MPYA) — kwa download
 // ============================================================
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { dealsApi } from "../api/deals.js";
@@ -38,8 +30,6 @@ function saveDeals(deals) {
 }
 
 const sameId = (a, b) => String(a) === String(b);
-
-// Backend statuses → frontend slugs (bila DISPUTED)
 const API_TO_FRONTEND_DEAL_STATUS = {
   OPEN: "negotiating",
   PENDING: "negotiating",
@@ -385,10 +375,13 @@ function normalizeDealFromApi(raw, currentUserId) {
 // ============================================================
 let _dealsUserId = null;
 
-async function _hydrateDealsImpl(currentUserId) {
+async function _hydrateDealsImpl(currentUserId, role = "") {
   _dealsUserId = currentUserId ?? _dealsUserId;
   try {
-    const data = await dealsApi.list({ page_size: 200 });
+    const params = { page_size: 200 };
+    if (role) params.role = role;
+
+    const data = await dealsApi.list(params);
     const rawList = Array.isArray(data) ? data : data?.results || [];
     const normalized = rawList
       .map((raw) => normalizeDealFromApi(raw, _dealsUserId))
@@ -782,11 +775,11 @@ export function getDealTranscript(dealId, currentUserId = null, lang = "sw") {
 // ============================================================
 // HOOKS
 // ============================================================
-export function useDeals(currentUserId) {
+export function useDeals(currentUserId, role = "") {
   const [deals, setDeals] = useState(() => getDeals());
 
   useEffect(() => {
-    hydrateDealsFromApi(currentUserId ?? null);
+    hydrateDealsFromApi(currentUserId ?? null, role);
     const sync = () => setDeals(getDeals());
     window.addEventListener("storage", sync);
     window.addEventListener(UPDATE_EVENT, sync);
@@ -794,7 +787,7 @@ export function useDeals(currentUserId) {
       window.removeEventListener("storage", sync);
       window.removeEventListener(UPDATE_EVENT, sync);
     };
-  }, [currentUserId]);
+  }, [currentUserId, role]);
 
   return useMemo(() => {
     const listings = getListings();
