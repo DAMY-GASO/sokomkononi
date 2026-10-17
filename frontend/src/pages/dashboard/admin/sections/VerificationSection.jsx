@@ -131,6 +131,13 @@ function DocumentPreview({ doc, verificationId, lang }) {
   const url = freshUrl || doc.url || doc.preview_url;
 
   // ── Fungua document: fetch URL mpya kutoka backend ──
+  
+  const getStreamUrl = () => {
+    const token = localStorage.getItem("sokomkononi_admin_access") || localStorage.getItem("sokomkononi_access") || "";
+    const base = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/+$/, "");
+    return `${base}/verifications/${verificationId}/documents/${doc.id}/stream/?token=${encodeURIComponent(token)}`;
+  };
+
   const handleOpen = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (loading) return;
@@ -138,70 +145,39 @@ function DocumentPreview({ doc, verificationId, lang }) {
     setLoadError(false);
 
     try {
-      const res = await fetchDocumentUrlAsync(verificationId, doc.id);
+      const { url, token } = getStreamUrl(doc.id);
+      const res = await fetch(url, {
+        method: "GET",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
 
-      // Backend confirmed the file is missing in R2/S3 — bail immediately.
-      // Do NOT fall back to the cached url because it is likely the
-      // same broken signed URL that returns S3 XML.
-      const isFileMissing =
-        res?.ok === false &&
-        (res?.code === "file_missing" ||
-         res?.error?.code === "file_missing" ||
-         res?.file_missing === true ||
-         res?.error?.file_missing === true);
-
-      if (isFileMissing) {
+      if (res.status === 404) {
+        setLoadError(true);
+        setLoading(false);
+        return;
+      }
+      if (!res.ok) {
         setLoadError(true);
         setLoading(false);
         return;
       }
 
-      const freshUrl =
-        res?.document?.url ||
-        res?.document?.preview_url ||
-        url;   // fall back ONLY for transient network errors, not file_missing
-
-      if (!freshUrl) {
-        setLoadError(true);
-        setLoading(false);
-        return;
-      }
-
-      setFreshUrl(freshUrl);
-      window.open(freshUrl, "_blank", "noopener,noreferrer");
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      window.open(objUrl, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(objUrl), 60_000);
     } catch (err) {
-      console.error("[DocumentPreview] refresh failed:", err);
-      if (url) {
-        window.open(url, "_blank", "noopener,noreferrer");
-      } else {
-        setLoadError(true);
-      }
+      console.error("[DocumentPreview] stream failed:", err);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
-  };;
+  };;;
 
   // ── Preview: pia refresh kabla ya kuonyesha ──
   const handleExpand = async () => {
-    if (expanded) {
-      setExpanded(false);
-      return;
-    }
-    if (!freshUrl) {
-      setLoading(true);
-      setLoadError(false);
-      try {
-        const res = await fetchDocumentUrlAsync(verificationId, doc.id);
-        if (res?.ok && res.document) {
-          const newUrl = res.document.url || res.document.preview_url;
-          if (newUrl) setFreshUrl(newUrl);
-        }
-      } catch (err) {
-        console.warn("[DocumentPreview] preview refresh failed:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
+    if (expanded) { setExpanded(false); return; }
+    setFreshUrl(getStreamUrl());
     setExpanded(true);
   };
 
