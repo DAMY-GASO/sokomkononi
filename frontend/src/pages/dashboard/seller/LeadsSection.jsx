@@ -2,10 +2,14 @@
 // LeadsSection.jsx
 // Seller anaona leads zote (maulizio ya wanunuzi) kwa listings zake.
 // Bilingual + mobile-responsive + KILA KITU CENTERED.
+//
+// SASISHO:
+//  - Button "Nenda Messages" → "Nenda Deal Room"
+//  - Inaelekeza deal room specific ya lead (kama dealRoomId ipo)
 // ============================================================
 
 import React, { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Inbox,
   MessageSquare,
@@ -24,6 +28,7 @@ import {
 
 export default function LeadsSection({ onNavigate }) {
   const { lang } = useLanguage();
+  const navigate = useNavigate();
   const leads = useLeads();
   const [filter, setFilter] = useState("all");
   const [busy, setBusy] = useState({});
@@ -86,7 +91,7 @@ export default function LeadsSection({ onNavigate }) {
   };
 
   // ============================================================
-  // HANDLERS — async + rollback (via store)
+  // HANDLERS
   // ============================================================
   const handleRespond = async (leadId) => {
     if (busy[leadId]) return;
@@ -104,7 +109,10 @@ export default function LeadsSection({ onNavigate }) {
       console.warn("[LeadsSection] respond failed:", res.error);
       alert(
         res.error?.message ||
-          t("Imeshindwa kuweka kama imejibiwa. Jaribu tena.", "Failed to mark as responded. Try again.")
+          t(
+            "Imeshindwa kuweka kama imejibiwa. Jaribu tena.",
+            "Failed to mark as responded. Try again."
+          )
       );
     }
   };
@@ -127,8 +135,27 @@ export default function LeadsSection({ onNavigate }) {
       console.warn("[LeadsSection] remove failed:", res.error);
       alert(
         res.error?.message ||
-          t("Imeshindwa kuondoa lead. Jaribu tena.", "Failed to remove lead. Try again.")
+          t(
+            "Imeshindwa kuondoa lead. Jaribu tena.",
+            "Failed to remove lead. Try again."
+          )
       );
+    }
+  };
+
+  // ── MPYA: Nenda deal room specific ──
+  const handleGoToDealRoom = (lead) => {
+    const dealId = lead.dealRoomId;
+    if (dealId) {
+      // Deal room specific — query param inatumika kwenye DashboardShell
+      navigate(`/dashboard/deals?deal=${dealId}`);
+      return;
+    }
+    // Fallback: dashboard nzima ya deal rooms
+    if (onNavigate) {
+      onNavigate("deals");
+    } else {
+      navigate("/dashboard/deals");
     }
   };
 
@@ -138,13 +165,9 @@ export default function LeadsSection({ onNavigate }) {
       className="w-full p-4 sm:p-6"
     >
       <div className="max-w-3xl mx-auto">
-        {/* ============================================================ */}
         {/* HEADER — CENTERED */}
-        {/* ============================================================ */}
         <div className="mb-6 text-center">
-          <h1 className="h-title">
-            {t("Maulizio", "Enquiries")}
-          </h1>
+          <h1 className="h-title">{t("Maulizio", "Enquiries")}</h1>
           <p className="text-secondary text-body-sm mt-2 max-w-xl mx-auto">
             {t(
               "Wanunuzi wanaoulizia mali zako — jibu haraka ili usikose fursa.",
@@ -153,9 +176,7 @@ export default function LeadsSection({ onNavigate }) {
           </p>
         </div>
 
-        {/* ============================================================ */}
         {/* TABS — CENTERED */}
-        {/* ============================================================ */}
         {leads.length > 0 && (
           <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-1">
             {TABS.map((tab) => {
@@ -189,9 +210,7 @@ export default function LeadsSection({ onNavigate }) {
           </div>
         )}
 
-        {/* ============================================================ */}
         {/* EMPTY STATE — CENTERED */}
-        {/* ============================================================ */}
         {filtered.length === 0 ? (
           <div
             style={{ borderColor: COLORS.sandLine }}
@@ -211,9 +230,7 @@ export default function LeadsSection({ onNavigate }) {
             </p>
           </div>
         ) : (
-          /* ============================================================ */
-          /* LIST — kadi za lead zimeachwa kushoto kwa urahisi */
-          /* ============================================================ */
+          /* LIST */
           <div className="flex flex-col gap-3">
             {filtered.map((lead) => {
               const status = getStatusBadge(lead.status);
@@ -230,7 +247,10 @@ export default function LeadsSection({ onNavigate }) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <span
-                          style={{ background: status?.bg || "#F5F3EC", color: status?.fg || "#101A2E" }}
+                          style={{
+                            background: status?.bg || "#F5F3EC",
+                            color: status?.fg || "#101A2E",
+                          }}
                           className="text-body-sm font-bold px-2 py-0.5 rounded-full shrink-0"
                         >
                           {status.label}
@@ -296,19 +316,18 @@ export default function LeadsSection({ onNavigate }) {
                       </button>
                     )}
 
-                    {onNavigate && (
-                      <button
-                        onClick={() => onNavigate("messages")}
-                        style={{
-                          borderColor: COLORS.sandLine,
-                          color: COLORS.night,
-                        }}
-                        className="flex items-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors"
-                      >
-                        <MessageSquare size={12} />
-                        {t("Nenda Messages", "Go to Messages")}
-                      </button>
-                    )}
+                    {/* ── MPYA: Nenda Deal Room (specific kama dealRoomId ipo) ── */}
+                    <button
+                      onClick={() => handleGoToDealRoom(lead)}
+                      style={{
+                        borderColor: COLORS.sandLine,
+                        color: COLORS.night,
+                      }}
+                      className="flex items-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg border hover:bg-gray-50 transition-colors"
+                    >
+                      <MessageSquare size={12} />
+                      {t("Nenda Deal Room", "Go to Deal Room")}
+                    </button>
 
                     <button
                       onClick={() => handleRemove(lead.id)}

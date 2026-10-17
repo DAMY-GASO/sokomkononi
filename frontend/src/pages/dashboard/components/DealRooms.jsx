@@ -1802,7 +1802,11 @@ function DealDetail({
         </div>
       )}
 
-      {deal.status === "accepted" && isBuyer && !reserveOpen && (
+      {deal.status === "accepted" &&
+        isBuyer &&
+         !reserveOpen &&
+         !deal.reservationPaidAt &&      
+         !deal.transactionId && (        
         <div
           style={{
             borderColor: COLORS.sandLine,
