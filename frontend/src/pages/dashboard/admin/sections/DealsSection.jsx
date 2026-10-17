@@ -337,187 +337,153 @@ export default function DealsSection() {
         </div>
       )}
 
-      {/* DESKTOP — TABLE */}
+      
+      {/* DESKTOP — MODERN GRID LIST */}
       {deals.length > 0 && (
-        <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                    {t("Mali", "Listing")}
-                  </th>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                    {t("Kategoria", "Category")}
-                  </th>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                    {t("Mahali", "Location")}
-                  </th>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                    {t("Mnunuzi", "Buyer")}
-                  </th>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                    {t("Muuzaji", "Seller")}
-                  </th>
-                  <th className="px-5 py-2.5 text-right text-xs font-medium text-secondary uppercase">
-                    {t("Bei / Ofa", "Price / Offer")}
-                  </th>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                    Status
-                  </th>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
-                    {t("Ilianzishwa", "Created")}
-                  </th>
-                  <th className="px-5 py-2.5 text-right text-xs font-medium text-secondary uppercase">
-                    {t("Kitendo", "Action")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {deals.map((d) => {
-                  const isExpanded = expandedId === d.id;
-                  return (
-                    <React.Fragment key={d.id}>
-                      <tr className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-5 py-3 text-sm font-medium text-primary">
-                          <span className="truncate">{displayListing(d)}</span>
-                        </td>
-                        <td className="px-5 py-3 text-sm text-secondary">
-                          {displayCategory(d)}
-                        </td>
-                        <td
-                          className="px-5 py-3 text-sm text-secondary truncate max-w-[180px]"
-                          title={d.location || ""}
-                        >
-                          {d.location || "—"}
-                        </td>
-                        <td className="px-5 py-3 text-sm text-secondary">
-                          <div className="min-w-0">
-                            <div>{displayDealName(d.buyerName, d.buyerId)}</div>
-                            {d.buyerEmail && (
-                              <div className="text-[11px] text-muted truncate">
-                                {d.buyerEmail}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-5 py-3 text-sm text-secondary">
-                          <div className="min-w-0">
-                            <div>{displayDealName(d.sellerName, d.sellerId)}</div>
-                            {d.sellerEmail && (
-                              <div className="text-[11px] text-muted truncate">
-                                {d.sellerEmail}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td
-                          className="px-5 py-3 text-sm font-semibold text-right"
-                          style={{ color: COLORS.rust }}
-                        >
-                          {displayDealAmount(d)}
-                        </td>
-                        <td className="px-5 py-3">
-                          <StatusBadge status={d.status} lang={lang} />
-                        </td>
-                        <td className="px-5 py-3 text-[11px] text-muted whitespace-nowrap">
-                          {d.createdAt ? timeAgo(d.createdAt, lang) : "—"}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <ActionButtons deal={d} />
-                        </td>
-                      </tr>
-                      {isExpanded && (
-                        <tr>
-                          <td colSpan={9} className="p-0">
-                            <DealRoomViewer
-                              deal={d}
-                              roomData={dealRooms[d.id]}
-                              loading={!!loadingRoom[d.id]}
-                              onClose={() => setExpandedId(null)}
-                              lang={lang}
-                            />
-                          </td>
-                        </tr>
+        <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+          {/* Header Row */}
+          <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-secondary uppercase tracking-wider">
+            <div className="col-span-3">Listing</div>
+            <div className="col-span-2">Buyer</div>
+            <div className="col-span-2">Seller</div>
+            <div className="col-span-1 text-right">Price / Offer</div>
+            <div className="col-span-2 text-center">Status</div>
+            <div className="col-span-1 text-right">Date</div>
+            <div className="col-span-1 text-right">Action</div>
+          </div>
+          
+          {/* Data Rows */}
+          <div className="divide-y divide-gray-100">
+            {deals.map((d) => {
+              const isExpanded = expandedId === d.id;
+              return (
+                <React.Fragment key={d.id}>
+                  <div className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors items-start">
+                    {/* Listing */}
+                    <div className="col-span-3 min-w-0 flex flex-col">
+                      <span className="font-semibold text-primary text-sm truncate" title={displayListing(d)}>
+                        {displayListing(d)}
+                      </span>
+                      <span className="text-[11px] text-muted truncate mt-0.5">
+                        {displayCategory(d)} · {d.location || "—"}
+                      </span>
+                    </div>
+                    
+                    {/* Buyer */}
+                    <div className="col-span-2 min-w-0 flex flex-col">
+                      <span className="font-medium text-primary text-sm truncate">
+                        {displayDealName(d.buyerName, d.buyerId)}
+                      </span>
+                      {d.buyerEmail && (
+                        <span className="text-[11px] text-muted truncate mt-0.5" title={d.buyerEmail}>
+                          {d.buyerEmail}
+                        </span>
                       )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+                    </div>
+                    
+                    {/* Seller */}
+                    <div className="col-span-2 min-w-0 flex flex-col">
+                      <span className="font-medium text-primary text-sm truncate">
+                        {displayDealName(d.sellerName, d.sellerId)}
+                      </span>
+                      {d.sellerEmail && (
+                        <span className="text-[11px] text-muted truncate mt-0.5" title={d.sellerEmail}>
+                          {d.sellerEmail}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Price */}
+                    <div className="col-span-1 text-right">
+                      <span className="font-bold text-sm whitespace-nowrap" style={{ color: COLORS.rust }}>
+                        {displayDealAmount(d)}
+                      </span>
+                    </div>
+                    
+                    {/* Status */}
+                    <div className="col-span-2 flex justify-center">
+                      <StatusBadge status={d.status} lang={lang} />
+                    </div>
+                    
+                    {/* Date */}
+                    <div className="col-span-1 text-right">
+                      <span className="text-[11px] text-muted whitespace-nowrap">
+                        {d.createdAt ? timeAgo(d.createdAt, lang) : "—"}
+                      </span>
+                    </div>
+                    
+                    {/* Action */}
+                    <div className="col-span-1 flex justify-end">
+                      <ActionButtons deal={d} />
+                    </div>
+                  </div>
+                  
+                  {/* Expanded Deal Room Viewer */}
+                  {isExpanded && (
+                    <div className="bg-white border-b border-gray-100">
+                      <DealRoomViewer
+                        deal={d}
+                        roomData={dealRooms[d.id]}
+                        loading={!!loadingRoom[d.id]}
+                        onClose={() => setExpandedId(null)}
+                        lang={lang}
+                      />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* MOBILE — CARD LIST */}
+      {/* MOBILE — STRUCTURED CARDS */}
       {deals.length > 0 && (
         <div className="sm:hidden flex flex-col gap-3">
           {deals.map((d) => {
             const isExpanded = expandedId === d.id;
             return (
-              <div
-                key={d.id}
-                className="bg-white rounded-xl border border-gray-100 overflow-hidden"
-              >
+              <div key={d.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="p-4">
-                  <div className="flex items-start justify-between gap-3 mb-2">
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-primary line-clamp-2">
-                        {displayListing(d)}
-                      </p>
+                      <p className="text-sm font-bold text-primary truncate">{displayListing(d)}</p>
+                      <p className="text-[11px] text-muted truncate mt-0.5">{displayCategory(d)} · {d.location || "—"}</p>
                     </div>
-                    <div className="shrink-0">
-                      <StatusBadge status={d.status} lang={lang} />
+                    <StatusBadge status={d.status} lang={lang} />
+                  </div>
+                  
+                  {/* Parties Grid */}
+                  <div className="grid grid-cols-2 gap-3 mb-3 bg-gray-50 rounded-lg p-3 border border-gray-100">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">{t("Mnunuzi", "Buyer")}</p>
+                      <p className="text-xs font-semibold text-primary truncate">{displayDealName(d.buyerName, d.buyerId)}</p>
+                      {d.buyerEmail && <p className="text-[10px] text-muted truncate">{d.buyerEmail}</p>}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">{t("Muuzaji", "Seller")}</p>
+                      <p className="text-xs font-semibold text-primary truncate">{displayDealName(d.sellerName, d.sellerId)}</p>
+                      {d.sellerEmail && <p className="text-[10px] text-muted truncate">{d.sellerEmail}</p>}
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1 text-xs text-secondary mb-2">
-                    <span className="truncate">
-                      {t("Kategoria", "Category")}:{" "}
-                      <span className="font-medium text-primary">
-                        {displayCategory(d)}
-                      </span>
-                    </span>
-                    {d.location && (
-                      <span className="truncate">
-                        {t("Mahali", "Location")}:{" "}
-                        <span className="font-medium text-primary">
-                          {d.location}
-                        </span>
-                      </span>
-                    )}
-                    <span className="truncate">
-                      {t("Mnunuzi", "Buyer")}:{" "}
-                      <span className="font-medium text-primary">
-                        {displayDealName(d.buyerName, d.buyerId)}
-                      </span>
-                      {d.buyerEmail && (
-                        <span className="text-muted"> · {d.buyerEmail}</span>
-                      )}
-                    </span>
-                    <span className="truncate">
-                      {t("Muuzaji", "Seller")}:{" "}
-                      <span className="font-medium text-primary">
-                        {displayDealName(d.sellerName, d.sellerId)}
-                      </span>
-                      {d.sellerEmail && (
-                        <span className="text-muted"> · {d.sellerEmail}</span>
-                      )}
-                    </span>
-                    {d.createdAt && (
-                      <span className="text-[11px] text-muted">
-                        {t("Ilianzishwa", "Created")}:{" "}
-                        {timeAgo(d.createdAt, lang)}
-                      </span>
-                    )}
+
+                  {/* Footer Grid */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">{t("Bei / Ofa", "Price / Offer")}</p>
+                      <p className="text-sm font-bold" style={{ color: COLORS.rust }}>{displayDealAmount(d)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">{t("Ilianzishwa", "Created")}</p>
+                      <p className="text-[11px] text-muted">{d.createdAt ? timeAgo(d.createdAt, lang) : "—"}</p>
+                    </div>
                   </div>
-                  <p
-                    className="text-sm font-bold mb-3"
-                    style={{ color: COLORS.rust }}
-                  >
-                    {displayDealAmount(d)}
-                  </p>
+
                   <ActionButtons deal={d} fullWidth />
                 </div>
+                
+                {/* Expanded Deal Room Viewer */}
                 {isExpanded && (
                   <div className="border-t border-gray-100">
                     <DealRoomViewer
@@ -534,6 +500,7 @@ export default function DealsSection() {
           })}
         </div>
       )}
+
 
       {/* Empty */}
       {!loading && deals.length === 0 && (
