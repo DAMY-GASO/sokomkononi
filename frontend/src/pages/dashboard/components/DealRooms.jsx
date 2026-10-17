@@ -2688,10 +2688,24 @@ export default function DealRooms({
     finalizeLocalReservation(id, deal, { hours, fee, method, expiresAt });
   };
 
-  const handleInspectionResolve = async (id, outcome, note) => {
+    const handleInspectionResolve = async (id, outcome, note) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
-    const txId = transactionIds[id] || deal.transactionId;
+    let txId = transactionIds[id] || deal.transactionId;
+
+    // ── MPYA: Kama txId haipo, fetch detail kupata transaction_id ──
+    if (!txId) {
+      try {
+        const detailRes = await dealsApi.detail(deal.dealRoomId || deal.id);
+        txId = detailRes?.transaction_id ?? detailRes?.transaction?.id;
+        if (txId) {
+          setTransactionIds((prev) => ({ ...prev, [id]: txId }));
+          updateDeal(id, { transactionId: txId });
+        }
+      } catch (fetchErr) {
+        console.warn("[DealRooms] fetch detail failed:", fetchErr);
+      }
+    }
 
     if (!txId) {
       alert(
