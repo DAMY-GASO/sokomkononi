@@ -240,7 +240,10 @@ export default function MyTransactionsPage() {
   const handleDownloadReceipt = async (tr) => {
     setReceiptBusyId(tr.id);
     try {
-      const blob = await downloadFile(`/finance/transactions/${tr.id}/receipt/`);
+      // Prefer the finance transaction id when present — falls back to the
+      // store id for records that only exist in the deal lifecycle store.
+      const financeId = tr.financeId ?? tr.finance_id ?? tr.id;
+      const blob = await downloadFile(`/finance/transactions/${financeId}/receipt/`);
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;

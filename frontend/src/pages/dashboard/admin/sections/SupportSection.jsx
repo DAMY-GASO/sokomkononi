@@ -159,7 +159,7 @@ function TicketCard({ ticket, lang }) {
 
     const res = await addTicketMessageAsync(ticket.id, {
       text: replyText.trim(),
-      files: replyFiles,
+      files: replyFiles.map((f) => f.file || f),
     });
 
     setBusy((b) => {
@@ -179,10 +179,26 @@ function TicketCard({ ticket, lang }) {
     }
   };
 
-  const handleFilesPicked = (e) => {
+  const handleFilesPicked = async (e) => {
     const picked = Array.from(e.target.files || []);
     e.target.value = "";
-    setReplyFiles((prev) => [...prev, ...picked].slice(0, 5));
+
+    const wrapped = await Promise.all(
+      picked.map(async (f) => {
+        let preview = null;
+        if (f.type?.startsWith("image/")) {
+          preview = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(f);
+          });
+        }
+        return { file: f, name: f.name, type: f.type, preview };
+      }),
+    );
+
+    setReplyFiles((prev) => [...prev, ...wrapped].slice(0, 5));
   };
 
   const removeReplyFile = (i) => {
@@ -474,9 +490,9 @@ function TicketCard({ ticket, lang }) {
                       className="relative flex items-center gap-1.5 text-xs bg-white border rounded-lg px-2 py-1.5"
                       style={{ borderColor: COLORS.sandLine }}
                     >
-                      {f.type?.startsWith("image/") ? (
+                      {f.preview ? (
                         <img
-                          src={URL.createObjectURL(f)}
+                          src={f.preview}
                           alt={f.name}
                           className="w-8 h-8 rounded object-cover"
                         />

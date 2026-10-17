@@ -28,25 +28,9 @@ import {
 } from "../../../../config/dealsStore.js";
 import {
   fetchDealRoomDetailAsync,
-} from "../../../../config/transactionLifecycleStore.js";
+} from "../../../../config/transactionsStore.js";
 
 // ============================================================
-// localStorage CLEANUP
-// ============================================================
-const LEGACY_DEALS_KEY = "sokomkononi_deals_v1";
-const CLEANUP_FLAG = "sokomkononi_deals_cleaned_v3";
-
-function cleanupLegacyDealsOnce() {
-  if (typeof window === "undefined") return;
-  try {
-    if (window.localStorage.getItem(CLEANUP_FLAG)) return;
-    window.localStorage.removeItem(LEGACY_DEALS_KEY);
-    window.localStorage.setItem(CLEANUP_FLAG, "1");
-  } catch {
-    /* noop */
-  }
-}
-
 const PAGE_SIZE = 20;
 
 const STATUS_FILTERS = [
@@ -63,10 +47,6 @@ export default function DealsSection() {
   const { user } = useAuth();
 
   // Cleanup
-  useEffect(() => {
-    cleanupLegacyDealsOnce();
-  }, []);
-
   // Pre-hydrate users + listings
   useEffect(() => {
     hydrateUsersFromApi().catch(() => {});

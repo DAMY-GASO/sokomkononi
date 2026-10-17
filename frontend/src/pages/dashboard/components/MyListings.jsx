@@ -810,7 +810,6 @@ export default function MyListings({
               onAdvertise={onAdvertise}
               onPause={onPause}
               onResume={onResume}
-              onMarkSold={handleMarkSold}   // ⬅️ Badilisha — tumia handler yetu
               onPay={goToPayment}
               onEdit={handleEdit}
               busy={busy[l.id]}

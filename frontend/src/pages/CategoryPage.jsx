@@ -33,18 +33,31 @@ function t(lang, sw, en) {
 
 const PRICE_RANGES = {
   nyumba: [
-    { label: { sw: "Chini ya TZS 50M", en: "Under TZS 50M" }, min: 0, max: 50000000 },
-    { label: { sw: "TZS 50M - 100M", en: "TZS 50M - 100M" }, min: 50000000, max: 100000000 },
-    { label: { sw: "TZS 100M - 200M", en: "TZS 100M - 200M" }, min: 100000000, max: 200000000 },
-    { label: { sw: "Juu ya TZS 200M", en: "Above TZS 200M" }, min: 200000000, max: Infinity },
+    { label: { sw: "Chini ya TZS 50M", en: "Under TZS 50M" }, min: 0, max: 50_000_000 },
+    { label: { sw: "TZS 50M - 100M", en: "TZS 50M - 100M" }, min: 50_000_000, max: 100_000_000 },
+    { label: { sw: "TZS 100M - 200M", en: "TZS 100M - 200M" }, min: 100_000_000, max: 200_000_000 },
+    { label: { sw: "Juu ya TZS 200M", en: "Above TZS 200M" }, min: 200_000_000, max: Infinity },
+  ],
+  magari: [
+    { label: { sw: "Chini ya TZS 10M", en: "Under TZS 10M" }, min: 0, max: 10_000_000 },
+    { label: { sw: "TZS 10M - 30M", en: "TZS 10M - 30M" }, min: 10_000_000, max: 30_000_000 },
+    { label: { sw: "TZS 30M - 60M", en: "TZS 30M - 60M" }, min: 30_000_000, max: 60_000_000 },
+    { label: { sw: "TZS 60M - 100M", en: "TZS 60M - 100M" }, min: 60_000_000, max: 100_000_000 },
+    { label: { sw: "Juu ya TZS 100M", en: "Above TZS 100M" }, min: 100_000_000, max: Infinity },
+  ],
+  viwanja: [
+    { label: { sw: "Chini ya TZS 20M", en: "Under TZS 20M" }, min: 0, max: 20_000_000 },
+    { label: { sw: "TZS 20M - 50M", en: "TZS 20M - 50M" }, min: 20_000_000, max: 50_000_000 },
+    { label: { sw: "TZS 50M - 100M", en: "TZS 50M - 100M" }, min: 50_000_000, max: 100_000_000 },
+    { label: { sw: "Juu ya TZS 100M", en: "Above TZS 100M" }, min: 100_000_000, max: Infinity },
   ],
 };
 
 const DEFAULT_RANGES = [
-  { label: { sw: "Chini ya TZS 20M", en: "Under TZS 20M" }, min: 0, max: 20000000 },
-  { label: { sw: "TZS 20M - 50M", en: "TZS 20M - 50M" }, min: 20000000, max: 50000000 },
-  { label: { sw: "TZS 50M - 100M", en: "TZS 50M - 100M" }, min: 50000000, max: 100000000 },
-  { label: { sw: "Juu ya TZS 100M", en: "Above TZS 100M" }, min: 100000000, max: Infinity },
+  { label: { sw: "Chini ya TZS 20M", en: "Under TZS 20M" }, min: 0, max: 20_000_000 },
+  { label: { sw: "TZS 20M - 50M", en: "TZS 20M - 50M" }, min: 20_000_000, max: 50_000_000 },
+  { label: { sw: "TZS 50M - 100M", en: "TZS 50M - 100M" }, min: 50_000_000, max: 100_000_000 },
+  { label: { sw: "Juu ya TZS 100M", en: "Above TZS 100M" }, min: 100_000_000, max: Infinity },
 ];
 
 /* ═══════════════════════════════════════════════════════════
@@ -262,7 +275,10 @@ export default function CategoryPage() {
 
   useEffect(() => { setCurrentPage(1); }, [searchQuery, filters, sortBy, categoryKey]);
 
-  const handleToggleSave = (id) => toggleSaved(id);
+  const handleToggleSave = (id) => {
+    const listing = paginatedProperties.find((l) => l.id === id) || allProperties.find((l) => l.id === id);
+    toggleSaved(id, listing);
+  };
   const handleSearchSubmit = (e) => { e.preventDefault(); setCurrentPage(1); };
 
   /* ── Category not found ───────────────────────────────── */

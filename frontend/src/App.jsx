@@ -116,8 +116,6 @@ function App() {
               <Route path="/dashboard/advertise" element={<DashboardShell />} />
               <Route path="/dashboard/bundles" element={<DashboardShell />} />
               <Route path="/dashboard/deals" element={<DashboardShell />} />
-              {/* Messages page imeondolewa - links za zamani zinaelekezwa Deal Rooms */}
-              <Route path="/dashboard/messages" element={<Navigate to="/dashboard/deals" replace />} />
               <Route path="/dashboard/notifications" element={<DashboardShell />} />
               <Route path="/dashboard/transactions" element={<DashboardShell />} />
               <Route path="/dashboard/activity" element={<DashboardShell />} />
@@ -134,7 +132,6 @@ function App() {
               <Route path="/dashboard/buyer/searches" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/bundles" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/deals" element={<DashboardShell />} />
-              <Route path="/dashboard/buyer/messages" element={<Navigate to="/dashboard/buyer/deals" replace />} />
               <Route path="/dashboard/buyer/notifications" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/waiting" element={<DashboardShell />} />
               <Route path="/dashboard/buyer/transactions" element={<DashboardShell />} />

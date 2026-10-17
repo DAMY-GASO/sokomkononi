@@ -567,7 +567,14 @@ export default function PostPropertyForm({
           if (extra.vyumba) detailBody.bedrooms = Number(extra.vyumba);
           if (extra.bafu) detailBody.bathrooms = Number(extra.bafu);
           if (extra.ukubwa) detailBody.area_sqm = String(extra.ukubwa);
-          detailBody.property_type = "HOUSE";
+          const PROPERTY_TYPE_MAP = {
+            "Nyumba ya Kawaida": "HOUSE",
+            "Apartment": "APARTMENT",
+            "Villa": "VILLA",
+            "Studio / Chumba": "STUDIO",
+            "Townhouse": "TOWNHOUSE",
+          };
+          detailBody.property_type = PROPERTY_TYPE_MAP[extra.aina] || "HOUSE";
         } else if (categoryKey === "viwanja") {
           detailBody.size = extra.ukubwa ? String(Number(extra.ukubwa)) : "0";
           detailBody.size_unit = SIZE_UNIT_MAP[extra.kipimo] || "SQM";

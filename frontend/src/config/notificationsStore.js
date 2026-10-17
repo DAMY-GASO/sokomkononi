@@ -209,7 +209,7 @@ function norm(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
-    audience: raw.audience || "user",
+    audience: String(raw.audience || "user").toLowerCase() === "admin" ? "admin" : "user",
     type: mapNotificationType(raw.notification_type),
     rawType: raw.notification_type,
     title: raw.title,

@@ -12,8 +12,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { dealsApi } from "../api/deals.js";
 import { transactionsApi } from "../api/transactions.js";
-import { getTransactionByDealRoom } from "./transactionLifecycleStore.js";
-import { getListings } from "./listingsStore.js";
+import { getListings, useListings } from "./listingsStore.js";
 import { getUser as getUserById } from "./usersStore.js";
 
 const STORAGE_KEY = "sokomkononi_deals_v1";
@@ -784,6 +783,7 @@ export function getDealTranscript(dealId, currentUserId = null, lang = "sw") {
 // ============================================================
 export function useDeals(currentUserId) {
   const [deals, setDeals] = useState(() => getDeals());
+  const liveListings = useListings();
 
   useEffect(() => {
     hydrateDealsFromApi(currentUserId ?? null);
@@ -797,7 +797,7 @@ export function useDeals(currentUserId) {
   }, [currentUserId]);
 
   return useMemo(() => {
-    const listings = getListings();
+    const listings = liveListings || getListings();
     return deals.map((d) => {
       const needsPrice = !d.askingPrice || d.askingPrice <= 0;
       const needsMeta = !d.category || !d.location || !d.listingTitle;
@@ -816,7 +816,7 @@ export function useDeals(currentUserId) {
         listingTitle: d.listingTitle || cached.title || "",
       };
     });
-  }, [deals]);
+  }, [deals, liveListings]);
 }
 
 export function useDeal(id) {

@@ -79,7 +79,7 @@ import {
   confirmPaymentAsync,
   cancelTransactionAsync,
   TX_STATUS,
-} from "../../../config/transactionLifecycleStore.js";
+} from "../../../config/transactionsStore.js";
 
 // ============================================================
 // HELPERS

@@ -329,3 +329,193 @@ export function useMyTransactionsAggregate() {
 export function useFeeTransactions() {
   return useTransactions();
 }
+
+// ============================================================
+// LIFECYCLE API (migrated from transactionLifecycleStore)
+// ============================================================
+// These are the operations DealRooms.jsx / PayListingFee / etc. need.
+// They wrap transactionsApi.* and share the same normalized store.
+import { transactionsApi as _txApi } from "../api/transactions.js";
+
+export const TX_STATUS = {
+  PENDING: "pending",
+  RESERVED: "reserved",
+  RESERVED_PAID: "reserved_paid",
+  INSPECTING: "inspecting",
+  DECIDED_ACCEPT: "decided_accept",
+  DECIDED_REJECT: "decided_reject",
+  AWAITING_CONFIRMATION: "awaiting_confirmation",
+  COMPLETED: "completed",
+  CANCELLED: "cancelled",
+  DISPUTED: "disputed",
+  EXPIRED: "expired",
+};
+
+function _findTx(id) {
+  return readFromStorage().find((t) => String(t.id) === String(id)) || null;
+}
+function _upsertTx(tx) {
+  if (!tx) return;
+  const list = readFromStorage().filter((t) => String(t.id) !== String(tx.id));
+  saveTransactions([tx, ...list]);
+}
+
+async function _mutate({ id, patch, apiCall }) {
+  const previous = readFromStorage();
+  const current = _findTx(id);
+  if (!current) return { ok: false, error: new Error("Transaction not found") };
+  _upsertTx({ ...current, ...patch, updatedAt: new Date().toISOString() });
+  try {
+    const raw = await apiCall();
+    const normalized = normalizeTransactionRow(raw) || normalizeMyTransaction(raw);
+    if (normalized) _upsertTx(normalized);
+    return { ok: true, transaction: normalized || current };
+  } catch (err) {
+    saveTransactions(previous);
+    return { ok: false, error: err };
+  }
+}
+
+export async function createTransactionAsync(dealRoomId) {
+  if (!dealRoomId) return { ok: false, error: new Error("dealRoomId is required") };
+  try {
+    const raw = await _txApi.create(dealRoomId);
+    const tx = normalizeTransactionRow(raw) || normalizeMyTransaction(raw);
+    if (tx) _upsertTx(tx);
+    return { ok: true, transaction: tx };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export async function createReservationAsync(id, durationHours = 48) {
+  return _mutate({
+    id,
+    patch: { status: TX_STATUS.RESERVED, reservationHours: durationHours },
+    apiCall: () => _txApi.createReservation(id, durationHours),
+  });
+}
+
+export async function payReservationAsync(id, opts = {}) {
+  if (!id) return { ok: false, error: new Error("Transaction id is required") };
+  const isCredits = opts.paymentReference === "credits";
+  if (isCredits) {
+    _upsertTx({ ..._findTx(id), status: TX_STATUS.RESERVED_PAID, reservationPaidAt: new Date().toISOString() });
+  }
+  try {
+    const raw = await _txApi.payReservation(id, {
+      payment_reference: opts.paymentReference || undefined,
+      payment_method: opts.paymentMethod || undefined,
+      phone: opts.phone || undefined,
+    });
+    // FimiPay order — caller polls status
+    if (raw?.order_id && !isCredits) {
+      return { ok: true, pending: true, orderId: raw.order_id, checkoutUrl: raw.payment_url || raw.checkout_url || null, transaction: _findTx(id) };
+    }
+    const tx = normalizeTransactionRow(raw) || normalizeMyTransaction(raw);
+    if (tx) _upsertTx(tx);
+    return { ok: true, pending: false, transaction: tx || _findTx(id) };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export async function pollReservationStatusAsync(id, { attempts = 15, intervalMs = 4000 } = {}) {
+  for (let i = 0; i < attempts; i++) {
+    await new Promise((r) => setTimeout(r, intervalMs));
+    try {
+      const raw = await _txApi.detail(id);
+      const tx = normalizeTransactionRow(raw) || normalizeMyTransaction(raw);
+      if (!tx) continue;
+      _upsertTx(tx);
+      if ([TX_STATUS.RESERVED_PAID, TX_STATUS.INSPECTING, TX_STATUS.DECIDED_ACCEPT, TX_STATUS.AWAITING_CONFIRMATION, TX_STATUS.COMPLETED].includes(tx.status)) {
+        return { ok: true, transaction: tx };
+      }
+      if ([TX_STATUS.CANCELLED, TX_STATUS.EXPIRED].includes(tx.status)) {
+        return { ok: false, transaction: tx, error: new Error("Reservation expired/cancelled") };
+      }
+    } catch { /* retry */ }
+  }
+  return { ok: false, error: new Error("Reservation not activated after waiting") };
+}
+
+export async function startInspectionAsync(id, durationHours = 24) {
+  return _mutate({
+    id,
+    patch: { status: TX_STATUS.INSPECTING, inspectionHours: durationHours, inspectionStartedAt: new Date().toISOString() },
+    apiCall: () => _txApi.startInspection(id, durationHours),
+  });
+}
+
+const _DECISION_MAP = {
+  READY_FOR_FINAL_PAYMENT: "READY_FOR_FINAL_PAYMENT",
+  NOT_AS_DESCRIBED: "NOT_AS_DESCRIBED",
+  REQUEST_NEGOTIATION: "REQUEST_NEGOTIATION",
+  CANCEL_TRANSACTION: "CANCEL_TRANSACTION",
+  ACCEPT: "READY_FOR_FINAL_PAYMENT",
+  REJECT: "NOT_AS_DESCRIBED",
+  CANCEL: "CANCEL_TRANSACTION",
+};
+
+export async function submitDecisionAsync(id, { buyerDecision, buyerDecisionNote = "" }) {
+  if (!buyerDecision) return { ok: false, error: new Error("buyerDecision required") };
+  const apiValue = _DECISION_MAP[String(buyerDecision).toUpperCase()] || buyerDecision;
+  const newStatus =
+    apiValue === "READY_FOR_FINAL_PAYMENT" ? TX_STATUS.DECIDED_ACCEPT
+    : apiValue === "REQUEST_NEGOTIATION" || apiValue === "NOT_AS_DESCRIBED" ? TX_STATUS.DISPUTED
+    : TX_STATUS.CANCELLED;
+  return _mutate({
+    id,
+    patch: { status: newStatus, buyerDecision: apiValue, buyerDecisionNote },
+    apiCall: () => _txApi.submitDecision(id, { buyer_decision: apiValue, buyer_decision_note: buyerDecisionNote }),
+  });
+}
+
+export async function uploadFinalPaymentAsync(id, { finalPaymentProof, finalPaymentReference = "" }) {
+  if (!finalPaymentProof) return { ok: false, error: new Error("finalPaymentProof required") };
+  return _mutate({
+    id,
+    patch: { status: TX_STATUS.AWAITING_CONFIRMATION, finalPaymentReference, finalPaymentUploadedAt: new Date().toISOString() },
+    apiCall: () => _txApi.uploadFinalPayment(id, { final_payment_proof: finalPaymentProof, final_payment_reference: finalPaymentReference }),
+  });
+}
+
+export async function confirmPaymentAsync(id, confirmationNote = "") {
+  return _mutate({
+    id,
+    patch: { status: TX_STATUS.COMPLETED, confirmationNote, confirmedAt: new Date().toISOString() },
+    apiCall: () => _txApi.confirmPayment(id, confirmationNote),
+  });
+}
+
+export async function cancelTransactionAsync(id, cancellationReason = "") {
+  return _mutate({
+    id,
+    patch: { status: TX_STATUS.CANCELLED, cancellationReason, cancelledAt: new Date().toISOString() },
+    apiCall: () => _txApi.cancel(id, cancellationReason),
+  });
+}
+
+export async function fetchDealRoomDetailAsync(dealRoomId) {
+  if (!dealRoomId) return { ok: false, error: new Error("dealRoomId is required") };
+  try {
+    const { dealsApi } = await import("../api/deals.js");
+    const data = await dealsApi.detail(dealRoomId);
+    return {
+      ok: true,
+      dealRoom: data,
+      messages: data?.messages || [],
+      paymentProof: data?.payment_proof || null,
+      reservation: { fee: data?.reservation_fee, hours: data?.reservation_hours, method: data?.reservation_method, expiresAt: data?.reservation_expires_at },
+      disputeNote: data?.dispute_note || "",
+    };
+  } catch (err) {
+    return { ok: false, error: err, messages: [], paymentProof: null };
+  }
+}
+
+export function getDealTranscript(dealId, currentUserId = null, lang = "sw") {
+  const tx = _findTx(dealId);
+  if (!tx) return null;
+  return { deal: tx, meta: { dealRoomId: tx.id, listingTitle: tx.listingTitle, buyerName: tx.buyerName, sellerName: tx.sellerName, status: tx.status }, messages: [] };
+}

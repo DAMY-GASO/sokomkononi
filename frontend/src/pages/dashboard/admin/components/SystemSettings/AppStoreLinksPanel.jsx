@@ -12,7 +12,8 @@ import {
 
 export default function AppStoreLinksPanel() {
   const { lang } = useLanguage();
-  const [links, setLinksLocal] = useAppStoreLinks();
+  const [storeLinks] = useAppStoreLinks();
+  const [links, setLinks] = useState(storeLinks || { play: "", appstore: "" });
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -20,8 +21,12 @@ export default function AppStoreLinksPanel() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  useEffect(() => {
+    if (storeLinks) setLinks(storeLinks);
+  }, [storeLinks]);
+
   const setField = (patch) => {
-    setLinksLocal({ ...links, ...patch });
+    setLinks((prev) => ({ ...prev, ...patch }));
     setDirty(true);
   };
 
@@ -41,7 +46,10 @@ export default function AppStoreLinksPanel() {
     }
   };
 
-  const hasChanges = dirty;
+  const hasChanges =
+    dirty &&
+    (links.play !== storeLinks?.play ||
+     links.appstore !== storeLinks?.appstore);
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-4 min-w-0">
