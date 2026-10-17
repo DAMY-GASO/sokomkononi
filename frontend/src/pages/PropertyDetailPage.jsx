@@ -501,7 +501,7 @@ export default function PropertyDetailPage() {
   const isOwner = Boolean(user && ownerId != null && String(ownerId) === String(user.id));
 
   const savedIds = useSavedIds();
-  const isSaved = property ? savedIds.includes(property.id) : false;
+  const isSaved = property ? savedIds.some((id) => String(id) === String(property.id)) : false;
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     fetchListingDetailAsync(id).finally(() => setHydrated(true));
@@ -663,18 +663,35 @@ export default function PropertyDetailPage() {
     });
   };
 
-  const handleSave = () => toggleSaved(property.id, property);
+  const handleSave = async () => {
+    try {
+      const res = await toggleSaved(property.id, property);
+      if (res?.ok) {
+        if (res.saved) toast.success(t(lang, "Imehifadhiwa", "Saved"));
+        else toast.success(t(lang, "Imeondolewa", "Removed"));
+      }
+    } catch (e) {
+      toast.error(t(lang, "Imeshindwa kuhifadhi.", "Failed to save."));
+    }
+  };
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: property.title,
-        text: property.description || property.title,
-        url: window.location.href,
-      });
-    } else if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      alert(t(lang, "Link imenakiliwa!", "Link copied!"));
+  const handleShare = async () => {
+    const shareData = {
+      title: property.title,
+      text: property.description || property.title,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success(t(lang, "Link imenakiliwa!", "Link copied!"));
+      }
+    } catch (err) {
+      if (!err || err.name !== "AbortError") {
+        toast.error(t(lang, "Imeshindwa kushiriki.", "Failed to share."));
+      }
     }
   };
 

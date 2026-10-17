@@ -108,7 +108,18 @@ export default function LocationPicker({
       },
       (err) => {
         setLocating(false);
-        setGeoError(err.message || t("Imeshindwa kupata mahali pako.", "Couldn't get your location."));
+        let msg = err && err.message ? err.message : t("Imeshindwa kupata mahali pako.", "Couldn't get your location.");
+        if (err && err.code === 1) {
+          msg = t(
+            "Ruhusa ya mahali imekataliwa. Ruhusu geolocation kwenye browser yako, na hakikisha una-ACCESS kwa HTTPS (http://localhost inaruhusiwa).",
+            "Location permission denied. Allow geolocation in your browser, and make sure you're on HTTPS (http://localhost is allowed)."
+          );
+        } else if (err && err.code === 2) {
+          msg = t("Mahali haipatikani kwa sasa.", "Position unavailable right now.");
+        } else if (err && err.code === 3) {
+          msg = t("Muda wa kutafuta mahali umeisha. Jaribu tena.", "Timed out finding your location. Try again.");
+        }
+        setGeoError(msg);
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
     );

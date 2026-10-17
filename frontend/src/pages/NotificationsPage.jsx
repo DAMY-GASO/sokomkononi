@@ -225,7 +225,11 @@ export default function NotificationsPage() {
     filter === "unread" ? notifications.filter((n) => !n.read) : notifications;
 
   const handleMarkRead = (id) => markRead(id);
-  const handleMarkAllRead = () => markAllRead();
+  const handleMarkAllRead = async () => {
+    const res = await markAllRead();
+    if (res?.ok) toast.success(lang === "sw" ? "Zote zimesomwa" : "All marked as read");
+    else toast.error(lang === "sw" ? "Imeshindwa kuweka zote kama zimesomwa" : "Failed to mark all read");
+  };
   const handleRemove = (id) => remove(id);
 
   const handleClearAll = async () => {
@@ -238,7 +242,7 @@ export default function NotificationsPage() {
     });
     if (!ok) return;
     const res = await markAllRead();
-    if (!res?.ok) toast.error(res?.error?.message || "Failed.");
+    if (!res?.ok) toast.error(res?.error?.message || (lang === "sw" ? "Imeshindwa kufuta alama" : "Failed to clear marks"));
     else toast.success(lang === "sw" ? "Alama zimeondolewa" : "Marks cleared");
   };
 
@@ -253,7 +257,7 @@ export default function NotificationsPage() {
     });
     if (!ok) return;
     const res = await clearAll();
-    if (!res?.ok) toast.error(res?.error?.message || "Failed.");
+    if (!res?.ok) toast.error(res?.error?.message || (lang === "sw" ? "Imeshindwa kufuta" : "Failed to delete"));
     else toast.success(lang === "sw" ? "Zimefutwa" : "Deleted");
   };
 

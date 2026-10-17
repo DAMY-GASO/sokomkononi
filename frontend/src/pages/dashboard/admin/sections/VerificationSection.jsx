@@ -143,6 +143,18 @@ function DocumentPreview({ doc, verificationId, lang }) {
         const newUrl = res.document.url || res.document.preview_url;
         if (newUrl) {
           setFreshUrl(newUrl);
+          try {
+            const check = await fetch(newUrl, { method: "GET", headers: { Range: "bytes=0-0" } });
+            const ct = (check.headers.get("content-type") || "").toLowerCase();
+            if (!check.ok || ct.includes("xml") || ct.includes("html")) {
+              throw new Error("File missing or unreadable");
+            }
+          } catch (probeErr) {
+            console.warn("[DocumentPreview] file missing in storage:", probeErr);
+            setLoadError(true);
+            setLoading(false);
+            return;
+          }
           window.open(newUrl, "_blank", "noopener,noreferrer");
         } else {
           setLoadError(true);
