@@ -9,6 +9,9 @@
 //  - TYPE_LABELS.success → "Mafanikio" / "Success"
 //  - credits default → {} (sio { listing: 1 })
 //  - code value → form.code (sio form.code || form.id)
+//  - CODE_DISPLAY: badilisha `b_listing_starter` → "Listing Starter"
+//  - displayBundleCode(): fallback kwa codes zisizojulikana
+//  - Search inajumuisha displayCode
 // ============================================================
 import React, { useState } from "react";
 import {
@@ -36,7 +39,7 @@ import { useLanguage } from "../context/LanguageContext.jsx";
 const TYPE_LABELS = {
   listing: { sw: "Kuweka Mali", en: "Listing" },
   reservation: { sw: "Kuhifadhi", en: "Reservation" },
-  success: { sw: "Mafanikio", en: "Success" }, // ⬅️ Badilishwa
+  success: { sw: "Mafanikio", en: "Success" },
   package: { sw: "Kifurushi Maalum", en: "Package" },
   boost: { sw: "Kukuza", en: "Boost" },
   leading: { sw: "Kuongoza", en: "Leading" },
@@ -53,6 +56,63 @@ const CREDIT_LABELS = {
   ads: { sw: "Matangazo", en: "Ads" },
   premium: { sw: "Hadhi ya Juu", en: "Premium" },
 };
+
+// ============================================================
+// CODE DISPLAY — badilisha `code` kuwa jina linaloeleweka
+// ============================================================
+const CODE_DISPLAY = {
+  // Listing bundles
+  b_listing_starter: { sw: "Kifurushi cha Kuanzia", en: "Listing Starter" },
+  b_listing_basic: { sw: "Kifurushi cha Msingi", en: "Listing Basic" },
+  b_listing_standard: { sw: "Kifurushi cha Kawaida", en: "Listing Standard" },
+  b_listing_premium: { sw: "Kifurushi cha Juu", en: "Listing Premium" },
+  b_listing_pro: { sw: "Kifurushi cha Pro", en: "Listing Pro" },
+
+  // Boost bundles
+  b_boost_starter: { sw: "Boost ya Kuanzia", en: "Boost Starter" },
+  b_boost_pack: { sw: "Kifurushi cha Boost", en: "Boost Pack" },
+  b_boost_premium: { sw: "Boost ya Juu", en: "Boost Premium" },
+
+  // Leading bundles
+  b_leading_pack: { sw: "Kifurushi cha Kuongoza", en: "Leading Pack" },
+  b_leading_starter: { sw: "Kuongoza kwa Kuanzia", en: "Leading Starter" },
+
+  // Ads bundles
+  b_ads_pack: { sw: "Kifurushi cha Matangazo", en: "Ads Pack" },
+  b_ads_starter: { sw: "Matangazo ya Kuanzia", en: "Ads Starter" },
+
+  // Premium / Package
+  b_premium_bundle: { sw: "Kifurushi cha Hadhi ya Juu", en: "Premium Bundle" },
+  b_premium_pack: { sw: "Pakiti ya Hadhi ya Juu", en: "Premium Pack" },
+
+  // Reservation
+  b_reservation_pack: { sw: "Kifurushi cha Kuhifadhi", en: "Reservation Pack" },
+  b_reservation_starter: {
+    sw: "Kuhifadhi kwa Kuanzia",
+    en: "Reservation Starter",
+  },
+
+  // Success
+  b_success_pack: { sw: "Kifurushi cha Mafanikio", en: "Success Pack" },
+  b_success_starter: { sw: "Mafanikio ya Kuanzia", en: "Success Starter" },
+};
+
+/**
+ * displayBundleCode — inabadilisha `code` kuwa jina linaloeleweka.
+ *
+ * - Kama `code` ipo kwenye CODE_DISPLAY, inarudisha SW/EN kulingana na lang.
+ * - Kama haipo, inaondoa prefix `b_`, inabadilisha `_` kuwa space,
+ *   na kufanya Title Case (mfano `b_my_pack` → `My Pack`).
+ */
+function displayBundleCode(code, lang = "sw") {
+  if (!code) return "";
+  const entry = CODE_DISPLAY[code];
+  if (entry) return pickLang(entry, lang);
+  return String(code)
+    .replace(/^b_/, "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 const pickLang = (obj, lang) =>
   obj?.[lang] || obj?.[lang === "sw" ? "en" : "sw"] || "";
@@ -71,7 +131,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
       name: { sw: "", en: "" },
       description: { sw: "", en: "" },
       price: 0,
-      credits: {}, // ⬅️ Badilishwa kutoka { listing: 1 }
+      credits: {},
       validityDays: 90,
       services: [],
       discountPercent: 0,
@@ -94,7 +154,8 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
     e.preventDefault();
 
     const missing = [];
-    if (!form.code?.trim()) missing.push(t("Kitambulisho (ID)", "Identifier (ID)"));
+    if (!form.code?.trim())
+      missing.push(t("Kitambulisho (ID)", "Identifier (ID)"));
     if (!form.name?.sw?.trim()) missing.push(t("Jina (SW)", "Name (SW)"));
     if (!form.name?.en?.trim()) missing.push(t("Jina (EN)", "Name (EN)"));
     if (!form.description?.sw?.trim())
@@ -149,7 +210,7 @@ function BundleFormModal({ bundle, onSave, onClose, lang, saving, error }) {
               <span className="text-[#C1502E]">*</span>
             </label>
             <input
-              value={form.code || ""} // ⬅️ Badilishwa
+              value={form.code || ""}
               onChange={(e) => updateField("code", e.target.value)}
               disabled={!!bundle || saving}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-secondary"
@@ -453,11 +514,13 @@ export default function AdminBundles() {
   const filtered = bundles.filter((b) => {
     const matchesType = filterType === "all" || b.type === filterType;
     const q = searchQuery.toLowerCase();
+    const displayCode = displayBundleCode(b.code, lang).toLowerCase();
     const matchesSearch =
       !q ||
       (b.name?.sw || "").toLowerCase().includes(q) ||
       (b.name?.en || "").toLowerCase().includes(q) ||
-      String(b.code || "").toLowerCase().includes(q);
+      String(b.code || "").toLowerCase().includes(q) ||
+      displayCode.includes(q);
     return matchesType && matchesSearch;
   });
 
@@ -589,13 +652,17 @@ export default function AdminBundles() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-xs sm:text-sm text-primary truncate">
-                        {pickLang(b.name, lang) || b.code}
+                        {pickLang(b.name, lang) ||
+                          displayBundleCode(b.code, lang)}
                       </p>
                       <p className="text-[10px] sm:text-xs text-secondary capitalize">
                         {pickLang(TYPE_LABELS[b.type], lang) || b.type}
                       </p>
-                      <p className="text-[10px] text-muted font-mono truncate">
-                        {b.code}
+                      <p
+                        className="text-[10px] text-muted font-mono truncate"
+                        title={`Code: ${b.code}`}
+                      >
+                        {displayBundleCode(b.code, lang)}
                       </p>
                     </div>
                     <span
