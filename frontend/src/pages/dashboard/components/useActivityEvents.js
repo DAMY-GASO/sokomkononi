@@ -3,7 +3,6 @@
 // FIX: uses useMyListings (not the merged list) and passes
 //      currentUserId to useDeals. Recipient/sender classification
 //      is now correct for both buyers and sellers.
-// NEW: transactions kutoka transactionLifecycleStore (sale/purchase).
 // NEW: bundle purchases zinaonekana kwenye shughuli.
 // NEW: simulations zimeondolewa (hakuna "listing posted" fake events).
 // ============================================================
@@ -24,7 +23,7 @@ import { useTransactions as useFeeTransactions } from "../../../config/transacti
 import {
   useTransactions as useLifecycleTransactions,
   TX_STATUS,
-} from "../../../config/transactionLifecycleStore.js";
+} from "../../../config/transactionsStore.js";
 import {
   useSavedIds,
   useSavedSnapshots,

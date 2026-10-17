@@ -69,7 +69,7 @@ export default function AdminLoginPage() {
   // Admin ambaye tayari ameingia (session ya admin) haoni tena fomu ya login.
   // Session hii ni tofauti na ya watumiaji, kwa hiyo haiathiri tab za user.
   useEffect(() => {
-    if (!isLoading && isAdmin) navigate(`${ADMIN_PATH}/dashboard`, { replace: true });
+    if (!isLoading && isAdmin) navigate(`${ADMIN_PATH}/overview`, { replace: true });
   }, [isAdmin, isLoading, navigate]);
 
   const [form, setForm] = useState({ email: "", password: "" });
@@ -106,7 +106,7 @@ export default function AdminLoginPage() {
     }
 
     // Mafanikio — tokens zimewekwa na user ni admin
-    navigate(`${ADMIN_PATH}/dashboard`);
+    navigate(`${ADMIN_PATH}/overview`);
   }
 
   // ✅ FIX #26: Ondoa `|| "..."` kwenye headings

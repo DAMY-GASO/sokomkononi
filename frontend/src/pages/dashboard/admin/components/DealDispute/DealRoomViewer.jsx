@@ -55,17 +55,76 @@ function DownloadBar({ dealId, lang }) {
     setDownloading(format);
 
     try {
-      const transcript = getDealTranscript(dealId, null, lang);
-      if (!transcript) {
+      // Read the deal from the store, OR fall back to the `deal` prop passed
+      // in by the parent — so admin transcript works even when the deal has
+      // never been hydrated locally (admin-only flow).
+      const source = getDealTranscript(dealId, null, lang)?.deal || deal;
+      if (!source) {
         throw new Error(t("Deal haipatikani.", "Deal not found."));
       }
+
+      const labelSender = (m) => {
+        if (m.senderId != null && source.buyerId != null && String(m.senderId) === String(source.buyerId)) {
+          return "buyer";
+        }
+        if (m.senderId != null && source.sellerId != null && String(m.senderId) === String(source.sellerId)) {
+          return "seller";
+        }
+        return "admin";
+      };
+
+      const transcript = {
+        deal: source,
+        meta: {
+          dealRoomId: source.id,
+          listingTitle: source.listingTitle,
+          location: source.location,
+          category: source.category,
+          buyerName: source.buyerName,
+          buyerId: source.buyerId,
+          sellerName: source.sellerName,
+          sellerId: source.sellerId,
+          status: source.status,
+          askingPrice: source.askingPrice,
+          currentOffer: source.currentOffer,
+          agreedPrice: source.agreedPrice,
+          agreedAt: source.agreedAt || null,
+          reservationFee: source.reservationFee || 0,
+          reservationHours: source.reservationHours || null,
+          reservationMethod: source.reservationMethod || "",
+          reservationExpiresAt: source.reservationExpiresAt || null,
+          createdAt: source.createdAt,
+          updatedAt: source.updatedAt,
+          exportedAt: new Date().toISOString(),
+          exportedBy: "admin",
+          labels: {
+            title: t("Ripoti ya Mazungumzo — Deal Room", "Deal Room Transcript"),
+            dealInfo: t("Taarifa za Deal", "Deal Info"),
+            participants: t("Washiriki", "Participants"),
+            listing: t("Mali", "Listing"),
+            timeline: t("Muda", "Timeline"),
+            conversation: t("Mazungumzo", "Conversation"),
+            offer: t("Ofa", "Offer"),
+            message: t("Ujumbe", "Message"),
+            from: t("Kutoka", "From"),
+            to: t("Kwa", "To"),
+            date: t("Tarehe", "Date"),
+            you: t("Wewe", "You"),
+            other: t("Mwingine", "Other"),
+            admin: t("Admin", "Admin"),
+          },
+        },
+        messages: (source.messages || []).map((m) => ({
+          ...m,
+          sender: labelSender(m),
+        })),
+      };
+
       await exportTranscript(transcript, format);
       setDownloading(null);
     } catch (err) {
       console.error("[DealRoomViewer] download failed:", err);
-      setError(
-        err?.message || t("Imeshindwa kupakua.", "Failed to download.")
-      );
+      setError(err?.message || t("Imeshindwa kupakua.", "Failed to download."));
       setDownloading(null);
     }
   };

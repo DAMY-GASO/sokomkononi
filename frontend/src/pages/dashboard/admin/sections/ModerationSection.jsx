@@ -1179,9 +1179,6 @@ export default function ModerationSection() {
         <AdminListingImageManager
           listing={imageListing}
           onClose={() => setImageListing(null)}
-          onUpdated={() => {
-            setHistory((prev) => ({ ...prev }));
-          }}
         />
       )}
     </>

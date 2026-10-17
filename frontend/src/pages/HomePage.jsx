@@ -15,8 +15,6 @@ import FeaturedSection from "../components/shop/FeaturedSection.jsx";
 import CategoryBento from "../components/shop/CategoryBento.jsx";
 import CountdownSaleSection from "../components/shop/CountdownSaleSection.jsx";
 import TestimonialsSection from "../components/shop/TestimonialsSection.jsx";
-import NewsletterCTA from "../components/shop/NewsletterCTA.jsx";
-
 import { usePublicListings } from "../config/listingsStore.js";
 import { usePopularCategories } from "../config/categoriesStore.js";
 import { useContent } from "../config/contentStore.js";
@@ -102,7 +100,6 @@ export default function HomePage() {
         />
         {boosted.length > 0 && <CountdownSaleSection listings={boosted} savedIds={savedIds} onToggleSave={handleToggleSave} />}
         <TestimonialsSection testimonials={testimonials} />
-        <NewsletterCTA />
         <NewsletterStrip variant="compact" />
       </main>
       <Footer selectedLang={lang} />

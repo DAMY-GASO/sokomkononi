@@ -2099,3 +2099,20 @@ html.dark body textarea::placeholder {
 }
 html.dark body select option { background-color: #011957; color: #FFFFFF; }
 
+
+/* ============================================================
+   MISSING PRIMITIVE CLASSES — added by automated fix
+   (referenced by AdminLoginPage, auth pages, marketing)
+   ============================================================ */
+.h-display { font-size: clamp(2rem, 5vw, 3.75rem); font-weight: 700; letter-spacing: -0.028em; line-height: 1.05; }
+.h-title   { font-size: clamp(1.5rem, 3vw, 1.875rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+.h-section { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
+.h-card    { font-size: 1rem; font-weight: 600; line-height: 1.4; }
+
+.cta-gradient {
+  background: linear-gradient(135deg, #FEA406 0%, #FD8706 100%);
+  color: #011957;
+  transition: filter 0.15s ease;
+}
+.cta-gradient:hover:not(:disabled) { filter: brightness(1.04); }
+.cta-gradient:disabled { opacity: 0.55; cursor: not-allowed; }

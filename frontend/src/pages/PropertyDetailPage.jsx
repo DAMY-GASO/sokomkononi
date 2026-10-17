@@ -26,6 +26,7 @@ import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { useWaitingList, joinWaitingListAsync } from "../config/waitingListStore.js";
 import { getOrCreateDealAsync } from "../config/dealsStore.js";
 import { trackViewed } from "../config/recentlyViewedStore.js";
+import { pickVariantUrl } from "../utils/imageVariants.js";
 import {
   CATEGORY_EXTRA,
   getPostingConfig,
@@ -100,11 +101,7 @@ function ImageGallery({ property, lang }) {
     ...(property.primary_image ? [property.primary_image] : []),
   ];
   const images = rawList
-    .map((img) => {
-      if (!img) return null;
-      if (typeof img === "string") return img;
-      return img.image_url || img.url || img.image || img.src || null;
-    })
+    .map((img) => pickVariantUrl(img, "detail") || (typeof img === "string" ? img : null))
     .filter(Boolean)
     .filter((v, i, arr) => arr.indexOf(v) === i);
   const Icon = CATEGORY_ICONS[property.category] || HomeIcon;
@@ -505,6 +502,10 @@ export default function PropertyDetailPage() {
 
   const savedIds = useSavedIds();
   const isSaved = property ? savedIds.includes(property.id) : false;
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    fetchListingDetailAsync(id).finally(() => setHydrated(true));
+  }, [id]);
   const [contactLoading, setContactLoading] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
 
@@ -619,6 +620,34 @@ export default function PropertyDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, property]);
 
+  if (!hydrated && !property) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="aspect-square rounded-2xl skeleton" />
+              <div className="bg-white rounded-2xl p-5 space-y-3">
+                <div className="h-6 w-3/4 skeleton" />
+                <div className="h-4 w-1/2 skeleton" />
+                <div className="h-8 w-1/3 skeleton" />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-white rounded-2xl p-5 space-y-3">
+                <div className="h-14 w-14 rounded-full skeleton" />
+                <div className="h-4 w-full skeleton" />
+                <div className="h-10 w-full skeleton" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <Footer />
+        <BottomNav />
+      </div>
+    );
+  }
   if (!property) return <ListingNotFound lang={lang} />;
 
   const handleJoinWaitlist = () => {

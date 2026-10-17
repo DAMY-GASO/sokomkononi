@@ -154,12 +154,12 @@ export default function PackageRow({
       <div className="flex items-center gap-2">
         <div className="flex flex-col items-end gap-0.5">
           {pkg.pricing?.discount_percent > 0 && (
-            <span className="text-[10px] text-muted line-through">
-              {formatTZS(pkg.pricing.base_price)}
+            <span className="text-[10px] text-muted">
+              {t("Baada ya punguzo", "After discount")}: {formatTZS(pkg.pricing.final_price)} (−{pkg.pricing.discount_percent}%)
             </span>
           )}
           <EditableAmount
-            value={pkg.pricing?.discount_percent > 0 ? pkg.pricing.final_price : pkg.price}
+            value={pkg.price}
             onSave={onUpdatePrice}
           />
         </div>

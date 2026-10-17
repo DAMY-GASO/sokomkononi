@@ -229,6 +229,7 @@ export default function BrowseProperties({ lang = "sw", excludeSellerId = null }
   const [page, setPage] = useState(1);
   const PER_PAGE = 12;
   const savedIds = useSavedIds();
+  const allCategories = useActiveCategories();
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -485,7 +486,7 @@ export default function BrowseProperties({ lang = "sw", excludeSellerId = null }
                   {t("Vichujio:", "Filters:")}
                 </span>
                 {filters.categories.map((key) => {
-                  const cat = useActiveCategories().find((c) => c.key === key);
+                  const cat = allCategories.find((c) => c.key === key);
                   const label = cat?.label?.[lang] || cat?.label?.sw || key;
                   return (
                     <span key={key} className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-[#FEA406]">
@@ -516,7 +517,7 @@ export default function BrowseProperties({ lang = "sw", excludeSellerId = null }
                   }
                 >
                   {pageItems.map((p) => {
-                    const cat = useActiveCategories().find((c) => c.key === p.category);
+                    const cat = allCategories.find((c) => c.key === p.category);
                     const Icon = getCategoryIcon(cat?.iconKey || "Home");
                     return (
                       <ListingCard

@@ -4,3 +4,29 @@ node_modules/
 .env.development
 dist/
 ".env" 
+
+# Editor / agent backups
+*.bak
+*.bak.*
+*.broken
+*.broken.*
+*.orig
+*.rej
+*.swp
+*~
+
+# Build artifacts
+dist/
+dist-ssr/
+node_modules/
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

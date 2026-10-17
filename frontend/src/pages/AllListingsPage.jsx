@@ -52,7 +52,7 @@ export default function AllListingsPage() {
 
   return (
     <div className="min-h-screen bg-page">
-      <Navbar lang={lang} setLang={setLang} categories={categories} />
+      <Navbar categories={categories} />
 
       <section className="py-8 sm:py-10 px-4 max-w-7xl mx-auto">
         {/* HEADER */}
