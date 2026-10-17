@@ -7,8 +7,9 @@
 // - REQUEST_NEGOTIATION → submitDecisionAsync
 // - Report buyer/seller, ContactDrawer (buyer+seller), download
 // - Input ya namba ya simu / kadi kwenye ReservationPanel
-// - Floating "Lipia Reservation" button
+// - Floating "Lipia Reservation" button (kama bado haijalipwa)
 // - Silent 404 handling kwa deals zisizopo backend
+// - Role-based filter (buyer/seller)
 // ============================================================
 
 import React, { useState, useRef, useEffect } from "react";
@@ -1479,7 +1480,19 @@ function DealDetail({
     try {
       const reportedUserId =
         side === "buyer" ? deal.sellerId : deal.buyerId;
-      await dealsApi.report(deal.dealRoomId || deal.id, {
+
+      // ── MPYA: Pata dealRoomId sahihi ──
+      let dealRoomId = deal.dealRoomId;
+      if (!dealRoomId) {
+        try {
+          const detailRes = await dealsApi.detail(deal.id);
+          dealRoomId = detailRes?.id ?? detailRes?.deal_room_id ?? deal.id;
+        } catch {
+          dealRoomId = deal.id;
+        }
+      }
+
+      await dealsApi.report(dealRoomId, {
         reported_user_id: reportedUserId,
         reason: reportReason,
         details: reportDetails.trim(),
@@ -2045,11 +2058,14 @@ function DealDetail({
         </div>
       )}
 
-      {/* ── Floating button "Lipia Reservation" ── */}
+      {/* ── Floating button "Lipia Reservation" (kama bado haijalipwa) ── */}
       {isBuyer &&
         deal.status === "accepted" &&
         !reserveOpen &&
-        !deal.pendingPayment && (
+        !deal.pendingPayment &&
+        !deal.reservationPaidAt &&
+        !deal.transactionId &&
+        (deal.reservationFee ?? 0) > 0 && (
           <button
             onClick={() => setReserveOpen(true)}
             style={{
@@ -2254,11 +2270,9 @@ export default function DealRooms({
   useEffect(() => {
     if (!selectedDeal?.id) return;
 
-    // Skip kama tumefetch hivi karibuni
     const lastFetch = detailFetchedAt[selectedDeal.id];
     if (lastFetch && Date.now() - lastFetch < 5000) return;
 
-    // Skip kama deal haipo kwenye backend (404 mara ya kwanza)
     if (detailError[selectedDeal.id] === "not_found") return;
 
     setDetailFetchedAt((prev) => ({
@@ -2528,6 +2542,7 @@ export default function DealRooms({
       reservationFee: fee,
       reservationMethod: method,
       reservationExpiresAt: nowExpiresAt,
+      reservationPaidAt: new Date().toISOString(),
       pendingPayment: null,
       messages: [
         ...deal.messages,
@@ -2550,7 +2565,6 @@ export default function DealRooms({
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
 
-    // ── Zuia kama deal haipo kwenye backend ──
     if (detailError[id] === "not_found") {
       alert(
         lang === "sw"
@@ -2560,7 +2574,16 @@ export default function DealRooms({
       return;
     }
 
-    const txId = await ensureTransactionId(deal);
+    // ── MPYA: Kama deal tayari ina transactionId, tumia moja kwa moja ──
+    let txId = deal.transactionId;
+    if (!txId) {
+      txId = await ensureTransactionId(deal);
+    } else {
+      console.info(
+        `[DealRooms] Deal #${id} already has transaction #${txId}, skipping create`
+      );
+    }
+
     if (!txId) {
       alert(
         lang === "sw"
@@ -2688,7 +2711,7 @@ export default function DealRooms({
     finalizeLocalReservation(id, deal, { hours, fee, method, expiresAt });
   };
 
-    const handleInspectionResolve = async (id, outcome, note) => {
+  const handleInspectionResolve = async (id, outcome, note) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
     let txId = transactionIds[id] || deal.transactionId;

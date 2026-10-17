@@ -1,6 +1,11 @@
 // ============================================================
 // MyTransactionsPage.jsx
 // Miamala Yangu — completed pekee + receipt download + period report.
+//
+// SASISHO:
+//  - Receipt download inatumia rawId (backend ID halisi)
+//  - Download history: rekodi kila download (success + failed)
+//  - Re-download kutoka history
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import {
@@ -21,9 +26,16 @@ import {
   TrendingUp,
   TrendingDown,
   Calendar,
+  History,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "./dashboard/components/shared";
 import { useTransactions } from "../config/transactionsStore.js";
+import {
+  addDownloadEntry,
+  updateDownloadEntry,
+  removeDownloadEntry,
+  useDownloadHistory,
+} from "../config/downloadHistoryStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../config/authStore.js";
 import {
@@ -96,7 +108,7 @@ const STATUS_META = {
   },
 };
 
-// ⬇️ Period options — kwa filter na download
+// ⬇️ Period options
 const PERIOD_OPTIONS = [
   { key: "today", label: { sw: "Leo", en: "Today" }, days: 0 },
   { key: "week", label: { sw: "Wiki Hii", en: "This Week" }, days: 7 },
@@ -113,6 +125,7 @@ export default function MyTransactionsPage() {
   const { lang } = useLanguage();
   const { user } = useAuth();
   const transactions = useTransactions();
+  const downloadHistory = useDownloadHistory();
 
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -159,17 +172,17 @@ export default function MyTransactionsPage() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ============================================================
-  // ✅ STEP 1: Chuja completed pekee (defensive)
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
+  // Filter: completed pekee
+  // ═══════════════════════════════════════════════════════════
   const completedTx = useMemo(
     () => transactions.filter((tr) => tr.status === "completed"),
     [transactions]
   );
 
-  // ============================================================
-  // ✅ STEP 2: Period filter (kama filter ni period_*)
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
+  // Period filter
+  // ═══════════════════════════════════════════════════════════
   const periodFilteredTx = useMemo(() => {
     if (!filter.startsWith("period_")) return completedTx;
 
@@ -178,7 +191,6 @@ export default function MyTransactionsPage() {
     if (!option || option.days === null) return completedTx;
 
     if (option.days === 0) {
-      // Leo — kuanzia saa 12 usiku
       const start = new Date();
       start.setHours(0, 0, 0, 0);
       return completedTx.filter((tr) => new Date(tr.at) >= start);
@@ -189,9 +201,9 @@ export default function MyTransactionsPage() {
     return completedTx.filter((tr) => new Date(tr.at) >= start);
   }, [completedTx, filter]);
 
-  // ============================================================
-  // ✅ STEP 3: Type filter + search
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
+  // Type filter + search
+  // ═══════════════════════════════════════════════════════════
   const filters = [
     { key: "all", label: lang === "sw" ? "Zote" : "All" },
     { key: "listing_fee", label: t("Ada ya Kuchapisha", "Listing Fee") },
@@ -218,9 +230,9 @@ export default function MyTransactionsPage() {
     });
   }, [periodFilteredTx, filter, searchQuery]);
 
-  // ============================================================
-  // ✅ TOTALS — earned + spent (hakuna balance)
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
+  // TOTALS
+  // ═══════════════════════════════════════════════════════════
   const totals = useMemo(() => {
     let earned = 0;
     let spent = 0;
@@ -234,17 +246,20 @@ export default function MyTransactionsPage() {
     return { earned, spent };
   }, [filtered]);
 
-  // ============================================================
-  // ✅ RECEIPT DOWNLOAD — kwa kila muamala
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
+  // RECEIPT DOWNLOAD — tumia rawId
+  // ═══════════════════════════════════════════════════════════
   const handleDownloadReceipt = async (tr) => {
     setReceiptBusyId(tr.id);
     try {
-      const blob = await downloadFile(`/finance/transactions/${tr.id}/receipt/`);
+      const backendId = tr.rawId || tr.id;
+      const blob = await downloadFile(
+        `/finance/transactions/${backendId}/receipt/`
+      );
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = `receipt_${tr.ref || tr.id}.pdf`;
+      a.download = `receipt_${tr.ref || backendId}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -256,9 +271,9 @@ export default function MyTransactionsPage() {
     }
   };
 
-  // ============================================================
-  // ✅ REPORT DOWNLOAD — pamoja na period param
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
+  // REPORT DOWNLOAD
+  // ═══════════════════════════════════════════════════════════
   const handleDownloadClick = async () => {
     if (filtered.length === 0) return;
     setFeeError("");
@@ -267,23 +282,61 @@ export default function MyTransactionsPage() {
     setShowDownloadModal(true);
   };
 
-  const performDownload = async () => {
+  const performDownload = async (entryId = null) => {
     setDownloading(true);
     setFeeError("");
+
+    // ── Rekodi kama pending (kama ni download mpya) ──
+    let entry = null;
+    if (!entryId) {
+      entry = addDownloadEntry({
+        userId: user?.id,
+        format: downloadFormat,
+        period: downloadPeriod,
+        status: "pending",
+        feeAmount: feeAmount,
+        paidWith: hasCredit ? "credit" : isFree ? "free" : "cash",
+      });
+    }
+
     try {
       const path = `/finance/success-fee/download/?format=${downloadFormat}&period=${downloadPeriod}`;
       let blob;
       try {
         blob = await downloadFile(path);
       } catch (err) {
+        // ── Update status failed ──
+        if (entry) {
+          updateDownloadEntry(entry.id, {
+            status: "failed",
+            error: err?.message || "Download failed",
+          });
+        } else if (entryId) {
+          updateDownloadEntry(entryId, {
+            status: "failed",
+            error: err?.message || "Download failed",
+          });
+        }
+
         if (err?.status === 402) {
-          setFeeError(err?.data?.message || t("Lipa ada ya mafanikio kwanza ili kupakua.", "Pay the success fee first to download."));
+          setFeeError(
+            err?.data?.message ||
+              t(
+                "Lipa ada ya mafanikio kwanza ili kupakua.",
+                "Pay the success fee first to download."
+              )
+          );
         } else {
-          setFeeError(err?.message || t("Download imeshindikana. Jaribu tena.", "Download failed. Try again."));
+          setFeeError(
+            err?.message ||
+              t("Download imeshindikana. Jaribu tena.", "Download failed. Try again.")
+          );
         }
         setDownloading(false);
         return;
       }
+
+      // ── Download file ──
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;
@@ -296,18 +349,33 @@ export default function MyTransactionsPage() {
       a.remove();
       window.URL.revokeObjectURL(downloadUrl);
 
+      // ── Update status success ──
+      if (entry) {
+        updateDownloadEntry(entry.id, { status: "completed" });
+      } else if (entryId) {
+        updateDownloadEntry(entryId, { status: "completed" });
+      }
+
       setShowDownloadModal(false);
       setShowBundleModal(false);
       setShowFeePayModal(false);
       setPendingBundlePurchase(null);
       setDownloading(false);
     } catch (err) {
+      if (entry) {
+        updateDownloadEntry(entry.id, {
+          status: "failed",
+          error: err?.message || "Unknown error",
+        });
+      } else if (entryId) {
+        updateDownloadEntry(entryId, {
+          status: "failed",
+          error: err?.message || "Unknown error",
+        });
+      }
       setFeeError(
         err?.message ||
-          t(
-            "Download imeshindikana. Jaribu tena.",
-            "Download failed. Try again."
-          )
+          t("Download imeshindikana. Jaribu tena.", "Download failed. Try again.")
       );
       setDownloading(false);
     }
@@ -350,9 +418,9 @@ export default function MyTransactionsPage() {
     }
   };
 
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
   // FIMIPAY DIRECT PAYMENT — Success Fee
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
   const handleFeePayInitiate = async ({ methodKey, phone } = {}) => {
     try {
       const raw = await api.post("/finance/success-fee/", {
@@ -404,9 +472,9 @@ export default function MyTransactionsPage() {
     }
   };
 
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
   // BUNDLE FLOW
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
   const handleBundlePurchaseInitiate = async ({ methodKey, phone } = {}) => {
     if (!pendingBundlePurchase) {
       return { ok: false, error: new Error("No bundle selected") };
@@ -487,12 +555,12 @@ export default function MyTransactionsPage() {
     }
   };
 
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
   // RENDER
-  // ============================================================
+  // ═══════════════════════════════════════════════════════════
   return (
     <div className="w-full max-w-5xl mx-auto px-2 sm:px-5 py-4 sm:py-6">
-      {/* ── Header ───────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap mb-5">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -523,7 +591,7 @@ export default function MyTransactionsPage() {
         </button>
       </div>
 
-      {/* ── Stats grid — 3 cards (bila balance) ──────────── */}
+      {/* Stats grid — 3 cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -573,7 +641,7 @@ export default function MyTransactionsPage() {
         </div>
       </div>
 
-      {/* ── Search ───────────────────────────────────────── */}
+      {/* Search */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <div
           className="flex items-center gap-2 bg-white border rounded-lg px-3 py-2 flex-1 min-w-0"
@@ -590,7 +658,7 @@ export default function MyTransactionsPage() {
         </div>
       </div>
 
-      {/* ── Period filters ───────────────────────────────── */}
+      {/* Period filters */}
       <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
         {PERIOD_OPTIONS.map((p) => {
           const key = p.key === "all" ? "all" : `period_${p.key}`;
@@ -613,7 +681,7 @@ export default function MyTransactionsPage() {
         })}
       </div>
 
-      {/* ── Type filters ─────────────────────────────────── */}
+      {/* Type filters */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
         {filters.map((f) => (
           <button
@@ -631,7 +699,77 @@ export default function MyTransactionsPage() {
         ))}
       </div>
 
-      {/* ── Transactions list ────────────────────────────── */}
+      {/* Download History — MPYA */}
+      {downloadHistory.length > 0 && (
+        <div
+          className="rounded-xl border p-3 mb-4"
+          style={{ borderColor: COLORS.sandLine, background: "white" }}
+        >
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-[10px] font-semibold text-secondary uppercase flex items-center gap-1">
+              <History size={11} />
+              {t("Historia ya Downloads", "Download History")}
+            </p>
+            <button
+              onClick={() => {
+                if (
+                  confirm(
+                    t(
+                      "Futa historia yote ya downloads?",
+                      "Clear all download history?"
+                    )
+                  )
+                ) {
+                  // eslint-disable-next-line no-unused-vars
+                  downloadHistory.forEach((h) => removeDownloadEntry(h.id));
+                }
+              }}
+              className="text-[10px] font-semibold text-muted hover:text-rust"
+            >
+              {t("Futa Zote", "Clear All")}
+            </button>
+          </div>
+          <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
+            {downloadHistory.slice(0, 10).map((h) => (
+              <div
+                key={h.id}
+                className="flex items-center gap-2 text-xs border rounded-lg px-2.5 py-1.5"
+                style={{ borderColor: COLORS.sandLine }}
+              >
+                <FileText size={12} className="text-muted shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-primary text-[11px] truncate">
+                    {h.format?.toUpperCase()} · {h.period}
+                  </p>
+                  <p className="text-[10px] text-muted">
+                    {timeAgo(h.createdAt, lang)}
+                    {h.status === "failed" && (
+                      <span style={{ color: COLORS.rust }}>
+                        {" "}· {t("Imeshindwa", "Failed")}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                {h.status === "completed" && (
+                  <button
+                    onClick={() => {
+                      setDownloadFormat(h.format);
+                      setDownloadPeriod(h.period);
+                      performDownload(h.id);
+                    }}
+                    className="text-[10px] font-semibold shrink-0"
+                    style={{ color: "#8A5A16" }}
+                  >
+                    {t("Pakua Tena", "Re-download")}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Transactions list */}
       {filtered.length === 0 ? (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -744,7 +882,7 @@ export default function MyTransactionsPage() {
       )}
 
       {/* ============================================================ */}
-      {/* DOWNLOAD REPORT MODAL — format + period */}
+      {/* DOWNLOAD REPORT MODAL */}
       {/* ============================================================ */}
       {showDownloadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -954,7 +1092,7 @@ export default function MyTransactionsPage() {
       )}
 
       {/* ============================================================ */}
-      {/* FIMIPAY MODAL — Direct Success Fee Payment */}
+      {/* FIMIPAY MODAL */}
       {/* ============================================================ */}
       {showFeePayModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -1043,7 +1181,7 @@ export default function MyTransactionsPage() {
       )}
 
       {/* ============================================================ */}
-      {/* BUNDLE MODAL — Alternative option */}
+      {/* BUNDLE MODAL */}
       {/* ============================================================ */}
       {showBundleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
