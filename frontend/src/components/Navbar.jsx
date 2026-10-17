@@ -316,7 +316,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                   type="button"
                   onClick={() => toggleMenu("lang")}
                   aria-expanded={openMenu === "lang"}
-                  className="hidden h-10 items-center gap-1.5 rounded-full border border-white/15 px-3 text-[12px] font-semibold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white sm:flex"
+                  className="hidden h-10 items-center gap-1.5 rounded-full border border-white/20 px-3 text-[12px] font-semibold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white sm:flex"
                 >
                   <Globe size={13} />
                   {currentLang.code}
@@ -398,7 +398,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                       <div className="my-1 border-t border-white/10" />
                       <button
                         onClick={handleLogout}
-                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-[#FF8A65] transition-colors hover:bg-[#C1502E]/15"
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-[#FF8A65] transition-colors hover:bg-[#C1502E]/20"
                       >
                         <LogOut size={15} />
                         {lang === "sw" ? "Toka" : "Logout"}

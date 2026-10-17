@@ -46,6 +46,8 @@ export default {
 
         // Semantic
         success: "#2F6D4F",
+        green:   "#2F6D4F",
+        rust:    "#C1502E",
         danger:  "#C1502E",
         warning: "#B45309",
         info:    c("royal"),

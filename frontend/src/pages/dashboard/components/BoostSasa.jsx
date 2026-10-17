@@ -570,7 +570,8 @@ export default function BoostSasa({
   const handlePaymentSuccess = async () => {
     if (paymentMode === "flat" && pendingBoost) {
       try {
-        const activated = await boostingApi.activate(pendingBoost.id);
+        const payResponse = await boostingApi.detail(pendingBoost.id);
+        const activated = payResponse?.boost || payResponse?.data?.boost || null;
         setDone({
           listing: pendingBoost.listing,
           pkg: pendingBoost.package,

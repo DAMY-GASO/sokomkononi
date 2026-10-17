@@ -298,7 +298,7 @@ export default function ForgotPasswordPage() {
             {/* STEP: OTP */}
             {step === "otp" && (
               <>
-                <div className="w-12 h-12 rounded-full bg-[#FEA406]/15 flex items-center justify-center mb-5 mx-auto">
+                <div className="w-12 h-12 rounded-full bg-[#FEA406]/20 flex items-center justify-center mb-5 mx-auto">
                   <span className="text-[#FEA406]">{icons.mail}</span>
                 </div>
 

@@ -320,10 +320,8 @@ export function getBoostPackage(key) {
 }
 
 export function isBoostActive(listing) {
-  return Boolean(
-    listing.boostExpiresAt &&
-      new Date(listing.boostExpiresAt).getTime() > Date.now()
-  );
+  if (!listing?.boostExpiresAt) return Boolean(listing?.isBoosted);
+  return new Date(listing.boostExpiresAt).getTime() > Date.now();
 }
 
 export function boostDaysRemaining(listing) {
@@ -348,10 +346,8 @@ export function applyBoost(listing, packageKey) {
 // Leading Fee
 // ============================================================
 export function isLeadingActive(listing) {
-  return Boolean(
-    listing.leadingExpiresAt &&
-      new Date(listing.leadingExpiresAt).getTime() > Date.now()
-  );
+  if (!listing?.leadingExpiresAt) return Boolean(listing?.isLeading);
+  return new Date(listing.leadingExpiresAt).getTime() > Date.now();
 }
 
 export function leadingDaysRemaining(listing) {

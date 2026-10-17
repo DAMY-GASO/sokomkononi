@@ -23,7 +23,7 @@ function write(list) {
 }
 export function isBannerActive(b) {
   if (!b || b.active === false) return false;
-  return Boolean(b.expiresAt && new Date(b.expiresAt).getTime() > Date.now());
+  return !b.expiresAt || new Date(b.expiresAt).getTime() > Date.now();
 }
 export function getBannerAds() { return read(); }
 export function getActiveBannerAds() { return read().filter(isBannerActive); }

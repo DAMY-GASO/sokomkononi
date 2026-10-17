@@ -159,7 +159,7 @@ function LanguageSwitcher({ lang, setLang }) {
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="text-white/60 hover:text-white text-sm font-medium border border-white/15 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
+        className="text-white/60 hover:text-white text-sm font-medium border border-white/20 rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
         aria-label={lang === "sw" ? "Badilisha lugha" : "Change language"}
       >
         <span className="hidden sm:inline">
@@ -690,7 +690,7 @@ export default function AdminDashboard() {
         {/* SIDEBAR — DESKTOP */}
         <aside
           style={{ borderColor: COLORS.sandLine }}
-          className="hidden md:flex w-64 shrink-0 border-r flex-col py-4 px-3 gap-1 min-h-[calc(100vh-56px)] overflow-y-auto"
+          className="hidden md:flex w-64 shrink-0 border-r flex-col py-4 px-3 gap-1 min-h-[calc(100vh-56px)] overflow-y-auto" bg-page
         >
           {visibleNav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeSection;
@@ -735,7 +735,7 @@ export default function AdminDashboard() {
         {sidebarOpen && (
           <div className="md:hidden fixed inset-0 z-40 flex">
             <div
-              style={{ background: COLORS.sand }}
+              style={{}}
               className="w-72 max-w-[85%] h-full pt-20 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto"
             >
               <div className="flex justify-end mb-2">

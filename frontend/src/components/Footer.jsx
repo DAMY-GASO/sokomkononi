@@ -75,7 +75,7 @@ export default function Footer({ selectedLang: propLang }) {
               </p>
             </div>
             <div className="flex flex-wrap gap-3 lg:col-span-5 lg:justify-end">
-              <a href={playUrl || undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!playUrl} onClick={(e) => { if (!playUrl) e.preventDefault(); }} className="group inline-flex items-center gap-3 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 transition-colors hover:bg-white/[0.08]">
+              <a href={playUrl || undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!playUrl} onClick={(e) => { if (!playUrl) e.preventDefault(); }} className="group inline-flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.04] px-4 py-3 transition-colors hover:bg-white/[0.08]">
                 <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0" aria-hidden="true">
                   <path d="M4.5 3.5c-.3.3-.5.7-.5 1.2v14.6c0 .5.2.9.5 1.2l.1.1L13 12.1v-.2L4.6 3.4l-.1.1z" fill="#00D2FF" />
                   <path d="M15.9 15L13 12.1v-.2l2.9-2.9 6.5 3.7c.8.5.8 1.3 0 1.8l-6.5 3.7z" fill="#FFCE00" />
@@ -87,7 +87,7 @@ export default function Footer({ selectedLang: propLang }) {
                   <span className="block text-sm font-semibold text-white">Google Play</span>
                 </span>
               </a>
-              <a href={appStoreUrl || undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!appStoreUrl} onClick={(e) => { if (!appStoreUrl) e.preventDefault(); }} className="group inline-flex items-center gap-3 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 transition-colors hover:bg-white/[0.08]">
+              <a href={appStoreUrl || undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!appStoreUrl} onClick={(e) => { if (!appStoreUrl) e.preventDefault(); }} className="group inline-flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.04] px-4 py-3 transition-colors hover:bg-white/[0.08]">
                 <svg viewBox="0 0 384 512" className="h-6 w-6 shrink-0 fill-white" aria-hidden="true">
                   <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.3c0 26.2 4.8 53.3 14.4 81.3 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.8zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
                 </svg>
@@ -117,7 +117,7 @@ export default function Footer({ selectedLang: propLang }) {
             </ul>
             <div className="flex items-center gap-2 pt-1">
               {SOCIAL.map((s) => { const Icon = s.icon; return (
-                <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label} className="grid h-9 w-9 place-items-center rounded-full border border-white/12 text-white/60 transition-all hover:border-white/30 hover:bg-white/[0.06] hover:text-white">
+                <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label} className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-white/60 transition-all hover:border-white/30 hover:bg-white/[0.06] hover:text-white">
                   <Icon size={15} />
                 </a>
               ); })}
@@ -135,7 +135,7 @@ export default function Footer({ selectedLang: propLang }) {
           ))}
           <div className="lg:col-span-2">
             <h4 className="mb-4 text-[11px] font-bold uppercase tracking-[0.16em] text-white/45">{t("Karibu", "Say hi")}</h4>
-            <Link to="/mawasiliano" className="group flex items-center justify-between gap-2 rounded-xl border border-white/15 px-4 py-3 text-sm font-medium text-white transition-all hover:border-white/30 hover:bg-white/[0.06]">
+            <Link to="/mawasiliano" className="group flex items-center justify-between gap-2 rounded-xl border border-white/20 px-4 py-3 text-sm font-medium text-white transition-all hover:border-white/30 hover:bg-white/[0.06]">
               {t("Andika ujumbe", "Send a message")}
               <ArrowUpRight size={15} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Link>

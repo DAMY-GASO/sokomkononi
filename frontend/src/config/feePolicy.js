@@ -50,6 +50,18 @@ function writeSettings(cfg) {
   window.dispatchEvent(new Event(EV));
 }
 
+// Bootstrap: if tiers are never seeded, write default tiers once
+(function bootstrapTiers() {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem("sokomkononi_reservation_tiers_v1");
+    if (raw === null) {
+      window.localStorage.setItem("sokomkononi_reservation_tiers_v1",
+        JSON.stringify(DEFAULT_TIERS));
+    }
+  } catch { /* noop */ }
+})();
+
 function readTiers() {
   if (typeof window === "undefined") return [];
   try {

@@ -43,7 +43,7 @@ function InfoRow({ icon: Icon, label, value, color = COLORS.night }) {
 // ============================================================
 // DOWNLOAD BAR (MPYA)
 // ============================================================
-function DownloadBar({ dealId, lang }) {
+function DownloadBar({ dealId, deal, lang }) {
   const [downloading, setDownloading] = useState(null);
   const [error, setError] = useState("");
 
@@ -372,7 +372,7 @@ export default function DealRoomViewer({
       </div>
 
       {/* ── MPYA: Download transcript (admin) ── */}
-      <DownloadBar dealId={deal.id} lang={lang} />
+      <DownloadBar dealId={deal.id} deal={deal} lang={lang} />
 
       {/* Payment Proof */}
       {paymentProof && (

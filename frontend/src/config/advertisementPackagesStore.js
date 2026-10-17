@@ -64,8 +64,7 @@ export async function addAdvertisementPackageAsync({ name, hours, price, orderin
       is_active: true,
       ordering: Number(ordering) || 0,
     });
-    const created = norm(raw);
-    write([...read(), created]);
+    if (created) write([...read(), created]);
     return { ok: true, package: created };
   } catch (err) { return { ok: false, error: err }; }
 }

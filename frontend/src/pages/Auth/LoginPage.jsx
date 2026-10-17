@@ -69,7 +69,8 @@ export default function LoginPage() {
     }
     const v = form.identifier.trim();
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-    const isPhone = /^\+?[0-9\s\-()]{9,15}$/.test(v);
+    const phoneDigits = v.replace(/\D/g, "");
+    const isPhone = phoneDigits.length >= 9 && phoneDigits.length <= 15;
     if (!isEmail && !isPhone) {
       setError(tx("Weka barua pepe au namba sahihi.", "Enter a valid email or phone number."));
       return;

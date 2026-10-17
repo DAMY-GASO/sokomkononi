@@ -27,7 +27,7 @@ export default function CountdownSaleSection({ listings = [], savedIds = [], onT
         <div className="pointer-events-none absolute -top-32 -right-32 h-72 w-72 rounded-full blur-3xl opacity-30 dark:opacity-60" style={{ background: "radial-gradient(circle, rgb(254 164 6 / .35), transparent 70%)" }} />
         <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-6 sm:mb-8">
           <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold bg-[#FEA406]/15 text-[#8A5A16] dark:bg-white/10 dark:text-white backdrop-blur-sm">
+            <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold bg-[#FEA406]/20 text-[#8A5A16] dark:bg-white/10 dark:text-white backdrop-blur-sm">
               <Zap size={11} fill="#FEA406" color="#FEA406" />
               {t("Ofa za Wiki Hii", "This Week's Offers")}
             </span>

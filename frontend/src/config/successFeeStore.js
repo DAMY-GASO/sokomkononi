@@ -22,6 +22,7 @@ const FALLBACK = {
 };
 
 const STATUS_FALLBACK = {
+  loaded: false,
   is_free: false,
   fee: "5000",
   requires_payment: true,
@@ -96,6 +97,7 @@ function normStatus(raw) {
     percentage: String(raw.percentage ?? "0"),
     max_fee: String(raw.max_fee ?? "0"),
     formats: Array.isArray(raw.formats) ? raw.formats : ["pdf", "csv", "doc"],
+    loaded: true,
     loaded_at: new Date().toISOString(),
   };
 }

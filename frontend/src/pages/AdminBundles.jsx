@@ -684,7 +684,7 @@ export default function AdminBundles() {
 
                   <p className="text-[10px] sm:text-xs text-secondary line-clamp-2">
                     {t("Salio", "Credits")}:{" "}
-                    {typeof b.credits === "object"
+                    {b && typeof b.credits === "object"
                       ? Object.entries(b.credits)
                           .map(
                             ([k, v]) =>

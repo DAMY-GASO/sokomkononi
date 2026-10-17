@@ -274,7 +274,9 @@ export async function markNotificationReadAsync(id) {
 
 export async function markAllNotificationsReadAsync(audience) {
   try {
-    await notificationsApi.markAllRead();
+    await notificationsApi.markAllRead(
+      audience && audience !== "user" ? { audience } : undefined
+    );
     write(
       read().map((n) =>
         !audience || audience === "user" || n.audience === audience

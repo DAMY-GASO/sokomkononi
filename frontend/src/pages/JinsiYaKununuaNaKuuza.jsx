@@ -176,7 +176,7 @@ export default function JinsiYaKununuaNaKuuza() {
 
           <StepFlow steps={buyAfter} startAt={buyBefore.length + 1} />
 
-          <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-[#2F6D4F]/25 bg-[#2F6D4F]/08 px-4 py-3 text-sm font-medium text-[#2F6D4F]">
+          <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-[#2F6D4F]/25 bg-[#2F6D4F]/10 px-4 py-3 text-sm font-medium text-[#2F6D4F]">
             {t(
               "Hongera! Umefanikiwa kukamilisha ununuzi wa mali kupitia SokoMkononi.",
               "Congratulations! You've successfully completed a property purchase through SokoMkononi."
@@ -214,7 +214,7 @@ export default function JinsiYaKununuaNaKuuza() {
 
           <StepFlow steps={sellSteps} />
 
-          <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-[#2F6D4F]/25 bg-[#2F6D4F]/08 px-4 py-3 text-sm font-medium text-[#2F6D4F]">
+          <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-[#2F6D4F]/25 bg-[#2F6D4F]/10 px-4 py-3 text-sm font-medium text-[#2F6D4F]">
             {t(
               "Hongera! Mali yako sasa imechapishwa kwenye SokoMkononi na iko tayari kuonekana na wanunuzi.",
               "Congratulations! Your property has been published on SokoMkononi and is now visible to buyers."

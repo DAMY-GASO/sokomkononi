@@ -640,7 +640,8 @@ export async function reorderCategoriesAsync(newOrder) {
   } catch (err) {
     if (err?.status === 404 || err?.status === 405) {
       console.warn("[categoriesStore] /reorder/ haipo — local-only");
-      return { ok: true, warning: "local_only" };
+      saveAll(current); // rollback local
+      return { ok: false, warning: "local_only", error: err };
     }
     saveAll(current);
     return { ok: false, error: err };
@@ -789,9 +790,17 @@ export async function hydrateCategoriesFromApi() {
     const data = await categoriesApi.list({ page_size: 100 });
     const rawList = Array.isArray(data) ? data : data?.results || [];
     if (!rawList.length) {
+      const everHydrated = window?.localStorage?.getItem(
+        "sokomkononi_categories_ever_hydrated"
+      ) === "1";
+      if (everHydrated) {
+        saveAll([]);
+        return { source: "empty", count: 0 };
+      }
       const seeded = initializeCategories();
       return { source: "seed", count: seeded.length };
     }
+    try { window.localStorage.setItem("sokomkononi_categories_ever_hydrated", "1"); } catch {}
 
     const seen = new Map();
     rawList.forEach((raw) => {

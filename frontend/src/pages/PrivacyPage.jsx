@@ -199,7 +199,7 @@ const PRIVACY_CONTENT = {
     title: "Privacy Policy",
     subtitle:
       "We care about your privacy. Read how we collect, use, and protect your information.",
-    lastUpdated: new Date().toLocaleDateString('sw-TZ', { year: 'numeric', month: 'long', day: 'numeric' }),
+    lastUpdated: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
     sections: [
       {
         id: "intro",

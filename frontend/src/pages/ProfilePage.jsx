@@ -92,7 +92,7 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div className="bg-white rounded-2xl max-w-md w-full p-6">
         <div className="text-center mb-5">
-          <div className="w-14 h-14 rounded-full bg-[#C1502E]/15 flex items-center justify-center mx-auto mb-3">
+          <div className="w-14 h-14 rounded-full bg-[#C1502E]/20 flex items-center justify-center mx-auto mb-3">
             <Trash2 size={26} className="text-[#C1502E]" />
           </div>
           <h3 className="text-primary">
@@ -323,8 +323,8 @@ function EditProfileTab({ user, lang }) {
     const preview = URL.createObjectURL(file);
     setAvatar(preview);
     const res = await updateAvatarAsync(file);
-    URL.revokeObjectURL(preview);
     if (!res.ok) {
+      URL.revokeObjectURL(preview);
       setAvatar(prev);
       alert(
         res.error?.message ||
@@ -743,6 +743,7 @@ function SecurityTab({ lang, user }) {
     setDeleting(false);
 
     if (res.ok) {
+      await logoutAsync();
       navigate("/");
     } else {
       alert(

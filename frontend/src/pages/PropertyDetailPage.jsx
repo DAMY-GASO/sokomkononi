@@ -892,7 +892,7 @@ export default function PropertyDetailPage() {
                     </span>
                   )}
                   {property.status === "reserved" && (
-                    <span className="text-body-sm font-medium text-gold-ink bg-gold/15 px-2.5 py-1 rounded-full mb-1">
+                    <span className="text-body-sm font-medium text-gold-ink bg-gold/20 px-2.5 py-1 rounded-full mb-1">
                       {t(lang, "Ina Reservation", "Reserved")}
                       {reservedTimes(property.reservationCount, lang)
                         ? ` · ${reservedTimes(property.reservationCount, lang)}`

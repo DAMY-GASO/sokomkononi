@@ -173,7 +173,7 @@ const TERMS_CONTENT = {
     title: "Terms & Conditions",
     subtitle:
       "Please read these terms and conditions carefully before using SokoMkononi.",
-    lastUpdated: new Date().toLocaleDateString('sw-TZ', { year: 'numeric', month: 'long', day: 'numeric' }),
+    lastUpdated: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
     sections: [
       {
         id: "intro",

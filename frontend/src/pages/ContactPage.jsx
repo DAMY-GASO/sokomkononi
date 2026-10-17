@@ -201,7 +201,7 @@ export default function ContactPage() {
           <div className="rounded-2xl border border-[color:rgb(var(--c-hairline))] bg-card p-6 sm:p-8">
             {sent ? (
               <div className="py-8 text-center">
-                <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[#2F6D4F]/12">
+                <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[#2F6D4F]/10">
                   <CheckCircle2 size={32} className="text-[#2F6D4F]" />
                 </div>
                 <h2 className="text-xl font-bold text-primary">

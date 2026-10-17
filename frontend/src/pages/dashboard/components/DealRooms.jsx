@@ -2600,7 +2600,15 @@ export default function DealRooms({
     const reserveRes = await callApiOrFallback(() =>
       createReservationAsync(txId, hours)
     );
-    if (!reserveRes.offline && !reserveRes.ok) {
+    if (reserveRes.offline) {
+      alert(
+        lang === "sw"
+          ? "Backend haipatikani. Jaribu tena baadaye."
+          : "Backend unavailable. Try again later."
+      );
+      return;
+    }
+    if (!reserveRes.ok) {
       alert(
         reserveRes.error?.message ||
           (lang === "sw"

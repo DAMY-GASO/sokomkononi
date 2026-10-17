@@ -232,10 +232,12 @@ export async function permanentDeleteUserAsync(id, { reason, confirmText } = {})
     return { ok: true, deleted: true };
   } catch (err) {
     if (err?.status === 404 || err?.status === 405) {
-      console.warn(
-        "[usersStore] /permanent/ haipo — tumia delete ya kawaida"
-      );
-      return deleteUserAsync(id);
+      return {
+        ok: false,
+        error: new Error(
+          "Permanent delete is not enabled on this server. Contact backend admin."
+        ),
+      };
     }
     return { ok: false, error: err };
   }

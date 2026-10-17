@@ -1023,7 +1023,7 @@ function FaqsTab({ lang }) {
 // ============================================================
 function SinglePageEditor({ section, lang }) {
   const content = useContent();
-  const data = content[section] || {};
+  const data = content[section];
   const [form, setForm] = useState(() => ({ ...data }));
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);

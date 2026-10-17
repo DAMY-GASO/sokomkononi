@@ -279,7 +279,7 @@ export default function RegisterPage() {
 
             {step === "otp" && (
               <>
-                <div className="w-12 h-12 rounded-full bg-gold/15 flex items-center justify-center mb-5 mx-auto">
+                <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center mb-5 mx-auto">
                   <span className="text-gold-ink">{icons.mail}</span>
                 </div>
                 <h1 className="h-title mb-1 text-center">{t("register_otp_heading")}</h1>

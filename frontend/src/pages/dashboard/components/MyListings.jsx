@@ -615,7 +615,9 @@ export default function MyListings({
   const handleConfirmMarkSold = async (listing) => {
     setMarkingSold(true);
     try {
-      const res = await markSoldAsync(listing.id);
+      const res = onMarkSold
+        ? await onMarkSold(listing.id)
+        : await markSoldAsync(listing.id);
       if (!res?.ok) {
         toast.error(
           res?.error?.message ||

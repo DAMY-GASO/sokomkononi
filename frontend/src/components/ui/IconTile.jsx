@@ -23,9 +23,9 @@ export default function IconTile({ icon: Icon, size = "md", tone = "default", cl
     default: "bg-[color:rgb(var(--c-page))] text-primary border-[color:rgb(var(--c-hairline))]",
     gold:    "bg-[#FEA406]/14 text-[#A35F00] dark:text-[#FEA406] border-[#FEA406]/30",
     night:   "bg-[#011957] text-[#FEA406] border-[#FEA406]/35",
-    green:   "bg-[#2F6D4F]/12 text-[#2F6D4F] border-[#2F6D4F]/25",
-    rust:    "bg-[#C1502E]/12 text-[#C1502E] border-[#C1502E]/25",
-    royal:   "bg-[#0062FD]/12 text-[#0062FD] border-[#0062FD]/25",
+    green:   "bg-[#2F6D4F]/10 text-[#2F6D4F] border-[#2F6D4F]/25",
+    rust:    "bg-[#C1502E]/10 text-[#C1502E] border-[#C1502E]/25",
+    royal:   "bg-[#0062FD]/10 text-[#0062FD] border-[#0062FD]/25",
   };
   const s = sizeMap[size] || sizeMap.md;
   const t = toneMap[tone] || toneMap.default;

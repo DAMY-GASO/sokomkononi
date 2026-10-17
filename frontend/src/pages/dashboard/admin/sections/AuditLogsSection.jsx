@@ -416,6 +416,18 @@ export default function AuditLogsSection() {
         res.error?.message ||
           t("Imeshindwa kufuta logs zote.", "Failed to clear all logs.")
       );
+    } else {
+      setError("");
+      // Reflect the actual count cleared
+      window.dispatchEvent(new CustomEvent("sokomkononi:toast", {
+        detail: {
+          type: "success",
+          message: t(
+            `Imetolewa ${res.deleted || 0} logs`,
+            `Cleared ${res.deleted || 0} logs`
+          ),
+        },
+      }));
     }
   };
 

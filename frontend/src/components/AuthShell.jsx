@@ -26,7 +26,7 @@ export default function AuthShell({ panelHeading, panelSubtext, panelExtra, form
     <div className="min-h-screen bg-[color:rgb(var(--c-page))] lg:grid lg:grid-cols-2">
       <aside className="surface-night noise relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         <div className="relative z-10 flex items-center justify-between gap-3">
-          <Link to="/" className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur-sm transition-colors hover:bg-white/[0.12] hover:text-white">
+          <Link to="/" className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur-sm transition-colors hover:bg-white/[0.12] hover:text-white">
             <ArrowLeft size={14} />
             {t("Nyumbani", "Home")}
           </Link>

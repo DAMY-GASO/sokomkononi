@@ -20,7 +20,7 @@ export default function CountdownTimer({ targetMs, tone = "auto" }) {
     <div className="flex items-center gap-2 sm:gap-2.5">
       {cells.map((c, i) => (
         <div key={i} className="flex flex-col items-center">
-          <span className={`w-11 h-11 sm:w-13 sm:h-13 grid place-items-center rounded-lg text-lg sm:text-2xl font-bold tabular-nums ${onNavy ? "bg-white/10 text-white" : "bg-[color:rgb(var(--c-night))] text-[rgb(254,164,6)]"}`}>
+          <span className={`w-11 h-11 sm:w-14 sm:h-14 grid place-items-center rounded-lg text-lg sm:text-2xl font-bold tabular-nums ${onNavy ? "bg-white/10 text-white" : "bg-[color:rgb(var(--c-night))] text-[rgb(254,164,6)]"}`}>
             {String(c.v).padStart(2, "0")}
           </span>
           <span className={`text-[9px] sm:text-[10px] uppercase tracking-wider mt-1 ${onNavy ? "text-white/55" : "text-muted"}`}>{c.l}</span>

@@ -439,8 +439,15 @@ export default function MyReservationsPage() {
 
   const openDeal = (id) => navigate(`/dashboard/buyer/deals?deal=${id}`);
 
-  const handleRefresh = () => {
-    updateDealInStore(0, (d) => d);
+  const handleRefresh = async () => {
+    try {
+      const { hydrateDealsFromApi } = await import(
+        "../../../config/dealsStore.js"
+      );
+      await hydrateDealsFromApi(user?.id, "buyer");
+    } catch (err) {
+      console.warn("[MyReservationsPage] refresh failed:", err);
+    }
   };
 
   return (

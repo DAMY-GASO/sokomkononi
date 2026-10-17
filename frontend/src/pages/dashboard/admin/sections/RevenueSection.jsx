@@ -171,6 +171,7 @@ export default function RevenueSection() {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const showFlash = (msg, type = "success") => {
+    setError("");
     setFlash({ msg, type });
     setTimeout(() => setFlash(null), 3500);
   };

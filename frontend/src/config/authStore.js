@@ -10,6 +10,7 @@ import { authApi, setUnauthorizedHandler } from "../api/index.js";
 import { clearTokens as clearJWT, setTokens, api as apiClient } from "../api/client.js";
 import { getSessionScope } from "./adminPath.js";
 import { resetMyListingsUserCache } from "./listingsStore.js";
+import { resetHydrateGuard } from "./hydrateGuard.js";
 import { resetDealsUserCache } from "./dealsStore.js";
 
 const USER_KEYS = {
@@ -119,6 +120,7 @@ function hardReset() {
   wipeUserScopedCaches();
   resetMyListingsUserCache();
   resetDealsUserCache();
+  resetHydrateGuard();
   if (typeof window === "undefined") return;
   const AUTH_KEYS =
     getSessionScope() === "admin"
