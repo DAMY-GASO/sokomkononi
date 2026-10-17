@@ -130,7 +130,11 @@ export default function DealsSection() {
       enrichmentAttemptsRef.current.set(d.id, attempts + 1);
       enrichedRef.current.add(d.id);
 
-      fetchDealDetailAsync(d.id).catch((err) => {
+      fetchAdminDealDetailAsync(d.id).then((res) => {
+        if (res.ok && res.deal) {
+          setDeals((prev) => prev.map((item) => (item.id === d.id ? { ...item, ...res.deal } : item)));
+        }
+      }).catch((err) => {
         console.warn("[DealsSection] enrich failed for", d.id, err);
       });
     });

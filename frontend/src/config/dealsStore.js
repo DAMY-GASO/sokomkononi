@@ -435,6 +435,25 @@ export async function fetchAdminDealsAsync({ page = 1, pageSize = 20, status = "
   }
 }
 
+
+export async function fetchAdminDealDetailAsync(dealId) {
+  if (!dealId) return { ok: false, error: new Error("dealId is required") };
+  try {
+    const raw = await dealsApi.admin.detail(dealId);
+    const deal = normalizeDealFromApi(raw, null);
+    if (!deal) return { ok: false, error: new Error("Invalid deal response") };
+
+    const current = getDeals();
+    const existing = current.find((d) => sameId(d.id, dealId));
+    const merged = existing ? { ...existing, ...deal } : deal;
+    saveDeals(existing ? current.map((d) => (sameId(d.id, dealId) ? merged : d)) : [deal, ...current]);
+
+    return { ok: true, deal: merged };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
 export async function fetchDealDetailAsync(dealId) {
   if (!dealId) return { ok: false, error: new Error("dealId is required") };
   try {
