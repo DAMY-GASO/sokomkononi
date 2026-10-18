@@ -1020,9 +1020,9 @@ export default function DashboardShell() {
 
       <div className="flex flex-1 relative">
         <aside
-          style={{ borderColor: COLORS.sandLine }}
-          className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto" bg-page bg-page
-        >
+         style={{ borderColor: COLORS.sandLine }}
+          className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto bg-page"
+>
           {nav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeKey;
             return (
@@ -1089,12 +1089,12 @@ export default function DashboardShell() {
           </a>
         </aside>
 
-        {sidebarOpen && (
-  <div className="md:hidden fixed inset-0 z-40 flex">
-    <div
-      style={{ background: COLORS.sand }}
-      className="w-72 max-w-[85%] h-full pt-16 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto"
-    >
+      {sidebarOpen && (
+       <div className="md:hidden fixed inset-0 z-40 flex">
+       <div
+        style={{ background: COLORS.sand }}
+         className="w-72 max-w-[85%] h-full pt-16 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto"
+       >
       <div className="flex justify-end mb-2">
         <button
           onClick={() => setSidebarOpen(false)}

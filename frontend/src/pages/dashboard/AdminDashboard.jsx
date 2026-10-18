@@ -40,7 +40,7 @@ import VerificationSection from "./admin/sections/VerificationSection.jsx";
 import DealsSection from "./admin/sections/DealsSection.jsx";
 import RevenueSection from "./admin/sections/RevenueSection.jsx";
 import PromotionsSection from "./admin/sections/PromotionsSection.jsx";
-import RefundsSection from "./admin/sections/RefundsSection.jsx;
+import RefundsSection from "./admin/sections/RefundsSection.jsx";
 import ReportsSection from "./admin/sections/ReportsSection.jsx";
 
 // Support & Content
