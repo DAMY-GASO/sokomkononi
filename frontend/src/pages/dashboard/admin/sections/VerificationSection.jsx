@@ -1,16 +1,11 @@
 // ============================================================
-// VerificationSection.jsx (admin)
-// - Admin anaona maombi, approve/reject
-// - Admin anaweza kuomba documents zaidi
-// - Admin anaweza kuona UserDrawer (muktadha kamili)
-// - Documents zinaonyeshwa kama preview (image/PDF)
-// - Filter ya type (Seller/Buyer) iko ndani ya search bar
+// VerificationSection.jsx
 //
 // SASISHO: DocumentPreview inafetch signed URL mpya kila
 // "Fungua"/"Onyesha" (URL inaisha baada ya SIGNED_URL_EXPIRY).
 // ============================================================
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ShieldCheck,
   User,
