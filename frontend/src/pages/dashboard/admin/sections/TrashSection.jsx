@@ -3,10 +3,10 @@
 // Admin — Trash / Recycle Bin.
 //
 // Marekebisho:
-//  - TrashItemCard inapokea `isProtected` prop
-//  - Delete button inafichwa kwa protected types
-//  - Message ya "inalindwa" inaonyeshwa
-//  - TrashTypeItems inasoma `isProtected` kutoka type config
+//  - Admin anaweza kufuta KILA KITU, ikiwemo protected items
+//  - Protected items zinaonyesha onyo la ziada kwenye confirm modal
+//  - "Empty This Type" na "Empty All" zinafanya kazi kwa protected pia
+//  - ConfirmModal ina `extraWarning` prop (hiari)
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -15,8 +15,6 @@ import {
   RotateCcw,
   Loader2,
   AlertTriangle,
-  X,
-  History,
   Home as HomeIcon,
   Users as UsersIcon,
   ShieldCheck,
@@ -65,7 +63,18 @@ function getTypeConfig(typeKey) {
 // ============================================================
 // CONFIRM MODAL
 // ============================================================
-function ConfirmModal({ open, title, description, confirmLabel, danger, busy, onConfirm, onClose, lang }) {
+function ConfirmModal({
+  open,
+  title,
+  description,
+  confirmLabel,
+  danger,
+  busy,
+  onConfirm,
+  onClose,
+  lang,
+  extraWarning,
+}) {
   if (!open) return null;
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -79,10 +88,27 @@ function ConfirmModal({ open, title, description, confirmLabel, danger, busy, on
             }}
             className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
           >
-            <AlertTriangle size={26} color={danger ? COLORS.rust : COLORS.gold} />
+            <AlertTriangle
+              size={26}
+              color={danger ? COLORS.rust : COLORS.gold}
+            />
           </div>
           <h3 className="text-lg font-bold text-primary">{title}</h3>
           <p className="text-sm text-secondary mt-2">{description}</p>
+
+          {extraWarning && (
+            <div
+              style={{
+                background: `${COLORS.rust}12`,
+                color: COLORS.rust,
+                border: `1px solid ${COLORS.rust}30`,
+              }}
+              className="mt-3 text-[11px] font-semibold px-3 py-2 rounded-lg text-left flex items-start gap-1.5"
+            >
+              <ShieldAlert size={13} className="shrink-0 mt-0.5" />
+              <span>{extraWarning}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2">
@@ -120,7 +146,14 @@ function ConfirmModal({ open, title, description, confirmLabel, danger, busy, on
 // ============================================================
 // ITEM CARD
 // ============================================================
-function TrashItemCard({ item, lang, onRestore, onDelete, busyState, isProtected }) {
+function TrashItemCard({
+  item,
+  lang,
+  onRestore,
+  onDelete,
+  busyState,
+  isProtected,
+}) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const typeConfig = getTypeConfig(item.type);
   const Icon = ICON_MAP[typeConfig.iconKey] || FileText;
@@ -173,7 +206,7 @@ function TrashItemCard({ item, lang, onRestore, onDelete, busyState, isProtected
             )}
           </div>
 
-          {/* Protected notice */}
+          {/* Protected notice — onyo tu, si kizuizi */}
           {isProtected && (
             <div
               style={{
@@ -184,8 +217,8 @@ function TrashItemCard({ item, lang, onRestore, onDelete, busyState, isProtected
             >
               <ShieldAlert size={11} />
               {t(
-                "Inalindwa — haiwezi kufutwa kabisa",
-                "Protected — cannot be permanently deleted"
+                "Inalindwa — futa kwa tahadhari",
+                "Protected — delete with caution"
               )}
             </div>
           )}
@@ -209,21 +242,32 @@ function TrashItemCard({ item, lang, onRestore, onDelete, busyState, isProtected
             </span>
           </button>
 
-          {!isProtected && (
-            <button
-              onClick={onDelete}
-              disabled={isBusy}
-              style={{ color: COLORS.rust }}
-              className="p-2 rounded-lg border transition-colors hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label={t("Futa Kabisa", "Delete Permanently")}
-            >
-              {isDeleting ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Trash2 size={13} />
-              )}
-            </button>
-          )}
+          {/* Kitufe cha kufuta — kinaonekana KILA MARA */}
+          <button
+            onClick={onDelete}
+            disabled={isBusy}
+            style={{
+              color: COLORS.rust,
+              borderColor: isProtected ? `${COLORS.rust}60` : undefined,
+              background: isProtected ? `${COLORS.rust}08` : undefined,
+            }}
+            className="p-2 rounded-lg border transition-colors hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={t("Futa Kabisa", "Delete Permanently")}
+            title={
+              isProtected
+                ? t(
+                    "Inalindwa — bado unaweza kufuta",
+                    "Protected — you can still delete"
+                  )
+                : t("Futa Kabisa", "Delete Permanently")
+            }
+          >
+            {isDeleting ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Trash2 size={13} />
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -307,7 +351,11 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
         style={{ borderColor: COLORS.rust, background: "white" }}
         className="rounded-2xl border p-6 text-center w-full"
       >
-        <AlertTriangle size={28} color={COLORS.rust} className="mx-auto mb-2" />
+        <AlertTriangle
+          size={28}
+          color={COLORS.rust}
+          className="mx-auto mb-2"
+        />
         <h3 className="font-semibold text-primary mb-1">
           {t("Imeshindwa kupakia items", "Failed to load items")}
         </h3>
@@ -364,17 +412,16 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
           {items.length}{" "}
           {items.length === 1 ? t("item", "item") : t("items", "items")}
         </p>
-        {!isProtected && (
-          <button
-            onClick={() => onEmptyType(type)}
-            disabled={confirming}
-            style={{ color: COLORS.rust }}
-            className="flex items-center gap-1 text-xs font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 size={12} />
-            {t("Futa Zote za Aina Hii", "Empty This Type")}
-          </button>
-        )}
+        {/* Empty This Type — inaonekana KILA MARA */}
+        <button
+          onClick={() => onEmptyType(type)}
+          disabled={confirming}
+          style={{ color: COLORS.rust }}
+          className="flex items-center gap-1 text-xs font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Trash2 size={12} />
+          {t("Futa Zote za Aina Hii", "Empty This Type")}
+        </button>
       </div>
 
       {items.map((item) => (
@@ -383,7 +430,7 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
           item={item}
           lang={lang}
           busyState={busy[item.id]}
-          isProtected={isProtected}
+          isProtected={isProtected || item.protected}
           onRestore={() => handleRestore(item)}
           onDelete={() => setConfirmDelete(item)}
         />
@@ -398,6 +445,13 @@ function TrashTypeItems({ type, lang, onEmptyType }) {
           `"${confirmDelete?.name || ""}" itafutwa kabisa. Hatua hii haiwezi kurudishwa.`,
           `"${confirmDelete?.name || ""}" will be permanently deleted. This action cannot be undone.`
         )}
+        extraWarning={
+          (isProtected || confirmDelete?.protected) &&
+          t(
+            "⚠️ Item hii inalindwa. Kufuta kunaweza kuathiri mfumo. Endelea tu ikiwa una uhakika.",
+            "⚠️ This item is protected. Deleting may affect the system. Continue only if you are sure."
+          )
+        }
         confirmLabel={
           <>
             <Trash2 size={14} />
@@ -436,6 +490,7 @@ export default function TrashSection() {
   }, [overview, activeType]);
 
   const totalItems = Number(overview.total) || 0;
+  const hasProtectedTypes = (overview.protectedTypes || []).length > 0;
 
   const handleEmptyAllConfirm = async () => {
     setBusy((b) => ({ ...b, emptyAll: true }));
@@ -450,7 +505,10 @@ export default function TrashSection() {
     if (!res.ok) {
       setError(
         res.error?.message ||
-          t("Imeshindwa kufuta recycle bin yote.", "Failed to empty recycle bin.")
+          t(
+            "Imeshindwa kufuta recycle bin yote.",
+            "Failed to empty recycle bin."
+          )
       );
     }
   };
@@ -522,7 +580,10 @@ export default function TrashSection() {
             {totalItems}{" "}
             {totalItems === 1
               ? t("item kwenye sanduku la kurejesha", "item in recycle bin")
-              : t("items kwenye sanduku la kurejesha", "items in recycle bin")}
+              : t(
+                  "items kwenye sanduku la kurejesha",
+                  "items in recycle bin"
+                )}
           </p>
           <p className="text-xs text-secondary mt-0.5">
             {t(
@@ -530,6 +591,15 @@ export default function TrashSection() {
               "Click any type to view its items."
             )}
           </p>
+          {hasProtectedTypes && (
+            <p className="text-[10px] text-muted mt-1 flex items-center gap-1">
+              <ShieldAlert size={9} />
+              {t(
+                "Baadhi ya items zinalindwa — unaweza kuzifuta kwa tahadhari.",
+                "Some items are protected — you can delete them with caution."
+              )}
+            </p>
+          )}
         </div>
         {totalItems > 0 && (
           <button
@@ -583,7 +653,8 @@ export default function TrashSection() {
               onClick={() => setActiveType(null)}
               style={{
                 background: activeType === null ? COLORS.night : "white",
-                color: activeType === null ? COLORS.sand : "var(--text-primary)",
+                color:
+                  activeType === null ? COLORS.sand : "var(--text-primary)",
                 borderColor: COLORS.sandLine,
               }}
               className="text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
@@ -678,11 +749,21 @@ export default function TrashSection() {
         open={confirmEmptyAll}
         busy={!!busy.emptyAll}
         danger
-        title={t("Futa Sanduku la Kurejesha Yote?", "Empty Entire Recycle Bin?")}
+        title={t(
+          "Futa Sanduku la Kurejesha Yote?",
+          "Empty Entire Recycle Bin?"
+        )}
         description={t(
           "Items zote kwenye sanduku la kurejesha zitafutwa kabisa. Hatua hii haiwezi kurudishwa.",
           "All items in the recycle bin will be permanently deleted. This action cannot be undone."
         )}
+        extraWarning={
+          hasProtectedTypes &&
+          t(
+            "⚠️ Kuna items zinalindwa kwenye sanduku hili. Zitafutwa pia. Hakikisha umezingatia usalama wa mfumo.",
+            "⚠️ There are protected items in this bin. They will also be deleted. Please ensure system safety."
+          )
+        }
         confirmLabel={
           <>
             <Trash2 size={14} />
@@ -700,9 +781,25 @@ export default function TrashSection() {
         danger
         title={t("Futa Aina Hii?", "Empty This Type?")}
         description={t(
-          `Items zote za "${confirmEmptyType ? getTypeConfig(confirmEmptyType).label[lang] : ""}" zitafutwa kabisa.`,
-          `All items of type "${confirmEmptyType ? getTypeConfig(confirmEmptyType).label[lang] : ""}" will be permanently deleted.`
+          `Items zote za "${
+            confirmEmptyType
+              ? getTypeConfig(confirmEmptyType).label[lang]
+              : ""
+          }" zitafutwa kabisa.`,
+          `All items of type "${
+            confirmEmptyType
+              ? getTypeConfig(confirmEmptyType).label[lang]
+              : ""
+          }" will be permanently deleted.`
         )}
+        extraWarning={
+          confirmEmptyType &&
+          getTypeConfig(confirmEmptyType).isProtected &&
+          t(
+            "⚠️ Aina hii inalindwa. Kufuta zote kunaweza kuathiri mfumo. Endelea kwa tahadhari.",
+            "⚠️ This type is protected. Emptying it may affect the system. Proceed with caution."
+          )
+        }
         confirmLabel={
           <>
             <Trash2 size={14} />
