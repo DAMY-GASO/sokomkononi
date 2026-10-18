@@ -1090,80 +1090,80 @@ export default function DashboardShell() {
         </aside>
 
         {sidebarOpen && (
-          <div className="md:hidden absolute inset-0 z-20 flex">
-            <div
-              style={{ background: COLORS.sand }}
-              className="w-64 h-full py-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto"
-            >
-              <div className="flex justify-end mb-2">
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  aria-label={t("Funga", "Close")}
-                >
-                  <X size={20} color={COLORS.night} />
-                </button>
-              </div>
-              {nav.map(({ key, label, icon: Icon }) => {
-                const isActive = key === activeKey;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      handleNavClick(key);
-                      setSidebarOpen(false);
-                    }}
-                    style={{
-                      background: isActive ? COLORS.night : "transparent",
-                      color: isActive ? COLORS.sand : COLORS.night,
-                    }}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left"
-                  >
-                    <Icon size={17} color={isActive ? accent : COLORS.night} />
-                    {label[lang] || label.sw}
-                    {key === "leads" && newLeadsCount > 0 && (
-                      <span
-                        style={{
-                          background: isActive
-                            ? "rgba(245,243,236,0.18)"
-                            : COLORS.rust,
-                          color: isActive ? COLORS.sand : "white",
-                        }}
-                        className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full"
-                      >
-                        {newLeadsCount}
-                      </span>
-                    )}
-                    {key === "searches" && buyerSearchesCount > 0 && (
-                      <span
-                        style={{
-                          background: isActive
-                            ? "rgba(245,243,236,0.18)"
-                            : COLORS.sandLine,
-                          color: isActive ? COLORS.sand : COLORS.night,
-                        }}
-                        className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full"
-                      >
-                        {buyerSearchesCount}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-
-              <a
-                href="/"
-                className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4"
+  <div className="md:hidden fixed inset-0 z-40 flex">
+    <div
+      style={{ background: COLORS.sand }}
+      className="w-72 max-w-[85%] h-full pt-16 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto"
+    >
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={() => setSidebarOpen(false)}
+          aria-label={t("Funga", "Close")}
+        >
+          <X size={20} color={COLORS.night} />
+        </button>
+      </div>
+      {nav.map(({ key, label, icon: Icon }) => {
+        const isActive = key === activeKey;
+        return (
+          <button
+            key={key}
+            onClick={() => {
+              handleNavClick(key);
+              setSidebarOpen(false);
+            }}
+            style={{
+              background: isActive ? COLORS.night : "transparent",
+              color: isActive ? COLORS.sand : COLORS.night,
+            }}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left"
+          >
+            <Icon size={17} color={isActive ? accent : COLORS.night} />
+            {label[lang] || label.sw}
+            {key === "leads" && newLeadsCount > 0 && (
+              <span
+                style={{
+                  background: isActive
+                    ? "rgba(245,243,236,0.18)"
+                    : COLORS.rust,
+                  color: isActive ? COLORS.sand : "white",
+                }}
+                className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full"
               >
-                <Home size={17} color={COLORS.night} />
-                {t("Rudi Nyumbani", "Back to Home")}
-              </a>
-            </div>
-            <div
-              onClick={() => setSidebarOpen(false)}
-              className="flex-1 bg-black/30"
-            />
-          </div>
-        )}
+                {newLeadsCount}
+              </span>
+            )}
+            {key === "searches" && buyerSearchesCount > 0 && (
+              <span
+                style={{
+                  background: isActive
+                    ? "rgba(245,243,236,0.18)"
+                    : COLORS.sandLine,
+                  color: isActive ? COLORS.sand : COLORS.night,
+                }}
+                className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full"
+              >
+                {buyerSearchesCount}
+              </span>
+            )}
+          </button>
+        );
+      })}
+
+      <a
+        href="/"
+        className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4"
+      >
+        <Home size={17} color={COLORS.night} />
+        {t("Rudi Nyumbani", "Back to Home")}
+      </a>
+    </div>
+    <div
+      onClick={() => setSidebarOpen(false)}
+      className="flex-1 bg-black/50"
+    />
+  </div>
+)}
 
         <div className="flex-1 min-w-0 w-full max-w-full overflow-x-hidden overflow-y-auto">{renderMain()}</div>
       </div>

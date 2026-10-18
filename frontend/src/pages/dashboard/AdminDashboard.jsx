@@ -40,7 +40,7 @@ import VerificationSection from "./admin/sections/VerificationSection.jsx";
 import DealsSection from "./admin/sections/DealsSection.jsx";
 import RevenueSection from "./admin/sections/RevenueSection.jsx";
 import PromotionsSection from "./admin/sections/PromotionsSection.jsx";
-import RefundsSection from "./admin/sections/RefundsSection.jsx";   // ⬅️ MPYA
+import RefundsSection from "./admin/sections/RefundsSection.jsx;
 import ReportsSection from "./admin/sections/ReportsSection.jsx";
 
 // Support & Content
@@ -82,7 +82,7 @@ const URL_TO_STATE = {
   [`${ADMIN_PATH}/deals`]: "deals",
   [`${ADMIN_PATH}/revenue`]: "revenue",
   [`${ADMIN_PATH}/promotions`]: "promotions",
-  [`${ADMIN_PATH}/refunds`]: "refunds",                    // ⬅️ MPYA
+  [`${ADMIN_PATH}/refunds`]: "refunds",
   [`${ADMIN_PATH}/reports`]: "reports",
   [`${ADMIN_PATH}/support`]: "support",
   [`${ADMIN_PATH}/content`]: "content",
@@ -103,7 +103,7 @@ const STATE_TO_URL = {
   deals: `${ADMIN_PATH}/deals`,
   revenue: `${ADMIN_PATH}/revenue`,
   promotions: `${ADMIN_PATH}/promotions`,
-  refunds: `${ADMIN_PATH}/refunds`,                        // ⬅️ MPYA
+  refunds: `${ADMIN_PATH}/refunds`,
   reports: `${ADMIN_PATH}/reports`,
   support: `${ADMIN_PATH}/support`,
   content: `${ADMIN_PATH}/content`,
@@ -291,10 +291,7 @@ export default function AdminDashboard() {
   ]);
 
   const canAccess = (sectionKey) => {
-    // Always-accessible personal sections
     if (sectionKey === "profile" || sectionKey === "overview") return true;
-    // Fail OPEN while roles hydrate, so the admin always sees the nav.
-    // The actual API endpoints remain enforced server-side.
     if (!rolesReady) return true;
     if (!staffRole) return false;
     if (staffRole.key === "super_admin" || staffRole.key === "admin") return true;
@@ -302,8 +299,6 @@ export default function AdminDashboard() {
   };
 
   const visibleNav = useMemo(() => {
-    // Show the full nav until roles are known; a failed role fetch must not
-    // leave the admin without any way to navigate.
     if (!rolesReady) return NAV;
     return NAV.filter((item) => canAccess(item.key));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -326,8 +321,6 @@ export default function AdminDashboard() {
       return;
     }
     if (!isAdmin) {
-      // Si admin → HAPELEKWI kwenye dashboard ya watumiaji. Futa session
-      // ya admin-scope na mrudishe kwenye login ya admin.
       logoutAsync().finally(() => navigate(ADMIN_LOGIN_PATH, { replace: true }));
       return;
     }
@@ -401,7 +394,7 @@ export default function AdminDashboard() {
         return <RevenueSection />;
       case "promotions":
         return <PromotionsSection />;
-      case "refunds":                                  // ⬅️ MPYA
+      case "refunds":
         return <RefundsSection />;
       case "reports":
         return <ReportsSection />;
@@ -443,241 +436,242 @@ export default function AdminDashboard() {
       data-surface="sand"
       className="bg-page min-h-screen w-full overflow-x-hidden"
     >
+      {/* HEADER */}
       <header
-      style={{ background: "#011957" }}
-      className="sticky top-0 z-50 w-full border-b border-white/[0.08] text-white"
-    >
-      <div className="flex h-16 w-full items-center justify-between gap-3 px-4 sm:px-6">
-        {/* LEFT: Menu + Logo */}
-        <div className="flex shrink-0 items-center gap-3">
-          <button
-            onClick={() => setSidebarOpen((v) => !v)}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white transition-colors hover:bg-white/[0.08] md:hidden"
-            aria-label={lang === "sw" ? "Fungua menyu" : "Open menu"}
-          >
-            <Menu size={22} />
-          </button>
-          <a href="/" className="flex shrink-0 select-none items-center gap-2.5">
-            <img
-              src="/logo.webp"
-              alt="SokoMkononi"
-              width={32}
-              height={32}
-              className="h-8 w-8 shrink-0 rounded-full"
-            />
-            <span className="text-[16px] font-bold tracking-tight">
-              Soko<span className="text-[#FEA406]">Mkononi</span>
-            </span>
-          </a>
-        </div>
-
-        {/* CENTER: Administrator Title */}
-        <div className="flex flex-1 items-center justify-center min-w-0 px-2 hidden sm:flex">
-          <span className="text-[13px] sm:text-[15px] font-black uppercase tracking-[0.28em] text-[#FEA406] whitespace-nowrap">
-            {lang === "sw" ? "MSIMAMIZI" : "ADMINISTRATOR"}
-          </span>
-        </div>
-
-        {/* RIGHT: Actions */}
-        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-          <ThemeToggle variant="onNavy" />
-          <a
-            href="/"
-            className="hidden sm:grid h-10 w-10 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
-            aria-label={lang === "sw" ? "Nenda kwenye tovuti ya umma" : "Go to public site"}
-            title={lang === "sw" ? "Nenda kwenye tovuti" : "Go to site"}
-          >
-            <HomeIcon size={18} />
-          </a>
-          <LanguageSwitcher lang={lang} setLang={setLang} />
-          <div className="relative">
+        style={{ background: "#011957" }}
+        className="sticky top-0 z-50 w-full border-b border-white/[0.08] text-white"
+      >
+        <div className="flex h-16 w-full items-center justify-between gap-3 px-4 sm:px-6">
+          {/* LEFT: Menu + Logo */}
+          <div className="flex shrink-0 items-center gap-3">
             <button
-              onClick={() => setNotifOpen((v) => !v)}
-              className="relative grid h-10 w-10 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
-              aria-label={lang === "sw" ? "Taarifa" : "Notifications"}
+              onClick={() => setSidebarOpen((v) => !v)}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white transition-colors hover:bg-white/[0.08] md:hidden"
+              aria-label={lang === "sw" ? "Fungua menyu" : "Open menu"}
             >
-              <Bell size={18} />
-              {unreadCount > 0 && (
-                <span
-                  style={{ background: COLORS.rust }}
-                  className="absolute right-1 top-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
-                >
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
+              <Menu size={22} />
             </button>
-            {/* NOTIFICATIONS DROPDOWN LOGIC */}
-            {notifOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setNotifOpen(false)}
-                  aria-hidden="true"
-                />
-                <div
-                  style={{ borderColor: COLORS.sandLine }}
-                  className="absolute right-0 mt-3 w-80 max-w-[85vw] bg-white rounded-xl border shadow-xl z-50 overflow-hidden"
-                >
-                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-primary">
-                      {lang === "sw" ? "Taarifa Zangu" : "My Notifications"}
-                    </span>
-                    {unreadCount > 0 && (
-                      <span
-                        style={{ color: COLORS.rust }}
-                        className="text-xs font-semibold"
-                      >
-                        {unreadCount} {lang === "sw" ? "mpya" : "new"}
-                      </span>
-                    )}
-                  </div>
-                  <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
-                    {notifications.map((n) => {
-                      const Icon = ADMIN_NOTIFICATION_ICONS[n.type] || Bell;
-                      return (
-                        <button
-                          key={n.id}
-                          onClick={() => openNotification(n)}
-                          style={{
-                            background: n.read ? "white" : `${COLORS.gold}0D`,
-                          }}
-                          className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-                        >
-                          <div
-                            style={{ background: `${COLORS.night}0D` }}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                          >
-                            <Icon size={14} color={COLORS.night} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs text-primary leading-snug">
-                              {getLocalizedField(n.title, lang)}
-                            </p>
-                            <p className="text-[11px] text-muted mt-1">
-                              {timeAgo(n.at, lang)}
-                            </p>
-                          </div>
-                          {!n.read && (
-                            <span
-                              style={{ background: COLORS.gold }}
-                              className="w-2 h-2 rounded-full shrink-0 mt-1.5"
-                            />
-                          )}
-                        </button>
-                      );
-                    })}
-                    {notifications.length === 0 && (
-                      <p className="text-xs text-muted px-4 py-6 text-center">
-                        {lang === "sw" ? "Hakuna taarifa" : "No notifications"}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="border-t border-gray-100 px-4 py-2 flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const res = await markAllNotificationsReadAsync("admin");
-                        if (!res?.ok) console.warn("markAllRead failed:", res?.error);
-                      }}
-                      className="text-[11px] font-semibold hover:underline"
-                      style={{ color: COLORS.green }}
-                    >
-                      {lang === "sw" ? "Soma Zote" : "Mark All Read"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!window.confirm(lang === "sw"
-                          ? "Futa taarifa zote za admin?"
-                          : "Delete all admin notifications?")) return;
-                        const res = await clearNotificationsAsync("admin");
-                        if (!res?.ok) console.warn("clearAll failed:", res?.error);
-                      }}
-                      className="text-[11px] font-semibold hover:underline"
-                      style={{ color: COLORS.rust }}
-                    >
-                      {lang === "sw" ? "Futa Zote" : "Delete All"}
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+            <a href="/" className="flex shrink-0 select-none items-center gap-2.5">
+              <img
+                src="/logo.webp"
+                alt="SokoMkononi"
+                width={32}
+                height={32}
+                className="h-8 w-8 shrink-0 rounded-full"
+              />
+              <span className="text-[16px] font-bold tracking-tight">
+                Soko<span className="text-[#FEA406]">Mkononi</span>
+              </span>
+            </a>
           </div>
-          <div className="relative ml-1">
-            <button
-              onClick={() => setProfileMenuOpen((v) => !v)}
-              className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#FEA406]/40"
-              aria-label={lang === "sw" ? "Menyu ya wasifu" : "Profile menu"}
+
+          {/* CENTER: Administrator Title */}
+          <div className="flex flex-1 items-center justify-center min-w-0 px-2 hidden sm:flex">
+            <span className="text-[13px] sm:text-[15px] font-black uppercase tracking-[0.28em] text-[#FEA406] whitespace-nowrap">
+              {lang === "sw" ? "MSIMAMIZI" : "ADMINISTRATOR"}
+            </span>
+          </div>
+
+          {/* RIGHT: Actions */}
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+            <ThemeToggle variant="onNavy" />
+            <a
+              href="/"
+              className="hidden sm:grid h-10 w-10 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
+              aria-label={lang === "sw" ? "Nenda kwenye tovuti ya umma" : "Go to public site"}
+              title={lang === "sw" ? "Nenda kwenye tovuti" : "Go to site"}
             >
-              <Avatar user={user} />
-            </button>
-            {profileMenuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setProfileMenuOpen(false)}
-                />
-                <div className="absolute right-0 mt-2 w-64 max-w-[85vw] bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-                    <Avatar user={user} size="lg" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-primary truncate">
-                        {user?.name || "Admin"}
-                      </p>
-                      <p className="text-xs text-secondary truncate">
-                        {user?.email}
-                      </p>
+              <HomeIcon size={18} />
+            </a>
+            <LanguageSwitcher lang={lang} setLang={setLang} />
+            <div className="relative">
+              <button
+                onClick={() => setNotifOpen((v) => !v)}
+                className="relative grid h-10 w-10 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
+                aria-label={lang === "sw" ? "Taarifa" : "Notifications"}
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span
+                    style={{ background: COLORS.rust }}
+                    className="absolute right-1 top-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+              {/* NOTIFICATIONS DROPDOWN LOGIC */}
+              {notifOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setNotifOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <div
+                    style={{ borderColor: COLORS.sandLine }}
+                    className="absolute right-0 mt-3 w-80 max-w-[85vw] bg-white rounded-xl border shadow-xl z-50 overflow-hidden"
+                  >
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-primary">
+                        {lang === "sw" ? "Taarifa Zangu" : "My Notifications"}
+                      </span>
+                      {unreadCount > 0 && (
+                        <span
+                          style={{ color: COLORS.rust }}
+                          className="text-xs font-semibold"
+                        >
+                          {unreadCount} {lang === "sw" ? "mpya" : "new"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                      {notifications.map((n) => {
+                        const Icon = ADMIN_NOTIFICATION_ICONS[n.type] || Bell;
+                        return (
+                          <button
+                            key={n.id}
+                            onClick={() => openNotification(n)}
+                            style={{
+                              background: n.read ? "white" : `${COLORS.gold}0D`,
+                            }}
+                            className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                          >
+                            <div
+                              style={{ background: `${COLORS.night}0D` }}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                            >
+                              <Icon size={14} color={COLORS.night} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs text-primary leading-snug">
+                                {getLocalizedField(n.title, lang)}
+                              </p>
+                              <p className="text-[11px] text-muted mt-1">
+                                {timeAgo(n.at, lang)}
+                              </p>
+                            </div>
+                            {!n.read && (
+                              <span
+                                style={{ background: COLORS.gold }}
+                                className="w-2 h-2 rounded-full shrink-0 mt-1.5"
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
+                      {notifications.length === 0 && (
+                        <p className="text-xs text-muted px-4 py-6 text-center">
+                          {lang === "sw" ? "Hakuna taarifa" : "No notifications"}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="border-t border-gray-100 px-4 py-2 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const res = await markAllNotificationsReadAsync("admin");
+                          if (!res?.ok) console.warn("markAllRead failed:", res?.error);
+                        }}
+                        className="text-[11px] font-semibold hover:underline"
+                        style={{ color: COLORS.green }}
+                      >
+                        {lang === "sw" ? "Soma Zote" : "Mark All Read"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!window.confirm(lang === "sw"
+                            ? "Futa taarifa zote za admin?"
+                            : "Delete all admin notifications?")) return;
+                          const res = await clearNotificationsAsync("admin");
+                          if (!res?.ok) console.warn("clearAll failed:", res?.error);
+                        }}
+                        className="text-[11px] font-semibold hover:underline"
+                        style={{ color: COLORS.rust }}
+                      >
+                        {lang === "sw" ? "Futa Zote" : "Delete All"}
+                      </button>
                     </div>
                   </div>
+                </>
+              )}
+            </div>
+            <div className="relative ml-1">
+              <button
+                onClick={() => setProfileMenuOpen((v) => !v)}
+                className="rounded-full focus:outline-none focus:ring-2 focus:ring-[#FEA406]/40"
+                aria-label={lang === "sw" ? "Menyu ya wasifu" : "Profile menu"}
+              >
+                <Avatar user={user} />
+              </button>
+              {profileMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setProfileMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-64 max-w-[85vw] bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+                      <Avatar user={user} size="lg" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-primary truncate">
+                          {user?.name || "Admin"}
+                        </p>
+                        <p className="text-xs text-secondary truncate">
+                          {user?.email}
+                        </p>
+                      </div>
+                    </div>
 
-                  <button
-                    onClick={() => {
-                      navigate(STATE_TO_URL.profile);
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <UserIcon size={16} className="text-muted" />
-                    {lang === "sw" ? "Wasifu" : "Profile"}
-                  </button>
+                    <button
+                      onClick={() => {
+                        navigate(STATE_TO_URL.profile);
+                        setProfileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <UserIcon size={16} className="text-muted" />
+                      {lang === "sw" ? "Wasifu" : "Profile"}
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      navigate(STATE_TO_URL.system);
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <Settings size={16} className="text-muted" />
-                    {lang === "sw" ? "Mipangilio" : "Settings"}
-                  </button>
+                    <button
+                      onClick={() => {
+                        navigate(STATE_TO_URL.system);
+                        setProfileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <Settings size={16} className="text-muted" />
+                      {lang === "sw" ? "Mipangilio" : "Settings"}
+                    </button>
 
-                  <div className="border-t border-gray-100" />
+                    <div className="border-t border-gray-100" />
 
-                  <button
-                    onClick={() => {
-                      setProfileMenuOpen(false);
-                      handleLogout();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#C1502E] hover:bg-[#C1502E]/5 transition-colors text-left"
-                  >
-                    <LogOut size={16} />
-                    {lang === "sw" ? "Toka" : "Logout"}
-                  </button>
-                </div>
-              </>
-            )}
+                    <button
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#C1502E] hover:bg-[#C1502E]/5 transition-colors text-left"
+                    >
+                      <LogOut size={16} />
+                      {lang === "sw" ? "Toka" : "Logout"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
 
       <div className="flex w-full">
         {/* SIDEBAR — DESKTOP */}
         <aside
           style={{ borderColor: COLORS.sandLine }}
-          className="hidden md:flex w-64 shrink-0 border-r flex-col py-4 px-3 gap-1 min-h-[calc(100vh-56px)] overflow-y-auto" bg-page bg-page
+          className="hidden md:flex w-64 shrink-0 border-r flex-col py-4 px-3 gap-1 min-h-[calc(100vh-56px)] overflow-y-auto bg-page"
         >
           {visibleNav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeSection;
@@ -722,8 +716,7 @@ export default function AdminDashboard() {
         {sidebarOpen && (
           <div className="md:hidden fixed inset-0 z-40 flex">
             <div
-              style={{}}
-              className="w-72 max-w-[85%] h-full pt-20 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto"
+              className="w-72 max-w-[85%] h-full pt-20 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto bg-page text-primary"
             >
               <div className="flex justify-end mb-2">
                 <button
@@ -731,7 +724,7 @@ export default function AdminDashboard() {
                   aria-label={lang === "sw" ? "Funga" : "Close"}
                   className="p-2 text-muted hover:text-secondary"
                 >
-                  <X size={20} color={COLORS.night} />
+                  <X size={20} color="currentColor" />
                 </button>
               </div>
 
@@ -750,7 +743,7 @@ export default function AdminDashboard() {
                   >
                     <Icon
                       size={17}
-                      color={isActive ? COLORS.gold : COLORS.night}
+                      color={isActive ? COLORS.gold : "currentColor"}
                       className="shrink-0"
                     />
                     <span className="flex-1 truncate">
@@ -775,7 +768,7 @@ export default function AdminDashboard() {
             </div>
             <div
               onClick={() => setSidebarOpen(false)}
-              className="flex-1 bg-black/30"
+              className="flex-1 bg-black/50"
             />
           </div>
         )}

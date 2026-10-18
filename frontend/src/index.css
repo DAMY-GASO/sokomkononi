@@ -2176,3 +2176,33 @@ input[type="search"]::-webkit-search-results-decoration {
   outline: none !important;
   box-shadow: none !important;
 }
+
+
+/* ============================================================
+   FIX: Admin Dropdown Text Visibility (Light & Dark Mode)
+   ============================================================ */
+html.dark [data-surface="sand"] .bg-white.text-primary,
+html.dark [data-surface="sand"] .bg-white .text-primary {
+  color: #FFFFFF !important;
+}
+html.dark [data-surface="sand"] .bg-white.text-secondary,
+html.dark [data-surface="sand"] .bg-white .text-secondary {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* Hakikisha maandishi kwenye dropdown yoyote yenye bg-white au bg-card yanaonekana */
+[data-surface="sand"] [role="menu"],
+[data-surface="sand"] .absolute.bg-white {
+  color: var(--text-primary);
+}
+
+/* Notification dropdown dark mode fix */
+html.dark [data-surface="sand"] .bg-white .divide-gray-100 > * {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+html.dark [data-surface="sand"] .bg-white .border-gray-100 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+html.dark [data-surface="sand"] .bg-white .hover\:bg-gray-50:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
