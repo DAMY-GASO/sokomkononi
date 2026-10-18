@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell, Menu, X, Heart, MessageSquare, User as UserIcon, Share2,
   Plus, ChevronRight, Globe, Sun, Moon, LogOut, LayoutGrid, Package,
+  Users,
 } from "lucide-react";
 
 import { useLanguage } from "../context/LanguageContext.jsx";
@@ -377,6 +378,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                         { to: "/dashboard/buyer",  label: lang === "sw" ? "Nunua Sasa" : "Buy Now",        Icon: Package },
                         { to: "/dashboard/buyer/saved",  label: lang === "sw" ? "Zilizohifadhiwa" : "Saved",     Icon: Heart },
                         { to: "/wasifu",           label: lang === "sw" ? "Wasifu" : "Profile",            Icon: UserIcon },
+                        { to: "/alika-marafiki",   label: lang === "sw" ? "Alika Marafiki" : "Invite Friends", Icon: Users },
                       ].map(({ to, label, Icon }) => (
                         <Link
                           key={to}
