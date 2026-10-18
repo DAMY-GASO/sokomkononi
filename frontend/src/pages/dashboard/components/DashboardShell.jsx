@@ -1019,10 +1019,10 @@ export default function DashboardShell() {
       <PromotedBannerStrip onOpenListing={goToListingDetail} />
 
       <div className="flex flex-1 relative">
-        <aside
+       <aside
          style={{ borderColor: COLORS.sandLine }}
-          className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto bg-page"
->
+         className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto bg-page"
+       >
           {nav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeKey;
             return (
@@ -1090,17 +1090,17 @@ export default function DashboardShell() {
         </aside>
 
       {sidebarOpen && (
-       <div className="md:hidden fixed inset-0 z-40 flex">
-       <div
-        style={{ background: COLORS.sand }}
-         className="w-72 max-w-[85%] h-full pt-16 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto"
-       >
+  <div className="md:hidden fixed inset-0 z-40 flex">
+    <div
+      className="w-72 max-w-[85%] h-full pt-16 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto bg-page"
+    >
       <div className="flex justify-end mb-2">
         <button
           onClick={() => setSidebarOpen(false)}
           aria-label={t("Funga", "Close")}
+          className="p-2 text-muted hover:text-secondary"
         >
-          <X size={20} color={COLORS.night} />
+          <X size={20} color="currentColor" />
         </button>
       </div>
       {nav.map(({ key, label, icon: Icon }) => {
@@ -1114,12 +1114,14 @@ export default function DashboardShell() {
             }}
             style={{
               background: isActive ? COLORS.night : "transparent",
-              color: isActive ? COLORS.sand : COLORS.night,
+              color: isActive ? COLORS.sand : "var(--text-primary)",
             }}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left w-full"
           >
-            <Icon size={17} color={isActive ? accent : COLORS.night} />
-            {label[lang] || label.sw}
+            <Icon size={17} color={isActive ? accent : "currentColor"} />
+            <span className="flex-1 truncate">
+              {label[lang] || label.sw}
+            </span>
             {key === "leads" && newLeadsCount > 0 && (
               <span
                 style={{
@@ -1128,7 +1130,7 @@ export default function DashboardShell() {
                     : COLORS.rust,
                   color: isActive ? COLORS.sand : "white",
                 }}
-                className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full"
+                className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full shrink-0"
               >
                 {newLeadsCount}
               </span>
@@ -1141,7 +1143,7 @@ export default function DashboardShell() {
                     : COLORS.sandLine,
                   color: isActive ? COLORS.sand : COLORS.night,
                 }}
-                className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full"
+                className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full shrink-0"
               >
                 {buyerSearchesCount}
               </span>
@@ -1154,17 +1156,16 @@ export default function DashboardShell() {
         href="/"
         className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4"
       >
-        <Home size={17} color={COLORS.night} />
+        <Home size={17} />
         {t("Rudi Nyumbani", "Back to Home")}
       </a>
     </div>
     <div
       onClick={() => setSidebarOpen(false)}
       className="flex-1 bg-black/50"
-    />
-  </div>
-)}
-
+     />
+      </div>
+    )}
         <div className="flex-1 min-w-0 w-full max-w-full overflow-x-hidden overflow-y-auto">{renderMain()}</div>
       </div>
 
