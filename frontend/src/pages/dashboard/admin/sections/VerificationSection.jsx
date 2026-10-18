@@ -116,70 +116,97 @@ const MIN_REASON = 5;
 
 // ============================================================
 // DOCUMENT PREVIEW
+// - Preview na Open zote zinatumia fetch + blob URL
+//   (kwa sababu <img>/<iframe> hazitumii Authorization header)
+// - Inafetch fresh kila "Onyesha"/"Fungua"
 // ============================================================
 function DocumentPreview({ doc, verificationId, lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [freshUrl, setFreshUrl] = useState(null);
+  const [blobUrl, setBlobUrl] = useState(null);
   const [loadError, setLoadError] = useState(false);
 
   const isImage = doc.is_image;
   const isPdf = doc.is_pdf;
 
-  // Tumia freshUrl kama ipo, vinginevyo doc.url
-  const url = freshUrl || doc.url || doc.preview_url;
+  // ── Fetch bytes kwa Authorization header, rudisha blob URL ──
+  const fetchBlobUrl = async () => {
+    const token =
+      localStorage.getItem("sokomkononi_admin_access") ||
+      localStorage.getItem("sokomkononi_access") ||
+      "";
+    const base = (import.meta.env.VITE_API_BASE_URL || "/api").replace(
+      /\/+$/,
+      ""
+    );
+    const url = `${base}/verifications/${verificationId}/documents/${doc.id}/stream/`;
 
-  // ── Fungua document: fetch URL mpya kutoka backend ──
-  
-  const getStreamUrl = () => {
-    const token = localStorage.getItem("sokomkononi_admin_access") || localStorage.getItem("sokomkononi_access") || "";
-    const base = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/+$/, "");
-    return `${base}/verifications/${verificationId}/documents/${doc.id}/stream/?token=${encodeURIComponent(token)}`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (res.status === 404) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.detail || "file_missing");
+    }
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
   };
 
+  // ── Fungua kwenye tab mpya ──
   const handleOpen = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (loading) return;
     setLoading(true);
     setLoadError(false);
-
     try {
-      const { url, token } = getStreamUrl(doc.id);
-      const res = await fetch(url, {
-        method: "GET",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-
-      if (res.status === 404) {
-        setLoadError(true);
-        setLoading(false);
-        return;
-      }
-      if (!res.ok) {
-        setLoadError(true);
-        setLoading(false);
-        return;
-      }
-
-      const blob = await res.blob();
-      const objUrl = URL.createObjectURL(blob);
+      const objUrl = await fetchBlobUrl();
       window.open(objUrl, "_blank", "noopener,noreferrer");
       setTimeout(() => URL.revokeObjectURL(objUrl), 60_000);
     } catch (err) {
-      console.error("[DocumentPreview] stream failed:", err);
+      console.error("[DocumentPreview] open failed:", err);
       setLoadError(true);
     } finally {
       setLoading(false);
     }
-  };;;
-
-  // ── Preview: pia refresh kabla ya kuonyesha ──
-  const handleExpand = async () => {
-    if (expanded) { setExpanded(false); return; }
-    setFreshUrl(getStreamUrl());
-    setExpanded(true);
   };
+
+  // ── Preview: fetch blob kisha onyesha ──
+  const handleExpand = async () => {
+    if (expanded) {
+      setExpanded(false);
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        setBlobUrl(null);
+      }
+      return;
+    }
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const objUrl = await fetchBlobUrl();
+      setBlobUrl(objUrl);
+      setExpanded(true);
+    } catch (err) {
+      console.error("[DocumentPreview] preview failed:", err);
+      setLoadError(true);
+      setExpanded(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [blobUrl]);
 
   if (!doc.id) {
     return (
@@ -221,13 +248,11 @@ function DocumentPreview({ doc, verificationId, lang }) {
           )}
           {expanded ? t("Funga", "Close") : t("Onyesha", "Show")}
         </button>
-        <a
-          href={url || "#"}
+        <button
+          type="button"
           onClick={handleOpen}
-          target="_blank"
-          rel="noreferrer"
-          download={doc.name || undefined}
-          className="text-[10px] font-semibold hover:underline flex items-center gap-1"
+          disabled={loading}
+          className="text-[10px] font-semibold hover:underline flex items-center gap-1 disabled:opacity-50"
           style={{ color: COLORS.rust }}
         >
           {loading ? (
@@ -236,7 +261,7 @@ function DocumentPreview({ doc, verificationId, lang }) {
             <ExternalLink size={11} />
           )}
           {t("Fungua", "Open")}
-        </a>
+        </button>
       </div>
 
       {expanded && (
@@ -255,16 +280,26 @@ function DocumentPreview({ doc, verificationId, lang }) {
                 )}
               </p>
             </div>
+          ) : !blobUrl ? (
+            <div className="text-center py-6">
+              <Loader2
+                size={28}
+                className="mx-auto text-muted mb-2 animate-spin"
+              />
+              <p className="text-xs text-secondary">
+                {t("Inapakia...", "Loading...")}
+              </p>
+            </div>
           ) : isImage ? (
             <img
-              src={url}
+              src={blobUrl}
               alt={doc.name || "Document"}
               className="w-full max-h-96 object-contain rounded"
               onError={() => setLoadError(true)}
             />
           ) : isPdf ? (
             <iframe
-              src={url}
+              src={blobUrl}
               title={doc.name || "PDF"}
               className="w-full h-96 rounded"
               style={{ border: "none" }}
@@ -286,7 +321,6 @@ function DocumentPreview({ doc, verificationId, lang }) {
     </div>
   );
 }
-
 // ============================================================
 // VERIFICATION CARD
 // ============================================================
