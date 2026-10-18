@@ -5,6 +5,8 @@
 //  - normOverview: inasoma `protected` flag kutoka backend
 //  - getTrashTypeConfig: inarudisha `isProtected`
 //  - normItem: inasoma `protected` flag kwa kila item
+//  - permanentDeleteTrashItemAsync: inatuma force=true kwenye QUERY
+//  - emptyTrashByTypeAsync / emptyTrashAsync: force=true kwenye QUERY
 // ============================================================
 import { useEffect, useState } from "react";
 import { trashApi } from "../api/trash.js";
@@ -48,7 +50,7 @@ const EMPTY_OVERVIEW = {
   banners: 0, announcements: 0, deals: 0, total: 0, lastUpdated: null,
   others: [],
   backendTypes: {},
-  protectedTypes: [],  // ⬅️ MPYA
+  protectedTypes: [],
 };
 
 function readOverview() {
@@ -100,14 +102,14 @@ function normOverview(raw) {
         o[key] = count;
         o.backendTypes[key] = type;
         if (t.protected) {
-          o.protectedTypes.push(key);  // ⬅️ MPYA
+          o.protectedTypes.push(key);
         }
       } else if (count > 0) {
         o.others.push({
           key: type,
           name: prettyName(t.model || String(type).split(".").pop()),
           count,
-          protected: !!t.protected,  // ⬅️ MPYA
+          protected: !!t.protected,
         });
       }
     }
@@ -141,7 +143,7 @@ function normItem(raw, fallbackType) {
     deletedBy: raw.deleted_by_name || "—",
     details: raw.details || raw.reason || "",
     thumbnail: raw.thumbnail || raw.image_url || null,
-    protected: !!raw.protected,  // ⬅️ MPYA
+    protected: !!raw.protected,
   };
 }
 
@@ -176,7 +178,7 @@ export function getAllTrashTypes(o = readOverview()) {
   const base = TRASH_TYPES.map((t) => ({
     ...t,
     count: Number(o[t.key]) || 0,
-    isProtected: (o.protectedTypes || []).includes(t.key),  // ⬅️ MPYA
+    isProtected: (o.protectedTypes || []).includes(t.key),
   }));
   const extra = (o.others || []).map((x) => ({
     key: x.key,
@@ -184,7 +186,7 @@ export function getAllTrashTypes(o = readOverview()) {
     iconKey: "File",
     color: "#6B7280",
     count: Number(x.count) || 0,
-    isProtected: !!x.protected,  // ⬅️ MPYA
+    isProtected: !!x.protected,
   }));
   return [...base, ...extra];
 }
@@ -209,7 +211,7 @@ export function getTrashBreakdown() {
     iconKey: t.iconKey,
     color: t.color,
     count: Number(o[t.key]) || 0,
-    isProtected: (o.protectedTypes || []).includes(t.key),  // ⬅️ MPYA
+    isProtected: (o.protectedTypes || []).includes(t.key),
   }));
 }
 export function getTrashItemsByType(type) {
@@ -253,16 +255,27 @@ export async function restoreTrashItemAsync(type, id) {
 
 export async function permanentDeleteTrashItemAsync(type, id) {
   try {
-    await api.delete(`/trash/${apiType(type)}/${id}/`);
+    // `force=true` kwenye QUERY — DELETE body haisafiri kwa urahisi
+    await api.delete(`/trash/${apiType(type)}/${id}/?force=true`);
     setTrashItemsByType(type, getTrashItemsByType(type).filter((i) => i.id !== id));
     writeOverview(adjustCount(readOverview(), type, -1));
     return { ok: true };
-  } catch (err) { return { ok: false, error: err }; }
+  } catch (err) {
+    // onyesha detail kwenye console kwa debugging
+    console.error("[trashStore] permanent delete failed:", {
+      url: `/trash/${apiType(type)}/${id}/?force=true`,
+      status: err?.status,
+      data: err?.data,
+    });
+    return { ok: false, error: err };
+  }
 }
 
 export async function emptyTrashByTypeAsync(type) {
   try {
-    const data = await api.post(`/trash/${apiType(type)}/empty/`, { confirm: "DELETE ALL" });
+    const data = await api.post(`/trash/${apiType(type)}/empty/?force=true`, {
+      confirm: "DELETE ALL",
+    });
     setTrashItemsByType(type, []);
     writeOverview(adjustCount(readOverview(), type, "all"));
     if (data?.skipped) {
@@ -275,7 +288,9 @@ export async function emptyTrashByTypeAsync(type) {
 
 export async function emptyTrashAsync() {
   try {
-    const data = await api.post("/trash/empty/", { confirm: "DELETE ALL" });
+    const data = await api.post("/trash/empty/?force=true", {
+      confirm: "DELETE ALL",
+    });
     writeItems({});
     writeOverview({
       ...EMPTY_OVERVIEW,
