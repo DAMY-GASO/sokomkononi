@@ -4,8 +4,8 @@ import {
   Search, Bell, Menu, X, PlusCircle, ListChecks, Rocket, MessagesSquare,
   Receipt, LayoutGrid, Clock3, CalendarCheck, Megaphone, Heart, Home,
   Globe, Check, TrendingUp, LogOut, User as UserIcon, Inbox, Shield,
-  Package, Tag, ShoppingBag, ShieldCheck, MessageSquarePlus, Plus, Share2,
-  Users,
+  Package, Tag, ShoppingBag, ShieldCheck, MessageSquarePlus,
+  Plus, Share2, Users,
 } from "lucide-react";
 import { COLORS } from "./shared.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -54,7 +54,10 @@ import NotificationsPage from "../../NotificationsPage.jsx";
 import MyTransactionsPage from "../../MyTransactionsPage.jsx";
 import WaitingListPage from "../../WaitingListPage.jsx";
 import BundlesPage from "../../BundlesPage.jsx";
-import { useWaitingList, leaveWaitingList } from "../../../config/waitingListStore.js";
+import {
+  useWaitingList,
+  leaveWaitingList,
+} from "../../../config/waitingListStore.js";
 import PageLoader from "../../../components/PageLoader.jsx";
 
 const SELLER_NAV = [
@@ -109,6 +112,7 @@ const URL_TO_STATE = {
   "/dashboard/feedback": { side: "seller", key: "feedback" },
   "/dashboard/activity": { side: "seller", key: "activity" },
   "/dashboard/pay-listing": { side: "seller", key: "pay_listing" },
+
   "/dashboard/buyer": { side: "buyer", key: "overview" },
   "/dashboard/buyer/overview": { side: "buyer", key: "overview" },
   "/dashboard/buyer/browse": { side: "buyer", key: "browse" },
@@ -214,11 +218,14 @@ export default function DashboardShell() {
   const [langOpen, setLangOpen] = useState(false);
 
   const nav = side === "seller" ? SELLER_NAV : BUYER_NAV;
+
   const languages = [
     { code: "sw", native: "Kiswahili" },
     { code: "en", native: "English" },
   ];
+
   const currentLang = languages.find((l) => l.code === lang) || languages[0];
+
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   useEffect(() => {
@@ -409,7 +416,8 @@ export default function DashboardShell() {
 
   const handleShare = async () => {
     setUserMenuOpen(false);
-    const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
+    const shareUrl =
+      typeof window !== "undefined" ? window.location.origin : "";
     const shareData = {
       title: "SokoMkononi",
       text:

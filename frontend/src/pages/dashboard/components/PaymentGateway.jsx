@@ -2,7 +2,7 @@
 // PaymentGateway.jsx — FimiPay modal
 //
 // Implements the state machine from the FimiPay frontend spec:
-//   SELECT | INITIATING | POLLING | REDIRECTING | SUCCESS | FAILED
+//   SELECT | INITIATING | POLLING | REDIRECTING | SUCCESS | FAILED | PROCESSING
 //
 // The component never talks to FimiPay directly. The parent page
 // receives `onInitiate({ methodKey, phone })` and returns:
@@ -11,7 +11,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Smartphone, CreditCard, Building2, Check, ChevronLeft,
-  ShieldCheck, Loader2, AlertTriangle, ExternalLink,
+  ShieldCheck, Loader2, AlertTriangle, ExternalLink, Clock,
 } from "lucide-react";
 import { COLORS, formatTZS } from "./shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -29,16 +29,13 @@ import {
   TERMINAL_FAILURE,
 } from "../../../api/payments.js";
 
-// ── Session keys (spec Section 8) ──────────────────────────
+// ── Session keys ───────────────────────────────────────────
 const SS_ORDER_ID  = "pending_order_id";
 const SS_AMOUNT    = "pending_order_amount";
 const SS_METHOD    = "pending_order_method";
 const SS_CONTEXT   = "pending_order_context";
 
 function contextKey(title, amount, scope) {
-  // `scope` disambiguates two features that happen to share a title+amount
-  // (e.g. Boost vs. Leading at the same price). Callers should pass a short
-  // feature key like "boost", "leading", "listing-fee", "reservation".
   return `${scope || "default"}::${title || ""}::${amount ?? ""}`;
 }
 
@@ -73,7 +70,7 @@ const session = {
   },
 };
 
-// ── Status → message (spec Section 7) ──────────────────────
+// ── Status → message ───────────────────────────────────────
 function failureMessage(status, lang) {
   const sw = lang === "sw";
   switch (String(status || "").toUpperCase()) {
@@ -95,8 +92,8 @@ function failureMessage(status, lang) {
         : "Payment failed. Try again.";
     case "TIMEOUT":
       return sw
-        ? "Muda wa malipo umepita. Angalia historia ya miamala yako."
-        : "Payment timed out. Check your transaction history.";
+        ? "Malipo bado yanasubiri uthibitisho. Angalia historia ya miamala yako baada ya dakika chache."
+        : "Payment is still awaiting confirmation. Check your transaction history in a few minutes.";
     default:
       return sw
         ? "Malipo hayakufanikishwa. Jaribu tena."
@@ -158,15 +155,12 @@ export default function PaymentGateway({
   const { lang } = useLanguage();
   const sw = lang === "sw";
 
-  // State machine
   const [stage, setStage] = useState("SELECT");
   const [error, setError] = useState("");
 
-  // Form
   const [methodKey, setMethodKey] = useState(null);
   const [phone, setPhone] = useState("");
 
-  // Order
   const [orderId, setOrderId] = useState(null);
   const [pollStatus, setPollStatus] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -174,7 +168,7 @@ export default function PaymentGateway({
   const [channel, setChannel] = useState("");
   const [transid, setTransid] = useState("");
 
-  const pollSeqRef = useRef(0);   // monotonically increasing; invalidates stale pollers
+  const pollSeqRef = useRef(0);
   const pollTimerRef = useRef(null);
   const abortControllersRef = useRef(new Map());
 
@@ -198,10 +192,7 @@ export default function PaymentGateway({
     };
   }, []);
 
-  // ── Resume polling after refresh (spec Section 11.9) ────
-  // Resume-poll ONLY if the stored context matches this mount's context.
-  // Prevents "payment successful" from showing for the wrong flow when
-  // two different features happen to share the same amount.
+  // ── Resume polling after refresh ────────────────────────
   useEffect(() => {
     const saved = session.read();
     if (!saved.orderId) return;
@@ -249,25 +240,26 @@ export default function PaymentGateway({
           continue;
         }
 
-      const status = String(data?.payment_status || "").toUpperCase();
-      setPollStatus(status);
-      if (data?.channel) setChannel(data.channel);
-      if (data?.simulated != null) setSimulated(Boolean(data.simulated));
-      if (data?.transid) setTransid(data.transid);
+        const status = String(data?.payment_status || "").toUpperCase();
+        setPollStatus(status);
+        if (data?.channel) setChannel(data.channel);
+        if (data?.simulated != null) setSimulated(Boolean(data.simulated));
+        if (data?.transid) setTransid(data.transid);
 
-      if (status === "SUCCESS") {
-        setTransid(data?.transid || data?.order_id || "");
-        session.clear();
-        setStage("SUCCESS");
-        onSuccess?.(data);
-        return;
-      }
+        if (status === "SUCCESS") {
+          setTransid(data?.transid || data?.order_id || "");
+          session.clear();
+          setStage("SUCCESS");
+          onSuccess?.(data);
+          return;
+        }
 
-      if (TERMINAL_FAILURE.has(status)) {
-        setError(failureMessage(status, lang));
-        setStage("FAILED");
-        return;
-      }
+        if (TERMINAL_FAILURE.has(status)) {
+          setError(failureMessage(status, lang));
+          setStage("FAILED");
+          return;
+        }
+
         if (isStale()) return;
 
         await new Promise((resolve) => {
@@ -278,8 +270,9 @@ export default function PaymentGateway({
       abortControllersRef.current.delete(mySeq);
     }
 
+    if (isStale()) return;
     setError(failureMessage("TIMEOUT", lang));
-    setStage("FAILED");
+    setStage("PROCESSING");
   };
 
   // ── Initiate ────────────────────────────────────────────
@@ -323,7 +316,6 @@ export default function PaymentGateway({
     if (res.channel) setChannel(res.channel);
     if (res.transid) setTransid(res.transid);
 
-    // ── Card / Bank → redirect ─────────────────────────
     if (res.gatewayUrl) {
       session.save(oid, amount, method.key, contextKey(title, amount, scope));
       setStage("REDIRECTING");
@@ -333,7 +325,6 @@ export default function PaymentGateway({
       return;
     }
 
-    // ── Instant SUCCESS (test mode with override) ──────
     if (pstatus === "SUCCESS") {
       setTransid(res.transid || oid || "");
       session.clear();
@@ -342,7 +333,6 @@ export default function PaymentGateway({
       return;
     }
 
-    // ── Terminal failure on initiate ───────────────────
     if (TERMINAL_FAILURE.has(pstatus)) {
       setError(failureMessage(pstatus, lang));
       setStage("FAILED");
@@ -359,7 +349,6 @@ export default function PaymentGateway({
       return;
     }
 
-    // ── Mobile → poll ──────────────────────────────────
     session.save(oid, amount, method.key, contextKey(title, amount, scope));
     setStage("POLLING");
     runPoll(oid);
@@ -432,6 +421,43 @@ export default function PaymentGateway({
           </p>
         )}
         <TestModeBadge />
+      </div>
+    );
+  }
+
+  // ── PROCESSING ──────────────────────────────────────────
+  if (stage === "PROCESSING") {
+    return (
+      <div
+        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        className="rounded-2xl border p-6 text-center"
+        aria-live="polite"
+      >
+        <div
+          style={{ background: "rgba(232,163,61,0.15)" }}
+          className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+        >
+          <Clock size={24} color={COLORS.gold} />
+        </div>
+        <p className="text-primary text-sm font-semibold mb-1">
+          {sw ? "Malipo Yanachakatwa" : "Payment Processing"}
+        </p>
+        <p className="text-secondary text-body-sm mb-4">
+          {sw
+            ? "Malipo yako yanaendelea kuchakatwa. Angalia historia ya miamala yako baada ya dakika chache."
+            : "Your payment is still being processed. Check your transaction history in a few minutes."}
+        </p>
+        {orderId && (
+          <p className="text-[10px] text-muted font-mono mb-4">
+            {sw ? "Order" : "Order"}: {orderId}
+          </p>
+        )}
+        <button
+          onClick={handleCancel}
+          className="text-xs font-medium text-secondary hover:text-primary underline"
+        >
+          {sw ? "Funga" : "Close"}
+        </button>
       </div>
     );
   }
@@ -586,7 +612,6 @@ export default function PaymentGateway({
         </button>
       </div>
 
-      {/* Amount header */}
       <div className="flex flex-col items-center text-center gap-1 mb-4">
         <span className="text-primary text-sm font-semibold">{title}</span>
         <span style={{ color: COLORS.rust }} className="text-lg font-bold">
@@ -599,7 +624,6 @@ export default function PaymentGateway({
         <p className="text-secondary text-body-sm mb-4 text-center">{description}</p>
       )}
 
-      {/* Method section */}
       <p className="text-primary text-body-sm font-semibold mb-2 text-center">
         {sw ? "Chagua Njia ya Malipo" : "Choose Payment Method"}
       </p>
@@ -643,7 +667,8 @@ export default function PaymentGateway({
           <input
             type="tel"
             inputMode="numeric"
-            autoComplete="tel"
+            name="payment_phone_custom"
+            autoComplete="off"
             style={{
               background: COLORS.sand,
               borderColor: phone && !phoneValid ? COLORS.rust : COLORS.sandLine,

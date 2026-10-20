@@ -21,15 +21,8 @@ export const VERIFICATION_STATUSES = [
   { key: "rejected", label: { sw: "Zimekataliwa", en: "Rejected" } },
 ];
 
-const API_TO_KEY = {
-  SELLER: "seller",
-  BUYER: "buyer",
-};
-
-const KEY_TO_API = {
-  seller: "SELLER",
-  buyer: "BUYER",
-};
+const API_TO_KEY = { SELLER: "seller", BUYER: "buyer" };
+const KEY_TO_API = { seller: "SELLER", buyer: "BUYER" };
 
 function read() {
   if (typeof window === "undefined") return [];
@@ -189,10 +182,41 @@ export async function rejectVerificationAsync(id, reason = "") {
   }
 }
 
+// ============================================================
+// REMOVE — soft delete (inaweka is_deleted = True)
+// ============================================================
 export async function removeVerificationAsync(id) {
   try {
     await api.delete(`/verifications/${id}/`);
     write(read().filter((v) => v.id !== id));
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("sokomkononi:auth-updated"));
+      window.dispatchEvent(new Event("sokomkononi:users-updated"));
+      window.dispatchEvent(new Event(EV));
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// DELETE — hard delete (inafuta kabisa kutoka database)
+// Admin pekee anaweza kufuta maombi ya uthibitisho.
+// ============================================================
+export async function deleteVerificationAsync(id) {
+  try {
+    await api.delete(`/verifications/${id}/`);
+    write(read().filter((v) => v.id !== id));
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("sokomkononi:auth-updated"));
+      window.dispatchEvent(new Event("sokomkononi:users-updated"));
+      window.dispatchEvent(new Event(EV));
+    }
+
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err };

@@ -1,27 +1,18 @@
 // ============================================================
-// VerificationSection.jsx
-//
-// SASISHO: DocumentPreview inafetch signed URL mpya kila
-// "Fungua"/"Onyesha" (URL inaisha baada ya SIGNED_URL_EXPIRY).
+// VerificationSection.jsx (admin)
+// - Admin anaona maombi, approve/reject
+// - Admin anaweza kuomba documents zaidi
+// - Admin anaweza kuona UserDrawer (muktadha kamili)
+// - Admin anaweza kufuta ombi (hard delete)
+// - Documents zinaonyeshwa kama preview (image/PDF)
+// - DocumentPreview inafetch signed URL mpya kila "Fungua"/"Onyesha"
 // ============================================================
 
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  ShieldCheck,
-  User,
-  UserCheck,
-  Check,
-  X,
-  FileText,
-  ChevronDown,
-  ChevronUp,
-  Search,
-  Trash2,
-  Loader2,
-  MessageSquare,
-  ExternalLink,
-  Eye,
-  AlertTriangle,
+  ShieldCheck, User, UserCheck, Check, X, FileText, ChevronDown,
+  ChevronUp, Search, Trash2, Loader2, MessageSquare, ExternalLink,
+  Eye, AlertTriangle,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -31,9 +22,8 @@ import {
   useVerifications,
   approveVerificationAsync,
   rejectVerificationAsync,
-  removeVerificationAsync,
   requestDocumentsAsync,
-  fetchDocumentUrlAsync,
+  deleteVerificationAsync,
   VERIFICATION_TYPES,
   VERIFICATION_STATUSES,
 } from "../../../../config/verificationsStore.js";
@@ -112,7 +102,6 @@ const MIN_REASON = 5;
 // ============================================================
 // DOCUMENT PREVIEW
 // - Preview na Open zote zinatumia fetch + blob URL
-//   (kwa sababu <img>/<iframe> hazitumii Authorization header)
 // - Inafetch fresh kila "Onyesha"/"Fungua"
 // ============================================================
 function DocumentPreview({ doc, verificationId, lang }) {
@@ -125,7 +114,6 @@ function DocumentPreview({ doc, verificationId, lang }) {
   const isImage = doc.is_image;
   const isPdf = doc.is_pdf;
 
-  // ── Fetch bytes kwa Authorization header, rudisha blob URL ──
   const fetchBlobUrl = async () => {
     const token =
       localStorage.getItem("sokomkononi_admin_access") ||
@@ -153,7 +141,6 @@ function DocumentPreview({ doc, verificationId, lang }) {
     return URL.createObjectURL(blob);
   };
 
-  // ── Fungua kwenye tab mpya ──
   const handleOpen = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (loading) return;
@@ -171,7 +158,6 @@ function DocumentPreview({ doc, verificationId, lang }) {
     }
   };
 
-  // ── Preview: fetch blob kisha onyesha ──
   const handleExpand = async () => {
     if (expanded) {
       setExpanded(false);
@@ -196,7 +182,6 @@ function DocumentPreview({ doc, verificationId, lang }) {
     }
   };
 
-  // Cleanup blob URL on unmount
   useEffect(() => {
     return () => {
       if (blobUrl) URL.revokeObjectURL(blobUrl);
@@ -316,6 +301,7 @@ function DocumentPreview({ doc, verificationId, lang }) {
     </div>
   );
 }
+
 // ============================================================
 // VERIFICATION CARD
 // ============================================================
@@ -404,11 +390,19 @@ function VerificationCard({ request, lang, onOpenUser }) {
     }
   };
 
-  const handleRemove = async () => {
-    if (!window.confirm(t("Ondoa ombi hili?", "Remove this request?"))) return;
+  const handleDelete = async () => {
+    if (
+      !window.confirm(
+        t(
+          "Futa ombi hili kabisa? Hatua hii haiwezi kurudishwa.",
+          "Delete this request permanently? This cannot be undone."
+        )
+      )
+    )
+      return;
     setBusy(true);
     setError("");
-    const res = await removeVerificationAsync(request.id);
+    const res = await deleteVerificationAsync(request.id);
     setBusy(false);
     if (!res.ok) {
       setError(res.error?.message || t("Imeshindwa.", "Failed."));
@@ -698,17 +692,20 @@ function VerificationCard({ request, lang, onOpenUser }) {
                   {t("Ghairi", "Cancel")}
                 </button>
               )}
-
-              <button
-                onClick={handleRemove}
-                disabled={busy}
-                className="ml-auto text-xs font-semibold p-2 rounded-lg text-muted hover:text-[#C1502E] disabled:opacity-50"
-                aria-label={t("Ondoa", "Remove")}
-              >
-                <Trash2 size={14} />
-              </button>
             </div>
           )}
+
+          <div className="flex items-center justify-end pt-2 border-t" style={{ borderColor: COLORS.sandLine }}>
+            <button
+              onClick={handleDelete}
+              disabled={busy}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg text-[#C1502E] hover:bg-[#C1502E]/10 disabled:opacity-50"
+              title={t("Futa Ombi Kabisa", "Delete Request Permanently")}
+            >
+              <Trash2 size={13} />
+              {t("Futa Ombi", "Delete Request")}
+            </button>
+          </div>
         </div>
       )}
     </div>

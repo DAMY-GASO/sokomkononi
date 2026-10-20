@@ -9,11 +9,13 @@
 // ============================================================
 import { api } from "./client";
 
-// ── Polling cadence (spec Section 6.3) ─────────────────────
+// ── Polling cadence ────────────────────────────────────────
+// Mobile-money confirmations (M-Pesa, Airtel, Mixx, HaloPesa)
+// often take 1–3 minutes. Allow up to ~4 minutes before giving up.
 export const POLL_INTERVAL_MS = 4000;
-export const MAX_POLL_ATTEMPTS = 30;       // ~2 minutes
+export const MAX_POLL_ATTEMPTS = 60;       // ~4 minutes
 
-// ── Terminal-status sets (spec Section 6.4) ────────────────
+// ── Terminal-status sets ───────────────────────────────────
 export const TERMINAL_SUCCESS = new Set(["SUCCESS"]);
 export const TERMINAL_FAILURE = new Set([
   "CANCELLED",
@@ -21,7 +23,7 @@ export const TERMINAL_FAILURE = new Set([
   "REJECTED",
   "FAILED",
 ]);
-export const NON_TERMINAL = new Set(["PENDING", "INPROGRESS"]);
+export const NON_TERMINAL = new Set(["PENDING", "INPROGRESS", "PROCESSING"]);
 
 export function isTerminal(status) {
   const s = String(status || "").toUpperCase();
@@ -33,9 +35,7 @@ export function isNonTerminal(status) {
   return NON_TERMINAL.has(s);
 }
 
-// ── Payment methods (spec Section 3.1) ─────────────────────
-// Only payment methods available in Tanzania.
-// MTN MoMo and Orange Money are NOT offered in TZ and were removed.
+// ── Payment methods ────────────────────────────────────────
 export const MOBILE_METHODS = [
   { key: "mpesa",    label: "M-Pesa",       icon: "smartphone" },
   { key: "airtel",   label: "Airtel Money", icon: "smartphone" },
@@ -62,7 +62,7 @@ export function isCardMethod(key) {
   return CARD_METHODS.some((m) => m.key === key);
 }
 
-// ── Phone normalization (spec Section 3.2) ─────────────────
+// ── Phone normalization ────────────────────────────────────
 export function normalizeTzPhone(raw) {
   const digits = String(raw || "").replace(/[^0-9]/g, "");
   if (!digits) return "";
@@ -85,7 +85,7 @@ export function formatTzPhoneDisplay(value) {
   return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
 }
 
-// ── Polling helper (spec Section 6.5) ──────────────────────
+// ── Polling helper ─────────────────────────────────────────
 export async function pollOrderStatus(orderId, { onProgress, signal } = {}) {
   for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
     if (signal?.aborted) {
@@ -122,10 +122,15 @@ export async function pollOrderStatus(orderId, { onProgress, signal } = {}) {
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
   }
 
+  // Baada ya attempts zote, bado haijaconfirm. Hii haimaanishi
+  // malipo yameshindwa — FimiPay inaweza kuwa bado inachakata.
   return {
     ok: false,
-    status: "TIMEOUT",
-    data: { detail: "Payment timed out. Check your transaction history." },
+    status: "PROCESSING",
+    data: {
+      detail:
+        "Malipo bado yanasubiri uthibitisho. Angalia historia ya miamala yako baada ya dakika chache.",
+    },
   };
 }
 
