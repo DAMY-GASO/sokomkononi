@@ -42,7 +42,6 @@ import {
 import { COLORS } from "./shared.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import MyVerificationsPanel from "./MyVerificationsPanel.jsx";
-import UserSupportSection from "./UserSupportSection.jsx";
 import SellerFeedback from "../seller/SellerFeedback.jsx";
 import { useAuth, logoutAsync } from "../../../config/authStore.js";
 import { ADMIN_PATH } from "../../../config/adminPath.js";
@@ -60,7 +59,7 @@ import {
   normalizeListingFromApi,
   saveMyListings,
 } from "../../../config/listingsStore.js";
-import { useSentAnnouncements } from "../../../config/announcementsStore.js";
+import { useAnnouncements, hydrateAnnouncementsFromApi } from "../../../config/announcementsStore.js";
 import { useNotifications } from "../../../config/notificationsStore.js";
 import { setDashboardSide } from "../../../config/dashboardSideStore.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
@@ -267,7 +266,7 @@ export default function DashboardShell() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const listings = useMyListings();
   const { unreadCount: unreadNotifCount } = useNotifications("user");
-  const announcements = useSentAnnouncements();
+  const announcements = useAnnouncements();
   const waitingList = useWaitingList();
   const newLeadsCount = useNewLeadsCount();
   const buyerSearchesCount = useSearchesCount();
@@ -321,6 +320,14 @@ export default function DashboardShell() {
     }, 5000);
     return () => clearInterval(id);
   }, [announcements.length]);
+
+  useEffect(() => {
+  hydrateAnnouncementsFromApi();
+  const interval = setInterval(() => {
+    hydrateAnnouncementsFromApi();
+  }, 60000);
+  return () => clearInterval(interval);
+}, []);
 
   useEffect(() => {
     if (!userMenuOpen) return;
@@ -628,7 +635,7 @@ export default function DashboardShell() {
      if (activeKey === "bundles") {
      return <BundlesPage role={side} />;
      }  
-     
+
     if (activeKey === "verification") {
       return <MyVerificationsPanel side={side} />;
     }
@@ -1003,21 +1010,29 @@ export default function DashboardShell() {
       </div>
 
       {/* ANNOUNCEMENT TICKER */}
-      {announcements.length > 0 && (
-        <div
-          style={{ background: COLORS.sandLine, color: COLORS.night }}
-          className="w-full flex items-center gap-2 px-4 py-1.5 text-body-sm sm:text-sm"
-        >
-          <Megaphone size={14} color={COLORS.rust} className="shrink-0" />
-          <span className="truncate">
-            {getAnnouncementMessage(
-              announcements[tickerIndex % announcements.length],
-              lang
-            )}
-          </span>
-        </div>
-      )}
-
+      {(() => {
+  const now = new Date();
+  const activeAnnouncements = announcements.filter((a) => {
+    if (!a.sent) return false;
+    if (a.scheduledFor && new Date(a.scheduledFor) > now) return false;
+    return true;
+  });
+  if (activeAnnouncements.length === 0) return null;
+  return (
+    <div
+      style={{ background: COLORS.sandLine, color: COLORS.night }}
+      className="w-full flex items-center gap-2 px-4 py-1.5 text-body-sm sm:text-sm"
+    >
+      <Megaphone size={14} color={COLORS.rust} className="shrink-0" />
+      <span className="truncate">
+        {getAnnouncementMessage(
+          activeAnnouncements[tickerIndex % activeAnnouncements.length],
+          lang
+        )}
+      </span>
+    </div>
+  );
+})()}
       <PromotedBannerStrip onOpenListing={goToListingDetail} />
 
       <div className="flex flex-1 relative">
