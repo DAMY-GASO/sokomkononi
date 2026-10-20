@@ -624,9 +624,11 @@ export default function DashboardShell() {
     if (activeKey === "transactions") {
       return <MyTransactionsPage />;
     }
-    if (activeKey === "bundles") {
-      return <BundlesPage />;
-    }
+    
+     if (activeKey === "bundles") {
+     return <BundlesPage role={side} />;
+     }  
+     
     if (activeKey === "verification") {
       return <MyVerificationsPanel side={side} />;
     }

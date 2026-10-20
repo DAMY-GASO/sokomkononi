@@ -7,6 +7,7 @@
 //
 // Marekebisho:
 //  - TYPE_LABELS.success → "Mafanikio" / "Success"
+//  - Inapokea `role` prop ("seller" | "buyer") kuchuja vifurushi
 // ============================================================
 
 import React, { useState, useRef } from "react";
@@ -60,7 +61,7 @@ const CREDIT_LABELS = {
   leading: { sw: "Kuongoza", en: "Leading" },
   boost: { sw: "Kukuza", en: "Boost" },
   reservation: { sw: "Kuhifadhi", en: "Reservation" },
-  success: { sw: "Mafanikio", en: "Success" }, // ⬅️ Badilishwa
+  success: { sw: "Mafanikio", en: "Success" },
   ads: { sw: "Matangazo", en: "Ads" },
   premium: { sw: "Hadhi ya Juu", en: "Premium" },
 };
@@ -72,13 +73,18 @@ const TYPE_LABELS = {
   all: { sw: "Zote", en: "All" },
   listing: { sw: "Kuweka Mali", en: "Listings" },
   reservation: { sw: "Kuhifadhi", en: "Reservation" },
-  success: { sw: "Mafanikio", en: "Success" }, // ⬅️ Badilishwa
+  success: { sw: "Mafanikio", en: "Success" },
   package: { sw: "Vifurushi Maalum", en: "Packages" },
   boost: { sw: "Kukuza", en: "Boost" },
   leading: { sw: "Kuongoza", en: "Leading" },
   ads: { sw: "Matangazo", en: "Ads" },
   premium: { sw: "Hadhi ya Juu", en: "Premium" },
 };
+
+// Aina zinazomhusu muuzaji (Seller)
+const SELLER_TYPES = ["listing", "boost", "leading", "ads", "premium", "package"];
+// Aina zinazomhusu mnunuzi (Buyer)
+const BUYER_TYPES = ["reservation", "success", "package"];
 
 function BundleCard({ bundle, lang, onBuy, owned }) {
   const Icon = ICON_MAP[bundle.icon] || Package;
@@ -177,10 +183,10 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
   );
 }
 
-export default function BundlesPage() {
+export default function BundlesPage({ role = "seller" }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
-  const bundles = useActiveBundles();
+  const allBundles = useActiveBundles();
   const userCredits = useUserCredits(user?.id);
 
   const [selectedType, setSelectedType] = useState("all");
@@ -189,15 +195,25 @@ export default function BundlesPage() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const types = Object.entries(TYPE_LABELS).map(([key, label]) => ({
-    key,
-    label: label[lang] || label.sw,
-  }));
+  // Chuja bundles kulingana na role
+  const allowedTypes = role === "buyer" ? BUYER_TYPES : SELLER_TYPES;
+  const roleBundles = allBundles.filter((b) => allowedTypes.includes(b.type));
+
+  // Kichujio cha aina (Filter) - onyesha aina zilizopo tu kwa role hii
+  const availableTypes = Object.entries(TYPE_LABELS)
+    .filter(([key]) => {
+      if (key === "all") return true;
+      return allowedTypes.includes(key) && roleBundles.some((b) => b.type === key);
+    })
+    .map(([key, label]) => ({
+      key,
+      label: label[lang] || label.sw,
+    }));
 
   const filtered =
     selectedType === "all"
-      ? bundles
-      : bundles.filter((b) => b.type === selectedType);
+      ? roleBundles
+      : roleBundles.filter((b) => b.type === selectedType);
 
   const handleBuy = (bundle) => {
     if (!user) return;
@@ -261,8 +277,8 @@ export default function BundlesPage() {
             className="text-xs sm:text-sm max-w-xl mx-auto px-2"
           >
             {t(
-              "Nunua vifurushi na uokoe pesa. Salio linaingizwa kwenye akaunti yako papo hapo.",
-              "Buy bundles and save money. Credits are added to your account instantly."
+              `Nunua vifurushi vya ${role === "buyer" ? "ununuzi" : "uuzaji"} na uokoe pesa. Salio linaingizwa kwenye akaunti yako papo hapo.`,
+              `Buy ${role === "buyer" ? "buyer" : "seller"} bundles and save money. Credits are added to your account instantly.`
             )}
           </p>
         </div>
@@ -296,7 +312,7 @@ export default function BundlesPage() {
 
         {/* TYPE FILTER */}
         <div className="flex justify-start sm:justify-center gap-2 mb-4 sm:mb-5 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
-          {types.map((ty) => (
+          {availableTypes.map((ty) => (
             <button
               key={ty.key}
               onClick={() => setSelectedType(ty.key)}
