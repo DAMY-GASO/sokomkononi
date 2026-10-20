@@ -10,7 +10,7 @@ import BottomNav from "../components/BottomNav.jsx";
 import NewsletterStrip from "../components/NewsletterStrip.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { contactApi } from "../api/contact.js";
-import { faqs } from "../data/faqsData.js"; // ⬅️ IMPORT MPYA
+import { faqs } from "../config/faqsData.js"; // ⬅️ IMPORT MPYA
 
 export default function ContactPage() {
   const { lang } = useLanguage();
