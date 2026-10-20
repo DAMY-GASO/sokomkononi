@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Mail, Phone, MapPin, Send, CheckCircle2, Loader2, AlertTriangle,
-  MessageSquare, Clock,
+  MessageSquare, Clock, ChevronDown, HelpCircle,
 } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
@@ -10,6 +10,7 @@ import BottomNav from "../components/BottomNav.jsx";
 import NewsletterStrip from "../components/NewsletterStrip.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { contactApi } from "../api/contact.js";
+import { faqs } from "../data/faqsData.js"; // ⬅️ IMPORT MPYA
 
 export default function ContactPage() {
   const { lang } = useLanguage();
@@ -19,6 +20,7 @@ export default function ContactPage() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [openFaq, setOpenFaq] = useState(null); // ⬅️ STATE MPYA KWA FAQ
 
   const submit = async (e) => {
     e.preventDefault();
@@ -87,9 +89,7 @@ export default function ContactPage() {
     <div className="min-h-screen bg-page">
       <Navbar />
 
-      {/* ═══════════════════════════════════════════════════════
-          HERO — navy header matching the rest of the site
-          ═══════════════════════════════════════════════════════ */}
+      {/* HERO */}
       <section className="surface-night relative isolate overflow-hidden">
         <div
           aria-hidden="true"
@@ -144,9 +144,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          CONTACT CHANNELS
-          ═══════════════════════════════════════════════════════ */}
+      {/* CONTACT CHANNELS */}
       <section className="container py-8 sm:py-10">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {channels.map(({ Icon, title, value, href, color }) => {
@@ -193,9 +191,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          MESSAGE FORM
-          ═══════════════════════════════════════════════════════ */}
+      {/* MESSAGE FORM */}
       <section className="container pb-14 sm:pb-16">
         <div className="mx-auto max-w-2xl">
           <div className="rounded-2xl border border-[color:rgb(var(--c-hairline))] bg-card p-6 sm:p-8">
@@ -311,17 +307,91 @@ export default function ContactPage() {
                       {t("Jinsi Inavyofanya Kazi", "How It Works")}
                     </Link>{" "}
                     {t("au", "or")}{" "}
-                    <Link
-                      to="/mawasiliano#faq"
+                    <a
+                      href="#faq"
                       className="font-semibold text-[color:rgb(var(--c-royal))] hover:underline"
                     >
                       FAQ
-                    </Link>
+                    </a>
                     .
                   </p>
                 </form>
               </>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════
+          FAQ SECTION — MPYA
+          ═══════════════════════════════════════════════════════ */}
+      <section id="faq" className="border-t border-[color:rgb(var(--c-hairline))] bg-[color:rgb(var(--c-sand))]">
+        <div className="container py-12 sm:py-16">
+          <div className="mx-auto max-w-3xl">
+            <div className="mb-8 text-center">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[color:rgb(var(--c-hairline))] bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
+                <HelpCircle size={13} />
+                FAQ
+              </span>
+              <h2 className="mt-4 text-[clamp(1.5rem,3vw,2rem)] font-bold text-primary">
+                {t("Maswali Yanayoulizwa Mara kwa Mara", "Frequently Asked Questions")}
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-sm text-secondary">
+                {t(
+                  "Majibu ya haraka kwa maswali yanayoulizwa mara kwa mara kuhusu SokoMkononi.",
+                  "Quick answers to the most common questions about SokoMkononi."
+                )}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {faqs.map((faq, index) => {
+                const isOpen = openFaq === index;
+                return (
+                  <div
+                    key={index}
+                    className="overflow-hidden rounded-xl border border-[color:rgb(var(--c-hairline))] bg-card transition-shadow hover:shadow-sm"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(isOpen ? null : index)}
+                      className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left sm:px-5"
+                      aria-expanded={isOpen}
+                    >
+                      <span className="text-sm font-semibold text-primary sm:text-[15px]">
+                        {faq.q[lang] || faq.q.sw}
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`shrink-0 text-secondary transition-transform duration-200 ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                    {isOpen && (
+                      <div className="border-t border-[color:rgb(var(--c-hairline))] px-4 pb-4 pt-3 sm:px-5">
+                        <p className="whitespace-pre-line text-sm leading-relaxed text-secondary">
+                          {faq.a[lang] || faq.a.sw}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-8 text-center">
+              <p className="text-sm text-secondary">
+                {t("Bado una swali?", "Still have a question?")}{" "}
+                <a
+                  href="mailto:support@sokomkononi.co.tz"
+                  className="font-semibold text-[color:rgb(var(--c-royal))] hover:underline"
+                >
+                  {t("Wasiliana nasi", "Contact us")}
+                </a>
+                .
+              </p>
+            </div>
           </div>
         </div>
       </section>

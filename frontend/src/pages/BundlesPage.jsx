@@ -241,9 +241,13 @@ export default function BundlesPage({ role = "seller" }) {
     setPayingBundle(null);
   };
 
+  const allowedCreditKeys = role === "buyer" 
+    ? ["reservation", "success"] 
+    : ["listing", "boost", "leading", "ads"];
+
   const activeCredits = userCredits
     ? Object.entries(CREDIT_LABELS)
-        .filter(([key]) => key !== "premium")
+        .filter(([key]) => allowedCreditKeys.includes(key)) // ⬅️ Filter kuu hapa
         .map(([key, label]) => ({
           key,
           label: label[lang] || label.sw,
@@ -251,7 +255,6 @@ export default function BundlesPage({ role = "seller" }) {
         }))
         .filter((c) => c.remaining > 0)
     : [];
-
   return (
     <div
       style={{
