@@ -16,16 +16,51 @@ const SOCIAL = [
   { href: "https://linkedin.com",  icon: Linkedin,  label: "LinkedIn"  },
   { href: "https://youtube.com",   icon: Youtube,   label: "YouTube"   },
 ];
+
+// ⬇️ PAYMENTS — sasa zina `src` (path ya logo) na `fallback` (maandishi)
 const PAYMENTS = [
-  { label: "M-Pesa",       bg: "#2E9E44", fg: "#FFFFFF" },
-  { label: "HaloPesa",     bg: "#E33C2B", fg: "#FFFFFF" },
-  { label: "Mixx by Yas",  bg: "#FFCC00", fg: "#011957" },
-  { label: "Airtel Money", bg: "#ED1C24", fg: "#FFFFFF" },
-  { label: "NMB",          bg: "#00734D", fg: "#FFFFFF" },
-  { label: "CRDB",         bg: "#0072BC", fg: "#FFFFFF" },
-  { label: "Visa",         bg: "#1A1F71", fg: "#FFFFFF" },
-  { label: "Mastercard",   bg: "#EB001B", fg: "#FFFFFF" },
+  { label: "M-Pesa",       src: "/assets/payments/mpesa.png",        fallbackBg: "#2E9E44", fallbackFg: "#FFFFFF" },
+  { label: "HaloPesa",     src: "/assets/payments/halopesa.png",     fallbackBg: "#E33C2B", fallbackFg: "#FFFFFF" },
+  { label: "Mixx by Yas",  src: "/assets/payments/mixx.png",         fallbackBg: "#FFCC00", fallbackFg: "#011957" },
+  { label: "Airtel Money", src: "/assets/payments/airtel.png",       fallbackBg: "#ED1C24", fallbackFg: "#FFFFFF" },
+  { label: "NMB",          src: "/assets/payments/nmb.png",          fallbackBg: "#00734D", fallbackFg: "#FFFFFF" },
+  { label: "CRDB",         src: "/assets/payments/crdb.png",         fallbackBg: "#0072BC", fallbackFg: "#FFFFFF" },
+  { label: "Visa",         src: "/assets/payments/visa.png",         fallbackBg: "#1A1F71", fallbackFg: "#FFFFFF" },
+  { label: "Mastercard",   src: "/assets/payments/mastercard.png",   fallbackBg: "#EB001B", fallbackFg: "#FFFFFF" },
 ];
+
+// Pay logo kwa hali ya sasa (image / fallback)
+function PayLogo({ payment }) {
+  const [err, setErr] = React.useState(false);
+
+  if (err || !payment.src) {
+    return (
+      <span
+        title={payment.label}
+        className="flex h-8 items-center justify-center rounded px-2 text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm"
+        style={{ background: payment.fallbackBg, color: payment.fallbackFg, minWidth: 60 }}
+      >
+        {payment.label}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      title={payment.label}
+      className="flex h-8 items-center justify-center rounded bg-white/[0.06] border border-white/[0.08] px-2 shadow-sm"
+      style={{ minWidth: 60 }}
+    >
+      <img
+        src={payment.src}
+        alt={payment.label}
+        className="h-5 w-auto max-w-[60px] object-contain"
+        onError={() => setErr(true)}
+        loading="lazy"
+      />
+    </span>
+  );
+}
 
 export default function Footer({ selectedLang: propLang }) {
   const { lang: ctxLang } = useLanguage();
@@ -146,14 +181,7 @@ export default function Footer({ selectedLang: propLang }) {
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/45">{t("Malipo yanakubaliwa", "Payments accepted")}</p>
             <div className="flex flex-wrap items-center gap-2">
               {PAYMENTS.map((p) => (
-                <span
-                  key={p.label}
-                  title={p.label}
-                  className="flex h-7 items-center justify-center rounded px-2 text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm"
-                  style={{ background: p.bg, color: p.fg, minWidth: 56 }}
-                >
-                  {p.label}
-                </span>
+                <PayLogo key={p.label} payment={p} />
               ))}
             </div>
           </div>
