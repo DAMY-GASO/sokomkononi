@@ -1,43 +1,11 @@
-// ============================================================
-// DashboardShell.jsx
-// Seller/Buyer dashboard shell. Inaruhusu admin KUPITA tu kama
-// guard ya kuzuia admin kuingia dashboard za watumiaji.
-// Admin ana dashboard yake (/smk-control-9x7k).
-//
-// SASISHO: "saved" (Matangazo Yaliyohifadhiwa) imeondolewa kwa
-// seller — ni kipengele cha buyer pekee.
-// ============================================================
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Search,
-  Bell,
-  Menu,
-  X,
-  PlusCircle,
-  ListChecks,
-  Rocket,
-  MessagesSquare,
-  Receipt,
-  LayoutGrid,
-  Clock3,
-  CalendarCheck,
-  Megaphone,
-  Heart,
-  Home,
-  Globe,
-  Check,
-  TrendingUp,
-  LogOut,
-  User,
-  Inbox,
-  Shield,
-  Package,
-  Tag,
-  ShoppingBag,
-  ShieldCheck,
-  Headphones,
-  MessageSquarePlus,
+  Search, Bell, Menu, X, PlusCircle, ListChecks, Rocket, MessagesSquare,
+  Receipt, LayoutGrid, Clock3, CalendarCheck, Megaphone, Heart, Home,
+  Globe, Check, TrendingUp, LogOut, User as UserIcon, Inbox, Shield,
+  Package, Tag, ShoppingBag, ShieldCheck, MessageSquarePlus, Plus, Share2,
+  Users,
 } from "lucide-react";
 import { COLORS } from "./shared.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -55,7 +23,6 @@ import {
   pauseListingAsync,
   unpauseListingAsync,
   markSoldAsync,
-  payListingFeeAsync,
   normalizeListingFromApi,
   saveMyListings,
 } from "../../../config/listingsStore.js";
@@ -77,32 +44,19 @@ import DealRooms from "./DealRooms.jsx";
 import MyReservationsPage from "./MyReservationsPage.jsx";
 import BrowseProperties from "./BrowseProperties.jsx";
 import BottomNav from "../../../components/BottomNav.jsx";
-
-// Seller & Buyer Overview
 import SellerOverview from "../seller/SellerOverview.jsx";
 import BuyerOverview from "../buyer/BuyerOverview.jsx";
 import RecentActivityPage from "./RecentActivityPage.jsx";
-
-// Buyer Sections
 import MySearchesSection from "../buyer/MySearchesSection.jsx";
 import SafetySupportSection from "../buyer/SafetySupportSection.jsx";
-
-// Kurasa mpya
 import SavedPropertiesPage from "../../SavedPropertiesPage.jsx";
 import NotificationsPage from "../../NotificationsPage.jsx";
 import MyTransactionsPage from "../../MyTransactionsPage.jsx";
 import WaitingListPage from "../../WaitingListPage.jsx";
 import BundlesPage from "../../BundlesPage.jsx";
-import {
-  useWaitingList,
-  leaveWaitingList,
-} from "../../../config/waitingListStore.js";
-
+import { useWaitingList, leaveWaitingList } from "../../../config/waitingListStore.js";
 import PageLoader from "../../../components/PageLoader.jsx";
 
-// ============================================================
-// SELLER NAV — "saved" imeondolewa (ni kipengele cha buyer)
-// ============================================================
 const SELLER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
   { key: "post", label: { sw: "Weka Tangazo", en: "Post Listing" }, icon: PlusCircle },
@@ -120,9 +74,6 @@ const SELLER_NAV = [
   { key: "feedback", label: { sw: "Maoni Yangu", en: "My Feedback" }, icon: MessageSquarePlus },
 ];
 
-// ============================================================
-// BUYER NAV — "saved" inabaki hapa
-// ============================================================
 const BUYER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
   { key: "browse", label: { sw: "Tafuta Mali", en: "Browse Listing" }, icon: Search },
@@ -139,11 +90,6 @@ const BUYER_NAV = [
   { key: "feedback", label: { sw: "Maoni Yangu", en: "My Feedback" }, icon: MessageSquarePlus },
 ];
 
-// ============================================================
-// URL ↔ STATE MAPS
-// NOTE: "/dashboard/saved" (seller) imeondolewa.
-//       "/dashboard/buyer/saved" (buyer) inabaki.
-// ============================================================
 const URL_TO_STATE = {
   "/dashboard": { side: "seller", key: "overview" },
   "/dashboard/seller": { side: "seller", key: "overview" },
@@ -163,7 +109,6 @@ const URL_TO_STATE = {
   "/dashboard/feedback": { side: "seller", key: "feedback" },
   "/dashboard/activity": { side: "seller", key: "activity" },
   "/dashboard/pay-listing": { side: "seller", key: "pay_listing" },
-
   "/dashboard/buyer": { side: "buyer", key: "overview" },
   "/dashboard/buyer/overview": { side: "buyer", key: "overview" },
   "/dashboard/buyer/browse": { side: "buyer", key: "browse" },
@@ -224,12 +169,6 @@ function getAnnouncementMessage(a, lang) {
   return a.message || "";
 }
 
-function getAnnouncementTitle(a, lang) {
-  if (!a) return "";
-  if (lang === "en" && a.titleEn) return a.titleEn;
-  return a.title || "";
-}
-
 export default function DashboardShell() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -242,7 +181,6 @@ export default function DashboardShell() {
     const id = setTimeout(() => setReady(true), 300);
     return () => clearTimeout(id);
   }, []);
-
 
   const isAdminUser =
     user?.role === "Admin" ||
@@ -276,23 +214,15 @@ export default function DashboardShell() {
   const [langOpen, setLangOpen] = useState(false);
 
   const nav = side === "seller" ? SELLER_NAV : BUYER_NAV;
-
   const languages = [
     { code: "sw", native: "Kiswahili" },
     { code: "en", native: "English" },
   ];
-
   const currentLang = languages.find((l) => l.code === lang) || languages[0];
-
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ============================================================
-  // ROUTE → STATE (pamoja na /dashboard/listings/edit/:id)
-  // ============================================================
   useEffect(() => {
     const path = location.pathname;
-
-    // Handle /dashboard/listings/edit/:id
     const editMatch = path.match(/^\/dashboard\/listings\/edit\/([^/]+)\/?$/);
     if (editMatch) {
       setSide("seller");
@@ -300,7 +230,6 @@ export default function DashboardShell() {
       setEditListingId(editMatch[1]);
       return;
     }
-
     const match = URL_TO_STATE[path];
     if (match) {
       setSide(match.side);
@@ -322,12 +251,12 @@ export default function DashboardShell() {
   }, [announcements.length]);
 
   useEffect(() => {
-  hydrateAnnouncementsFromApi();
-  const interval = setInterval(() => {
     hydrateAnnouncementsFromApi();
-  }, 60000);
-  return () => clearInterval(interval);
-}, []);
+    const interval = setInterval(() => {
+      hydrateAnnouncementsFromApi();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!userMenuOpen) return;
@@ -338,9 +267,6 @@ export default function DashboardShell() {
 
   const accent = side === "seller" ? COLORS.gold : COLORS.green;
 
-  // ============================================================
-  // LISTING HELPERS — API-backed
-  // ============================================================
   const addListing = (listing) => {
     if (listing && (listing.id || listing.pk)) {
       const normalized = normalizeListingFromApi(listing, "pending_payment");
@@ -362,9 +288,6 @@ export default function DashboardShell() {
   const handleResume = (id) => unpauseListingAsync(id);
   const handleMarkSold = (id) => markSoldAsync(id);
 
-  // ============================================================
-  // TRANSACTION HELPERS
-  // ============================================================
   const handleReservationPaid = (deal, { hours, fee, method, expiresAt }) => {
     addTransaction({
       type: "reservation",
@@ -393,13 +316,10 @@ export default function DashboardShell() {
     });
   };
 
-  // ============================================================
-  // NAVIGATION HELPERS
-  // ============================================================
   const handleNavClick = useCallback(
     (key) => {
       setActiveKey(key);
-      setEditListingId(null); // ⬅️ toka edit mode kila unapobonyeza nav
+      setEditListingId(null);
       const url = STATE_TO_URL[side]?.[key];
       if (url) navigate(url);
     },
@@ -458,12 +378,10 @@ export default function DashboardShell() {
   const markListingPaid = async (id, { alreadyPaid = false } = {}) => {
     const all = getMyListings();
     const listing = all.find((l) => String(l.id) === String(id));
-
     updateListing(id, {
       status: "in_review",
       paidAt: new Date().toISOString(),
     });
-
     if (!alreadyPaid && listing) {
       addTransaction({
         type: "listing_fee",
@@ -489,9 +407,45 @@ export default function DashboardShell() {
     navigate("/login");
   };
 
-  // ============================================================
-  // RENDER MAIN CONTENT
-  // ============================================================
+  const handleShare = async () => {
+    setUserMenuOpen(false);
+    const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
+    const shareData = {
+      title: "SokoMkononi",
+      text:
+        lang === "sw"
+          ? "Nunua na uza mali kwa urahisi na usalama — SokoMkononi."
+          : "Buy and sell property easily and safely — SokoMkononi.",
+      url: shareUrl,
+    };
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+    }
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("sokomkononi:toast", {
+              detail: {
+                type: "success",
+                message:
+                  lang === "sw"
+                    ? "Kiungo kimenakiliwa — shiriki na marafiki!"
+                    : "Link copied — share with friends!",
+              },
+            })
+          );
+        }
+      }
+    } catch { /* noop */ }
+  };
+
   const renderMain = () => {
     if (activeKey === "overview") {
       if (side === "seller") {
@@ -515,7 +469,6 @@ export default function DashboardShell() {
         const listing = listings.find(
           (l) => String(l.id) === String(editListingId)
         );
-
         if (!listing) {
           return (
             <div className="p-6 text-center">
@@ -535,16 +488,13 @@ export default function DashboardShell() {
             </div>
           );
         }
-
         return (
           <PostPropertyForm
             mode="edit"
             initialData={listing}
             onSubmit={async (data) => {
               const res = await updateListing(editListingId, data);
-              if (res?.ok) {
-                handleNavClick("listings");
-              }
+              if (res?.ok) handleNavClick("listings");
               return res;
             }}
             onGoToListings={() => handleNavClick("listings")}
@@ -553,7 +503,6 @@ export default function DashboardShell() {
           />
         );
       }
-
       return (
         <MyListings
           listings={listings}
@@ -570,47 +519,19 @@ export default function DashboardShell() {
         />
       );
     }
-    if (activeKey === "leads") {
-      return <LeadsSection onNavigate={handleNavClick} />;
-    }
-    if (activeKey === "browse") {
-      return <BrowseProperties lang={lang} excludeSellerId={user?.id} />;
-    }
-    if (activeKey === "saved") {
-      return <SavedPropertiesPage />;
-    }
-    if (activeKey === "searches") {
-      return <MySearchesSection />;
-    }
-    if (activeKey === "safety") {
-      return <SafetySupportSection side={side} />;
-    }
+    if (activeKey === "leads") return <LeadsSection onNavigate={handleNavClick} />;
+    if (activeKey === "browse") return <BrowseProperties lang={lang} excludeSellerId={user?.id} />;
+    if (activeKey === "saved") return <SavedPropertiesPage />;
+    if (activeKey === "searches") return <MySearchesSection />;
+    if (activeKey === "safety") return <SafetySupportSection side={side} />;
     if (activeKey === "boost") {
-      return (
-        <BoostSasa
-          listings={listings}
-          initialListingId={boostTarget}
-          onBoosted={updateListing}
-        />
-      );
+      return <BoostSasa listings={listings} initialListingId={boostTarget} onBoosted={updateListing} />;
     }
     if (activeKey === "leading") {
-      return (
-        <LeadingSasa
-          listings={listings}
-          initialListingId={leadingTarget}
-          onLead={updateListing}
-        />
-      );
+      return <LeadingSasa listings={listings} initialListingId={leadingTarget} onLead={updateListing} />;
     }
     if (activeKey === "advertise") {
-      return (
-        <AdvertiseSasa
-          listings={listings}
-          initialListingId={advertiseTarget}
-          onAdvertised={() => {}}
-        />
-      );
+      return <AdvertiseSasa listings={listings} initialListingId={advertiseTarget} onAdvertised={() => {}} />;
     }
     if (activeKey === "deals") {
       return (
@@ -622,26 +543,12 @@ export default function DashboardShell() {
         />
       );
     }
-    if (activeKey === "reservations") {
-      return <MyReservationsPage />;
-    }
-    if (activeKey === "notifications") {
-      return <NotificationsPage />;
-    }
-    if (activeKey === "transactions") {
-      return <MyTransactionsPage />;
-    }
-    
-     if (activeKey === "bundles") {
-     return <BundlesPage role={side} />;
-     }  
-
-    if (activeKey === "verification") {
-      return <MyVerificationsPanel side={side} />;
-    }
-    if (activeKey === "feedback") {
-      return <SellerFeedback side={side} />;
-    }
+    if (activeKey === "reservations") return <MyReservationsPage />;
+    if (activeKey === "notifications") return <NotificationsPage />;
+    if (activeKey === "transactions") return <MyTransactionsPage />;
+    if (activeKey === "bundles") return <BundlesPage role={side} />;
+    if (activeKey === "verification") return <MyVerificationsPanel side={side} />;
+    if (activeKey === "feedback") return <SellerFeedback side={side} />;
     if (activeKey === "waiting") {
       return (
         <WaitingListPage
@@ -651,37 +558,19 @@ export default function DashboardShell() {
         />
       );
     }
-    if (activeKey === "activity") {
-      return <RecentActivityPage side={side} onNavigate={handleNavClick} />;
-    }
-    if (activeKey === "pay_listing") {
-      return <PayListingFee />;
-    }
+    if (activeKey === "activity") return <RecentActivityPage side={side} onNavigate={handleNavClick} />;
+    if (activeKey === "pay_listing") return <PayListingFee />;
     return (
       <main className="flex-1 p-4 sm:p-6 text-center">
-        <h1 className="h-title">
-          {nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}
-        </h1>
+        <h1 className="h-title">{nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}</h1>
         <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
           {side === "seller"
-            ? t(
-                "Upande wa Muuzaji — dhibiti mali zako, malipo na maombi ya wanunuzi.",
-                "Seller side — manage your listings, payments, and buyer enquiries."
-              )
-            : t(
-                "Upande wa Mnunuzi — tafuta, negotiate na fuatilia manunuzi yako.",
-                "Buyer side — find, negotiate, and track your purchases."
-              )}
+            ? t("Upande wa Muuzaji — dhibiti mali zako, malipo na maombi ya wanunuzi.", "Seller side — manage your listings, payments, and buyer enquiries.")
+            : t("Upande wa Mnunuzi — tafuta, negotiate na fuatilia manunuzi yako.", "Buyer side — find, negotiate, and track your purchases.")}
         </p>
-        <div
-          style={{ borderColor: COLORS.sandLine }}
-          className="rounded-2xl border-2 border-dashed p-10 text-center mt-6"
-        >
+        <div style={{ borderColor: COLORS.sandLine }} className="rounded-2xl border-2 border-dashed p-10 text-center mt-6">
           <p className="text-muted text-sm">
-            {t(
-              `Sehemu ya "${nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}" itajengwa hapa`,
-              `The "${nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}" section will be built here`
-            )}
+            {t(`Sehemu ya "${nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}" itajengwa hapa`, `The "${nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}" section will be built here`)}
           </p>
         </div>
       </main>
@@ -689,13 +578,7 @@ export default function DashboardShell() {
   };
 
   const renderAvatar = (size = "w-8 h-8", textSize = "text-sm") => {
-    const url =
-      user?.avatarUrl ||
-      user?.avatar ||
-      user?.avatar_url ||
-      user?.picture ||
-      null;
-
+    const url = user?.avatarUrl || user?.avatar || user?.avatar_url || user?.picture || null;
     if (url) {
       return (
         <img
@@ -716,42 +599,24 @@ export default function DashboardShell() {
     );
   };
 
-  // ⬇️ Zuia render kama ni admin
   if (isAdminUser) {
     return (
-      <div
-        style={{ background: COLORS.sand, minHeight: "100vh" }}
-        className="w-full flex items-center justify-center p-6"
-      >
+      <div style={{ background: COLORS.sand, minHeight: "100vh" }} className="w-full flex items-center justify-center p-6">
         <div className="text-center max-w-md">
-          <div
-            style={{ background: `${COLORS.rust}15` }}
-            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-          >
+          <div style={{ background: `${COLORS.rust}15` }} className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield size={28} color={COLORS.rust} />
           </div>
           <h2 className="text-lg font-bold text-primary mb-2">
             {t("Admin Hana Ruhusa Hapa", "Admin Cannot Access Here")}
           </h2>
           <p className="text-sm text-secondary leading-relaxed">
-            {t(
-              "Admin ana dashboard yake. Kama unataka kuingia dashboard za watumiaji, tafadhali tengeneza account nyingine kama Buyer au Seller.",
-              "Admin has their own dashboard. If you want to access user dashboards, please create another account as a Buyer or Seller."
-            )}
+            {t("Admin ana dashboard yake. Kama unataka kuingia dashboard za watumiaji, tafadhali tengeneza account nyingine kama Buyer au Seller.", "Admin has their own dashboard. If you want to access user dashboards, please create another account as a Buyer or Seller.")}
           </p>
           <div className="mt-5 flex flex-col sm:flex-row gap-2 justify-center">
-            <button
-              onClick={() => navigate(ADMIN_PATH)}
-              style={{ background: COLORS.night, color: "white" }}
-              className="px-4 py-2.5 rounded-lg text-sm font-semibold"
-            >
+            <button onClick={() => navigate(ADMIN_PATH)} style={{ background: COLORS.night, color: "white" }} className="px-4 py-2.5 rounded-lg text-sm font-semibold">
               {t("Nenda Dashboard ya Admin", "Go to Admin Dashboard")}
             </button>
-            <button
-              onClick={handleLogout}
-              style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-              className="px-4 py-2.5 rounded-lg text-sm font-semibold border bg-white"
-            >
+            <button onClick={handleLogout} style={{ borderColor: COLORS.sandLine, color: COLORS.night }} className="px-4 py-2.5 rounded-lg text-sm font-semibold border bg-white">
               {t("Toka na uingie kama mtumiaji", "Log out and sign in as a user")}
             </button>
           </div>
@@ -760,16 +625,10 @@ export default function DashboardShell() {
     );
   }
 
-  if (!ready) {
-    return <PageLoader lang={lang} />;
-  }
+  if (!ready) return <PageLoader lang={lang} />;
 
   return (
-    <div
-      data-surface="sand"
-      className="bg-page w-full flex flex-col pb-16 md:pb-0 min-h-screen"
-    >
-      {/* TOP HEADER */}
+    <div data-surface="sand" className="bg-page w-full flex flex-col pb-16 md:pb-0 min-h-screen">
       <header
         style={{ background: COLORS.night }}
         className="w-full flex items-center gap-3 px-3 sm:px-5 py-3 sticky top-0 z-30"
@@ -782,40 +641,20 @@ export default function DashboardShell() {
           <Menu size={22} />
         </button>
 
-        <a
-          href="/"
-          style={{ color: COLORS.sand }}
-          className="text-lg sm:text-xl font-semibold tracking-tight shrink-0 hover:opacity-80 transition-opacity"
-        >
+        <a href="/" style={{ color: COLORS.sand }} className="text-lg sm:text-xl font-semibold tracking-tight shrink-0 hover:opacity-80 transition-opacity">
           SokoMkononi
         </a>
 
-        <div
-          style={{
-            background: COLORS.nightSoft,
-            borderColor: "rgba(245,243,236,0.12)",
-          }}
-          className="hidden sm:flex items-center flex-1 max-w-md rounded-full border px-3 py-1.5 gap-2"
-        >
+        <div style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.12)" }} className="hidden sm:flex items-center flex-1 max-w-md rounded-full border px-3 py-1.5 gap-2">
           <Search size={16} color="rgba(245,243,236,0.6)" />
-          <input
-            placeholder={t("Tafuta mali...", "Search properties...")}
-            className="bg-transparent outline-none text-sm flex-1"
-            style={{ color: COLORS.sand }}
-          />
+          <input placeholder={t("Tafuta mali...", "Search properties...")} className="bg-transparent outline-none text-sm flex-1" style={{ color: COLORS.sand }} />
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <div
-            style={{ background: COLORS.nightSoft }}
-            className="hidden md:flex items-center rounded-full p-1"
-          >
+          <div style={{ background: COLORS.nightSoft }} className="hidden md:flex items-center rounded-full p-1">
             <button
               onClick={() => handleSideChange("seller")}
-              style={{
-                background: side === "seller" ? COLORS.gold : "transparent",
-                color: side === "seller" ? COLORS.night : COLORS.sand,
-              }}
+              style={{ background: side === "seller" ? COLORS.gold : "transparent", color: side === "seller" ? COLORS.night : COLORS.sand }}
               className="flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
               <Tag size={14} />
@@ -823,10 +662,7 @@ export default function DashboardShell() {
             </button>
             <button
               onClick={() => handleSideChange("buyer")}
-              style={{
-                background: side === "buyer" ? COLORS.green : "transparent",
-                color: COLORS.sand,
-              }}
+              style={{ background: side === "buyer" ? COLORS.green : "transparent", color: COLORS.sand }}
               className="flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
               <ShoppingBag size={14} />
@@ -837,36 +673,17 @@ export default function DashboardShell() {
           <div className="relative">
             <button
               onClick={() => setLangOpen((v) => !v)}
-              style={{
-                background: COLORS.nightSoft,
-                borderColor: "rgba(245,243,236,0.15)",
-              }}
+              style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.15)" }}
               className="text-white/80 hover:text-white text-sm font-medium border rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
             >
               <Globe size={14} />
-              <span className="hidden sm:inline">
-                {currentLang?.native || "Kiswahili"}
-              </span>
-              <span className="sm:hidden">
-                {currentLang?.code?.toUpperCase() || "SW"}
-              </span>
+              <span className="hidden sm:inline">{currentLang?.native || "Kiswahili"}</span>
+              <span className="sm:hidden">{currentLang?.code?.toUpperCase() || "SW"}</span>
             </button>
             {langOpen && (
-              <div
-                style={{
-                  background: COLORS.nightSoft,
-                  borderColor: "rgba(245,243,236,0.1)",
-                }}
-                className="absolute right-0 mt-2 w-48 border rounded-lg shadow-xl py-2 z-50"
-              >
-                <div
-                  style={{ borderColor: "rgba(245,243,236,0.1)" }}
-                  className="px-4 py-2 border-b"
-                >
-                  <p
-                    style={{ color: "rgba(245,243,236,0.5)" }}
-                    className="text-body-sm font-semibold"
-                  >
+              <div style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.1)" }} className="absolute right-0 mt-2 w-48 border rounded-lg shadow-xl py-2 z-50">
+                <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-2 border-b">
+                  <p style={{ color: "rgba(245,243,236,0.5)" }} className="text-body-sm font-semibold">
                     {t("Chagua Lugha", "Choose Language")}
                   </p>
                 </div>
@@ -874,13 +691,7 @@ export default function DashboardShell() {
                   <button
                     key={l.code}
                     onClick={() => handleLanguageSelect(l.code)}
-                    style={{
-                      background:
-                        lang === l.code
-                          ? "rgba(245,243,236,0.05)"
-                          : "transparent",
-                      color: COLORS.sand,
-                    }}
+                    style={{ background: lang === l.code ? "rgba(245,243,236,0.05)" : "transparent", color: COLORS.sand }}
                     className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-white/5 transition-colors"
                   >
                     <span className="text-sm font-medium">{l.native}</span>
@@ -891,11 +702,7 @@ export default function DashboardShell() {
             )}
           </div>
 
-          <a
-            href="/"
-            className="hidden md:block text-white/80 hover:text-white p-1.5 transition-colors"
-            aria-label={t("Rudi kwenye ukurasa wa mwanzo", "Back to homepage")}
-          >
+          <a href="/" className="hidden md:block text-white/80 hover:text-white p-1.5 transition-colors" aria-label={t("Rudi kwenye ukurasa wa mwanzo", "Back to homepage")}>
             <Home size={20} />
           </a>
 
@@ -906,10 +713,7 @@ export default function DashboardShell() {
           >
             <Bell size={20} />
             {unreadNotifCount > 0 && (
-              <span
-                style={{ background: COLORS.rust }}
-                className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
-              >
+              <span style={{ background: COLORS.rust }} className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center">
                 {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
               </span>
             )}
@@ -930,48 +734,56 @@ export default function DashboardShell() {
 
             {userMenuOpen && (
               <div
-                style={{
-                  background: COLORS.nightSoft,
-                  borderColor: "rgba(245,243,236,0.1)",
-                }}
-                className="absolute right-0 mt-2 w-56 border rounded-lg shadow-xl py-2 z-50"
+                style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.1)" }}
+                className="absolute right-0 mt-2 w-64 border rounded-lg shadow-xl py-1 z-50"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div
-                  style={{ borderColor: "rgba(245,243,236,0.1)" }}
-                  className="px-4 py-3 border-b"
-                >
-                  <p
-                    style={{ color: COLORS.sand }}
-                    className="text-sm font-semibold truncate"
-                  >
+                <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-3 border-b">
+                  <p style={{ color: COLORS.sand }} className="text-sm font-semibold truncate">
                     {user?.name || "User"}
                   </p>
-                  <p
-                    style={{ color: "rgba(245,243,236,0.5)" }}
-                    className="text-body-sm truncate"
-                  >
+                  <p style={{ color: "rgba(245,243,236,0.5)" }} className="text-body-sm truncate">
                     {user?.email || ""}
                   </p>
                 </div>
 
+                {[
+                  { to: "/dashboard",              label: t("Dashibodi", "Dashboard"),           Icon: LayoutGrid },
+                  { to: "/dashboard/post",         label: t("Uza Sasa", "Sell Now"),             Icon: Plus },
+                  { to: "/dashboard/buyer",        label: t("Nunua Sasa", "Buy Now"),            Icon: Package },
+                  { to: "/wasifu",                 label: t("Wasifu", "Profile"),                Icon: UserIcon },
+                  { to: "/alika-marafiki",         label: t("Alika Marafiki", "Invite Friends"), Icon: Users },
+                ].map(({ to, label, Icon }) => (
+                  <button
+                    key={to}
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      navigate(to);
+                    }}
+                    style={{ color: COLORS.sand }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
+                  >
+                    <Icon size={15} color="rgba(245,243,236,0.55)" />
+                    {label}
+                  </button>
+                ))}
+
                 <button
-                  onClick={() => {
-                    setUserMenuOpen(false);
-                    navigate("/wasifu");
-                  }}
+                  onClick={handleShare}
                   style={{ color: COLORS.sand }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
                 >
-                  <User size={16} color="rgba(245,243,236,0.7)" />
-                  {t("Wasifu", "Profile")}
+                  <Share2 size={15} color="rgba(245,243,236,0.55)" />
+                  {t("Shiriki SokoMkononi", "Share SokoMkononi")}
                 </button>
+
+                <div className="my-1 border-t" style={{ borderColor: "rgba(245,243,236,0.1)" }} />
 
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#C1502E] hover:bg-[#C1502E]/10 transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#FF8A65] hover:bg-[#C1502E]/10 transition-colors text-left"
                 >
-                  <LogOut size={16} />
+                  <LogOut size={15} />
                   {t("Toka", "Logout")}
                 </button>
               </div>
@@ -980,17 +792,10 @@ export default function DashboardShell() {
         </div>
       </header>
 
-      {/* MOBILE SELLER/BUYER TOGGLE */}
-      <div
-        style={{ background: COLORS.nightSoft }}
-        className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full"
-      >
+      <div style={{ background: COLORS.nightSoft }} className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full">
         <button
           onClick={() => handleSideChange("seller")}
-          style={{
-            background: side === "seller" ? COLORS.gold : "transparent",
-            color: side === "seller" ? COLORS.night : COLORS.sand,
-          }}
+          style={{ background: side === "seller" ? COLORS.gold : "transparent", color: side === "seller" ? COLORS.night : COLORS.sand }}
           className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
           <Tag size={14} />
@@ -998,10 +803,7 @@ export default function DashboardShell() {
         </button>
         <button
           onClick={() => handleSideChange("buyer")}
-          style={{
-            background: side === "buyer" ? COLORS.green : "transparent",
-            color: COLORS.sand,
-          }}
+          style={{ background: side === "buyer" ? COLORS.green : "transparent", color: COLORS.sand }}
           className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
           <ShoppingBag size={14} />
@@ -1009,180 +811,107 @@ export default function DashboardShell() {
         </button>
       </div>
 
-      {/* ANNOUNCEMENT TICKER */}
       {(() => {
-  const now = new Date();
-  const activeAnnouncements = announcements.filter((a) => {
-    if (!a.sent) return false;
-    if (a.scheduledFor && new Date(a.scheduledFor) > now) return false;
-    return true;
-  });
-  if (activeAnnouncements.length === 0) return null;
-  return (
-    <div
-      style={{ background: COLORS.sandLine, color: COLORS.night }}
-      className="w-full flex items-center gap-2 px-4 py-1.5 text-body-sm sm:text-sm"
-    >
-      <Megaphone size={14} color={COLORS.rust} className="shrink-0" />
-      <span className="truncate">
-        {getAnnouncementMessage(
-          activeAnnouncements[tickerIndex % activeAnnouncements.length],
-          lang
-        )}
-      </span>
-    </div>
-  );
-})()}
+        const now = new Date();
+        const activeAnnouncements = announcements.filter((a) => {
+          if (!a.sent) return false;
+          if (a.scheduledFor && new Date(a.scheduledFor) > now) return false;
+          return true;
+        });
+        if (activeAnnouncements.length === 0) return null;
+        return (
+          <div style={{ background: COLORS.sandLine, color: COLORS.night }} className="w-full flex items-center gap-2 px-4 py-1.5 text-body-sm sm:text-sm">
+            <Megaphone size={14} color={COLORS.rust} className="shrink-0" />
+            <span className="truncate">
+              {getAnnouncementMessage(activeAnnouncements[tickerIndex % activeAnnouncements.length], lang)}
+            </span>
+          </div>
+        );
+      })()}
+
       <PromotedBannerStrip onOpenListing={goToListingDetail} />
 
       <div className="flex flex-1 relative">
-       <aside
-         style={{ borderColor: COLORS.sandLine }}
-         className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto bg-page"
-       >
+        <aside
+          style={{ borderColor: COLORS.sandLine }}
+          className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto bg-page"
+        >
           {nav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeKey;
             return (
               <button
                 key={key}
                 onClick={() => handleNavClick(key)}
-                style={{
-                  background: isActive ? COLORS.night : "transparent",
-                  color: isActive ? COLORS.sand : COLORS.night,
-                }}
+                style={{ background: isActive ? COLORS.night : "transparent", color: isActive ? COLORS.sand : COLORS.night }}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left"
               >
                 <Icon size={17} color={isActive ? accent : COLORS.night} />
                 {label[lang] || label.sw}
                 {key === "listings" && listings.length > 0 && (
-                  <span
-                    style={{
-                      background: isActive
-                        ? "rgba(245,243,236,0.18)"
-                        : COLORS.sandLine,
-                      color: isActive ? COLORS.sand : COLORS.night,
-                    }}
-                    className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full"
-                  >
+                  <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : COLORS.sandLine, color: isActive ? COLORS.sand : COLORS.night }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full">
                     {listings.length}
                   </span>
                 )}
                 {key === "leads" && newLeadsCount > 0 && (
-                  <span
-                    style={{
-                      background: isActive
-                        ? "rgba(245,243,236,0.18)"
-                        : COLORS.rust,
-                      color: isActive ? COLORS.sand : "white",
-                    }}
-                    className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full"
-                  >
+                  <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust, color: isActive ? COLORS.sand : "white" }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full">
                     {newLeadsCount}
                   </span>
                 )}
                 {key === "searches" && buyerSearchesCount > 0 && (
-                  <span
-                    style={{
-                      background: isActive
-                        ? "rgba(245,243,236,0.18)"
-                        : COLORS.sandLine,
-                      color: isActive ? COLORS.sand : COLORS.night,
-                    }}
-                    className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full"
-                  >
+                  <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : COLORS.sandLine, color: isActive ? COLORS.sand : COLORS.night }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full">
                     {buyerSearchesCount}
                   </span>
                 )}
               </button>
             );
           })}
-
-          <a
-            href="/"
-            className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4"
-          >
+          <a href="/" className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4">
             <Home size={17} color={COLORS.night} />
             {t("Rudi Nyumbani", "Back to Home")}
           </a>
         </aside>
 
-      {sidebarOpen && (
-  <div className="md:hidden fixed inset-0 z-40 flex">
-    <div
-      className="w-72 max-w-[85%] h-full pt-16 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto bg-page"
-    >
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={() => setSidebarOpen(false)}
-          aria-label={t("Funga", "Close")}
-          className="p-2 text-muted hover:text-secondary"
-        >
-          <X size={20} color="currentColor" />
-        </button>
-      </div>
-      {nav.map(({ key, label, icon: Icon }) => {
-        const isActive = key === activeKey;
-        return (
-          <button
-            key={key}
-            onClick={() => {
-              handleNavClick(key);
-              setSidebarOpen(false);
-            }}
-            style={{
-              background: isActive ? COLORS.night : "transparent",
-              color: isActive ? COLORS.sand : "var(--text-primary)",
-            }}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left w-full"
-          >
-            <Icon size={17} color={isActive ? accent : "currentColor"} />
-            <span className="flex-1 truncate">
-              {label[lang] || label.sw}
-            </span>
-            {key === "leads" && newLeadsCount > 0 && (
-              <span
-                style={{
-                  background: isActive
-                    ? "rgba(245,243,236,0.18)"
-                    : COLORS.rust,
-                  color: isActive ? COLORS.sand : "white",
-                }}
-                className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full shrink-0"
-              >
-                {newLeadsCount}
-              </span>
-            )}
-            {key === "searches" && buyerSearchesCount > 0 && (
-              <span
-                style={{
-                  background: isActive
-                    ? "rgba(245,243,236,0.18)"
-                    : COLORS.sandLine,
-                  color: isActive ? COLORS.sand : COLORS.night,
-                }}
-                className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full shrink-0"
-              >
-                {buyerSearchesCount}
-              </span>
-            )}
-          </button>
-        );
-      })}
+        {sidebarOpen && (
+          <div className="md:hidden fixed inset-0 z-40 flex">
+            <div className="w-72 max-w-[85%] h-full pt-16 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto bg-page">
+              <div className="flex justify-end mb-2">
+                <button onClick={() => setSidebarOpen(false)} aria-label={t("Funga", "Close")} className="p-2 text-muted hover:text-secondary">
+                  <X size={20} color="currentColor" />
+                </button>
+              </div>
+              {nav.map(({ key, label, icon: Icon }) => {
+                const isActive = key === activeKey;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => { handleNavClick(key); setSidebarOpen(false); }}
+                    style={{ background: isActive ? COLORS.night : "transparent", color: isActive ? COLORS.sand : "var(--text-primary)" }}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left w-full"
+                  >
+                    <Icon size={17} color={isActive ? accent : "currentColor"} />
+                    <span className="flex-1 truncate">{label[lang] || label.sw}</span>
+                    {key === "leads" && newLeadsCount > 0 && (
+                      <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust, color: isActive ? COLORS.sand : "white" }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                        {newLeadsCount}
+                      </span>
+                    )}
+                    {key === "searches" && buyerSearchesCount > 0 && (
+                      <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : COLORS.sandLine, color: isActive ? COLORS.sand : COLORS.night }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                        {buyerSearchesCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+              <a href="/" className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4">
+                <Home size={17} />
+                {t("Rudi Nyumbani", "Back to Home")}
+              </a>
+            </div>
+            <div onClick={() => setSidebarOpen(false)} className="flex-1 bg-black/50" />
+          </div>
+        )}
 
-      <a
-        href="/"
-        className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4"
-      >
-        <Home size={17} />
-        {t("Rudi Nyumbani", "Back to Home")}
-      </a>
-    </div>
-    <div
-      onClick={() => setSidebarOpen(false)}
-      className="flex-1 bg-black/50"
-     />
-      </div>
-    )}
         <div className="flex-1 min-w-0 w-full max-w-full overflow-x-hidden overflow-y-auto">{renderMain()}</div>
       </div>
 

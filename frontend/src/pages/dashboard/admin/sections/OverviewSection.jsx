@@ -152,7 +152,7 @@ export default function OverviewSection({ onNavigate }) {
     { label: t("Wanunuzi Pekee", "Buyers Only"), value: userStats.buyersOnly, color: "#2F6D4F" },
     { label: t("Wote Wawili", "Both"),          value: userStats.bothRoles,   color: "#7C3AED" },
     { label: t("Wapya", "Neither"),             value: userStats.neitherRole, color: "#9CA3AF" },
-    { label: t("Admins", "Admins"),             value: userStats.totalAdmins, color: "#011957" },
+    { label: t("Admins", "Admins"),             value: userStats.totalAdmins, color: "#DC2626" },
   ].filter((d) => d.value > 0), [userStats, lang]);
 
   // ── Donut: Listings by status (Sasa inalingana na totalListings) ─────────

@@ -2,19 +2,20 @@
 // ReportsSection.jsx
 // Admin — Reports & Analytics (stats, graphs, top lists).
 // + Download ripoti (CSV/PDF/DOC) kwa today/week/month/year/all
+// + Custom date range
 // ============================================================
 
 import React, { useMemo, useEffect, useState } from "react";
 import {
   Users, Home, Handshake, Wallet, TrendingUp, BarChart3, Award, Eye,
-  MapPin, Tag, Download, FileText, FileSpreadsheet, File, Loader2,
+  MapPin, Tag, Download, FileText, FileSpreadsheet, File, Loader2, Calendar,
 } from "lucide-react";
 import { COLORS, formatTZS, getCategory } from "../shared/constants.js";
 import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useReports } from "../../../../config/reportsStore.js";
-import { useUsers } from "../../../../config/usersStore.js"; // ⬅️ Chanzo kikuu cha users
+import { useUsers } from "../../../../config/usersStore.js";
 import {
   useListings,
   useHydratePublicListings,
@@ -24,25 +25,38 @@ import { usePlatformRevenue, localDayKey } from "../shared/revenue.js";
 import { api } from "../../../../api/client.js";
 
 // ── PDF/CSV/DOC download via client.js ──
-async function downloadReport(format, period) {
+async function downloadReport(format, { period, from, to }) {
   const base = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
-  const path = `/finance/reports/export/?format=${format}&period=${period}`;
-  const blob = await api.download ? await api.download(path) : null;
+  const params = new URLSearchParams();
+  params.set("format", format);
+  if (period === "custom") {
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+  } else if (period) {
+    params.set("period", period);
+  }
+  const path = `/finance/reports/export/?${params.toString()}`;
   const { getAccessToken } = await import("../../../../api/client.js");
   const token = getAccessToken?.();
   const res = await fetch(`${base}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "Accept-Language": (typeof window !== "undefined" && window.__SMK_LANG__) || "sw",
+    },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.detail || `Download failed (${res.status})`);
+    throw new Error(err?.detail || err?.error?.message || `Download failed (${res.status})`);
   }
   const data = await res.blob();
   const url = window.URL.createObjectURL(data);
   const a = document.createElement("a");
   a.href = url;
   const ext = format === "doc" ? "docx" : format;
-  a.download = `ripoti_${period}_${new Date().toISOString().slice(0, 10)}.${ext}`;
+  const suffix = period === "custom"
+    ? `${from || "start"}_to_${to || "end"}`
+    : period;
+  a.download = `ripoti_${suffix}_${new Date().toISOString().slice(0, 10)}.${ext}`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -50,11 +64,13 @@ async function downloadReport(format, period) {
 }
 
 // ============================================================
-// DOWNLOAD PANEL
+// DOWNLOAD PANEL — pamoja na custom date range
 // ============================================================
 function DownloadPanel({ lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [period, setPeriod] = useState("month");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -65,6 +81,7 @@ function DownloadPanel({ lang }) {
     { key: "month", label: t("Mwezi Huu", "This Month") },
     { key: "year", label: t("Mwaka Huu", "This Year") },
     { key: "all", label: t("Zote", "All Time") },
+    { key: "custom", label: t("Chagua Siku", "Custom Range") }, // ⬅️ MPYA
   ];
 
   const formats = [
@@ -74,11 +91,15 @@ function DownloadPanel({ lang }) {
   ];
 
   const handleDownload = async (format) => {
+    if (period === "custom" && (!from || !to)) {
+      setError(t("Chagua tarehe ya kuanza na kumaliza.", "Select start and end date."));
+      return;
+    }
     setBusy(format);
     setError("");
     setSuccess("");
     try {
-      await downloadReport(format, period);
+      await downloadReport(format, { period, from, to });
       setSuccess(t("Ripoti imepakuliwa", "Report downloaded"));
       setTimeout(() => setSuccess(""), 2500);
     } catch (err) {
@@ -116,7 +137,7 @@ function DownloadPanel({ lang }) {
       <p className="text-[11px] font-semibold text-secondary uppercase tracking-wide mb-1.5">
         {t("Kipindi", "Period")}
       </p>
-      <div className="flex flex-wrap gap-1.5 mb-4">
+      <div className="flex flex-wrap gap-1.5 mb-3">
         {periods.map((p) => (
           <button
             key={p.key}
@@ -133,6 +154,36 @@ function DownloadPanel({ lang }) {
           </button>
         ))}
       </div>
+
+      {/* Custom date range — inaonekana tu kama period === "custom" */}
+      {period === "custom" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold text-secondary flex items-center gap-1">
+              <Calendar size={11} /> {t("Kuanzia", "From")}
+            </span>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none w-full focus:border-[#FEA406] cursor-pointer"
+              style={{ colorScheme: "light dark" }}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold text-secondary flex items-center gap-1">
+              <Calendar size={11} /> {t("Mpaka", "To")}
+            </span>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none w-full focus:border-[#FEA406] cursor-pointer"
+              style={{ colorScheme: "light dark" }}
+            />
+          </label>
+        </div>
+      )}
 
       <p className="text-[11px] font-semibold text-secondary uppercase tracking-wide mb-1.5">
         {t("Muundo", "Format")}
@@ -304,7 +355,7 @@ export default function ReportsSection() {
   const { lang } = useLanguage();
   const apiReports = useReports(lang);
   const platformRevenue = usePlatformRevenue("all");
-  const users = useUsers(); // ⬅️ Chanzo kikuu cha users
+  const users = useUsers();
   useHydratePublicListings();
   const listings = useListings();
   const deals = useDeals();
@@ -316,9 +367,7 @@ export default function ReportsSection() {
     ? "…"
     : platformRevenue.error ? "—" : formatTZS(platformRevenue.total);
 
-  // ============================================================
-  // USER STATS — Hesabu moja kwa moja kutoka `users`
-  // ============================================================
+  // USER STATS
   const userStats = useMemo(() => {
     let totalSellers = 0, totalBuyers = 0, bothRoles = 0, neitherRole = 0, totalAdmins = 0;
     users.forEach((u) => {
@@ -366,6 +415,8 @@ export default function ReportsSection() {
 
     const apiStatus = apiReports.dealsByStatus || {};
     const byStatus = (st) => deals.filter((d) => d.status === st).length;
+
+    // ⬇️ Deals by status — MIGOGORO IMEONDOLEWA
     const dealsByStatus = Object.values(apiStatus).some((v) => num(v) > 0)
       ? apiStatus
       : {
@@ -373,7 +424,7 @@ export default function ReportsSection() {
           accepted: byStatus("accepted"),
           reserved: byStatus("reserved"),
           completed: byStatus("completed"),
-          disputed: byStatus("disputed"),
+          // disputed: byStatus("disputed"),   ⬅️ IMEONDOLEWA
           cancelled: byStatus("cancelled"),
         };
     const totalDeals = pick(apiReports.totalDeals, deals.length);
@@ -446,7 +497,7 @@ export default function ReportsSection() {
       liveListings: pick(apiReports.liveListings, lsStatus("live")),
       soldListings: pick(apiReports.soldListings, lsStatus("sold")),
       totalDeals, completedDeals,
-      disputedDeals: pick(apiReports.disputedDeals, byStatus("disputed")),
+      disputedDeals: 0,   // ⬅️ IMEWEKWA 0 kwa sababu migogoro haipo
       conversionRate, dealsByStatus,
       usersGrowth: pickList(apiReports.usersGrowth, usersGrowthLocal),
       listingsGrowth: pickList(apiReports.listingsGrowth, listingsGrowthLocal),
@@ -500,8 +551,8 @@ export default function ReportsSection() {
           icon={Handshake}
           color="#2563EB"
           subtext={t(
-            `${reports.completedDeals} zimekamilika · ${reports.disputedDeals} migogoro`,
-            `${reports.completedDeals} completed · ${reports.disputedDeals} disputes`
+            `${reports.completedDeals} zimekamilika`,   // ⬅️ migogoro imeondolewa
+            `${reports.completedDeals} completed`
           )}
         />
         <ReportTile
@@ -552,7 +603,7 @@ export default function ReportsSection() {
               { key: "accepted", label: t("Imekubaliwa", "Accepted"), color: COLORS.green },
               { key: "reserved", label: t("Imehifadhiwa", "Reserved"), color: COLORS.gold },
               { key: "completed", label: t("Imekamilika", "Completed"), color: COLORS.green },
-              { key: "disputed", label: t("Migogoro", "Disputed"), color: COLORS.rust },
+              // { key: "disputed", label: t("Migogoro", "Disputed"), color: COLORS.rust },   ⬅️ IMEONDOLEWA
               { key: "cancelled", label: t("Imeghairiwa", "Cancelled"), color: COLORS.night },
             ].map(({ key, label, color }) => {
               const count = reports.dealsByStatus?.[key] || 0;

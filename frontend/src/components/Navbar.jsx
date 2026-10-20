@@ -376,7 +376,6 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                         { to: "/dashboard",        label: lang === "sw" ? "Dashibodi" : "Dashboard",       Icon: LayoutGrid },
                         { to: "/dashboard/post",   label: lang === "sw" ? "Uza Sasa" : "Sell Now",         Icon: Plus },
                         { to: "/dashboard/buyer",  label: lang === "sw" ? "Nunua Sasa" : "Buy Now",        Icon: Package },
-                        { to: "/dashboard/buyer/saved",  label: lang === "sw" ? "Zilizohifadhiwa" : "Saved",     Icon: Heart },
                         { to: "/wasifu",           label: lang === "sw" ? "Wasifu" : "Profile",            Icon: UserIcon },
                         { to: "/alika-marafiki",   label: lang === "sw" ? "Alika Marafiki" : "Invite Friends", Icon: Users },
                       ].map(({ to, label, Icon }) => (
