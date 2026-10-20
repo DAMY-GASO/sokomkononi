@@ -1,5 +1,12 @@
 // ============================================================
 // usersStore.js — API-only via /api/admin/users/
+//
+// Marekebisho:
+//  - norm(): role sasa inasoma `raw.role` au `raw.user_role`
+//    kutoka backend. Fallback: is_seller + is_buyer → Both,
+//    Seller, Buyer, Neither. Admins wanabaki Admin.
+//  - roleMap inahakikisha casing ni consistent (Admin, Seller,
+//    Buyer, Both, Neither) — inalingana na UserManagementSection.
 // ============================================================
 import { useEffect, useState, useCallback } from "react";
 import { api } from "../api/client";
@@ -29,25 +36,101 @@ function write(list) {
 }
 
 // ============================================================
+// ROLE NORMALIZER
+// ============================================================
+const ROLE_MAP = {
+  admin: "Admin",
+  administrator: "Admin",
+  super_admin: "Admin",
+  staff: "Admin",
+  seller: "Seller",
+  muuzaji: "Seller",
+  buyer: "Buyer",
+  mnunuzi: "Buyer",
+  both: "Both",
+  both_roles: "Both",
+  wote_wawili: "Both",
+  neither: "Neither",
+  wapya: "Neither",
+  new: "Neither",
+  none: "Neither",
+};
+
+function resolveRole(raw) {
+  if (!raw) return "Neither";
+
+  // 1) Backend role (preferred)
+  const backendRole =
+    raw.role ||
+    raw.user_role ||
+    raw.roleKey ||
+    raw.role_key ||
+    null;
+  if (backendRole) {
+    const key = String(backendRole).toLowerCase().replace(/[\s-]/g, "_");
+    if (ROLE_MAP[key]) return ROLE_MAP[key];
+    // Unknown string but still a valid-looking role
+    const title = String(backendRole)
+      .toLowerCase()
+      .replace(/(^|_)(\w)/g, (_, __, c) => " " + c.toUpperCase())
+      .trim();
+    if (title === "Admin" || title === "Seller" || title === "Buyer" || title === "Both" || title === "Neither") {
+      return title;
+    }
+  }
+
+  // 2) Admin flags
+  if (raw.is_staff || raw.is_superuser || raw.isStaff || raw.isSuperuser) {
+    return "Admin";
+  }
+
+  // 3) is_seller + is_buyer flags
+  const isSeller =
+    raw.is_seller === true ||
+    raw.isSeller === true ||
+    raw.seller === true ||
+    raw.has_listings === true ||
+    raw.hasListings === true;
+  const isBuyer =
+    raw.is_buyer === true ||
+    raw.isBuyer === true ||
+    raw.buyer === true ||
+    raw.has_deals === true ||
+    raw.hasDeals === true ||
+    raw.has_purchases === true ||
+    raw.hasPurchases === true;
+
+  if (isSeller && isBuyer) return "Both";
+  if (isSeller) return "Seller";
+  if (isBuyer) return "Buyer";
+
+  // 4) account_type fallback
+  const accType = String(raw.account_type || raw.accountType || "").toUpperCase();
+  if (accType === "BUSINESS") return "Seller";
+
+  // 5) Default
+  return "Neither";
+}
+
+// ============================================================
 // NORMALIZE — kutoka backend → frontend shape
 // ============================================================
 function norm(raw) {
   if (!raw) return null;
+
+  const role = resolveRole(raw);
+
   return {
     id: raw.id,
-    name: raw.name || "",
+    name: raw.name || raw.full_name || raw.fullName || "",
     email: raw.email || "",
     phone: raw.phone || "",
-    avatar: raw.avatar || null,
-    role: raw.is_staff || raw.is_superuser
-      ? "Admin"
-      : raw.account_type === "BUSINESS" || raw.is_seller
-        ? "Seller"
-        : "Buyer",
+    avatar: raw.avatar || raw.avatar_url || raw.avatarUrl || null,
+    role,
     status: raw.is_active === false ? "suspended" : "active",
-    joined: raw.date_joined || raw.created_at,
-    isStaff: !!raw.is_staff,
-    isVerified: !!raw.is_verified,
+    joined: raw.date_joined || raw.dateJoined || raw.created_at || raw.createdAt,
+    isStaff: !!(raw.is_staff || raw.isStaff || raw.is_superuser || raw.isSuperuser),
+    isVerified: !!(raw.is_verified || raw.isVerified),
   };
 }
 
@@ -257,11 +340,18 @@ function _dedupedUsersHydrate(opts) {
 
 /**
  * useUsers — inasikiliza cache + inarudisha list ya users.
+ *
+ * Kumbuka: kwa default inachukua page 1 (pageSize 20). Kama
+ * unahitaji users wote (mfano kwa Overview/Reports), tumia
+ * hydrateUsersFromApi({ page: 1, pageSize: 1000 }) au ongeza
+ * endpoint ya "all". Hii ni muhimu ili idadi ya users
+ * inayorudishwa ilingane na total.
  */
 export function useUsers() {
   const [list, setList] = useState(() => read());
   useEffect(() => {
-    _dedupedUsersHydrate();
+    // Fetch page kubwa ili kupata idadi kamili kwa dashboards
+    _dedupedUsersHydrate({ page: 1, pageSize: 1000 });
     const sync = () => setList(read());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);
@@ -337,7 +427,6 @@ export function useUsersPaged(initial = {}) {
     };
   }, []);
 
-
   useEffect(() => {
     fetchPage(page, filters);
   }, [page, filters]);
@@ -368,7 +457,3 @@ export function useUsersPaged(initial = {}) {
     refresh,
   };
 }
-
-// ============================================================
-// AUTO-REFRESH: sikiliza events ili list ya users i-refresh
-// ============================================================

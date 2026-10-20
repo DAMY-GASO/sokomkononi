@@ -1,5 +1,11 @@
 // ============================================================
 // userCreditsStore.js — API-only via /api/credits/
+//
+// Marekebisho:
+//  - useUserCredits: inasoma upya kila userId inabadilika
+//  - norm: inahakikisha remaining/total ni namba
+//  - getUserCredits: inarudisha null kama userId haipo
+//  - hydrateUserCreditsFromApi: inasafisha data ya userId isiyo sahihi
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -26,12 +32,14 @@ function write(map) {
 function norm(list) {
   const out = { services: [] };
   for (const item of list || []) {
-    out[item.service_key] = {
-      remaining: item.remaining ?? 0,
-      total: item.total ?? 0,
-      expiresAt: item.expires_at,
-      lastBundleId: item.last_bundle_code,
-      lastBundleName: item.last_bundle_name,
+    const key = item.service_key || item.serviceKey;
+    if (!key) continue;
+    out[key] = {
+      remaining: Number(item.remaining ?? 0) || 0,
+      total: Number(item.total ?? 0) || 0,
+      expiresAt: item.expires_at || item.expiresAt || null,
+      lastBundleId: item.last_bundle_code || item.lastBundleCode || null,
+      lastBundleName: item.last_bundle_name || item.lastBundleName || null,
     };
   }
   return out;
@@ -59,16 +67,12 @@ export function checkCredit(userId, service, amount = 1) {
   };
 }
 
-/**
- * Consume a credit via the backend. Awaits the response and refreshes
- * the caller's balance from the server.
- * @returns {Promise<{success:boolean, remaining:number, data?:any, error?:any}>}
- */
 // Backend: /credits/consume/ is documented as admin-gated. If your backend
 // exposes a user-scoped self-consume endpoint, set VITE_CREDITS_CONSUME_PATH.
-// Otherwise, ensure backend allows the self-service consume call.
 const CONSUME_PATH =
-  (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_CREDITS_CONSUME_PATH) ||
+  (typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    import.meta.env.VITE_CREDITS_CONSUME_PATH) ||
   "/credits/consume/";
 
 export async function consumeCreditAsync(userId, service, amount = 1) {
@@ -91,19 +95,12 @@ export async function consumeCreditAsync(userId, service, amount = 1) {
 
 /**
  * @deprecated Use consumeCreditAsync — this is fire-and-forget and unsafe.
- *
- * IMPORTANT: this now returns { success: false } so any caller that
- * hasn't migrated to the async version will fall back to real payment
- * instead of leaking revenue. Also fires the async call in the
- * background so credit accounting still happens if the backend allows it.
  */
 export function consumeCredit() {
   console.warn(
     "[userCredits] consumeCredit() is deprecated and now a NO-OP. " +
-    "Use consumeCreditAsync(). Returning {success:false} so callers fall back to real payment."
+      "Use consumeCreditAsync(). Returning {success:false} so callers fall back to real payment."
   );
-  // Intentionally do NOT fire a network call — a "deprecated" helper that
-  // still spends credits can double-charge callers that fall back to payment.
   return { success: false, remaining: 0, deprecated: true };
 }
 
@@ -140,16 +137,27 @@ export async function hydrateUserCreditsFromApi(userId) {
 
 export function useUserCredits(userId) {
   const [c, setC] = useState(() => getUserCredits(userId));
+
+  // Re-read when userId changes
   useEffect(() => {
-    hydrateUserCreditsFromApi(userId);
+    setC(getUserCredits(userId));
+    if (!userId) return;
+
+    let cancelled = false;
+    hydrateUserCreditsFromApi(userId).then(() => {
+      if (!cancelled) setC(getUserCredits(userId));
+    });
+
     const sync = () => setC(getUserCredits(userId));
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);
     return () => {
+      cancelled = true;
       window.removeEventListener("storage", sync);
       window.removeEventListener(EV, sync);
     };
   }, [userId]);
+
   return c;
 }
 
@@ -157,9 +165,12 @@ export function removeExpiredCredits() {}
 
 // ============================================================
 // waitForCredit — poll for credits after a bundle purchase.
-// FimiPay webhook may land seconds after the frontend poll succeeds.
 // ============================================================
-export async function waitForCredit(userId, service, { attempts = 10, intervalMs = 2000 } = {}) {
+export async function waitForCredit(
+  userId,
+  service,
+  { attempts = 10, intervalMs = 2000 } = {}
+) {
   for (let i = 0; i < attempts; i++) {
     const info = checkCredit(userId, service);
     if (info.hasCredit) return { ok: true, remaining: info.remaining };

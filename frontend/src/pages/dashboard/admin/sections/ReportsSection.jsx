@@ -6,28 +6,15 @@
 
 import React, { useMemo, useEffect, useState } from "react";
 import {
-  Users,
-  Home,
-  Handshake,
-  Wallet,
-  TrendingUp,
-  BarChart3,
-  Award,
-  Eye,
-  MapPin,
-  Tag,
-  Download,
-  FileText,
-  FileSpreadsheet,
-  File,
-  Loader2,
+  Users, Home, Handshake, Wallet, TrendingUp, BarChart3, Award, Eye,
+  MapPin, Tag, Download, FileText, FileSpreadsheet, File, Loader2,
 } from "lucide-react";
 import { COLORS, formatTZS, getCategory } from "../shared/constants.js";
 import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useReports } from "../../../../config/reportsStore.js";
-import { useUsers } from "../../../../config/usersStore.js";
+import { useUsers } from "../../../../config/usersStore.js"; // ⬅️ Chanzo kikuu cha users
 import {
   useListings,
   useHydratePublicListings,
@@ -41,7 +28,6 @@ async function downloadReport(format, period) {
   const base = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
   const path = `/finance/reports/export/?format=${format}&period=${period}`;
   const blob = await api.download ? await api.download(path) : null;
-  // Fallback: use raw fetch with auth
   const { getAccessToken } = await import("../../../../api/client.js");
   const token = getAccessToken?.();
   const res = await fetch(`${base}${path}`, {
@@ -127,7 +113,6 @@ function DownloadPanel({ lang }) {
         </div>
       </div>
 
-      {/* Period selector */}
       <p className="text-[11px] font-semibold text-secondary uppercase tracking-wide mb-1.5">
         {t("Kipindi", "Period")}
       </p>
@@ -149,7 +134,6 @@ function DownloadPanel({ lang }) {
         ))}
       </div>
 
-      {/* Format buttons */}
       <p className="text-[11px] font-semibold text-secondary uppercase tracking-wide mb-1.5">
         {t("Muundo", "Format")}
       </p>
@@ -320,26 +304,10 @@ export default function ReportsSection() {
   const { lang } = useLanguage();
   const apiReports = useReports(lang);
   const platformRevenue = usePlatformRevenue("all");
-  const users = useUsers();
+  const users = useUsers(); // ⬅️ Chanzo kikuu cha users
   useHydratePublicListings();
   const listings = useListings();
   const deals = useDeals();
-
-  const [userStats, setUserStats] = useState({
-    totalUsers: 0, totalSellers: 0, totalBuyers: 0,
-    bothRoles: 0, neitherRole: 0, totalAdmins: 0,
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await api.get("/finance/user-stats/");
-        if (!cancelled) setUserStats(data);
-      } catch { /* noop */ }
-    })();
-    return () => { cancelled = true; };
-  }, []);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const locale = lang === "sw" ? "sw-TZ" : "en-US";
@@ -347,6 +315,29 @@ export default function ReportsSection() {
   const totalRevenueText = platformRevenue.loading
     ? "…"
     : platformRevenue.error ? "—" : formatTZS(platformRevenue.total);
+
+  // ============================================================
+  // USER STATS — Hesabu moja kwa moja kutoka `users`
+  // ============================================================
+  const userStats = useMemo(() => {
+    let totalSellers = 0, totalBuyers = 0, bothRoles = 0, neitherRole = 0, totalAdmins = 0;
+    users.forEach((u) => {
+      const role = u.role || "Neither";
+      if (role === "Admin") totalAdmins++;
+      else if (role === "Seller") totalSellers++;
+      else if (role === "Buyer") totalBuyers++;
+      else if (role === "Both") bothRoles++;
+      else neitherRole++;
+    });
+    return {
+      totalUsers: users.length,
+      totalSellers: totalSellers + bothRoles,
+      totalBuyers: totalBuyers + bothRoles,
+      bothRoles,
+      neitherRole,
+      totalAdmins,
+    };
+  }, [users]);
 
   const reports = useMemo(() => {
     const num = (v) => Number(v) || 0;
@@ -367,14 +358,12 @@ export default function ReportsSection() {
       deals.map((d) => String(d.buyerId ?? d.buyer_id)).filter(Boolean)
     );
 
-    // ── User counts — API KAMILI, sio fallback ──
-    const totalUsers = userStats.totalUsers || num(apiReports.totalUsers) || users.length;
-    const totalSellers = userStats.totalSellers || num(apiReports.totalSellers) || 0;
-    const totalBuyers = userStats.totalBuyers || num(apiReports.totalBuyers) || 0;
-    const bothRoles = userStats.bothRoles || num(apiReports.bothRoles) || 0;
-    const neitherRole = userStats.neitherRole || num(apiReports.neitherRole) || 0;
+    const totalUsers = userStats.totalUsers;
+    const totalSellers = userStats.totalSellers;
+    const totalBuyers = userStats.totalBuyers;
+    const bothRoles = userStats.bothRoles;
+    const neitherRole = userStats.neitherRole;
 
-    // ── Deals ──
     const apiStatus = apiReports.dealsByStatus || {};
     const byStatus = (st) => deals.filter((d) => d.status === st).length;
     const dealsByStatus = Object.values(apiStatus).some((v) => num(v) > 0)
@@ -393,7 +382,6 @@ export default function ReportsSection() {
       ? num(apiReports.conversionRate)
       : totalDeals > 0 ? (completedDeals / totalDeals) * 100 : 0;
 
-    // ── Users Growth ──
     const usersGrowthLocal = [];
     if (users.length > 0) {
       for (let i = 29; i >= 0; i--) {
@@ -408,7 +396,6 @@ export default function ReportsSection() {
       }
     }
 
-    // ── Listings ──
     const lsStatus = (st) => listings.filter((l) => l.status === st).length;
     const perDay = {};
     listings.forEach((l) => {
@@ -484,10 +471,8 @@ export default function ReportsSection() {
         )}
       />
 
-      {/* DOWNLOAD PANEL */}
       <DownloadPanel lang={lang} />
 
-      {/* PRIMARY STATS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-5">
         <ReportTile
           label={t("Watumiaji Wote", "Total Users")}
@@ -531,7 +516,6 @@ export default function ReportsSection() {
         />
       </div>
 
-      {/* CHARTS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-5">
         <ChartCard title={t("Ukuaji wa Watumiaji (Siku 30)", "Users Growth (Last 30 Days)")} icon={TrendingUp} iconColor={COLORS.gold}>
           <LineChart
@@ -592,7 +576,6 @@ export default function ReportsSection() {
         </ChartCard>
       </div>
 
-      {/* TOP LISTS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         <ChartCard title={t("Wauzaji Bora (kwa Views)", "Top Sellers (by Views)")} icon={Award} iconColor={COLORS.gold}>
           {reports.topSellers?.length === 0 ? (
