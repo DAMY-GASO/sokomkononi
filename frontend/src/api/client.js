@@ -6,6 +6,7 @@
 // - DELETE supports body
 // - FIX: Always send Authorization header when token exists
 // - FIX: Send X-CSRFToken on unsafe methods (POST/PUT/PATCH/DELETE)
+// - FIX: Send Accept-Language header (sw / en) kwa kila ombi
 // ============================================================
 
 import { getSessionScope } from "../config/adminPath.js";
@@ -35,6 +36,15 @@ function getBaseUrl() {
     return "/api";
   }
   return raw.replace(/\/+$/, "");
+}
+
+// ============================================================
+// LANGUAGE (Accept-Language)
+// ============================================================
+function getLang() {
+  if (typeof window === "undefined") return "sw";
+  const v = window.__SMK_LANG__;
+  return v === "en" ? "en" : "sw";
 }
 
 // ============================================================
@@ -120,6 +130,7 @@ export class ApiError extends Error {
     this.retryAfter =
       opts.retryAfter ??
       (Number(env?.retry_after) || Number(data?.retry_after) || null);
+    this.language = env?.language || null;
   }
 }
 
@@ -205,7 +216,10 @@ async function refreshAccessToken() {
   refreshPromise = (async () => {
     const res = await fetchWithTimeout(`${getBaseUrl()}/auth/token/refresh/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Accept-Language": getLang(),
+      },
       body: JSON.stringify({ refresh: getRefreshToken() }),
     });
     if (!res.ok) {
@@ -251,6 +265,7 @@ async function request(path, {
 } = {}) {
   const isPublic = isPublicEndpoint(path, method);
   const accessToken = getAccessToken();
+  const lang = getLang();
 
   const finalHeaders = {
     ...(shouldUseIdempotency(path, method)
@@ -259,6 +274,7 @@ async function request(path, {
     ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     "X-Requested-With": "XMLHttpRequest",
+    "Accept-Language": lang, // ⬅️ MPYA — backend itatumia lugha hii
     ...headers,
   };
 
@@ -278,7 +294,6 @@ async function request(path, {
         headers: finalHeaders,
         body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
         signal: signal || undefined,
-        // ⬇️ credentials IMEONDOLEWA — JWT-only, no cookies
       }, timeoutMs);
       if (RETRYABLE_METHODS.has(method.toUpperCase()) && (r.status === 408 || r.status === 429 || (r.status >= 500 && r.status < 600))) {
         const data = await parseResponse(r);
@@ -326,14 +341,16 @@ function normalizeBody(body) {
 export async function downloadFile(path, { signal } = {}) {
   const isPublic = isPublicEndpoint(path, "GET");
   const accessToken = getAccessToken();
+  const lang = getLang();
   const headers = {
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     "X-Requested-With": "XMLHttpRequest",
+    "Accept-Language": lang, // ⬅️ MPYA
   };
 
   let res = await fetchWithTimeout(
     `${getBaseUrl()}${path}`,
-    { method: "GET", headers, signal }  // ⬅️ credentials IMEONDOLEWA
+    { method: "GET", headers, signal }
   );
 
   if (res.status === 401 && !isPublic && getRefreshToken()) {

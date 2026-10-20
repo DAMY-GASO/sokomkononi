@@ -594,8 +594,11 @@ export function LanguageProvider({ children }) {
   );
 
   useEffect(() => {
-    localStorage.setItem("preferred_language", lang);
-  }, [lang]);
+  localStorage.setItem("preferred_language", lang);
+  if (typeof window !== "undefined") {
+    window.__SMK_LANG__ = lang;
+  }
+}, [lang]);
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, t }}>
