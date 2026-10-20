@@ -514,38 +514,47 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                 ))}
               </div>
             )}
-            
-            {/* ⬇️ ONGEZA SEHEMU YA LUGHA HAPA */}
-            <div className="mt-4 border-t border-white/10 pt-4">
-              <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-white/45 mb-2">
-                {lang === "sw" ? "Lugha" : "Language"}
-              </p>
-              <div className="flex flex-col gap-1">
+
+            {/* ⬇️ LUGHA — Dropdown Toggle */}
+            <button
+              onClick={() => setMobileSub((v) => (v === "lang" ? null : "lang"))}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
+            >
+              <div className="flex items-center gap-2">
+                <Globe size={16} className="text-white/60" />
+                <span>{lang === "sw" ? "Lugha" : "Language"}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
+                  {currentLang.code}
+                </span>
+                <Chev open={mobileSub === "lang"} />
+              </div>
+            </button>
+            {mobileSub === "lang" && (
+              <div className="mb-1 ml-2 border-l border-white/10 pl-3">
                 {languages.map((l) => (
                   <button
                     key={l.code}
                     onClick={() => {
                       setLang(l.code);
-                      setMobileOpen(false);
+                      setMobileSub(null);
                     }}
                     className={cx(
-                      "flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors",
+                      "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-colors",
                       lang === l.code
-                        ? "bg-white/[0.08] text-white font-semibold"
-                        : "text-white/70 hover:bg-white/[0.04] hover:text-white"
+                        ? "bg-white/[0.08] font-semibold text-white"
+                        : "text-white/65 hover:bg-white/[0.05] hover:text-white"
                     )}
                   >
-                    <div className="flex items-center gap-2">
-                      <Globe size={14} className="text-white/40" />
-                      <span>{l.native}</span>
-                    </div>
+                    <span>{l.native}</span>
                     {lang === l.code && (
                       <span className="h-1.5 w-1.5 rounded-full bg-[#FEA406]" />
                     )}
                   </button>
                 ))}
               </div>
-            </div>
+            )}
           </nav>
         </div>
       </div>
