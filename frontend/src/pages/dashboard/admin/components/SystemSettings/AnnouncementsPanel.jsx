@@ -10,7 +10,7 @@
 // ============================================================
 
 import React, { useState } from "react";
-import { Megaphone, Plus, Trash2, Loader2 } from "lucide-react";
+import { Megaphone, Plus, Trash2, Loader2, Calendar } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 import {
@@ -264,20 +264,28 @@ export default function AnnouncementsPanel() {
             className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none resize-none focus:border-[#FEA406] disabled:opacity-50"
           />
 
-          {/* Schedule */}
+                    {/* Schedule */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <label className="text-xs text-secondary shrink-0">
+            <label className="text-xs text-secondary shrink-0 flex items-center gap-1">
+              <Calendar size={12} />
               {lang === "sw" ? "Ratiba (hiari):" : "Schedule (optional):"}
             </label>
-            <input
-              type="datetime-local"
-              value={form.scheduledFor}
-              onChange={(e) =>
-                setForm({ ...form, scheduledFor: e.target.value })
-              }
-              disabled={busy.sending}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none flex-1 min-w-0 focus:border-[#FEA406] disabled:opacity-50"
-            />
+            <div className="relative flex-1 min-w-0">
+              <input
+                type="datetime-local"
+                value={form.scheduledFor}
+                onChange={(e) =>
+                  setForm({ ...form, scheduledFor: e.target.value })
+                }
+                disabled={busy.sending}
+                className="border border-gray-200 rounded-lg px-3 py-2 pr-9 text-xs outline-none w-full focus:border-[#FEA406] disabled:opacity-50 cursor-pointer"
+                style={{ colorScheme: "light dark" }}
+              />
+              <Calendar
+                size={14}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
+              />
+            </div>
           </div>
 
           {/* Submit */}
