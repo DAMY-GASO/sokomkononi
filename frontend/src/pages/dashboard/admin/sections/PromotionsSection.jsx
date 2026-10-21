@@ -10,6 +10,7 @@
 //  - isPaused prop inaonyesha "IMESIMAMISHWA" badge
 //  - actionBusy inazuia double-click
 //  - Cancel modal inaonyesha refund preview
+//  - ✅ "Revenue by Type" IMEONDOLEWA — mapato yako Overview
 // ============================================================
 
 import React, { useState } from "react";
@@ -45,7 +46,6 @@ import {
   resumePromotionAsync,
   cancelPromotionAsync,
 } from "../../../../config/promotionsStore.js";
-import { usePlatformRevenue } from "../shared/revenue.js";
 
 // ============================================================
 // PROMOTION TYPE CONFIG — REVENUE TYPES ZOTE 6
@@ -413,7 +413,6 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
       style={{ borderColor: COLORS.sandLine, background: "white" }}
       className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full max-w-full min-w-0 overflow-hidden"
     >
-      {/* Jina */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-secondary">
@@ -443,7 +442,6 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
         </label>
       </div>
 
-      {/* Maelezo */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-secondary">
@@ -481,7 +479,6 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
         </label>
       </div>
 
-      {/* Punguzo + Inatumika kwa */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-secondary">
@@ -524,7 +521,6 @@ function CampaignForm({ initial, onSave, onCancel, lang, saving }) {
         </label>
       </div>
 
-      {/* Tarehe */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
         <label className="flex flex-col gap-1 min-w-0 w-full">
           <span className="text-[11px] font-semibold text-secondary">
@@ -717,7 +713,6 @@ function ConfirmActionModal({ action, lang, busy, onConfirm, onClose }) {
 export default function PromotionsSection() {
   const { lang } = useLanguage();
   const promotions = usePromotions(lang);
-  const platformRevenue = usePlatformRevenue("all");
 
   const [activeTab, setActiveTab] = useState("boost");
   const [editingCampaign, setEditingCampaign] = useState(null);
@@ -725,12 +720,11 @@ export default function PromotionsSection() {
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
-  // ⬇️ pause/resume/cancel
+  // pause/resume/cancel
   const [confirmAction, setConfirmAction] = useState(null);
   const [actionBusy, setActionBusy] = useState({});
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
-  const revenueByType = platformRevenue.byType;
 
   // ============================================================
   // PROMOTION ACTION HANDLERS
@@ -871,7 +865,6 @@ export default function PromotionsSection() {
       label: t("Boost", "Boost"),
       icon: Rocket,
       count: promotions.counts.boosted,
-      revenue: revenueByType.boost || 0,
       color: COLORS.gold,
     },
     {
@@ -879,7 +872,6 @@ export default function PromotionsSection() {
       label: t("Matangazo", "Advertisements"),
       icon: Megaphone,
       count: promotions.counts.advertised,
-      revenue: revenueByType.advertise || 0,
       color: COLORS.rust,
     },
     {
@@ -887,7 +879,6 @@ export default function PromotionsSection() {
       label: t("Leading", "Leading"),
       icon: TrendingUp,
       count: promotions.counts.leading,
-      revenue: revenueByType.leading || 0,
       color: COLORS.green,
     },
     {
@@ -895,7 +886,6 @@ export default function PromotionsSection() {
       label: t("Uhifadhi", "Reservation"),
       icon: HandCoins,
       count: promotions.counts.reserved,
-      revenue: revenueByType.reservation || 0,
       color: "#2563EB",
     },
     {
@@ -903,7 +893,6 @@ export default function PromotionsSection() {
       label: t("Ada ya Mafanikio", "Success Fee"),
       icon: Wallet,
       count: promotions.counts.successFee,
-      revenue: revenueByType.success || 0,
       color: "#7C3AED",
     },
     {
@@ -911,7 +900,6 @@ export default function PromotionsSection() {
       label: t("Ada ya Kuchapisha", "Listing Fee"),
       icon: CreditCard,
       count: promotions.counts.listingFee,
-      revenue: revenueByType.listing || 0,
       color: "#0891B2",
     },
     {
@@ -919,7 +907,6 @@ export default function PromotionsSection() {
       label: t("Kampeni", "Campaigns"),
       icon: Sparkles,
       count: promotions.counts.campaigns,
-      revenue: null,
       color: COLORS.gold,
     },
   ];
@@ -1224,48 +1211,6 @@ export default function PromotionsSection() {
         />
       </div>
 
-      {/* Revenue Breakdown */}
-      <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
-        className="rounded-xl border p-3 sm:p-4 mb-5 w-full min-w-0 overflow-hidden"
-      >
-        <h3 className="text-sm font-semibold text-primary mb-3">
-          {t("Mapato kwa Aina", "Revenue by Type")}
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 w-full">
-          <RevenueRow
-            label={t("Boost", "Boost")}
-            value={revenueByType.boost || 0}
-            color={COLORS.gold}
-          />
-          <RevenueRow
-            label={t("Matangazo", "Advertisements")}
-            value={revenueByType.advertise || 0}
-            color={COLORS.rust}
-          />
-          <RevenueRow
-            label={t("Leading", "Leading")}
-            value={revenueByType.leading || 0}
-            color={COLORS.green}
-          />
-          <RevenueRow
-            label={t("Uhifadhi", "Reservation")}
-            value={revenueByType.reservation || 0}
-            color="#2563EB"
-          />
-          <RevenueRow
-            label={t("Success Fee", "Success Fee")}
-            value={revenueByType.success || 0}
-            color="#7C3AED"
-          />
-          <RevenueRow
-            label={t("Listing Fee", "Listing Fee")}
-            value={revenueByType.listing || 0}
-            color="#0891B2"
-          />
-        </div>
-      </div>
-
       {/* Tabs */}
       <div className="flex justify-start sm:justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
         {TABS.map(({ key, label, icon: Icon, count, color }) => {
@@ -1334,25 +1279,6 @@ function StatBox({ label, value, icon: Icon, color }) {
       </p>
       <p className="text-[10px] text-secondary leading-tight mt-0.5 break-words">
         {label}
-      </p>
-    </div>
-  );
-}
-
-function RevenueRow({ label, value, color }) {
-  return (
-    <div
-      style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-      className="rounded-lg border p-2.5 sm:p-3 min-w-0 w-full overflow-hidden"
-    >
-      <p className="text-[10px] font-semibold text-secondary uppercase truncate">
-        {label}
-      </p>
-      <p
-        style={{ color }}
-        className="text-sm sm:text-base font-bold mt-1 break-words leading-tight"
-      >
-        {formatTZS(value)}
       </p>
     </div>
   );

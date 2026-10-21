@@ -3,8 +3,7 @@ import {
   Users, Home, ShoppingBag, Wallet,
   UserCheck, Store, ClipboardList, CheckCircle2,
   UserPlus, CreditCard, User, ShieldCheck,
-  ArrowRight, BarChart3, Handshake, Banknote,
-  TrendingUp, Tag, Megaphone, Package, Sparkles,
+  Banknote, TrendingUp, Tag, Megaphone, Package, Sparkles,
 } from "lucide-react";
 import { COLORS, formatTZS } from "../shared/constants.js";
 import StatCard from "../shared/StatCard.jsx";
@@ -19,28 +18,17 @@ import { useDeals } from "../../../../config/dealsStore.js";
 import { useTransactions } from "../../../../config/transactionsStore.js";
 import { usePlatformRevenue } from "../shared/revenue.js";
 
-// ── Icons + colors kwa kila revenue stream ──────────────
 const STREAM_META = {
-  listing:     { icon: Tag,        color: "#0891B2", labelSw: "Listing Fee",   labelEn: "Listing Fee" },
-  reservation: { icon: Store,      color: "#2F6D4F", labelSw: "Reservation",   labelEn: "Reservation" },
-  boost:       { icon: Sparkles,   color: "#FEA406", labelSw: "Boost",         labelEn: "Boost" },
-  leading:     { icon: TrendingUp, color: "#7C3AED", labelSw: "Leading",       labelEn: "Leading" },
-  advertise:   { icon: Megaphone,  color: "#C1502E", labelSw: "Advertise",     labelEn: "Advertise" },
-  success:     { icon: CheckCircle2, color: "#2563EB", labelSw: "Success Fee", labelEn: "Success Fee" },
-  bundle:      { icon: Package,    color: "#DB2777", labelSw: "Bundle",        labelEn: "Bundle" },
+  listing:     { icon: Tag,          color: "#0891B2", labelSw: "Listing Fee",   labelEn: "Listing Fee" },
+  reservation: { icon: Store,        color: "#2F6D4F", labelSw: "Reservation",   labelEn: "Reservation" },
+  boost:       { icon: Sparkles,     color: "#FEA406", labelSw: "Boost",         labelEn: "Boost" },
+  leading:     { icon: TrendingUp,   color: "#7C3AED", labelSw: "Leading",       labelEn: "Leading" },
+  advertise:   { icon: Megaphone,    color: "#C1502E", labelSw: "Advertise",     labelEn: "Advertise" },
+  success:     { icon: CheckCircle2, color: "#2563EB", labelSw: "Success Fee",   labelEn: "Success Fee" },
+  bundle:      { icon: Package,      color: "#DB2777", labelSw: "Bundle",        labelEn: "Bundle" },
 };
 
-const STREAM_COLORS = {
-  listing:     "#0891B2",
-  reservation: "#2F6D4F",
-  boost:       "#FEA406",
-  leading:     "#7C3AED",
-  advertise:   "#C1502E",
-  success:     "#2563EB",
-  bundle:      "#DB2777",
-};
-
-export default function OverviewSection({ onNavigate }) {
+export default function OverviewSection() {
   const { lang } = useLanguage();
   const users = useUsers();
   const listings = useListings();
@@ -58,7 +46,6 @@ export default function OverviewSection({ onNavigate }) {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ── User stats ───────────────────────────────────────────
   const userStats = useMemo(() => {
     let sellersOnly = 0, buyersOnly = 0, bothRoles = 0, neitherRole = 0, totalAdmins = 0;
     users.forEach((u) => {
@@ -101,7 +88,6 @@ export default function OverviewSection({ onNavigate }) {
     [deals]
   );
 
-  // ── User stat cards ──────────────────────────────────────
   const userStatsGrid = [
     { id: "users",       label: t("Watumiaji Wote", "Total Users"),  value: userStats.totalUsers.toLocaleString("en-US"),   icon: Users,       color: COLORS.gold },
     { id: "sellersOnly", label: t("Wauzaji Pekee", "Sellers Only"),  value: userStats.sellersOnly.toLocaleString("en-US"), icon: Store,      color: "#2563EB" },
@@ -111,7 +97,6 @@ export default function OverviewSection({ onNavigate }) {
     { id: "admins",      label: t("Admins", "Admins"),               value: userStats.totalAdmins.toLocaleString("en-US"), icon: ShieldCheck, color: "#DC2626" },
   ];
 
-  // ── Activity stat cards ──────────────────────────────────
   const activityStats = [
     { id: "listings",        label: t("Mali Zote", "Total Listings"),             value: totalListings.toLocaleString("en-US"),   icon: Home,          color: COLORS.green },
     { id: "pendingListings", label: t("Mali Zinazosubiri", "Pending Listings"),   value: pendingCount.toLocaleString("en-US"),    icon: ClipboardList, color: "#D97706" },
@@ -120,7 +105,6 @@ export default function OverviewSection({ onNavigate }) {
     { id: "pendingPayments", label: t("Malipo Yanayosubiri", "Pending Payments"), value: pendingPayments.toLocaleString("en-US"), icon: CreditCard,    color: "#D97706" },
   ];
 
-  // ── Revenue streams — kila moja kama stat card ───────────
   const revenueStreamCards = useMemo(() => {
     if (revenue.loading) return [];
     return revenue.streams
@@ -135,33 +119,8 @@ export default function OverviewSection({ onNavigate }) {
           color: meta.color,
         };
       })
-      .filter((c) => c); // onyesha zote — hata zilizo 0, ili admin aone kila stream
+      .filter((c) => c);
   }, [revenue.loading, revenue.streams, revenue.byType, lang]);
-
-  // ── Quick links ──────────────────────────────────────────
-  const quickLinks = [
-    {
-      id: "reports",
-      icon: BarChart3,
-      color: COLORS.gold,
-      title: t("Ripoti & Uchanganuzi", "Reports & Analytics"),
-      desc: t("Graphs, trends na uchanganuzi wa kina", "Graphs, trends and deep analytics"),
-    },
-    {
-      id: "deals",
-      icon: Handshake,
-      color: "#2563EB",
-      title: t("Deal Rooms", "Deal Rooms"),
-      desc: t("Deals hai na mazungumzo yanayoendelea", "Active deals and ongoing negotiations"),
-    },
-    {
-      id: "moderation",   // ⬅️ FIX: moderation, sio listings
-      icon: Home,
-      color: COLORS.green,
-      title: t("Uidhinishaji wa Mali", "Listing Moderation"),
-      desc: t("Idhinisha, kataa au simamia mali", "Approve, reject or manage listings"),
-    },
-  ];
 
   return (
     <>
@@ -173,7 +132,7 @@ export default function OverviewSection({ onNavigate }) {
         )}
       />
 
-      {/* ═══ USERS ═══════════════════════════════════════════ */}
+      {/* USERS */}
       <div className="mb-4">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
           {t("Watumiaji", "Users")}
@@ -183,7 +142,7 @@ export default function OverviewSection({ onNavigate }) {
         </div>
       </div>
 
-      {/* ═══ ACTIVITY ════════════════════════════════════════ */}
+      {/* ACTIVITY */}
       <div className="mb-6">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
           {t("Shughuli", "Activity")}
@@ -193,7 +152,7 @@ export default function OverviewSection({ onNavigate }) {
         </div>
       </div>
 
-      {/* ═══ REVENUE — Hero + per-stream stat cards ══════════ */}
+      {/* REVENUE */}
       <div className="mb-6">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
           {t("Mapato ya Jukwaa", "Platform Revenue")}
@@ -241,44 +200,7 @@ export default function OverviewSection({ onNavigate }) {
         )}
       </div>
 
-      {/* ═══ QUICK LINKS ═════════════════════════════════════ */}
-      <div className="mb-2">
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-          {t("Nenda Haraka", "Quick Links")}
-        </h3>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {quickLinks.map(({ id, icon: Icon, color, title, desc }) => (
-            <button
-              key={id}
-              onClick={() => onNavigate?.(id)}
-              className="group card p-4 sm:p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <div className="flex items-start gap-3">
-                <span
-                  className="grid h-10 w-10 shrink-0 place-items-center rounded-lg"
-                  style={{ background: `${color}15`, color }}
-                >
-                  <Icon size={18} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-primary truncate">
-                      {title}
-                    </p>
-                    <ArrowRight
-                      size={14}
-                      className="shrink-0 text-muted transition-transform group-hover:translate-x-0.5"
-                    />
-                  </div>
-                  <p className="mt-1 text-xs text-secondary leading-snug">
-                    {desc}
-                  </p>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* ✅ QUICK LINKS ZIMEONDOLEWA */}
     </>
   );
 }
