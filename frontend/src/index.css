@@ -646,3 +646,38 @@ html:not(.dark) header button[aria-label*="Dark"] svg {
   color: #FFFFFF !important;
   stroke: #FFFFFF !important;
 }
+
+/* ============================================================
+   AVATAR / NOTIFICATION DROPDOWN ICONS — light & dark
+   ============================================================ */
+
+/* ── LIGHT MODE — dropdown yenye bg-white ─────────────────── */
+html:not(.dark) [data-surface="sand"] .bg-white svg[stroke="currentColor"],
+html:not(.dark) [data-surface="sand"] .bg-white svg:not([class*="fill-"]),
+html:not(.dark) [data-surface="sand"] .bg-white svg {
+  color: #0B1220 !important;
+  stroke: #0B1220 !important;
+}
+
+/* Ruhusu rangi maalum (rust kwa logout, gold kwa icons za gold) */
+html:not(.dark) [data-surface="sand"] .bg-white svg[stroke="#C1502E"],
+html:not(.dark) [data-surface="sand"] .bg-white svg[stroke="#FEA406"] {
+  color: inherit !important;
+  stroke: currentColor !important;
+}
+
+/* ── DARK MODE — dropdown yenye bg-card (navy) ────────────── */
+html.dark [data-surface="sand"] .bg-white svg[stroke="currentColor"],
+html.dark [data-surface="sand"] .bg-white svg:not([class*="fill-"]),
+html.dark [data-surface="sand"] .bg-white svg {
+  color: rgba(255, 255, 255, 0.88) !important;
+  stroke: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* Ruhusu rangi maalum kwenye dark */
+html.dark [data-surface="sand"] .bg-white svg[stroke="#C1502E"],
+html.dark [data-surface="sand"] .bg-white svg[stroke="#FF8A65"],
+html.dark [data-surface="sand"] .bg-white svg[stroke="#FEA406"] {
+  color: inherit !important;
+  stroke: currentColor !important;
+}
