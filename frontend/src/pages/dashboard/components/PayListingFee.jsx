@@ -1,18 +1,5 @@
 // ============================================================
 // PayListingFee.jsx
-// Dedicated page for paying a single listing's fee.
-// Route: /dashboard/pay-listing?id=<listingId>
-//
-// Chaguo B flow:
-//   • Admin anaona listing kwenye moderation
-//   • Admin → "Omba Malipo" → listing.status = APPROVED_PENDING_PAYMENT
-//   • Seller anaona notification → PayListingFee
-//   • Seller analipa → listing.status = PAID_PENDING_APPROVAL
-//   • Admin analidhinisha mwisho → LIVE
-//
-// Reads ?id= from the query string, fetches that listing + its fee,
-// shows the amount, offers credits (if any) or FimiPay, then routes
-// the seller back to My Listings on success.
 // ============================================================
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
@@ -29,6 +16,16 @@ import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
 import PaymentGateway from "./PaymentGateway";
 import ListingImage from "../../../components/ListingImage.jsx";
+
+// ============================================================
+// Helpers — API inaweza kurudisha category/location kama object
+// {id, name, slug}. React haiwezi kuonyesha object moja kwa moja.
+// ============================================================
+const toText = (v) =>
+  v == null ? "" : typeof v === "object" ? v.name || v.slug || "" : String(v);
+
+const toSlug = (v) =>
+  v == null ? "" : typeof v === "object" ? v.slug || v.key || "" : String(v);
 
 export default function PayListingFee() {
   const { lang } = useLanguage();
@@ -456,7 +453,7 @@ export default function PayListingFee() {
   }
 
   // ── READY — payment form ───────────────────────────────────
-  const category = getCategory(listing?.category);
+  const category = getCategory(toSlug(listing?.category));
   const CatIcon = getCategoryIcon(category?.iconKey);
   const imageUrl = (listing?.photos || [])[0] || listing?.imageUrl || null;
   const isFree = feeAmount === 0;
@@ -554,8 +551,8 @@ export default function PayListingFee() {
             {listing?.title}
           </p>
           <p className="text-xs text-secondary mt-0.5 truncate">
-            {category?.label?.[lang] || category?.label?.sw || listing?.category}
-            {listing?.location ? ` · ${listing.location}` : ""}
+            {category?.label?.[lang] || category?.label?.sw || toText(listing?.category)}
+            {listing?.location ? ` · ${toText(listing.location)}` : ""}
           </p>
           {listing?.price > 0 && (
             <p
