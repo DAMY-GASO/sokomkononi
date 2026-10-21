@@ -497,3 +497,93 @@ html.dark .smk-map .leaflet-bar a:hover { background: rgb(var(--c-ink) / 0.08) !
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   .animate-spin, .animate-pulse, .animate-shimmer { animation-duration: 1s !important; animation-iteration-count: infinite !important; }
 }
+
+/* ============================================================
+   DROPDOWN TEXT VISIBILITY — light & dark
+   Avatar dropdown, notifications dropdown, na dropdowns zote
+   zenye bg-white na bg-[#182541] / bg-[#042475] (navbar).
+   ============================================================ */
+
+/* ── LIGHT MODE ──────────────────────────────────────────── */
+html:not(.dark) [data-surface="sand"] .bg-white,
+html:not(.dark) [data-surface="sand"] .bg-white *,
+html:not(.dark) [data-surface="sand"] [class*="bg-white"] {
+  color: #0B1220 !important;
+}
+
+/* Rangi za maandishi ndani ya dropdown (light mode) */
+html:not(.dark) [data-surface="sand"] .bg-white .text-primary,
+html:not(.dark) [data-surface="sand"] .bg-white.text-primary {
+  color: #0B1220 !important;
+}
+html:not(.dark) [data-surface="sand"] .bg-white .text-secondary,
+html:not(.dark) [data-surface="sand"] .bg-white.text-secondary {
+  color: #455068 !important;
+}
+html:not(.dark) [data-surface="sand"] .bg-white .text-muted,
+html:not(.dark) [data-surface="sand"] .bg-white.text-muted {
+  color: #6B7280 !important;
+}
+
+/* Hover kwenye dropdown items */
+html:not(.dark) [data-surface="sand"] .bg-white .hover\:bg-gray-50:hover {
+  background-color: rgba(244, 247, 252, 1) !important;
+}
+html:not(.dark) [data-surface="sand"] .bg-white .hover\:bg-gray-100:hover {
+  background-color: rgba(240, 244, 250, 1) !important;
+}
+
+/* Borders za dropdown */
+html:not(.dark) [data-surface="sand"] .bg-white .border-gray-100,
+html:not(.dark) [data-surface="sand"] .bg-white .border-gray-200 {
+  border-color: #DCE4F2 !important;
+}
+html:not(.dark) [data-surface="sand"] .bg-white .divide-gray-100 > * {
+  border-color: #DCE4F2 !important;
+}
+
+/* ── DARK MODE ───────────────────────────────────────────── */
+html.dark [data-surface="sand"] .bg-white,
+html.dark [data-surface="sand"] [class*="bg-white"] {
+  background-color: rgb(var(--c-card)) !important;
+  color: #FFFFFF !important;
+}
+
+html.dark [data-surface="sand"] .bg-white .text-primary,
+html.dark [data-surface="sand"] .bg-white.text-primary {
+  color: #FFFFFF !important;
+}
+html.dark [data-surface="sand"] .bg-white .text-secondary,
+html.dark [data-surface="sand"] .bg-white.text-secondary {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+html.dark [data-surface="sand"] .bg-white .text-muted,
+html.dark [data-surface="sand"] .bg-white.text-muted {
+  color: rgba(255, 255, 255, 0.58) !important;
+}
+
+html.dark [data-surface="sand"] .bg-white .hover\:bg-gray-50:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+html.dark [data-surface="sand"] .bg-white .hover\:bg-gray-100:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark [data-surface="sand"] .bg-white .border-gray-100,
+html.dark [data-surface="sand"] .bg-white .border-gray-200 {
+  border-color: rgb(var(--c-hairline)) !important;
+}
+html.dark [data-surface="sand"] .bg-white .divide-gray-100 > * {
+  border-color: rgb(var(--c-hairline)) !important;
+}
+
+/* Dropdown yenye bg-[#182541] (Language switcher) au bg-[#042475] (Navbar) */
+html:not(.dark) .bg-\[\#182541\],
+html:not(.dark) .bg-\[\#042475\] {
+  /* Hizi ni za admin navbar — hazibadiliki kwenye light mode */
+}
+
+/* Rangi za hover kwa dropdown items (light) */
+html:not(.dark) [data-surface="sand"] .bg-white .hover\:bg-gray-50:hover * {
+  color: #0B1220;
+}
