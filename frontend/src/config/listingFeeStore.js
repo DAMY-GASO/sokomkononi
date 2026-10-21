@@ -1,15 +1,14 @@
 // ============================================================
 // listingFeeStore.js — API-only via /api/listings/fee-rules/
-// Sasa ina: fee_mode (PERCENTAGE|FLAT), flat_fee, is_enabled.
-// DEDUPE: kila seedKey ina rule moja pekee (active > Title Case > id ndogo).
 //
 // ✅ FIX #1: addFeeConfigAsync inafanya upsert sahihi (PATCH kama ipo, POST kama haipo)
 // ✅ FIX #2: Inatuma flat_fee tu kwa FLAT, percentage tu kwa PERCENTAGE
 // ✅ FIX #3: Inafilter rules kwa categoryId kwenye frontend (defensive)
 // ✅ FIX #4: Inasasisha cache (hydrate) baada ya POST/PATCH kufanikiwa
-// ✅ FIX #5: norm() inatumia category_slug kutoka backend (fallback kwa name)
+// ✅ FIX #5: norm() inatumia safeString() — kila field ni PRIMITIVE (string/number)
 // ✅ FIX #6: updateListingFeeConfigAsync inafanya OPTIMISTIC UPDATE + rollback
 // ✅ FIX #7: useListingFeeConfigs HAITII hydrate kila mara (inaepuka overwrite)
+// ✅ FIX #8: React Error #31 fix — hakuna object inayoweza kufika kwenye JSX
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
@@ -68,7 +67,7 @@ export function hasFeeConfig(categoryKey) {
 }
 
 // ============================================================
-// HELPERS
+// HELPERS — SAFE PRIMITIVE EXTRACTION
 // ============================================================
 function toSlug(str) {
   return String(str || "")
@@ -78,27 +77,74 @@ function toSlug(str) {
     .replace(/[^a-z0-9-]/g, "");
 }
 
+// ✅ FIX: safeString inarudisha STRING kila mara, hata kama input ni object
+function safeString(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (Array.isArray(v)) return "";
+  if (typeof v === "object") {
+    // Localized object: {sw, en} au {name, slug} au {id, name, slug}
+    if (typeof v.sw === "string") return v.sw;
+    if (typeof v.en === "string") return v.en;
+    if (typeof v.name === "string") return v.name;
+    if (typeof v.slug === "string") return v.slug;
+    if (typeof v.key === "string") return v.key;
+  }
+  return "";
+}
+
+// ✅ FIX: safeNumber inarudisha NUMBER au null, hata kama input ni object
+function safeNumber(v) {
+  if (v == null) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  if (typeof v === "object" && typeof v.id === "number") {
+    return v.id;
+  }
+  if (typeof v === "object" && typeof v.id === "string") {
+    const n = Number(v.id);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
 // ============================================================
 // NORMALIZER
-// ✅ FIX #5: Tumia `category_slug` kutoka backend kwanza,
-//    fallback kwa `category.slug`, kisha `name`.
+// ✅ FIX: Kila field ni PRIMITIVE (string / number / boolean / null)
+//    Hakuna object inayoweza kufika kwenye JSX.
 // ============================================================
 function norm(raw) {
   if (!raw) return null;
+
   const pct = Number(raw.percentage) || 0;
 
-  // Backend inaweza kurudisha:
-  //   - `category_slug` (SerializerMethodField — slug halisi)
-  //   - `category` (FK id — number)
-  //   - `name` (jina la binadamu — fallback tu)
-  const slugSource =
-    raw.category_slug ||
-    (raw.category && typeof raw.category === "object"
-      ? raw.category.slug
-      : null) ||
-    raw.name ||
-    "";
+  // ── name: LAZIMA iwe string ──────────────────────────
+  const safeName = safeString(raw.name);
 
+  // ── categoryId: LAZIMA iwe number au null ────────────
+  let categoryId = null;
+  if (typeof raw.category === "number") {
+    categoryId = raw.category;
+  } else if (raw.category && typeof raw.category === "object") {
+    categoryId = safeNumber(raw.category.id);
+  } else if (raw.category_id != null) {
+    categoryId = safeNumber(raw.category_id);
+  }
+
+  // ── categorySlug: LAZIMA iwe string ─────────────────
+  let categorySlug = "";
+  if (typeof raw.category_slug === "string") {
+    categorySlug = raw.category_slug;
+  } else if (raw.category && typeof raw.category === "object") {
+    categorySlug = safeString(raw.category.slug);
+  }
+
+  // ── slugSource: categorySlug > name ─────────────────
+  const slugSource = categorySlug || safeName || "";
   const rawSlug = toSlug(slugSource);
   const seedKey = getSeedKeyFromSlug(rawSlug);
   const orphan = !isKnownCategoryKey(rawSlug);
@@ -107,30 +153,25 @@ function norm(raw) {
     id: raw.id,
     key: seedKey,
     backendKey: rawSlug,
-    name: raw.name,
+    name: safeName,               // ✅ STRING
     orphan,
-    // category FK id — muhimu kwa filtering ya frontend
-    categoryId:
-      raw.category != null && typeof raw.category !== "object"
-        ? Number(raw.category)
-        : raw.category_id != null
-        ? Number(raw.category_id)
-        : null,
+    categoryId,                   // ✅ NUMBER au NULL
     feeMode: raw.fee_mode || "PERCENTAGE",
-    percentage: pct,
-    rate: pct / 100,
-    flatFee: Number(raw.flat_fee) || 0,
-    min: Number(raw.min_price) || 0,
-    max: raw.max_price != null ? Number(raw.max_price) : 999999999,
-    isActive: raw.is_active !== false,
-    priority: raw.priority ?? 0,
+    percentage: pct,              // ✅ NUMBER
+    rate: pct / 100,              // ✅ NUMBER
+    flatFee: Number(raw.flat_fee) || 0,       // ✅ NUMBER
+    min: Number(raw.min_price) || 0,          // ✅ NUMBER
+    max:
+      raw.max_price != null
+        ? Number(raw.max_price)   // ✅ NUMBER
+        : 999999999,
+    isActive: raw.is_active !== false,        // ✅ BOOLEAN
+    priority: raw.priority ?? 0,              // ✅ NUMBER
   };
 }
 
 // ============================================================
 // HYDRATE + DEDUPE
-// Chagua rule moja pekee kwa kila seedKey:
-//   active > Title Case > ina nafasi > id ndogo
 // ============================================================
 export async function hydrateListingFeeConfigsFromApi() {
   try {
@@ -138,7 +179,6 @@ export async function hydrateListingFeeConfigsFromApi() {
     const list = Array.isArray(data) ? data : data?.results || [];
     const normalized = list.map(norm).filter(Boolean);
 
-    // DEDUPE kwa `key` (seedKey)
     const byKey = new Map();
     for (const rule of normalized) {
       const existing = byKey.get(rule.key);
@@ -181,8 +221,7 @@ export async function hydrateListingFeeConfigsFromApi() {
 }
 
 // ============================================================
-// MUTATIONS — UPDATE
-// ✅ FIX #6: OPTIMISTIC UPDATE + rollback + kinga ya id/key
+// MUTATIONS — UPDATE (optimistic + rollback + kinga ya id/key)
 // ============================================================
 export async function updateListingFeeConfigAsync(key, patch) {
   const target = getListingFeeConfig(key);
@@ -194,7 +233,6 @@ export async function updateListingFeeConfigAsync(key, patch) {
     };
   }
 
-  // ── Tengeneza OPTIMISTIC update ────────────────────────
   const optimistic = {
     ...target,
     ...(patch.rate != null
@@ -210,7 +248,6 @@ export async function updateListingFeeConfigAsync(key, patch) {
     ...(patch.is_active != null ? { isActive: patch.is_active } : {}),
   };
 
-  // ✅ SASISHA UI MARA MOJA (kabla ya await)
   write(read().map((c) => (c.id === target.id ? optimistic : c)));
 
   const apiPatch = {};
@@ -231,17 +268,13 @@ export async function updateListingFeeConfigAsync(key, patch) {
     const updated = norm(raw) || { ...target, ...patch };
 
     // ✅ KINGA: hakikisha `id` na `key` hazibadiliki
-    // (kwa sababu backend inaweza kurudisha `name` tofauti
-    //  ambayo `toSlug()` inaunda `key` tofauti)
     updated.id = target.id;
     updated.key = target.key;
     updated.backendKey = target.backendKey;
 
-    // ✅ Sasisha kwa data halisi kutoka backend
     write(read().map((c) => (c.id === target.id ? updated : c)));
     return { ok: true, config: updated };
   } catch (err) {
-    // ❌ ROLLBACK kama backend imeshindwa
     write(read().map((c) => (c.id === target.id ? target : c)));
     return { ok: false, error: err };
   }
@@ -265,7 +298,6 @@ export async function updateListingFeeModeAsync(key, mode) {
   const target = getListingFeeConfig(key);
   if (!target) return { ok: false, error: new Error("Fee config not found") };
 
-  // Seed sensible default when the target mode has no value yet.
   const patch = { fee_mode: mode };
   if (mode === "FLAT" && !(Number(target.flatFee) > 0)) {
     patch.flat_fee = 3000;
@@ -283,8 +315,7 @@ export async function toggleListingFeeActiveAsync(key) {
 }
 
 // ============================================================
-// ADD — upsert sahihi (PATCH kama ipo, POST kama haipo)
-// ✅ FIX #4: Inasasisha cache baada ya POST/PATCH kufanikiwa
+// ADD — upsert (PATCH kama ipo, POST kama haipo)
 // ============================================================
 export async function addFeeConfigAsync({
   category_key,
@@ -298,7 +329,6 @@ export async function addFeeConfigAsync({
 }) {
   if (!name) return { ok: false, error: new Error("name required") };
 
-  // ── Hakikisha fee > 0 kulingana na mode ─────────────────
   let safeFlatFee = Number(flat_fee) || 0;
   let safePercentage = Number(percentage) || 0;
   const mode = String(fee_mode || "FLAT").toUpperCase();
@@ -310,7 +340,6 @@ export async function addFeeConfigAsync({
     safePercentage = 2.5;
   }
 
-  // ── Pata categoryId kutoka store ───────────────────────
   const slug = toSlug(category_key || name);
   const seedKey = getSeedKeyFromSlug(slug);
   const categoryId = getCategoryIdByKey(seedKey);
@@ -324,7 +353,6 @@ export async function addFeeConfigAsync({
     };
   }
 
-  // ── Payload ya msingi ──────────────────────────────────
   const basePayload = {
     category: categoryId,
     name,
@@ -342,13 +370,10 @@ export async function addFeeConfigAsync({
   }
 
   try {
-    // ── Tafuta rules zilizopo kwa category hii ───────────
     let existing = [];
     try {
       existing = await listingFeeRulesApi.byCategory(categoryId);
     } catch (err) {
-      // ✅ FALLBACK: kama byCategory inashindwa (CORS/network),
-      //    tumia cache ya ndani.
       console.warn(
         "[addFeeConfigAsync] byCategory failed, using cache:",
         err?.message || err
@@ -358,7 +383,6 @@ export async function addFeeConfigAsync({
       );
     }
 
-    // ✅ Filter kwa categoryId kwenye frontend (defensive)
     const matching = (existing || []).filter((r) => {
       const rid =
         r?.category != null
@@ -372,7 +396,6 @@ export async function addFeeConfigAsync({
     });
 
     if (matching.length > 0) {
-      // ✅ PATCH — chagua active kwanza, kisha ya kwanza
       const target =
         matching.find((r) => r.is_active !== false) || matching[0];
       const raw = await listingFeeRulesApi.update(target.id, basePayload);
@@ -380,7 +403,6 @@ export async function addFeeConfigAsync({
 
       write(read().map((c) => (c.id === updated.id ? updated : c)));
 
-      // ✅ SASISHA CACHE — ili frontend ionee rule mpya
       try {
         await hydrateListingFeeConfigsFromApi();
       } catch (hydrateErr) {
@@ -393,7 +415,6 @@ export async function addFeeConfigAsync({
       return { ok: true, config: updated, mode: "updated" };
     }
 
-    // ✅ POST — hakuna rule kwa category hii
     const raw = await listingFeeRulesApi.create(basePayload);
     const created = norm(raw);
 
@@ -415,7 +436,6 @@ export async function addFeeConfigAsync({
 
     return { ok: true, config: created, mode: "created" };
   } catch (err) {
-    // ── Error handling bora ────────────────────────────
     if (err?.status === 400) {
       const detail =
         err?.data?.detail ||
@@ -446,7 +466,6 @@ export async function removeFeeConfigAsync(key) {
     await listingFeeRulesApi.remove(target.id);
     write(read().filter((c) => c.id !== target.id));
 
-  
     try {
       await hydrateListingFeeConfigsFromApi();
     } catch (hydrateErr) {
@@ -474,7 +493,7 @@ export async function cleanupOrphanFeeConfigsAsync() {
 }
 
 // ============================================================
-// HOOK
+// HOOK — HAIITII hydrate (inaepuka overwrite)
 // ============================================================
 export function useListingFeeConfigs() {
   const [list, setList] = useState(() => read());

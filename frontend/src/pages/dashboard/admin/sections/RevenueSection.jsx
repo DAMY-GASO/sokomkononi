@@ -4,7 +4,7 @@
 // Packages: boost, leading, advertisement.
 //
 // ✅ FIX: Hydrate MARA MOJA tu kwenye mount (si kwenye hook).
-// ✅ FIX: Haipangi refresh ya listings fee wakati wa mabadiliko.
+// ✅ FIX: safeStr() — hakuna object inayofika kwenye JSX (React Error #31).
 // ============================================================
 import React, { useState, useRef, useEffect } from "react";
 import {
@@ -85,11 +85,25 @@ import {
   useActiveCategories, getCategory, getCategoryIcon,
 } from "../../../../config/categoriesStore.js";
 
-// ── Helpers ───────────────────────────────────────────────
+// ── SAFE HELPERS — hakuna object inayoweza kufika kwenye JSX ──
+function safeStr(v, lang) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (Array.isArray(v)) return "";
+  if (typeof v === "object") {
+    if (lang && typeof v[lang] === "string") return v[lang];
+    if (typeof v.sw === "string") return v.sw;
+    if (typeof v.en === "string") return v.en;
+    if (typeof v.name === "string") return v.name;
+    if (typeof v.slug === "string") return v.slug;
+    if (typeof v.key === "string") return v.key;
+  }
+  return "";
+}
+
 function getLocalized(field, lang) {
-  if (!field) return "";
-  if (typeof field === "string") return field;
-  return field?.[lang] || field?.sw || field?.en || "";
+  return safeStr(field, lang);
 }
 
 function RevenueCard({ accentColor, children }) {
@@ -153,7 +167,7 @@ function ToggleSwitch({ enabled, onToggle, disabled, lang, compact = false }) {
 
 export default function RevenueSection() {
   const { lang } = useLanguage();
-  // Fee rules zisizo na category (orphans) hazionyeshwi tena — zimefichwa kabisa.
+  // Fee rules zisizo na category (orphans) hazionyeshwi tena.
   const listingFeeConfigs = useListingFeeConfigs().filter((c) => !c.orphan);
   const reservationSettings = useReservationSettings();
   const reservationTiers = useReservationTiers();
@@ -174,8 +188,7 @@ export default function RevenueSection() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ✅ FIX: Hydrate MARA MOJA tu kwenye mount.
-  //    Si kwenye kila hook wala kila render.
+  // ✅ Hydrate MARA MOJA tu kwenye mount
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -201,7 +214,7 @@ export default function RevenueSection() {
     return () => {
       cancelled = true;
     };
-  }, []); // ⚠️ Empty deps — mara moja tu
+  }, []);
 
   const showFlash = (msg, type = "success") => {
     setError("");
@@ -754,7 +767,8 @@ export default function RevenueSection() {
               {missingFeeCategories.map((cat) => {
                 const Icon = getCategoryIcon(cat.iconKey);
                 const hasPhoto = Boolean(cat.imageUrl);
-                const catLabel = cat.label?.[lang] || cat.label?.sw || cat.key;
+                const catLabel =
+                  safeStr(cat.label, lang) || cat.key || "—";
                 const isBusy = !!busy[`add-fee-${cat.key}`];
                 return (
                   <div
@@ -832,12 +846,14 @@ export default function RevenueSection() {
           <div className="divide-y divide-hairline">
             {listingFeeConfigs.map((c) => {
               const category = getCategory(c.key);
+              // ✅ SAFE: catLabel ni STRING kila mara (hakuna object)
               const catLabel =
-                category?.label?.[lang] ||
-                category?.label?.sw ||
-                c.name ||
-                c.backendKey ||
-                c.key;
+                safeStr(category?.label, lang) ||
+                safeStr(c.name, lang) ||
+                safeStr(c.backendKey, lang) ||
+                safeStr(c.key, lang) ||
+                "—";
+              const backendKey = safeStr(c.backendKey, lang);
               const isDeleting = !!busy[`lf-del-${c.id}`];
               const isToggling = !!busy[`lf-toggle-${c.key}`];
               const isModeBusy = !!busy[`lf-mode-${c.key}`];
@@ -848,9 +864,9 @@ export default function RevenueSection() {
                     <p className="text-sm font-medium text-primary">
                       {catLabel}
                     </p>
-                    {c.backendKey && c.backendKey !== c.key && (
+                    {backendKey && backendKey !== c.key && (
                       <span className="text-[10px] text-muted font-mono">
-                        ({c.backendKey})
+                        ({backendKey})
                       </span>
                     )}
                     <div className="ml-auto flex items-center gap-1.5">
