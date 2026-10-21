@@ -4,6 +4,7 @@
 // + Statuses mpya: needs_edit, approved_pending_payment, paid_pending_approval
 // + Picha: horizontal scroll ya picha zote kwenye kila card
 // + Mark Sold: confirmation modal (are you sure?)
+// + Fix: category object (id, name, slug) haitupwi kwenye JSX
 // ============================================================
 import React, { useState, useMemo } from "react";
 import {
@@ -27,8 +28,20 @@ import { useConfirm } from "../../../components/ConfirmDialog.jsx";
 import { startUndo } from "../../../config/undoStore.js";
 import {
   restoreListingAsync,
-  markSoldAsync,   // ⬅️ ONGEZA
+  markSoldAsync,
 } from "../../../config/listingsStore.js";
+
+// ============================================================
+// Helper — toa string kutoka category (inaweza kuwa object)
+// ============================================================
+function categoryToString(cat) {
+  if (cat == null) return "";
+  if (typeof cat === "string") return cat;
+  if (typeof cat === "object") {
+    return cat.slug || cat.key || cat.name || "";
+  }
+  return String(cat);
+}
 
 // ============================================================
 // isUnpaid — module-scope helper
@@ -175,10 +188,19 @@ function ListingCard({
   onPause, onResume, onMarkSold, onPay, onEdit, busy,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
-  const category = getCategory(listing.category);
+
+  // ⬇️ FIX: category inaweza kuwa object (id, name, slug)
+  const categorySlug = categoryToString(listing.category);
+  const category = getCategory(categorySlug);
   const CategoryIcon = getCategoryIcon(category?.iconKey) || Tag;
   const catLabel =
-    category?.label?.[lang] || category?.label?.sw || listing.category || "—";
+    category?.label?.[lang] ||
+    category?.label?.sw ||
+    (typeof listing.category === "object"
+      ? listing.category?.name || listing.category?.slug
+      : listing.category) ||
+    "—";
+
   const isBusy = busy === "delete";
 
   const photos = getPhotos(listing);
@@ -528,7 +550,7 @@ export default function MyListings({
   onPaid,
   onPause,
   onResume,
-  onMarkSold,   // ⬅️ Inatoka DashboardShell
+  onMarkSold,
   onPostNew,
   onEdit,
 }) {
@@ -539,7 +561,6 @@ export default function MyListings({
   const navigate = useNavigate();
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ⬇️ MPYA: confirmation modal state
   const [confirmSold, setConfirmSold] = useState(null);
   const [markingSold, setMarkingSold] = useState(false);
 
@@ -570,12 +591,15 @@ export default function MyListings({
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (l) =>
+      list = list.filter((l) => {
+        // ⬇️ FIX: category inaweza kuwa object
+        const catStr = categoryToString(l.category).toLowerCase();
+        return (
           l.title?.toLowerCase().includes(q) ||
           l.location?.toLowerCase().includes(q) ||
-          l.category?.toLowerCase().includes(q)
-      );
+          catStr.includes(q)
+        );
+      });
     }
 
     return list.sort(
@@ -605,7 +629,6 @@ export default function MyListings({
     { key: "rejected", label: { sw: "Imekataliwa", en: "Rejected" } },
   ];
 
-  // ⬇️ MPYA: Mark sold handlers
   const handleMarkSold = (id) => {
     const listing = listings.find((l) => String(l.id) === String(id));
     if (!listing) return;
@@ -820,7 +843,6 @@ export default function MyListings({
         </div>
       )}
 
-      {/* ⬇️ MPYA: Confirmation Modal */}
       <MarkSoldConfirmModal
         listing={confirmSold}
         lang={lang}

@@ -431,14 +431,20 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     }
   }
 
-  const categoryObj = raw.category;
+const categoryObj = raw.category;
   const rawCategorySlug =
-    categoryObj?.slug ||
-    categoryObj?.key ||
-    raw.category_slug ||
-    (typeof categoryObj === "string" ? categoryObj : null) ||
-    null;
-  const category = getSeedKeyFromSlug(rawCategorySlug);
+  categoryObj?.slug ||
+  categoryObj?.key ||
+  raw.category_slug ||
+  (typeof categoryObj === "string" ? categoryObj : null) ||
+  null;
+
+// ⬇️ FIX: category LAZIMA iwe string (slug), sio object
+const category =
+  getSeedKeyFromSlug(rawCategorySlug) ||
+  rawCategorySlug ||
+  (typeof categoryObj === "string" ? categoryObj : null) ||
+  null;
 
   const rawStatus = raw.status ? String(raw.status).toUpperCase() : "";
   const status =
