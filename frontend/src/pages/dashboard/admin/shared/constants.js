@@ -25,7 +25,7 @@ export const SURFACE = {
 };
 
 export const NAV = [
-  { key: "overview",     label: { sw: "Muhtasari & Uchanganuzi",   en: "Overview & Analytics" },     icon: LayoutDashboard },
+  { key: "overview",     label: { sw: "Muhtasari",   en: "Overview" },     icon: LayoutDashboard },
   { key: "users",        label: { sw: "Usimamizi wa Watumiaji",    en: "User Management" },           icon: Users },
   { key: "moderation",   label: { sw: "Uidhinishaji wa Mali",      en: "Listing Moderation" },        icon: ShieldCheck },
   { key: "verification", label: { sw: "Uthibitisho",               en: "Verification" },              icon: UserCheck },
@@ -39,7 +39,7 @@ export const NAV = [
   { key: "content",      label: { sw: "Usimamizi wa Maudhui",      en: "Content Management" },        icon: FileText },
   { key: "categories",   label: { sw: "Kategoria",                 en: "Categories" },                icon: Tags },
   { key: "audit",        label: { sw: "Kumbukumbu za Matendo",     en: "Audit Logs" },                icon: History },
-  { key: "trash",        label: { sw: "Sanduku la Kurejesha",               en: "Recycle Bin" },               icon: Trash2 },
+  { key: "trash",        label: { sw: "Sanduku la Kurejesha",       en: "Recycle Bin" },               icon: Trash2 },
   { key: "system",       label: { sw: "Mipangilio ya Mfumo",       en: "System Settings" },           icon: SettingsIcon },
   { key: "staff",        label: { sw: "Roles & Wafanyakazi",       en: "Roles & Staff" },             icon: Lock },
   { key: "profile",      label: { sw: "Wasifu Wangu",              en: "My Profile" },                icon: User },

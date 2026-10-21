@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
-  Users, Home, Handshake, Wallet, TrendingUp, BarChart3, Award, Eye,
+  Users, Home, Handshake, Wallet, TrendingUp, BarChart3, Eye,
   MapPin, Tag, Download, FileText, FileSpreadsheet, File, Loader2, Calendar,
 } from "lucide-react";
 import { COLORS, formatTZS, getCategory } from "../shared/constants.js";
@@ -8,16 +8,12 @@ import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useReports } from "../../../../config/reportsStore.js";
-import { useUsers } from "../../../../config/usersStore.js";
 import {
   useListings,
   useHydratePublicListings,
 } from "../../../../config/listingsStore.js";
 import { useDeals } from "../../../../config/dealsStore.js";
-import {
-  usePlatformRevenue,
-  localDayKey,
-} from "../shared/revenue.js";
+import { usePlatformRevenue, localDayKey } from "../shared/revenue.js";
 import {
   DonutChart,
   HBarChart,
@@ -262,36 +258,6 @@ function DownloadPanel({ lang }) {
   );
 }
 
-function ReportTile({ label, value, icon: Icon, color, subtext }) {
-  return (
-    <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border p-2.5 sm:p-3 lg:p-4 min-w-0"
-    >
-      <div className="flex items-start justify-between gap-2 mb-1.5 sm:mb-2">
-        <div
-          style={{ background: `${color}15` }}
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0"
-        >
-          <Icon size={14} className="sm:hidden" color={color} />
-          <Icon size={16} className="hidden sm:block" color={color} />
-        </div>
-      </div>
-      <p className="text-sm sm:text-base lg:text-lg font-bold text-primary break-words leading-tight">
-        {value}
-      </p>
-      <p className="text-[10px] sm:text-[11px] text-secondary leading-tight mt-0.5">
-        {label}
-      </p>
-      {subtext && (
-        <p className="text-[10px] text-muted mt-1 break-words leading-tight">
-          {subtext}
-        </p>
-      )}
-    </div>
-  );
-}
-
 function ChartCard({ title, icon: Icon, iconColor, hint, children }) {
   return (
     <div
@@ -327,7 +293,6 @@ export default function ReportsSection() {
   const { lang } = useLanguage();
   const apiReports = useReports(lang);
   const platformRevenue = usePlatformRevenue("all");
-  const users = useUsers();
   useHydratePublicListings();
   const listings = useListings();
   const deals = useDeals();
@@ -335,12 +300,10 @@ export default function ReportsSection() {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const locale = lang === "sw" ? "sw-TZ" : "en-US";
 
-  const totalRevenueText = platformRevenue.loading
-    ? "…"
-    : platformRevenue.error ? "—" : formatTZS(platformRevenue.total);
-
-  const userStats = useMemo(() => {
+  // ── Users donut (kutoka apiReports.users) ────────────────
+  const usersDonut = useMemo(() => {
     let sellersOnly = 0, buyersOnly = 0, bothRoles = 0, neitherRole = 0, totalAdmins = 0;
+    const users = apiReports?.users || [];
     users.forEach((u) => {
       const role = u.role || "Neither";
       if (role === "Admin") totalAdmins++;
@@ -349,20 +312,17 @@ export default function ReportsSection() {
       else if (role === "Both") bothRoles++;
       else neitherRole++;
     });
-    return {
-      totalUsers: sellersOnly + buyersOnly + bothRoles + neitherRole + totalAdmins,
-      sellersOnly, buyersOnly, bothRoles, neitherRole, totalAdmins,
-    };
-  }, [users]);
+    return [
+      { label: t("Wauzaji Pekee", "Sellers Only"), value: sellersOnly, display: sellersOnly.toLocaleString("en-US"), color: "#FEA406" },
+      { label: t("Wanunuzi Pekee", "Buyers Only"), value: buyersOnly, display: buyersOnly.toLocaleString("en-US"), color: "#2F6D4F" },
+      { label: t("Wote Wawili", "Both"),          value: bothRoles,   display: bothRoles.toLocaleString("en-US"),   color: "#7C3AED" },
+      { label: t("Wapya", "Neither"),             value: neitherRole, display: neitherRole.toLocaleString("en-US"), color: "#9CA3AF" },
+      { label: t("Admins", "Admins"),             value: totalAdmins, display: totalAdmins.toLocaleString("en-US"), color: "#DC2626" },
+    ].filter((d) => d.value > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiReports?.users, lang]);
 
-  const usersDonut = useMemo(() => [
-    { label: t("Wauzaji Pekee", "Sellers Only"), value: userStats.sellersOnly, color: "#FEA406" },
-    { label: t("Wanunuzi Pekee", "Buyers Only"), value: userStats.buyersOnly, color: "#2F6D4F" },
-    { label: t("Wote Wawili", "Both"),          value: userStats.bothRoles,   color: "#7C3AED" },
-    { label: t("Wapya", "Neither"),             value: userStats.neitherRole, color: "#9CA3AF" },
-    { label: t("Admins", "Admins"),             value: userStats.totalAdmins, color: "#DC2626" },
-  ].filter((d) => d.value > 0), [userStats, lang]);
-
+  // ── Listings donut ───────────────────────────────────────
   const listingsDonut = useMemo(() => {
     const statuses = ["live","reserved","sold","pending_payment","in_review","rejected","paused","expired"];
     const labels = {
@@ -372,14 +332,19 @@ export default function ReportsSection() {
       paused: t("Imesimamishwa","Paused"), expired: t("Imeisha Muda","Expired"),
     };
     return statuses
-      .map((s) => ({
-        label: labels[s],
-        value: listings.filter((l) => l.status === s).length,
-        color: LISTING_STATUS_COLORS[s],
-      }))
+      .map((s) => {
+        const count = listings.filter((l) => l.status === s).length;
+        return {
+          label: labels[s],
+          value: count,
+          display: count.toLocaleString("en-US"),
+          color: LISTING_STATUS_COLORS[s],
+        };
+      })
       .filter((d) => d.value > 0);
   }, [listings, lang]);
 
+  // ── Deals donut ──────────────────────────────────────────
   const dealsDonut = useMemo(() => {
     const keys = Object.keys(DEAL_STATUS_COLORS);
     const labels = {
@@ -394,14 +359,19 @@ export default function ReportsSection() {
       cancelled: t("Imeghairiwa","Cancelled"),
     };
     return keys
-      .map((k) => ({
-        label: labels[k],
-        value: deals.filter((d) => d.status === k).length,
-        color: DEAL_STATUS_COLORS[k],
-      }))
+      .map((k) => {
+        const count = deals.filter((d) => d.status === k).length;
+        return {
+          label: labels[k],
+          value: count,
+          display: count.toLocaleString("en-US"),
+          color: DEAL_STATUS_COLORS[k],
+        };
+      })
       .filter((d) => d.value > 0);
   }, [deals, lang]);
 
+  // ── Revenue donut — SASA INA `display` (commas!) ─────────
   const revenueDonut = useMemo(() => {
     const total = platformRevenue.total || 1;
     return platformRevenue.streams
@@ -411,12 +381,14 @@ export default function ReportsSection() {
         return {
           label: `${s.label} (${pct.toFixed(1)}%)`,
           value: value,
+          display: formatTZS(value),   // ⬅️ IMEONGEZWA — commas zinaonekana
           color: STREAM_COLORS[s.key] || "#9CA3AF",
         };
       })
       .filter((d) => d.value > 0);
   }, [platformRevenue]);
 
+  // ── Revenue by day ───────────────────────────────────────
   const revenueByDay = useMemo(() => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -440,6 +412,7 @@ export default function ReportsSection() {
     return days;
   }, [platformRevenue, locale]);
 
+  // ── Revenue by month ─────────────────────────────────────
   const revenueByMonth = useMemo(() => {
     const out = [];
     const now = new Date();
@@ -458,6 +431,7 @@ export default function ReportsSection() {
     return out;
   }, [platformRevenue, locale]);
 
+  // ── Reports data ─────────────────────────────────────────
   const reports = useMemo(() => {
     const num = (v) => Number(v) || 0;
     const apiHasLoaded = apiReports?.source === "api";
@@ -484,9 +458,6 @@ export default function ReportsSection() {
         };
     const totalDeals = pick(apiReports.totalDeals, deals.length);
     const completedDeals = pick(apiReports.completedDeals, byStatus("completed"));
-    const conversionRate = num(apiReports.conversionRate) > 0
-      ? num(apiReports.conversionRate)
-      : totalDeals > 0 ? (completedDeals / totalDeals) * 100 : 0;
 
     const lsStatus = (st) => listings.filter((l) => l.status === st).length;
     const perDay = {};
@@ -532,7 +503,7 @@ export default function ReportsSection() {
       liveListings: pick(apiReports.liveListings, lsStatus("live")),
       soldListings: pick(apiReports.soldListings, lsStatus("sold")),
       totalDeals, completedDeals,
-      conversionRate, dealsByStatus,
+      dealsByStatus,
       listingsGrowth: pickList(apiReports.listingsGrowth, listingsGrowthLocal),
       mostViewedListings: pickList(apiReports.mostViewedListings, mostViewedLocal),
       topCategories: pickList(apiReports.topCategories, topCategoriesLocal),
@@ -540,7 +511,6 @@ export default function ReportsSection() {
     };
   }, [apiReports, listings, deals, locale]);
 
-  const listingsMax = Math.max(...(reports.listingsGrowth?.map((d) => d.count) || [0]), 1);
   const revenueMonthMax = Math.max(...(revenueByMonth?.map((d) => d.value) || [0]), 1);
   const revenueDayMax = Math.max(...(revenueByDay?.map((d) => d.value) || [0]), 1);
 
@@ -556,43 +526,10 @@ export default function ReportsSection() {
 
       <DownloadPanel lang={lang} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 mb-5">
-        <ReportTile
-          label={t("Mali Zote", "Total Listings")}
-          value={reports.totalListings}
-          icon={Home}
-          color={COLORS.green}
-          subtext={t(
-            `${reports.liveListings} hai · ${reports.soldListings} zimeuzwa`,
-            `${reports.liveListings} live · ${reports.soldListings} sold`
-          )}
-        />
-        <ReportTile
-          label={t("Deals", "Deals")}
-          value={reports.totalDeals}
-          icon={Handshake}
-          color="#2563EB"
-          subtext={t(
-            `${reports.completedDeals} zimekamilika`,
-            `${reports.completedDeals} completed`
-          )}
-        />
-        <ReportTile
-          label={t("Mapato", "Revenue")}
-          value={totalRevenueText}
-          icon={Wallet}
-          color={COLORS.rust}
-          subtext={t(
-            `Conversion: ${Number(reports.conversionRate || 0).toFixed(1)}%`,
-            `Conversion: ${Number(reports.conversionRate || 0).toFixed(1)}%`
-          )}
-        />
-      </div>
-
       {/* REVENUE ANALYTICS */}
       <div className="mb-2">
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-          {t("Mapato", "Revenue")}
+          {t("Mapato ya Jukwaa", "Platform Revenue")}
         </h3>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-5">
           <ChartCard
@@ -609,7 +546,6 @@ export default function ReportsSection() {
                 size={180}
                 thickness={26}
                 centerLabel="100%"
-                centerSub="TZS"
               />
             )}
           </ChartCard>
@@ -652,13 +588,13 @@ export default function ReportsSection() {
             title={t("Mgawanyo wa Watumiaji", "User Breakdown")}
             icon={Users}
             iconColor="#2563EB"
-            hint={t(`${userStats.totalUsers} watumiaji`, `${userStats.totalUsers} users`)}
+            hint={t(`${apiReports?.users?.length || 0} watumiaji`, `${apiReports?.users?.length || 0} users`)}
           >
             <DonutChart
               data={usersDonut}
               size={180}
               thickness={26}
-              centerLabel={userStats.totalUsers.toLocaleString()}
+              centerLabel={(apiReports?.users?.length || 0).toLocaleString("en-US")}
               centerSub={t("Watumiaji", "Users")}
             />
           </ChartCard>
@@ -673,7 +609,7 @@ export default function ReportsSection() {
               data={listingsDonut}
               size={180}
               thickness={26}
-              centerLabel={reports.totalListings.toLocaleString()}
+              centerLabel={reports.totalListings.toLocaleString("en-US")}
               centerSub={t("Mali", "Listings")}
             />
           </ChartCard>
@@ -693,7 +629,7 @@ export default function ReportsSection() {
                 data={dealsDonut}
                 size={180}
                 thickness={26}
-                centerLabel={reports.totalDeals}
+                centerLabel={reports.totalDeals.toLocaleString("en-US")}
                 centerSub={t("Deals", "Deals")}
               />
             )}
@@ -715,7 +651,7 @@ export default function ReportsSection() {
             <VBarChart
               data={(reports.listingsGrowth || []).map((d) => ({ ...d, color: COLORS.green }))}
               height={180}
-              valueFormat={(v) => v}
+              valueFormat={(v) => v.toLocaleString("en-US")}
             />
           </ChartCard>
 
@@ -740,7 +676,7 @@ export default function ReportsSection() {
                     <div className="flex items-center justify-between text-xs mb-1 gap-2">
                       <span className="text-secondary truncate">{label}</span>
                       <span className="font-semibold text-primary shrink-0">
-                        {count} ({pct.toFixed(0)}%)
+                        {count.toLocaleString("en-US")} ({pct.toFixed(0)}%)
                       </span>
                     </div>
                     <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -779,6 +715,7 @@ export default function ReportsSection() {
                     color: "#0891B2",
                   };
                 })}
+                valueFormat={(v) => v.toLocaleString("en-US")}
               />
             )}
           </ChartCard>
@@ -799,6 +736,7 @@ export default function ReportsSection() {
                   value: loc.count || 0,
                   color: COLORS.rust,
                 }))}
+                valueFormat={(v) => v.toLocaleString("en-US")}
               />
             )}
           </ChartCard>
@@ -820,7 +758,7 @@ export default function ReportsSection() {
                     rank={i + 1}
                     label={l.title}
                     sub={formatTZS(l.price)}
-                    value={`${(l.views || 0).toLocaleString()}`}
+                    value={`${(l.views || 0).toLocaleString("en-US")}`}
                     color={i === 0 ? COLORS.gold : i === 1 ? "#9CA3AF" : i === 2 ? "#CD7F32" : COLORS.green}
                   />
                 ))}
