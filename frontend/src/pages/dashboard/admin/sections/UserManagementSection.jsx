@@ -1,11 +1,7 @@
 // ============================================================
 // UserManagementSection.jsx
-// Usimamizi wa watumiaji — table (desktop) + card list (mobile).
-// Bilingual + Async actions na rollback + loading state.
-// + Status filter, Verified filter, Pagination
-// + UserDrawer inachukua data yake yenyewe (/full/ endpoint)
-// + Event listeners: refresh kwenye users-updated/verifications-updated
-// + FIX: loading state + race condition guard + fetch moja tu
+// + FIX: loading inaisha kila mara + users ina-update baada ya fetch
+// + Race-condition guard + skeleton (firstLoad pekee)
 // ============================================================
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
@@ -89,7 +85,6 @@ function RoleBadge({ role, lang }) {
 
 const PAGE_SIZE = 20;
 
-// Skeleton row kwa desktop
 function TableSkeleton({ rows = 6 }) {
   return (
     <>
@@ -119,7 +114,6 @@ function TableSkeleton({ rows = 6 }) {
   );
 }
 
-// Skeleton card kwa mobile
 function CardSkeleton({ rows = 3 }) {
   return (
     <>
@@ -145,10 +139,7 @@ function CardSkeleton({ rows = 3 }) {
 export default function UserManagementSection() {
   const { lang } = useLanguage();
 
-  // ⬇️ TUNATUMIA useState BADALA YA useUsers() ili kuepuka
-  // fetch ya pili inayogongana na fetchPage().
   const [users, setUsers] = useState(() => getUsers());
-
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -166,7 +157,6 @@ export default function UserManagementSection() {
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
-  // ⬇️ Race-condition guard — kila fetch inapata id yake
   const requestIdRef = useRef(0);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -180,45 +170,50 @@ export default function UserManagementSection() {
       setLoading(true);
       setError("");
 
-      const res = await hydrateUsersFromApi({
-        page: p,
-        pageSize: PAGE_SIZE,
-        q: query.trim(),
-        role: roleFilter,
-        status: statusFilter,
-        verified: verifiedFilter,
-      });
+      let res;
+      try {
+        res = await hydrateUsersFromApi({
+          page: p,
+          pageSize: PAGE_SIZE,
+          q: query.trim(),
+          role: roleFilter,
+          status: statusFilter,
+          verified: verifiedFilter,
+        });
+      } catch (err) {
+        res = { ok: false, error: err };
+      }
 
       // Kama fetch nyingine imeanza baada ya hii, puuza matokeo
-      if (myId !== requestIdRef.current) return;
-
-      if (res.ok) {
-        setUsers(getUsers());
-        setPage(res.page || p);
-        setTotalPages(res.totalPages || 1);
-        setCount(res.count || 0);
-      } else {
-        setError(
-          res.error?.message ||
-            t("Imeshindwa kupakia watumiaji.", "Failed to load users.")
-        );
+      // LAKINI hakikisha loading imezimwa — hii ndio fix.
+      if (myId === requestIdRef.current) {
+        if (res?.ok) {
+          setUsers(getUsers());
+          setPage(res.page || p);
+          setTotalPages(res.totalPages || 1);
+          setCount(res.count || 0);
+        } else {
+          setError(
+            res?.error?.message ||
+              t("Imeshindwa kupakia watumiaji.", "Failed to load users.")
+          );
+          setUsers([]);
+        }
+        setLoading(false);
+        setFirstLoad(false);
       }
-      setLoading(false);
-      setFirstLoad(false);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [query, roleFilter, statusFilter, verifiedFilter]
   );
 
-  // Reset to page 1 + refetch kama filter imebadilika
-  // (Hii inatosha kwa mount + filter change — hakuna haja ya
-  //  useEffect ya pili ya mount)
+  // Refetch kila filter inabadilika + mount
   useEffect(() => {
     fetchPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, roleFilter, statusFilter, verifiedFilter]);
 
-  // ── Sikiliza events ili refresh list ───────────────────────
+  // Sikiliza events ili refresh list (verify/suspend/delete)
   useEffect(() => {
     const onUpdate = () => {
       fetchPage(page);
