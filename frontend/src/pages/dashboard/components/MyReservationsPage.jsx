@@ -2,12 +2,11 @@
 // MyReservationsPage.jsx — Mali alizolipia Reservation (buyer)
 //
 // SASISHO:
-//  - isReservationPaid() helper
+//  - Live countdown (kila sekunde) kwa muda wa reservation
+//  - Popup ya "Renew / Cancel" dakika 5 kabla ya expire
 //  - Vitufe 4: Fungua Deal Room, Angalia Mali, Waitlist, Ondoa
-//  - Waitlist → /dashboard/buyer/waiting (WaitingListPage)
-//  - Angalia Mali → /mali/{listingId} (PropertyDetailPage)
 // ============================================================
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CalendarCheck,
@@ -28,6 +27,7 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import {
   useDeals,
   updateDeal as updateDealInStore,
+  hydrateDealsFromApi,
 } from "../../../config/dealsStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
@@ -90,26 +90,39 @@ const getStatus = (lang) => ({
 });
 
 // ============================================================
-// COUNTDOWN
+// LIVE COUNTDOWN
 // ============================================================
-function countdown(expiresAt, lang) {
+function useCountdown(expiresAt, lang) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
+
   if (!expiresAt) return null;
-  const ms = new Date(expiresAt).getTime() - Date.now();
+  const ms = new Date(expiresAt).getTime() - now;
   if (Number.isNaN(ms)) return null;
   if (ms <= 0)
-    return { text: lang === "sw" ? "Muda umeisha" : "Expired", expired: true };
+    return {
+      text: lang === "sw" ? "Muda umeisha" : "Expired",
+      expired: true,
+    };
+
   const hrs = Math.floor(ms / 3600000);
   const mins = Math.floor((ms % 3600000) / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
   const d = Math.floor(hrs / 24);
+
   const text =
     d >= 1
       ? lang === "sw"
-        ? `Siku ${d}, saa ${hrs % 24} zimebaki`
-        : `${d}d ${hrs % 24}h left`
+        ? `Siku ${d}, saa ${hrs % 24}, dakika ${mins}`
+        : `${d}d ${hrs % 24}h ${mins}m`
       : lang === "sw"
-        ? `Saa ${hrs}, dakika ${mins} zimebaki`
-        : `${hrs}h ${mins}m left`;
-  return { text, expired: false };
+        ? `Saa ${hrs}, dakika ${mins}, sekunde ${secs}`
+        : `${hrs}h ${mins}m ${secs}s`;
+
+  return { text, expired: false, hrs, mins, secs, d };
 }
 
 // ============================================================
@@ -120,18 +133,18 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
   const category = getCategory(deal.category);
   const Icon = getCategoryIcon(category?.iconKey);
   const status = getStatus(lang)[deal.status];
-  const cd =
-    deal.status === "reserved"
-      ? countdown(deal.reservationExpiresAt, lang)
-      : null;
-  const price = deal.agreedPrice || deal.currentOffer || deal.askingPrice || 0;
+  const cd = useCountdown(
+    deal.status === "reserved" ? deal.reservationExpiresAt : null,
+    lang
+  );
+  const price =
+    deal.agreedPrice || deal.currentOffer || deal.askingPrice || 0;
 
   const [actionBusy, setActionBusy] = useState(null);
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ── Extend Reservation ──
   const handleExtend = async () => {
     setError("");
     const input = prompt(
@@ -175,12 +188,10 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
     }
   };
 
-  // ── Finalize Deal → nenda Deal Room ──
   const handleFinalize = () => {
     onOpen(deal.id);
   };
 
-  // ── Remove Reservation ──
   const handleRemove = async () => {
     setError("");
     if (
@@ -217,14 +228,12 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
     }
   };
 
-  // ── Angalia Mali → PropertyDetailPage ──
   const handleViewListing = () => {
     if (deal.listingId) {
       navigate(`/mali/${deal.listingId}`);
     }
   };
 
-  // ── Waitlist → WaitingListPage ──
   const handleViewWaitlist = () => {
     navigate("/dashboard/buyer/waiting");
   };
@@ -262,8 +271,10 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
             )}
             {cd && (
               <span
-                style={{ color: cd.expired ? COLORS.rust : "#8A5A16" }}
-                className="text-body-sm font-semibold flex items-center gap-1"
+                style={{
+                  color: cd.expired ? COLORS.rust : "#8A5A16",
+                }}
+                className="text-body-sm font-semibold flex items-center gap-1 tabular-nums"
               >
                 <Clock3 size={11} /> {cd.text}
               </span>
@@ -308,18 +319,16 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
         </div>
       )}
 
-      {/* Primary action — Open Deal Room */}
       <button
         onClick={() => onOpen(deal.id)}
         style={{ background: COLORS.gold, color: COLORS.night }}
         className="mt-3 w-full flex items-center justify-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg"
       >
-        {t("Fungua Deal Room", "Open Deal Room")} <ArrowRight size={13} />
+        {t("Fungua Deal Room", "Open Deal Room")}{" "}
+        <ArrowRight size={13} />
       </button>
 
-      {/* ── Vitufe 3: Angalia Mali, Waitlist, Ondoa ── */}
       <div className="grid grid-cols-3 gap-2 mt-2">
-        {/* 1. Angalia Mali → /mali/{listingId} */}
         <button
           onClick={handleViewListing}
           disabled={!deal.listingId}
@@ -335,7 +344,6 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
           </span>
         </button>
 
-        {/* 2. Waitlist → /dashboard/buyer/waiting */}
         <button
           onClick={handleViewWaitlist}
           style={{
@@ -350,7 +358,6 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
           </span>
         </button>
 
-        {/* 3. Ondoa → removeReservation */}
         <button
           onClick={handleRemove}
           disabled={!!actionBusy || !deal.transactionId}
@@ -371,13 +378,15 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
         </button>
       </div>
 
-      {/* ── Vitendo vya reservation (status = reserved pekee): Ongeza / Kamilisha ── */}
       {deal.status === "reserved" && deal.transactionId && (
         <div className="grid grid-cols-2 gap-2 mt-2">
           <button
             onClick={handleExtend}
             disabled={!!actionBusy}
-            style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
+            style={{
+              borderColor: COLORS.sandLine,
+              color: COLORS.night,
+            }}
             className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 disabled:opacity-50"
             title={t("Ongeza muda", "Extend time")}
           >
@@ -410,6 +419,63 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
 }
 
 // ============================================================
+// EXPIRING MODAL
+// ============================================================
+function ExpiringModal({ deal, lang, onRenew, onCancel }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  if (!deal) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div
+        className="bg-white rounded-2xl max-w-md w-full p-5"
+        style={{ borderColor: COLORS.sandLine }}
+      >
+        <div className="flex flex-col items-center text-center gap-3">
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center"
+            style={{ background: "rgba(193,80,46,0.12)" }}
+          >
+            <Clock3 size={24} color={COLORS.rust} />
+          </div>
+          <h3 className="text-primary text-base font-bold">
+            {t(
+              "Reservation inaisha hivi karibuni",
+              "Reservation is about to expire"
+            )}
+          </h3>
+          <p className="text-secondary text-sm">
+            {t(
+              `Reservation yako ya "${deal.listingTitle}" inaisha ndani ya dakika 5. Unataka ku-renew?`,
+              `Your reservation for "${deal.listingTitle}" expires in 5 minutes. Renew?`
+            )}
+          </p>
+          <div className="flex items-center gap-2 w-full mt-2">
+            <button
+              onClick={onCancel}
+              style={{
+                borderColor: COLORS.sandLine,
+                color: COLORS.rust,
+              }}
+              className="flex-1 text-sm font-semibold px-3 py-2.5 rounded-lg border bg-white"
+            >
+              {t("Cancel", "Cancel")}
+            </button>
+            <button
+              onClick={onRenew}
+              style={{ background: COLORS.green, color: "white" }}
+              className="flex-1 text-sm font-semibold px-3 py-2.5 rounded-lg"
+            >
+              {t("Renew Sasa", "Renew Now")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // MAIN PAGE
 // ============================================================
 export default function MyReservationsPage() {
@@ -417,6 +483,9 @@ export default function MyReservationsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const deals = useDeals(user?.id);
+
+  const [expiringDeal, setExpiringDeal] = useState(null);
+  const [dismissed, setDismissed] = useState({});
 
   const reservations = useMemo(() => {
     const mine = (deals || []).filter(
@@ -441,13 +510,40 @@ export default function MyReservationsPage() {
 
   const handleRefresh = async () => {
     try {
-      const { hydrateDealsFromApi } = await import(
-        "../../../config/dealsStore.js"
-      );
       await hydrateDealsFromApi(user?.id, "buyer");
     } catch (err) {
       console.warn("[MyReservationsPage] refresh failed:", err);
     }
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // EXPIRING MODAL — check kila sekunde 10
+  // ═══════════════════════════════════════════════════════════
+  useEffect(() => {
+    const check = () => {
+      const now = Date.now();
+      const expiring = reservations.find((d) => {
+        if (d.status !== "reserved") return false;
+        if (!d.reservationExpiresAt) return false;
+        if (dismissed[d.id]) return false;
+        const ms = new Date(d.reservationExpiresAt).getTime() - now;
+        return ms > 0 && ms <= 5 * 60 * 1000;
+      });
+      if (
+        expiring &&
+        (!expiringDeal || expiringDeal.id !== expiring.id)
+      ) {
+        setExpiringDeal(expiring);
+      }
+    };
+    check();
+    const iv = setInterval(check, 10000);
+    return () => clearInterval(iv);
+  }, [reservations, dismissed, expiringDeal]);
+
+  const handleDismissModal = (id) => {
+    setDismissed((prev) => ({ ...prev, [id]: true }));
+    setExpiringDeal(null);
   };
 
   return (
@@ -526,6 +622,21 @@ export default function MyReservationsPage() {
             )}
           </>
         )}
+
+        {/* Expiring Modal */}
+        <ExpiringModal
+          deal={expiringDeal}
+          lang={lang}
+          onRenew={() => {
+            if (expiringDeal) {
+              handleDismissModal(expiringDeal.id);
+              navigate("/dashboard/buyer/reservations");
+            }
+          }}
+          onCancel={() => {
+            if (expiringDeal) handleDismissModal(expiringDeal.id);
+          }}
+        />
       </div>
     </div>
   );

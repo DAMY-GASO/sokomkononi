@@ -1,4 +1,12 @@
+// ============================================================
+// WaitingListPage.jsx — Orodha ya Kusubiri (buyer)
+//
+// SASISHO:
+//  - Button "Reserve Sasa" kwa notified entries
+//  - Inampeleka deal room ya listing husika
+// ============================================================
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Clock3,
   Bell,
@@ -24,7 +32,7 @@ import {
 import { useLanguage } from "../context/LanguageContext.jsx";
 
 // ============================================================
-// STATUS — bilingual
+// STATUS
 // ============================================================
 const getWaitingStatus = (lang) => ({
   waiting: {
@@ -57,7 +65,7 @@ const getWaitingStatus = (lang) => ({
 });
 
 // ============================================================
-// WAITING LIST ITEM — imeachwa kushoto (kadi zina data nyingi)
+// COUNTDOWN BADGE
 // ============================================================
 function CountdownBadge({ to, lang }) {
   const [now, setNow] = useState(Date.now());
@@ -69,7 +77,10 @@ function CountdownBadge({ to, lang }) {
   if (!Number.isFinite(ms)) return null;
   if (ms <= 0) {
     return (
-      <span className="text-[11px] font-bold" style={{ color: COLORS.rust }}>
+      <span
+        className="text-[11px] font-bold"
+        style={{ color: COLORS.rust }}
+      >
         {lang === "sw" ? "Muda umeisha" : "Expired"}
       </span>
     );
@@ -78,18 +89,39 @@ function CountdownBadge({ to, lang }) {
   const m = Math.floor((ms % 3600000) / 60000);
   const sec = Math.floor((ms % 60000) / 1000);
   return (
-    <span className="text-[11px] font-bold tabular-nums" style={{ color: COLORS.rust }}>
-      {h}h {String(m).padStart(2,"0")}m {String(sec).padStart(2,"0")}s
+    <span
+      className="text-[11px] font-bold tabular-nums"
+      style={{ color: COLORS.rust }}
+    >
+      {h}h {String(m).padStart(2, "0")}m{" "}
+      {String(sec).padStart(2, "0")}s
     </span>
   );
 }
 
+// ============================================================
+// WAITING LIST ITEM
+// ============================================================
 function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
+  const navigate = useNavigate();
   const category = getCategory(entry.category);
   const Icon = category?.icon;
   const status =
-    getWaitingStatus(lang)[entry.status] || getWaitingStatus(lang).waiting;
+    getWaitingStatus(lang)[entry.status] ||
+    getWaitingStatus(lang).waiting;
   const StatusIcon = status.icon;
+
+  const handleReserveNow = () => {
+    const listingId = entry.listingId;
+    if (listingId) {
+      navigate(
+        `/dashboard/buyer/deals?listing=${listingId}&action=reserve`
+      );
+      return;
+    }
+    if (onGoToDeals) onGoToDeals();
+    else navigate("/dashboard/buyer/deals");
+  };
 
   return (
     <div
@@ -120,8 +152,10 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
             </p>
           </div>
           <span
-          
-style={{ background: status?.bg || "#F5F3EC", color: status?.color || "#101A2E" }}
+            style={{
+              background: status?.bg || "#F5F3EC",
+              color: status?.color || "#101A2E",
+            }}
             className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full shrink-0"
           >
             <StatusIcon size={11} />
@@ -161,31 +195,19 @@ style={{ background: status?.bg || "#F5F3EC", color: status?.color || "#101A2E" 
               style={{ color: COLORS.green }}
               className="text-[11px] font-medium flex items-center gap-2"
             >
-              {entry.respondBy && <CountdownBadge to={entry.respondBy} lang={lang} />}
-              {lang === "sw" ? (
-                <>
-                  Nafasi imefunguka! Una hadi{" "}
-                  {entry.respondBy
-                    ? new Date(entry.respondBy).toLocaleString("sw-TZ")
-                    : "muda fulani"}{" "}
-                  kuanza mazungumzo kabla nafasi kupewa mtu mwingine.
-                </>
-              ) : (
-                <>
-                  A slot opened! You have until{" "}
-                  {entry.respondBy
-                    ? new Date(entry.respondBy).toLocaleString("en-US")
-                    : "some time"}{" "}
-                  to start negotiations before it's given to someone else.
-                </>
+              {entry.respondBy && (
+                <CountdownBadge to={entry.respondBy} lang={lang} />
               )}
+              {lang === "sw"
+                ? "Nafasi imefunguka! Bofya 'Reserve Sasa' kuweka reservation yako."
+                : "Slot opened! Click 'Reserve Now' to place your reservation."}
             </span>
             <button
-              onClick={onGoToDeals}
+              onClick={handleReserveNow}
               style={{ background: COLORS.green, color: "white" }}
               className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
             >
-              {lang === "sw" ? "Nenda Chumba cha Mazungumzo" : "Go to Deal Room"}{" "}
+              {lang === "sw" ? "Reserve Sasa" : "Reserve Now"}
               <ArrowRight size={12} />
             </button>
           </div>
@@ -221,8 +243,6 @@ export default function WaitingListPage({
   const loadError = storeState.error;
   const [filter, setFilter] = useState("all");
 
-  // Periodic re-hydrate so queue progression is visible without
-  // a manual refresh. Reservation expiry is a backend job.
   useEffect(() => {
     const iv = setInterval(() => {
       hydrateWaitingListFromApi().catch(() => {});
@@ -240,10 +260,22 @@ export default function WaitingListPage({
 
   const filters = [
     { key: "all", label: lang === "sw" ? "Zote" : "All" },
-    { key: "waiting", label: lang === "sw" ? "Kwenye Foleni" : "In Queue" },
-    { key: "notified", label: lang === "sw" ? "Umetaarifiwa" : "Notified" },
-    { key: "fulfilled", label: lang === "sw" ? "Imekamilika" : "Fulfilled" },
-    { key: "cancelled", label: lang === "sw" ? "Umeondoka" : "Cancelled" },
+    {
+      key: "waiting",
+      label: lang === "sw" ? "Kwenye Foleni" : "In Queue",
+    },
+    {
+      key: "notified",
+      label: lang === "sw" ? "Umetaarifiwa" : "Notified",
+    },
+    {
+      key: "fulfilled",
+      label: lang === "sw" ? "Imekamilika" : "Fulfilled",
+    },
+    {
+      key: "cancelled",
+      label: lang === "sw" ? "Umeondoka" : "Cancelled",
+    },
   ];
 
   const filtered = entries.filter(
@@ -255,11 +287,18 @@ export default function WaitingListPage({
 
   if (loading) {
     return (
-      <div style={{ background: COLORS.sand, minHeight: "100%" }}
-           className="w-full p-4 sm:p-6 flex items-center justify-center">
+      <div
+        style={{ background: COLORS.sand, minHeight: "100%" }}
+        className="w-full p-4 sm:p-6 flex items-center justify-center"
+      >
         <div className="flex flex-col items-center gap-2">
-          <div className="w-8 h-8 border-2 rounded-full animate-spin"
-               style={{ borderColor: COLORS.sandLine, borderTopColor: COLORS.gold }} />
+          <div
+            className="w-8 h-8 border-2 rounded-full animate-spin"
+            style={{
+              borderColor: COLORS.sandLine,
+              borderTopColor: COLORS.gold,
+            }}
+          />
           <p className="text-sm text-secondary">
             {lang === "sw" ? "Inapakia..." : "Loading..."}
           </p>
@@ -270,22 +309,36 @@ export default function WaitingListPage({
 
   if (loadError) {
     return (
-      <div style={{ background: COLORS.sand, minHeight: "100%" }}
-           className="w-full p-4 sm:p-6 flex items-center justify-center">
-        <div className="bg-white rounded-2xl border max-w-md w-full p-6 text-center"
-             style={{ borderColor: COLORS.sandLine }}>
-          <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center"
-               style={{ background: "rgba(193,80,46,0.1)" }}>
-            <span style={{ color: COLORS.rust }} className="text-2xl font-bold">!</span>
+      <div
+        style={{ background: COLORS.sand, minHeight: "100%" }}
+        className="w-full p-4 sm:p-6 flex items-center justify-center"
+      >
+        <div
+          className="bg-white rounded-2xl border max-w-md w-full p-6 text-center"
+          style={{ borderColor: COLORS.sandLine }}
+        >
+          <div
+            className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center"
+            style={{ background: "rgba(193,80,46,0.1)" }}
+          >
+            <span
+              style={{ color: COLORS.rust }}
+              className="text-2xl font-bold"
+            >
+              !
+            </span>
           </div>
           <p className="text-sm font-semibold text-primary mb-1">
-            {lang === "sw" ? "Imeshindwa kupakia orodha" : "Failed to load waitlist"}
+            {lang === "sw"
+              ? "Imeshindwa kupakia orodha"
+              : "Failed to load waitlist"}
           </p>
           <p className="text-xs text-secondary mb-4">{loadError}</p>
           <button
             onClick={() => window.location.reload()}
             style={{ background: COLORS.gold, color: COLORS.night }}
-            className="px-4 py-2 rounded-lg text-sm font-semibold">
+            className="px-4 py-2 rounded-lg text-sm font-semibold"
+          >
             {lang === "sw" ? "Jaribu tena" : "Try again"}
           </button>
         </div>
@@ -295,17 +348,10 @@ export default function WaitingListPage({
 
   return (
     <div
-      style={{
-        background: COLORS.sand,
-        minHeight: "100%",
-      }}
+      style={{ background: COLORS.sand, minHeight: "100%" }}
       className="w-full p-4 sm:p-6"
     >
-
       <div className="max-w-4xl mx-auto">
-        {/* ============================================================ */}
-        {/* HEADER — CENTERED */}
-        {/* ============================================================ */}
         <div className="mb-5 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Clock3 size={22} color={COLORS.gold} />
@@ -326,9 +372,6 @@ export default function WaitingListPage({
           </p>
         </div>
 
-        {/* ============================================================ */}
-        {/* NOTIFIED NOTIFICATION — CENTERED */}
-        {/* ============================================================ */}
         {notifiedCount > 0 && (
           <div
             style={{
@@ -345,23 +388,22 @@ export default function WaitingListPage({
               {lang === "sw" ? (
                 <>
                   Una {notifiedCount} nafasi{" "}
-                  {notifiedCount === 1 ? "iliyofunguka" : "zilizofunguka"} —
-                  chukua hatua kabla muda haujaisha.
+                  {notifiedCount === 1
+                    ? "iliyofunguka"
+                    : "zilizofunguka"}{" "}
+                  — chukua hatua kabla muda haujaisha.
                 </>
               ) : (
                 <>
                   You have {notifiedCount} open slot
-                  {notifiedCount === 1 ? "" : "s"} — take action before time runs
-                  out.
+                  {notifiedCount === 1 ? "" : "s"} — take action before
+                  time runs out.
                 </>
               )}
             </p>
           </div>
         )}
 
-        {/* ============================================================ */}
-        {/* FILTER TABS — CENTERED */}
-        {/* ============================================================ */}
         <div className="flex justify-center gap-2 mb-5 overflow-x-auto pb-1">
           {filters.map((f) => (
             <button
@@ -369,7 +411,10 @@ export default function WaitingListPage({
               onClick={() => setFilter(f.key)}
               style={{
                 background: filter === f.key ? COLORS.night : "white",
-                color: filter === f.key ? COLORS.sand : "var(--text-primary)",
+                color:
+                  filter === f.key
+                    ? COLORS.sand
+                    : "var(--text-primary)",
                 borderColor: COLORS.sandLine,
               }}
               className="text-xs font-semibold px-3.5 py-2 rounded-full border whitespace-nowrap shrink-0"
@@ -379,9 +424,6 @@ export default function WaitingListPage({
           ))}
         </div>
 
-        {/* ============================================================ */}
-        {/* EMPTY STATE — CENTERED */}
-        {/* ============================================================ */}
         {filtered.length === 0 ? (
           <div
             style={{ borderColor: COLORS.sandLine }}
@@ -406,9 +448,6 @@ export default function WaitingListPage({
             </p>
           </div>
         ) : (
-          /* ============================================================ */
-          /* LIST — kadi zimeachwa kushoto kwa data nyingi */
-          /* ============================================================ */
           <div className="flex flex-col gap-3">
             {filtered.map((e) => (
               <WaitingListItem
