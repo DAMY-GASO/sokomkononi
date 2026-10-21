@@ -1,8 +1,9 @@
 // ============================================================
 // UserManagementSection.jsx
-// + FIX: loading inaisha KILA MARA (finally block)
-// + AbortController badala ya requestIdRef (race condition)
+// + FIX: loading inaisha KILA MARA (request sequence)
+// + AbortController + requestSeqRef (race-condition safe)
 // + skeleton inaonekana tu kwenye firstLoad
+// + timeout guard ya skeleton
 // ============================================================
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
@@ -85,6 +86,7 @@ function RoleBadge({ role, lang }) {
 }
 
 const PAGE_SIZE = 20;
+const SKELETON_TIMEOUT_MS = 15000;
 
 function TableSkeleton({ rows = 6 }) {
   return (
@@ -158,8 +160,9 @@ export default function UserManagementSection() {
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
-  // AbortController kwa race condition
+  // AbortController + sequence kwa race condition
   const abortRef = useRef(null);
+  const requestSeqRef = useRef(0);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -168,6 +171,8 @@ export default function UserManagementSection() {
   // ── Fetch ─────────────────────────────────────────────────
   const fetchPage = useCallback(
     async (p = 1) => {
+      const seq = ++requestSeqRef.current;
+
       // Cancel fetch iliyopita
       if (abortRef.current) {
         abortRef.current.abort();
@@ -195,14 +200,15 @@ export default function UserManagementSection() {
         if (err?.name === "AbortError") return;
         res = { ok: false, error: err };
       } finally {
-        // ⬇️ Hii inaitwa KILA MARA — ndio fix ya skeleton
-        if (abortRef.current === controller) {
+        // ⬇️ Kila request inamaliza loading yake — race-safe
+        if (seq === requestSeqRef.current) {
           setLoading(false);
           setFirstLoad(false);
         }
       }
 
-      if (controller.signal.aborted) return;
+      // Stale request — acha
+      if (seq !== requestSeqRef.current) return;
 
       if (res?.ok) {
         setUsers(getUsers());
@@ -225,7 +231,11 @@ export default function UserManagementSection() {
   useEffect(() => {
     fetchPage(1);
     return () => {
-      if (abortRef.current) abortRef.current.abort();
+      // Cancel request inayoendelea wakati filter zinabadilika / unmount
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, roleFilter, statusFilter, verifiedFilter]);
@@ -241,6 +251,23 @@ export default function UserManagementSection() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, query, roleFilter, statusFilter, verifiedFilter]);
+
+  // Timeout guard — skeleton isiwe milele
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setTimeout(() => {
+      setLoading(false);
+      setFirstLoad(false);
+      setError(
+        t(
+          "Inachukua muda mrefu kupakia. Tafadhali jaribu tena.",
+          "Loading is taking too long. Please try again."
+        )
+      );
+    }, SKELETON_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   // ── HANDLERS ───────────────────────────────────────────────
   const handleToggle = (userId) => {
@@ -558,7 +585,10 @@ export default function UserManagementSection() {
             className="smk-inline-search w-full rounded-lg border border-hairline bg-card pl-3 pr-10 py-2 text-sm outline-none focus:outline-none focus-visible:outline-none"
             style={{ WebkitAppearance: "none" }}
           />
-          <Search size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
+          <Search
+            size={16}
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
+          />
         </div>
 
         <select
@@ -591,7 +621,9 @@ export default function UserManagementSection() {
         >
           <option value="all">{t("Uthibitisho: Zote", "Verified: All")}</option>
           <option value="verified">{t("Imethibitishwa", "Verified")}</option>
-          <option value="unverified">{t("Haijathibitishwa", "Unverified")}</option>
+          <option value="unverified">
+            {t("Haijathibitishwa", "Unverified")}
+          </option>
         </select>
       </div>
 
