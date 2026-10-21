@@ -587,3 +587,62 @@ html:not(.dark) .bg-\[\#042475\] {
 html:not(.dark) [data-surface="sand"] .bg-white .hover\:bg-gray-50:hover * {
   color: #0B1220;
 }
+
+/* ============================================================
+   NAVBAR ICONS — lazima zionekane kwenye navy background
+   (Bell, Home, ThemeToggle, Menu, n.k.)
+   ============================================================ */
+
+/* Light mode — navbar ina bg-[#011957] (navy), kwa hiyo icons ziwe nyeupe */
+html:not(.dark) header.bg-\[\#011957\] svg,
+html:not(.dark) header[style*="background: #011957"] svg,
+html:not(.dark) header[style*="background:#011957"] svg,
+html:not(.dark) header[style*="background: rgb(1, 25, 87)"] svg,
+html:not(.dark) header[style*="background:rgb(1,25,87)"] svg {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
+
+/* Ruhusu rangi maalum (gold, rust, n.k.) kwenye icons za navbar */
+html:not(.dark) header.bg-\[\#011957\] svg[stroke="#FEA406"],
+html:not(.dark) header[style*="background: #011957"] svg[stroke="#FEA406"],
+html:not(.dark) header[style*="background: #011957"] svg[stroke="#C1502E"],
+html:not(.dark) header[style*="background: #011957"] svg[stroke="#FF8A65"] {
+  color: inherit !important;
+  stroke: currentColor !important;
+}
+
+/* Dark mode — tayari iko sawa, lakini ongeza kwa usalama */
+html.dark header.bg-\[\#011957\] svg,
+html.dark header[style*="background: #011957"] svg,
+html.dark header[style*="background: rgb(1, 25, 87)"] svg {
+  color: rgba(255, 255, 255, 0.88) !important;
+  stroke: currentColor !important;
+}
+
+/* ============================================================
+   DASHBOARD SHELL HEADER — icons za dashboard pia
+   ============================================================ */
+html:not(.dark) [data-surface="sand"] > header svg,
+html:not(.dark) [data-surface="sand"] > header svg[stroke="currentColor"] {
+  color: #FFFFFF !important;
+}
+
+/* Ruhusu rangi maalum kwenye dashboard header */
+html:not(.dark) [data-surface="sand"] > header svg[stroke="#FEA406"],
+html:not(.dark) [data-surface="sand"] > header svg[stroke="#C1502E"],
+html:not(.dark) [data-surface="sand"] > header svg[stroke="#FF8A65"] {
+  color: inherit !important;
+  stroke: currentColor !important;
+}
+
+/* ============================================================
+   THEME TOGGLE — kwenye navbar navy
+   ============================================================ */
+html:not(.dark) header [class*="ThemeToggle"],
+html:not(.dark) header button[aria-label*="mode"] svg,
+html:not(.dark) header button[aria-label*="Light"] svg,
+html:not(.dark) header button[aria-label*="Dark"] svg {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
