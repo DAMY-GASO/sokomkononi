@@ -17,19 +17,19 @@ const SOCIAL = [
   { href: "https://youtube.com",   icon: Youtube,   label: "YouTube"   },
 ];
 
-// ⬇️ PAYMENTS — sasa zina `src` (path ya logo) na `fallback` (maandishi)
+// SVG logos — public/assets/payments/*.svg
 const PAYMENTS = [
-  { label: "M-Pesa",       src: "/assets/payments/mpesa.png",        fallbackBg: "#2E9E44", fallbackFg: "#FFFFFF" },
-  { label: "HaloPesa",     src: "/assets/payments/halopesa.png",     fallbackBg: "#E33C2B", fallbackFg: "#FFFFFF" },
-  { label: "Mixx by Yas",  src: "/assets/payments/mixx.png",         fallbackBg: "#FFCC00", fallbackFg: "#011957" },
-  { label: "Airtel Money", src: "/assets/payments/airtel.png",       fallbackBg: "#ED1C24", fallbackFg: "#FFFFFF" },
-  { label: "NMB",          src: "/assets/payments/nmb.png",          fallbackBg: "#00734D", fallbackFg: "#FFFFFF" },
-  { label: "CRDB",         src: "/assets/payments/crdb.png",         fallbackBg: "#0072BC", fallbackFg: "#FFFFFF" },
-  { label: "Visa",         src: "/assets/payments/visa.png",         fallbackBg: "#1A1F71", fallbackFg: "#FFFFFF" },
-  { label: "Mastercard",   src: "/assets/payments/mastercard.png",   fallbackBg: "#EB001B", fallbackFg: "#FFFFFF" },
+  { label: "M-Pesa",       src: "/assets/payments/mpesa.svg",      fallbackBg: "#e91d42", fallbackFg: "#FFFFFF" },
+  { label: "HaloPesa",     src: "/assets/payments/halopesa.svg",   fallbackBg: "#eb903b", fallbackFg: "#FFFFFF" },
+  { label: "Mixx by Yas",  src: "/assets/payments/mixx.svg",       fallbackBg: "#FFCC00", fallbackFg: "#011957" },
+  { label: "Airtel Money", src: "/assets/payments/airtel.svg",     fallbackBg: "#ED1C24", fallbackFg: "#FFFFFF" },
+  { label: "NMB",          src: "/assets/payments/nmb.svg",        fallbackBg: "#1125a6", fallbackFg: "#FFFFFF" },
+  { label: "CRDB",         src: "/assets/payments/crdb.svg",       fallbackBg: "#18c14a", fallbackFg: "#FFFFFF" },
+  { label: "Visa",         src: "/assets/payments/visa.svg",       fallbackBg: "#1A1F71", fallbackFg: "#FFFFFF" },
+  { label: "Mastercard",   src: "/assets/payments/mastercard.svg", fallbackBg: "#dbc821", fallbackFg: "#FFFFFF" },
 ];
 
-// Pay logo kwa hali ya sasa (image / fallback)
+// Pay logo — background nyeupe ili SVG zionekane kwenye navy footer
 function PayLogo({ payment }) {
   const [err, setErr] = React.useState(false);
 
@@ -37,8 +37,8 @@ function PayLogo({ payment }) {
     return (
       <span
         title={payment.label}
-        className="keep-light flex h-8 items-center justify-center rounded px-2 text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm"
-        style={{ background: payment.fallbackBg, color: payment.fallbackFg, minWidth: 60 }}
+        className="flex h-9 items-center justify-center rounded-md px-2 text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm"
+        style={{ background: payment.fallbackBg, color: payment.fallbackFg, minWidth: 68 }}
       >
         {payment.label}
       </span>
@@ -48,8 +48,8 @@ function PayLogo({ payment }) {
   return (
     <span
       title={payment.label}
-      className="flex h-8 items-center justify-center rounded bg-white/[0.06] border border-white/[0.08] px-2 shadow-sm"
-      style={{ minWidth: 60 }}
+      className="flex h-9 items-center justify-center rounded-md bg-white px-2 shadow-sm ring-1 ring-white/20"
+      style={{ minWidth: 68 }}
     >
       <img
         src={payment.src}

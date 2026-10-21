@@ -577,12 +577,6 @@ html.dark [data-surface="sand"] .bg-white .divide-gray-100 > * {
   border-color: rgb(var(--c-hairline)) !important;
 }
 
-/* Dropdown yenye bg-[#182541] (Language switcher) au bg-[#042475] (Navbar) */
-html:not(.dark) .bg-\[\#182541\],
-html:not(.dark) .bg-\[\#042475\] {
-  /* Hizi ni za admin navbar — hazibadiliki kwenye light mode */
-}
-
 /* Rangi za hover kwa dropdown items (light) */
 html:not(.dark) [data-surface="sand"] .bg-white .hover\:bg-gray-50:hover * {
   color: #0B1220;
@@ -593,7 +587,7 @@ html:not(.dark) [data-surface="sand"] .bg-white .hover\:bg-gray-50:hover * {
    (Bell, Home, ThemeToggle, Menu, n.k.)
    ============================================================ */
 
-/* Light mode — navbar ina bg-[#011957] (navy), kwa hiyo icons ziwe nyeupe */
+/* Light mode — navbar ya PUBLIC ina bg-[#011957] (navy), kwa hiyo icons ziwe nyeupe */
 html:not(.dark) header.bg-\[\#011957\] svg,
 html:not(.dark) header[style*="background: #011957"] svg,
 html:not(.dark) header[style*="background:#011957"] svg,
@@ -621,30 +615,50 @@ html.dark header[style*="background: rgb(1, 25, 87)"] svg {
 }
 
 /* ============================================================
-   DASHBOARD SHELL HEADER — icons za dashboard pia
+   DASHBOARD SHELL HEADER — icons za dashboard
+   Header sasa inatumia var(--c-card) (nyeupe kwenye light,
+   navy kwenye dark) — kwa hiyo icons zifuate --c-text-*.
    ============================================================ */
-html:not(.dark) [data-surface="sand"] > header svg,
-html:not(.dark) [data-surface="sand"] > header svg[stroke="currentColor"] {
-  color: #FFFFFF !important;
+[data-surface="sand"] > header svg {
+  color: rgb(var(--c-text-2));
+  stroke: currentColor;
+}
+[data-surface="sand"] > header svg[stroke="currentColor"] {
+  stroke: currentColor;
 }
 
-/* Ruhusu rangi maalum kwenye dashboard header */
-html:not(.dark) [data-surface="sand"] > header svg[stroke="#FEA406"],
-html:not(.dark) [data-surface="sand"] > header svg[stroke="#C1502E"],
-html:not(.dark) [data-surface="sand"] > header svg[stroke="#FF8A65"] {
-  color: inherit !important;
-  stroke: currentColor !important;
+/* Ruhusu rangi maalum (gold, rust, n.k.) kwenye dashboard header */
+[data-surface="sand"] > header svg[stroke="#FEA406"],
+[data-surface="sand"] > header svg[stroke="#C1502E"],
+[data-surface="sand"] > header svg[stroke="#FF8A65"],
+[data-surface="sand"] > header svg[stroke="#2E9E44"] {
+  color: inherit;
+  stroke: currentColor;
 }
 
 /* ============================================================
-   THEME TOGGLE — kwenye navbar navy
+   THEME TOGGLE
+   - Navbar ya PUBLIC (navy daima) → icons nyeupe
+   - DashboardShell (inafuata theme) → --c-text-2
    ============================================================ */
-html:not(.dark) header [class*="ThemeToggle"],
-html:not(.dark) header button[aria-label*="mode"] svg,
-html:not(.dark) header button[aria-label*="Light"] svg,
-html:not(.dark) header button[aria-label*="Dark"] svg {
+
+/* Navbar ya public (navy) */
+html:not(.dark) header.bg-\[\#011957\] button[aria-label*="mode"] svg,
+html:not(.dark) header.bg-\[\#011957\] button[aria-label*="Light"] svg,
+html:not(.dark) header.bg-\[\#011957\] button[aria-label*="Dark"] svg,
+html:not(.dark) header[style*="background: #011957"] button[aria-label*="mode"] svg,
+html:not(.dark) header[style*="background: #011957"] button[aria-label*="Light"] svg,
+html:not(.dark) header[style*="background: #011957"] button[aria-label*="Dark"] svg {
   color: #FFFFFF !important;
   stroke: #FFFFFF !important;
+}
+
+/* DashboardShell (inafuata theme kupitia --c-text-2) */
+[data-surface="sand"] > header button[aria-label*="mode"] svg,
+[data-surface="sand"] > header button[aria-label*="Light"] svg,
+[data-surface="sand"] > header button[aria-label*="Dark"] svg {
+  color: rgb(var(--c-text-2)) !important;
+  stroke: currentColor !important;
 }
 
 /* ============================================================

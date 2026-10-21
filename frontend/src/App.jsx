@@ -15,6 +15,9 @@ import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
 import { initializeCategories, hydrateCategoriesFromApi } from "./config/categoriesStore.js";
 import { hydrateListingsFromApi, sweepGhostListings } from "./config/listingsStore.js";
 
+// ⬇️ Theme — weka kabla ya render ili kuzuia flash
+import { getTheme, applyTheme } from "./config/themeStore.js";
+
 import HomePage from "./pages/HomePage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import ContactPage from "./pages/ContactPage.jsx";
@@ -57,6 +60,13 @@ function BrowseRoute() {
 
 function App() {
   useEffect(() => {
+    // ⬇️ Theme: apply mara moja kabla ya render (flash-free)
+    try {
+      applyTheme(getTheme());
+    } catch {
+      /* noop */
+    }
+
     // ⬇️ Weka lugha kwenye window mara moja ili client.js iione
     // kabla ya LanguageProvider kuwa tayari.
     if (typeof window !== "undefined" && !window.__SMK_LANG__) {

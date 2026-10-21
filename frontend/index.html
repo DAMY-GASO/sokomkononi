@@ -64,6 +64,19 @@
         }
       }
     </script>
+    <script>
+  (function () {
+    try {
+      var k = "sokomkononi_theme_v1";
+      var v = localStorage.getItem(k);
+      var t = (v === "dark" || v === "light")
+        ? v
+        : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.classList.toggle("dark", t === "dark");
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
   </head>
   <body>
     <div id="root"></div>

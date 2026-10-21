@@ -5,10 +5,11 @@ import {
   Receipt, LayoutGrid, Clock3, CalendarCheck, Megaphone, Heart, Home,
   Globe, Check, TrendingUp, LogOut, User as UserIcon, Inbox, Shield,
   Package, Tag, ShoppingBag, ShieldCheck, MessageSquarePlus,
-  Plus, Share2, Users,
+  Plus, Share2, Users, Sun, Moon,
 } from "lucide-react";
 import { COLORS } from "./shared.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { useTheme } from "../../../config/themeStore.js";
 import MyVerificationsPanel from "./MyVerificationsPanel.jsx";
 import SellerFeedback from "../seller/SellerFeedback.jsx";
 import { useAuth, logoutAsync } from "../../../config/authStore.js";
@@ -178,6 +179,7 @@ export default function DashboardShell() {
   const navigate = useNavigate();
   const { lang, setLang } = useLanguage();
   const { user } = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
 
   const [ready, setReady] = useState(false);
 
@@ -638,31 +640,30 @@ export default function DashboardShell() {
   return (
     <div data-surface="sand" className="bg-page w-full flex flex-col pb-16 md:pb-0 min-h-screen">
       <header
-        style={{ background: COLORS.night }}
-        className="w-full flex items-center gap-3 px-3 sm:px-5 py-3 sticky top-0 z-30"
+        className="w-full flex items-center gap-3 px-3 sm:px-5 py-3 sticky top-0 z-30 bg-[rgb(var(--c-card))] text-[rgb(var(--c-ink))] border-b border-[rgb(var(--c-hairline))]"
       >
         <button
           onClick={() => setSidebarOpen((v) => !v)}
-          className="text-white/80 hover:text-white md:hidden"
+          className="text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))] md:hidden"
           aria-label={t("Fungua menyu", "Open menu")}
         >
           <Menu size={22} />
         </button>
 
-        <a href="/" style={{ color: COLORS.sand }} className="text-lg sm:text-xl font-semibold tracking-tight shrink-0 hover:opacity-80 transition-opacity">
+        <a href="/" className="text-lg sm:text-xl font-semibold tracking-tight shrink-0 hover:opacity-80 transition-opacity">
           SokoMkononi
         </a>
 
-        <div style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.12)" }} className="hidden sm:flex items-center flex-1 max-w-md rounded-full border px-3 py-1.5 gap-2">
-          <Search size={16} color="rgba(245,243,236,0.6)" />
-          <input placeholder={t("Tafuta mali...", "Search properties...")} className="bg-transparent outline-none text-sm flex-1" style={{ color: COLORS.sand }} />
+        <div className="hidden sm:flex items-center flex-1 max-w-md rounded-full border border-[rgb(var(--c-hairline))] bg-[rgb(var(--c-page))] px-3 py-1.5 gap-2">
+          <Search size={16} className="text-[rgb(var(--c-text-3))]" />
+          <input placeholder={t("Tafuta mali...", "Search properties...")} className="bg-transparent outline-none text-sm flex-1 text-[rgb(var(--c-ink))] placeholder:text-[rgb(var(--c-text-3))]" />
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <div style={{ background: COLORS.nightSoft }} className="hidden md:flex items-center rounded-full p-1">
+          <div className="hidden md:flex items-center rounded-full p-1 bg-[rgb(var(--c-page))]">
             <button
               onClick={() => handleSideChange("seller")}
-              style={{ background: side === "seller" ? COLORS.gold : "transparent", color: side === "seller" ? COLORS.night : COLORS.sand }}
+              style={{ background: side === "seller" ? COLORS.gold : "transparent", color: side === "seller" ? COLORS.night : "rgb(var(--c-text-2))" }}
               className="flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
               <Tag size={14} />
@@ -670,7 +671,7 @@ export default function DashboardShell() {
             </button>
             <button
               onClick={() => handleSideChange("buyer")}
-              style={{ background: side === "buyer" ? COLORS.green : "transparent", color: COLORS.sand }}
+              style={{ background: side === "buyer" ? COLORS.green : "transparent", color: side === "buyer" ? "#FFFFFF" : "rgb(var(--c-text-2))" }}
               className="flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
               <ShoppingBag size={14} />
@@ -678,20 +679,29 @@ export default function DashboardShell() {
             </button>
           </div>
 
+          {/* THEME TOGGLE */}
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-md text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))] hover:bg-[rgb(var(--c-ink)/0.06)] transition-colors"
+            aria-label={theme === "dark" ? t("Badilisha kuwa mwanga", "Switch to light mode") : t("Badilisha kuwa giza", "Switch to dark mode")}
+            title={theme === "dark" ? t("Mode ya Mwanga", "Light mode") : t("Mode ya Giza", "Dark mode")}
+          >
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
           <div className="relative">
             <button
               onClick={() => setLangOpen((v) => !v)}
-              style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.15)" }}
-              className="text-white/80 hover:text-white text-sm font-medium border rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
+              className="text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))] text-sm font-medium border border-[rgb(var(--c-hairline))] rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
             >
               <Globe size={14} />
               <span className="hidden sm:inline">{currentLang?.native || "Kiswahili"}</span>
               <span className="sm:hidden">{currentLang?.code?.toUpperCase() || "SW"}</span>
             </button>
             {langOpen && (
-              <div style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.1)" }} className="absolute right-0 mt-2 w-48 border rounded-lg shadow-xl py-2 z-50">
-                <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-2 border-b">
-                  <p style={{ color: "rgba(245,243,236,0.5)" }} className="text-body-sm font-semibold">
+              <div className="absolute right-0 mt-2 w-48 border border-[rgb(var(--c-hairline))] bg-[rgb(var(--c-card))] rounded-lg shadow-xl py-2 z-50">
+                <div className="px-4 py-2 border-b border-[rgb(var(--c-hairline))]">
+                  <p className="text-[rgb(var(--c-text-3))] text-xs font-semibold">
                     {t("Chagua Lugha", "Choose Language")}
                   </p>
                 </div>
@@ -699,8 +709,7 @@ export default function DashboardShell() {
                   <button
                     key={l.code}
                     onClick={() => handleLanguageSelect(l.code)}
-                    style={{ background: lang === l.code ? "rgba(245,243,236,0.05)" : "transparent", color: COLORS.sand }}
-                    className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-white/5 transition-colors"
+                    className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-[rgb(var(--c-ink)/0.06)] transition-colors text-[rgb(var(--c-text))]"
                   >
                     <span className="text-sm font-medium">{l.native}</span>
                     {lang === l.code && <Check size={14} color={COLORS.gold} />}
@@ -710,13 +719,13 @@ export default function DashboardShell() {
             )}
           </div>
 
-          <a href="/" className="hidden md:block text-white/80 hover:text-white p-1.5 transition-colors" aria-label={t("Rudi kwenye ukurasa wa mwanzo", "Back to homepage")}>
+          <a href="/" className="hidden md:block text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))] p-1.5 transition-colors" aria-label={t("Rudi kwenye ukurasa wa mwanzo", "Back to homepage")}>
             <Home size={20} />
           </a>
 
           <button
             onClick={() => handleNavClick("notifications")}
-            className="relative text-white/80 hover:text-white p-1.5 transition-colors"
+            className="relative text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))] p-1.5 transition-colors"
             aria-label={t("Taarifa", "Notifications")}
           >
             <Bell size={20} />
@@ -742,15 +751,14 @@ export default function DashboardShell() {
 
             {userMenuOpen && (
               <div
-                style={{ background: COLORS.nightSoft, borderColor: "rgba(245,243,236,0.1)" }}
-                className="absolute right-0 mt-2 w-64 border rounded-lg shadow-xl py-1 z-50"
+                className="absolute right-0 mt-2 w-64 border border-[rgb(var(--c-hairline))] bg-[rgb(var(--c-card))] rounded-lg shadow-xl py-1 z-50"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-3 border-b">
-                  <p style={{ color: COLORS.sand }} className="text-sm font-semibold truncate">
+                <div className="px-4 py-3 border-b border-[rgb(var(--c-hairline))]">
+                  <p className="text-sm font-semibold truncate text-[rgb(var(--c-ink))]">
                     {user?.name || "User"}
                   </p>
-                  <p style={{ color: "rgba(245,243,236,0.5)" }} className="text-body-sm truncate">
+                  <p className="text-xs truncate text-[rgb(var(--c-text-3))]">
                     {user?.email || ""}
                   </p>
                 </div>
@@ -768,24 +776,22 @@ export default function DashboardShell() {
                       setUserMenuOpen(false);
                       navigate(to);
                     }}
-                    style={{ color: COLORS.sand }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[rgb(var(--c-text))] hover:bg-[rgb(var(--c-ink)/0.06)] transition-colors text-left"
                   >
-                    <Icon size={15} color="rgba(245,243,236,0.55)" />
+                    <Icon size={15} className="text-[rgb(var(--c-text-3))]" />
                     {label}
                   </button>
                 ))}
 
                 <button
                   onClick={handleShare}
-                  style={{ color: COLORS.sand }}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[rgb(var(--c-text))] hover:bg-[rgb(var(--c-ink)/0.06)] transition-colors text-left"
                 >
-                  <Share2 size={15} color="rgba(245,243,236,0.55)" />
+                  <Share2 size={15} className="text-[rgb(var(--c-text-3))]" />
                   {t("Shiriki SokoMkononi", "Share SokoMkononi")}
                 </button>
 
-                <div className="my-1 border-t" style={{ borderColor: "rgba(245,243,236,0.1)" }} />
+                <div className="my-1 border-t border-[rgb(var(--c-hairline))]" />
 
                 <button
                   onClick={handleLogout}
@@ -800,10 +806,10 @@ export default function DashboardShell() {
         </div>
       </header>
 
-      <div style={{ background: COLORS.nightSoft }} className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full">
+      <div className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full bg-[rgb(var(--c-page))]">
         <button
           onClick={() => handleSideChange("seller")}
-          style={{ background: side === "seller" ? COLORS.gold : "transparent", color: side === "seller" ? COLORS.night : COLORS.sand }}
+          style={{ background: side === "seller" ? COLORS.gold : "transparent", color: side === "seller" ? COLORS.night : "rgb(var(--c-text-2))" }}
           className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
           <Tag size={14} />
@@ -811,7 +817,7 @@ export default function DashboardShell() {
         </button>
         <button
           onClick={() => handleSideChange("buyer")}
-          style={{ background: side === "buyer" ? COLORS.green : "transparent", color: COLORS.sand }}
+          style={{ background: side === "buyer" ? COLORS.green : "transparent", color: side === "buyer" ? "#FFFFFF" : "rgb(var(--c-text-2))" }}
           className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
           <ShoppingBag size={14} />
@@ -828,7 +834,7 @@ export default function DashboardShell() {
         });
         if (activeAnnouncements.length === 0) return null;
         return (
-          <div style={{ background: "rgb(var(--c-hairline))", color: COLORS.ink }} className="w-full flex items-center gap-2 px-4 py-1.5 text-body-sm sm:text-sm">
+          <div className="w-full flex items-center gap-2 px-4 py-1.5 text-xs sm:text-sm bg-[rgb(var(--c-page))] text-[rgb(var(--c-ink))] border-b border-[rgb(var(--c-hairline))]">
             <Megaphone size={14} color={COLORS.rust} className="shrink-0" />
             <span className="truncate">
               {getAnnouncementMessage(activeAnnouncements[tickerIndex % activeAnnouncements.length], lang)}
@@ -841,8 +847,7 @@ export default function DashboardShell() {
 
       <div className="flex flex-1 relative">
         <aside
-          style={{ borderColor: "rgb(var(--c-hairline))" }}
-          className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto bg-page"
+          className="hidden md:flex w-56 shrink-0 border-r border-[rgb(var(--c-hairline))] flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto bg-[rgb(var(--c-page))]"
         >
           {nav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeKey;
@@ -850,30 +855,33 @@ export default function DashboardShell() {
               <button
                 key={key}
                 onClick={() => handleNavClick(key)}
-                style={{ background: isActive ? COLORS.night : "transparent", color: isActive ? COLORS.sand : COLORS.ink }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
+                  isActive
+                    ? "bg-[rgb(var(--c-ink))] text-[rgb(var(--c-page))]"
+                    : "text-[rgb(var(--c-ink))] hover:bg-[rgb(var(--c-ink)/0.06)]"
+                }`}
               >
-                <Icon size={17} color={isActive ? accent : "currentColor"} />
+                <Icon size={17} style={{ color: isActive ? accent : "currentColor" }} />
                 {label[lang] || label.sw}
                 {key === "listings" && listings.length > 0 && (
-                  <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : "rgb(var(--c-hairline))", color: isActive ? COLORS.sand : COLORS.ink }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full">
+                  <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-[rgb(var(--c-hairline))]"}`}>
                     {listings.length}
                   </span>
                 )}
                 {key === "leads" && newLeadsCount > 0 && (
-                  <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust, color: isActive ? COLORS.sand : "white" }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full">
+                  <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-[#C1502E] text-white"}`}>
                     {newLeadsCount}
                   </span>
                 )}
                 {key === "searches" && buyerSearchesCount > 0 && (
-                  <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : "rgb(var(--c-hairline))", color: isActive ? COLORS.sand : COLORS.ink }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full">
+                  <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-[rgb(var(--c-hairline))]"}`}>
                     {buyerSearchesCount}
                   </span>
                 )}
               </button>
             );
           })}
-          <a href="/" className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-ink/5 mt-4 border-t border-hairline pt-4">
+          <a href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-[rgb(var(--c-ink)/0.06)] mt-4 border-t border-[rgb(var(--c-hairline))] pt-4 text-[rgb(var(--c-text-2))]">
             <Home size={17} />
             {t("Rudi Nyumbani", "Back to Home")}
           </a>
@@ -881,10 +889,10 @@ export default function DashboardShell() {
 
         {sidebarOpen && (
           <div className="md:hidden fixed inset-0 z-40 flex">
-            <div className="w-72 max-w-[85%] h-full pt-16 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto bg-page">
+            <div className="w-72 max-w-[85%] h-full pt-16 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto bg-[rgb(var(--c-page))]">
               <div className="flex justify-end mb-2">
-                <button onClick={() => setSidebarOpen(false)} aria-label={t("Funga", "Close")} className="p-2 text-muted hover:text-secondary">
-                  <X size={20} color="currentColor" />
+                <button onClick={() => setSidebarOpen(false)} aria-label={t("Funga", "Close")} className="p-2 text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))]">
+                  <X size={20} />
                 </button>
               </div>
               {nav.map(({ key, label, icon: Icon }) => {
@@ -893,25 +901,28 @@ export default function DashboardShell() {
                   <button
                     key={key}
                     onClick={() => { handleNavClick(key); setSidebarOpen(false); }}
-                    style={{ background: isActive ? COLORS.night : "transparent", color: isActive ? COLORS.sand : "var(--text-primary)" }}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left w-full"
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left w-full ${
+                      isActive
+                        ? "bg-[rgb(var(--c-ink))] text-[rgb(var(--c-page))]"
+                        : "text-[rgb(var(--c-ink))] hover:bg-[rgb(var(--c-ink)/0.06)]"
+                    }`}
                   >
-                    <Icon size={17} color={isActive ? accent : "currentColor"} />
+                    <Icon size={17} style={{ color: isActive ? accent : "currentColor" }} />
                     <span className="flex-1 truncate">{label[lang] || label.sw}</span>
                     {key === "leads" && newLeadsCount > 0 && (
-                      <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : COLORS.rust, color: isActive ? COLORS.sand : "white" }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                      <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${isActive ? "bg-white/20" : "bg-[#C1502E] text-white"}`}>
                         {newLeadsCount}
                       </span>
                     )}
                     {key === "searches" && buyerSearchesCount > 0 && (
-                      <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : "rgb(var(--c-hairline))", color: isActive ? COLORS.sand : COLORS.ink }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                      <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${isActive ? "bg-white/20" : "bg-[rgb(var(--c-hairline))]"}`}>
                         {buyerSearchesCount}
                       </span>
                     )}
                   </button>
                 );
               })}
-              <a href="/" className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-ink/5 mt-4 border-t border-hairline pt-4">
+              <a href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-[rgb(var(--c-ink)/0.06)] mt-4 border-t border-[rgb(var(--c-hairline))] pt-4 text-[rgb(var(--c-text-2))]">
                 <Home size={17} />
                 {t("Rudi Nyumbani", "Back to Home")}
               </a>
