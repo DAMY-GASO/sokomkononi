@@ -632,7 +632,7 @@ export default function AdminDashboard() {
                       }}
                       className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-gray-50 transition-colors text-left"
                     >
-                      <UserIcon size={16} className="text-muted" />
+                      <UserIcon size={16} className="text-secondary" />
                       {lang === "sw" ? "Wasifu" : "Profile"}
                     </button>
 
@@ -643,7 +643,7 @@ export default function AdminDashboard() {
                       }}
                       className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-primary hover:bg-gray-50 transition-colors text-left"
                     >
-                      <Settings size={16} className="text-muted" />
+                      <Settings size={16} className="text-secondary" />
                       {lang === "sw" ? "Mipangilio" : "Settings"}
                     </button>
 
