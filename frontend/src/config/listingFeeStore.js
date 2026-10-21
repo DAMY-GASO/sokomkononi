@@ -17,6 +17,7 @@ import {
   getSeedKeyFromSlug,
   isKnownCategoryKey,
   getCategoryIdByKey,
+  getCategories,
 } from "./categoriesStore.js";
 
 const KEY = "sokomkononi_listing_fee_config_v2";
@@ -147,7 +148,28 @@ function norm(raw) {
   const slugSource = categorySlug || safeName || "";
   const rawSlug = toSlug(slugSource);
   const seedKey = getSeedKeyFromSlug(rawSlug);
-  const orphan = !isKnownCategoryKey(rawSlug);
+
+  // ✅ FIX #9: orphan inaangalia categories HALISI (pamoja na mpya ulizounda),
+  // si seed list pekee. Kabla, kila category mpya ilionekana "orphan" na
+  // fee rule yake ilifichwa kwenye Revenue page.
+  let orphan;
+  try {
+    const cats = getCategories() || [];
+    if (cats.length === 0) {
+      // Categories bado hazijapakiwa — usiamue mapema
+      orphan = false;
+    } else {
+      const knownById =
+        categoryId != null &&
+        cats.some((c) => String(c.id) === String(categoryId));
+      const knownByKey =
+        isKnownCategoryKey(rawSlug) ||
+        cats.some((c) => c.key === seedKey || c.slug === rawSlug);
+      orphan = !(knownById || knownByKey);
+    }
+  } catch {
+    orphan = false;
+  }
 
   return {
     id: raw.id,
