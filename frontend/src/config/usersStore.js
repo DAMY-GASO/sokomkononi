@@ -2,11 +2,10 @@
 // usersStore.js — API-only via /api/admin/users/
 //
 // Marekebisho:
-//  - norm(): role sasa inasoma `raw.role` au `raw.user_role`
-//    kutoka backend. Fallback: is_seller + is_buyer → Both,
-//    Seller, Buyer, Neither. Admins wanabaki Admin.
-//  - roleMap inahakikisha casing ni consistent (Admin, Seller,
-//    Buyer, Both, Neither) — inalingana na UserManagementSection.
+//  - resolveVerified() inasoma `is_verified` (boolean) kutoka
+//    AdminUserSerializer — hii ndio field sahihi.
+//  - Filter ya verified inafanywa client-side pia.
+//  - useUsers() inatumia pageSize: 100 (backend max_page_size).
 // ============================================================
 import { useEffect, useState, useCallback } from "react";
 import { api } from "../api/client";
@@ -14,8 +13,10 @@ import { api } from "../api/client";
 const KEY = "sokomkononi_users_v1";
 const EV = "sokomkononi:users-updated";
 
+const BACKEND_MAX_PAGE_SIZE = 100;
+
 // ============================================================
-// LOCAL STORAGE (cache ya ukurasa wa sasa)
+// LOCAL STORAGE
 // ============================================================
 function read() {
   if (typeof window === "undefined") return [];
@@ -59,7 +60,6 @@ const ROLE_MAP = {
 function resolveRole(raw) {
   if (!raw) return "Neither";
 
-  // 1) Backend role (preferred)
   const backendRole =
     raw.role ||
     raw.user_role ||
@@ -69,22 +69,19 @@ function resolveRole(raw) {
   if (backendRole) {
     const key = String(backendRole).toLowerCase().replace(/[\s-]/g, "_");
     if (ROLE_MAP[key]) return ROLE_MAP[key];
-    // Unknown string but still a valid-looking role
     const title = String(backendRole)
       .toLowerCase()
       .replace(/(^|_)(\w)/g, (_, __, c) => " " + c.toUpperCase())
       .trim();
-    if (title === "Admin" || title === "Seller" || title === "Buyer" || title === "Both" || title === "Neither") {
+    if (["Admin", "Seller", "Buyer", "Both", "Neither"].includes(title)) {
       return title;
     }
   }
 
-  // 2) Admin flags
   if (raw.is_staff || raw.is_superuser || raw.isStaff || raw.isSuperuser) {
     return "Admin";
   }
 
-  // 3) is_seller + is_buyer flags
   const isSeller =
     raw.is_seller === true ||
     raw.isSeller === true ||
@@ -104,21 +101,51 @@ function resolveRole(raw) {
   if (isSeller) return "Seller";
   if (isBuyer) return "Buyer";
 
-  // 4) account_type fallback
   const accType = String(raw.account_type || raw.accountType || "").toUpperCase();
   if (accType === "BUSINESS") return "Seller";
 
-  // 5) Default
   return "Neither";
 }
 
 // ============================================================
-// NORMALIZE — kutoka backend → frontend shape
+// VERIFIED NORMALIZER
+// AdminUserSerializer inarudisha `is_verified` kama boolean
+// (SerializerMethodField). Hii ndio field sahihi.
+// ============================================================
+function resolveVerified(raw) {
+  if (!raw) return false;
+
+  // 1) AdminUserSerializer field — boolean
+  if (raw.is_verified === true) return true;
+  if (raw.isVerified === true) return true;
+
+  // 2) String "true" / "True" (safety net)
+  if (raw.is_verified === "true" || raw.is_verified === "True") return true;
+  if (raw.isVerified === "true" || raw.isVerified === "True") return true;
+
+  // 3) Other boolean flags
+  if (raw.verified === true) return true;
+  if (raw.is_verified_seller === true && raw.is_verified_buyer === true) return true;
+  if (raw.isVerifiedSeller === true && raw.isVerifiedBuyer === true) return true;
+
+  // 4) Nested verification object
+  if (raw.verification && typeof raw.verification === "object") {
+    const v = raw.verification;
+    if (v.is_verified === true || v.isVerified === true) return true;
+    if (v.status && String(v.status).toLowerCase() === "approved") return true;
+  }
+
+  return false;
+}
+
+// ============================================================
+// NORMALIZE
 // ============================================================
 function norm(raw) {
   if (!raw) return null;
 
   const role = resolveRole(raw);
+  const isVerified = resolveVerified(raw);
 
   return {
     id: raw.id,
@@ -130,12 +157,12 @@ function norm(raw) {
     status: raw.is_active === false ? "suspended" : "active",
     joined: raw.date_joined || raw.dateJoined || raw.created_at || raw.createdAt,
     isStaff: !!(raw.is_staff || raw.isStaff || raw.is_superuser || raw.isSuperuser),
-    isVerified: !!(raw.is_verified || raw.isVerified),
+    isVerified,
   };
 }
 
 // ============================================================
-// READS (kutoka cache ya sasa)
+// READS
 // ============================================================
 export function getUsers() {
   return read();
@@ -148,7 +175,7 @@ export function getUserByEmail(email) {
 }
 
 // ============================================================
-// HYDRATE — inarudisha { ok, count, page, totalPages, hasNext, hasPrev }
+// HYDRATE
 // ============================================================
 export async function hydrateUsersFromApi(opts = {}) {
   const {
@@ -160,9 +187,12 @@ export async function hydrateUsersFromApi(opts = {}) {
     verified = "all",
   } = opts;
 
+  // Backend ina-cap page_size kwa max_page_size (100).
+  const safePageSize = Math.min(pageSize, BACKEND_MAX_PAGE_SIZE);
+
   const params = new URLSearchParams();
   params.set("page", String(page));
-  params.set("page_size", String(pageSize));
+  params.set("page_size", String(safePageSize));
   if (q) params.set("q", q);
   if (role && role !== "all") params.set("role", role);
   if (status && status !== "all") params.set("status", status);
@@ -170,17 +200,54 @@ export async function hydrateUsersFromApi(opts = {}) {
 
   try {
     const d = await api.get(`/admin/users/?${params.toString()}`);
-    const list = Array.isArray(d) ? d : d?.results || [];
-    const count = Array.isArray(d) ? list.length : d?.count ?? list.length;
-    const totalPages = Math.max(1, Math.ceil(count / pageSize));
+    const rawList = Array.isArray(d) ? d : d?.results || [];
+    let normalized = rawList.map(norm).filter(Boolean);
 
-    write(list.map(norm).filter(Boolean));
+    // Client-side filter (safety net kama backend haitambui)
+    if (verified === "verified") {
+      normalized = normalized.filter((u) => u.isVerified === true);
+    } else if (verified === "unverified") {
+      normalized = normalized.filter((u) => u.isVerified !== true);
+    }
+
+    if (status === "active") {
+      normalized = normalized.filter((u) => u.status === "active");
+    } else if (status === "suspended") {
+      normalized = normalized.filter((u) => u.status === "suspended");
+    }
+
+    if (role && role !== "all") {
+      const target = String(role).toLowerCase();
+      normalized = normalized.filter(
+        (u) => String(u.role).toLowerCase() === target
+      );
+    }
+
+    if (q) {
+      const needle = q.toLowerCase();
+      normalized = normalized.filter(
+        (u) =>
+          u.name?.toLowerCase().includes(needle) ||
+          u.email?.toLowerCase().includes(needle)
+      );
+    }
+
+    const count = Array.isArray(d)
+      ? normalized.length
+      : d?.count ?? normalized.length;
+    const displayCount =
+      Array.isArray(d) || verified !== "all" || status !== "all" || role !== "all" || q
+        ? normalized.length
+        : (d?.count ?? normalized.length);
+    const totalPages = Math.max(1, Math.ceil(displayCount / safePageSize));
+
+    write(normalized);
 
     return {
       ok: true,
-      count,
+      count: displayCount,
       page,
-      pageSize,
+      pageSize: safePageSize,
       totalPages,
       hasNext: !!d?.next,
       hasPrev: !!d?.previous,
@@ -191,7 +258,7 @@ export async function hydrateUsersFromApi(opts = {}) {
 }
 
 // ============================================================
-// SUSPEND — inahitaji sababu (herufi 5+)
+// SUSPEND
 // ============================================================
 export async function suspendUserAsync(id, { reason } = {}) {
   const u = getUser(id);
@@ -237,7 +304,7 @@ export async function activateUserAsync(id) {
 }
 
 // ============================================================
-// TOGGLE — moja kwa moja
+// TOGGLE
 // ============================================================
 export async function toggleUserStatusAsync(id, opts) {
   const u = getUser(id);
@@ -263,7 +330,7 @@ export async function verifyUserAsync(id) {
 }
 
 // ============================================================
-// DELETE — soft delete (backend inaamua)
+// DELETE (soft)
 // ============================================================
 export async function deleteUserAsync(id) {
   try {
@@ -276,7 +343,7 @@ export async function deleteUserAsync(id) {
 }
 
 // ============================================================
-// PERMANENT DELETE — inahitaji sababu + "DELETE"
+// PERMANENT DELETE
 // ============================================================
 export async function permanentDeleteUserAsync(id, { reason, confirmText } = {}) {
   const u = getUser(id);
@@ -340,18 +407,13 @@ function _dedupedUsersHydrate(opts) {
 
 /**
  * useUsers — inasikiliza cache + inarudisha list ya users.
- *
- * Kumbuka: kwa default inachukua page 1 (pageSize 20). Kama
- * unahitaji users wote (mfano kwa Overview/Reports), tumia
- * hydrateUsersFromApi({ page: 1, pageSize: 1000 }) au ongeza
- * endpoint ya "all". Hii ni muhimu ili idadi ya users
- * inayorudishwa ilingane na total.
+ * Tunatumia pageSize: 100 (backend max_page_size) ili tupate
+ * idadi kubwa ya users kwa dashboards.
  */
 export function useUsers() {
   const [list, setList] = useState(() => read());
   useEffect(() => {
-    // Fetch page kubwa ili kupata idadi kamili kwa dashboards
-    _dedupedUsersHydrate({ page: 1, pageSize: 1000 });
+    _dedupedUsersHydrate({ page: 1, pageSize: BACKEND_MAX_PAGE_SIZE });
     const sync = () => setList(read());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);
@@ -363,17 +425,11 @@ export function useUsers() {
   return list;
 }
 
-/**
- * useUser — inarudisha user mmoja kwa id.
- */
 export function useUser(id) {
   const list = useUsers();
   return id ? list.find((u) => u.id === id) || null : null;
 }
 
-/**
- * useUsersPaged — hook kamili yenye pagination + filters.
- */
 export function useUsersPaged(initial = {}) {
   const [users, setUsers] = useState(() => read());
   const [page, setPage] = useState(initial.page || 1);
@@ -412,11 +468,9 @@ export function useUsersPaged(initial = {}) {
       }
       return res;
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [pageSize]
   );
 
-  // Sinc cache
   useEffect(() => {
     const sync = () => setUsers(read());
     window.addEventListener("storage", sync);
