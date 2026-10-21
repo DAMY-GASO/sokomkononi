@@ -11,7 +11,7 @@ import { useAuth, logoutAsync } from "../config/authStore.js";
 import { useNotifications } from "../config/notificationsStore.js";
 import { useDashboardSide } from "../config/dashboardSideStore.js";
 import { useAttribution } from "../context/AttributionContext.jsx";
-import { getTheme, toggleTheme } from "../config/themeStore.js";
+import { useTheme } from "../config/themeStore.js";
 import AnnouncementBar from "./AnnouncementBar.jsx";
 import { cx } from "./ui";
 
@@ -60,7 +60,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
   const [openMenu, setOpenMenu] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSub, setMobileSub] = useState(null);
-  const [theme, setTheme] = useState(getTheme());
+  const { theme, toggle: handleTheme } = useTheme();
   const navRef = useRef(null);
 
   useEffect(() => {
@@ -103,7 +103,6 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
   const toggleMenu = (name) =>
     setOpenMenu((prev) => (prev === name ? null : name));
   const handleLogoClick = (e) => { if (registerLogoTap()) e.preventDefault(); };
-  const handleTheme = () => setTheme(toggleTheme());
   const handleShare = async () => {
     setOpenMenu(null);
     const shareUrl =
@@ -180,6 +179,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
 
       <header
         ref={navRef}
+        data-on-night
         className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#011957] text-white"
       >
         <div className="container">
@@ -429,6 +429,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
         aria-hidden="true"
       />
       <div
+        data-on-night
         className={cx(
           "fixed left-0 top-0 z-50 h-full w-72 max-w-[82%] bg-[#011957] transition-transform duration-300 ease-out lg:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"

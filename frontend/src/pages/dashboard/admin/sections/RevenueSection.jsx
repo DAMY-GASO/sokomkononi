@@ -28,7 +28,7 @@ import {
 import {
   useListingFeeConfigs, updateListingFeeConfigAsync, addFeeConfigAsync,
   hasFeeConfig, hydrateListingFeeConfigsFromApi, removeFeeConfigAsync,
-  cleanupOrphanFeeConfigsAsync, updateListingFeeFlatAsync,
+  updateListingFeeFlatAsync,
   updateListingFeeModeAsync, toggleListingFeeActiveAsync,
 } from "../../../../config/listingFeeStore.js";
 import {
@@ -92,7 +92,7 @@ function getLocalized(field, lang) {
 function RevenueCard({ accentColor, children }) {
   return (
     <div
-      className="bg-white rounded-xl border-2 p-4 sm:p-5 transition-all hover:shadow-md"
+      className="bg-card rounded-xl border-2 p-4 sm:p-5 transition-all hover:shadow-md"
       style={{ borderColor: `${accentColor}30` }}
     >
       {children}
@@ -125,7 +125,7 @@ function ToggleSwitch({ enabled, onToggle, disabled, lang, compact = false }) {
       {!compact && (
         <span
           className="text-[10px] font-bold uppercase tracking-wide"
-          style={{ color: enabled ? COLORS.green : COLORS.rust }}
+          style={{ color: enabled ? COLORS.successText : COLORS.dangerText }}
         >
           {enabled ? t("IMEWASHWA", "ON") : t("IMEZIMWA", "OFF")}
         </span>
@@ -140,7 +140,7 @@ function ToggleSwitch({ enabled, onToggle, disabled, lang, compact = false }) {
         style={{ background: enabled ? COLORS.green : "#D1D5DB" }}
       >
         <span
-          className={`inline-block ${knob} rounded-full bg-white shadow transform transition-transform`}
+          className={`inline-block ${knob} rounded-full bg-white keep-light shadow transform transition-transform`}
           style={{ transform: enabled ? travel : rest }}
         />
       </button>
@@ -150,7 +150,8 @@ function ToggleSwitch({ enabled, onToggle, disabled, lang, compact = false }) {
 
 export default function RevenueSection() {
   const { lang } = useLanguage();
-  const listingFeeConfigs = useListingFeeConfigs();
+  // Fee rules zisizo na category (orphans) hazionyeshwi tena — zimefichwa kabisa.
+  const listingFeeConfigs = useListingFeeConfigs().filter((c) => !c.orphan);
   const reservationSettings = useReservationSettings();
   const reservationTiers = useReservationTiers();
   const leadingFee = useLeadingFeeConfig();
@@ -601,37 +602,6 @@ export default function RevenueSection() {
       return res;
     });
 
-  const orphanCount = listingFeeConfigs.filter((c) => c.orphan).length;
-
-  const handleCleanupOrphans = async () => {
-    const orphans = listingFeeConfigs.filter((c) => c.orphan);
-    if (orphans.length === 0) return;
-    const preview = orphans
-      .map((c) => `  • ${c.backendKey || c.key} — ${c.name || "?"}`)
-      .join("\n");
-    const ok = window.confirm(
-      t(
-        `Futa fee rules ${orphanCount}:\n\n${preview}\n\nHatua hii haiwezi kurudishwa.`,
-        `Delete ${orphanCount} orphan fee rules:\n\n${preview}\n\nThis cannot be undone.`
-      )
-    );
-    if (!ok) return;
-    setError("");
-    const res = await cleanupOrphanFeeConfigsAsync();
-    if (res.ok) {
-      showFlash(
-        t(
-          `Imetolewa ${res.removed}/${res.total} fee rules zisizohitajika.`,
-          `Removed ${res.removed}/${res.total} orphan fee rules.`
-        )
-      );
-    } else {
-      setError(
-        res.error?.message || t("Imeshindwa kusafisha.", "Failed to clean up.")
-      );
-    }
-  };
-
   const handleDeleteFeeConfig = (config) => {
     if (
       !window.confirm(
@@ -660,32 +630,14 @@ export default function RevenueSection() {
       />
 
       <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
-        {orphanCount > 0 && (
-          <button
-            onClick={handleCleanupOrphans}
-            disabled={refreshing || !!busy["cleanup-orphans"]}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors"
-            style={{
-              borderColor: `${COLORS.rust}55`,
-              color: COLORS.rust,
-              background: "white",
-            }}
-          >
-            <Trash2 size={13} />
-            {t(
-              `Safisha Zisizohitajika (${orphanCount})`,
-              `Clean Up Orphans (${orphanCount})`
-            )}
-          </button>
-        )}
         <button
           onClick={handleRefresh}
           disabled={refreshing}
           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors disabled:opacity-60"
           style={{
-            borderColor: COLORS.sandLine,
-            color: COLORS.night,
-            background: "white",
+            borderColor: "rgb(var(--c-hairline))",
+            color: COLORS.ink,
+            background: "rgb(var(--c-card))",
           }}
         >
           <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
@@ -710,7 +662,7 @@ export default function RevenueSection() {
                   flash.type === "error"
                     ? `${COLORS.rust}15`
                     : `${COLORS.green}15`,
-                color: flash.type === "error" ? COLORS.rust : COLORS.green,
+                color: flash.type === "error" ? COLORS.dangerText : COLORS.successText,
               }}
               className="text-xs font-semibold px-3 py-2 rounded-lg"
             >
@@ -719,7 +671,7 @@ export default function RevenueSection() {
           )}
           {error && (
             <div
-              style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+              style={{ background: `${COLORS.rust}15`, color: COLORS.dangerText }}
               className="text-xs font-semibold px-3 py-2 rounded-lg"
             >
               {error}
@@ -740,7 +692,7 @@ export default function RevenueSection() {
                 style={{ background: `${COLORS.rust}20` }}
                 className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
               >
-                <AlertTriangle size={18} color={COLORS.rust} />
+                <AlertTriangle size={18} style={{ color: COLORS.dangerText }} />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-primary">
@@ -760,8 +712,8 @@ export default function RevenueSection() {
                 return (
                   <div
                     key={cat.key}
-                    style={{ borderColor: COLORS.sandLine }}
-                    className="flex items-center gap-2 sm:gap-3 border rounded-lg px-2.5 sm:px-3 py-2 bg-white"
+                    style={{ borderColor: "rgb(var(--c-hairline))" }}
+                    className="flex items-center gap-2 sm:gap-3 border rounded-lg px-2.5 sm:px-3 py-2 bg-card"
                   >
                     {hasPhoto ? (
                       <img
@@ -770,11 +722,8 @@ export default function RevenueSection() {
                         className="w-9 h-9 rounded-lg object-cover shrink-0"
                       />
                     ) : (
-                      <div
-                        style={{ background: COLORS.night }}
-                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                      >
-                        <Icon size={14} color={COLORS.gold} />
+                      <div className="category-tile-icon !h-9 !w-9 !rounded-lg shrink-0 [&>svg]:!h-4 [&>svg]:!w-4">
+                        <Icon size={14} />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
@@ -788,7 +737,7 @@ export default function RevenueSection() {
                     <button
                       onClick={() => handleAddFeeConfig(cat)}
                       disabled={isBusy}
-                      style={{ background: COLORS.rust, color: "white" }}
+                      style={{ background: COLORS.rust, color: "rgb(var(--c-card))" }}
                       className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold px-2 sm:px-3 py-1.5 rounded-lg shrink-0 disabled:opacity-50"
                     >
                       {isBusy ? (
@@ -815,7 +764,7 @@ export default function RevenueSection() {
               style={{ background: `${COLORS.gold}15` }}
               className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Home size={18} color={COLORS.gold} />
+              <Home size={18} style={{ color: COLORS.goldTextText }} />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-primary">
@@ -830,7 +779,7 @@ export default function RevenueSection() {
             </div>
           </div>
           <EditHint lang={lang} accentColor={COLORS.gold} />
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-hairline">
             {listingFeeConfigs.map((c) => {
               const category = getCategory(c.key);
               const catLabel =
@@ -839,7 +788,6 @@ export default function RevenueSection() {
                 c.name ||
                 c.backendKey ||
                 c.key;
-              const isOrphan = !!c.orphan;
               const isDeleting = !!busy[`lf-del-${c.id}`];
               const isToggling = !!busy[`lf-toggle-${c.key}`];
               const isModeBusy = !!busy[`lf-mode-${c.key}`];
@@ -850,17 +798,6 @@ export default function RevenueSection() {
                     <p className="text-sm font-medium text-primary">
                       {catLabel}
                     </p>
-                    {isOrphan && (
-                      <span
-                        style={{
-                          background: "rgba(193,80,46,0.12)",
-                          color: COLORS.rust,
-                        }}
-                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                      >
-                        {t("BILA CATEGORY", "ORPHAN")}
-                      </span>
-                    )}
                     {c.backendKey && c.backendKey !== c.key && (
                       <span className="text-[10px] text-muted font-mono">
                         ({c.backendKey})
@@ -877,7 +814,7 @@ export default function RevenueSection() {
                         type="button"
                         onClick={() => handleDeleteFeeConfig(c)}
                         disabled={isDeleting || busy.saving}
-                        className="p-1.5 text-muted hover:text-[#C1502E] rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                        className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-danger/10 transition-colors disabled:opacity-50"
                       >
                         {isDeleting ? (
                           <Loader2 size={12} className="animate-spin" />
@@ -896,11 +833,11 @@ export default function RevenueSection() {
                       disabled={isModeBusy || isFlat === false}
                       className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
                       style={{
-                        background: !isFlat ? COLORS.gold : "white",
+                        background: !isFlat ? COLORS.gold : "rgb(var(--c-card))",
                         color: !isFlat
-                          ? COLORS.night
+                          ? "rgb(var(--c-night))"
                           : "var(--text-secondary)",
-                        borderColor: COLORS.sandLine,
+                        borderColor: "rgb(var(--c-hairline))",
                       }}
                     >
                       {t("Asilimia (%)", "Percentage (%)")}
@@ -911,11 +848,11 @@ export default function RevenueSection() {
                       disabled={isModeBusy || isFlat === true}
                       className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
                       style={{
-                        background: isFlat ? COLORS.gold : "white",
+                        background: isFlat ? COLORS.gold : "rgb(var(--c-card))",
                         color: isFlat
-                          ? COLORS.night
+                          ? "rgb(var(--c-night))"
                           : "var(--text-secondary)",
-                        borderColor: COLORS.sandLine,
+                        borderColor: "rgb(var(--c-hairline))",
                       }}
                     >
                       {t("Flat (TZS)", "Flat (TZS)")}
@@ -987,7 +924,7 @@ export default function RevenueSection() {
               style={{ background: `${COLORS.green}15` }}
               className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Clock size={18} color={COLORS.green} />
+              <Clock size={18} style={{ color: COLORS.successText }} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-primary">
@@ -1010,7 +947,7 @@ export default function RevenueSection() {
           {!reservationSettings.is_enabled && (
             <p
               className="text-xs text-center rounded-lg px-3 py-2 mb-3"
-              style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+              style={{ background: `${COLORS.rust}15`, color: COLORS.dangerText }}
             >
               {t(
                 "Reservation Fee imezimwa — tiers zote ni BURE kwa watumiaji.",
@@ -1027,7 +964,7 @@ export default function RevenueSection() {
               type="button"
               onClick={handleAddTier}
               disabled={!!busy["res-add-tier"]}
-              style={{ background: COLORS.gold, color: COLORS.night }}
+              style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
               className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["res-add-tier"] ? (
@@ -1043,7 +980,7 @@ export default function RevenueSection() {
               {t("Hakuna tiers.", "No tiers yet.")}
             </p>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-hairline">
               {reservationTiers.map((tier) => {
                 const isToggling = !!busy[`res-tier-t-${tier.id}`];
                 const isDeleting = !!busy[`res-tier-d-${tier.id}`];
@@ -1063,8 +1000,8 @@ export default function RevenueSection() {
                       {!tier.is_active && (
                         <span
                           style={{
-                            background: "rgba(16,26,46,0.08)",
-                            color: COLORS.night,
+                            background: "rgb(var(--c-ink) / 0.08)",
+                            color: COLORS.ink,
                           }}
                           className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                         >
@@ -1083,7 +1020,7 @@ export default function RevenueSection() {
                           type="button"
                           onClick={() => handleDeleteTier(tier)}
                           disabled={isDeleting}
-                          className="p-1.5 text-muted hover:text-[#C1502E] rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                          className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-danger/10 transition-colors disabled:opacity-50"
                         >
                           {isDeleting ? (
                             <Loader2 size={12} className="animate-spin" />
@@ -1134,7 +1071,7 @@ export default function RevenueSection() {
               style={{ background: `${COLORS.green}15` }}
               className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <TrendingUp size={18} color={COLORS.green} />
+              <TrendingUp size={18} style={{ color: COLORS.successText }} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-primary">
@@ -1202,7 +1139,7 @@ export default function RevenueSection() {
               style={{ background: `${COLORS.gold}15` }}
               className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Rocket size={18} color={COLORS.gold} />
+              <Rocket size={18} style={{ color: COLORS.goldTextText }} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-primary">
@@ -1222,7 +1159,7 @@ export default function RevenueSection() {
           {boostFee.loaded && !boostFee.enabled && (
             <p
               className="text-xs text-center rounded-lg px-3 py-2 mb-2"
-              style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+              style={{ background: `${COLORS.rust}15`, color: COLORS.dangerText }}
             >
               {t("Boost ni BURE kwa wote.", "Boost is FREE for everyone.")}
             </p>
@@ -1236,7 +1173,7 @@ export default function RevenueSection() {
               type="button"
               onClick={handleAddBoostPackage}
               disabled={!!busy["boost-add-pkg"]}
-              style={{ background: COLORS.gold, color: COLORS.night }}
+              style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
               className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["boost-add-pkg"] ? (
@@ -1252,7 +1189,7 @@ export default function RevenueSection() {
               {t("Hakuna boost packages.", "No boost packages.")}
             </p>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-hairline">
               {boostPackages.map((pkg) => (
                 <PackageRow
                   key={pkg.id}
@@ -1280,7 +1217,7 @@ export default function RevenueSection() {
               style={{ background: `${COLORS.rust}15` }}
               className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Search size={18} color={COLORS.rust} />
+              <Search size={18} style={{ color: COLORS.dangerText }} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-primary">
@@ -1305,7 +1242,7 @@ export default function RevenueSection() {
           {!leadingFee.is_enabled && (
             <p
               className="text-xs text-center rounded-lg px-3 py-2 mb-3"
-              style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+              style={{ background: `${COLORS.rust}15`, color: COLORS.dangerText }}
             >
               {t(
                 "Leading ni BURE kwa watumiaji wote.",
@@ -1322,7 +1259,7 @@ export default function RevenueSection() {
               type="button"
               onClick={handleAddLeadingPackage}
               disabled={!!busy["leading-add-pkg"]}
-              style={{ background: COLORS.gold, color: COLORS.night }}
+              style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
               className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["leading-add-pkg"] ? (
@@ -1338,7 +1275,7 @@ export default function RevenueSection() {
               {t("Hakuna packages.", "No packages yet.")}
             </p>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-hairline">
               {leadingPackages.map((pkg) => (
                 <PackageRow
                   key={pkg.id}
@@ -1366,7 +1303,7 @@ export default function RevenueSection() {
               style={{ background: `${COLORS.rust}15` }}
               className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Smartphone size={18} color={COLORS.rust} />
+              <Smartphone size={18} style={{ color: COLORS.dangerText }} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-primary">
@@ -1391,7 +1328,7 @@ export default function RevenueSection() {
           {!adFee.is_enabled && (
             <p
               className="text-xs text-center rounded-lg px-3 py-2 mb-3"
-              style={{ background: `${COLORS.rust}15`, color: COLORS.rust }}
+              style={{ background: `${COLORS.rust}15`, color: COLORS.dangerText }}
             >
               {t(
                 "Matangazo ni BURE kwa watumiaji wote.",
@@ -1408,7 +1345,7 @@ export default function RevenueSection() {
               type="button"
               onClick={handleAddAdvertisementPackage}
               disabled={!!busy["ad-add-pkg"]}
-              style={{ background: COLORS.gold, color: COLORS.night }}
+              style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
               className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["ad-add-pkg"] ? (
@@ -1424,7 +1361,7 @@ export default function RevenueSection() {
               {t("Hakuna packages.", "No packages yet.")}
             </p>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-hairline">
               {advertisementPackages.map((pkg) => (
                 <PackageRow
                   key={pkg.id}
@@ -1454,7 +1391,7 @@ export default function RevenueSection() {
             borderColor: `${COLORS.gold}30`,
           }}
         >
-          <Info size={16} color={COLORS.gold} className="shrink-0 mt-0.5" />
+          <Info size={16} style={{ color: COLORS.goldTextText }} className="shrink-0 mt-0.5" />
           <p className="text-xs text-secondary leading-relaxed">
             {t(
               "Bofya jina la package kuhariri. Bofya kiasi kuhariri bei. Toggle kuwasha/kuzima.",

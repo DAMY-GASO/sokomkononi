@@ -1,15 +1,9 @@
 // ============================================================
 // shared/revenue.js
-// Chanzo KIMOJA cha ukweli cha mapato ya jukwaa zima:
-//   GET /api/finance/dashboard/?period=all
-// Jumla na kila njia ya mapato vinatoka kwenye jibu moja, kwa hiyo
-// haviwezi kutofautiana. Overview na Reports zinatumia hook hii hii.
 // ============================================================
 import { useEffect, useState } from "react";
 import { financeApi } from "../../../../api/finance.js";
 
-// key = ufunguo wa ndani, field = jina la field kwenye jibu la backend.
-// `optional`: inaonyeshwa tu ikiwa backend imeituma.
 export const REVENUE_STREAMS = [
   { key: "listing", label: "Listing Fee", field: "listing_fee_revenue" },
   { key: "reservation", label: "Reservation", field: "reservation_revenue" },
@@ -86,7 +80,7 @@ export function isRevenueTransaction(t) {
   return !!t && t.status === "completed" && PLATFORM_FEE_TYPES.includes(t.type);
 }
 
-/** Ufunguo wa siku kwa saa za ndani ya kifaa (YYYY-MM-DD), si UTC. */
+
 export function localDayKey(date) {
   const d = date instanceof Date ? date : new Date(date);
   const m = String(d.getMonth() + 1).padStart(2, "0");

@@ -43,11 +43,11 @@ const CONFIG = {
 };
 
 const TONES = {
-  success: "bg-[#2F6D4F]/10 text-[#2F6D4F] border-[#2F6D4F]/25",
-  warn:    "bg-[#B45309]/10 text-[#B45309] border-[#B45309]/25",
-  danger:  "bg-[#C1502E]/10 text-[#C1502E] border-[#C1502E]/25",
-  gold:    "bg-[#FEA406]/20 text-[#A35F00] border-[#FEA406]/30",
-  royal:   "bg-[#0062FD]/10 text-[#0062FD] border-[#0062FD]/25",
+  success: "bg-[#2F6D4F]/10 text-[color:rgb(var(--c-success-text))] border-[#2F6D4F]/25",
+  warn:    "bg-[#B45309]/10 text-[color:rgb(var(--c-warning-text))] border-[#B45309]/25",
+  danger:  "bg-[#C1502E]/10 text-[color:rgb(var(--c-danger-text))] border-[#C1502E]/25",
+  gold:    "bg-[#FEA406]/20 text-[color:rgb(var(--c-gold-ink))] border-[#FEA406]/30",
+  royal:   "bg-[#0062FD]/10 text-[color:rgb(var(--c-link))] border-[#0062FD]/25",
   muted:   "bg-[color:rgb(var(--c-hairline))]/60 text-secondary border-[color:rgb(var(--c-hairline))]",
 };
 

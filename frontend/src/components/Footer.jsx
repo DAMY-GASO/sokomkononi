@@ -37,7 +37,7 @@ function PayLogo({ payment }) {
     return (
       <span
         title={payment.label}
-        className="flex h-8 items-center justify-center rounded px-2 text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm"
+        className="keep-light flex h-8 items-center justify-center rounded px-2 text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm"
         style={{ background: payment.fallbackBg, color: payment.fallbackFg, minWidth: 60 }}
       >
         {payment.label}

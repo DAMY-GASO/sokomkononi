@@ -48,6 +48,52 @@ import {
 } from "../../../../config/auditLogsStore.js";
 
 // ============================================================
+// LOCALIZED LOG TEXT
+// `target` na `details` zinaweza kuja kwa njia hizi (zote zinaungwa mkono):
+//   1. object:        details: { sw: "...", en: "..." }
+//   2. sehemu mbili:  details + detailsEn  (au details_en / detailsSw / details_sw)
+//   3. string moja:   details: "..."  → inaonyeshwa kama ilivyo (haiwezi kutafsiriwa
+//      kwenye frontend; backend inapaswa kutuma matoleo mawili au object)
+// ============================================================
+// Logs za zamani za mfumo wenyewe (audit.deleted / audit.cleared) ziliandikwa kwa lugha moja
+// kabla ya `details_sw/details_en` kuwepo — hizi tunazitafsiri hapa kutoka kwenye muundo wake.
+function legacyDetails(log, lang) {
+  const raw = typeof log?.details === "string" ? log.details : "";
+  if (!raw) return "";
+  if (log.action === "audit.deleted") {
+    const m = raw.match(/^Deleted log: action=(\S+) admin=(.*)$/s);
+    if (m) {
+      const label = AUDIT_ACTIONS.find((a) => a.key === m[1])?.label;
+      const name = label?.[lang] || m[1];
+      return lang === "sw"
+        ? `Log imefutwa: kitendo=${name} msimamizi=${m[2]}`
+        : `Deleted log: action=${name} admin=${m[2]}`;
+    }
+  }
+  if (log.action === "audit.cleared") {
+    const m = raw.match(/^Cleared (\d+) audit logs\.?$/);
+    if (m) {
+      return lang === "sw" ? `Logs ${m[1]} zimefutwa.` : `Cleared ${m[1]} audit logs.`;
+    }
+  }
+  return "";
+}
+
+function pickText(log, field, lang) {
+  if (!log) return "";
+  const v = log[field];
+  if (v && typeof v === "object") return v[lang] || v.sw || v.en || "";
+  const sw = log[`${field}Sw`] ?? log[`${field}_sw`];
+  const en = log[`${field}En`] ?? log[`${field}_en`];
+  if (!sw && !en && field === "details") {
+    const legacy = legacyDetails(log, lang);
+    if (legacy) return legacy;
+  }
+  if (lang === "en") return en || v || sw || "";
+  return sw || v || en || "";
+}
+
+// ============================================================
 // ACTION ICONS
 // ============================================================
 const ACTION_ICONS = {
@@ -118,9 +164,9 @@ const ACTION_ICONS = {
 };
 
 const ACTION_COLORS = {
-  green: { bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
-  rust: { bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
-  gold: { bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
+  green: { bg: "rgba(47,109,79,0.12)", fg: COLORS.successText },
+  rust: { bg: "rgba(193,80,46,0.12)", fg: COLORS.dangerText },
+  gold: { bg: "rgba(254,164,6,0.16)", fg: COLORS.goldText },
 };
 
 // ============================================================
@@ -132,7 +178,7 @@ function ConfirmModal({ open, title, description, confirmLabel, danger, busy, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+      <div className="bg-card rounded-2xl max-w-sm w-full p-6">
         <div className="text-center mb-5">
           <div
             style={{
@@ -140,7 +186,7 @@ function ConfirmModal({ open, title, description, confirmLabel, danger, busy, on
             }}
             className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
           >
-            <AlertTriangle size={26} color={danger ? COLORS.rust : COLORS.gold} />
+            <AlertTriangle size={26} style={{ color: danger ? COLORS.dangerText : COLORS.goldText }} />
           </div>
           <h3 className="text-lg font-bold text-primary">{title}</h3>
           <p className="text-sm text-secondary mt-2">{description}</p>
@@ -150,7 +196,7 @@ function ConfirmModal({ open, title, description, confirmLabel, danger, busy, on
           <button
             onClick={onClose}
             disabled={busy}
-            className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+            className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
           >
             {t("Ghairi", "Cancel")}
           </button>
@@ -159,7 +205,7 @@ function ConfirmModal({ open, title, description, confirmLabel, danger, busy, on
             disabled={busy}
             style={{
               background: danger ? COLORS.rust : COLORS.gold,
-              color: danger ? "white" : COLORS.night,
+              color: danger ? "white" : "rgb(var(--c-night))",
             }}
             className="flex-1 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-1.5"
           >
@@ -206,15 +252,15 @@ function LogDetailModal({ log, lang, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-lg w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+      <div className="bg-card rounded-t-2xl sm:rounded-2xl max-w-lg w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 p-4 sm:p-5 flex items-start justify-between gap-3">
+        <div className="sticky top-0 bg-card border-b border-hairline p-4 sm:p-5 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div
               style={{ background: colors.bg }}
               className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Icon size={18} color={colors.fg} />
+              <Icon size={18} style={{ color: colors.fg }} />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-primary truncate">
@@ -251,26 +297,26 @@ function LogDetailModal({ log, lang, onClose }) {
           />
 
           {/* Target */}
-          {log.target && (
+          {pickText(log, "target", lang) && (
             <Field
               icon={Tag}
               label={t("Kitu", "Target")}
-              value={`${log.target}${log.targetId ? ` #${log.targetId}` : ""}`}
+              value={`${pickText(log, "target", lang)}${log.targetId ? ` #${log.targetId}` : ""}`}
             />
           )}
 
           {/* Details */}
-          {log.details && (
+          {pickText(log, "details", lang) && (
             <div>
               <p className="text-[10px] font-semibold text-muted uppercase mb-1 flex items-center gap-1">
                 <FileText size={11} />
                 {t("Maelezo", "Details")}
               </p>
               <div
-                style={{ background: COLORS.sand, borderColor: COLORS.sandLine }}
+                style={{ background: "rgb(var(--c-page))", borderColor: "rgb(var(--c-hairline))" }}
                 className="rounded-lg border p-3 text-xs text-primary leading-relaxed break-words whitespace-pre-wrap"
               >
-                {log.details}
+                {pickText(log, "details", lang)}
               </div>
             </div>
           )}
@@ -369,14 +415,14 @@ export default function AuditLogsSection() {
       result = result.filter(
         (l) =>
           l.adminName?.toLowerCase().includes(q) ||
-          l.target?.toLowerCase().includes(q) ||
-          l.details?.toLowerCase().includes(q) ||
+          pickText(l, "target", lang).toLowerCase().includes(q) ||
+          pickText(l, "details", lang).toLowerCase().includes(q) ||
           l.action?.toLowerCase().includes(q)
       );
     }
 
     return result;
-  }, [logs, actionFilter, query]);
+  }, [logs, actionFilter, query, lang]);
 
   // ============================================================
   // HANDLERS
@@ -455,7 +501,7 @@ export default function AuditLogsSection() {
         <div
           style={{
             background: "rgba(193,80,46,0.1)",
-            color: COLORS.rust,
+            color: COLORS.dangerText,
           }}
           className="text-xs font-semibold px-3 py-2 rounded-lg mb-4"
         >
@@ -465,14 +511,14 @@ export default function AuditLogsSection() {
 
       {/* Summary + Clear All */}
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
         className="rounded-xl border p-3 sm:p-4 mb-5 flex items-start gap-3 flex-wrap w-full min-w-0"
       >
         <div
-          style={{ background: `${COLORS.night}0D` }}
+          style={{ background: "rgb(var(--c-ink) / 0.08)" }}
           className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
         >
-          <History size={16} color={COLORS.night} />
+          <History size={16} style={{ color: COLORS.ink }} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-primary break-words">
@@ -489,7 +535,7 @@ export default function AuditLogsSection() {
           <button
             onClick={() => setConfirmClear(true)}
             disabled={busy.clearAll}
-            style={{ color: COLORS.rust }}
+            style={{ color: COLORS.dangerText }}
             className="flex items-center gap-1 text-xs font-semibold shrink-0 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {busy.clearAll ? (
@@ -507,13 +553,9 @@ export default function AuditLogsSection() {
         <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
           <button
             onClick={() => setActionFilter("all")}
-            style={{
-              background: actionFilter === "all" ? COLORS.night : "white",
-              color:
-                actionFilter === "all" ? COLORS.sand : "var(--text-primary)",
-              borderColor: COLORS.sandLine,
-            }}
-            className="text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
+            className={`text-xs font-semibold px-3 py-1.5 rounded-full border border-hairline whitespace-nowrap shrink-0 ${
+              actionFilter === "all" ? "chip-active" : "bg-card text-primary"
+            }`}
           >
             {t("Zote", "All")} ({actionCounts.all})
           </button>
@@ -521,16 +563,9 @@ export default function AuditLogsSection() {
             <button
               key={action.key}
               onClick={() => setActionFilter(action.key)}
-              style={{
-                background:
-                  actionFilter === action.key ? COLORS.night : "white",
-                color:
-                  actionFilter === action.key
-                    ? COLORS.sand
-                    : "var(--text-primary)",
-                borderColor: COLORS.sandLine,
-              }}
-              className="text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
+              className={`text-xs font-semibold px-3 py-1.5 rounded-full border border-hairline whitespace-nowrap shrink-0 ${
+                actionFilter === action.key ? "chip-active" : "bg-card text-primary"
+              }`}
             >
               {action.label?.[lang] || action.label?.sw} (
               {actionCounts[action.key]})
@@ -549,7 +584,7 @@ export default function AuditLogsSection() {
               "Tafuta kwa admin, target, au maelezo...",
               "Search by admin, target, or details..."
             )}
-            className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+            className="smk-inline-search w-full rounded-lg border border-hairline bg-card pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
             style={{ WebkitAppearance: "none" }}
           />
           <Search size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -559,7 +594,7 @@ export default function AuditLogsSection() {
       {/* List */}
       {filtered.length === 0 ? (
         <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
           className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
         >
           <History size={40} className="mx-auto text-muted mb-3" />
@@ -593,22 +628,22 @@ export default function AuditLogsSection() {
             return (
               <div
                 key={log.id}
-                style={{ borderColor: COLORS.sandLine, background: "white" }}
+                style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
                 className="rounded-xl border p-3 sm:p-4 flex items-start gap-2 sm:gap-3 w-full max-w-full min-w-0 overflow-hidden"
               >
                 <div
-                  style={{ background: colors?.bg || "#F5F3EC" }}
+                  style={{ background: colors?.bg || "rgb(var(--c-page))" }}
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0"
                 >
-                  <ActionIcon size={15} color={colors.fg} />
+                  <ActionIcon size={15} style={{ color: colors.fg }} />
                 </div>
 
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span
                       style={{
-                        background: colors?.bg || "#F5F3EC",
-                        color: colors?.fg || "#101A2E",
+                        background: colors?.bg || "rgb(var(--c-page))",
+                        color: colors?.fg || COLORS.ink,
                       }}
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
                     >
@@ -621,12 +656,12 @@ export default function AuditLogsSection() {
                   </div>
 
                   <p className="text-sm text-primary font-medium break-words">
-                    {log.target}
+                    {pickText(log, "target", lang)}
                   </p>
 
-                  {log.details && (
+                  {pickText(log, "details", lang) && (
                     <p className="text-xs text-secondary mt-1 leading-relaxed break-words line-clamp-2">
-                      {log.details}
+                      {pickText(log, "details", lang)}
                     </p>
                   )}
 
@@ -640,7 +675,7 @@ export default function AuditLogsSection() {
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => setDetailLog(log)}
-                    className="p-1.5 text-muted hover:text-[#2F6D4F] transition-colors"
+                    className="p-1.5 text-muted hover:text-success transition-colors"
                     aria-label={t("Fungua", "Open")}
                     title={t("Fungua", "Open")}
                   >
@@ -649,7 +684,7 @@ export default function AuditLogsSection() {
                   <button
                     onClick={() => setConfirmDelete(log)}
                     disabled={isBusy}
-                    className="p-1.5 text-muted hover:text-[#C1502E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1.5 text-muted hover:text-danger transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label={t("Futa", "Delete")}
                     title={t("Futa", "Delete")}
                   >

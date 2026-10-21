@@ -1,16 +1,10 @@
 // ============================================================
 // AnnouncementsPanel.jsx
-// System/Marketplace announcements — Admin.
 // Bilingual + mobile-responsive + Async actions na rollback.
-//
-// Marekebisho:
-//  - lg:col-span-3 imeondolewa (parent inashughulikia layout)
-//  - `busy` na `error` state zinafanya kazi vizuri
-//  - scheduledFor inaonyeshwa kwenye list
 // ============================================================
 
 import React, { useState } from "react";
-import { Megaphone, Plus, Trash2, Loader2, Calendar } from "lucide-react";
+import { Megaphone, Plus, Trash2, Loader2 } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 import {
@@ -124,15 +118,15 @@ export default function AnnouncementsPanel() {
   const canSend = form.title.trim() && form.message.trim() && !busy.sending;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-4 w-full min-w-0">
+    <div className="bg-card rounded-xl border border-hairline p-4 sm:p-5 flex flex-col gap-4 w-full min-w-0">
       {/* Header */}
       <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           <div
-            style={{ background: `${COLORS.night}0D` }}
+            style={{ background: "rgb(var(--c-ink) / 0.08)" }}
             className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
           >
-            <Megaphone size={16} color={COLORS.night} />
+            <Megaphone size={16} style={{ color: COLORS.ink }} />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-primary">
@@ -168,7 +162,7 @@ export default function AnnouncementsPanel() {
         <div
           style={{
             background: "rgba(193,80,46,0.1)",
-            color: COLORS.rust,
+            color: COLORS.dangerText,
           }}
           className="text-xs font-semibold px-3 py-2 rounded-lg"
         >
@@ -179,8 +173,7 @@ export default function AnnouncementsPanel() {
       {/* Form */}
       {expanded && (
         <div
-          style={{ borderColor: COLORS.sandLine }}
-          className="border rounded-xl p-3 sm:p-4 flex flex-col gap-3"
+          className="border border-hairline rounded-xl p-3 sm:p-4 flex flex-col gap-3"
         >
           {/* Type */}
           <div>
@@ -196,12 +189,9 @@ export default function AnnouncementsPanel() {
                     type="button"
                     onClick={() => setForm({ ...form, typeId: ty.id })}
                     disabled={busy.sending}
-                    style={{
-                      background: isActive ? COLORS.night : "white",
-                      color: isActive ? COLORS.sand : "var(--text-primary)",
-                      borderColor: COLORS.sandLine,
-                    }}
-                    className="text-[10px] sm:text-[11px] font-semibold px-2 sm:px-2.5 py-1 rounded-full border whitespace-nowrap transition-colors disabled:opacity-50"
+                    className={`text-[10px] sm:text-[11px] font-semibold px-2 sm:px-2.5 py-1 rounded-full border border-hairline whitespace-nowrap transition-colors disabled:opacity-50 ${
+                      isActive ? "chip-active" : "bg-card text-primary"
+                    }`}
                   >
                     {typeof ty.label === "string"
                       ? ty.label
@@ -222,7 +212,7 @@ export default function AnnouncementsPanel() {
                 : "Announcement title (SW)"
             }
             disabled={busy.sending}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="input"
           />
 
           {/* Title EN */}
@@ -235,7 +225,7 @@ export default function AnnouncementsPanel() {
                 : "Announcement title (EN) — optional"
             }
             disabled={busy.sending}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+            className="input"
           />
 
           {/* Message SW */}
@@ -247,7 +237,7 @@ export default function AnnouncementsPanel() {
             }
             rows={3}
             disabled={busy.sending}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none resize-none focus:border-[#FEA406] disabled:opacity-50"
+            className="textarea resize-none"
           />
 
           {/* Message EN */}
@@ -261,31 +251,30 @@ export default function AnnouncementsPanel() {
             }
             rows={3}
             disabled={busy.sending}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none resize-none focus:border-[#FEA406] disabled:opacity-50"
+            className="textarea resize-none"
           />
 
-                    {/* Schedule */}
+          {/* Schedule — calendar moja tu: ya browser (inafunguka kwa kubonyeza popote kwenye field) */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <label className="text-xs text-secondary shrink-0 flex items-center gap-1">
-              <Calendar size={12} />
+            <label
+              htmlFor="announcement-schedule"
+              className="text-xs text-secondary shrink-0"
+            >
               {lang === "sw" ? "Ratiba (hiari):" : "Schedule (optional):"}
             </label>
-            <div className="relative flex-1 min-w-0">
-              <input
-                type="datetime-local"
-                value={form.scheduledFor}
-                onChange={(e) =>
-                  setForm({ ...form, scheduledFor: e.target.value })
-                }
-                disabled={busy.sending}
-                className="border border-gray-200 rounded-lg px-3 py-2 pr-9 text-xs outline-none w-full focus:border-[#FEA406] disabled:opacity-50 cursor-pointer"
-                style={{ colorScheme: "light dark" }}
-              />
-              <Calendar
-                size={14}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
-              />
-            </div>
+            <input
+              id="announcement-schedule"
+              type="datetime-local"
+              value={form.scheduledFor}
+              onChange={(e) =>
+                setForm({ ...form, scheduledFor: e.target.value })
+              }
+              onClick={(e) => {
+                try { e.currentTarget.showPicker?.(); } catch { /* noop */ }
+              }}
+              disabled={busy.sending}
+              className="input flex-1 min-w-0 cursor-pointer"
+            />
           </div>
 
           {/* Submit */}
@@ -293,7 +282,7 @@ export default function AnnouncementsPanel() {
             onClick={handleSend}
             disabled={!canSend}
             style={{
-              background: canSend ? COLORS.green : COLORS.sandLine,
+              background: canSend ? COLORS.green : "rgb(var(--c-hairline))",
               color: canSend ? "white" : "var(--text-muted)",
             }}
             className="flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2 w-full sm:w-auto sm:self-start transition-colors disabled:cursor-not-allowed"
@@ -321,15 +310,14 @@ export default function AnnouncementsPanel() {
           return (
             <div
               key={a.id}
-              style={{ borderColor: COLORS.sandLine }}
-              className="flex items-start justify-between gap-3 border rounded-lg px-3 sm:px-4 py-3 min-w-0"
+              className="flex items-start justify-between gap-3 border border-hairline rounded-lg px-3 sm:px-4 py-3 min-w-0"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span
                     style={{
                       background: `${COLORS.gold}15`,
-                      color: COLORS.gold,
+                      color: COLORS.goldText,
                     }}
                     className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
                   >
@@ -339,7 +327,7 @@ export default function AnnouncementsPanel() {
                     <span
                       style={{
                         background: `${COLORS.green}15`,
-                        color: COLORS.green,
+                        color: COLORS.successText,
                       }}
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                     >
@@ -350,8 +338,8 @@ export default function AnnouncementsPanel() {
                   {a.sent && (
                     <span
                       style={{
-                        background: `${COLORS.night}0D`,
-                        color: COLORS.night,
+                        background: "rgb(var(--c-ink) / 0.08)",
+                        color: COLORS.ink,
                       }}
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                     >
@@ -374,7 +362,7 @@ export default function AnnouncementsPanel() {
               <button
                 onClick={() => handleRemove(a.id)}
                 disabled={isRemoving}
-                className="text-muted hover:text-[#C1502E] shrink-0 p-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="text-muted hover:text-danger shrink-0 p-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label={lang === "sw" ? "Ondoa" : "Remove"}
               >
                 {isRemoving ? (

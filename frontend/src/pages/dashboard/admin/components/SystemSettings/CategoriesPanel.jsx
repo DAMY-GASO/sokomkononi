@@ -421,15 +421,15 @@ export default function CategoriesPanel() {
   // RENDER
   // ══════════════════════════════════════════════════════════
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-4 lg:col-span-3">
+    <div className="bg-card rounded-xl border border-hairline p-4 sm:p-5 flex flex-col gap-4 lg:col-span-3">
       {/* Header */}
       <div className="flex items-start sm:items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           <div
-            style={{ background: `${COLORS.night}0D` }}
+            style={{ background: "rgb(var(--c-ink) / 0.08)" }}
             className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
           >
-            <ShoppingBag size={16} color={COLORS.night} />
+            <ShoppingBag size={16} style={{ color: COLORS.ink }} />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-primary">
@@ -449,7 +449,7 @@ export default function CategoriesPanel() {
             setError("");
           }}
           disabled={adding || !!editing || busy.saving}
-          style={{ background: COLORS.gold, color: COLORS.night }}
+          style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
           className="flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-2 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus size={13} /> {lang === "sw" ? "Category Mpya" : "New Category"}
@@ -459,7 +459,7 @@ export default function CategoriesPanel() {
       {/* Error banner */}
       {error && (
         <div
-          style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
+          style={{ background: "rgba(193,80,46,0.1)", color: COLORS.dangerText }}
           className="text-xs font-semibold px-3 py-2 rounded-lg"
         >
           {error}
@@ -475,7 +475,7 @@ export default function CategoriesPanel() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t("Tafuta category...", "Search category...")}
-              className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-16 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
+              className="smk-inline-search w-full rounded-lg border border-hairline bg-card pl-3 pr-16 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
               style={{ WebkitAppearance: "none" }}
             />
             {query && (
@@ -498,12 +498,9 @@ export default function CategoriesPanel() {
                 <button
                   key={tab.key}
                   onClick={() => setFilterTab(tab.key)}
-                  style={{
-                    background: isActive ? COLORS.night : "white",
-                    color: isActive ? COLORS.sand : "var(--text-primary)",
-                    borderColor: COLORS.sandLine,
-                  }}
-                  className="text-[11px] font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
+                  className={`text-[11px] font-semibold px-3 py-2 rounded-full border border-hairline whitespace-nowrap shrink-0 ${
+                    isActive ? "chip-active" : "bg-card text-primary"
+                  }`}
                 >
                   {tab.label?.[lang] || tab.label?.sw}
                 </button>
@@ -526,8 +523,8 @@ export default function CategoriesPanel() {
             <button
               onClick={handleBulkEnable}
               disabled={bulkBusy}
-              style={{ color: COLORS.green, borderColor: COLORS.sandLine }}
-              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-white disabled:opacity-50 flex items-center gap-1"
+              style={{ color: COLORS.successText, borderColor: "rgb(var(--c-hairline))" }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-card disabled:opacity-50 flex items-center gap-1"
             >
               {bulkBusy ? <Loader2 size={11} className="animate-spin" /> : <Eye size={11} />}
               {t("Washa", "Enable")}
@@ -535,8 +532,8 @@ export default function CategoriesPanel() {
             <button
               onClick={handleBulkDisable}
               disabled={bulkBusy}
-              style={{ color: COLORS.rust, borderColor: COLORS.sandLine }}
-              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-white disabled:opacity-50 flex items-center gap-1"
+              style={{ color: COLORS.dangerText, borderColor: "rgb(var(--c-hairline))" }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-card disabled:opacity-50 flex items-center gap-1"
             >
               {bulkBusy ? <Loader2 size={11} className="animate-spin" /> : <EyeOff size={11} />}
               {t("Zima", "Disable")}
@@ -544,8 +541,8 @@ export default function CategoriesPanel() {
             <button
               onClick={handleBulkMarkPopular}
               disabled={bulkBusy}
-              style={{ color: COLORS.gold, borderColor: COLORS.sandLine }}
-              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-white disabled:opacity-50 flex items-center gap-1"
+              style={{ color: COLORS.goldText, borderColor: "rgb(var(--c-hairline))" }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-card disabled:opacity-50 flex items-center gap-1"
             >
               {bulkBusy ? <Loader2 size={11} className="animate-spin" /> : <Star size={11} />}
               {t("Weka Popular", "Mark Popular")}
@@ -553,16 +550,16 @@ export default function CategoriesPanel() {
             <button
               onClick={handleBulkUnmarkPopular}
               disabled={bulkBusy}
-              style={{ color: COLORS.night, borderColor: COLORS.sandLine }}
-              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-white disabled:opacity-50"
+              style={{ color: COLORS.ink, borderColor: "rgb(var(--c-hairline))" }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-card disabled:opacity-50"
             >
               {t("Ondoa Popular", "Unmark")}
             </button>
             <button
               onClick={() => setConfirmBulkDelete(true)}
               disabled={bulkBusy}
-              style={{ color: COLORS.rust, borderColor: COLORS.sandLine }}
-              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-white disabled:opacity-50 flex items-center gap-1"
+              style={{ color: COLORS.dangerText, borderColor: "rgb(var(--c-hairline))" }}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-md border bg-card disabled:opacity-50 flex items-center gap-1"
             >
               {bulkBusy ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
               {t("Futa", "Delete")}
@@ -621,8 +618,7 @@ export default function CategoriesPanel() {
       <div className="flex flex-col gap-2">
         {filteredCategories.length === 0 && !adding && (
           <div
-            style={{ borderColor: COLORS.sandLine, background: "white" }}
-            className="rounded-2xl border-2 border-dashed p-8 text-center"
+            className="rounded-2xl border-2 border-dashed border-hairline bg-card p-8 text-center"
           >
             <ShoppingBag size={40} className="mx-auto text-muted mb-3" />
             <h3 className="font-semibold text-primary mb-1">
@@ -670,8 +666,8 @@ export default function CategoriesPanel() {
             <div
               key={cat.key}
               style={{
-                borderColor: isSelected ? COLORS.gold : COLORS.sandLine,
-                background: isSelected ? `${COLORS.gold}08` : "white",
+                borderColor: isSelected ? COLORS.gold : "rgb(var(--c-hairline))",
+                background: isSelected ? `${COLORS.gold}08` : "rgb(var(--c-card))",
               }}
               className="border rounded-lg overflow-hidden"
             >
@@ -682,7 +678,7 @@ export default function CategoriesPanel() {
                   disabled={isAnyBusy}
                   className="shrink-0 self-start sm:self-center p-0.5 disabled:opacity-50"
                   aria-label={t("Chagua", "Select")}
-                  style={{ color: isSelected ? COLORS.gold : "var(--text-muted)" }}
+                  style={{ color: isSelected ? COLORS.goldText : "var(--text-muted)" }}
                 >
                   {isSelected ? (
                     <CheckSquare size={18} />
@@ -697,7 +693,7 @@ export default function CategoriesPanel() {
                     onClick={() => handleMove(cat.key, "up")}
                     disabled={isAnyBusy || isFirst || !!query || filterTab !== "all"}
                     className="w-7 h-7 rounded-md border flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
-                    style={{ borderColor: COLORS.sandLine }}
+                    style={{ borderColor: "rgb(var(--c-hairline))" }}
                     title={lang === "sw" ? "Pandisha juu" : "Move up"}
                   >
                     <ChevronUp size={12} />
@@ -706,7 +702,7 @@ export default function CategoriesPanel() {
                     onClick={() => handleMove(cat.key, "down")}
                     disabled={isAnyBusy || isLast || !!query || filterTab !== "all"}
                     className="w-7 h-7 rounded-md border flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
-                    style={{ borderColor: COLORS.sandLine }}
+                    style={{ borderColor: "rgb(var(--c-hairline))" }}
                     title={lang === "sw" ? "Shusha chini" : "Move down"}
                   >
                     <ChevronDown size={12} />
@@ -722,11 +718,8 @@ export default function CategoriesPanel() {
                       className="w-10 h-10 rounded-lg object-cover shrink-0"
                     />
                   ) : (
-                    <div
-                      style={{ background: COLORS.night }}
-                      className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                    >
-                      <Icon size={15} color={COLORS.gold} />
+                    <div className="category-tile-icon !h-10 !w-10 !rounded-lg shrink-0 [&>svg]:!h-4 [&>svg]:!w-4">
+                      <Icon size={15} />
                     </div>
                   )}
 
@@ -740,8 +733,8 @@ export default function CategoriesPanel() {
                       </span>
                       <span
                         style={{
-                          background: `${COLORS.night}0D`,
-                          color: COLORS.night,
+                          background: "rgb(var(--c-ink) / 0.08)",
+                          color: COLORS.ink,
                         }}
                         className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
                       >
@@ -751,7 +744,7 @@ export default function CategoriesPanel() {
                         <span
                           style={{
                             background: `${COLORS.gold}20`,
-                            color: COLORS.gold,
+                            color: COLORS.goldText,
                           }}
                           className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
                         >
@@ -762,7 +755,7 @@ export default function CategoriesPanel() {
                         <span
                           style={{
                             background: `${COLORS.rust}20`,
-                            color: COLORS.rust,
+                            color: COLORS.dangerText,
                           }}
                           className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
                         >
@@ -790,8 +783,8 @@ export default function CategoriesPanel() {
                     disabled={isAnyBusy}
                     className="text-[11px] font-semibold px-2 py-1.5 rounded-md border text-center flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
-                      color: cat.active === false ? COLORS.green : COLORS.rust,
-                      borderColor: COLORS.sandLine,
+                      color: cat.active === false ? COLORS.successText : COLORS.dangerText,
+                      borderColor: "rgb(var(--c-hairline))",
                     }}
                   >
                     {isTogglingActive && (
@@ -810,8 +803,8 @@ export default function CategoriesPanel() {
                     disabled={isAnyBusy}
                     className="text-[11px] font-semibold px-2 py-1.5 rounded-md border text-center flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
-                      color: cat.isPopular ? COLORS.rust : COLORS.green,
-                      borderColor: COLORS.sandLine,
+                      color: cat.isPopular ? COLORS.dangerText : COLORS.successText,
+                      borderColor: "rgb(var(--c-hairline))",
                     }}
                   >
                     {isTogglingPopular && (
@@ -835,7 +828,7 @@ export default function CategoriesPanel() {
                     className="text-[11px] font-semibold px-2 py-1.5 rounded-md border text-center disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       color: "var(--text-primary)",
-                      borderColor: COLORS.sandLine,
+                      borderColor: "rgb(var(--c-hairline))",
                     }}
                   >
                     {isEditing
@@ -851,8 +844,8 @@ export default function CategoriesPanel() {
                     disabled={isAnyBusy}
                     className="text-[11px] font-semibold px-2 py-1.5 rounded-md border text-center flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
-                      color: COLORS.rust,
-                      borderColor: COLORS.sandLine,
+                      color: COLORS.dangerText,
+                      borderColor: "rgb(var(--c-hairline))",
                     }}
                     aria-label={lang === "sw" ? "Futa" : "Delete"}
                   >
@@ -890,13 +883,13 @@ export default function CategoriesPanel() {
       {/* Bulk delete confirm modal */}
       {confirmBulkDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6">
+          <div className="bg-card rounded-2xl max-w-sm w-full p-6">
             <div className="text-center mb-5">
               <div
                 style={{ background: `${COLORS.rust}15` }}
                 className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
               >
-                <AlertTriangle size={26} color={COLORS.rust} />
+                <AlertTriangle size={26} style={{ color: COLORS.dangerText }} />
               </div>
               <h3 className="text-lg font-bold text-primary">
                 {t("Futa Categories Hizi?", "Delete These Categories?")}
@@ -912,7 +905,7 @@ export default function CategoriesPanel() {
               <button
                 onClick={() => setConfirmBulkDelete(false)}
                 disabled={bulkBusy}
-                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
+                className="flex-1 py-2.5 border border-hairline rounded-lg text-sm font-semibold text-secondary disabled:opacity-50"
               >
                 {t("Ghairi", "Cancel")}
               </button>

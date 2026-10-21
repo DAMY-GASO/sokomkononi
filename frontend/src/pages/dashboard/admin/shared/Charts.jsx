@@ -1,4 +1,5 @@
 import React from "react";
+import { toneText } from "./constants.js";
 
 /* ============================================================
    Lightweight SVG chart components — no external dependencies.
@@ -269,7 +270,7 @@ export function LineChart({
             cx={p.x}
             cy={p.y}
             r="3"
-            fill="rgb(var(--c-card))"
+            style={{ fill: "rgb(var(--c-card))" }}
             stroke={color}
             strokeWidth="2"
           />
@@ -295,7 +296,7 @@ export function MiniRow({ rank, label, value, sub, color = "#FEA406" }) {
           className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[11px] font-bold"
           style={{
             background: `${color}20`,
-            color,
+            color: toneText(color),
           }}
         >
           {rank}

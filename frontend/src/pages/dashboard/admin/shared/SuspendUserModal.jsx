@@ -20,14 +20,14 @@ export default function SuspendUserModal({ user, onClose, onConfirm, busy }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="flex items-start justify-between gap-3 p-5 border-b border-gray-100">
+      <div className="relative bg-card rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-start justify-between gap-3 p-5 border-b border-hairline">
           <div className="flex items-start gap-3">
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
               style={{ background: "rgba(193,80,46,0.12)" }}
             >
-              <Ban size={18} color={COLORS.rust} />
+              <Ban size={18} style={{ color: COLORS.dangerText }} />
             </div>
             <div>
               <h3 className="text-base font-bold text-primary">
@@ -47,7 +47,7 @@ export default function SuspendUserModal({ user, onClose, onConfirm, busy }) {
         </div>
 
         <div className="p-5 space-y-4">
-          <div className="rounded-lg bg-sand border border-sandline p-3">
+          <div className="rounded-lg bg-page border border-hairline p-3">
             <p className="text-xs font-semibold text-primary">
               {t("Mtumiaji:", "User:")}
             </p>
@@ -58,7 +58,7 @@ export default function SuspendUserModal({ user, onClose, onConfirm, busy }) {
           <div>
             <label className="block text-xs font-semibold text-primary mb-1.5">
               {t("Sababu ya kusimamisha", "Reason for suspension")}{" "}
-              <span style={{ color: COLORS.rust }}>*</span>
+              <span style={{ color: COLORS.dangerText }}>*</span>
             </label>
             <textarea
               value={reason}
@@ -68,7 +68,7 @@ export default function SuspendUserModal({ user, onClose, onConfirm, busy }) {
                 "Mfano: Malalamiko mengi, udanganyifu, ukiukaji wa sheria...",
                 "E.g. Multiple complaints, fraud, rule violation..."
               )}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-gold resize-none"
+              className="textarea resize-none"
             />
             <p className="text-[11px] text-muted mt-1">
               {t("Herufi 5+ zinahitajika", "5+ characters required")} ({reason.trim().length})
@@ -76,11 +76,11 @@ export default function SuspendUserModal({ user, onClose, onConfirm, busy }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 p-5 border-t border-gray-100">
+        <div className="flex items-center justify-end gap-2 p-5 border-t border-hairline">
           <button
             onClick={onClose}
             disabled={busy}
-            className="px-4 py-2 rounded-lg text-sm font-semibold text-secondary hover:bg-gray-50 disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-secondary hover:bg-ink/5 disabled:opacity-50"
           >
             {t("Ghairi", "Cancel")}
           </button>

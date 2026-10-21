@@ -40,33 +40,33 @@ import {
 const ROLE_STYLES = {
   Admin: {
     label: { sw: "Admin", en: "Admin" },
-    bg: "rgba(16,26,46,0.10)",
-    fg: COLORS.night,
-    border: "rgba(16,26,46,0.25)",
+    bg: "rgb(var(--c-ink) / 0.10)",
+    fg: COLORS.ink,
+    border: "rgb(var(--c-ink) / 0.25)",
   },
   Both: {
     label: { sw: "Wote Wawili", en: "Both" },
-    bg: "rgba(124,58,237,0.12)",
-    fg: "#7C3AED",
-    border: "rgba(124,58,237,0.3)",
+    bg: "rgba(0,98,253,0.12)",
+    fg: COLORS.link,
+    border: "rgba(0,98,253,0.30)",
   },
   Seller: {
     label: { sw: "Muuzaji", en: "Seller" },
-    bg: "rgba(232,163,61,0.16)",
-    fg: "#8A5A16",
-    border: "rgba(232,163,61,0.4)",
+    bg: "rgba(254,164,6,0.16)",
+    fg: COLORS.goldText,
+    border: "rgba(254,164,6,0.40)",
   },
   Buyer: {
     label: { sw: "Mnunuzi", en: "Buyer" },
     bg: "rgba(47,109,79,0.14)",
-    fg: COLORS.green,
+    fg: COLORS.successText,
     border: "rgba(47,109,79,0.35)",
   },
   Neither: {
     label: { sw: "Wapya", en: "Neither" },
-    bg: "rgba(16,26,46,0.06)",
-    fg: "var(--text-secondary, #4B5563)",
-    border: "rgba(16,26,46,0.15)",
+    bg: "rgb(var(--c-ink) / 0.06)",
+    fg: "rgb(var(--c-text-2))",
+    border: "rgb(var(--c-ink) / 0.15)",
   },
 };
 
@@ -284,7 +284,7 @@ export default function UserManagementSection() {
             }}
             disabled={isBusy}
             style={{
-              color: COLORS.green,
+              color: COLORS.successText,
               borderColor: `${COLORS.green}33`,
             }}
             className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -308,7 +308,7 @@ export default function UserManagementSection() {
           }}
           disabled={isBusy}
           style={{
-            color: isSuspended ? COLORS.green : COLORS.rust,
+            color: isSuspended ? COLORS.successText : COLORS.dangerText,
             borderColor: isSuspended
               ? `${COLORS.green}33`
               : `${COLORS.rust}33`,
@@ -347,7 +347,7 @@ export default function UserManagementSection() {
               : t("Futa Kabisa", "Delete Permanently")
           }
           style={{
-            color: COLORS.rust,
+            color: COLORS.dangerText,
             borderColor: `${COLORS.rust}33`,
           }}
           className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -384,7 +384,7 @@ export default function UserManagementSection() {
         <button
           onClick={() => page > 1 && fetchPage(page - 1)}
           disabled={page <= 1}
-          className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
+          className="w-9 h-9 rounded-lg border border-hairline flex items-center justify-center disabled:opacity-40 hover:bg-ink/5 transition-colors"
           aria-label={t("Nyuma", "Previous")}
         >
           <ChevronLeft size={16} />
@@ -394,7 +394,7 @@ export default function UserManagementSection() {
           <>
             <button
               onClick={() => fetchPage(1)}
-              className="w-9 h-9 rounded-lg border border-gray-200 text-sm font-medium text-secondary hover:bg-gray-50"
+              className="w-9 h-9 rounded-lg border border-hairline text-sm font-medium text-secondary hover:bg-ink/5"
             >
               1
             </button>
@@ -408,8 +408,8 @@ export default function UserManagementSection() {
             onClick={() => fetchPage(p)}
             className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
               p === page
-                ? "bg-gold text-night"
-                : "border border-gray-200 text-secondary hover:bg-gray-50"
+                ? "bg-gold on-gold"
+                : "border border-hairline text-secondary hover:bg-ink/5"
             }`}
           >
             {p}
@@ -423,7 +423,7 @@ export default function UserManagementSection() {
             )}
             <button
               onClick={() => fetchPage(totalPages)}
-              className="w-9 h-9 rounded-lg border border-gray-200 text-sm font-medium text-secondary hover:bg-gray-50"
+              className="w-9 h-9 rounded-lg border border-hairline text-sm font-medium text-secondary hover:bg-ink/5"
             >
               {totalPages}
             </button>
@@ -433,7 +433,7 @@ export default function UserManagementSection() {
         <button
           onClick={() => page < totalPages && fetchPage(page + 1)}
           disabled={page >= totalPages}
-          className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center disabled:opacity-40 hover:bg-gray-50 transition-colors"
+          className="w-9 h-9 rounded-lg border border-hairline flex items-center justify-center disabled:opacity-40 hover:bg-ink/5 transition-colors"
           aria-label={t("Mbele", "Next")}
         >
           <ChevronRight size={16} />
@@ -456,7 +456,7 @@ export default function UserManagementSection() {
         <div
           style={{
             background: "rgba(193,80,46,0.1)",
-            color: COLORS.rust,
+            color: COLORS.dangerText,
           }}
           className="text-xs font-semibold px-3 py-2 rounded-lg mb-4"
         >
@@ -474,7 +474,7 @@ export default function UserManagementSection() {
               "Tafuta kwa jina au email...",
               "Search by name or email..."
             )}
-            className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-sm outline-none focus:outline-none focus-visible:outline-none"
+            className="smk-inline-search w-full rounded-lg border border-hairline bg-card pl-3 pr-10 py-2 text-sm outline-none focus:outline-none focus-visible:outline-none"
             style={{ WebkitAppearance: "none" }}
           />
           <Search size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -483,7 +483,7 @@ export default function UserManagementSection() {
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary"
+          className="bg-card border border-hairline rounded-lg px-3 py-2 text-sm text-primary"
         >
           <option value="all">{t("Nafasi: Zote", "Role: All")}</option>
           <option value="Admin">Admin</option>
@@ -496,7 +496,7 @@ export default function UserManagementSection() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary"
+          className="bg-card border border-hairline rounded-lg px-3 py-2 text-sm text-primary"
         >
           <option value="all">{t("Hali: Zote", "Status: All")}</option>
           <option value="active">{t("Hai", "Active")}</option>
@@ -506,7 +506,7 @@ export default function UserManagementSection() {
         <select
           value={verifiedFilter}
           onChange={(e) => setVerifiedFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-primary"
+          className="bg-card border border-hairline rounded-lg px-3 py-2 text-sm text-primary"
         >
           <option value="all">{t("Uthibitisho: Zote", "Verified: All")}</option>
           <option value="verified">{t("Imethibitishwa", "Verified")}</option>
@@ -520,10 +520,10 @@ export default function UserManagementSection() {
       </p>
 
       {/* DESKTOP — TABLE */}
-      <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div className="hidden sm:block bg-card rounded-xl border border-hairline overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-page">
               <tr>
                 <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
                   {t("Jina", "Name")}
@@ -545,13 +545,13 @@ export default function UserManagementSection() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-hairline">
               {users.map((u) => {
                 const role = getUserRole(u);
                 return (
                   <tr
                     key={u.id}
-                    className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    className="hover:bg-ink/5 transition-colors cursor-pointer"
                     onClick={() => setSelectedUser(u)}
                   >
                     <td className="px-5 py-3 text-sm font-medium text-primary">
@@ -560,7 +560,7 @@ export default function UserManagementSection() {
                         {u.isVerified && (
                           <ShieldCheck
                             size={13}
-                            style={{ color: COLORS.green }}
+                            style={{ color: COLORS.successText }}
                             className="shrink-0"
                           />
                         )}
@@ -607,7 +607,7 @@ export default function UserManagementSection() {
             <div
               key={u.id}
               onClick={() => setSelectedUser(u)}
-              className="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:shadow-sm transition-shadow"
+              className="bg-card rounded-xl border border-hairline p-4 cursor-pointer hover:shadow-sm transition-shadow"
             >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="min-w-0 flex-1">
@@ -618,7 +618,7 @@ export default function UserManagementSection() {
                     {u.isVerified && (
                       <ShieldCheck
                         size={13}
-                        style={{ color: COLORS.green }}
+                        style={{ color: COLORS.successText }}
                         className="shrink-0"
                       />
                     )}
@@ -654,7 +654,7 @@ export default function UserManagementSection() {
         })}
 
         {users.length === 0 && (
-          <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-sm text-muted">
+          <div className="bg-card rounded-xl border border-hairline p-8 text-center text-sm text-muted">
             {t("Hakuna matokeo", "No results")}
           </div>
         )}

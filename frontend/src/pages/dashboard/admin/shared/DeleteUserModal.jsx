@@ -26,15 +26,15 @@ export default function DeleteUserModal({ user, onClose, onConfirm, busy }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
 
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div className="relative bg-card rounded-2xl shadow-2xl w-full max-w-md">
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 p-5 border-b border-gray-100">
+        <div className="flex items-start justify-between gap-3 p-5 border-b border-hairline">
           <div className="flex items-start gap-3">
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
               style={{ background: "rgba(193,80,46,0.12)" }}
             >
-              <AlertTriangle size={18} color={COLORS.rust} />
+              <AlertTriangle size={18} style={{ color: COLORS.dangerText }} />
             </div>
             <div>
               <h3 className="text-base font-bold text-primary">
@@ -52,7 +52,7 @@ export default function DeleteUserModal({ user, onClose, onConfirm, busy }) {
 
         {/* Body */}
         <div className="p-5 space-y-4">
-          <div className="rounded-lg bg-red-50 border border-red-100 p-3">
+          <div className="rounded-lg bg-danger/10 border border-danger/25 p-3">
             <p className="text-xs font-semibold text-primary">
               {t("Utakayemfuta:", "You are about to delete:")}
             </p>
@@ -64,7 +64,7 @@ export default function DeleteUserModal({ user, onClose, onConfirm, busy }) {
           <div>
             <label className="block text-xs font-semibold text-primary mb-1.5">
               {t("Sababu ya kufuta", "Reason for deletion")}{" "}
-              <span style={{ color: COLORS.rust }}>*</span>
+              <span style={{ color: COLORS.dangerText }}>*</span>
             </label>
             <textarea
               value={reason}
@@ -74,7 +74,7 @@ export default function DeleteUserModal({ user, onClose, onConfirm, busy }) {
                 "Mfano: Akaunti fake, udanganyifu, ombi la mtumiaji...",
                 "E.g. Fake account, fraud, user request..."
               )}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-gold resize-none"
+              className="textarea resize-none"
             />
             <p className="text-[11px] text-muted mt-1">
               {t("Herufi 5+ zinahitajika", "5+ characters required")} ({reason.trim().length})
@@ -85,7 +85,7 @@ export default function DeleteUserModal({ user, onClose, onConfirm, busy }) {
           <div>
             <label className="block text-xs font-semibold text-primary mb-1.5">
               {t('Andika "DELETE" kuthibitisha', 'Type "DELETE" to confirm')}{" "}
-              <span style={{ color: COLORS.rust }}>*</span>
+              <span style={{ color: COLORS.dangerText }}>*</span>
             </label>
             <input
               type="text"
@@ -93,17 +93,17 @@ export default function DeleteUserModal({ user, onClose, onConfirm, busy }) {
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder="DELETE"
               autoComplete="off"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-gold font-mono"
+              className="input font-mono"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 p-5 border-t border-gray-100">
+        <div className="flex items-center justify-end gap-2 p-5 border-t border-hairline">
           <button
             onClick={onClose}
             disabled={busy}
-            className="px-4 py-2 rounded-lg text-sm font-semibold text-secondary hover:bg-gray-50 disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-secondary hover:bg-ink/5 disabled:opacity-50"
           >
             {t("Ghairi", "Cancel")}
           </button>

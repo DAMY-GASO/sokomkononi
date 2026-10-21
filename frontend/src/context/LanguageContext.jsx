@@ -574,7 +574,11 @@ const translations = {
 export function LanguageProvider({ children }) {
   const [lang, setLang] = useState(() => {
     const saved = localStorage.getItem("preferred_language");
-    return saved || "sw";
+    const initial = saved || "sw";
+    // Weka mara moja (synchronously): effects za watoto (mf. hydrate za stores) zinaendeshwa
+    // KABLA ya effect ya provider, kwa hiyo maombi ya kwanza ya API yangeenda na "sw" tu.
+    if (typeof window !== "undefined") window.__SMK_LANG__ = initial;
+    return initial;
   });
 
   const t = useCallback(

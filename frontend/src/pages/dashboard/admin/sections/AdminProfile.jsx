@@ -1,13 +1,5 @@
 // ============================================================
 // AdminProfile.jsx — SECTION ndani ya AdminDashboard
-// Inaonyeshwa kama `case "profile"` kwenye renderSection().
-// Inatumia authStore moja kwa moja.
-//
-// SASISHO:
-//   - Password change: logout baada ya kubadilisha (backend blacklists tokens)
-//   - Password min: 8 (kutoka backend min_length=8)
-//   - Email input: readOnly (haiwezi kubadilishwa)
-//   - Import: ADMIN_LOGIN_PATH (sio getAdminLoginPath — haipo)
 // ============================================================
 import React, { useState, useRef, useEffect } from "react";
 import {
@@ -30,7 +22,6 @@ import {
   Phone,
   Info,
 } from "lucide-react";
-import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 
 // ============================================================
@@ -55,7 +46,7 @@ function Avatar({ user, size = "lg" }) {
   }
   return (
     <div
-      className={`${sizeClass} rounded-full bg-[#FEA406] flex items-center justify-center text-[#101A2E] font-bold`}
+      className={`${sizeClass} rounded-full bg-gold on-gold flex items-center justify-center font-bold`}
     >
       {initial}
     </div>
@@ -234,10 +225,8 @@ export default function AdminProfile() {
 
       {toast && (
         <div
-          className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${
-            toast.type === "success"
-              ? "bg-green-50 text-green-700 border border-green-200"
-              : "bg-red-50 text-red-700 border border-red-200"
+          className={`alert mb-4 font-medium ${
+            toast.type === "success" ? "alert-success" : "alert-danger"
           }`}
         >
           {toast.msg}
@@ -246,8 +235,7 @@ export default function AdminProfile() {
 
       {/* AVATAR CARD */}
       <div
-        style={{ borderColor: COLORS.sandLine }}
-        className="bg-white rounded-2xl border p-6 mb-4"
+        className="bg-card border-hairline rounded-2xl border p-6 mb-4"
       >
         <div className="flex flex-col sm:flex-row items-center gap-5">
           <Avatar user={user} />
@@ -266,7 +254,7 @@ export default function AdminProfile() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAvatar}
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-[#101A2E] text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-night dark:bg-royal text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
               >
                 <Camera size={14} />
                 {uploadingAvatar
@@ -278,7 +266,7 @@ export default function AdminProfile() {
                   type="button"
                   onClick={handleAvatarRemove}
                   disabled={uploadingAvatar}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-danger/30 text-[color:rgb(var(--c-danger-text))] hover:bg-danger/10 disabled:opacity-50 transition-colors"
                 >
                   <Trash2 size={14} />
                   {t("Ondoa", "Remove")}
@@ -299,8 +287,7 @@ export default function AdminProfile() {
       {/* PROFILE INFO */}
       <form
         onSubmit={handleProfileSubmit}
-        style={{ borderColor: COLORS.sandLine }}
-        className="bg-white rounded-2xl border p-6 mb-4"
+        className="bg-card border-hairline rounded-2xl border p-6 mb-4"
       >
         <h2
           style={{ color: "var(--text-primary)" }}
@@ -321,7 +308,7 @@ export default function AdminProfile() {
               onChange={(e) =>
                 setProfileForm({ ...profileForm, name: e.target.value })
               }
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406]"
+              className="input"
               placeholder={t("Jina lako", "Your name")}
             />
           </label>
@@ -336,7 +323,7 @@ export default function AdminProfile() {
               value={profileForm.email}
               readOnly
               disabled
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none bg-gray-50 text-muted cursor-not-allowed"
+              className="input cursor-not-allowed"
               placeholder="admin@sokomkononi.co.tz"
             />
             <span className="text-[10px] text-muted flex items-start gap-1">
@@ -361,7 +348,7 @@ export default function AdminProfile() {
               onChange={(e) =>
                 setProfileForm({ ...profileForm, phone: e.target.value })
               }
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406]"
+              className="input"
               placeholder="+255 700 000 000"
             />
           </label>
@@ -371,7 +358,7 @@ export default function AdminProfile() {
           <button
             type="submit"
             disabled={savingProfile}
-            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-lg bg-[#FEA406] text-[#101A2E] hover:bg-[#D98706] disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-lg bg-gold on-gold hover:bg-flame disabled:opacity-50 transition-colors"
           >
             <Save size={14} />
             {savingProfile
@@ -384,8 +371,7 @@ export default function AdminProfile() {
       {/* PASSWORD */}
       <form
         onSubmit={handlePasswordSubmit}
-        style={{ borderColor: COLORS.sandLine }}
-        className="bg-white rounded-2xl border p-6"
+        className="bg-card border-hairline rounded-2xl border p-6"
       >
         <h2
           style={{ color: "var(--text-primary)" }}
@@ -409,7 +395,7 @@ export default function AdminProfile() {
                   currentPassword: e.target.value,
                 })
               }
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406]"
+              className="input"
               autoComplete="current-password"
             />
           </label>
@@ -427,7 +413,7 @@ export default function AdminProfile() {
                   newPassword: e.target.value,
                 })
               }
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406]"
+              className="input"
               autoComplete="new-password"
             />
             <span className="text-[10px] text-muted">
@@ -448,7 +434,7 @@ export default function AdminProfile() {
                   confirmPassword: e.target.value,
                 })
               }
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406]"
+              className="input"
               autoComplete="new-password"
             />
           </label>
@@ -467,7 +453,7 @@ export default function AdminProfile() {
           <button
             type="submit"
             disabled={savingPassword}
-            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-lg bg-[#101A2E] text-white hover:opacity-90 disabled:opacity-50 transition-opacity shrink-0"
+            className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-lg bg-night dark:bg-royal text-white hover:opacity-90 disabled:opacity-50 transition-opacity shrink-0"
           >
             <Lock size={14} />
             {savingPassword

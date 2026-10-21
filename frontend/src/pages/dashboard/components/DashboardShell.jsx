@@ -576,7 +576,7 @@ export default function DashboardShell() {
             ? t("Upande wa Muuzaji — dhibiti mali zako, malipo na maombi ya wanunuzi.", "Seller side — manage your listings, payments, and buyer enquiries.")
             : t("Upande wa Mnunuzi — tafuta, negotiate na fuatilia manunuzi yako.", "Buyer side — find, negotiate, and track your purchases.")}
         </p>
-        <div style={{ borderColor: COLORS.sandLine }} className="rounded-2xl border-2 border-dashed p-10 text-center mt-6">
+        <div className="rounded-2xl border-2 border-dashed border-hairline p-10 text-center mt-6">
           <p className="text-muted text-sm">
             {t(`Sehemu ya "${nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}" itajengwa hapa`, `The "${nav.find((n) => n.key === activeKey)?.label?.[lang] || ""}" section will be built here`)}
           </p>
@@ -609,7 +609,7 @@ export default function DashboardShell() {
 
   if (isAdminUser) {
     return (
-      <div style={{ background: COLORS.sand, minHeight: "100vh" }} className="w-full flex items-center justify-center p-6">
+      <div style={{ minHeight: "100vh" }} className="bg-page w-full flex items-center justify-center p-6">
         <div className="text-center max-w-md">
           <div style={{ background: `${COLORS.rust}15` }} className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield size={28} color={COLORS.rust} />
@@ -624,7 +624,7 @@ export default function DashboardShell() {
             <button onClick={() => navigate(ADMIN_PATH)} style={{ background: COLORS.night, color: "white" }} className="px-4 py-2.5 rounded-lg text-sm font-semibold">
               {t("Nenda Dashboard ya Admin", "Go to Admin Dashboard")}
             </button>
-            <button onClick={handleLogout} style={{ borderColor: COLORS.sandLine, color: COLORS.night }} className="px-4 py-2.5 rounded-lg text-sm font-semibold border bg-white">
+            <button onClick={handleLogout} style={{ borderColor: "rgb(var(--c-hairline))", color: COLORS.ink }} className="px-4 py-2.5 rounded-lg text-sm font-semibold border bg-card">
               {t("Toka na uingie kama mtumiaji", "Log out and sign in as a user")}
             </button>
           </div>
@@ -828,7 +828,7 @@ export default function DashboardShell() {
         });
         if (activeAnnouncements.length === 0) return null;
         return (
-          <div style={{ background: COLORS.sandLine, color: COLORS.night }} className="w-full flex items-center gap-2 px-4 py-1.5 text-body-sm sm:text-sm">
+          <div style={{ background: "rgb(var(--c-hairline))", color: COLORS.ink }} className="w-full flex items-center gap-2 px-4 py-1.5 text-body-sm sm:text-sm">
             <Megaphone size={14} color={COLORS.rust} className="shrink-0" />
             <span className="truncate">
               {getAnnouncementMessage(activeAnnouncements[tickerIndex % activeAnnouncements.length], lang)}
@@ -841,7 +841,7 @@ export default function DashboardShell() {
 
       <div className="flex flex-1 relative">
         <aside
-          style={{ borderColor: COLORS.sandLine }}
+          style={{ borderColor: "rgb(var(--c-hairline))" }}
           className="hidden md:flex w-56 shrink-0 border-r flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto bg-page"
         >
           {nav.map(({ key, label, icon: Icon }) => {
@@ -850,13 +850,13 @@ export default function DashboardShell() {
               <button
                 key={key}
                 onClick={() => handleNavClick(key)}
-                style={{ background: isActive ? COLORS.night : "transparent", color: isActive ? COLORS.sand : COLORS.night }}
+                style={{ background: isActive ? COLORS.night : "transparent", color: isActive ? COLORS.sand : COLORS.ink }}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left"
               >
-                <Icon size={17} color={isActive ? accent : COLORS.night} />
+                <Icon size={17} color={isActive ? accent : "currentColor"} />
                 {label[lang] || label.sw}
                 {key === "listings" && listings.length > 0 && (
-                  <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : COLORS.sandLine, color: isActive ? COLORS.sand : COLORS.night }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full">
+                  <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : "rgb(var(--c-hairline))", color: isActive ? COLORS.sand : COLORS.ink }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full">
                     {listings.length}
                   </span>
                 )}
@@ -866,15 +866,15 @@ export default function DashboardShell() {
                   </span>
                 )}
                 {key === "searches" && buyerSearchesCount > 0 && (
-                  <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : COLORS.sandLine, color: isActive ? COLORS.sand : COLORS.night }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full">
+                  <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : "rgb(var(--c-hairline))", color: isActive ? COLORS.sand : COLORS.ink }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full">
                     {buyerSearchesCount}
                   </span>
                 )}
               </button>
             );
           })}
-          <a href="/" className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4">
-            <Home size={17} color={COLORS.night} />
+          <a href="/" className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-ink/5 mt-4 border-t border-hairline pt-4">
+            <Home size={17} />
             {t("Rudi Nyumbani", "Back to Home")}
           </a>
         </aside>
@@ -904,14 +904,14 @@ export default function DashboardShell() {
                       </span>
                     )}
                     {key === "searches" && buyerSearchesCount > 0 && (
-                      <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : COLORS.sandLine, color: isActive ? COLORS.sand : COLORS.night }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                      <span style={{ background: isActive ? "rgba(245,243,236,0.18)" : "rgb(var(--c-hairline))", color: isActive ? COLORS.sand : COLORS.ink }} className="ml-auto text-body-sm font-bold px-1.5 py-0.5 rounded-full shrink-0">
                         {buyerSearchesCount}
                       </span>
                     )}
                   </button>
                 );
               })}
-              <a href="/" className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-black/5 mt-4 border-t pt-4">
+              <a href="/" className="text-primary flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-ink/5 mt-4 border-t border-hairline pt-4">
                 <Home size={17} />
                 {t("Rudi Nyumbani", "Back to Home")}
               </a>

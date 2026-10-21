@@ -1,10 +1,5 @@
 // ============================================================
 // auditLogsStore.js — API-only via /api/audit/
-//
-// Marekebisho:
-//  - Wezesha removeAuditLogAsync (DELETE /api/audit/{id}/)
-//  - Wezesha clearAuditLogsAsync (POST /api/audit/clear/)
-//  - Ongeza actions zote (listing, user, verification, n.k.)
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -103,7 +98,10 @@ function norm(raw) {
     adminUserId: raw.admin_user,
     target: raw.target || "",
     targetId: raw.target_id,
-    details: raw.details || "",
+    // details: toleo la zamani (fallback). detailsSw/detailsEn: logs mpya zenye lugha mbili.
+    details: raw.details || raw.details_sw || raw.details_en || "",
+    detailsSw: raw.details_sw || "",
+    detailsEn: raw.details_en || "",
     ipAddress: raw.ip_address || null,
     userAgent: raw.user_agent || null,
     requestPath: raw.request_path || null,

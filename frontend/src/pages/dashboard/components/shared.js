@@ -30,11 +30,32 @@ export const COLORS = {
   green: "#2F6D4F",
   rust: "#C1502E",
 
+  // Theme-aware (CSS variables) — tumia hizi kwa MAANDISHI/ICONS zinazotakiwa
+  // kubadilika light/dark. COLORS.night / goldInk hapo juu ni za mandhari (bg) tu.
+  ink: "rgb(var(--c-ink))",
+  goldText: "rgb(var(--c-gold-ink))",
+  successText: "rgb(var(--c-success-text))",
+  dangerText: "rgb(var(--c-danger-text))",
+  link: "rgb(var(--c-link))",
+
   // Text — typography system
   textPrimary: "#111827",
   textSecondary: "#6B7280",
   textMuted: "#9CA3AF",
 };
+
+// Rangi za "tone" (zinazotumika kama mandhari/tint) → toleo la MAANDISHI
+// linalosomeka kwenye light na dark. Rangi zisizojulikana zinarudi kama zilivyo.
+const TONE_TEXT = {
+  "#FEA406": COLORS.goldText, "#FD8706": COLORS.goldText, "#A35F00": COLORS.goldText,
+  "#2F6D4F": COLORS.successText, "#C1502E": COLORS.dangerText,
+  "#0062FD": COLORS.link, "#3D8BFF": COLORS.link,
+  "#011957": COLORS.ink, "#010F3A": COLORS.ink, "#042475": COLORS.ink,
+};
+export function toneText(color) {
+  if (typeof color !== "string") return color;
+  return TONE_TEXT[color.trim().toUpperCase()] || color;
+}
 
 export const FONTS = {
   display: "'Inter', system-ui, -apple-system, sans-serif",
@@ -250,32 +271,32 @@ export function calculateListingFee(categoryKey, priceInput) {
 // Listing status metadata
 // ============================================================
 export const STATUS = {
-  live: { label: "Live", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
+  live: { label: "Live", bg: "rgba(47,109,79,0.12)", fg: COLORS.successText },
   reserved: {
     label: "Ina Reservation",
     bg: "rgba(254,164,6,0.16)",
-    fg: COLORS.goldInk,
+    fg: COLORS.goldText,
   },
-  sold: { label: "Imeuzwa", bg: "rgba(1,25,87,0.08)", fg: COLORS.night },
+  sold: { label: "Imeuzwa", bg: "rgb(var(--c-ink) / 0.10)", fg: COLORS.ink },
   pending_payment: {
     label: "Inasubiri Malipo",
     bg: "rgba(254,164,6,0.16)",
-    fg: COLORS.goldInk,
+    fg: COLORS.goldText,
   },
   in_review: {
     label: "Inakaguliwa",
-    bg: "rgba(1,25,87,0.08)",
-    fg: COLORS.night,
+    bg: "rgb(var(--c-ink) / 0.10)",
+    fg: COLORS.ink,
   },
   expired: {
     label: "Imeisha Muda",
     bg: "rgba(193,80,46,0.12)",
-    fg: COLORS.rust,
+    fg: COLORS.dangerText,
   },
   rejected: {
     label: "Imekataliwa",
     bg: "rgba(193,80,46,0.12)",
-    fg: COLORS.rust,
+    fg: COLORS.dangerText,
   },
 };
 

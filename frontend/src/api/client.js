@@ -1,12 +1,5 @@
 // ============================================================
 // client.js — API Client
-// - Lazy BASE_URL validation (no top-level throw)
-// - 5xx / 408 / 429 retry with exponential backoff
-// - AbortController timeout
-// - DELETE supports body
-// - FIX: Always send Authorization header when token exists
-// - FIX: Send X-CSRFToken on unsafe methods (POST/PUT/PATCH/DELETE)
-// - FIX: Send Accept-Language header (sw / en) kwa kila ombi
 // ============================================================
 
 import { getSessionScope } from "../config/adminPath.js";
@@ -43,7 +36,11 @@ function getBaseUrl() {
 // ============================================================
 function getLang() {
   if (typeof window === "undefined") return "sw";
-  const v = window.__SMK_LANG__;
+  let v = window.__SMK_LANG__;
+  // Fallback: maombi ya kwanza yanaweza kutoka kabla LanguageProvider haijaweka __SMK_LANG__
+  if (!v) {
+    try { v = window.localStorage.getItem("preferred_language"); } catch { /* noop */ }
+  }
   return v === "en" ? "en" : "sw";
 }
 

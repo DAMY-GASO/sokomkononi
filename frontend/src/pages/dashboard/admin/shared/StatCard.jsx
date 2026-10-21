@@ -1,10 +1,11 @@
 import React from "react";
+import { toneText } from "./constants.js";
 
 function changeColor(change) {
   if (!change) return "text-muted";
   const s = String(change).trim();
-  if (s.startsWith("-") || s.startsWith("↓") || s.startsWith("−")) return "text-[#C1502E]";
-  return "text-[#2F6D4F]";
+  if (s.startsWith("-") || s.startsWith("↓") || s.startsWith("−")) return "text-danger";
+  return "text-success";
 }
 
 export default function StatCard({ label, value, change, icon: Icon, color }) {
@@ -17,7 +18,7 @@ export default function StatCard({ label, value, change, icon: Icon, color }) {
           {change && <p className={`mt-1 truncate text-[10px] font-medium sm:text-xs ${changeColor(change)}`}>{change}</p>}
         </div>
         {Icon && (
-          <span style={{ background: `${color}15`, color }} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg sm:h-12 sm:w-12 sm:rounded-xl">
+          <span style={{ background: `${color}15`, color: toneText(color) }} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg sm:h-12 sm:w-12 sm:rounded-xl">
             <Icon size={18} className="sm:hidden" />
             <Icon size={22} className="hidden sm:block" />
           </span>

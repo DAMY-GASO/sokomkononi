@@ -23,13 +23,14 @@ export default {
         bold: "700",
       },
       colors: {
-        // Text
-        primary:   "#111827",
-        secondary: "#6B7280",
-        muted:     "#9CA3AF",
-        "text-primary":   "#111827",
-        "text-secondary": "#6B7280",
-        "text-muted":     "#9CA3AF",
+        // Text — zinasoma CSS variables (src/index.css) kwa hiyo zinabadilika light/dark zenyewe
+        ink:       c("ink"),
+        primary:   c("text"),
+        secondary: c("text-2"),
+        muted:     c("text-3"),
+        "text-primary":   c("text"),
+        "text-secondary": c("text-2"),
+        "text-muted":     c("text-3"),
 
         // Brand
         night: { DEFAULT: c("night"), deep: c("night-deep"), soft: c("night-soft") },

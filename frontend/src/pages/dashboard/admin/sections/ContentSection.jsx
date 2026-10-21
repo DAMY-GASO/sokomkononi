@@ -31,7 +31,6 @@ import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { api } from "../../../../api/client.js";
 import {
   useContent,
-  addBannerAsync,
   updateBannerAsync,
   removeBannerAsync,
   addTestimonialAsync,
@@ -65,7 +64,9 @@ const TABS = [
 function BilingualField({ label, value, onChange, multiline = false, rows = 3, disabled = false }) {
   const swVal = value?.sw || "";
   const enVal = value?.en || "";
-  const cls = "w-full max-w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none mt-1 disabled:opacity-50";
+  const cls = multiline
+    ? "textarea !min-h-0 w-full max-w-full resize-none mt-1"
+    : "input w-full max-w-full mt-1";
 
   return (
     <div className="flex flex-col gap-2 w-full min-w-0">
@@ -104,14 +105,14 @@ function FormActions({ onCancel, onSave, lang, saving = false, saveLabel = null 
       <button
         onClick={onCancel}
         disabled={saving}
-        className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary shrink-0 disabled:opacity-50"
+        className="text-xs font-semibold px-3 py-2 rounded-lg border border-hairline text-secondary shrink-0 disabled:opacity-50"
       >
         {t("Ghairi", "Cancel")}
       </button>
       <button
         onClick={onSave}
         disabled={saving}
-        style={{ background: COLORS.gold, color: COLORS.night }}
+        style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
         className="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {saving ? (
@@ -200,7 +201,7 @@ function ImageUploadField({
             src={value}
             alt="Preview"
             className={`border ${previewClass}`}
-            style={{ borderColor: COLORS.sandLine }}
+            style={{ borderColor: "rgb(var(--c-hairline))" }}
             onError={(e) => {
               e.target.style.display = "none";
             }}
@@ -233,8 +234,7 @@ function ImageUploadField({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || uploading}
-          style={{ background: COLORS.night, color: COLORS.sand }}
-          className="flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 disabled:opacity-50"
+          className="flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 disabled:opacity-50 bg-night dark:bg-royal text-white"
         >
           {uploading ? (
             <Loader2 size={13} className="animate-spin" />
@@ -257,7 +257,7 @@ function ImageUploadField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={t("Weka URL ya picha", "Paste image URL")}
           disabled={disabled || uploading}
-          className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50"
+          className="input flex-1 min-w-0"
         />
       </div>
 
@@ -362,7 +362,7 @@ function SectionsEditor({
           type="button"
           onClick={addSection}
           disabled={disabled}
-          style={{ background: COLORS.gold, color: COLORS.night }}
+          style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
           className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
         >
           <Plus size={12} />
@@ -373,7 +373,7 @@ function SectionsEditor({
       {sections.map((section, index) => (
         <div
           key={section.id || index}
-          style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
+          style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-page))" }}
           className="rounded-lg border p-3 flex flex-col gap-2 w-full min-w-0"
         >
           <div className="flex items-center gap-1.5 justify-between">
@@ -403,7 +403,7 @@ function SectionsEditor({
                 type="button"
                 onClick={() => removeSection(index)}
                 disabled={disabled}
-                className="p-1 text-muted hover:text-[#C1502E] disabled:opacity-50"
+                className="p-1 text-muted hover:text-danger disabled:opacity-50"
                 aria-label={t("Ondoa", "Remove")}
               >
                 <Trash2 size={12} />
@@ -441,13 +441,13 @@ function SectionsEditor({
                   }
                   rows={2}
                   disabled={disabled}
-                  className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50"
+                  className="textarea !min-h-0 flex-1 min-w-0 resize-none"
                 />
                 <button
                   type="button"
                   onClick={() => removeParagraph(index, "sw", pIndex)}
                   disabled={disabled}
-                  className="p-1.5 text-muted hover:text-[#C1502E] disabled:opacity-50 shrink-0"
+                  className="p-1.5 text-muted hover:text-danger disabled:opacity-50 shrink-0"
                   aria-label={t("Ondoa", "Remove")}
                 >
                   <Trash2 size={12} />
@@ -478,13 +478,13 @@ function SectionsEditor({
                   }
                   rows={2}
                   disabled={disabled}
-                  className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] resize-none disabled:opacity-50"
+                  className="textarea !min-h-0 flex-1 min-w-0 resize-none"
                 />
                 <button
                   type="button"
                   onClick={() => removeParagraph(index, "en", pIndex)}
                   disabled={disabled}
-                  className="p-1.5 text-muted hover:text-[#C1502E] disabled:opacity-50 shrink-0"
+                  className="p-1.5 text-muted hover:text-danger disabled:opacity-50 shrink-0"
                   aria-label={t("Ondoa", "Remove")}
                 >
                   <Trash2 size={12} />
@@ -514,49 +514,30 @@ function BannersTab({ lang }) {
   const banners = content.banners || [];
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
-  const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const handleAdd = () => {
-    setForm({
-      title: { sw: "", en: "" },
-      subtitle: { sw: "", en: "" },
-      ctaText: { sw: "", en: "" },
-      ctaLink: "",
-      imageUrl: "",
-      active: true,
-    });
-    setAdding(true);
-    setEditing(null);
-    setError("");
-  };
-
   const handleEdit = (banner) => {
     setForm({ ...banner });
     setEditing(banner.id);
-    setAdding(false);
     setError("");
   };
 
   const handleCancel = () => {
-    setAdding(false);
     setEditing(null);
     setForm({});
     setError("");
   };
 
   const handleSave = async () => {
+    if (!editing) return;
     setSaving(true);
     setError("");
-    const res = adding
-      ? await addBannerAsync(form)
-      : await updateBannerAsync(editing, form);
+    const res = await updateBannerAsync(editing, form);
     setSaving(false);
     if (res.ok) {
-      setAdding(false);
       setEditing(null);
       setForm({});
     } else {
@@ -576,24 +557,14 @@ function BannersTab({ lang }) {
   return (
     <div className="flex flex-col gap-3 w-full min-w-0">
       {error && (
-        <div style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
+        <div style={{ background: "rgba(193,80,46,0.1)", color: COLORS.dangerText }}
              className="text-xs font-semibold px-3 py-2 rounded-lg">
           {error}
         </div>
       )}
 
-      <button
-        onClick={handleAdd}
-        disabled={adding || !!editing}
-        style={{ background: COLORS.gold, color: COLORS.night }}
-        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50"
-      >
-        <Plus size={13} />
-        {t("Banner Mpya", "New Banner")}
-      </button>
-
-      {(adding || editing) && (
-        <div style={{ borderColor: COLORS.sandLine, background: "white" }}
+      {editing && (
+        <div style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
              className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0">
           <BilingualField label={t("Kichwa", "Title")} value={form.title || { sw: "", en: "" }}
                           onChange={(v) => setForm({ ...form, title: v })} disabled={saving} />
@@ -609,7 +580,7 @@ function BannersTab({ lang }) {
             <input value={form.ctaLink || ""}
                    onChange={(e) => setForm({ ...form, ctaLink: e.target.value })}
                    placeholder="/tafuta" disabled={saving}
-                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50" />
+                   className="input w-full" />
           </label>
 
           {/* ⬇️ MPYA — Upload image */}
@@ -636,7 +607,7 @@ function BannersTab({ lang }) {
       )}
 
       {banners.map((banner) => (
-        <div key={banner.id} style={{ borderColor: COLORS.sandLine, background: "white" }}
+        <div key={banner.id} style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
              className="rounded-xl border p-3 sm:p-4 w-full min-w-0">
           <div className="flex items-start justify-between gap-3 w-full min-w-0">
             {/* Thumbnail kama ipo */}
@@ -652,8 +623,8 @@ function BannersTab({ lang }) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span style={{
-                        background: banner.active ? "rgba(47,109,79,0.12)" : "rgba(16,26,46,0.08)",
-                        color: banner.active ? COLORS.green : COLORS.night,
+                        background: banner.active ? "rgba(47,109,79,0.12)" : "rgb(var(--c-ink) / 0.08)",
+                        color: banner.active ? COLORS.successText : COLORS.ink,
                       }}
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full">
                   {banner.active ? t("Hai", "Active") : t("Imezimwa", "Inactive")}
@@ -672,7 +643,7 @@ function BannersTab({ lang }) {
                 <Pencil size={14} />
               </button>
               <button onClick={() => handleRemove(banner.id)} disabled={saving}
-                      className="p-1.5 text-muted hover:text-[#C1502E] disabled:opacity-50">
+                      className="p-1.5 text-muted hover:text-danger disabled:opacity-50">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -753,35 +724,35 @@ function TestimonialsTab({ lang }) {
   return (
     <div className="flex flex-col gap-3 w-full min-w-0">
       {error && (
-        <div style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
+        <div style={{ background: "rgba(193,80,46,0.1)", color: COLORS.dangerText }}
              className="text-xs font-semibold px-3 py-2 rounded-lg">
           {error}
         </div>
       )}
 
       <button onClick={handleAdd} disabled={adding || !!editing || saving}
-              style={{ background: COLORS.gold, color: COLORS.night }}
+              style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50">
         <Plus size={13} />
         {t("Ushuhuda Mpya", "New Testimonial")}
       </button>
 
       {(adding || editing) && (
-        <div style={{ borderColor: COLORS.sandLine, background: "white" }}
+        <div style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
              className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0">
           <label className="flex flex-col gap-1 w-full min-w-0">
             <span className="text-[11px] font-semibold text-secondary">{t("Jina", "Name")} *</span>
             <input value={form.name || ""}
                    onChange={(e) => setForm({ ...form, name: e.target.value })}
                    placeholder="Mary Mwangi" disabled={saving}
-                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50" />
+                   className="input w-full" />
           </label>
           <label className="flex flex-col gap-1 w-full min-w-0">
             <span className="text-[11px] font-semibold text-secondary">{t("Mahali", "Location")}</span>
             <input value={form.location || ""}
                    onChange={(e) => setForm({ ...form, location: e.target.value })}
                    placeholder="Dar es Salaam" disabled={saving}
-                   className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50" />
+                   className="input w-full" />
           </label>
           <BilingualField label={t("Ushuhuda", "Quote")} value={form.quote || { sw: "", en: "" }}
                           onChange={(v) => setForm({ ...form, quote: v })} multiline rows={3} disabled={saving} />
@@ -790,7 +761,7 @@ function TestimonialsTab({ lang }) {
             <select value={form.rating || 5}
                     onChange={(e) => setForm({ ...form, rating: Number(e.target.value) })}
                     disabled={saving}
-                    className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[#FEA406] disabled:opacity-50">
+                    className="select w-full">
               {[5, 4, 3, 2, 1].map((r) => (
                 <option key={r} value={r}>
                   {"★".repeat(r)}{"☆".repeat(5 - r)} ({r})
@@ -820,7 +791,7 @@ function TestimonialsTab({ lang }) {
       )}
 
       {testimonials.map((item) => (
-        <div key={item.id} style={{ borderColor: COLORS.sandLine, background: "white" }}
+        <div key={item.id} style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
              className="rounded-xl border p-3 sm:p-4 w-full min-w-0">
           <div className="flex items-start justify-between gap-3 w-full min-w-0">
             <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -834,7 +805,7 @@ function TestimonialsTab({ lang }) {
                   <p className="text-sm font-semibold text-primary truncate">{item.name}</p>
                   {item.location && <span className="text-[11px] text-muted">• {item.location}</span>}
                 </div>
-                <p style={{ color: COLORS.gold }} className="text-xs mb-1">
+                <p style={{ color: COLORS.goldText }} className="text-xs mb-1">
                   {"★".repeat(item.rating || 0)}{"☆".repeat(5 - (item.rating || 0))}
                 </p>
                 <p className="text-xs text-secondary mt-1 leading-relaxed line-clamp-3 break-words">
@@ -848,7 +819,7 @@ function TestimonialsTab({ lang }) {
                 <Pencil size={14} />
               </button>
               <button onClick={() => handleRemove(item.id)} disabled={saving}
-                      className="p-1.5 text-muted hover:text-[#C1502E] disabled:opacity-50">
+                      className="p-1.5 text-muted hover:text-danger disabled:opacity-50">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -948,21 +919,21 @@ function FaqsTab({ lang }) {
   return (
     <div className="flex flex-col gap-3 w-full min-w-0">
       {error && (
-        <div style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
+        <div style={{ background: "rgba(193,80,46,0.1)", color: COLORS.dangerText }}
              className="text-xs font-semibold px-3 py-2 rounded-lg">
           {error}
         </div>
       )}
 
       <button onClick={handleAdd} disabled={adding || !!editing || saving}
-              style={{ background: COLORS.gold, color: COLORS.night }}
+              style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg self-start shrink-0 disabled:opacity-50">
         <Plus size={13} />
         {t("Swali Jipya", "New FAQ")}
       </button>
 
       {(adding || editing) && (
-        <div style={{ borderColor: COLORS.sandLine, background: "white" }}
+        <div style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
              className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0">
           <BilingualField label={t("Swali", "Question")} value={form.question || { sw: "", en: "" }}
                           onChange={(v) => setForm({ ...form, question: v })} disabled={saving} />
@@ -973,14 +944,14 @@ function FaqsTab({ lang }) {
       )}
 
       {sortedFaqs.map((faq, index) => (
-        <div key={faq.id} style={{ borderColor: COLORS.sandLine, background: "white" }}
+        <div key={faq.id} style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
              className="rounded-xl border p-3 sm:p-4 w-full min-w-0">
           <div className="flex items-start justify-between gap-3 w-full min-w-0">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span className="text-[10px] font-bold text-muted">#{index + 1}</span>
                 {faq.active === false && (
-                  <span style={{ background: "rgba(16,26,46,0.08)", color: COLORS.night }}
+                  <span style={{ background: "rgb(var(--c-ink) / 0.08)", color: COLORS.ink }}
                         className="text-[10px] font-bold px-2 py-0.5 rounded-full">
                     {t("Imezimwa", "Inactive")}
                   </span>
@@ -1007,7 +978,7 @@ function FaqsTab({ lang }) {
                 <Pencil size={14} />
               </button>
               <button onClick={() => handleRemove(faq.id)} disabled={saving}
-                      className="p-1.5 text-muted hover:text-[#C1502E] disabled:opacity-50">
+                      className="p-1.5 text-muted hover:text-danger disabled:opacity-50">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -1061,10 +1032,10 @@ function SinglePageEditor({ section, lang }) {
   };
 
   return (
-    <div style={{ borderColor: COLORS.sandLine, background: "white" }}
+    <div style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
          className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0">
       {error && (
-        <div style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
+        <div style={{ background: "rgba(193,80,46,0.1)", color: COLORS.dangerText }}
              className="text-xs font-semibold px-3 py-2 rounded-lg">
           {error}
         </div>
@@ -1130,13 +1101,13 @@ function SinglePageEditor({ section, lang }) {
 
       <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
         <button onClick={handleSave} disabled={saving}
-                style={{ background: COLORS.gold, color: COLORS.night }}
+                style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
                 className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg shrink-0 disabled:opacity-60">
           {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
           {saving ? t("Inahifadhi...", "Saving...") : t("Hifadhi", "Save")}
         </button>
         {saved && (
-          <span style={{ color: COLORS.green }} className="flex items-center gap-1 text-xs font-semibold">
+          <span style={{ color: COLORS.successText }} className="flex items-center gap-1 text-xs font-semibold">
             <Check size={13} />
             {t("Imehifadhiwa", "Saved")}
           </span>
@@ -1172,12 +1143,9 @@ export default function ContentSection() {
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              style={{
-                background: isActive ? COLORS.night : "white",
-                color: isActive ? COLORS.sand : "var(--text-primary)",
-                borderColor: COLORS.sandLine,
-              }}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border border-hairline whitespace-nowrap shrink-0 ${
+                isActive ? "chip-active" : "bg-card text-primary"
+              }`}
             >
               <Icon size={13} />
               {label?.[lang] || label?.sw}

@@ -70,14 +70,14 @@ export default function PlatformPolicyPanel() {
     !saving;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-4 min-w-0">
+    <div className="bg-card rounded-xl border border-hairline p-4 sm:p-5 flex flex-col gap-4 min-w-0">
       {/* Header */}
       <div className="flex items-center gap-3 min-w-0">
         <div
-          style={{ background: `${COLORS.night}0D` }}
+          style={{ background: "rgb(var(--c-ink) / 0.08)" }}
           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
         >
-          <Clock size={16} color={COLORS.night} />
+          <Clock size={16} style={{ color: COLORS.ink }} />
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-primary truncate">
@@ -94,7 +94,7 @@ export default function PlatformPolicyPanel() {
         <div
           style={{
             background: "rgba(193,80,46,0.1)",
-            color: COLORS.rust,
+            color: COLORS.dangerText,
           }}
           className="text-xs font-semibold px-3 py-2 rounded-lg"
         >
@@ -118,7 +118,7 @@ export default function PlatformPolicyPanel() {
               if (e.key === "Enter" && canSave) handleSave();
             }}
             disabled={saving}
-            className="w-20 sm:w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406] min-w-0 disabled:opacity-50"
+            className="input !w-20 sm:!w-24 min-w-0"
           />
           <span className="text-xs text-secondary shrink-0">
             {t("siku", "days")}
@@ -141,8 +141,8 @@ export default function PlatformPolicyPanel() {
           onClick={handleSave}
           disabled={!canSave}
           style={{
-            background: canSave ? COLORS.gold : COLORS.sandLine,
-            color: canSave ? COLORS.night : "var(--text-muted)",
+            background: canSave ? COLORS.gold : "rgb(var(--c-hairline))",
+            color: canSave ? "rgb(var(--c-night))" : "var(--text-muted)",
           }}
           className="flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg px-4 py-2 w-full sm:w-auto transition-colors disabled:cursor-not-allowed"
         >
@@ -158,7 +158,7 @@ export default function PlatformPolicyPanel() {
 
         {saved && (
           <span
-            style={{ color: COLORS.green }}
+            style={{ color: COLORS.successText }}
             className="text-xs font-semibold flex items-center gap-1"
           >
             <Check size={13} />

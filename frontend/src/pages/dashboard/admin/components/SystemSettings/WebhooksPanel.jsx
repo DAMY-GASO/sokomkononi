@@ -118,14 +118,14 @@ export default function WebhooksPanel() {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 flex flex-col gap-4 min-w-0">
+    <div className="bg-card rounded-xl border border-hairline p-4 sm:p-5 flex flex-col gap-4 min-w-0">
       {/* Header */}
       <div className="flex items-center gap-3 min-w-0">
         <div
-          style={{ background: `${COLORS.night}0D` }}
+          style={{ background: "rgb(var(--c-ink) / 0.08)" }}
           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
         >
-          <Webhook size={16} color={COLORS.night} />
+          <Webhook size={16} style={{ color: COLORS.ink }} />
         </div>
         <p className="text-sm font-semibold text-primary truncate">
           Webhooks
@@ -137,7 +137,7 @@ export default function WebhooksPanel() {
         <div
           style={{
             background: "rgba(193,80,46,0.1)",
-            color: COLORS.rust,
+            color: COLORS.dangerText,
           }}
           className="text-xs font-semibold px-3 py-2 rounded-lg"
         >
@@ -153,7 +153,7 @@ export default function WebhooksPanel() {
           return (
             <div
               key={w.id}
-              style={{ borderColor: COLORS.sandLine }}
+              style={{ borderColor: "rgb(var(--c-hairline))" }}
               className="flex items-start justify-between gap-2 border rounded-lg px-3 py-2 min-w-0"
             >
               <div className="min-w-0 flex-1">
@@ -166,8 +166,8 @@ export default function WebhooksPanel() {
                 <button
                   onClick={() => handleToggle(w.id)}
                   disabled={isToggling || isRemoving}
-                  style={{ color: w.active ? COLORS.green : "#9CA3AF" }}
-                  className="text-[10px] sm:text-[11px] font-semibold px-2 py-1 rounded-full border border-gray-200 whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  style={{ color: w.active ? COLORS.successText : "rgb(var(--c-text-3))" }}
+                  className="text-[10px] sm:text-[11px] font-semibold px-2 py-1 rounded-full border border-hairline whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                 >
                   {isToggling && <Loader2 size={10} className="animate-spin" />}
                   {w.active
@@ -181,7 +181,7 @@ export default function WebhooksPanel() {
                 <button
                   onClick={() => handleRemove(w.id)}
                   disabled={isRemoving || isToggling}
-                  className="text-muted hover:text-rust p-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-muted hover:text-danger p-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label={lang === "sw" ? "Ondoa" : "Remove"}
                 >
                   {isRemoving ? (
@@ -202,12 +202,12 @@ export default function WebhooksPanel() {
       </div>
 
       {/* Form */}
-      <div className="flex flex-col gap-2 pt-3 border-t border-gray-100">
+      <div className="flex flex-col gap-2 pt-3 border-t border-hairline">
         <select
           value={form.event}
           onChange={(e) => setForm({ ...form, event: e.target.value })}
           disabled={busy.adding}
-          className="border border-gray-200 rounded-lg px-2 py-2 text-xs w-full focus:border-royal outline-none disabled:opacity-50"
+          className="select"
         >
           {WEBHOOK_EVENTS.map((e) => (
             <option key={e.id} value={e.id}>
@@ -223,14 +223,14 @@ export default function WebhooksPanel() {
             onKeyDown={(e) => e.key === "Enter" && canAdd && handleAdd()}
             placeholder="https://..."
             disabled={busy.adding}
-            className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-royal disabled:opacity-50"
+            className="input flex-1 min-w-0"
           />
           <button
             onClick={handleAdd}
             disabled={!canAdd}
             style={{
-              background: canAdd ? COLORS.gold : COLORS.sandLine,
-              color: canAdd ? COLORS.night : "var(--text-muted)",
+              background: canAdd ? COLORS.gold : "rgb(var(--c-hairline))",
+              color: canAdd ? "rgb(var(--c-night))" : "var(--text-muted)",
             }}
             className="flex items-center justify-center gap-1 text-xs font-semibold rounded-lg px-3 py-2 w-full sm:w-auto shrink-0 transition-colors disabled:cursor-not-allowed"
           >

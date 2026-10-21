@@ -57,4 +57,4 @@ export const ADMIN_NOTIFICATION_ICONS = {
 
 export const timeAgo = sharedTimeAgo;
 export const formatTZS = sharedFormatTZS;
-export { resolveSender } from "../../../dashboard/components/shared.js";
+export { resolveSender, toneText } from "../../../dashboard/components/shared.js";

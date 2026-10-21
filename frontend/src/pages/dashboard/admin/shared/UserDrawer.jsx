@@ -1,16 +1,5 @@
 // ============================================================
 // UserDrawer.jsx
-// Drawer ya mtumiaji (kwa User Management) — inaonyesha
-// listings zake, deals zake, na sold listings.
-// Inachukua data yenyewe kutoka /api/admin/users/{id}/full/
-// Mobile-responsive.
-//
-// Marekebisho:
-//  - Ongeza tabs: Wasifu / Mali / Deals / Zilizouzwa
-//  - Tab "Zilizouzwa" inaonyesha sold listings pekee
-//  - Inasoma URL params (?tab=listings&filter=sold) kwa deep link
-//  - REFUND MODE: kama `refund` prop ipo, inaonyesha payment
-//    details za mtumiaji + button "Paid"
 // ============================================================
 
 import React, { useEffect, useState } from "react";
@@ -83,11 +72,11 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
     <div className="space-y-4">
       {/* Refund amount */}
       <div
-        style={{ background: "rgba(37,99,235,0.06)", borderColor: "rgba(37,99,235,0.2)" }}
+        style={{ background: "rgba(0,98,253,0.06)", borderColor: "rgba(0,98,253,0.2)" }}
         className="rounded-xl border p-4"
       >
         <div className="flex items-center gap-2 mb-1">
-          <Wallet size={14} color="#2563EB" />
+          <Wallet size={14} style={{ color: COLORS.link }} />
           <p className="text-xs font-semibold text-secondary uppercase">
             {t("Kiasi cha Refund", "Refund Amount")}
           </p>
@@ -102,7 +91,7 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
 
       {/* Payment details */}
       <div
-        style={{ borderColor: COLORS.sandLine, background: "white" }}
+        style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
         className="rounded-xl border p-4 space-y-3"
       >
         <p className="text-xs font-semibold text-secondary uppercase">
@@ -115,7 +104,7 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
             style={{ background: `${COLORS.green}15` }}
             className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
           >
-            <Phone size={14} color={COLORS.green} />
+            <Phone size={14} style={{ color: COLORS.successText }} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] text-muted uppercase">
@@ -134,7 +123,7 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
               style={{ background: `${COLORS.gold}15` }}
               className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
             >
-              <Mail size={14} color={COLORS.gold} />
+              <Mail size={14} style={{ color: COLORS.goldText }} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] text-muted uppercase">
@@ -151,10 +140,10 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
         {refund.userPaymentMethod && (
           <div className="flex items-start gap-3">
             <div
-              style={{ background: "rgba(37,99,235,0.1)" }}
+              style={{ background: "rgba(0,98,253,0.1)" }}
               className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
             >
-              <CreditCard size={14} color="#2563EB" />
+              <CreditCard size={14} style={{ color: COLORS.link }} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] text-muted uppercase">
@@ -199,7 +188,7 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
           <button
             onClick={onFail}
             disabled={busy}
-            style={{ color: COLORS.rust, borderColor: COLORS.sandLine }}
+            style={{ color: COLORS.dangerText, borderColor: "rgb(var(--c-hairline))" }}
             className="w-full flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl border disabled:opacity-50"
           >
             <XCircle size={14} />
@@ -211,7 +200,7 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
       {/* Completed */}
       {refund.status === "COMPLETED" && (
         <div
-          style={{ background: "rgba(47,109,79,0.08)", color: COLORS.green }}
+          style={{ background: "rgba(47,109,79,0.08)", color: COLORS.successText }}
           className="rounded-xl p-4 text-center"
         >
           <CheckCircle2 size={22} className="mx-auto mb-2" />
@@ -229,7 +218,7 @@ function RefundSection({ refund, lang, onComplete, onFail, busy }) {
       {/* Failed */}
       {refund.status === "FAILED" && (
         <div
-          style={{ background: "rgba(193,80,46,0.08)", color: COLORS.rust }}
+          style={{ background: "rgba(193,80,46,0.08)", color: COLORS.dangerText }}
           className="rounded-xl p-4 text-center"
         >
           <XCircle size={22} className="mx-auto mb-2" />
@@ -250,7 +239,7 @@ function ListingsTab({ listings, lang, loading }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-500">
+      <div className="flex items-center justify-center gap-2 py-6 text-sm text-secondary">
         <Loader2 size={16} className="animate-spin" />
         {t("Inapakia...", "Loading...")}
       </div>
@@ -259,7 +248,7 @@ function ListingsTab({ listings, lang, loading }) {
 
   if (listings.length === 0) {
     return (
-      <p className="text-xs text-gray-400 py-3">
+      <p className="text-xs text-muted py-3">
         {t("Hakuna listings.", "No listings.")}
       </p>
     );
@@ -271,9 +260,9 @@ function ListingsTab({ listings, lang, loading }) {
         <div
           key={l.id}
           className="flex items-center justify-between gap-2 text-xs border rounded-lg px-3 py-2"
-          style={{ borderColor: COLORS.sandLine }}
+          style={{ borderColor: "rgb(var(--c-hairline))" }}
         >
-          <span className="truncate text-gray-700 min-w-0 flex-1">
+          <span className="truncate text-primary min-w-0 flex-1">
             {l.title}
           </span>
           <div className="shrink-0">
@@ -293,7 +282,7 @@ function DealsTab({ deals, lang, loading }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-500">
+      <div className="flex items-center justify-center gap-2 py-6 text-sm text-secondary">
         <Loader2 size={16} className="animate-spin" />
         {t("Inapakia...", "Loading...")}
       </div>
@@ -302,7 +291,7 @@ function DealsTab({ deals, lang, loading }) {
 
   if (deals.length === 0) {
     return (
-      <p className="text-xs text-gray-400 py-3">
+      <p className="text-xs text-muted py-3">
         {t("Hakuna deals.", "No deals.")}
       </p>
     );
@@ -314,12 +303,12 @@ function DealsTab({ deals, lang, loading }) {
         <div
           key={d.id}
           className="flex items-center justify-between gap-2 text-xs border rounded-lg px-3 py-2"
-          style={{ borderColor: COLORS.sandLine }}
+          style={{ borderColor: "rgb(var(--c-hairline))" }}
         >
-          <span className="truncate text-gray-700 min-w-0 flex-1">
+          <span className="truncate text-primary min-w-0 flex-1">
             {d.listingTitle || "—"}
             {d.role && (
-              <span className="ml-1 text-gray-400">({d.role})</span>
+              <span className="ml-1 text-muted">({d.role})</span>
             )}
           </span>
           <div className="shrink-0">
@@ -339,7 +328,7 @@ function SoldTab({ listings, lang, loading }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-500">
+      <div className="flex items-center justify-center gap-2 py-6 text-sm text-secondary">
         <Loader2 size={16} className="animate-spin" />
         {t("Inapakia...", "Loading...")}
       </div>
@@ -357,9 +346,9 @@ function SoldTab({ listings, lang, loading }) {
         <CheckCircle2
           size={28}
           className="mx-auto text-muted mb-2"
-          style={{ color: COLORS.green }}
+          style={{ color: COLORS.successText }}
         />
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-muted">
           {t("Hakuna mali zilizouzwa.", "No sold listings.")}
         </p>
       </div>
@@ -373,15 +362,15 @@ function SoldTab({ listings, lang, loading }) {
           key={l.id}
           className="flex items-start justify-between gap-2 text-xs border rounded-lg px-3 py-2"
           style={{
-            borderColor: "rgba(37,99,235,0.3)",
-            background: "rgba(37,99,235,0.04)",
+            borderColor: "rgba(0,98,253,0.3)",
+            background: "rgba(0,98,253,0.04)",
           }}
         >
           <div className="min-w-0 flex-1">
-            <p className="font-medium text-gray-700 truncate">
+            <p className="font-medium text-primary truncate">
               {l.title}
             </p>
-            <p className="text-[10px] text-gray-400 mt-0.5">
+            <p className="text-[10px] text-muted mt-0.5">
               {t("Imeuzwa", "Sold")}:{" "}
               {l.soldAt || l.updatedAt
                 ? formatJoined(l.soldAt || l.updatedAt)
@@ -391,8 +380,8 @@ function SoldTab({ listings, lang, loading }) {
           <div className="shrink-0">
             <span
               style={{
-                background: "rgba(37,99,235,0.12)",
-                color: "#2563EB",
+                background: "rgba(0,98,253,0.12)",
+                color: COLORS.link,
               }}
               className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
             >
@@ -499,20 +488,20 @@ export default function UserDrawer({
 
         {/* Drawer */}
         <div
-          className="w-full sm:w-96 sm:max-w-md h-full bg-white shadow-2xl overflow-y-auto flex flex-col"
+          className="w-full sm:w-96 sm:max-w-md h-full bg-card shadow-2xl overflow-y-auto flex flex-col"
           style={{ fontFamily: FONTS.body }}
         >
           {/* Header — sticky */}
           <div
             className="sticky top-0 z-10 p-4 flex items-center justify-between border-b"
-            style={{ borderColor: COLORS.sandLine, background: "white" }}
+            style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
           >
-            <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
+            <h3 className="font-semibold text-primary text-sm sm:text-base">
               {t("Malipo ya Refund", "Refund Payment")}
             </h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-1 -mr-1"
+              className="text-muted hover:text-secondary p-1 -mr-1"
               aria-label={t("Funga", "Close")}
             >
               <X size={20} />
@@ -520,19 +509,19 @@ export default function UserDrawer({
           </div>
 
           {/* User header */}
-          <div className="p-4 sm:p-5 border-b" style={{ borderColor: COLORS.sandLine }}>
+          <div className="p-4 sm:p-5 border-b" style={{ borderColor: "rgb(var(--c-hairline))" }}>
             <div className="flex items-center gap-3">
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center text-base font-bold shrink-0"
-                style={{ background: `${COLORS.gold}20`, color: COLORS.gold }}
+                style={{ background: `${COLORS.gold}20`, color: COLORS.goldText }}
               >
                 {getUserInitial(fullUser)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-gray-800 truncate">
+                <p className="font-semibold text-primary truncate">
                   {refund.userName || fullUser.name || "—"}
                 </p>
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs text-secondary truncate">
                   {refund.userEmail || fullUser.email || "—"}
                 </p>
               </div>
@@ -560,26 +549,26 @@ export default function UserDrawer({
       <div className="flex-1 bg-black/40" onClick={onClose} />
 
       <div
-        className="w-full sm:w-96 sm:max-w-md h-full bg-white shadow-2xl overflow-y-auto flex flex-col"
+        className="w-full sm:w-96 sm:max-w-md h-full bg-card shadow-2xl overflow-y-auto flex flex-col"
         style={{ fontFamily: FONTS.body }}
       >
         <div
           className="sticky top-0 z-10 p-4 flex items-center justify-between border-b"
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
         >
-          <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
+          <h3 className="font-semibold text-primary text-sm sm:text-base">
             {t("Wasifu wa Mtumiaji", "User Profile")}
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1 -mr-1"
+            className="text-muted hover:text-secondary p-1 -mr-1"
             aria-label={t("Funga", "Close")}
           >
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-4 sm:p-5 border-b" style={{ borderColor: COLORS.sandLine }}>
+        <div className="p-4 sm:p-5 border-b" style={{ borderColor: "rgb(var(--c-hairline))" }}>
           <div className="flex items-center gap-3">
             {hasAvatar ? (
               <img
@@ -590,31 +579,31 @@ export default function UserDrawer({
             ) : (
               <div
                 className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-base sm:text-lg font-bold shrink-0"
-                style={{ background: `${COLORS.gold}20`, color: COLORS.gold }}
+                style={{ background: `${COLORS.gold}20`, color: COLORS.goldText }}
               >
                 {getUserInitial(fullUser)}
               </div>
             )}
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <p className="font-semibold text-gray-800 truncate">
+                <p className="font-semibold text-primary truncate">
                   {fullUser.name || "—"}
                 </p>
                 {fullUser.is_verified && (
                   <ShieldCheck
                     size={14}
-                    style={{ color: COLORS.green }}
+                    style={{ color: COLORS.successText }}
                     className="shrink-0"
                     aria-label={t("Imethibitishwa", "Verified")}
                   />
                 )}
               </div>
-              <p className="text-xs text-gray-500 truncate">
+              <p className="text-xs text-secondary truncate">
                 {fullUser.email || "—"}
               </p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <StatusBadge status={userStatus} lang={lang} />
-                <span className="text-xs text-gray-400 capitalize">
+                <span className="text-xs text-muted capitalize">
                   {fullUser.role}
                 </span>
               </div>
@@ -624,10 +613,10 @@ export default function UserDrawer({
           {fullUser.phone && (
             <a
               href={`tel:${fullUser.phone}`}
-              className="mt-3 flex items-center gap-2 text-sm text-gray-700 rounded-lg border px-3 py-2 hover:bg-gray-50 transition-colors"
-              style={{ borderColor: COLORS.sandLine }}
+              className="mt-3 flex items-center gap-2 text-sm text-primary rounded-lg border px-3 py-2 hover:bg-ink/5 transition-colors"
+              style={{ borderColor: "rgb(var(--c-hairline))" }}
             >
-              <Phone size={14} style={{ color: COLORS.night }} />
+              <Phone size={14} style={{ color: COLORS.ink }} />
               <span className="font-medium">{fullUser.phone}</span>
             </a>
           )}
@@ -635,7 +624,7 @@ export default function UserDrawer({
 
         <div
           className="flex gap-1 px-4 sm:px-5 border-b overflow-x-auto"
-          style={{ borderColor: COLORS.sandLine }}
+          style={{ borderColor: "rgb(var(--c-hairline))" }}
         >
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
@@ -653,14 +642,14 @@ export default function UserDrawer({
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 style={{
-                  color: isActive ? COLORS.night : "#6B7280",
+                  color: isActive ? COLORS.ink : "rgb(var(--c-text-2))",
                   borderBottomColor: isActive ? COLORS.gold : "transparent",
                 }}
                 className="shrink-0 text-xs font-semibold px-3 py-2.5 border-b-2 whitespace-nowrap transition-colors"
               >
                 {tab.label[lang] || tab.label.sw}
                 {count != null && (
-                  <span className="ml-1 text-[10px] text-gray-400">
+                  <span className="ml-1 text-[10px] text-muted">
                     ({count})
                   </span>
                 )}
@@ -671,7 +660,7 @@ export default function UserDrawer({
 
         <div className="p-4 sm:p-5 space-y-5 flex-1">
           {loading && !data && (
-            <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-500">
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-secondary">
               <Loader2 size={16} className="animate-spin" />
               {t("Inapakia...", "Loading...")}
             </div>
@@ -681,7 +670,7 @@ export default function UserDrawer({
             <div
               className="text-xs text-center py-3 rounded-lg"
               style={{
-                color: COLORS.rust,
+                color: COLORS.dangerText,
                 background: "rgba(193,80,46,0.08)",
               }}
             >
@@ -692,43 +681,43 @@ export default function UserDrawer({
           {activeTab === "profile" && !loading && !error && (
             <div
               className="rounded-xl p-3 text-xs space-y-1.5"
-              style={{ background: COLORS.sand }}
+              style={{ background: "rgb(var(--c-page))" }}
             >
               <div className="flex justify-between gap-2">
-                <span className="text-gray-500 flex items-center gap-1">
+                <span className="text-secondary flex items-center gap-1">
                   <Calendar size={11} />
                   {t("Alijiunga:", "Joined:")}
                 </span>
-                <span className="font-medium text-gray-700 text-right">
+                <span className="font-medium text-primary text-right">
                   {formatJoined(fullUser.date_joined || fullUser.joined)}
                 </span>
               </div>
               <div className="flex justify-between gap-2">
-                <span className="text-gray-500">Listings:</span>
-                <span className="font-medium text-gray-700">
+                <span className="text-secondary">Listings:</span>
+                <span className="font-medium text-primary">
                   {loading ? "…" : listings.length}
                 </span>
               </div>
               <div className="flex justify-between gap-2">
-                <span className="text-gray-500">Sold:</span>
-                <span className="font-medium text-gray-700">
+                <span className="text-secondary">Sold:</span>
+                <span className="font-medium text-primary">
                   {loading ? "…" : soldCount}
                 </span>
               </div>
               <div className="flex justify-between gap-2">
-                <span className="text-gray-500">Deals:</span>
-                <span className="font-medium text-gray-700">
+                <span className="text-secondary">Deals:</span>
+                <span className="font-medium text-primary">
                   {loading ? "…" : deals.length}
                 </span>
               </div>
               <div className="flex justify-between gap-2">
-                <span className="text-gray-500">
+                <span className="text-secondary">
                   {t("Hali ya Uthibitisho:", "Verified:")}
                 </span>
                 <span
                   className="font-medium"
                   style={{
-                    color: fullUser.is_verified ? COLORS.green : "#6B7280",
+                    color: fullUser.is_verified ? COLORS.successText : "rgb(var(--c-text-3))",
                   }}
                 >
                   {fullUser.is_verified

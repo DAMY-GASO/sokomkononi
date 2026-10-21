@@ -41,43 +41,27 @@ import { useToast } from "../components/Toast.jsx";
 // ============================================================
 // NOTIFICATION TYPES — icon + color
 // ============================================================
+// Rangi zinatoka kwenye logo. `color` ni CSS variable — itumike kupitia
+// style={{ color }} (si prop ya `color=` ya lucide, kwa sababu var() haifanyi
+// kazi ndani ya SVG attribute).
+const GOLD_BG = "rgba(254,164,6,0.14)";
+const GREEN_BG = "rgba(47,109,79,0.14)";
+const RUST_BG = "rgba(193,80,46,0.14)";
+const ROYAL_BG = "rgba(0,98,253,0.12)";
+
 const NOTIFICATION_TYPES = {
-  message: {
-    icon: MessageSquare,
-    color: COLORS.gold,
-    bg: "rgba(232,163,61,0.12)",
-  },
-  deal: { icon: HandCoins, color: COLORS.green, bg: "rgba(47,109,79,0.12)" },
-  boost: { icon: Rocket, color: COLORS.rust, bg: "rgba(193,80,46,0.12)" },
-  leading: { icon: TrendingUp, color: "#2563EB", bg: "rgba(37,99,235,0.12)" },
-  advertisement: {
-    icon: Megaphone,
-    color: COLORS.gold,
-    bg: "rgba(232,163,61,0.12)",
-  },
-  listing_fee: {
-    icon: Receipt,
-    color: COLORS.green,
-    bg: "rgba(47,109,79,0.12)",
-  },
-  verified: { icon: Shield, color: COLORS.green, bg: "rgba(47,109,79,0.12)" },
-  reminder: { icon: Clock, color: "#2563EB", bg: "rgba(37,99,235,0.12)" },
-  listing_released: {
-    icon: BellRing,
-    color: COLORS.rust,
-    bg: "rgba(193,80,46,0.12)",
-  },
-  system: { icon: Info, color: COLORS.night, bg: "rgba(16,26,46,0.08)" },
-  "dispute.resolved": {
-    icon: Shield,
-    color: COLORS.green,
-    bg: "rgba(47,109,79,0.12)",
-  },
-  "payment.proof_submitted": {
-    icon: Receipt,
-    color: "#8A5A16",
-    bg: "rgba(232,163,61,0.16)",
-  },
+  message: { icon: MessageSquare, color: COLORS.goldText, bg: GOLD_BG },
+  deal: { icon: HandCoins, color: COLORS.successText, bg: GREEN_BG },
+  boost: { icon: Rocket, color: COLORS.dangerText, bg: RUST_BG },
+  leading: { icon: TrendingUp, color: COLORS.link, bg: ROYAL_BG },
+  advertisement: { icon: Megaphone, color: COLORS.goldText, bg: GOLD_BG },
+  listing_fee: { icon: Receipt, color: COLORS.successText, bg: GREEN_BG },
+  verified: { icon: Shield, color: COLORS.successText, bg: GREEN_BG },
+  reminder: { icon: Clock, color: COLORS.link, bg: ROYAL_BG },
+  listing_released: { icon: BellRing, color: COLORS.dangerText, bg: RUST_BG },
+  system: { icon: Info, color: COLORS.ink, bg: "rgb(var(--c-ink) / 0.08)" },
+  "dispute.resolved": { icon: Shield, color: COLORS.successText, bg: GREEN_BG },
+  "payment.proof_submitted": { icon: Receipt, color: COLORS.goldText, bg: GOLD_BG },
 };
 
 // ============================================================
@@ -126,17 +110,17 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
       onKeyDown={handleKey}
       aria-label={title || ""}
       style={{
-        background: notif.read ? "white" : (config?.bg || "#F5F3EC"),
-        borderColor: COLORS.sandLine,
+        background: notif.read ? "rgb(var(--c-card))" : (config?.bg || "rgb(var(--c-page))"),
+        borderColor: "rgb(var(--c-hairline))",
       }}
       className="rounded-xl border p-4 flex items-start gap-3 transition-all cursor-pointer hover:shadow-md hover:border-[#FEA406]/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FEA406]"
     >
       {/* Icon */}
       <div
-        style={{ background: config?.bg || "#F5F3EC" }}
+        style={{ background: config?.bg || "rgb(var(--c-page))" }}
         className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
       >
-        <Icon size={18} color={config.color} />
+        <Icon size={18} style={{ color: config.color }} />
       </div>
 
       {/* Body */}
@@ -187,7 +171,7 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
               e.stopPropagation();
               onMarkRead(notif.id);
             }}
-            className="p-1.5 text-muted hover:text-green-600 rounded-lg hover:bg-green-50 transition-colors"
+            className="p-1.5 text-muted hover:text-[color:rgb(var(--c-success-text))] rounded-lg hover:bg-success/10 transition-colors"
             aria-label={lang === "sw" ? "Weka kama imesomwa" : "Mark as read"}
           >
             <Check size={14} />
@@ -199,7 +183,7 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
             e.stopPropagation();
             onRemove(notif.id);
           }}
-          className="p-1.5 text-muted hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+          className="p-1.5 text-muted hover:text-[color:rgb(var(--c-danger-text))] rounded-lg hover:bg-danger/10 transition-colors"
           aria-label={lang === "sw" ? "Ondoa" : "Remove"}
         >
           <Trash2 size={14} />
@@ -263,11 +247,8 @@ export default function NotificationsPage() {
 
   return (
     <div
-      style={{
-        background: COLORS.sand,
-        minHeight: "100%",
-      }}
-      className="w-full p-4 sm:p-6"
+      style={{ minHeight: "100%" }}
+      className="bg-page w-full p-4 sm:p-6"
     >
       <div className="max-w-3xl mx-auto">
         {/* ============================================================ */}
@@ -306,28 +287,17 @@ export default function NotificationsPage() {
         {notifications.length > 0 && (
           <div className="flex flex-col items-center gap-3 mb-4">
             <div
-              style={{ background: "white", borderColor: COLORS.sandLine }}
-              className="flex rounded-full border p-1"
+              className="flex rounded-full border border-hairline bg-card p-1"
             >
               <button
                 onClick={() => setFilter("all")}
-                style={{
-                  background:
-                    filter === "all" ? COLORS.night : "transparent",
-                  color: filter === "all" ? COLORS.sand : "var(--text-primary)",
-                }}
-                className="text-xs font-semibold px-4 py-1.5 rounded-full transition-colors"
+                className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors ${filter === "all" ? "chip-active" : "text-primary"}`}
               >
                 {lang === "sw" ? "Zote" : "All"} ({notifications.length})
               </button>
               <button
                 onClick={() => setFilter("unread")}
-                style={{
-                  background:
-                    filter === "unread" ? COLORS.night : "transparent",
-                  color: filter === "unread" ? COLORS.sand : "var(--text-primary)",
-                }}
-                className="text-xs font-semibold px-4 py-1.5 rounded-full transition-colors"
+                className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors ${filter === "unread" ? "chip-active" : "text-primary"}`}
               >
                 {lang === "sw" ? "Hazijasomwa" : "Unread"} ({unreadCount})
               </button>
@@ -338,7 +308,7 @@ export default function NotificationsPage() {
                 <button
                   onClick={handleMarkAllRead}
                   className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-                  style={{ color: COLORS.green }}
+                  style={{ color: COLORS.successText }}
                 >
                   <CheckCheck size={14} />
                   {lang === "sw" ? "Soma zote" : "Mark all read"}
@@ -347,7 +317,7 @@ export default function NotificationsPage() {
               <button
                 onClick={handleClearAll}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-                style={{ color: COLORS.night }}
+                style={{ color: COLORS.ink }}
               >
                 <CheckCheck size={14} />
                 {lang === "sw" ? "Ondoa Alama Zote" : "Clear All"}
@@ -355,7 +325,7 @@ export default function NotificationsPage() {
               <button
                 onClick={handleDeleteAll}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-                style={{ color: COLORS.rust }}
+                style={{ color: COLORS.dangerText }}
               >
                 <Trash2 size={14} />
                 {lang === "sw" ? "Futa Zote" : "Delete All"}
@@ -369,8 +339,7 @@ export default function NotificationsPage() {
         {/* ============================================================ */}
         {filtered.length === 0 ? (
           <div
-            style={{ borderColor: COLORS.sandLine }}
-            className="rounded-2xl border-2 border-dashed p-12 text-center bg-white"
+            className="rounded-2xl border-2 border-dashed border-hairline p-12 text-center bg-card"
           >
             <Bell size={48} className="mx-auto text-muted mb-3" />
             <h3

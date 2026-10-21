@@ -147,12 +147,11 @@ export default function CategoryForm({
       )}
       <form
         onSubmit={handleSubmit}
-        style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-        className="border-t rounded-b-lg p-3 sm:p-4 flex flex-col gap-3"
+        className="border-t border-hairline bg-page rounded-b-lg p-3 sm:p-4 flex flex-col gap-3"
       >
         {error && (
           <div
-            style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
+            style={{ background: "rgba(193,80,46,0.1)", color: COLORS.dangerText }}
             className="text-xs font-semibold px-3 py-2 rounded-lg"
           >
             {error}
@@ -180,7 +179,7 @@ export default function CategoryForm({
                 src={form.imagePreview}
                 alt="Category preview"
                 className="w-20 h-20 sm:w-24 sm:h-24 aspect-square rounded-lg object-cover border shrink-0"
-                style={{ borderColor: COLORS.sandLine }}
+                style={{ borderColor: "rgb(var(--c-hairline))" }}
               />
               <div className="flex flex-row sm:flex-col gap-2 sm:gap-1.5">
                 <button
@@ -189,7 +188,7 @@ export default function CategoryForm({
                   disabled={saving || uploadingImage}
                   className="text-[11px] font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
                   style={{
-                    borderColor: COLORS.sandLine,
+                    borderColor: "rgb(var(--c-hairline))",
                     color: "var(--text-primary)",
                   }}
                 >
@@ -200,7 +199,7 @@ export default function CategoryForm({
                   onClick={handleRemoveImage}
                   disabled={saving || uploadingImage}
                   className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg border disabled:opacity-50"
-                  style={{ borderColor: COLORS.sandLine, color: COLORS.rust }}
+                  style={{ borderColor: "rgb(var(--c-hairline))", color: COLORS.dangerText }}
                 >
                   <X size={12} />
                   {t("Ondoa", "Remove")}
@@ -213,12 +212,12 @@ export default function CategoryForm({
               onClick={() => fileInputRef.current?.click()}
               disabled={saving || uploadingImage}
               style={{
-                borderColor: COLORS.sandLine,
+                borderColor: "rgb(var(--c-hairline))",
                 color: "var(--text-secondary)",
               }}
-              className="w-full rounded-xl border-2 border-dashed py-4 sm:py-5 flex flex-col items-center gap-1.5 hover:bg-white/50 transition-colors disabled:opacity-50"
+              className="w-full rounded-xl border-2 border-dashed py-4 sm:py-5 flex flex-col items-center gap-1.5 hover:bg-ink/5 transition-colors disabled:opacity-50"
             >
-              <ImagePlus size={22} color="rgba(16,26,46,0.35)" />
+              <ImagePlus size={22} className="opacity-60" />
               <span className="text-xs font-medium text-center px-2">
                 {t(
                   "Bofya kupakia picha (itakatwa kuwa mraba)",
@@ -248,7 +247,7 @@ export default function CategoryForm({
               onChange={(e) => setForm({ ...form, key: e.target.value })}
               placeholder="mfano: pikipiki"
               disabled={isEditing || saving}
-              className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:bg-gray-100 disabled:text-secondary"
+              className="input"
             />
           </label>
 
@@ -261,7 +260,7 @@ export default function CategoryForm({
               onChange={(e) => setForm({ ...form, labelSw: e.target.value })}
               placeholder="mfano: Pikipiki"
               disabled={saving}
-              className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:opacity-50"
+              className="input"
             />
           </label>
 
@@ -274,7 +273,7 @@ export default function CategoryForm({
               onChange={(e) => setForm({ ...form, labelEn: e.target.value })}
               placeholder="e.g. Motorcycles"
               disabled={saving}
-              className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:opacity-50"
+              className="input"
             />
           </label>
         </div>
@@ -290,8 +289,8 @@ export default function CategoryForm({
           {/* Preview ya icon iliyochaguliwa */}
           {SelectedIcon && (
             <div
-              style={{ borderColor: COLORS.sandLine }}
-              className="flex items-center gap-2 border rounded-md px-2.5 py-2 mb-2 bg-white"
+              style={{ borderColor: "rgb(var(--c-hairline))" }}
+              className="flex items-center gap-2 border rounded-md px-2.5 py-2 mb-2 bg-card"
             >
               <div
                 style={{
@@ -300,7 +299,7 @@ export default function CategoryForm({
                 }}
                 className="w-8 h-8 rounded-md border flex items-center justify-center shrink-0"
               >
-                <SelectedIcon size={16} color={COLORS.gold} />
+                <SelectedIcon size={16} style={{ color: COLORS.goldTextText }} />
               </div>
               <span className="text-xs font-semibold text-primary">
                 {form.iconKey}
@@ -310,8 +309,8 @@ export default function CategoryForm({
 
           {/* Grid ya icons */}
           <div
-            style={{ borderColor: COLORS.sandLine }}
-            className="border rounded-md p-2 max-h-56 overflow-y-auto grid grid-cols-6 sm:grid-cols-8 gap-1.5 bg-white"
+            style={{ borderColor: "rgb(var(--c-hairline))" }}
+            className="border rounded-md p-2 max-h-56 overflow-y-auto grid grid-cols-6 sm:grid-cols-8 gap-1.5 bg-card"
           >
             {Object.entries(AVAILABLE_ICONS).map(([key, Icon]) => {
               const isSelected = form.iconKey === key;
@@ -326,11 +325,11 @@ export default function CategoryForm({
                     borderColor: isSelected ? COLORS.gold : "transparent",
                     background: isSelected ? `${COLORS.gold}15` : "transparent",
                   }}
-                  className="w-full aspect-square rounded-md border-2 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="w-full aspect-square rounded-md border-2 flex items-center justify-center hover:bg-ink/5 transition-colors disabled:opacity-50"
                 >
                   <Icon
                     size={18}
-                    color={isSelected ? COLORS.gold : COLORS.night}
+                    style={{ color: isSelected ? COLORS.goldText : COLORS.ink }}
                   />
                 </button>
               );
@@ -356,7 +355,7 @@ export default function CategoryForm({
               value={form.descSw}
               onChange={(e) => setForm({ ...form, descSw: e.target.value })}
               disabled={saving}
-              className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:opacity-50"
+              className="input"
             />
           </label>
           <label className="flex flex-col gap-1 sm:col-span-2">
@@ -367,7 +366,7 @@ export default function CategoryForm({
               value={form.descEn}
               onChange={(e) => setForm({ ...form, descEn: e.target.value })}
               disabled={saving}
-              className="border border-gray-200 rounded-md px-2.5 py-1.5 text-xs outline-none disabled:opacity-50"
+              className="input"
             />
           </label>
         </div>
@@ -407,7 +406,7 @@ export default function CategoryForm({
 
         {/* WARNING (only when adding new) */}
         {!isEditing && (
-          <p style={{ color: COLORS.rust }} className="text-[11px] leading-relaxed">
+          <p style={{ color: COLORS.dangerText }} className="text-[11px] leading-relaxed">
             {lang === "sw" ? (
               <>
                 ⚠️ Baada ya kuunda category hii, <b>LAZIMA</b> uende{" "}
@@ -430,21 +429,19 @@ export default function CategoryForm({
             type="button"
             onClick={onCancel}
             disabled={saving || uploadingImage}
-            style={{ borderColor: COLORS.sandLine }}
-            className="text-xs font-semibold px-3 py-2 rounded-lg border text-secondary hover:bg-white transition-colors shrink-0 disabled:opacity-50"
+            style={{ borderColor: "rgb(var(--c-hairline))" }}
+            className="text-xs font-semibold px-3 py-2 rounded-lg border text-secondary hover:bg-ink/5 transition-colors shrink-0 disabled:opacity-50"
           >
             {t("Ghairi", "Cancel")}
           </button>
           <button
             type="submit"
             disabled={!canSave || uploadingImage}
-            style={{
-              background:
-                canSave && !uploadingImage ? COLORS.night : COLORS.sandLine,
-              color:
-                canSave && !uploadingImage ? COLORS.sand : "var(--text-muted)",
-            }}
-            className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
+            className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors disabled:cursor-not-allowed ${
+              canSave && !uploadingImage
+                ? "bg-night dark:bg-royal text-white"
+                : "bg-hairline text-muted"
+            }`}
           >
             {(saving || uploadingImage) && (
               <Loader2 size={13} className="animate-spin" />
