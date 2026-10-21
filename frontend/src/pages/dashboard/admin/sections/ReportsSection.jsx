@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
-  Home, Handshake, Wallet, BarChart3, Eye,
+  Users, Home, Handshake, Wallet, TrendingUp, BarChart3, Award, Eye,
   MapPin, Tag, Download, FileText, FileSpreadsheet, File, Loader2, Calendar,
 } from "lucide-react";
 import { COLORS, formatTZS, getCategory } from "../shared/constants.js";
@@ -8,12 +8,56 @@ import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useReports } from "../../../../config/reportsStore.js";
+import { useUsers } from "../../../../config/usersStore.js";
 import {
   useListings,
   useHydratePublicListings,
 } from "../../../../config/listingsStore.js";
 import { useDeals } from "../../../../config/dealsStore.js";
-import { usePlatformRevenue, localDayKey } from "../shared/revenue.js";
+import {
+  usePlatformRevenue,
+  localDayKey,
+} from "../shared/revenue.js";
+import {
+  DonutChart,
+  HBarChart,
+  VBarChart,
+  LineChart,
+  MiniRow,
+} from "../shared/Charts.jsx";
+
+const STREAM_COLORS = {
+  listing:     "#0891B2",
+  reservation: "#2F6D4F",
+  boost:       "#FEA406",
+  leading:     "#7C3AED",
+  advertise:   "#C1502E",
+  success:     "#2563EB",
+  bundle:      "#DB2777",
+};
+
+const DEAL_STATUS_COLORS = {
+  negotiating:            "#FEA406",
+  offer_sent:             "#D97706",
+  accepted:               "#2F6D4F",
+  reserved:               "#0062FD",
+  awaiting_final_payment: "#2563EB",
+  payment_proof_submitted:"#7C3AED",
+  completed:              "#059669",
+  disputed:               "#C1502E",
+  cancelled:              "#6B7280",
+};
+
+const LISTING_STATUS_COLORS = {
+  live:            "#2F6D4F",
+  reserved:        "#FEA406",
+  sold:            "#7C3AED",
+  pending_payment: "#D97706",
+  in_review:       "#0062FD",
+  rejected:        "#C1502E",
+  paused:          "#6B7280",
+  expired:         "#9CA3AF",
+};
 
 async function downloadReport(format, { period, from, to }) {
   const base = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
@@ -248,48 +292,33 @@ function ReportTile({ label, value, icon: Icon, color, subtext }) {
   );
 }
 
-function BarChart({ data, maxValue, color, emptyText, formatValue }) {
-  if (!data || data.length === 0 || maxValue === 0) {
-    return <p className="text-xs text-muted text-center py-6 sm:py-8">{emptyText}</p>;
-  }
-  return (
-    <div className="flex items-end justify-between gap-0.5 sm:gap-1 h-32 sm:h-40">
-      {data.map((d, i) => {
-        const height = maxValue > 0 ? (d.value / maxValue) * 100 : 0;
-        return (
-          <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-0">
-            <div className="w-full flex items-end justify-center h-full">
-              <div
-                style={{
-                  background: color,
-                  height: `${Math.max(height, 2)}%`,
-                  minHeight: height > 0 ? 4 : 2,
-                }}
-                className="w-full max-w-[16px] sm:max-w-[24px] rounded-t transition-all"
-                title={`${d.label}: ${formatValue ? formatValue(d.value) : d.value}`}
-              />
-            </div>
-            <span className="text-[8px] sm:text-[9px] text-muted truncate w-full text-center">
-              {d.label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ChartCard({ title, icon: Icon, iconColor, children }) {
+function ChartCard({ title, icon: Icon, iconColor, hint, children }) {
   return (
     <div
       style={{ borderColor: COLORS.sandLine, background: "white" }}
       className="rounded-xl border p-3 sm:p-4 min-w-0 w-full"
     >
-      <div className="flex items-center gap-2 mb-2 sm:mb-3 min-w-0">
-        <Icon size={16} color={iconColor} className="shrink-0" />
-        <h3 className="text-sm font-semibold text-primary truncate">{title}</h3>
+      <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon size={16} color={iconColor} className="shrink-0" />
+          <h3 className="text-sm font-semibold text-primary truncate">{title}</h3>
+        </div>
+        {hint && (
+          <span className="shrink-0 text-[10px] font-medium text-muted">
+            {hint}
+          </span>
+        )}
       </div>
       {children}
+    </div>
+  );
+}
+
+function LoadingBlock() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-8">
+      <div className="h-32 w-32 rounded-full skeleton" />
+      <div className="h-3 w-24 rounded skeleton" />
     </div>
   );
 }
@@ -298,6 +327,7 @@ export default function ReportsSection() {
   const { lang } = useLanguage();
   const apiReports = useReports(lang);
   const platformRevenue = usePlatformRevenue("all");
+  const users = useUsers();
   useHydratePublicListings();
   const listings = useListings();
   const deals = useDeals();
@@ -308,6 +338,125 @@ export default function ReportsSection() {
   const totalRevenueText = platformRevenue.loading
     ? "…"
     : platformRevenue.error ? "—" : formatTZS(platformRevenue.total);
+
+  const userStats = useMemo(() => {
+    let sellersOnly = 0, buyersOnly = 0, bothRoles = 0, neitherRole = 0, totalAdmins = 0;
+    users.forEach((u) => {
+      const role = u.role || "Neither";
+      if (role === "Admin") totalAdmins++;
+      else if (role === "Seller") sellersOnly++;
+      else if (role === "Buyer") buyersOnly++;
+      else if (role === "Both") bothRoles++;
+      else neitherRole++;
+    });
+    return {
+      totalUsers: sellersOnly + buyersOnly + bothRoles + neitherRole + totalAdmins,
+      sellersOnly, buyersOnly, bothRoles, neitherRole, totalAdmins,
+    };
+  }, [users]);
+
+  const usersDonut = useMemo(() => [
+    { label: t("Wauzaji Pekee", "Sellers Only"), value: userStats.sellersOnly, color: "#FEA406" },
+    { label: t("Wanunuzi Pekee", "Buyers Only"), value: userStats.buyersOnly, color: "#2F6D4F" },
+    { label: t("Wote Wawili", "Both"),          value: userStats.bothRoles,   color: "#7C3AED" },
+    { label: t("Wapya", "Neither"),             value: userStats.neitherRole, color: "#9CA3AF" },
+    { label: t("Admins", "Admins"),             value: userStats.totalAdmins, color: "#DC2626" },
+  ].filter((d) => d.value > 0), [userStats, lang]);
+
+  const listingsDonut = useMemo(() => {
+    const statuses = ["live","reserved","sold","pending_payment","in_review","rejected","paused","expired"];
+    const labels = {
+      live: t("Hai","Live"), reserved: t("Imehifadhiwa","Reserved"),
+      sold: t("Imeuzwa","Sold"), pending_payment: t("Haijalipwa","Unpaid"),
+      in_review: t("Inakaguliwa","In Review"), rejected: t("Imekataliwa","Rejected"),
+      paused: t("Imesimamishwa","Paused"), expired: t("Imeisha Muda","Expired"),
+    };
+    return statuses
+      .map((s) => ({
+        label: labels[s],
+        value: listings.filter((l) => l.status === s).length,
+        color: LISTING_STATUS_COLORS[s],
+      }))
+      .filter((d) => d.value > 0);
+  }, [listings, lang]);
+
+  const dealsDonut = useMemo(() => {
+    const keys = Object.keys(DEAL_STATUS_COLORS);
+    const labels = {
+      negotiating: t("Inajadiliwa","Negotiating"),
+      offer_sent: t("Ofa Imetumwa","Offer Sent"),
+      accepted: t("Imekubaliwa","Accepted"),
+      reserved: t("Imehifadhiwa","Reserved"),
+      awaiting_final_payment: t("Malipo ya Mwisho","Final Payment"),
+      payment_proof_submitted: t("Uthibitisho","Proof Sent"),
+      completed: t("Imekamilika","Completed"),
+      disputed: t("Mgogoro","Disputed"),
+      cancelled: t("Imeghairiwa","Cancelled"),
+    };
+    return keys
+      .map((k) => ({
+        label: labels[k],
+        value: deals.filter((d) => d.status === k).length,
+        color: DEAL_STATUS_COLORS[k],
+      }))
+      .filter((d) => d.value > 0);
+  }, [deals, lang]);
+
+  const revenueDonut = useMemo(() => {
+    const total = platformRevenue.total || 1;
+    return platformRevenue.streams
+      .map((s) => {
+        const value = platformRevenue.byType[s.key] || 0;
+        const pct = (value / total) * 100;
+        return {
+          label: `${s.label} (${pct.toFixed(1)}%)`,
+          value: value,
+          color: STREAM_COLORS[s.key] || "#9CA3AF",
+        };
+      })
+      .filter((d) => d.value > 0);
+  }, [platformRevenue]);
+
+  const revenueByDay = useMemo(() => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - i);
+      days.push({
+        key: localDayKey(d),
+        label: d.toLocaleDateString(locale, { weekday: "short" }),
+        value: 0,
+      });
+    }
+    const byKey = Object.fromEntries(days.map((d) => [d.key, d]));
+    const revenueSource = platformRevenue.transactions || [];
+    revenueSource.forEach((tr) => {
+      const dt = new Date(tr.at);
+      if (Number.isNaN(dt.getTime())) return;
+      const key = localDayKey(dt);
+      if (byKey[key]) byKey[key].value += Number(tr.amount) || 0;
+    });
+    return days;
+  }, [platformRevenue, locale]);
+
+  const revenueByMonth = useMemo(() => {
+    const out = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+      const label = start.toLocaleDateString(locale, { month: "short" });
+      let total = 0;
+      const revenueSource = platformRevenue.transactions || [];
+      revenueSource.forEach((tr) => {
+        const dt = new Date(tr.at);
+        if (dt >= start && dt <= end) total += Number(tr.amount) || 0;
+      });
+      out.push({ label, value: total });
+    }
+    return out;
+  }, [platformRevenue, locale]);
 
   const reports = useMemo(() => {
     const num = (v) => Number(v) || 0;
@@ -383,7 +532,6 @@ export default function ReportsSection() {
       liveListings: pick(apiReports.liveListings, lsStatus("live")),
       soldListings: pick(apiReports.soldListings, lsStatus("sold")),
       totalDeals, completedDeals,
-      disputedDeals: 0,
       conversionRate, dealsByStatus,
       listingsGrowth: pickList(apiReports.listingsGrowth, listingsGrowthLocal),
       mostViewedListings: pickList(apiReports.mostViewedListings, mostViewedLocal),
@@ -393,15 +541,16 @@ export default function ReportsSection() {
   }, [apiReports, listings, deals, locale]);
 
   const listingsMax = Math.max(...(reports.listingsGrowth?.map((d) => d.count) || [0]), 1);
-  const revenueMax = Math.max(...(reports.revenueByMonth?.map((d) => d.total) || [0]), 1);
+  const revenueMonthMax = Math.max(...(revenueByMonth?.map((d) => d.value) || [0]), 1);
+  const revenueDayMax = Math.max(...(revenueByDay?.map((d) => d.value) || [0]), 1);
 
   return (
     <div className="w-full max-w-7xl mx-auto">
       <SectionHeader
         title={t("Ripoti & Uchanganuzi", "Reports & Analytics")}
         subtitle={t(
-          "Muhtasari wa data ya mfumo — listings, deals, revenue.",
-          "Overview of system data — listings, deals, revenue."
+          "Uchanganuzi wa kina — graphs, trends, top lists na data zote za mfumo.",
+          "Deep analytics — graphs, trends, top lists and all system data."
         )}
       />
 
@@ -440,125 +589,245 @@ export default function ReportsSection() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-5">
-        <ChartCard title={t("Ukuaji wa Mali (Siku 30)", "Listings Growth (Last 30 Days)")} icon={Home} iconColor={COLORS.green}>
-          <BarChart
-            data={(reports.listingsGrowth || []).map((d) => ({ label: d.label, value: d.count }))}
-            maxValue={listingsMax}
-            color={COLORS.green}
-            emptyText={t("Hakuna data bado", "No data yet")}
-          />
-        </ChartCard>
+      {/* REVENUE ANALYTICS */}
+      <div className="mb-2">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+          {t("Mapato", "Revenue")}
+        </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-5">
+          <ChartCard
+            title={t("Mapato kwa Njia", "Revenue by Stream")}
+            icon={Wallet}
+            iconColor={COLORS.gold}
+            hint={t(`Jumla: ${formatTZS(platformRevenue.total)}`, `Total: ${formatTZS(platformRevenue.total)}`)}
+          >
+            {platformRevenue.loading ? (
+              <LoadingBlock />
+            ) : (
+              <DonutChart
+                data={revenueDonut}
+                size={180}
+                thickness={26}
+                centerLabel="100%"
+                centerSub="TZS"
+              />
+            )}
+          </ChartCard>
 
-        <ChartCard title={t("Mapato kwa Mwezi (Miezi 6)", "Revenue by Month (Last 6 Months)")} icon={BarChart3} iconColor={COLORS.rust}>
-          <BarChart
-            data={(reports.revenueByMonth || []).map((d) => ({ label: d.label, value: d.total }))}
-            maxValue={revenueMax}
-            formatValue={formatTZS}
-            color={COLORS.rust}
-            emptyText={t("Hakuna data bado", "No data yet")}
-          />
-        </ChartCard>
+          <ChartCard
+            title={t("Mapato — Siku 7", "Revenue — Last 7 Days")}
+            icon={TrendingUp}
+            iconColor={COLORS.gold}
+            hint={t("Mwenendo wa kila siku", "Daily trend")}
+          >
+            <LineChart
+              data={revenueByDay}
+              color={COLORS.gold}
+              valueFormat={formatTZS}
+            />
+          </ChartCard>
 
-        <ChartCard title={t("Mgawanyo wa Deals", "Deals Breakdown")} icon={Handshake} iconColor="#2563EB">
-          <div className="flex flex-col gap-2">
-            {[
-              { key: "negotiating", label: t("Inajadiliwa", "Negotiating"), color: "#2563EB" },
-              { key: "accepted", label: t("Imekubaliwa", "Accepted"), color: COLORS.green },
-              { key: "reserved", label: t("Imehifadhiwa", "Reserved"), color: COLORS.gold },
-              { key: "completed", label: t("Imekamilika", "Completed"), color: COLORS.green },
-              { key: "cancelled", label: t("Imeghairiwa", "Cancelled"), color: COLORS.night },
-            ].map(({ key, label, color }) => {
-              const count = reports.dealsByStatus?.[key] || 0;
-              const total = reports.totalDeals || 1;
-              const pct = (count / total) * 100;
-              return (
-                <div key={key} className="min-w-0">
-                  <div className="flex items-center justify-between text-xs mb-1 gap-2">
-                    <span className="text-secondary truncate">{label}</span>
-                    <span className="font-semibold text-primary shrink-0">
-                      {count} ({pct.toFixed(0)}%)
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div style={{ background: color, width: `${pct}%` }} className="h-full rounded-full transition-all" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </ChartCard>
+          <ChartCard
+            title={t("Mapato — Miezi 6", "Revenue — Last 6 Months")}
+            icon={BarChart3}
+            iconColor={COLORS.rust}
+            hint={t("Kwa mwezi", "Per month")}
+          >
+            <VBarChart
+              data={revenueByMonth.map((m) => ({ ...m, color: COLORS.rust }))}
+              height={180}
+              valueFormat={(v) => (v >= 1_000_000 ? `${Math.round(v / 1_000_000)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v)}
+            />
+          </ChartCard>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        <ChartCard title={t("Mali Zinazoonekana Zaidi", "Most Viewed Listings")} icon={Eye} iconColor={COLORS.green}>
-          {reports.mostViewedListings?.length === 0 ? (
-            <p className="text-xs text-muted text-center py-6">{t("Hakuna data bado", "No data yet")}</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {(reports.mostViewedListings || []).map((l, i) => (
-                <div key={l.id} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0">
-                  <span className="text-xs font-bold text-muted w-5 shrink-0">#{i + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-primary truncate">{l.title}</p>
-                    <p className="text-[11px] text-secondary truncate">
-                      {l.views || 0} {t("views", "views")} · {formatTZS(l.price)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </ChartCard>
+      {/* BREAKDOWNS */}
+      <div className="mb-2">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+          {t("Mgawanyo", "Breakdowns")}
+        </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 mb-5">
+          <ChartCard
+            title={t("Mgawanyo wa Watumiaji", "User Breakdown")}
+            icon={Users}
+            iconColor="#2563EB"
+            hint={t(`${userStats.totalUsers} watumiaji`, `${userStats.totalUsers} users`)}
+          >
+            <DonutChart
+              data={usersDonut}
+              size={180}
+              thickness={26}
+              centerLabel={userStats.totalUsers.toLocaleString()}
+              centerSub={t("Watumiaji", "Users")}
+            />
+          </ChartCard>
 
-        <ChartCard title={t("Kategoria Zinazoonekana Zaidi", "Most Viewed Categories")} icon={Tag} iconColor="#2563EB">
-          {reports.topCategories?.length === 0 ? (
-            <p className="text-xs text-muted text-center py-6">{t("Hakuna data bado", "No data yet")}</p>
-          ) : (
+          <ChartCard
+            title={t("Mali kwa Hali", "Listings by Status")}
+            icon={Home}
+            iconColor={COLORS.green}
+            hint={t(`${reports.totalListings} mali`, `${reports.totalListings} listings`)}
+          >
+            <DonutChart
+              data={listingsDonut}
+              size={180}
+              thickness={26}
+              centerLabel={reports.totalListings.toLocaleString()}
+              centerSub={t("Mali", "Listings")}
+            />
+          </ChartCard>
+
+          <ChartCard
+            title={t("Mgawanyo wa Deals", "Deals Breakdown")}
+            icon={Handshake}
+            iconColor="#7C3AED"
+            hint={t(`${reports.totalDeals} deals`, `${reports.totalDeals} deals`)}
+          >
+            {dealsDonut.length === 0 ? (
+              <p className="py-6 text-center text-xs text-muted">
+                {t("Hakuna deals bado", "No deals yet")}
+              </p>
+            ) : (
+              <DonutChart
+                data={dealsDonut}
+                size={180}
+                thickness={26}
+                centerLabel={reports.totalDeals}
+                centerSub={t("Deals", "Deals")}
+              />
+            )}
+          </ChartCard>
+        </div>
+      </div>
+
+      {/* GROWTH */}
+      <div className="mb-2">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+          {t("Ukuaji", "Growth")}
+        </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-5">
+          <ChartCard
+            title={t("Ukuaji wa Mali (Siku 30)", "Listings Growth (Last 30 Days)")}
+            icon={BarChart3}
+            iconColor={COLORS.green}
+          >
+            <VBarChart
+              data={(reports.listingsGrowth || []).map((d) => ({ ...d, color: COLORS.green }))}
+              height={180}
+              valueFormat={(v) => v}
+            />
+          </ChartCard>
+
+          <ChartCard
+            title={t("Mgawanyo wa Deals kwa Hali", "Deals by Status")}
+            icon={Handshake}
+            iconColor="#2563EB"
+          >
             <div className="flex flex-col gap-2">
-              {(reports.topCategories || []).map((cat) => {
-                const category = getCategory(cat.key);
-                const CatIcon = getCategoryIcon(category?.iconKey);
-                const catLabel = category?.label?.[lang] || category?.label?.sw || cat.key;
+              {[
+                { key: "negotiating", label: t("Inajadiliwa", "Negotiating"), color: "#2563EB" },
+                { key: "accepted", label: t("Imekubaliwa", "Accepted"), color: COLORS.green },
+                { key: "reserved", label: t("Imehifadhiwa", "Reserved"), color: COLORS.gold },
+                { key: "completed", label: t("Imekamilika", "Completed"), color: COLORS.green },
+                { key: "cancelled", label: t("Imeghairiwa", "Cancelled"), color: COLORS.night },
+              ].map(({ key, label, color }) => {
+                const count = reports.dealsByStatus?.[key] || 0;
+                const total = reports.totalDeals || 1;
+                const pct = (count / total) * 100;
                 return (
-                  <div key={cat.key} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0">
-                    <div style={{ background: `${COLORS.night}0D` }} className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0">
-                      <CatIcon size={13} color={COLORS.night} />
+                  <div key={key} className="min-w-0">
+                    <div className="flex items-center justify-between text-xs mb-1 gap-2">
+                      <span className="text-secondary truncate">{label}</span>
+                      <span className="font-semibold text-primary shrink-0">
+                        {count} ({pct.toFixed(0)}%)
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-primary truncate">{catLabel}</p>
-                      <p className="text-[11px] text-secondary truncate">
-                        {cat.count} {t("mali", "listings")} · {cat.views.toLocaleString()} {t("views", "views")}
-                      </p>
+                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div style={{ background: color, width: `${pct}%` }} className="h-full rounded-full transition-all" />
                     </div>
                   </div>
                 );
               })}
             </div>
-          )}
-        </ChartCard>
+          </ChartCard>
+        </div>
+      </div>
 
-        <ChartCard title={t("Maeneo Yanayoonekana Zaidi", "Most Active Locations")} icon={MapPin} iconColor={COLORS.rust}>
-          {reports.topLocations?.length === 0 ? (
-            <p className="text-xs text-muted text-center py-6">{t("Hakuna data bado", "No data yet")}</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {(reports.topLocations || []).map((loc) => (
-                <div key={loc.name} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0">
-                  <div style={{ background: `${COLORS.rust}15` }} className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0">
-                    <MapPin size={13} color={COLORS.rust} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-primary truncate">{loc.name}</p>
-                    <p className="text-[11px] text-secondary truncate">
-                      {loc.count} {t("mali", "listings")} · {loc.views.toLocaleString()} {t("views", "views")}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </ChartCard>
+      {/* TOP LISTS */}
+      <div className="mb-2">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+          {t("Orodha za Juu", "Top Lists")}
+        </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+          <ChartCard
+            title={t("Kategoria Zinazoonekana Zaidi", "Top Categories")}
+            icon={Tag}
+            iconColor="#0891B2"
+          >
+            {reports.topCategories?.length === 0 ? (
+              <p className="text-xs text-muted text-center py-6">
+                {t("Hakuna data bado", "No data yet")}
+              </p>
+            ) : (
+              <HBarChart
+                data={(reports.topCategories || []).map((c) => {
+                  const cat = getCategory(c.key || c.slug || c.name);
+                  return {
+                    label: cat?.label?.[lang] || c.name || c.key,
+                    value: c.count || 0,
+                    color: "#0891B2",
+                  };
+                })}
+              />
+            )}
+          </ChartCard>
+
+          <ChartCard
+            title={t("Maeneo Yanayoonekana Zaidi", "Top Locations")}
+            icon={MapPin}
+            iconColor={COLORS.rust}
+          >
+            {reports.topLocations?.length === 0 ? (
+              <p className="text-xs text-muted text-center py-6">
+                {t("Hakuna data bado", "No data yet")}
+              </p>
+            ) : (
+              <HBarChart
+                data={(reports.topLocations || []).map((loc) => ({
+                  label: loc.name || loc.location || "—",
+                  value: loc.count || 0,
+                  color: COLORS.rust,
+                }))}
+              />
+            )}
+          </ChartCard>
+
+          <ChartCard
+            title={t("Mali Zinazoonekana Zaidi", "Most Viewed Listings")}
+            icon={Eye}
+            iconColor={COLORS.green}
+          >
+            {reports.mostViewedListings?.length === 0 ? (
+              <p className="text-xs text-muted text-center py-6">
+                {t("Hakuna data bado", "No data yet")}
+              </p>
+            ) : (
+              <div>
+                {(reports.mostViewedListings || []).slice(0, 5).map((l, i) => (
+                  <MiniRow
+                    key={l.id || i}
+                    rank={i + 1}
+                    label={l.title}
+                    sub={formatTZS(l.price)}
+                    value={`${(l.views || 0).toLocaleString()}`}
+                    color={i === 0 ? COLORS.gold : i === 1 ? "#9CA3AF" : i === 2 ? "#CD7F32" : COLORS.green}
+                  />
+                ))}
+              </div>
+            )}
+          </ChartCard>
+        </div>
       </div>
     </div>
   );

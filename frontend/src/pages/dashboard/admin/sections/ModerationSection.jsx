@@ -3,13 +3,14 @@
 // Approve / Reject / Request Edit / Request Payment / Finalize
 //
 // Marekebisho:
-//  - Ongeza filter tab "Zilizouzwa" (sold)
-//  - Sold listings zinaonekana kwa admin (read-only)
+//  - Filter tab "Zilizouzwa" (sold)
+//  - Filter tab "Zilizoisha Muda" (expired)   ⬅️ MPYA
+//  - Sold + Expired listings zinaonekana kwa admin (read-only)
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import {
   CheckCircle, XCircle, MoreVertical, Loader2, Trash2, RotateCcw,
-  Image, Pencil, Wallet, CheckCheck, ShoppingBag,
+  Image, Pencil, Wallet, CheckCheck, ShoppingBag, Clock,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -68,6 +69,8 @@ export default function ModerationSection() {
       statusFilter === "rejected" || statusFilter === "zote";
     const wantSold =
       statusFilter === "sold" || statusFilter === "zote";
+    const wantExpired =
+      statusFilter === "expired" || statusFilter === "zote";   // ⬅️ MPYA
 
     const tasks = [];
     if (wantPending) tasks.push(hydrateModerationQueueFromApi());
@@ -79,6 +82,7 @@ export default function ModerationSection() {
     if (wantLive) tasks.push(fetchListingsByStatusAsync("live"));
     if (wantRejected) tasks.push(fetchListingsByStatusAsync("rejected"));
     if (wantSold) tasks.push(fetchListingsByStatusAsync("sold"));
+    if (wantExpired) tasks.push(fetchListingsByStatusAsync("expired"));   // ⬅️ MPYA
 
     Promise.all(tasks).then((results) => {
       if (cancelled) return;
@@ -174,7 +178,8 @@ export default function ModerationSection() {
       label: { sw: "Zinahitaji Uhariri", en: "Needs Edit" },
     },
     { key: "live", label: { sw: "Zimeidhinishwa", en: "Approved" } },
-    { key: "sold", label: { sw: "Zilizouzwa", en: "Sold" } },  // ⬅️ MPYA
+    { key: "sold", label: { sw: "Zilizouzwa", en: "Sold" } },
+    { key: "expired", label: { sw: "Zilizoisha Muda", en: "Expired" } },   // ⬅️ MPYA
     { key: "rejected", label: { sw: "Zimekataliwa", en: "Rejected" } },
     { key: "zote", label: { sw: "Zote", en: "All" } },
   ];
@@ -542,7 +547,7 @@ export default function ModerationSection() {
       );
     }
 
-    // Awaiting payment — admin anaweza kukataa au kuona picha
+    // Awaiting payment
     if (listing.status === "approved_pending_payment") {
       return (
         <div
@@ -566,7 +571,7 @@ export default function ModerationSection() {
       );
     }
 
-    // Needs edit — admin anaweza kukataa au kuona picha
+    // Needs edit
     if (listing.status === "needs_edit") {
       return (
         <div
@@ -679,7 +684,7 @@ export default function ModerationSection() {
       );
     }
 
-    // ⬇️ MPYA: Sold / Rented — read-only (admin anaweza kuona tu)
+    // Sold / Rented — read-only
     if (listing.status === "sold" || listing.status === "rented") {
       return (
         <div
@@ -698,6 +703,44 @@ export default function ModerationSection() {
             {t("Imeuzwa", "Sold")}
           </span>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
+        </div>
+      );
+    }
+
+    // ⬇️ MPYA: Expired — read-only (admin anaweza kuona tu)
+    if (listing.status === "expired") {
+      return (
+        <div
+          className={`flex flex-wrap gap-2 ${
+            fullWidth ? "w-full" : "justify-end"
+          }`}
+        >
+          <span
+            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg"
+            style={{
+              background: "rgba(156,163,175,0.15)",
+              color: "#6B7280",
+            }}
+          >
+            <Clock size={13} />
+            {t("Imeisha Muda", "Expired")}
+          </span>
+          <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
+          <button
+            onClick={() => openDeleteModal(listing.id)}
+            disabled={isBusy}
+            style={{ color: "#DC2626", borderColor: "rgba(220,38,38,0.4)" }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 ${
+              fullWidth ? "flex-1" : ""
+            }`}
+          >
+            {currentAction === "delete" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Trash2 size={13} />
+            )}
+            {t("Futa", "Delete")}
+          </button>
         </div>
       );
     }

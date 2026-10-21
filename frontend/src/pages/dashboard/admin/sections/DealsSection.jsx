@@ -1,7 +1,7 @@
 // ============================================================
 // DealsSection.jsx
 // ============================================================
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Eye,
   Loader2,
@@ -10,8 +10,10 @@ import {
   ChevronRight,
   Search,
   X,
+  Clock,
+  ArrowRight,
 } from "lucide-react";
-import { COLORS, timeAgo } from "../shared/constants.js";
+import { COLORS, timeAgo, formatTZS } from "../shared/constants.js";
 import { getCategory } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
@@ -42,11 +44,21 @@ const STATUS_FILTERS = [
   { key: "CANCELLED", label: { sw: "Imeghairiwa", en: "Cancelled" } },
 ];
 
+// Status ambazo zinahesabiwa kama "active / live"
+const ACTIVE_STATUSES = new Set([
+  "negotiating",
+  "offer_sent",
+  "accepted",
+  "reserved",
+  "awaiting_final_payment",
+  "payment_proof_submitted",
+  "disputed",
+]);
+
 export default function DealsSection() {
   const { lang } = useLanguage();
   const { user } = useAuth();
 
-  // Cleanup
   // Pre-hydrate users + listings
   useEffect(() => {
     hydrateUsersFromApi().catch(() => {});
@@ -165,7 +177,12 @@ export default function DealsSection() {
     return cat?.label?.[lang] || cat?.label?.sw || d.category;
   };
 
-  // ── Load deal room data (messages, payment proof) ────────
+  // ── Live / active deals (kutoka ukurasa wa sasa) ─────────
+  const liveDeals = useMemo(() => {
+    return deals.filter((d) => ACTIVE_STATUSES.has(String(d.status || "").toLowerCase()));
+  }, [deals]);
+
+  // ── Load deal room data ──────────────────────────────────
   const ensureRoomData = async (dealId, { force = false } = {}) => {
     if (!force && dealRooms[dealId]) return dealRooms[dealId];
     if (inflightRoomRef.current.has(dealId)) {
@@ -272,6 +289,88 @@ export default function DealsSection() {
         </button>
       </div>
 
+      {/* ═══════════════════════════════════════════════════════
+          LIVE TRANSACTIONS IN PROGRESS — kuhamishwa kutoka Overview
+          ═══════════════════════════════════════════════════════ */}
+      <div className="card mb-5 p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-primary sm:text-base">
+            <Clock size={16} color={COLORS.gold} className="shrink-0" />
+            {t("Live Transactions Zinazoendelea", "Live Transactions in Progress")}
+          </h3>
+          <span className="text-xs font-semibold text-muted">
+            {liveDeals.length} {t("hai", "active")}
+          </span>
+        </div>
+
+        {loading && deals.length === 0 ? (
+          <div className="flex items-center justify-center gap-2 py-6">
+            <Loader2 size={16} className="animate-spin text-muted" />
+            <span className="text-xs text-muted">
+              {t("Inapakia...", "Loading...")}
+            </span>
+          </div>
+        ) : liveDeals.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted">
+            {t("Hakuna deals zinazoendelea kwa sasa.", "No active deals right now.")}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {liveDeals.slice(0, 5).map((d) => (
+              <div
+                key={d.id}
+                className="rounded-lg border border-[color:rgb(var(--c-hairline))] px-3 py-3 hover:bg-page/50 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-primary">
+                      {displayListing(d)}
+                    </p>
+                    <p className="truncate text-xs text-secondary">
+                      {displayDealName(d.buyerName, d.buyerId)} ← → {displayDealName(d.sellerName, d.sellerId)}
+                    </p>
+                  </div>
+                  <span
+                    className="shrink-0 text-sm font-bold tabular-nums"
+                    style={{ color: COLORS.rust }}
+                  >
+                    {displayDealAmount(d)}
+                  </span>
+                  <StatusBadge status={d.status} lang={lang} />
+                  <button
+                    onClick={() => handleViewRoom(d)}
+                    disabled={!!loadingRoom[d.id]}
+                    style={{
+                      borderColor: COLORS.sandLine,
+                      color: "var(--text-primary)",
+                    }}
+                    className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    title={t("Angalia Room", "View Room")}
+                  >
+                    {loadingRoom[d.id] ? (
+                      <Loader2 size={11} className="animate-spin" />
+                    ) : (
+                      <ArrowRight size={11} />
+                    )}
+                    <span className="hidden sm:inline">
+                      {t("Room", "Room")}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ))}
+            {liveDeals.length > 5 && (
+              <p className="text-center text-xs text-muted pt-1">
+                {t(
+                  `Na deals ${liveDeals.length - 5} nyingine hai...`,
+                  `And ${liveDeals.length - 5} more active deals...`
+                )}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
       {error && (
         <div
           style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
@@ -337,11 +436,9 @@ export default function DealsSection() {
         </div>
       )}
 
-      
       {/* DESKTOP — MODERN GRID LIST */}
       {deals.length > 0 && (
         <div className="hidden sm:block bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-          {/* Header Row */}
           <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-page border-b border-hairline text-[11px] font-bold text-secondary uppercase tracking-wider">
             <div className="col-span-3">Listing</div>
             <div className="col-span-2">Buyer</div>
@@ -351,15 +448,13 @@ export default function DealsSection() {
             <div className="col-span-1 text-right">Date</div>
             <div className="col-span-1 text-right">Action</div>
           </div>
-          
-          {/* Data Rows */}
+
           <div className="divide-y divide-hairline">
             {deals.map((d) => {
               const isExpanded = expandedId === d.id;
               return (
                 <React.Fragment key={d.id}>
                   <div className="grid grid-cols-12 gap-4 px-5 py-4 hover:bg-page/50 transition-colors items-start">
-                    {/* Listing */}
                     <div className="col-span-3 min-w-0 flex flex-col">
                       <span className="font-semibold text-primary text-sm truncate" title={displayListing(d)}>
                         {displayListing(d)}
@@ -368,8 +463,7 @@ export default function DealsSection() {
                         {displayCategory(d)} · {d.location || "—"}
                       </span>
                     </div>
-                    
-                    {/* Buyer */}
+
                     <div className="col-span-2 min-w-0 flex flex-col">
                       <span className="font-medium text-primary text-sm truncate">
                         {displayDealName(d.buyerName, d.buyerId)}
@@ -380,8 +474,7 @@ export default function DealsSection() {
                         </span>
                       )}
                     </div>
-                    
-                    {/* Seller */}
+
                     <div className="col-span-2 min-w-0 flex flex-col">
                       <span className="font-medium text-primary text-sm truncate">
                         {displayDealName(d.sellerName, d.sellerId)}
@@ -392,33 +485,28 @@ export default function DealsSection() {
                         </span>
                       )}
                     </div>
-                    
-                    {/* Price */}
+
                     <div className="col-span-1 text-right">
                       <span className="font-bold text-sm whitespace-nowrap" style={{ color: COLORS.rust }}>
                         {displayDealAmount(d)}
                       </span>
                     </div>
-                    
-                    {/* Status */}
+
                     <div className="col-span-2 flex justify-center">
                       <StatusBadge status={d.status} lang={lang} />
                     </div>
-                    
-                    {/* Date */}
+
                     <div className="col-span-1 text-right">
                       <span className="text-[11px] text-muted whitespace-nowrap">
                         {d.createdAt ? timeAgo(d.createdAt, lang) : "—"}
                       </span>
                     </div>
-                    
-                    {/* Action */}
+
                     <div className="col-span-1 flex justify-end">
                       <ActionButtons deal={d} />
                     </div>
                   </div>
-                  
-                  {/* Expanded Deal Room Viewer */}
+
                   {isExpanded && (
                     <div className="bg-white border-b border-gray-100">
                       <DealRoomViewer
@@ -445,7 +533,6 @@ export default function DealsSection() {
             return (
               <div key={d.id} className="bg-card rounded-xl border border-hairline shadow-sm overflow-hidden">
                 <div className="p-4">
-                  {/* Header */}
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-primary truncate">{displayListing(d)}</p>
@@ -453,8 +540,7 @@ export default function DealsSection() {
                     </div>
                     <StatusBadge status={d.status} lang={lang} />
                   </div>
-                  
-                  {/* Parties Grid */}
+
                   <div className="grid grid-cols-2 gap-3 mb-3 bg-page rounded-lg p-3 border border-hairline">
                     <div className="min-w-0">
                       <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">{t("Mnunuzi", "Buyer")}</p>
@@ -468,7 +554,6 @@ export default function DealsSection() {
                     </div>
                   </div>
 
-                  {/* Footer Grid */}
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-1">{t("Bei / Ofa", "Price / Offer")}</p>
@@ -482,8 +567,7 @@ export default function DealsSection() {
 
                   <ActionButtons deal={d} fullWidth />
                 </div>
-                
-                {/* Expanded Deal Room Viewer */}
+
                 {isExpanded && (
                   <div className="border-t border-gray-100">
                     <DealRoomViewer
@@ -500,7 +584,6 @@ export default function DealsSection() {
           })}
         </div>
       )}
-
 
       {/* Empty */}
       {!loading && deals.length === 0 && (

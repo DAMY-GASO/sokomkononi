@@ -145,7 +145,7 @@ export default function Footer({ selectedLang: propLang }) {
               {t("Jukwaa la kuaminika la kununua na kuuza mali nchini Tanzania.", "A trusted platform for buying and selling property in Tanzania.")}
             </p>
             <ul className="space-y-2.5 text-sm">
-              <li className="flex items-center gap-2.5 text-white/60"><Mail size={15} className="shrink-0 text-white/35" /><a href="mailto:hello@sokomkononi.co.tz" className="hover:text-white">hello@sokomkononi.co.tz</a></li>
+              <li className="flex items-center gap-2.5 text-white/60"><Mail size={15} className="shrink-0 text-white/35" /><a href="mailto:support@sokomkononi.co.tz" className="hover:text-white">hello@sokomkononi.co.tz</a></li>
               <li className="flex items-center gap-2.5 text-white/60"><Phone size={15} className="shrink-0 text-white/35" /><a href="tel:+255743895038" className="hover:text-white">+255 743 895 038</a></li>
               <li className="flex items-center gap-2.5 text-white/60"><MapPin size={15} className="shrink-0 text-white/35" />Dar es Salaam, Tanzania</li>
             </ul>
