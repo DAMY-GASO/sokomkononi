@@ -1,54 +1,91 @@
 // ============================================================
-// listingFeeRules.js — Admin update for listing fee rules.
+// listingFeeRules.js — API client for /listings/fee-rules/
+// Upsert: PATCH kama rule ipo (kwa category), POST kama haipo.
 // ============================================================
-import { api } from "./client";
+import { api } from "./client.js";
 
 export const listingFeeRulesApi = {
-  list: () => api.get("/listings/fee-rules/?page_size=100"),
+  /**
+   * Orodha ya fee rules zote.
+   */
+  list: async (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return api.get(`/listings/fee-rules/${qs ? `?${qs}` : ""}`);
+  },
 
-  update: (id, patch) =>
-    api.patch(`/listings/fee-rules/${id}/`, patch),
+  /**
+   * Tafuta rule moja kwa ID.
+   */
+  get: async (id) => {
+    return api.get(`/listings/fee-rules/${id}/`);
+  },
 
-  create: (payload) =>
-    api.post("/listings/fee-rules/", payload),
-
-  remove: (id) =>
-    api.delete(`/listings/fee-rules/${id}/`),
-
-  // ⬇️ MPYA: upsert — kama category tayari ina rule active, update;
-  // vinginevyo create mpya. Inazuia DUPLICATE_ACTIVE_RULE (400).
-  upsert: async (payload) => {
-    if (!payload?.category) {
-      return api.post("/listings/fee-rules/", payload);
-    }
-
-    // Tafuta rule active kwa category
+  /**
+   * Tafuta rules kwa category (ID).
+   * Inarudisha array (tupu kama hakuna).
+   */
+  byCategory: async (categoryId) => {
+    if (!categoryId) return [];
     try {
-      const existing = await api.get(
-        `/listings/fee-rules/?category=${payload.category}&page_size=100`
+      const data = await api.get(
+        `/listings/fee-rules/?category=${categoryId}&page_size=200`
       );
-      const list = Array.isArray(existing)
-        ? existing
-        : existing?.results || [];
-
-      // Chagua rule active (is_active !== false)
-      const active = list.find((r) => r.is_active !== false);
-
-      if (active) {
-        // Update rule iliyopo — usiunde mpya
-        return api.patch(
-          `/listings/fee-rules/${active.id}/`,
-          payload
-        );
-      }
+      return Array.isArray(data) ? data : data?.results || [];
     } catch (err) {
-      console.warn(
-        "[listingFeeRules] upsert lookup failed:",
-        err
-      );
+      console.warn("[listingFeeRulesApi] byCategory failed:", err);
+      return [];
+    }
+  },
+
+  /**
+   * Unda rule mpya.
+   */
+  create: async (payload) => {
+    return api.post("/listings/fee-rules/", payload);
+  },
+
+  /**
+   * Sasisha rule iliyopo (PATCH).
+   */
+  update: async (id, payload) => {
+    return api.patch(`/listings/fee-rules/${id}/`, payload);
+  },
+
+  /**
+   * Futa rule (soft delete).
+   */
+  remove: async (id) => {
+    return api.delete(`/listings/fee-rules/${id}/`);
+  },
+
+  /**
+   * Upsert — PATCH kama rule ipo kwa category, POST kama haipo.
+   *
+   * Hii inazuia IntegrityError ya `unique_active_rule_per_category`:
+   *   - Kama rule ipo (hata is_active=False), tunaiweka active na
+   *     kusasisha fields zote.
+   *   - Kama haipo, tunaunda mpya.
+   */
+  upsert: async (payload) => {
+    if (!payload) throw new Error("payload is required");
+    if (!payload.category) {
+      throw new Error("category (id) is required for upsert");
     }
 
-    // Hakuna rule active — unda mpya
-    return api.post("/listings/fee-rules/", payload);
+    // 1. Tafuta rule zilizopo kwa category hii
+    const existing = await listingFeeRulesApi.byCategory(payload.category);
+
+    // 2. Kama ipo, PATCH (chagua active kwanza, kisha ya kwanza)
+    if (existing.length > 0) {
+      const target = existing.find((r) => r.is_active) || existing[0];
+      const updated = await listingFeeRulesApi.update(target.id, {
+        ...payload,
+        is_active: true,
+      });
+      return updated;
+    }
+
+    // 3. Haipo — POST
+    return listingFeeRulesApi.create(payload);
   },
 };

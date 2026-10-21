@@ -58,7 +58,7 @@ function toSlug(str) {
 }
 
 // ------------------------------------------------------------
-// Normalizer — sasa ina fee_mode, flat_fee, is_enabled
+// Normalizer
 // ------------------------------------------------------------
 function norm(raw) {
   if (!raw) return null;
@@ -86,8 +86,6 @@ function norm(raw) {
 
 // ------------------------------------------------------------
 // Hydrate na dedupe kwa seedKey
-// Chagua rule moja pekee kwa kila seedKey:
-//   active > Title Case > ina nafasi > id ndogo
 // ------------------------------------------------------------
 export async function hydrateListingFeeConfigsFromApi() {
   try {
@@ -95,7 +93,7 @@ export async function hydrateListingFeeConfigsFromApi() {
     const list = Array.isArray(data) ? data : data?.results || [];
     const normalized = list.map(norm).filter(Boolean);
 
-    // ⬇️ DEDUPE kwa `key` (seedKey)
+    // DEDUPE kwa `key` (seedKey)
     const byKey = new Map();
     for (const rule of normalized) {
       const existing = byKey.get(rule.key);
@@ -184,8 +182,6 @@ export async function updateListingFeeModeAsync(key, mode) {
   if (!target) return { ok: false, error: new Error("Fee config not found") };
 
   // Seed a sensible default when the target mode has no value yet.
-  // Otherwise switching modes could silently make every listing free
-  // (e.g. FLAT with flat_fee=0, or PERCENTAGE with percentage=0).
   const patch = { fee_mode: mode };
   if (mode === "FLAT" && !(Number(target.flatFee) > 0)) {
     patch.flat_fee = 3000;
@@ -202,6 +198,14 @@ export async function toggleListingFeeActiveAsync(key) {
   return updateListingFeeConfigAsync(key, { is_active: !target.isActive });
 }
 
+/**
+ * ✅ FIX: addFeeConfigAsync sasa inafanya upsert sahihi.
+ *
+ * - Kama rule ipo kwa category (hata is_active=False), inafanya PATCH.
+ * - Kama haipo, inafanya POST.
+ *
+ * Hii inazuia IntegrityError ya `unique_active_rule_per_category`.
+ */
 export async function addFeeConfigAsync({
   category_key,
   name,
@@ -213,9 +217,11 @@ export async function addFeeConfigAsync({
   priority = 0,
 }) {
   if (!name) return { ok: false, error: new Error("name required") };
+
   const slug = toSlug(category_key || name);
   const seedKey = getSeedKeyFromSlug(slug);
   const categoryId = getCategoryIdByKey(seedKey);
+
   if (!categoryId) {
     return {
       ok: false,
@@ -224,9 +230,33 @@ export async function addFeeConfigAsync({
       ),
     };
   }
+
   try {
-    // ⬇️ Tumia upsert (inafanya PATCH kama rule ipo, POST kama haipo)
-    const raw = await listingFeeRulesApi.upsert({
+    // ✅ Tafuta rule zilizopo kwa category hii kwanza
+    const existing = await listingFeeRulesApi.byCategory(categoryId);
+
+    // ✅ Kama ipo, PATCH (update) — hakuna IntegrityError
+    if (existing.length > 0) {
+      // Chagua active kwanza, kisha ya kwanza
+      const target = existing.find((r) => r.is_active) || existing[0];
+      const raw = await listingFeeRulesApi.update(target.id, {
+        category: categoryId,
+        name,
+        percentage,
+        min_price,
+        max_price,
+        flat_fee,
+        fee_mode,
+        priority,
+        is_active: true,
+      });
+      const updated = norm(raw);
+      write(read().map((c) => (c.id === updated.id ? updated : c)));
+      return { ok: true, config: updated, mode: "updated" };
+    }
+
+    // ✅ Haipo — POST (create)
+    const raw = await listingFeeRulesApi.create({
       category: categoryId,
       name,
       percentage,
@@ -238,15 +268,25 @@ export async function addFeeConfigAsync({
       is_active: true,
     });
     const created = norm(raw);
-    const existing = read().find((c) => c.id === created.id);
-    if (existing) {
-      write(read().map((c) => (c.id === created.id ? created : c)));
-    } else {
-      write([created, ...read()]);
-    }
-
-    return { ok: true, config: created };
+    write([created, ...read()]);
+    return { ok: true, config: created, mode: "created" };
   } catch (err) {
+    // ✅ Kama bado kuna IntegrityError, rudisha error yenye maelezo
+    if (err?.status === 400) {
+      const detail =
+        err?.data?.detail ||
+        err?.data?.category?.[0] ||
+        err?.data?.flat_fee?.[0] ||
+        err?.data?.percentage?.[0] ||
+        err?.message;
+      return {
+        ok: false,
+        error: new Error(
+          detail ||
+          "Imeshindwa kuunda fee rule. Labda kuna rule iliyofichwa kwa category hii. Futa rule zote za category hii kwanza."
+        ),
+      };
+    }
     return { ok: false, error: err };
   }
 }
