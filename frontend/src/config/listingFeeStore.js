@@ -2,15 +2,28 @@
 // listingFeeStore.js — API-only via /api/listings/fee-rules/
 // Sasa ina: fee_mode (PERCENTAGE|FLAT), flat_fee, is_enabled.
 // DEDUPE: kila seedKey ina rule moja pekee (active > Title Case > id ndogo).
+//
+// ✅ FIX: addFeeConfigAsync sasa:
+//   - Inafilter rules kwa category kwenye frontend (defensive)
+//   - Inatuma flat_fee tu kwa FLAT, percentage tu kwa PERCENTAGE
+//   - Inafanya PATCH kama rule ipo, POST kama haipo
+//   - Haigongani na `unique_active_rule_per_category`
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import { listingFeeRulesApi } from "../api/listingFeeRules.js";
-import { getSeedKeyFromSlug, isKnownCategoryKey, getCategoryIdByKey } from "./categoriesStore.js";
+import {
+  getSeedKeyFromSlug,
+  isKnownCategoryKey,
+  getCategoryIdByKey,
+} from "./categoriesStore.js";
 
 const KEY = "sokomkononi_listing_fee_config_v2";
 const EV = "sokomkononi:listing-fee-config-updated";
 
+// ============================================================
+// LOCAL STORAGE
+// ============================================================
 function read() {
   if (typeof window === "undefined") return [];
   try {
@@ -22,18 +35,20 @@ function read() {
     return [];
   }
 }
+
 function write(list) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(KEY, JSON.stringify(list));
   window.dispatchEvent(new Event(EV));
 }
 
-// ------------------------------------------------------------
-// Synchronous reads
-// ------------------------------------------------------------
+// ============================================================
+// SYNCHRONOUS READS
+// ============================================================
 export function getListingFeeConfigs() {
   return read();
 }
+
 export function getListingFeeConfig(key) {
   if (!key) return null;
   const target = getSeedKeyFromSlug(key);
@@ -43,12 +58,16 @@ export function getListingFeeConfig(key) {
     null
   );
 }
+
 export function hasFeeConfig(categoryKey) {
   if (!categoryKey) return false;
   const target = getSeedKeyFromSlug(categoryKey);
   return read().some((c) => c.key === target);
 }
 
+// ============================================================
+// HELPERS
+// ============================================================
 function toSlug(str) {
   return String(str || "")
     .trim()
@@ -57,9 +76,9 @@ function toSlug(str) {
     .replace(/[^a-z0-9-]/g, "");
 }
 
-// ------------------------------------------------------------
-// Normalizer
-// ------------------------------------------------------------
+// ============================================================
+// NORMALIZER
+// ============================================================
 function norm(raw) {
   if (!raw) return null;
   const pct = Number(raw.percentage) || 0;
@@ -73,6 +92,13 @@ function norm(raw) {
     backendKey: rawSlug,
     name: raw.name,
     orphan,
+    // category FK id — muhimu kwa filtering ya frontend
+    categoryId:
+      raw.category != null
+        ? Number(raw.category)
+        : raw.category_id != null
+        ? Number(raw.category_id)
+        : null,
     feeMode: raw.fee_mode || "PERCENTAGE",
     percentage: pct,
     rate: pct / 100,
@@ -84,9 +110,11 @@ function norm(raw) {
   };
 }
 
-// ------------------------------------------------------------
-// Hydrate na dedupe kwa seedKey
-// ------------------------------------------------------------
+// ============================================================
+// HYDRATE + DEDUPE
+// Chagua rule moja pekee kwa kila seedKey:
+//   active > Title Case > ina nafasi > id ndogo
+// ============================================================
 export async function hydrateListingFeeConfigsFromApi() {
   try {
     const data = await api.get("/listings/fee-rules/?page_size=200");
@@ -135,9 +163,9 @@ export async function hydrateListingFeeConfigsFromApi() {
   }
 }
 
-// ------------------------------------------------------------
-// Mutations
-// ------------------------------------------------------------
+// ============================================================
+// MUTATIONS — UPDATE
+// ============================================================
 export async function updateListingFeeConfigAsync(key, patch) {
   const target = getListingFeeConfig(key);
   if (!target) return { ok: false, error: new Error("Fee config not found") };
@@ -147,6 +175,7 @@ export async function updateListingFeeConfigAsync(key, patch) {
       error: new Error("Fee config has no backend id — hydrate first"),
     };
   }
+
   const apiPatch = {};
   if (patch.rate != null) apiPatch.percentage = patch.rate * 100;
   if (patch.percentage != null) apiPatch.percentage = patch.percentage;
@@ -155,7 +184,9 @@ export async function updateListingFeeConfigAsync(key, patch) {
   if (patch.flat_fee != null) apiPatch.flat_fee = patch.flat_fee;
   if (patch.fee_mode != null) apiPatch.fee_mode = patch.fee_mode;
   if (patch.is_active != null) apiPatch.is_active = patch.is_active;
+
   if (!Object.keys(apiPatch).length) return { ok: true, config: target };
+
   try {
     const raw = await listingFeeRulesApi.update(target.id, apiPatch);
     const updated = norm(raw) || { ...target, ...patch };
@@ -176,12 +207,15 @@ export async function updateListingFeeFlatAsync(key, flatFee) {
 
 export async function updateListingFeeModeAsync(key, mode) {
   if (!["PERCENTAGE", "FLAT"].includes(mode)) {
-    return { ok: false, error: new Error("fee_mode must be PERCENTAGE or FLAT") };
+    return {
+      ok: false,
+      error: new Error("fee_mode must be PERCENTAGE or FLAT"),
+    };
   }
   const target = getListingFeeConfig(key);
   if (!target) return { ok: false, error: new Error("Fee config not found") };
 
-  // Seed a sensible default when the target mode has no value yet.
+  // Seed sensible default when the target mode has no value yet.
   const patch = { fee_mode: mode };
   if (mode === "FLAT" && !(Number(target.flatFee) > 0)) {
     patch.flat_fee = 3000;
@@ -198,13 +232,18 @@ export async function toggleListingFeeActiveAsync(key) {
   return updateListingFeeConfigAsync(key, { is_active: !target.isActive });
 }
 
+// ============================================================
+// ADD — upsert sahihi (PATCH kama ipo, POST kama haipo)
+// ============================================================
 /**
- * ✅ FIX: addFeeConfigAsync sasa inafanya upsert sahihi.
+ * ✅ FIX: addFeeConfigAsync
  *
- * - Kama rule ipo kwa category (hata is_active=False), inafanya PATCH.
- * - Kama haipo, inafanya POST.
+ * - Inafilter rules kwa `categoryId` kwenye frontend (defensive).
+ * - Inatuma `flat_fee` TU kwa FLAT, `percentage` TU kwa PERCENTAGE.
+ * - Kama rule ipo kwa category → PATCH (update, is_active=true).
+ * - Kama haipo → POST (create).
  *
- * Hii inazuia IntegrityError ya `unique_active_rule_per_category`.
+ * Hii inazuia `DUPLICATE_ACTIVE_RULE` (unique_active_rule_per_category).
  */
 export async function addFeeConfigAsync({
   category_key,
@@ -218,6 +257,19 @@ export async function addFeeConfigAsync({
 }) {
   if (!name) return { ok: false, error: new Error("name required") };
 
+  // ── Hakikisha fee > 0 kulingana na mode ─────────────────
+  let safeFlatFee = Number(flat_fee) || 0;
+  let safePercentage = Number(percentage) || 0;
+  const mode = String(fee_mode || "FLAT").toUpperCase();
+
+  if (mode === "FLAT" && safeFlatFee <= 0) {
+    safeFlatFee = 3000;
+  }
+  if (mode === "PERCENTAGE" && safePercentage <= 0) {
+    safePercentage = 2.5;
+  }
+
+  // ── Pata categoryId kutoka store ───────────────────────
   const slug = toSlug(category_key || name);
   const seedKey = getSeedKeyFromSlug(slug);
   const categoryId = getCategoryIdByKey(seedKey);
@@ -231,59 +283,82 @@ export async function addFeeConfigAsync({
     };
   }
 
+  // ── Payload ya msingi ──────────────────────────────────
+  // ⚠️ Tuma TU fields zinazohitajika kwa mode ili kuepuka
+  //    validation errors za backend (flat_fee>0 kwa FLAT,
+  //    percentage>0 kwa PERCENTAGE).
+  const basePayload = {
+    category: categoryId,
+    name,
+    min_price,
+    max_price,
+    fee_mode: mode,
+    priority,
+    is_active: true,
+  };
+
+  if (mode === "FLAT") {
+    basePayload.flat_fee = safeFlatFee;
+  } else {
+    basePayload.percentage = safePercentage;
+  }
+
   try {
-    // ✅ Tafuta rule zilizopo kwa category hii kwanza
+    // ── Tafuta rules zilizopo kwa category hii ───────────
     const existing = await listingFeeRulesApi.byCategory(categoryId);
 
-    // ✅ Kama ipo, PATCH (update) — hakuna IntegrityError
-    if (existing.length > 0) {
-      // Chagua active kwanza, kisha ya kwanza
-      const target = existing.find((r) => r.is_active) || existing[0];
-      const raw = await listingFeeRulesApi.update(target.id, {
-        category: categoryId,
-        name,
-        percentage,
-        min_price,
-        max_price,
-        flat_fee,
-        fee_mode,
-        priority,
-        is_active: true,
-      });
+    // ✅ Filter kwa categoryId kwenye frontend (defensive)
+    const matching = (existing || []).filter((r) => {
+      const rid =
+        r?.category != null
+          ? Number(r.category)
+          : r?.category_id != null
+          ? Number(r?.category_id)
+          : null;
+      return rid === Number(categoryId);
+    });
+
+    if (matching.length > 0) {
+      // ✅ PATCH — chagua active kwanza, kisha ya kwanza
+      const target =
+        matching.find((r) => r.is_active !== false) || matching[0];
+      const raw = await listingFeeRulesApi.update(target.id, basePayload);
       const updated = norm(raw);
-      write(read().map((c) => (c.id === updated.id ? updated : c)));
+
+      write(
+        read().map((c) => (c.id === updated.id ? updated : c))
+      );
       return { ok: true, config: updated, mode: "updated" };
     }
 
-    // ✅ Haipo — POST (create)
-    const raw = await listingFeeRulesApi.create({
-      category: categoryId,
-      name,
-      percentage,
-      min_price,
-      max_price,
-      flat_fee,
-      fee_mode,
-      priority,
-      is_active: true,
-    });
+    // ✅ POST — hakuna rule kwa category hii
+    const raw = await listingFeeRulesApi.create(basePayload);
     const created = norm(raw);
-    write([created, ...read()]);
+
+    // Badilisha entry iliyopo (kama ipo kwa seedKey) au ongeza mpya
+    const existingIdx = read().findIndex((c) => c.id === created.id);
+    if (existingIdx >= 0) {
+      write(read().map((c) => (c.id === created.id ? created : c)));
+    } else {
+      write([created, ...read()]);
+    }
+
     return { ok: true, config: created, mode: "created" };
   } catch (err) {
-    // ✅ Kama bado kuna IntegrityError, rudisha error yenye maelezo
+    // ── Error handling bora ────────────────────────────
     if (err?.status === 400) {
       const detail =
         err?.data?.detail ||
         err?.data?.category?.[0] ||
         err?.data?.flat_fee?.[0] ||
         err?.data?.percentage?.[0] ||
+        err?.data?.name?.[0] ||
         err?.message;
       return {
         ok: false,
         error: new Error(
           detail ||
-          "Imeshindwa kuunda fee rule. Labda kuna rule iliyofichwa kwa category hii. Futa rule zote za category hii kwanza."
+            "Imeshindwa kuunda fee rule. Angalia Network tab kwa maelezo zaidi."
         ),
       };
     }
@@ -291,6 +366,9 @@ export async function addFeeConfigAsync({
   }
 }
 
+// ============================================================
+// REMOVE
+// ============================================================
 export async function removeFeeConfigAsync(key) {
   const target = getListingFeeConfig(key);
   if (!target) return { ok: false, error: new Error("Fee config not found") };
@@ -314,9 +392,9 @@ export async function cleanupOrphanFeeConfigsAsync() {
   return { ok: true, removed: succeeded, total: orphans.length };
 }
 
-// ------------------------------------------------------------
-// Hook
-// ------------------------------------------------------------
+// ============================================================
+// HOOK
+// ============================================================
 export function useListingFeeConfigs() {
   const [list, setList] = useState(() => read());
   useEffect(() => {
