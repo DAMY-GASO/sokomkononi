@@ -1,12 +1,10 @@
 // ============================================================
 // MyListings.jsx
 // Seller — orodha ya mali zake (listings).
-// + Statuses mpya: needs_edit, approved_pending_payment, paid_pending_approval
-// + Picha: horizontal scroll ya picha zote kwenye kila card
-// + Mark Sold: confirmation modal (are you sure?)
 // + Fix: category object (id, name, slug) haitupwi kwenye JSX
+// + Fix: clear legacy localStorage entries with object category
 // ============================================================
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   PlusCircle, Edit3, Trash2, Pause, Play, CheckCircle2,
   Rocket, TrendingUp, Megaphone, Eye, MapPin, Tag, Search,
@@ -29,6 +27,8 @@ import { startUndo } from "../../../config/undoStore.js";
 import {
   restoreListingAsync,
   markSoldAsync,
+  getMyListings,
+  saveMyListings,
 } from "../../../config/listingsStore.js";
 
 // ============================================================
@@ -44,7 +44,37 @@ function categoryToString(cat) {
 }
 
 // ============================================================
-// isUnpaid — module-scope helper
+// Helper — ondoa object category kwenye localStorage
+// ============================================================
+function normalizeCategoryInCache() {
+  try {
+    const mine = getMyListings();
+    if (!Array.isArray(mine) || mine.length === 0) return;
+
+    let changed = false;
+    const cleaned = mine.map((l) => {
+      if (l && typeof l.category === "object" && l.category !== null) {
+        changed = true;
+        return { ...l, category: categoryToString(l.category) };
+      }
+      return l;
+    });
+
+    if (changed) {
+      console.info(
+        "[MyListings] cleaned",
+        mine.length,
+        "cached listing(s) with object category"
+      );
+      saveMyListings(cleaned);
+    }
+  } catch (err) {
+    console.warn("[MyListings] cache cleanup failed:", err);
+  }
+}
+
+// ============================================================
+// isUnpaid
 // ============================================================
 function isUnpaid(listing) {
   if (!listing) return false;
@@ -69,7 +99,7 @@ function isUnpaid(listing) {
 }
 
 // ============================================================
-// getPhotos — chukua picha zote
+// getPhotos
 // ============================================================
 function getPhotos(listing) {
   if (!listing) return [];
@@ -189,16 +219,14 @@ function ListingCard({
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ⬇️ FIX: category inaweza kuwa object (id, name, slug)
+  // ⬇️ FIX: category LAZIMA iwe string
   const categorySlug = categoryToString(listing.category);
   const category = getCategory(categorySlug);
   const CategoryIcon = getCategoryIcon(category?.iconKey) || Tag;
   const catLabel =
     category?.label?.[lang] ||
     category?.label?.sw ||
-    (typeof listing.category === "object"
-      ? listing.category?.name || listing.category?.slug
-      : listing.category) ||
+    categorySlug ||
     "—";
 
   const isBusy = busy === "delete";
@@ -355,7 +383,6 @@ function ListingCard({
             )}
           </div>
 
-          {/* Status-specific messages */}
           {listing.status === "needs_edit" && (
             <div
               className="mt-1.5 rounded-lg px-2.5 py-1.5"
@@ -416,9 +443,7 @@ function ListingCard({
         </div>
       </div>
 
-      {/* Actions */}
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-sandline pt-2.5">
-        {/* approved_pending_payment — Pay Now kikubwa */}
         {listing.status === "approved_pending_payment" && (
           <button
             type="button"
@@ -432,7 +457,6 @@ function ListingCard({
           </button>
         )}
 
-        {/* needs_edit — Hariri Sasa kikubwa */}
         {listing.status === "needs_edit" && (
           <button
             type="button"
@@ -446,7 +470,6 @@ function ListingCard({
           </button>
         )}
 
-        {/* unpaid legacy — Pay Now */}
         {isUnpaid(listing) &&
           listing.status !== "approved_pending_payment" && (
             <button
@@ -564,6 +587,11 @@ export default function MyListings({
   const [confirmSold, setConfirmSold] = useState(null);
   const [markingSold, setMarkingSold] = useState(false);
 
+  // ⬇️ FIX: ondoa object category kwenye localStorage mara moja
+  useEffect(() => {
+    normalizeCategoryInCache();
+  }, []);
+
   const goToPayment = (id) => {
     if (String(id).startsWith("temp_")) {
       alert(
@@ -592,7 +620,6 @@ export default function MyListings({
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter((l) => {
-        // ⬇️ FIX: category inaweza kuwa object
         const catStr = categoryToString(l.category).toLowerCase();
         return (
           l.title?.toLowerCase().includes(q) ||
