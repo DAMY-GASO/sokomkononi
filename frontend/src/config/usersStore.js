@@ -2,10 +2,9 @@
 // usersStore.js — API-only via /api/admin/users/
 //
 // Marekebisho:
-//  - resolveVerified() inasoma `is_verified` (boolean) kutoka
-//    AdminUserSerializer — hii ndio field sahihi.
-//  - Filter ya verified inafanywa client-side pia.
-//  - useUsers() inatumia pageSize: 100 (backend max_page_size).
+//  - hydrateUsersFromApi inapokea na inapitisha `signal` kwa api.get
+//  - AbortError inarethrow ili component i-handle
+//  - write() hai-dispatch kama data haijabadilika (zuia loop)
 // ============================================================
 import { useEffect, useState, useCallback } from "react";
 import { api } from "../api/client";
@@ -32,7 +31,13 @@ function read() {
 
 function write(list) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify(list));
+
+  // ✅ FIX: Usiandike / usi-dispatch kama data haijabadilika
+  const json = JSON.stringify(list);
+  const prev = window.localStorage.getItem(KEY);
+  if (prev === json) return;
+
+  window.localStorage.setItem(KEY, json);
   window.dispatchEvent(new Event(EV));
 }
 
@@ -109,26 +114,20 @@ function resolveRole(raw) {
 
 // ============================================================
 // VERIFIED NORMALIZER
-// AdminUserSerializer inarudisha `is_verified` kama boolean
-// (SerializerMethodField). Hii ndio field sahihi.
 // ============================================================
 function resolveVerified(raw) {
   if (!raw) return false;
 
-  // 1) AdminUserSerializer field — boolean
   if (raw.is_verified === true) return true;
   if (raw.isVerified === true) return true;
 
-  // 2) String "true" / "True" (safety net)
   if (raw.is_verified === "true" || raw.is_verified === "True") return true;
   if (raw.isVerified === "true" || raw.isVerified === "True") return true;
 
-  // 3) Other boolean flags
   if (raw.verified === true) return true;
   if (raw.is_verified_seller === true && raw.is_verified_buyer === true) return true;
   if (raw.isVerifiedSeller === true && raw.isVerifiedBuyer === true) return true;
 
-  // 4) Nested verification object
   if (raw.verification && typeof raw.verification === "object") {
     const v = raw.verification;
     if (v.is_verified === true || v.isVerified === true) return true;
@@ -177,7 +176,7 @@ export function getUserByEmail(email) {
 // ============================================================
 // HYDRATE
 // ============================================================
-export async function hydrateUsersFromApi(opts = {}) {
+export async function hydrateUsersFromApi(opts = {}, { signal } = {}) {
   const {
     page = 1,
     pageSize = 20,
@@ -187,7 +186,6 @@ export async function hydrateUsersFromApi(opts = {}) {
     verified = "all",
   } = opts;
 
-  // Backend ina-cap page_size kwa max_page_size (100).
   const safePageSize = Math.min(pageSize, BACKEND_MAX_PAGE_SIZE);
 
   const params = new URLSearchParams();
@@ -199,7 +197,9 @@ export async function hydrateUsersFromApi(opts = {}) {
   if (verified && verified !== "all") params.set("verified", verified);
 
   try {
-    const d = await api.get(`/admin/users/?${params.toString()}`);
+    // ✅ FIX: Pitisha signal kwa api.get
+    const d = await api.get(`/admin/users/?${params.toString()}`, { signal });
+
     const rawList = Array.isArray(d) ? d : d?.results || [];
     let normalized = rawList.map(norm).filter(Boolean);
 
@@ -253,6 +253,8 @@ export async function hydrateUsersFromApi(opts = {}) {
       hasPrev: !!d?.previous,
     };
   } catch (err) {
+    // ✅ FIX: Rethrow AbortError ili component i-handle
+    if (err?.name === "AbortError") throw err;
     return { ok: false, error: err };
   }
 }
@@ -405,11 +407,6 @@ function _dedupedUsersHydrate(opts) {
   return _usersHydratePromise;
 }
 
-/**
- * useUsers — inasikiliza cache + inarudisha list ya users.
- * Tunatumia pageSize: 100 (backend max_page_size) ili tupate
- * idadi kubwa ya users kwa dashboards.
- */
 export function useUsers() {
   const [list, setList] = useState(() => read());
   useEffect(() => {

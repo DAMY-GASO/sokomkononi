@@ -4,6 +4,7 @@
 // + AbortController + requestSeqRef (race-condition safe)
 // + skeleton inaonekana tu kwenye firstLoad
 // + timeout guard ya skeleton
+// + ONDOA listener ya "sokomkononi:users-updated" (infinite loop fix)
 // ============================================================
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
@@ -200,7 +201,7 @@ export default function UserManagementSection() {
         if (err?.name === "AbortError") return;
         res = { ok: false, error: err };
       } finally {
-        // ⬇️ Kila request inamaliza loading yake — race-safe
+        // Kila request inamaliza loading yake — race-safe
         if (seq === requestSeqRef.current) {
           setLoading(false);
           setFirstLoad(false);
@@ -231,7 +232,6 @@ export default function UserManagementSection() {
   useEffect(() => {
     fetchPage(1);
     return () => {
-      // Cancel request inayoendelea wakati filter zinabadilika / unmount
       if (abortRef.current) {
         abortRef.current.abort();
         abortRef.current = null;
@@ -240,17 +240,11 @@ export default function UserManagementSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, roleFilter, statusFilter, verifiedFilter]);
 
-  // Sikiliza events
-  useEffect(() => {
-    const onUpdate = () => fetchPage(page);
-    window.addEventListener("sokomkononi:users-updated", onUpdate);
-    window.addEventListener("sokomkononi:verifications-updated", onUpdate);
-    return () => {
-      window.removeEventListener("sokomkononi:users-updated", onUpdate);
-      window.removeEventListener("sokomkononi:verifications-updated", onUpdate);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, query, roleFilter, statusFilter, verifiedFilter]);
+  // ❌ FIX: ONDOA listener ya "sokomkononi:users-updated"
+  // Kwa sababu write() ina-dispatch EV kila fetch inapokamilika,
+  // na listener hii inaita fetchPage tena → infinite loop.
+  // Component hii inajitegemea: fetchPage inaitwa kwenye filter changes
+  // na baada ya actions.
 
   // Timeout guard — skeleton isiwe milele
   useEffect(() => {

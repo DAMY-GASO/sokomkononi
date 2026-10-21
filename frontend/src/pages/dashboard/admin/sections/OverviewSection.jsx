@@ -1,16 +1,15 @@
 import React, { useMemo, useEffect, useState } from "react";
 import {
   Users, Home, ShoppingBag, Wallet, Clock, ArrowRight,
-  UserCheck, Store, ClipboardList, CheckCircle2, AlertTriangle,
-  UserPlus, CreditCard, TrendingUp, User, BarChart3, Tag, MapPin, Award, Eye,
+  UserCheck, Store, ClipboardList, CheckCircle2,
+  UserPlus, CreditCard, TrendingUp, User, BarChart3, Tag, MapPin, Eye,
 } from "lucide-react";
 import { COLORS, formatTZS, getCategory } from "../shared/constants.js";
-import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import StatCard from "../shared/StatCard.jsx";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import StatusBadge from "../shared/StatusBadge.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
-import { useUsers } from "../../../../config/usersStore.js"; // ⬅️ Chanzo kikuu cha users
+import { useUsers } from "../../../../config/usersStore.js";
 import {
   useListings,
   fetchPendingListingsAsync,
@@ -23,7 +22,6 @@ import {
   isRevenueTransaction,
   localDayKey,
 } from "../shared/revenue.js";
-import { api } from "../../../../api/client.js";
 import {
   DonutChart,
   HBarChart,
@@ -69,7 +67,7 @@ const LISTING_STATUS_COLORS = {
 
 export default function OverviewSection({ onNavigate }) {
   const { lang } = useLanguage();
-  const users = useUsers(); // ⬅️ Chanzo cha watumiaji wote
+  const users = useUsers();
   const listings = useListings();
   const deals = useDeals();
   const transactions = useTransactions();
@@ -86,12 +84,8 @@ export default function OverviewSection({ onNavigate }) {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ============================================================
-  // USER STATS — Hesabu moja kwa moja kutoka `users`
-  // ============================================================
   const userStats = useMemo(() => {
     let sellersOnly = 0, buyersOnly = 0, bothRoles = 0, neitherRole = 0, totalAdmins = 0;
-    
     users.forEach((u) => {
       const role = u.role || "Neither";
       if (role === "Admin") totalAdmins++;
@@ -100,9 +94,8 @@ export default function OverviewSection({ onNavigate }) {
       else if (role === "Both") bothRoles++;
       else neitherRole++;
     });
-
     return {
-      totalUsers: users.length,
+      totalUsers: sellersOnly + buyersOnly + bothRoles + neitherRole + totalAdmins,
       totalSellers: sellersOnly + bothRoles,
       totalBuyers: buyersOnly + bothRoles,
       sellersOnly,
@@ -111,14 +104,6 @@ export default function OverviewSection({ onNavigate }) {
       neitherRole,
       totalAdmins,
     };
-  }, [users]);
-
-  const newRegistrations = useMemo(() => {
-    const cutoff = Date.now() - NEW_REGISTRATION_WINDOW_DAYS * 86400000;
-    return users.filter((u) => {
-      const ts = new Date(u.joined).getTime();
-      return !Number.isNaN(ts) && ts >= cutoff;
-    }).length;
   }, [users]);
 
   const totalListings = listings.length;
@@ -135,18 +120,12 @@ export default function OverviewSection({ onNavigate }) {
     ),
     [deals]
   );
-  
+
   const completedDeals = useMemo(
     () => deals.filter((d) => d.status === "completed").length,
     [deals]
   );
-  
-  const disputes = useMemo(
-    () => deals.filter((d) => d.status === "disputed").length,
-    [deals]
-  );
 
-  // ── Donut: Users breakdown (Sasa inalingana 100% na Summary) ──────────────
   const usersDonut = useMemo(() => [
     { label: t("Wauzaji Pekee", "Sellers Only"), value: userStats.sellersOnly, color: "#FEA406" },
     { label: t("Wanunuzi Pekee", "Buyers Only"), value: userStats.buyersOnly, color: "#2F6D4F" },
@@ -155,7 +134,6 @@ export default function OverviewSection({ onNavigate }) {
     { label: t("Admins", "Admins"),             value: userStats.totalAdmins, color: "#DC2626" },
   ].filter((d) => d.value > 0), [userStats, lang]);
 
-  // ── Donut: Listings by status (Sasa inalingana na totalListings) ─────────
   const listingsDonut = useMemo(() => {
     const statuses = ["live","reserved","sold","pending_payment","in_review","rejected","paused","expired"];
     const labels = {
@@ -173,7 +151,6 @@ export default function OverviewSection({ onNavigate }) {
       .filter((d) => d.value > 0);
   }, [listings, lang]);
 
-  // ── Donut: Deals by status ──────────────────────────────────────────────
   const dealsDonut = useMemo(() => {
     const keys = Object.keys(DEAL_STATUS_COLORS);
     const labels = {
@@ -196,7 +173,6 @@ export default function OverviewSection({ onNavigate }) {
       .filter((d) => d.value > 0);
   }, [deals, lang]);
 
-  // ── Revenue donut — sasa kwa ASILIMIA (%) ────────────────────────────────
   const revenueDonut = useMemo(() => {
     const total = revenue.total || 1;
     return revenue.streams
@@ -264,10 +240,6 @@ export default function OverviewSection({ onNavigate }) {
     ? reports.topLocations.slice(0, 5)
     : buildTopLocations(listings);
 
-  const topSellers = reports.topSellers?.length
-    ? reports.topSellers.slice(0, 5)
-    : buildTopSellers(listings);
-
   const mostViewed = reports.mostViewedListings?.length
     ? reports.mostViewedListings.slice(0, 5)
     : listings
@@ -285,13 +257,11 @@ export default function OverviewSection({ onNavigate }) {
   ];
 
   const activityStats = [
-    { id: "listings",        label: t("Mali Zote", "Total Listings"),   value: totalListings.toLocaleString(), icon: Home,          color: COLORS.green },
-    { id: "pendingListings", label: t("Mali Zinazosubiri", "Pending"),  value: pendingCount.toLocaleString(),  icon: ClipboardList, color: "#D97706" },
-    { id: "activeDeals",     label: t("Deals Hai", "Active Deals"),     value: activeDeals.length.toLocaleString(), icon: ShoppingBag, color: "#2563EB" },
-    { id: "completedDeals",  label: t("Deals Zilizokamilika", "Completed"), value: completedDeals.toLocaleString(), icon: CheckCircle2, color: COLORS.green },
-    { id: "pendingPayments", label: t("Malipo Yanayosubiri", "Pending Pay"), value: pendingPayments.toLocaleString(), icon: CreditCard, color: "#D97706" },
-    { id: "disputes",        label: t("Migogoro", "Disputes"),         value: disputes.toLocaleString(), icon: AlertTriangle, color: "#DC2626" },
-    { id: "newRegistrations",label: t(`Usajili Mpya (${NEW_REGISTRATION_WINDOW_DAYS}d)`, `New Users (${NEW_REGISTRATION_WINDOW_DAYS}d)`), value: newRegistrations.toLocaleString(), icon: UserPlus, color: COLORS.gold },
+    { id: "listings",        label: t("Mali Zote", "Total Listings"),             value: totalListings.toLocaleString(),        icon: Home,          color: COLORS.green },
+    { id: "pendingListings", label: t("Mali Zinazosubiri", "Pending Listings"),   value: pendingCount.toLocaleString(),         icon: ClipboardList, color: "#D97706" },
+    { id: "activeDeals",     label: t("Deals Hai", "Active Deals"),               value: activeDeals.length.toLocaleString(),   icon: ShoppingBag,   color: "#2563EB" },
+    { id: "completedDeals",  label: t("Deals Zilizokamilika", "Completed Deals"), value: completedDeals.toLocaleString(),       icon: CheckCircle2,  color: COLORS.green },
+    { id: "pendingPayments", label: t("Malipo Yanayosubiri", "Pending Payments"), value: pendingPayments.toLocaleString(),      icon: CreditCard,    color: "#D97706" },
   ];
 
   return (
@@ -500,32 +470,6 @@ export default function OverviewSection({ onNavigate }) {
         </ReportCard>
 
         <ReportCard
-          title={t("Wauzaji Bora (kwa Views)", "Top Sellers (by Views)")}
-          icon={Award}
-          color={COLORS.gold}
-        >
-          {topSellers.length === 0 ? (
-            <EmptyBlock label={t("Hakuna data bado", "No data yet")} />
-          ) : (
-            <div>
-              {topSellers.slice(0, 5).map((s, i) => (
-                <MiniRow
-                  key={s.name + i}
-                  rank={i + 1}
-                  label={s.name}
-                  sub={t(
-                    `${s.listings || 0} mali · ${(s.views || 0).toLocaleString()} views`,
-                    `${s.listings || 0} listings · ${(s.views || 0).toLocaleString()} views`
-                  )}
-                  value={(s.views || 0).toLocaleString()}
-                  color={i === 0 ? COLORS.gold : i === 1 ? "#9CA3AF" : i === 2 ? "#CD7F32" : COLORS.gold}
-                />
-              ))}
-            </div>
-          )}
-        </ReportCard>
-
-        <ReportCard
           title={t("Mali Zinazoonekana Zaidi", "Most Viewed Listings")}
           icon={Eye}
           color={COLORS.green}
@@ -660,23 +604,5 @@ function buildTopLocations(listings) {
   });
   return Array.from(m.values())
     .sort((a, b) => b.views - a.views || b.count - a.count)
-    .slice(0, 5);
-}
-
-function buildTopSellers(listings) {
-  const m = new Map();
-  listings.forEach((l) => {
-    const name =
-      (typeof l.seller_name === "string" && l.seller_name) ||
-      (typeof l.seller === "string" ? l.seller : "") ||
-      "";
-    if (!name) return;
-    const e = m.get(name) || { name, listings: 0, views: 0 };
-    e.listings += 1;
-    e.views += Number(l.views) || 0;
-    m.set(name, e);
-  });
-  return Array.from(m.values())
-    .sort((a, b) => b.views - a.views || b.listings - a.listings)
     .slice(0, 5);
 }

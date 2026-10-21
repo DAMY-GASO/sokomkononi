@@ -37,7 +37,6 @@ function getBaseUrl() {
 function getLang() {
   if (typeof window === "undefined") return "sw";
   let v = window.__SMK_LANG__;
-  // Fallback: maombi ya kwanza yanaweza kutoka kabla LanguageProvider haijaweka __SMK_LANG__
   if (!v) {
     try { v = window.localStorage.getItem("preferred_language"); } catch { /* noop */ }
   }
@@ -131,19 +130,35 @@ export class ApiError extends Error {
   }
 }
 
+// ============================================================
+// ✅ FIX: Tofautisha external abort na timeout
+// ============================================================
 async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
   const controller = new AbortController();
   const external = options?.signal;
+  let timedOut = false;   // ⬅️ flag ya kutofautisha
+
   const onAbort = () => controller.abort();
   if (external) {
     if (external.aborted) controller.abort();
     else external.addEventListener("abort", onAbort, { once: true });
   }
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
   try {
     return await fetch(url, { ...options, signal: controller.signal });
   } catch (err) {
     if (err.name === "AbortError") {
+      // ⬇️ Kama ni external abort (sio timeout), rethrow kama AbortError
+      if (external?.aborted || !timedOut) {
+        const abortErr = new Error("Aborted");
+        abortErr.name = "AbortError";
+        throw abortErr;
+      }
+      // Timeout halisi
       throw new ApiError(408, { detail: "Request timed out. Please try again." });
     }
     throw new ApiError(0, { detail: err.message || "Network error. Check your connection." });
@@ -271,11 +286,10 @@ async function request(path, {
     ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     "X-Requested-With": "XMLHttpRequest",
-    "Accept-Language": lang, // ⬅️ MPYA — backend itatumia lugha hii
+    "Accept-Language": lang,
     ...headers,
   };
 
-  // CSRF token kwa unsafe methods
   const methodUpper = String(method || "GET").toUpperCase();
   if (["POST", "PUT", "PATCH", "DELETE"].includes(methodUpper)) {
     const csrf = getCsrfToken();
@@ -342,7 +356,7 @@ export async function downloadFile(path, { signal } = {}) {
   const headers = {
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     "X-Requested-With": "XMLHttpRequest",
-    "Accept-Language": lang, // ⬅️ MPYA
+    "Accept-Language": lang,
   };
 
   let res = await fetchWithTimeout(

@@ -1,13 +1,6 @@
-// ============================================================
-// ReportsSection.jsx
-// Admin — Reports & Analytics (stats, graphs, top lists).
-// + Download ripoti (CSV/PDF/DOC) kwa today/week/month/year/all
-// + Custom date range
-// ============================================================
-
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  Users, Home, Handshake, Wallet, TrendingUp, BarChart3, Award, Eye,
+  Home, Handshake, Wallet, BarChart3, Eye,
   MapPin, Tag, Download, FileText, FileSpreadsheet, File, Loader2, Calendar,
 } from "lucide-react";
 import { COLORS, formatTZS, getCategory } from "../shared/constants.js";
@@ -15,16 +8,13 @@ import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useReports } from "../../../../config/reportsStore.js";
-import { useUsers } from "../../../../config/usersStore.js";
 import {
   useListings,
   useHydratePublicListings,
 } from "../../../../config/listingsStore.js";
 import { useDeals } from "../../../../config/dealsStore.js";
 import { usePlatformRevenue, localDayKey } from "../shared/revenue.js";
-import { api } from "../../../../api/client.js";
 
-// ── PDF/CSV/DOC download via client.js ──
 async function downloadReport(format, { period, from, to }) {
   const base = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") || "/api";
   const params = new URLSearchParams();
@@ -63,9 +53,6 @@ async function downloadReport(format, { period, from, to }) {
   window.URL.revokeObjectURL(url);
 }
 
-// ============================================================
-// DOWNLOAD PANEL — pamoja na custom date range
-// ============================================================
 function DownloadPanel({ lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [period, setPeriod] = useState("month");
@@ -81,7 +68,7 @@ function DownloadPanel({ lang }) {
     { key: "month", label: t("Mwezi Huu", "This Month") },
     { key: "year", label: t("Mwaka Huu", "This Year") },
     { key: "all", label: t("Zote", "All Time") },
-    { key: "custom", label: t("Chagua Siku", "Custom Range") }, // ⬅️ MPYA
+    { key: "custom", label: t("Chagua Siku", "Custom Range") },
   ];
 
   const formats = [
@@ -155,7 +142,6 @@ function DownloadPanel({ lang }) {
         ))}
       </div>
 
-      {/* Custom date range — inaonekana tu kama period === "custom" */}
       {period === "custom" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
           <label className="flex flex-col gap-1">
@@ -232,9 +218,6 @@ function DownloadPanel({ lang }) {
   );
 }
 
-// ============================================================
-// STAT TILE
-// ============================================================
 function ReportTile({ label, value, icon: Icon, color, subtext }) {
   return (
     <div
@@ -265,9 +248,6 @@ function ReportTile({ label, value, icon: Icon, color, subtext }) {
   );
 }
 
-// ============================================================
-// BAR CHART
-// ============================================================
 function BarChart({ data, maxValue, color, emptyText, formatValue }) {
   if (!data || data.length === 0 || maxValue === 0) {
     return <p className="text-xs text-muted text-center py-6 sm:py-8">{emptyText}</p>;
@@ -299,40 +279,6 @@ function BarChart({ data, maxValue, color, emptyText, formatValue }) {
   );
 }
 
-// ============================================================
-// LINE CHART
-// ============================================================
-function LineChart({ data, color, maxValue, emptyText }) {
-  if (!data || data.length === 0 || maxValue === 0) {
-    return <p className="text-xs text-muted text-center py-6 sm:py-8">{emptyText}</p>;
-  }
-  const width = 600;
-  const height = 120;
-  const padding = 8;
-  const points = data.map((d, i) => {
-    const x = padding + (i / (data.length - 1 || 1)) * (width - 2 * padding);
-    const y = height - padding - (d.value / maxValue) * (height - 2 * padding);
-    return { x, y, ...d };
-  });
-  const pathData = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-  const areaData = `${pathData} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
-  return (
-    <div className="w-full overflow-hidden">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-24 sm:h-32" preserveAspectRatio="none">
-        <path d={areaData} fill={`${color}20`} />
-        <path d={pathData} stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        {points.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r={3} fill="white" stroke={color} strokeWidth={2} />
-        ))}
-      </svg>
-      <div className="flex justify-between mt-1 px-1">
-        <span className="text-[9px] text-muted truncate">{data[0]?.label}</span>
-        <span className="text-[9px] text-muted truncate">{data[data.length - 1]?.label}</span>
-      </div>
-    </div>
-  );
-}
-
 function ChartCard({ title, icon: Icon, iconColor, children }) {
   return (
     <div
@@ -348,14 +294,10 @@ function ChartCard({ title, icon: Icon, iconColor, children }) {
   );
 }
 
-// ============================================================
-// MAIN
-// ============================================================
 export default function ReportsSection() {
   const { lang } = useLanguage();
   const apiReports = useReports(lang);
   const platformRevenue = usePlatformRevenue("all");
-  const users = useUsers();
   useHydratePublicListings();
   const listings = useListings();
   const deals = useDeals();
@@ -366,27 +308,6 @@ export default function ReportsSection() {
   const totalRevenueText = platformRevenue.loading
     ? "…"
     : platformRevenue.error ? "—" : formatTZS(platformRevenue.total);
-
-  // USER STATS
-  const userStats = useMemo(() => {
-    let totalSellers = 0, totalBuyers = 0, bothRoles = 0, neitherRole = 0, totalAdmins = 0;
-    users.forEach((u) => {
-      const role = u.role || "Neither";
-      if (role === "Admin") totalAdmins++;
-      else if (role === "Seller") totalSellers++;
-      else if (role === "Buyer") totalBuyers++;
-      else if (role === "Both") bothRoles++;
-      else neitherRole++;
-    });
-    return {
-      totalUsers: users.length,
-      totalSellers: totalSellers + bothRoles,
-      totalBuyers: totalBuyers + bothRoles,
-      bothRoles,
-      neitherRole,
-      totalAdmins,
-    };
-  }, [users]);
 
   const reports = useMemo(() => {
     const num = (v) => Number(v) || 0;
@@ -400,23 +321,9 @@ export default function ReportsSection() {
       Array.isArray(api) && api.length > 0 ? api : local;
     const dayLabel = (d) => d.toLocaleDateString(locale, { day: "numeric", month: "short" });
 
-    const sellerIds = new Set(
-      listings.map((l) => String(l.sellerId ?? l.seller_id)).filter(Boolean)
-    );
-    const buyerIds = new Set(
-      deals.map((d) => String(d.buyerId ?? d.buyer_id)).filter(Boolean)
-    );
-
-    const totalUsers = userStats.totalUsers;
-    const totalSellers = userStats.totalSellers;
-    const totalBuyers = userStats.totalBuyers;
-    const bothRoles = userStats.bothRoles;
-    const neitherRole = userStats.neitherRole;
-
     const apiStatus = apiReports.dealsByStatus || {};
     const byStatus = (st) => deals.filter((d) => d.status === st).length;
 
-    // ⬇️ Deals by status — MIGOGORO IMEONDOLEWA
     const dealsByStatus = Object.values(apiStatus).some((v) => num(v) > 0)
       ? apiStatus
       : {
@@ -424,7 +331,6 @@ export default function ReportsSection() {
           accepted: byStatus("accepted"),
           reserved: byStatus("reserved"),
           completed: byStatus("completed"),
-          // disputed: byStatus("disputed"),   ⬅️ IMEONDOLEWA
           cancelled: byStatus("cancelled"),
         };
     const totalDeals = pick(apiReports.totalDeals, deals.length);
@@ -432,20 +338,6 @@ export default function ReportsSection() {
     const conversionRate = num(apiReports.conversionRate) > 0
       ? num(apiReports.conversionRate)
       : totalDeals > 0 ? (completedDeals / totalDeals) * 100 : 0;
-
-    const usersGrowthLocal = [];
-    if (users.length > 0) {
-      for (let i = 29; i >= 0; i--) {
-        const end = new Date();
-        end.setHours(23, 59, 59, 999);
-        end.setDate(end.getDate() - i);
-        const cumulative = users.filter((u) => {
-          const j = new Date(u.joined).getTime();
-          return !Number.isNaN(j) && j <= end.getTime();
-        }).length;
-        usersGrowthLocal.push({ label: dayLabel(end), cumulative });
-      }
-    }
 
     const lsStatus = (st) => listings.filter((l) => l.status === st).length;
     const perDay = {};
@@ -465,9 +357,6 @@ export default function ReportsSection() {
       }
     }
 
-    const sellerOf = (l) =>
-      (typeof l.seller_name === "string" && l.seller_name) ||
-      (typeof l.seller === "string" ? l.seller : "");
     const group = (keyFn) => {
       const m = new Map();
       listings.forEach((l) => {
@@ -480,7 +369,6 @@ export default function ReportsSection() {
       });
       return Array.from(m.values()).sort((a, b) => b.views - a.views || b.count - a.count).slice(0, 5);
     };
-    const topSellersLocal = group(sellerOf).map((g) => ({ name: g.key, listings: g.count, views: g.views }));
     const topCategoriesLocal = group((l) => l.category).map((g) => ({ key: g.key, count: g.count, views: g.views }));
     const topLocationsLocal = group((l) => String(l.location || "").trim()).map((g) => ({ name: g.key, count: g.count, views: g.views }));
     const mostViewedLocal = listings
@@ -491,24 +379,19 @@ export default function ReportsSection() {
 
     return {
       ...apiReports,
-      totalUsers, totalSellers, totalBuyers,
-      bothRoles, neitherRole,
       totalListings: pick(apiReports.totalListings, listings.length),
       liveListings: pick(apiReports.liveListings, lsStatus("live")),
       soldListings: pick(apiReports.soldListings, lsStatus("sold")),
       totalDeals, completedDeals,
-      disputedDeals: 0,   // ⬅️ IMEWEKWA 0 kwa sababu migogoro haipo
+      disputedDeals: 0,
       conversionRate, dealsByStatus,
-      usersGrowth: pickList(apiReports.usersGrowth, usersGrowthLocal),
       listingsGrowth: pickList(apiReports.listingsGrowth, listingsGrowthLocal),
-      topSellers: pickList(apiReports.topSellers, topSellersLocal),
       mostViewedListings: pickList(apiReports.mostViewedListings, mostViewedLocal),
       topCategories: pickList(apiReports.topCategories, topCategoriesLocal),
       topLocations: pickList(apiReports.topLocations, topLocationsLocal),
     };
-  }, [apiReports, userStats, users, listings, deals, locale]);
+  }, [apiReports, listings, deals, locale]);
 
-  const usersMax = Math.max(...(reports.usersGrowth?.map((d) => d.cumulative) || [0]), 1);
   const listingsMax = Math.max(...(reports.listingsGrowth?.map((d) => d.count) || [0]), 1);
   const revenueMax = Math.max(...(reports.revenueByMonth?.map((d) => d.total) || [0]), 1);
 
@@ -517,24 +400,14 @@ export default function ReportsSection() {
       <SectionHeader
         title={t("Ripoti & Uchanganuzi", "Reports & Analytics")}
         subtitle={t(
-          "Muhtasari wa data ya mfumo — users, listings, deals, revenue.",
-          "Overview of system data — users, listings, deals, revenue."
+          "Muhtasari wa data ya mfumo — listings, deals, revenue.",
+          "Overview of system data — listings, deals, revenue."
         )}
       />
 
       <DownloadPanel lang={lang} />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-5">
-        <ReportTile
-          label={t("Watumiaji Wote", "Total Users")}
-          value={reports.totalUsers}
-          icon={Users}
-          color={COLORS.gold}
-          subtext={t(
-            `${reports.totalSellers} wauzaji · ${reports.totalBuyers} wanunuzi · ${reports.bothRoles} wote wawili · ${reports.neitherRole} wapya`,
-            `${reports.totalSellers} sellers · ${reports.totalBuyers} buyers · ${reports.bothRoles} both · ${reports.neitherRole} neither`
-          )}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 mb-5">
         <ReportTile
           label={t("Mali Zote", "Total Listings")}
           value={reports.totalListings}
@@ -551,7 +424,7 @@ export default function ReportsSection() {
           icon={Handshake}
           color="#2563EB"
           subtext={t(
-            `${reports.completedDeals} zimekamilika`,   // ⬅️ migogoro imeondolewa
+            `${reports.completedDeals} zimekamilika`,
             `${reports.completedDeals} completed`
           )}
         />
@@ -568,15 +441,6 @@ export default function ReportsSection() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-5">
-        <ChartCard title={t("Ukuaji wa Watumiaji (Siku 30)", "Users Growth (Last 30 Days)")} icon={TrendingUp} iconColor={COLORS.gold}>
-          <LineChart
-            data={(reports.usersGrowth || []).map((d) => ({ label: d.label, value: d.cumulative }))}
-            color={COLORS.gold}
-            maxValue={usersMax}
-            emptyText={t("Hakuna data bado", "No data yet")}
-          />
-        </ChartCard>
-
         <ChartCard title={t("Ukuaji wa Mali (Siku 30)", "Listings Growth (Last 30 Days)")} icon={Home} iconColor={COLORS.green}>
           <BarChart
             data={(reports.listingsGrowth || []).map((d) => ({ label: d.label, value: d.count }))}
@@ -603,7 +467,6 @@ export default function ReportsSection() {
               { key: "accepted", label: t("Imekubaliwa", "Accepted"), color: COLORS.green },
               { key: "reserved", label: t("Imehifadhiwa", "Reserved"), color: COLORS.gold },
               { key: "completed", label: t("Imekamilika", "Completed"), color: COLORS.green },
-              // { key: "disputed", label: t("Migogoro", "Disputed"), color: COLORS.rust },   ⬅️ IMEONDOLEWA
               { key: "cancelled", label: t("Imeghairiwa", "Cancelled"), color: COLORS.night },
             ].map(({ key, label, color }) => {
               const count = reports.dealsByStatus?.[key] || 0;
@@ -628,34 +491,6 @@ export default function ReportsSection() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        <ChartCard title={t("Wauzaji Bora (kwa Views)", "Top Sellers (by Views)")} icon={Award} iconColor={COLORS.gold}>
-          {reports.topSellers?.length === 0 ? (
-            <p className="text-xs text-muted text-center py-6">{t("Hakuna data bado", "No data yet")}</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {(reports.topSellers || []).map((seller, i) => (
-                <div key={seller.name} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0 min-w-0">
-                  <span
-                    style={{
-                      background: i === 0 ? COLORS.gold : i === 1 ? "#C0C0C0" : i === 2 ? "#CD7F32" : COLORS.sandLine,
-                      color: COLORS.night,
-                    }}
-                    className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold shrink-0"
-                  >
-                    {i + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-primary truncate">{seller.name}</p>
-                    <p className="text-[11px] text-secondary truncate">
-                      {seller.listings} {t("mali", "listings")} · {seller.views.toLocaleString()} {t("views", "views")}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </ChartCard>
-
         <ChartCard title={t("Mali Zinazoonekana Zaidi", "Most Viewed Listings")} icon={Eye} iconColor={COLORS.green}>
           {reports.mostViewedListings?.length === 0 ? (
             <p className="text-xs text-muted text-center py-6">{t("Hakuna data bado", "No data yet")}</p>
