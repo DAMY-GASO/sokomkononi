@@ -639,12 +639,14 @@ export default function DashboardShell() {
 
   return (
     <div data-surface="sand" className="bg-page w-full flex flex-col pb-16 md:pb-0 min-h-screen">
+      {/* HEADER — navy daima (kama AdminDashboard) */}
       <header
-        className="w-full flex items-center gap-3 px-3 sm:px-5 py-3 sticky top-0 z-30 bg-[rgb(var(--c-card))] text-[rgb(var(--c-ink))] border-b border-[rgb(var(--c-hairline))]"
+        style={{ background: "#011957" }}
+        className="w-full flex items-center gap-3 px-3 sm:px-5 py-3 sticky top-0 z-30 text-white border-b border-white/[0.08]"
       >
         <button
           onClick={() => setSidebarOpen((v) => !v)}
-          className="text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))] md:hidden"
+          className="text-white/80 hover:text-white md:hidden"
           aria-label={t("Fungua menyu", "Open menu")}
         >
           <Menu size={22} />
@@ -654,16 +656,16 @@ export default function DashboardShell() {
           SokoMkononi
         </a>
 
-        <div className="hidden sm:flex items-center flex-1 max-w-md rounded-full border border-[rgb(var(--c-hairline))] bg-[rgb(var(--c-page))] px-3 py-1.5 gap-2">
-          <Search size={16} className="text-[rgb(var(--c-text-3))]" />
-          <input placeholder={t("Tafuta mali...", "Search properties...")} className="bg-transparent outline-none text-sm flex-1 text-[rgb(var(--c-ink))] placeholder:text-[rgb(var(--c-text-3))]" />
+        <div style={{ background: "#042475", borderColor: "rgba(245,243,236,0.12)" }} className="hidden sm:flex items-center flex-1 max-w-md rounded-full border px-3 py-1.5 gap-2">
+          <Search size={16} color="rgba(245,243,236,0.6)" />
+          <input placeholder={t("Tafuta mali...", "Search properties...")} className="bg-transparent outline-none text-sm flex-1 text-white placeholder:text-white/50" />
         </div>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <div className="hidden md:flex items-center rounded-full p-1 bg-[rgb(var(--c-page))]">
+          <div style={{ background: "#042475" }} className="hidden md:flex items-center rounded-full p-1">
             <button
               onClick={() => handleSideChange("seller")}
-              style={{ background: side === "seller" ? COLORS.gold : "transparent", color: side === "seller" ? COLORS.night : "rgb(var(--c-text-2))" }}
+              style={{ background: side === "seller" ? COLORS.gold : "transparent", color: side === "seller" ? COLORS.night : "#FFFFFF" }}
               className="flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
               <Tag size={14} />
@@ -671,7 +673,7 @@ export default function DashboardShell() {
             </button>
             <button
               onClick={() => handleSideChange("buyer")}
-              style={{ background: side === "buyer" ? COLORS.green : "transparent", color: side === "buyer" ? "#FFFFFF" : "rgb(var(--c-text-2))" }}
+              style={{ background: side === "buyer" ? COLORS.green : "transparent", color: "#FFFFFF" }}
               className="flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
             >
               <ShoppingBag size={14} />
@@ -679,10 +681,10 @@ export default function DashboardShell() {
             </button>
           </div>
 
-          {/* THEME TOGGLE */}
+          {/* THEME TOGGLE — kwenye navy daima */}
           <button
             onClick={toggleTheme}
-            className="p-1.5 rounded-md text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))] hover:bg-[rgb(var(--c-ink)/0.06)] transition-colors"
+            className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/[0.08] transition-colors"
             aria-label={theme === "dark" ? t("Badilisha kuwa mwanga", "Switch to light mode") : t("Badilisha kuwa giza", "Switch to dark mode")}
             title={theme === "dark" ? t("Mode ya Mwanga", "Light mode") : t("Mode ya Giza", "Dark mode")}
           >
@@ -692,16 +694,17 @@ export default function DashboardShell() {
           <div className="relative">
             <button
               onClick={() => setLangOpen((v) => !v)}
-              className="text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))] text-sm font-medium border border-[rgb(var(--c-hairline))] rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
+              style={{ background: "#042475", borderColor: "rgba(245,243,236,0.15)" }}
+              className="text-white/80 hover:text-white text-sm font-medium border rounded-md px-2 sm:px-3 py-1.5 transition-colors flex items-center gap-1"
             >
               <Globe size={14} />
               <span className="hidden sm:inline">{currentLang?.native || "Kiswahili"}</span>
               <span className="sm:hidden">{currentLang?.code?.toUpperCase() || "SW"}</span>
             </button>
             {langOpen && (
-              <div className="absolute right-0 mt-2 w-48 border border-[rgb(var(--c-hairline))] bg-[rgb(var(--c-card))] rounded-lg shadow-xl py-2 z-50">
-                <div className="px-4 py-2 border-b border-[rgb(var(--c-hairline))]">
-                  <p className="text-[rgb(var(--c-text-3))] text-xs font-semibold">
+              <div style={{ background: "#042475", borderColor: "rgba(245,243,236,0.1)" }} className="absolute right-0 mt-2 w-48 border rounded-lg shadow-xl py-2 z-50">
+                <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-2 border-b">
+                  <p className="text-white/50 text-xs font-semibold">
                     {t("Chagua Lugha", "Choose Language")}
                   </p>
                 </div>
@@ -709,7 +712,8 @@ export default function DashboardShell() {
                   <button
                     key={l.code}
                     onClick={() => handleLanguageSelect(l.code)}
-                    className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-[rgb(var(--c-ink)/0.06)] transition-colors text-[rgb(var(--c-text))]"
+                    style={{ background: lang === l.code ? "rgba(245,243,236,0.05)" : "transparent", color: "#F5F3EC" }}
+                    className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-white/5 transition-colors"
                   >
                     <span className="text-sm font-medium">{l.native}</span>
                     {lang === l.code && <Check size={14} color={COLORS.gold} />}
@@ -719,13 +723,13 @@ export default function DashboardShell() {
             )}
           </div>
 
-          <a href="/" className="hidden md:block text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))] p-1.5 transition-colors" aria-label={t("Rudi kwenye ukurasa wa mwanzo", "Back to homepage")}>
+          <a href="/" className="hidden md:block text-white/80 hover:text-white p-1.5 transition-colors" aria-label={t("Rudi kwenye ukurasa wa mwanzo", "Back to homepage")}>
             <Home size={20} />
           </a>
 
           <button
             onClick={() => handleNavClick("notifications")}
-            className="relative text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))] p-1.5 transition-colors"
+            className="relative text-white/80 hover:text-white p-1.5 transition-colors"
             aria-label={t("Taarifa", "Notifications")}
           >
             <Bell size={20} />
@@ -751,14 +755,15 @@ export default function DashboardShell() {
 
             {userMenuOpen && (
               <div
-                className="absolute right-0 mt-2 w-64 border border-[rgb(var(--c-hairline))] bg-[rgb(var(--c-card))] rounded-lg shadow-xl py-1 z-50"
+                style={{ background: "#042475", borderColor: "rgba(245,243,236,0.1)" }}
+                className="absolute right-0 mt-2 w-64 border rounded-lg shadow-xl py-1 z-50"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="px-4 py-3 border-b border-[rgb(var(--c-hairline))]">
-                  <p className="text-sm font-semibold truncate text-[rgb(var(--c-ink))]">
+                <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-3 border-b">
+                  <p className="text-sm font-semibold truncate text-white">
                     {user?.name || "User"}
                   </p>
-                  <p className="text-xs truncate text-[rgb(var(--c-text-3))]">
+                  <p className="text-xs truncate text-white/50">
                     {user?.email || ""}
                   </p>
                 </div>
@@ -776,22 +781,24 @@ export default function DashboardShell() {
                       setUserMenuOpen(false);
                       navigate(to);
                     }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[rgb(var(--c-text))] hover:bg-[rgb(var(--c-ink)/0.06)] transition-colors text-left"
+                    style={{ color: "#F5F3EC" }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
                   >
-                    <Icon size={15} className="text-[rgb(var(--c-text-3))]" />
+                    <Icon size={15} color="rgba(245,243,236,0.55)" />
                     {label}
                   </button>
                 ))}
 
                 <button
                   onClick={handleShare}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[rgb(var(--c-text))] hover:bg-[rgb(var(--c-ink)/0.06)] transition-colors text-left"
+                  style={{ color: "#F5F3EC" }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
                 >
-                  <Share2 size={15} className="text-[rgb(var(--c-text-3))]" />
+                  <Share2 size={15} color="rgba(245,243,236,0.55)" />
                   {t("Shiriki SokoMkononi", "Share SokoMkononi")}
                 </button>
 
-                <div className="my-1 border-t border-[rgb(var(--c-hairline))]" />
+                <div className="my-1 border-t" style={{ borderColor: "rgba(245,243,236,0.1)" }} />
 
                 <button
                   onClick={handleLogout}
@@ -806,10 +813,11 @@ export default function DashboardShell() {
         </div>
       </header>
 
-      <div className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full bg-[rgb(var(--c-page))]">
+      {/* MOBILE SIDE TOGGLE — navy */}
+      <div style={{ background: "#042475" }} className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full">
         <button
           onClick={() => handleSideChange("seller")}
-          style={{ background: side === "seller" ? COLORS.gold : "transparent", color: side === "seller" ? COLORS.night : "rgb(var(--c-text-2))" }}
+          style={{ background: side === "seller" ? COLORS.gold : "transparent", color: side === "seller" ? COLORS.night : "#FFFFFF" }}
           className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
           <Tag size={14} />
@@ -817,7 +825,7 @@ export default function DashboardShell() {
         </button>
         <button
           onClick={() => handleSideChange("buyer")}
-          style={{ background: side === "buyer" ? COLORS.green : "transparent", color: side === "buyer" ? "#FFFFFF" : "rgb(var(--c-text-2))" }}
+          style={{ background: side === "buyer" ? COLORS.green : "transparent", color: "#FFFFFF" }}
           className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full transition-colors"
         >
           <ShoppingBag size={14} />

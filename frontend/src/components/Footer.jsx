@@ -18,18 +18,19 @@ const SOCIAL = [
 ];
 
 // SVG logos — public/assets/payments/*.svg
+// HAKIKISHA majina ya faili kwenye folder yanalingana EXACTLY na haya.
 const PAYMENTS = [
-  { label: "M-Pesa",       src: "/assets/payments/mpesa.svg",      fallbackBg: "#e91d42", fallbackFg: "#FFFFFF" },
-  { label: "HaloPesa",     src: "/assets/payments/halopesa.svg",   fallbackBg: "#eb903b", fallbackFg: "#FFFFFF" },
+  { label: "M-Pesa",       src: "/assets/payments/mpesa.svg",      fallbackBg: "#2E9E44", fallbackFg: "#FFFFFF" },
+  { label: "HaloPesa",     src: "/assets/payments/halopesa.svg",   fallbackBg: "#E33C2B", fallbackFg: "#FFFFFF" },
   { label: "Mixx by Yas",  src: "/assets/payments/mixx.svg",       fallbackBg: "#FFCC00", fallbackFg: "#011957" },
   { label: "Airtel Money", src: "/assets/payments/airtel.svg",     fallbackBg: "#ED1C24", fallbackFg: "#FFFFFF" },
-  { label: "NMB",          src: "/assets/payments/nmb.svg",        fallbackBg: "#1125a6", fallbackFg: "#FFFFFF" },
-  { label: "CRDB",         src: "/assets/payments/crdb.svg",       fallbackBg: "#18c14a", fallbackFg: "#FFFFFF" },
+  { label: "NMB",          src: "/assets/payments/nmb.svg",        fallbackBg: "#00734D", fallbackFg: "#FFFFFF" },
+  { label: "CRDB",         src: "/assets/payments/crdb.svg",       fallbackBg: "#0072BC", fallbackFg: "#FFFFFF" },
   { label: "Visa",         src: "/assets/payments/visa.svg",       fallbackBg: "#1A1F71", fallbackFg: "#FFFFFF" },
-  { label: "Mastercard",   src: "/assets/payments/mastercard.svg", fallbackBg: "#dbc821", fallbackFg: "#FFFFFF" },
+  { label: "Mastercard",   src: "/assets/payments/mastercard.svg", fallbackBg: "#EB001B", fallbackFg: "#FFFFFF" },
 ];
 
-// Pay logo — background nyeupe ili SVG zionekane kwenye navy footer
+// Pay logo — rounded rectangle sawa kwa zote, logo inaadapt ndani
 function PayLogo({ payment }) {
   const [err, setErr] = React.useState(false);
 
@@ -37,8 +38,8 @@ function PayLogo({ payment }) {
     return (
       <span
         title={payment.label}
-        className="flex h-9 items-center justify-center rounded-md px-2 text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm"
-        style={{ background: payment.fallbackBg, color: payment.fallbackFg, minWidth: 68 }}
+        className="flex h-10 w-16 items-center justify-center rounded-lg px-2 text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm"
+        style={{ background: payment.fallbackBg, color: payment.fallbackFg }}
       >
         {payment.label}
       </span>
@@ -48,13 +49,12 @@ function PayLogo({ payment }) {
   return (
     <span
       title={payment.label}
-      className="flex h-9 items-center justify-center rounded-md bg-white px-2 shadow-sm ring-1 ring-white/20"
-      style={{ minWidth: 68 }}
+      className="flex h-10 w-16 items-center justify-center rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-white/20"
     >
       <img
         src={payment.src}
         alt={payment.label}
-        className="h-5 w-auto max-w-[60px] object-contain"
+        className="h-full w-full object-contain"
         onError={() => setErr(true)}
         loading="lazy"
       />
@@ -136,10 +136,9 @@ export default function Footer({ selectedLang: propLang }) {
         </div>
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="space-y-5 lg:col-span-4">
-            <Link to="/" onClick={registerLogoTap} className="inline-flex items-center gap-3">
-              <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: "linear-gradient(135deg, #FEA406, #FD8706)" }}>
-                <img src="/logo.webp" alt="" className="h-6 w-6 rounded-full object-contain" />
-              </span>
+            {/* Logo — favicon.svg moja kwa moja, hakuna circle nene */}
+            <Link to="/" onClick={registerLogoTap} className="inline-flex items-center gap-2.5">
+              <img src="/favicon.svg" alt="SokoMkononi" className="h-9 w-9 object-contain" />
               <span className="text-[16px] font-bold text-white">Soko<span className="text-[#FEA406]">Mkononi</span></span>
             </Link>
             <p className="max-w-xs text-sm leading-relaxed text-white/55">
