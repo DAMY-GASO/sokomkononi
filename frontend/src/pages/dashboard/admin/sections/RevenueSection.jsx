@@ -2,8 +2,11 @@
 // RevenueSection.jsx — fully backend-synced
 // Flat fees: listing, reservation (tiers), success.
 // Packages: boost, leading, advertisement.
+//
+// ✅ FIX: Hydrate MARA MOJA tu kwenye mount (si kwenye hook).
+// ✅ FIX: Haipangi refresh ya listings fee wakati wa mabadiliko.
 // ============================================================
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Home, Clock, Rocket, Search, Smartphone, Plus, AlertTriangle,
   Pencil, Info, Loader2, RefreshCw, Trash2, TrendingUp,
@@ -170,6 +173,35 @@ export default function RevenueSection() {
   const [lastSync, setLastSync] = useState(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ✅ FIX: Hydrate MARA MOJA tu kwenye mount.
+  //    Si kwenye kila hook wala kila render.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await Promise.allSettled([
+          hydrateReservationFromApi(),
+          hydrateListingFeeConfigsFromApi(),
+          hydrateLeadingFeeFromApi(),
+          hydrateLeadingPackagesFromApi(),
+          hydrateAdvertisementFeeFromApi(),
+          hydrateAdvertisementPackagesFromApi(),
+          hydrateSuccessFeeFromApi(),
+          hydrateBoostPackagesFromApi(),
+          hydrateBoostFeeFromApi(),
+        ]);
+        if (!cancelled) setLastSync(new Date());
+      } catch (e) {
+        if (!cancelled) {
+          console.warn("[RevenueSection] initial hydrate failed:", e);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []); // ⚠️ Empty deps — mara moja tu
 
   const showFlash = (msg, type = "success") => {
     setError("");
@@ -416,7 +448,12 @@ export default function RevenueSection() {
     });
 
   const handleDeleteBoostPackage = (pkg) => {
-    if (!window.confirm(t(`Futa package "${pkg.name}"?`, `Delete package "${pkg.name}"?`))) return;
+    if (
+      !window.confirm(
+        t(`Futa package "${pkg.name}"?`, `Delete package "${pkg.name}"?`)
+      )
+    )
+      return;
     withBusy(`boost-del-${pkg.key}`, async () => {
       const res = await removeBoostPackageAsync(pkg.key);
       if (res.ok) showFlash(t("Package imefutwa.", "Package deleted."));
@@ -431,9 +468,6 @@ export default function RevenueSection() {
       return res;
     });
 
-  // ═══════════════════════════════════════════════════════════
-  // BOOST PACKAGES — ADD / UPDATE
-  // ═══════════════════════════════════════════════════════════
   const handleAddBoostPackage = () =>
     withBusy("boost-add-pkg", async () => {
       const nextOrder =
@@ -446,15 +480,6 @@ export default function RevenueSection() {
         price: 3000,
         ordering: nextOrder,
       });
-      if (res.ok) flashSaved();
-      return res;
-    });
-
-  const updateBoostPackageHours = (key, hours) =>
-    withBusy(`boost-hours-${key}`, async () => {
-      const target = boostPackages.find((p) => p.key === key);
-      if (!target) return { ok: false, error: new Error("Not found") };
-      const res = await updateBoostPackageAsync(target.id, { hours });
       if (res.ok) flashSaved();
       return res;
     });
@@ -507,7 +532,12 @@ export default function RevenueSection() {
     });
 
   const handleDeleteLeadingPackage = (pkg) => {
-    if (!window.confirm(t(`Futa package "${pkg.name}"?`, `Delete package "${pkg.name}"?`))) return;
+    if (
+      !window.confirm(
+        t(`Futa package "${pkg.name}"?`, `Delete package "${pkg.name}"?`)
+      )
+    )
+      return;
     withBusy(`leading-pkg-d-${pkg.id}`, async () => {
       const res = await removeLeadingPackageAsync(pkg.id);
       if (res.ok) showFlash(t("Package imefutwa.", "Package deleted."));
@@ -563,7 +593,12 @@ export default function RevenueSection() {
     });
 
   const handleDeleteAdvertisementPackage = (pkg) => {
-    if (!window.confirm(t(`Futa package "${pkg.name}"?`, `Delete package "${pkg.name}"?`))) return;
+    if (
+      !window.confirm(
+        t(`Futa package "${pkg.name}"?`, `Delete package "${pkg.name}"?`)
+      )
+    )
+      return;
     withBusy(`ad-pkg-d-${pkg.id}`, async () => {
       const res = await removeAdvertisementPackageAsync(pkg.id);
       if (res.ok) showFlash(t("Package imefutwa.", "Package deleted."));
@@ -662,7 +697,10 @@ export default function RevenueSection() {
                   flash.type === "error"
                     ? `${COLORS.rust}15`
                     : `${COLORS.green}15`,
-                color: flash.type === "error" ? COLORS.dangerText : COLORS.successText,
+                color:
+                  flash.type === "error"
+                    ? COLORS.dangerText
+                    : COLORS.successText,
               }}
               className="text-xs font-semibold px-3 py-2 rounded-lg"
             >
@@ -671,7 +709,10 @@ export default function RevenueSection() {
           )}
           {error && (
             <div
-              style={{ background: `${COLORS.rust}15`, color: COLORS.dangerText }}
+              style={{
+                background: `${COLORS.rust}15`,
+                color: COLORS.dangerText,
+              }}
               className="text-xs font-semibold px-3 py-2 rounded-lg"
             >
               {error}
@@ -685,14 +726,20 @@ export default function RevenueSection() {
         {missingFeeCategories.length > 0 && (
           <div
             className="rounded-xl border-2 p-4 sm:p-5"
-            style={{ borderColor: COLORS.rust, background: `${COLORS.rust}05` }}
+            style={{
+              borderColor: COLORS.rust,
+              background: `${COLORS.rust}05`,
+            }}
           >
             <div className="flex items-start gap-3 mb-4">
               <div
                 style={{ background: `${COLORS.rust}20` }}
                 className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
               >
-                <AlertTriangle size={18} style={{ color: COLORS.dangerText }} />
+                <AlertTriangle
+                  size={18}
+                  style={{ color: COLORS.dangerText }}
+                />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-primary">
@@ -737,7 +784,10 @@ export default function RevenueSection() {
                     <button
                       onClick={() => handleAddFeeConfig(cat)}
                       disabled={isBusy}
-                      style={{ background: COLORS.rust, color: "rgb(var(--c-card))" }}
+                      style={{
+                        background: COLORS.rust,
+                        color: "rgb(var(--c-card))",
+                      }}
                       className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold px-2 sm:px-3 py-1.5 rounded-lg shrink-0 disabled:opacity-50"
                     >
                       {isBusy ? (
@@ -833,7 +883,9 @@ export default function RevenueSection() {
                       disabled={isModeBusy || isFlat === false}
                       className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
                       style={{
-                        background: !isFlat ? COLORS.gold : "rgb(var(--c-card))",
+                        background: !isFlat
+                          ? COLORS.gold
+                          : "rgb(var(--c-card))",
                         color: !isFlat
                           ? "rgb(var(--c-night))"
                           : "var(--text-secondary)",
@@ -848,7 +900,9 @@ export default function RevenueSection() {
                       disabled={isModeBusy || isFlat === true}
                       className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50"
                       style={{
-                        background: isFlat ? COLORS.gold : "rgb(var(--c-card))",
+                        background: isFlat
+                          ? COLORS.gold
+                          : "rgb(var(--c-card))",
                         color: isFlat
                           ? "rgb(var(--c-night))"
                           : "var(--text-secondary)",
@@ -947,7 +1001,10 @@ export default function RevenueSection() {
           {!reservationSettings.is_enabled && (
             <p
               className="text-xs text-center rounded-lg px-3 py-2 mb-3"
-              style={{ background: `${COLORS.rust}15`, color: COLORS.dangerText }}
+              style={{
+                background: `${COLORS.rust}15`,
+                color: COLORS.dangerText,
+              }}
             >
               {t(
                 "Reservation Fee imezimwa — tiers zote ni BURE kwa watumiaji.",
@@ -964,7 +1021,10 @@ export default function RevenueSection() {
               type="button"
               onClick={handleAddTier}
               disabled={!!busy["res-add-tier"]}
-              style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
+              style={{
+                background: COLORS.gold,
+                color: "rgb(var(--c-night))",
+              }}
               className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["res-add-tier"] ? (
@@ -984,7 +1044,8 @@ export default function RevenueSection() {
               {reservationTiers.map((tier) => {
                 const isToggling = !!busy[`res-tier-t-${tier.id}`];
                 const isDeleting = !!busy[`res-tier-d-${tier.id}`];
-                const days = tier.hours % 24 === 0 ? tier.hours / 24 : null;
+                const days =
+                  tier.hours % 24 === 0 ? tier.hours / 24 : null;
                 const label = days
                   ? t(
                       `Siku ${days}`,
@@ -1159,7 +1220,10 @@ export default function RevenueSection() {
           {boostFee.loaded && !boostFee.enabled && (
             <p
               className="text-xs text-center rounded-lg px-3 py-2 mb-2"
-              style={{ background: `${COLORS.rust}15`, color: COLORS.dangerText }}
+              style={{
+                background: `${COLORS.rust}15`,
+                color: COLORS.dangerText,
+              }}
             >
               {t("Boost ni BURE kwa wote.", "Boost is FREE for everyone.")}
             </p>
@@ -1173,7 +1237,10 @@ export default function RevenueSection() {
               type="button"
               onClick={handleAddBoostPackage}
               disabled={!!busy["boost-add-pkg"]}
-              style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
+              style={{
+                background: COLORS.gold,
+                color: "rgb(var(--c-night))",
+              }}
               className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["boost-add-pkg"] ? (
@@ -1242,7 +1309,10 @@ export default function RevenueSection() {
           {!leadingFee.is_enabled && (
             <p
               className="text-xs text-center rounded-lg px-3 py-2 mb-3"
-              style={{ background: `${COLORS.rust}15`, color: COLORS.dangerText }}
+              style={{
+                background: `${COLORS.rust}15`,
+                color: COLORS.dangerText,
+              }}
             >
               {t(
                 "Leading ni BURE kwa watumiaji wote.",
@@ -1259,7 +1329,10 @@ export default function RevenueSection() {
               type="button"
               onClick={handleAddLeadingPackage}
               disabled={!!busy["leading-add-pkg"]}
-              style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
+              style={{
+                background: COLORS.gold,
+                color: "rgb(var(--c-night))",
+              }}
               className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["leading-add-pkg"] ? (
@@ -1282,7 +1355,9 @@ export default function RevenueSection() {
                   pkg={pkg}
                   lang={lang}
                   onUpdateName={(name) => renameLeading(pkg, name)}
-                  onUpdatePrice={(v) => updateLeadingPackagePrice(pkg.id, v)}
+                  onUpdatePrice={(v) =>
+                    updateLeadingPackagePrice(pkg.id, v)
+                  }
                   onToggle={() => toggleLeadingPackage(pkg.id)}
                   onDelete={() => handleDeleteLeadingPackage(pkg)}
                   isToggling={!!busy[`leading-pkg-t-${pkg.id}`]}
@@ -1312,10 +1387,7 @@ export default function RevenueSection() {
               </p>
               <p className="text-xs text-secondary mt-0.5">
                 {getLocalized(adFee.desc, lang) ||
-                  t(
-                    "Packages za tangazo",
-                    "Advertisement packages"
-                  )}
+                  t("Packages za tangazo", "Advertisement packages")}
               </p>
             </div>
             <ToggleSwitch
@@ -1328,7 +1400,10 @@ export default function RevenueSection() {
           {!adFee.is_enabled && (
             <p
               className="text-xs text-center rounded-lg px-3 py-2 mb-3"
-              style={{ background: `${COLORS.rust}15`, color: COLORS.dangerText }}
+              style={{
+                background: `${COLORS.rust}15`,
+                color: COLORS.dangerText,
+              }}
             >
               {t(
                 "Matangazo ni BURE kwa watumiaji wote.",
@@ -1345,7 +1420,10 @@ export default function RevenueSection() {
               type="button"
               onClick={handleAddAdvertisementPackage}
               disabled={!!busy["ad-add-pkg"]}
-              style={{ background: COLORS.gold, color: "rgb(var(--c-night))" }}
+              style={{
+                background: COLORS.gold,
+                color: "rgb(var(--c-night))",
+              }}
               className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg disabled:opacity-50"
             >
               {busy["ad-add-pkg"] ? (
@@ -1391,7 +1469,11 @@ export default function RevenueSection() {
             borderColor: `${COLORS.gold}30`,
           }}
         >
-          <Info size={16} style={{ color: COLORS.goldTextText }} className="shrink-0 mt-0.5" />
+          <Info
+            size={16}
+            style={{ color: COLORS.goldTextText }}
+            className="shrink-0 mt-0.5"
+          />
           <p className="text-xs text-secondary leading-relaxed">
             {t(
               "Bofya jina la package kuhariri. Bofya kiasi kuhariri bei. Toggle kuwasha/kuzima.",
