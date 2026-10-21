@@ -3,11 +3,10 @@
 // Sasa ina: fee_mode (PERCENTAGE|FLAT), flat_fee, is_enabled.
 // DEDUPE: kila seedKey ina rule moja pekee (active > Title Case > id ndogo).
 //
-// ✅ FIX: addFeeConfigAsync sasa:
-//   - Inafilter rules kwa category kwenye frontend (defensive)
-//   - Inatuma flat_fee tu kwa FLAT, percentage tu kwa PERCENTAGE
-//   - Inafanya PATCH kama rule ipo, POST kama haipo
-//   - Haigongani na `unique_active_rule_per_category`
+// ✅ FIX #1: addFeeConfigAsync inafanya upsert sahihi (PATCH kama ipo, POST kama haipo)
+// ✅ FIX #2: Inatuma flat_fee tu kwa FLAT, percentage tu kwa PERCENTAGE
+// ✅ FIX #3: Inafilter rules kwa categoryId kwenye frontend (defensive)
+// ✅ FIX #4: Inasasisha cache (hydrate) baada ya POST/PATCH kufanikiwa
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
@@ -234,16 +233,19 @@ export async function toggleListingFeeActiveAsync(key) {
 
 // ============================================================
 // ADD — upsert sahihi (PATCH kama ipo, POST kama haipo)
+// ✅ FIX: Inasasisha cache baada ya POST/PATCH kufanikiwa
 // ============================================================
 /**
- * ✅ FIX: addFeeConfigAsync
+ * ✅ addFeeConfigAsync
  *
  * - Inafilter rules kwa `categoryId` kwenye frontend (defensive).
  * - Inatuma `flat_fee` TU kwa FLAT, `percentage` TU kwa PERCENTAGE.
  * - Kama rule ipo kwa category → PATCH (update, is_active=true).
  * - Kama haipo → POST (create).
+ * - Baada ya kufanikiwa, inasasisha cache (hydrate) ili frontend
+ *   ionee rule mpya mara moja.
  *
- * Hii inazuia `DUPLICATE_ACTIVE_RULE` (unique_active_rule_per_category).
+ * Hii inazuia `DUPLICATE_ACTIVE_RULE` na "category bila fee config".
  */
 export async function addFeeConfigAsync({
   category_key,
@@ -284,9 +286,6 @@ export async function addFeeConfigAsync({
   }
 
   // ── Payload ya msingi ──────────────────────────────────
-  // ⚠️ Tuma TU fields zinazohitajika kwa mode ili kuepuka
-  //    validation errors za backend (flat_fee>0 kwa FLAT,
-  //    percentage>0 kwa PERCENTAGE).
   const basePayload = {
     category: categoryId,
     name,
@@ -305,7 +304,20 @@ export async function addFeeConfigAsync({
 
   try {
     // ── Tafuta rules zilizopo kwa category hii ───────────
-    const existing = await listingFeeRulesApi.byCategory(categoryId);
+    let existing = [];
+    try {
+      existing = await listingFeeRulesApi.byCategory(categoryId);
+    } catch (err) {
+      // ✅ FALLBACK: kama byCategory inashindwa (CORS/network),
+      //    tumia cache ya ndani.
+      console.warn(
+        "[addFeeConfigAsync] byCategory failed, using cache:",
+        err?.message || err
+      );
+      existing = read().filter(
+        (c) => Number(c.categoryId) === Number(categoryId)
+      );
+    }
 
     // ✅ Filter kwa categoryId kwenye frontend (defensive)
     const matching = (existing || []).filter((r) => {
@@ -314,6 +326,8 @@ export async function addFeeConfigAsync({
           ? Number(r.category)
           : r?.category_id != null
           ? Number(r?.category_id)
+          : r?.categoryId != null
+          ? Number(r?.categoryId)
           : null;
       return rid === Number(categoryId);
     });
@@ -325,9 +339,15 @@ export async function addFeeConfigAsync({
       const raw = await listingFeeRulesApi.update(target.id, basePayload);
       const updated = norm(raw);
 
-      write(
-        read().map((c) => (c.id === updated.id ? updated : c))
-      );
+      write(read().map((c) => (c.id === updated.id ? updated : c)));
+
+      // ✅ SASISHA CACHE — ili frontend ionee rule mpya
+      try {
+        await hydrateListingFeeConfigsFromApi();
+      } catch (hydrateErr) {
+        console.warn("[addFeeConfigAsync] hydrate after PATCH failed:", hydrateErr);
+      }
+
       return { ok: true, config: updated, mode: "updated" };
     }
 
@@ -341,6 +361,13 @@ export async function addFeeConfigAsync({
       write(read().map((c) => (c.id === created.id ? created : c)));
     } else {
       write([created, ...read()]);
+    }
+
+    // ✅ SASISHA CACHE — ili frontend ionee rule mpya
+    try {
+      await hydrateListingFeeConfigsFromApi();
+    } catch (hydrateErr) {
+      console.warn("[addFeeConfigAsync] hydrate after POST failed:", hydrateErr);
     }
 
     return { ok: true, config: created, mode: "created" };
@@ -375,6 +402,14 @@ export async function removeFeeConfigAsync(key) {
   try {
     await listingFeeRulesApi.remove(target.id);
     write(read().filter((c) => c.id !== target.id));
+
+    // ✅ SASISHA CACHE — ili frontend ionee mabadiliko
+    try {
+      await hydrateListingFeeConfigsFromApi();
+    } catch (hydrateErr) {
+      console.warn("[removeFeeConfigAsync] hydrate after DELETE failed:", hydrateErr);
+    }
+
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err };
