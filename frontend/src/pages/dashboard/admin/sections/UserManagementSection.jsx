@@ -1,7 +1,8 @@
 // ============================================================
 // UserManagementSection.jsx
-// + FIX: loading inaisha kila mara + users ina-update baada ya fetch
-// + Race-condition guard + skeleton (firstLoad pekee)
+// + FIX: loading inaisha KILA MARA (finally block)
+// + AbortController badala ya requestIdRef (race condition)
+// + skeleton inaonekana tu kwenye firstLoad
 // ============================================================
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
@@ -157,50 +158,63 @@ export default function UserManagementSection() {
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
 
-  const requestIdRef = useRef(0);
+  // AbortController kwa race condition
+  const abortRef = useRef(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const getUserRole = (user) => user.role || "Neither";
 
-  // ── Fetch with filters + pagination ────────────────────────
+  // ── Fetch ─────────────────────────────────────────────────
   const fetchPage = useCallback(
     async (p = 1) => {
-      const myId = ++requestIdRef.current;
+      // Cancel fetch iliyopita
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setLoading(true);
       setError("");
 
       let res;
       try {
-        res = await hydrateUsersFromApi({
-          page: p,
-          pageSize: PAGE_SIZE,
-          q: query.trim(),
-          role: roleFilter,
-          status: statusFilter,
-          verified: verifiedFilter,
-        });
+        res = await hydrateUsersFromApi(
+          {
+            page: p,
+            pageSize: PAGE_SIZE,
+            q: query.trim(),
+            role: roleFilter,
+            status: statusFilter,
+            verified: verifiedFilter,
+          },
+          { signal: controller.signal }
+        );
       } catch (err) {
+        if (err?.name === "AbortError") return;
         res = { ok: false, error: err };
+      } finally {
+        // ⬇️ Hii inaitwa KILA MARA — ndio fix ya skeleton
+        if (abortRef.current === controller) {
+          setLoading(false);
+          setFirstLoad(false);
+        }
       }
 
-      // Kama fetch nyingine imeanza baada ya hii, puuza matokeo
-      // LAKINI hakikisha loading imezimwa — hii ndio fix.
-      if (myId === requestIdRef.current) {
-        if (res?.ok) {
-          setUsers(getUsers());
-          setPage(res.page || p);
-          setTotalPages(res.totalPages || 1);
-          setCount(res.count || 0);
-        } else {
-          setError(
-            res?.error?.message ||
-              t("Imeshindwa kupakia watumiaji.", "Failed to load users.")
-          );
-          setUsers([]);
-        }
-        setLoading(false);
-        setFirstLoad(false);
+      if (controller.signal.aborted) return;
+
+      if (res?.ok) {
+        setUsers(getUsers());
+        setPage(res.page || p);
+        setTotalPages(res.totalPages || 1);
+        setCount(res.count || 0);
+      } else if (res) {
+        setError(
+          res?.error?.message ||
+            t("Imeshindwa kupakia watumiaji.", "Failed to load users.")
+        );
+        setUsers([]);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,14 +224,15 @@ export default function UserManagementSection() {
   // Refetch kila filter inabadilika + mount
   useEffect(() => {
     fetchPage(1);
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, roleFilter, statusFilter, verifiedFilter]);
 
-  // Sikiliza events ili refresh list (verify/suspend/delete)
+  // Sikiliza events
   useEffect(() => {
-    const onUpdate = () => {
-      fetchPage(page);
-    };
+    const onUpdate = () => fetchPage(page);
     window.addEventListener("sokomkononi:users-updated", onUpdate);
     window.addEventListener("sokomkononi:verifications-updated", onUpdate);
     return () => {
@@ -433,7 +448,7 @@ export default function UserManagementSection() {
     );
   };
 
-  // ── Pagination controls ────────────────────────────────────
+  // ── Pagination ─────────────────────────────────────────────
   const PaginationControls = () => {
     if (totalPages <= 1) return null;
 
