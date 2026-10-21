@@ -2,9 +2,8 @@
 // ContentSection.jsx
 // ============================================================
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Image as ImageIcon,
   MessageSquareQuote,
   HelpCircle,
   Info,
@@ -17,14 +16,10 @@ import {
   Save,
   Check,
   Loader2,
-  Star,
-  Upload,
-  X,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
-import { api } from "../../../../api/client.js";
 import {
   useContent,
   addTestimonialAsync,
@@ -115,155 +110,6 @@ function FormActions({ onCancel, onSave, lang, saving = false, saveLabel = null 
         )}
         {saveLabel || t("Hifadhi", "Save")}
       </button>
-    </div>
-  );
-}
-
-// ============================================================
-// IMAGE UPLOAD FIELD
-// Inatumika kwa banners (imageUrl) na testimonials (avatarUrl).
-// ============================================================
-function ImageUploadField({
-  label,
-  value,
-  onChange,
-  disabled = false,
-  lang,
-  aspect = "banner", // "banner" | "avatar"
-}) {
-  const t = (sw, en) => (lang === "sw" ? sw : en);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState("");
-  const fileInputRef = useRef(null);
-
-  const handleFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError(
-        t("Picha ni kubwa mno (max 5MB).", "Image too large (max 5MB).")
-      );
-      return;
-    }
-
-    setUploading(true);
-    setUploadError("");
-
-    try {
-      const fd = new FormData();
-      fd.append("image", file);
-
-      const res = await api.upload("/admin/content/upload/", fd);
-
-      if (res?.url) {
-        onChange(res.url);
-      } else {
-        setUploadError(
-          t("Imeshindwa kupakia picha.", "Failed to upload image.")
-        );
-      }
-    } catch (err) {
-      setUploadError(
-        err?.message ||
-          t("Imeshindwa kupakia picha.", "Failed to upload image.")
-      );
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  const handleClear = () => onChange("");
-
-  const previewClass =
-    aspect === "avatar"
-      ? "w-24 h-24 rounded-full object-cover"
-      : "w-full h-40 rounded-lg object-cover";
-
-  return (
-    <div className="flex flex-col gap-2 w-full min-w-0">
-      <span className="text-[11px] font-semibold text-secondary">
-        {label || t("Picha", "Image")}
-      </span>
-
-      {/* Preview */}
-      {value && (
-        <div className="relative self-start">
-          <img
-            src={value}
-            alt="Preview"
-            className={`border ${previewClass}`}
-            style={{ borderColor: "rgb(var(--c-hairline))" }}
-            onError={(e) => {
-              e.target.style.display = "none";
-            }}
-          />
-          <button
-            type="button"
-            onClick={handleClear}
-            disabled={disabled || uploading}
-            className="absolute -top-2 -right-2 bg-black/70 hover:bg-black/90 text-white rounded-full p-1 transition-colors disabled:opacity-50"
-            aria-label={t("Ondoa", "Remove")}
-          >
-            <X size={12} />
-          </button>
-        </div>
-      )}
-
-      {/* File input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        onChange={handleFileChange}
-        disabled={disabled || uploading}
-        className="hidden"
-      />
-
-      {/* Buttons + URL input */}
-      <div className="flex flex-col sm:flex-row gap-2 w-full min-w-0">
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || uploading}
-          className="flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0 disabled:opacity-50 bg-night dark:bg-royal text-white"
-        >
-          {uploading ? (
-            <Loader2 size={13} className="animate-spin" />
-          ) : (
-            <Upload size={13} />
-          )}
-          {uploading
-            ? t("Inapakia...", "Uploading...")
-            : value
-              ? t("Badilisha", "Change")
-              : t("Pakia Picha", "Upload")}
-        </button>
-
-        <span className="text-[10px] text-muted self-center shrink-0">
-          {t("au", "or")}
-        </span>
-
-        <input
-          value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={t("Weka URL ya picha", "Paste image URL")}
-          disabled={disabled || uploading}
-          className="input flex-1 min-w-0"
-        />
-      </div>
-
-      {uploadError && (
-        <p className="text-[10px] text-[#C1502E] font-medium">{uploadError}</p>
-      )}
-
-      <p className="text-[10px] text-muted">
-        {t(
-          "JPG, PNG au WEBP — max 5MB. Unaweza pia kuweka URL ya picha.",
-          "JPG, PNG or WEBP — max 5MB. You can also paste an image URL."
-        )}
-      </p>
     </div>
   );
 }
@@ -500,154 +346,6 @@ function SectionsEditor({
 }
 
 // ============================================================
-// BANNERS TAB
-// ============================================================
-function BannersTab({ lang }) {
-  const content = useContent();
-  const banners = content.banners || [];
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  const t = (sw, en) => (lang === "sw" ? sw : en);
-
-  const handleEdit = (banner) => {
-    setForm({ ...banner });
-    setEditing(banner.id);
-    setError("");
-  };
-
-  const handleCancel = () => {
-    setEditing(null);
-    setForm({});
-    setError("");
-  };
-
-  const handleSave = async () => {
-    if (!editing) return;
-    setSaving(true);
-    setError("");
-    const res = await updateBannerAsync(editing, form);
-    setSaving(false);
-    if (res.ok) {
-      setEditing(null);
-      setForm({});
-    } else {
-      setError(res.error?.message || t("Imeshindwa kuhifadhi banner.", "Failed to save banner."));
-    }
-  };
-
-  const handleRemove = async (id) => {
-    if (!window.confirm(t("Ondoa banner?", "Remove banner?"))) return;
-    setError("");
-    const res = await removeBannerAsync(id);
-    if (!res.ok) {
-      setError(res.error?.message || t("Imeshindwa kuondoa banner.", "Failed to remove banner."));
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-3 w-full min-w-0">
-      {error && (
-        <div style={{ background: "rgba(193,80,46,0.1)", color: COLORS.dangerText }}
-             className="text-xs font-semibold px-3 py-2 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {editing && (
-        <div style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
-             className="rounded-xl border p-3 sm:p-4 flex flex-col gap-3 w-full min-w-0">
-          <BilingualField label={t("Kichwa", "Title")} value={form.title || { sw: "", en: "" }}
-                          onChange={(v) => setForm({ ...form, title: v })} disabled={saving} />
-          <BilingualField label={t("Maelezo", "Subtitle")} value={form.subtitle || { sw: "", en: "" }}
-                          onChange={(v) => setForm({ ...form, subtitle: v })} multiline rows={2} disabled={saving} />
-          <BilingualField label={t("Kitufe", "CTA Text")} value={form.ctaText || { sw: "", en: "" }}
-                          onChange={(v) => setForm({ ...form, ctaText: v })} disabled={saving} />
-
-          <label className="flex flex-col gap-1 w-full min-w-0">
-            <span className="text-[11px] font-semibold text-secondary">
-              {t("Kiungo (URL)", "Link (URL)")}
-            </span>
-            <input value={form.ctaLink || ""}
-                   onChange={(e) => setForm({ ...form, ctaLink: e.target.value })}
-                   placeholder="/tafuta" disabled={saving}
-                   className="input w-full" />
-          </label>
-
-          {/* ⬇️ MPYA — Upload image */}
-          <ImageUploadField
-            label={t("Picha ya Banner", "Banner Image")}
-            value={form.imageUrl || ""}
-            onChange={(url) => setForm({ ...form, imageUrl: url })}
-            disabled={saving}
-            lang={lang}
-            aspect="banner"
-          />
-
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={form.active !== false}
-                   onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                   disabled={saving} className="w-4 h-4 rounded text-[#FEA406]" />
-            <span className="text-xs text-secondary">
-              {t("Inaonekana HomePage", "Show on HomePage")}
-            </span>
-          </label>
-
-          <FormActions onCancel={handleCancel} onSave={handleSave} lang={lang} saving={saving} />
-        </div>
-      )}
-
-      {banners.map((banner) => (
-        <div key={banner.id} style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
-             className="rounded-xl border p-3 sm:p-4 w-full min-w-0">
-          <div className="flex items-start justify-between gap-3 w-full min-w-0">
-            {/* Thumbnail kama ipo */}
-            {banner.imageUrl && (
-              <img
-                src={banner.imageUrl}
-                alt={banner.title?.[lang] || banner.title?.sw || "Banner"}
-                className="w-20 h-14 rounded-lg object-cover shrink-0"
-                onError={(e) => { e.target.style.display = "none"; }}
-              />
-            )}
-
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span style={{
-                        background: banner.active ? "rgba(47,109,79,0.12)" : "rgb(var(--c-ink) / 0.08)",
-                        color: banner.active ? COLORS.successText : COLORS.ink,
-                      }}
-                      className="text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  {banner.active ? t("Hai", "Active") : t("Imezimwa", "Inactive")}
-                </span>
-              </div>
-              <p className="text-sm font-semibold text-primary truncate">{banner.title?.[lang] || banner.title?.sw}</p>
-              <p className="text-xs text-secondary mt-0.5 line-clamp-2">{banner.subtitle?.[lang] || banner.subtitle?.sw}</p>
-              <p className="text-[11px] text-muted mt-1 truncate">
-                CTA: {banner.ctaText?.[lang] || banner.ctaText?.sw} → {banner.ctaLink}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-1 shrink-0">
-              <button onClick={() => handleEdit(banner)} disabled={saving}
-                      className="p-1.5 text-muted hover:text-[#FEA406] disabled:opacity-50">
-                <Pencil size={14} />
-              </button>
-              <button onClick={() => handleRemove(banner.id)} disabled={saving}
-                      className="p-1.5 text-muted hover:text-danger disabled:opacity-50">
-                <Trash2 size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================
 // TESTIMONIALS TAB
 // ============================================================
 function TestimonialsTab({ lang }) {
@@ -763,15 +461,25 @@ function TestimonialsTab({ lang }) {
             </select>
           </label>
 
-          {/* ⬇️ MPYA — Upload avatar */}
-          <ImageUploadField
-            label={t("Picha ya Mtoa Ushuhuda (hiari)", "Testimonial Avatar (optional)")}
-            value={form.avatarUrl || ""}
-            onChange={(url) => setForm({ ...form, avatarUrl: url })}
-            disabled={saving}
-            lang={lang}
-            aspect="avatar"
-          />
+          <label className="flex flex-col gap-1 w-full min-w-0">
+            <span className="text-[11px] font-semibold text-secondary">
+              {t("Picha ya Mtoa Ushuhuda (URL, hiari)", "Testimonial Avatar (URL, optional)")}
+            </span>
+            <input value={form.avatarUrl || ""}
+                   onChange={(e) => setForm({ ...form, avatarUrl: e.target.value })}
+                   placeholder={t("Weka URL ya picha", "Paste image URL")}
+                   disabled={saving}
+                   className="input w-full" />
+            {form.avatarUrl && (
+              <img
+                src={form.avatarUrl}
+                alt="Preview"
+                className="w-16 h-16 rounded-full object-cover mt-1 border"
+                style={{ borderColor: "rgb(var(--c-hairline))" }}
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+            )}
+          </label>
 
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.active !== false}
@@ -1113,7 +821,7 @@ function SinglePageEditor({ section, lang }) {
 // ============================================================
 export default function ContentSection() {
   const { lang } = useLanguage();
-
+  const [activeTab, setActiveTab] = useState("testimonials");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
