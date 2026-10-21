@@ -1,9 +1,5 @@
 // ============================================================
 // ContentSection.jsx
-// Admin — Content Management (banners, testimonials, FAQs, About,
-// Terms, Privacy, Help).
-// Bilingual + mobile-responsive + Async actions na rollback.
-// + Upload ya picha kwa banners + testimonials
 // ============================================================
 
 import React, { useState, useRef, useEffect } from "react";
@@ -31,8 +27,6 @@ import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { api } from "../../../../api/client.js";
 import {
   useContent,
-  updateBannerAsync,
-  removeBannerAsync,
   addTestimonialAsync,
   updateTestimonialAsync,
   removeTestimonialAsync,
@@ -49,7 +43,6 @@ import {
 // TABS
 // ============================================================
 const TABS = [
-  { key: "banners", label: { sw: "Banners", en: "Banners" }, icon: ImageIcon },
   { key: "testimonials", label: { sw: "Ushuhuda", en: "Testimonials" }, icon: MessageSquareQuote },
   { key: "faqs", label: { sw: "Maswali", en: "FAQs" }, icon: HelpCircle },
   { key: "about", label: { sw: "Kuhusu", en: "About" }, icon: Info },
@@ -1000,8 +993,6 @@ function SinglePageEditor({ section, lang }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Resync the form whenever the store's data object identity changes —
-  // covers hydration completing after mount and cross-tab saves.
   useEffect(() => {
     setForm({ ...data });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1122,7 +1113,7 @@ function SinglePageEditor({ section, lang }) {
 // ============================================================
 export default function ContentSection() {
   const { lang } = useLanguage();
-  const [activeTab, setActiveTab] = useState("banners");
+
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -1155,7 +1146,6 @@ export default function ContentSection() {
       </div>
 
       <div className="w-full min-w-0">
-        {activeTab === "banners" && <BannersTab lang={lang} />}
         {activeTab === "testimonials" && <TestimonialsTab lang={lang} />}
         {activeTab === "faqs" && <FaqsTab lang={lang} />}
         {activeTab === "about" && <SinglePageEditor section="about" lang={lang} />}

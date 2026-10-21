@@ -500,45 +500,44 @@ html.dark .smk-map .leaflet-bar a:hover { background: rgb(var(--c-ink) / 0.08) !
 
 /* ============================================================
    DROPDOWN TEXT VISIBILITY — light & dark
-   Avatar dropdown, notifications dropdown, na dropdowns zote
-   zenye bg-white na bg-[#182541] / bg-[#042475] (navbar).
    ============================================================ */
 
 /* ── LIGHT MODE ──────────────────────────────────────────── */
-html:not(.dark) [data-surface="sand"] .bg-white,
-html:not(.dark) [data-surface="sand"] .bg-white *,
-html:not(.dark) [data-surface="sand"] [class*="bg-white"] {
+/* Dropdowns zenye bg-white (sio za DashboardShell) */
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]):not([data-keep-light] *),
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]):not([data-keep-light] *) *,
+html:not(.dark) [data-surface="sand"] [class*="bg-white"]:not([data-keep-light]):not([data-keep-light] *) {
   color: #0B1220 !important;
 }
 
 /* Rangi za maandishi ndani ya dropdown (light mode) */
-html:not(.dark) [data-surface="sand"] .bg-white .text-primary,
-html:not(.dark) [data-surface="sand"] .bg-white.text-primary {
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) .text-primary,
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]).text-primary {
   color: #0B1220 !important;
 }
-html:not(.dark) [data-surface="sand"] .bg-white .text-secondary,
-html:not(.dark) [data-surface="sand"] .bg-white.text-secondary {
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) .text-secondary,
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]).text-secondary {
   color: #455068 !important;
 }
-html:not(.dark) [data-surface="sand"] .bg-white .text-muted,
-html:not(.dark) [data-surface="sand"] .bg-white.text-muted {
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) .text-muted,
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]).text-muted {
   color: #6B7280 !important;
 }
 
 /* Hover kwenye dropdown items */
-html:not(.dark) [data-surface="sand"] .bg-white .hover\:bg-gray-50:hover {
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) .hover\:bg-gray-50:hover {
   background-color: rgba(244, 247, 252, 1) !important;
 }
-html:not(.dark) [data-surface="sand"] .bg-white .hover\:bg-gray-100:hover {
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) .hover\:bg-gray-100:hover {
   background-color: rgba(240, 244, 250, 1) !important;
 }
 
 /* Borders za dropdown */
-html:not(.dark) [data-surface="sand"] .bg-white .border-gray-100,
-html:not(.dark) [data-surface="sand"] .bg-white .border-gray-200 {
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) .border-gray-100,
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) .border-gray-200 {
   border-color: #DCE4F2 !important;
 }
-html:not(.dark) [data-surface="sand"] .bg-white .divide-gray-100 > * {
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) .divide-gray-100 > * {
   border-color: #DCE4F2 !important;
 }
 
@@ -578,13 +577,12 @@ html.dark [data-surface="sand"] .bg-white .divide-gray-100 > * {
 }
 
 /* Rangi za hover kwa dropdown items (light) */
-html:not(.dark) [data-surface="sand"] .bg-white .hover\:bg-gray-50:hover * {
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) .hover\:bg-gray-50:hover * {
   color: #0B1220;
 }
 
 /* ============================================================
    NAVBAR ICONS — lazima zionekane kwenye navy background
-   (Bell, Home, ThemeToggle, Menu, n.k.)
    ============================================================ */
 
 /* Light mode — navbar ya PUBLIC ina bg-[#011957] (navy), kwa hiyo icons ziwe nyeupe */
@@ -681,17 +679,17 @@ html:not(.dark) header[style*="background: #011957"] button[aria-label*="Dark"] 
    AVATAR / NOTIFICATION DROPDOWN ICONS — light & dark
    ============================================================ */
 
-/* ── LIGHT MODE — dropdown yenye bg-white ─────────────────── */
-html:not(.dark) [data-surface="sand"] .bg-white svg[stroke="currentColor"],
-html:not(.dark) [data-surface="sand"] .bg-white svg:not([class*="fill-"]),
-html:not(.dark) [data-surface="sand"] .bg-white svg {
+/* ── LIGHT MODE — dropdown yenye bg-white (sio DashboardShell) ─── */
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) svg[stroke="currentColor"],
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) svg:not([class*="fill-"]),
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) svg {
   color: #0B1220 !important;
   stroke: #0B1220 !important;
 }
 
 /* Ruhusu rangi maalum (rust kwa logout, gold kwa icons za gold) */
-html:not(.dark) [data-surface="sand"] .bg-white svg[stroke="#C1502E"],
-html:not(.dark) [data-surface="sand"] .bg-white svg[stroke="#FEA406"] {
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) svg[stroke="#C1502E"],
+html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) svg[stroke="#FEA406"] {
   color: inherit !important;
   stroke: currentColor !important;
 }
@@ -710,4 +708,40 @@ html.dark [data-surface="sand"] .bg-white svg[stroke="#FF8A65"],
 html.dark [data-surface="sand"] .bg-white svg[stroke="#FEA406"] {
   color: inherit !important;
   stroke: currentColor !important;
+}
+
+/* ============================================================
+   DASHBOARD DROPDOWNS — navy daima (kama Admin)
+   Dropdowns zenye data-keep-light hazibadiliki kwenye light mode
+   ============================================================ */
+[data-keep-light] {
+  color-scheme: dark;
+}
+
+[data-keep-light],
+[data-keep-light] * {
+  color: #F5F3EC !important;
+}
+
+[data-keep-light] svg {
+  color: rgba(245, 243, 236, 0.85) !important;
+  stroke: currentColor !important;
+}
+
+[data-keep-light] svg[stroke="#FEA406"],
+[data-keep-light] svg[stroke="#C1502E"],
+[data-keep-light] svg[stroke="#FF8A65"] {
+  color: inherit !important;
+  stroke: currentColor !important;
+}
+
+/* Hover kwenye dropdown items */
+[data-keep-light] button:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Logout button — rust rangi */
+[data-keep-light] .text-\[#FF8A65\],
+[data-keep-light] button:last-child {
+  color: #FF8A65 !important;
 }

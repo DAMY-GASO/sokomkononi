@@ -702,7 +702,11 @@ export default function DashboardShell() {
               <span className="sm:hidden">{currentLang?.code?.toUpperCase() || "SW"}</span>
             </button>
             {langOpen && (
-              <div style={{ background: "#042475", borderColor: "rgba(245,243,236,0.1)" }} className="absolute right-0 mt-2 w-48 border rounded-lg shadow-xl py-2 z-50">
+              <div
+                data-keep-light
+                style={{ background: "#042475", borderColor: "rgba(245,243,236,0.1)" }}
+                className="absolute right-0 mt-2 w-48 border rounded-lg shadow-xl py-2 z-50"
+              >
                 <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-2 border-b">
                   <p className="text-white/50 text-xs font-semibold">
                     {t("Chagua Lugha", "Choose Language")}
@@ -755,15 +759,16 @@ export default function DashboardShell() {
 
             {userMenuOpen && (
               <div
+                data-keep-light
                 style={{ background: "#042475", borderColor: "rgba(245,243,236,0.1)" }}
                 className="absolute right-0 mt-2 w-64 border rounded-lg shadow-xl py-1 z-50"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div style={{ borderColor: "rgba(245,243,236,0.1)" }} className="px-4 py-3 border-b">
-                  <p className="text-sm font-semibold truncate text-white">
+                  <p className="text-sm font-semibold truncate" style={{ color: "#FFFFFF" }}>
                     {user?.name || "User"}
                   </p>
-                  <p className="text-xs truncate text-white/50">
+                  <p className="text-xs truncate" style={{ color: "rgba(245,243,236,0.55)" }}>
                     {user?.email || ""}
                   </p>
                 </div>
