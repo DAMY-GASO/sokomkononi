@@ -215,12 +215,6 @@ export async function addFeeConfigAsync({
   if (!name) return { ok: false, error: new Error("name required") };
   const slug = toSlug(category_key || name);
   const seedKey = getSeedKeyFromSlug(slug);
-  if (hasFeeConfig(seedKey)) {
-    return {
-      ok: false,
-      error: new Error(`Fee config for "${seedKey}" already exists`),
-    };
-  }
   const categoryId = getCategoryIdByKey(seedKey);
   if (!categoryId) {
     return {
@@ -231,7 +225,8 @@ export async function addFeeConfigAsync({
     };
   }
   try {
-    const raw = await listingFeeRulesApi.create({
+    // ⬇️ Tumia upsert (inafanya PATCH kama rule ipo, POST kama haipo)
+    const raw = await listingFeeRulesApi.upsert({
       category: categoryId,
       name,
       percentage,
@@ -243,7 +238,13 @@ export async function addFeeConfigAsync({
       is_active: true,
     });
     const created = norm(raw);
-    write([created, ...read()]);
+    const existing = read().find((c) => c.id === created.id);
+    if (existing) {
+      write(read().map((c) => (c.id === created.id ? created : c)));
+    } else {
+      write([created, ...read()]);
+    }
+
     return { ok: true, config: created };
   } catch (err) {
     return { ok: false, error: err };
