@@ -5,9 +5,10 @@
 // + Status filter, Verified filter, Pagination
 // + UserDrawer inachukua data yake yenyewe (/full/ endpoint)
 // + Event listeners: refresh kwenye users-updated/verifications-updated
+// + FIX: loading state + race condition guard + fetch moja tu
 // ============================================================
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Search,
   RotateCcw,
@@ -26,8 +27,8 @@ import DeleteUserModal from "../shared/DeleteUserModal.jsx";
 import SuspendUserModal from "../shared/SuspendUserModal.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
-  useUsers,
   hydrateUsersFromApi,
+  getUsers,
   activateUserAsync,
   suspendUserAsync,
   verifyUserAsync,
@@ -88,9 +89,65 @@ function RoleBadge({ role, lang }) {
 
 const PAGE_SIZE = 20;
 
+// Skeleton row kwa desktop
+function TableSkeleton({ rows = 6 }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, i) => (
+        <tr key={i} className="animate-pulse">
+          <td className="px-5 py-3">
+            <div className="h-4 w-32 rounded bg-[rgb(var(--c-ink)/0.08)]" />
+          </td>
+          <td className="px-5 py-3">
+            <div className="h-4 w-40 rounded bg-[rgb(var(--c-ink)/0.08)]" />
+          </td>
+          <td className="px-5 py-3">
+            <div className="h-5 w-16 rounded-full bg-[rgb(var(--c-ink)/0.08)]" />
+          </td>
+          <td className="px-5 py-3">
+            <div className="h-5 w-16 rounded-full bg-[rgb(var(--c-ink)/0.08)]" />
+          </td>
+          <td className="px-5 py-3">
+            <div className="h-4 w-20 rounded bg-[rgb(var(--c-ink)/0.08)]" />
+          </td>
+          <td className="px-5 py-3">
+            <div className="ml-auto h-7 w-24 rounded bg-[rgb(var(--c-ink)/0.08)]" />
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+// Skeleton card kwa mobile
+function CardSkeleton({ rows = 3 }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div
+          key={i}
+          className="bg-card rounded-xl border border-hairline p-4 animate-pulse"
+        >
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-4 w-32 rounded bg-[rgb(var(--c-ink)/0.08)]" />
+              <div className="h-3 w-48 rounded bg-[rgb(var(--c-ink)/0.08)]" />
+            </div>
+            <div className="h-5 w-16 rounded-full bg-[rgb(var(--c-ink)/0.08)]" />
+          </div>
+          <div className="h-8 w-full rounded bg-[rgb(var(--c-ink)/0.08)]" />
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function UserManagementSection() {
   const { lang } = useLanguage();
-  const users = useUsers();
+
+  // ⬇️ TUNATUMIA useState BADALA YA useUsers() ili kuepuka
+  // fetch ya pili inayogongana na fetchPage().
+  const [users, setUsers] = useState(() => getUsers());
 
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -100,12 +157,17 @@ export default function UserManagementSection() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [firstLoad, setFirstLoad] = useState(true);
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [suspendTarget, setSuspendTarget] = useState(null);
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
+
+  // ⬇️ Race-condition guard — kila fetch inapata id yake
+  const requestIdRef = useRef(0);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -114,6 +176,10 @@ export default function UserManagementSection() {
   // ── Fetch with filters + pagination ────────────────────────
   const fetchPage = useCallback(
     async (p = 1) => {
+      const myId = ++requestIdRef.current;
+      setLoading(true);
+      setError("");
+
       const res = await hydrateUsersFromApi({
         page: p,
         pageSize: PAGE_SIZE,
@@ -122,7 +188,12 @@ export default function UserManagementSection() {
         status: statusFilter,
         verified: verifiedFilter,
       });
+
+      // Kama fetch nyingine imeanza baada ya hii, puuza matokeo
+      if (myId !== requestIdRef.current) return;
+
       if (res.ok) {
+        setUsers(getUsers());
         setPage(res.page || p);
         setTotalPages(res.totalPages || 1);
         setCount(res.count || 0);
@@ -132,25 +203,22 @@ export default function UserManagementSection() {
             t("Imeshindwa kupakia watumiaji.", "Failed to load users.")
         );
       }
+      setLoading(false);
+      setFirstLoad(false);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [query, roleFilter, statusFilter, verifiedFilter]
   );
 
-  // Initial load
-  useEffect(() => {
-    fetchPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Reset to page 1 + refetch kama filter imebadilika
+  // (Hii inatosha kwa mount + filter change — hakuna haja ya
+  //  useEffect ya pili ya mount)
   useEffect(() => {
     fetchPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, roleFilter, statusFilter, verifiedFilter]);
 
   // ── Sikiliza events ili refresh list ───────────────────────
-  // (mfano: admin ana-approve verification kwenye tab nyingine)
   useEffect(() => {
     const onUpdate = () => {
       fetchPage(page);
@@ -383,7 +451,7 @@ export default function UserManagementSection() {
       <div className="flex items-center justify-center gap-2 mt-6">
         <button
           onClick={() => page > 1 && fetchPage(page - 1)}
-          disabled={page <= 1}
+          disabled={page <= 1 || loading}
           className="w-9 h-9 rounded-lg border border-hairline flex items-center justify-center disabled:opacity-40 hover:bg-ink/5 transition-colors"
           aria-label={t("Nyuma", "Previous")}
         >
@@ -394,7 +462,8 @@ export default function UserManagementSection() {
           <>
             <button
               onClick={() => fetchPage(1)}
-              className="w-9 h-9 rounded-lg border border-hairline text-sm font-medium text-secondary hover:bg-ink/5"
+              disabled={loading}
+              className="w-9 h-9 rounded-lg border border-hairline text-sm font-medium text-secondary hover:bg-ink/5 disabled:opacity-40"
             >
               1
             </button>
@@ -406,7 +475,8 @@ export default function UserManagementSection() {
           <button
             key={p}
             onClick={() => fetchPage(p)}
-            className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+            disabled={loading}
+            className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 ${
               p === page
                 ? "bg-gold on-gold"
                 : "border border-hairline text-secondary hover:bg-ink/5"
@@ -423,7 +493,8 @@ export default function UserManagementSection() {
             )}
             <button
               onClick={() => fetchPage(totalPages)}
-              className="w-9 h-9 rounded-lg border border-hairline text-sm font-medium text-secondary hover:bg-ink/5"
+              disabled={loading}
+              className="w-9 h-9 rounded-lg border border-hairline text-sm font-medium text-secondary hover:bg-ink/5 disabled:opacity-40"
             >
               {totalPages}
             </button>
@@ -432,7 +503,7 @@ export default function UserManagementSection() {
 
         <button
           onClick={() => page < totalPages && fetchPage(page + 1)}
-          disabled={page >= totalPages}
+          disabled={page >= totalPages || loading}
           className="w-9 h-9 rounded-lg border border-hairline flex items-center justify-center disabled:opacity-40 hover:bg-ink/5 transition-colors"
           aria-label={t("Mbele", "Next")}
         >
@@ -516,7 +587,9 @@ export default function UserManagementSection() {
 
       {/* Count */}
       <p className="text-xs text-muted mb-2">
-        {t(`Watumiaji ${count}`, `${count} users`)}
+        {loading && firstLoad
+          ? t("Inapakia...", "Loading...")
+          : t(`Watumiaji ${count}`, `${count} users`)}
       </p>
 
       {/* DESKTOP — TABLE */}
@@ -546,45 +619,9 @@ export default function UserManagementSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
-              {users.map((u) => {
-                const role = getUserRole(u);
-                return (
-                  <tr
-                    key={u.id}
-                    className="hover:bg-ink/5 transition-colors cursor-pointer"
-                    onClick={() => setSelectedUser(u)}
-                  >
-                    <td className="px-5 py-3 text-sm font-medium text-primary">
-                      <div className="flex items-center gap-1.5">
-                        <span>{u.name}</span>
-                        {u.isVerified && (
-                          <ShieldCheck
-                            size={13}
-                            style={{ color: COLORS.successText }}
-                            className="shrink-0"
-                          />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-sm text-secondary">
-                      {u.email}
-                    </td>
-                    <td className="px-5 py-3">
-                      <RoleBadge role={role} lang={lang} />
-                    </td>
-                    <td className="px-5 py-3">
-                      <StatusBadge status={u.status} lang={lang} />
-                    </td>
-                    <td className="px-5 py-3 text-sm text-muted">
-                      {u.joined}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <ActionButtons user={u} />
-                    </td>
-                  </tr>
-                );
-              })}
-              {users.length === 0 && (
+              {loading && firstLoad ? (
+                <TableSkeleton rows={6} />
+              ) : users.length === 0 ? (
                 <tr>
                   <td
                     colSpan={6}
@@ -593,6 +630,45 @@ export default function UserManagementSection() {
                     {t("Hakuna matokeo", "No results")}
                   </td>
                 </tr>
+              ) : (
+                users.map((u) => {
+                  const role = getUserRole(u);
+                  return (
+                    <tr
+                      key={u.id}
+                      className="hover:bg-ink/5 transition-colors cursor-pointer"
+                      onClick={() => setSelectedUser(u)}
+                    >
+                      <td className="px-5 py-3 text-sm font-medium text-primary">
+                        <div className="flex items-center gap-1.5">
+                          <span>{u.name}</span>
+                          {u.isVerified && (
+                            <ShieldCheck
+                              size={13}
+                              style={{ color: COLORS.successText }}
+                              className="shrink-0"
+                            />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-secondary">
+                        {u.email}
+                      </td>
+                      <td className="px-5 py-3">
+                        <RoleBadge role={role} lang={lang} />
+                      </td>
+                      <td className="px-5 py-3">
+                        <StatusBadge status={u.status} lang={lang} />
+                      </td>
+                      <td className="px-5 py-3 text-sm text-muted">
+                        {u.joined}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <ActionButtons user={u} />
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -601,69 +677,71 @@ export default function UserManagementSection() {
 
       {/* MOBILE — CARD LIST */}
       <div className="sm:hidden flex flex-col gap-3">
-        {users.map((u) => {
-          const role = getUserRole(u);
-          return (
-            <div
-              key={u.id}
-              onClick={() => setSelectedUser(u)}
-              className="bg-card rounded-xl border border-hairline p-4 cursor-pointer hover:shadow-sm transition-shadow"
-            >
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-semibold text-primary truncate">
-                      {u.name}
-                    </p>
-                    {u.isVerified && (
-                      <ShieldCheck
-                        size={13}
-                        style={{ color: COLORS.successText }}
-                        className="shrink-0"
-                      />
-                    )}
-                  </div>
-                  <p className="text-xs text-secondary truncate mt-0.5">
-                    {u.email}
-                  </p>
-                </div>
-                <StatusBadge status={u.status} lang={lang} />
-              </div>
-
-              <div className="flex items-center gap-3 text-xs text-secondary mb-3 flex-wrap">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="text-muted">
-                    {t("Nafasi:", "Role:")}
-                  </span>
-                  <RoleBadge role={role} lang={lang} />
-                </span>
-                <span className="text-muted">•</span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="text-muted">
-                    {t("Alijiunga:", "Joined:")}
-                  </span>
-                  <span className="font-medium text-primary">
-                    {u.joined}
-                  </span>
-                </span>
-              </div>
-
-              <ActionButtons user={u} fullWidth />
-            </div>
-          );
-        })}
-
-        {users.length === 0 && (
+        {loading && firstLoad ? (
+          <CardSkeleton rows={3} />
+        ) : users.length === 0 ? (
           <div className="bg-card rounded-xl border border-hairline p-8 text-center text-sm text-muted">
             {t("Hakuna matokeo", "No results")}
           </div>
+        ) : (
+          users.map((u) => {
+            const role = getUserRole(u);
+            return (
+              <div
+                key={u.id}
+                onClick={() => setSelectedUser(u)}
+                className="bg-card rounded-xl border border-hairline p-4 cursor-pointer hover:shadow-sm transition-shadow"
+              >
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-semibold text-primary truncate">
+                        {u.name}
+                      </p>
+                      {u.isVerified && (
+                        <ShieldCheck
+                          size={13}
+                          style={{ color: COLORS.successText }}
+                          className="shrink-0"
+                        />
+                      )}
+                    </div>
+                    <p className="text-xs text-secondary truncate mt-0.5">
+                      {u.email}
+                    </p>
+                  </div>
+                  <StatusBadge status={u.status} lang={lang} />
+                </div>
+
+                <div className="flex items-center gap-3 text-xs text-secondary mb-3 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="text-muted">
+                      {t("Nafasi:", "Role:")}
+                    </span>
+                    <RoleBadge role={role} lang={lang} />
+                  </span>
+                  <span className="text-muted">•</span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="text-muted">
+                      {t("Alijiunga:", "Joined:")}
+                    </span>
+                    <span className="font-medium text-primary">
+                      {u.joined}
+                    </span>
+                  </span>
+                </div>
+
+                <ActionButtons user={u} fullWidth />
+              </div>
+            );
+          })
         )}
       </div>
 
       {/* PAGINATION */}
       <PaginationControls />
 
-      {/* DRAWER — inachukua data yenyewe kutoka /full/ */}
+      {/* DRAWER */}
       {selectedUser && (
         <UserDrawer
           user={selectedUser}
