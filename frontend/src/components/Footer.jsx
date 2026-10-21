@@ -22,8 +22,8 @@ const SOCIAL = [
 const PAYMENTS = [
   { label: "M-Pesa",       src: "/assets/payments/mpesa.svg",      fallbackBg: "#2E9E44", fallbackFg: "#FFFFFF" },
   { label: "HaloPesa",     src: "/assets/payments/halopesa.svg",   fallbackBg: "#E33C2B", fallbackFg: "#FFFFFF" },
-  { label: "Mixx by Yas",  src: "/assets/payments/mixx.svg",       fallbackBg: "#FFCC00", fallbackFg: "#011957" },
-  { label: "Airtel Money", src: "/assets/payments/airtel.svg",     fallbackBg: "#ED1C24", fallbackFg: "#FFFFFF" },
+  { label: "Mixx by Yas",  src: "/assets/payments/mixx-by-yas.svg",       fallbackBg: "#FFCC00", fallbackFg: "#011957" },
+  { label: "Airtel Money", src: "/assets/payments/airtel-money.svg",     fallbackBg: "#ED1C24", fallbackFg: "#FFFFFF" },
   { label: "NMB",          src: "/assets/payments/nmb.svg",        fallbackBg: "#00734D", fallbackFg: "#FFFFFF" },
   { label: "CRDB",         src: "/assets/payments/crdb.svg",       fallbackBg: "#0072BC", fallbackFg: "#FFFFFF" },
   { label: "Visa",         src: "/assets/payments/visa.svg",       fallbackBg: "#1A1F71", fallbackFg: "#FFFFFF" },
