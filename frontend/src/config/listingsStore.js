@@ -10,6 +10,8 @@
 // Marekebisho ya mwisho:
 //  - usePublicListings: ondoa "sold" — haionekani public
 //  - markSoldAsync: tumia listingsApi.markSold (kwa notification)
+//  - ✅ FIX: normalizeListingFromApi — category ni STRING kila mara
+//    (React Error #31: "Objects are not valid as a React child")
 // ============================================================
 import { useEffect, useMemo, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
@@ -73,6 +75,24 @@ const API_TO_FRONTEND_STATUS = {
   APPROVED_PENDING_PAYMENT: "approved_pending_payment",
   PAID_PENDING_APPROVAL: "paid_pending_approval",
 };
+
+// ============================================================
+// SAFE HELPERS — hakuna object inayofika kwenye JSX
+// ============================================================
+function safeStr(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (Array.isArray(v)) return "";
+  if (typeof v === "object") {
+    if (typeof v.slug === "string") return v.slug;
+    if (typeof v.key === "string") return v.key;
+    if (typeof v.name === "string") return v.name;
+    if (typeof v.sw === "string") return v.sw;
+    if (typeof v.en === "string") return v.en;
+  }
+  return "";
+}
 
 function toApiPatch(patch) {
   if (!patch || !patch.status) return patch;
@@ -387,6 +407,9 @@ export function sweepGhostListings() {
 export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   if (!raw) return null;
 
+  // ─────────────────────────────────────────────────────────
+  // PHOTOS
+  // ─────────────────────────────────────────────────────────
   let photos = [];
   if (Array.isArray(raw.photos)) photos = raw.photos;
   else if (Array.isArray(raw.images)) photos = raw.images;
@@ -431,21 +454,57 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     }
   }
 
-const categoryObj = raw.category;
-  const rawCategorySlug =
-  categoryObj?.slug ||
-  categoryObj?.key ||
-  raw.category_slug ||
-  (typeof categoryObj === "string" ? categoryObj : null) ||
-  null;
+  // ─────────────────────────────────────────────────────────
+  // ✅ CATEGORY — LAZIMA iwe STRING (slug)
+  // Backend inaweza kurudisha:
+  //   - raw.category = "nyumba" (string slug) ✅
+  //   - raw.category = 5 (FK id number) ⚠️
+  //   - raw.category = {id, name, slug} (object) ⚠️
+  //   - raw.category_slug = "nyumba" (string) ✅
+  //   - raw.category_id = 5 (number) ⚠️
+  // ─────────────────────────────────────────────────────────
+  const categoryObj = raw.category;
 
-// ⬇️ FIX: category LAZIMA iwe string (slug), sio object
-const category =
-  getSeedKeyFromSlug(rawCategorySlug) ||
-  rawCategorySlug ||
-  (typeof categoryObj === "string" ? categoryObj : null) ||
-  null;
+  let rawCategorySlug = "";
 
+  if (typeof categoryObj === "string") {
+    rawCategorySlug = categoryObj;
+  } else if (categoryObj && typeof categoryObj === "object") {
+    rawCategorySlug =
+      (typeof categoryObj.slug === "string" && categoryObj.slug) ||
+      (typeof categoryObj.key === "string" && categoryObj.key) ||
+      (typeof categoryObj.name === "string" && categoryObj.name) ||
+      "";
+  }
+
+  // Fallback kwa `category_slug` (string)
+  if (!rawCategorySlug && raw.category_slug) {
+    rawCategorySlug = String(raw.category_slug);
+  }
+
+  // ✅ Normalize kwa seed key (mfano "nyumba-majengo" → "nyumba")
+  // Hii inahakikisha `category` ni STRING inayolingana na `cat.key`
+  // kwenye categoriesStore (frontend)
+  const category = rawCategorySlug
+    ? (getSeedKeyFromSlug(rawCategorySlug) || rawCategorySlug)
+    : null;
+
+  // ✅ categoryId — number au null, kwa filtering
+  let categoryId = null;
+  if (categoryObj && typeof categoryObj === "object" && categoryObj.id != null) {
+    const n = Number(categoryObj.id);
+    if (Number.isFinite(n)) categoryId = n;
+  } else if (raw.category_id != null) {
+    const n = Number(raw.category_id);
+    if (Number.isFinite(n)) categoryId = n;
+  } else if (typeof categoryObj === "number") {
+    const n = Number(categoryObj);
+    if (Number.isFinite(n)) categoryId = n;
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // STATUS
+  // ─────────────────────────────────────────────────────────
   const rawStatus = raw.status ? String(raw.status).toUpperCase() : "";
   const status =
     API_TO_FRONTEND_STATUS[raw.status] ||
@@ -458,11 +517,17 @@ const category =
     return null;
   }
 
+  // ─────────────────────────────────────────────────────────
+  // SELLER
+  // ─────────────────────────────────────────────────────────
   const sellerName =
     raw.seller_name ||
     raw.seller?.name ||
     (typeof raw.seller === "string" ? raw.seller : "");
 
+  // ─────────────────────────────────────────────────────────
+  // BOOST / LEADING
+  // ─────────────────────────────────────────────────────────
   const boostedUntil = raw.boosted_until || raw.boostedUntil || null;
   const boostExpiresAt =
     raw.boostExpiresAt ||
@@ -470,7 +535,9 @@ const category =
   const leadingExpiresAt =
     raw.leading_expires_at || raw.leadingExpiresAt || null;
 
-  // Resolve URLs (prepend / if relative) while keeping variant metadata.
+  // ─────────────────────────────────────────────────────────
+  // PHOTOS — resolve URLs (prepend / if relative)
+  // ─────────────────────────────────────────────────────────
   const normalizeOne = (p) => {
     if (typeof p === "string") return resolveImageUrl(p);
     return {
@@ -490,14 +557,19 @@ const category =
       ? firstPhoto
       : firstPhoto?.image_url || null;
 
+  // ─────────────────────────────────────────────────────────
+  // RETURN
+  // ─────────────────────────────────────────────────────────
   return {
     ...raw,
     id: raw.id ?? raw.pk,
     title: raw.title || raw.name || "",
     description: raw.description || "",
     price: Number(raw.price) || 0,
+    // ✅ category ni STRING (slug) — sio object
     category,
-    categoryId: categoryObj?.id ?? raw.category_id ?? null,
+    // ✅ categoryId ni number au null
+    categoryId,
     location: raw.location || raw.region || raw.address || "",
     attributes: raw.attributes || {},
     region: raw.region || raw.location || "",

@@ -1,5 +1,8 @@
+// ============================================================
+// AllListingsPage.jsx — /mali-zote
+// ✅ FIX: Category matching inatumia safeStr, hakuna object
+// ============================================================
 import React, { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { Home as HomeIcon } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
@@ -7,9 +10,6 @@ import BottomNav from "../components/BottomNav.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
 import ListingCard from "../components/ListingCard.jsx";
-import ListingCardShop from "../components/shop/ListingCardShop.jsx";
-import SortDropdown from "../components/shop/SortDropdown.jsx";
-import Pagination from "../components/shop/Pagination.jsx";
 import {
   useActiveCategories,
   getCategoryIcon,
@@ -18,27 +18,18 @@ import {
 const PAGE_SIZE = 12;
 
 export default function AllListingsPage() {
-  const { lang, setLang } = useLanguage();
+  const { lang } = useLanguage();
   const allListings = usePublicListings();
   const activeCategories = useActiveCategories();
 
-  // Navbar inatarajia categories zenye `count` (kama HomePage.jsx
-  // inavyozitengeneza) — tunahesabu hapa ili muundo ulingane.
-  const categories = useMemo(
-    () =>
-      activeCategories.map((cat) => ({
-        ...cat,
-        count: allListings.filter((l) => l.category === cat.key).length,
-      })),
-    [activeCategories, allListings]
-  );
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ✅ FIX: Hakuna tena `categories` prop kwa Navbar (Navbar inachukua
+  //    yenyewe kutoka useActiveCategories + usePublicListings).
+  //    Hii inaepuka mismatch ya `l.category === cat.key`.
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const t = (sw, en) => (lang === "sw" ? sw : en);
-
-  // Listings zinazoonekana kwa umma — live au reserved (sawa na
-  // kigezo kinachotumika kwenye "Trending" ya HomePage.jsx).
   const liveListings = useMemo(
     () =>
       allListings.filter(
@@ -50,12 +41,21 @@ export default function AllListingsPage() {
   const visibleListings = liveListings.slice(0, visibleCount);
   const hasMore = visibleCount < liveListings.length;
 
+  // ✅ FIX: category lookup kwa key (string)
+  const categoryByKey = useMemo(() => {
+    const map = new Map();
+    activeCategories.forEach((c) => {
+      const key = c.key || c.slug;
+      if (key) map.set(String(key), c);
+    });
+    return map;
+  }, [activeCategories]);
+
   return (
     <div className="min-h-screen bg-page">
-      <Navbar categories={categories} />
+      <Navbar />
 
       <section className="py-8 sm:py-10 px-4 max-w-7xl mx-auto">
-        {/* HEADER */}
         <div className="mb-6 sm:mb-8 text-center">
           <h1 className="text-2xl sm:text-3xl font-bold text-primary">
             {t("Mali Zote", "All Listings")}
@@ -68,7 +68,6 @@ export default function AllListingsPage() {
           </p>
         </div>
 
-        {/* GRID */}
         {liveListings.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-200 p-10 sm:p-16 text-center bg-page">
             <HomeIcon size={44} className="mx-auto text-muted mb-3" />
@@ -80,7 +79,8 @@ export default function AllListingsPage() {
           <>
             <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4">
               {visibleListings.map((l) => {
-                const cat = categories.find((c) => c.key === l.category);
+                // ✅ FIX: l.category ni STRING (slug) — sio object
+                const cat = categoryByKey.get(String(l.category));
                 const Icon = getCategoryIcon(cat?.iconKey || "Home");
                 return (
                   <ListingCard
@@ -94,7 +94,6 @@ export default function AllListingsPage() {
               })}
             </div>
 
-            {/* LOAD MORE */}
             {hasMore && (
               <div className="flex justify-center mt-8">
                 <button

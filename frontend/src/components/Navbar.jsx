@@ -15,6 +15,27 @@ import { useTheme } from "../config/themeStore.js";
 import AnnouncementBar from "./AnnouncementBar.jsx";
 import { cx } from "./ui";
 
+// ✅ SAFE: hakikisha ni string kila mara (React Error #31 fix)
+function safeStr(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (Array.isArray(v)) return "";
+  if (typeof v === "object") {
+    if (typeof v[langPlaceholder] === "string") return v[langPlaceholder];
+    if (typeof v.sw === "string") return v.sw;
+    if (typeof v.en === "string") return v.en;
+    if (typeof v.name === "string") return v.name;
+    if (typeof v.label === "string") return v.label;
+    if (typeof v.slug === "string") return v.slug;
+    if (typeof v.key === "string") return v.key;
+  }
+  return "";
+}
+
+// Dummy variable for safeStr (haipendekezi, lakini inafanya kazi)
+const langPlaceholder = "sw";
+
 function NotificationBell() {
   const { user, isLoading } = useAuth();
   const { unreadCount } = useNotifications("user", Boolean(user) && !isLoading);
@@ -63,6 +84,45 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
   const { theme, toggle: handleTheme } = useTheme();
   const navRef = useRef(null);
 
+  // ✅ SAFE: getCatLabel sasa inarudisha STRING kila mara
+  const getCatLabel = (cat) => {
+    if (!cat) return "";
+    // 1. Jaribu label[lang]
+    const labelLang = safeStr(cat.label?.[lang]);
+    if (labelLang) return labelLang;
+    // 2. Jaribu label.sw
+    const labelSw = safeStr(cat.label?.sw);
+    if (labelSw) return labelSw;
+    // 3. Jaribu label.en
+    const labelEn = safeStr(cat.label?.en);
+    if (labelEn) return labelEn;
+    // 4. Jaribu label kama string
+    const labelStr = safeStr(cat.label);
+    if (labelStr) return labelStr;
+    // 5. Jaribu name
+    const name = safeStr(cat.name);
+    if (name) return name;
+    // 6. Jaribu key
+    const key = safeStr(cat.key);
+    if (key) return key;
+    // 7. Jaribu slug
+    const slug = safeStr(cat.slug);
+    if (slug) return slug;
+    return "";
+  };
+
+  // ✅ SAFE: getCatKey sasa inarudisha STRING kila mara
+  const getCatKey = (cat) => {
+    if (!cat) return "";
+    const key = safeStr(cat.key);
+    if (key) return key;
+    const slug = safeStr(cat.slug);
+    if (slug) return slug;
+    const name = safeStr(cat.name);
+    if (name) return name;
+    return "";
+  };
+
   useEffect(() => {
     setOpenMenu(null);
     setMobileOpen(false);
@@ -103,6 +163,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
   const toggleMenu = (name) =>
     setOpenMenu((prev) => (prev === name ? null : name));
   const handleLogoClick = (e) => { if (registerLogoTap()) e.preventDefault(); };
+
   const handleShare = async () => {
     setOpenMenu(null);
     const shareUrl =
@@ -121,7 +182,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
         return;
       }
     } catch (err) {
-      if (err?.name === "AbortError") return; // user cancelled
+      if (err?.name === "AbortError") return;
     }
     try {
       if (navigator.clipboard?.writeText) {
@@ -161,9 +222,6 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
     { code: "en", native: "English" },
   ];
   const currentLang = languages.find((l) => l.code === lang) || languages[0];
-
-  const getCatLabel = (cat) => cat.label?.[lang] || cat.label?.sw || cat.key || "";
-  const getCatKey = (cat) => cat.key || cat.slug || "";
 
   const navLinkCls = ({ isActive }) =>
     cx(
@@ -230,15 +288,19 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                 {openMenu === "cat" && (
                   <div className="absolute left-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-white/10 bg-[#042475] py-2 shadow-xl">
                     <div className="max-h-80 overflow-y-auto">
-                      {categories.slice(0, 10).map((cat) => (
-                        <Link
-                          key={getCatKey(cat)}
-                          to={`/kategoria/${getCatKey(cat)}`}
-                          className="flex items-center gap-2.5 px-4 py-2 text-sm text-white/85 transition-colors hover:bg-white/[0.06] hover:text-white"
-                        >
-                          <span className="truncate">{getCatLabel(cat)}</span>
-                        </Link>
-                      ))}
+                      {categories.slice(0, 10).map((cat) => {
+                        const catKey = getCatKey(cat);
+                        const catLabel = getCatLabel(cat);
+                        return (
+                          <Link
+                            key={catKey}
+                            to={`/kategoria/${catKey}`}
+                            className="flex items-center gap-2.5 px-4 py-2 text-sm text-white/85 transition-colors hover:bg-white/[0.06] hover:text-white"
+                          >
+                            <span className="truncate">{catLabel}</span>
+                          </Link>
+                        );
+                      })}
                     </div>
                     <div className="mt-1 border-t border-white/10 pt-1">
                       <Link
@@ -358,19 +420,23 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                       <img src={user.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
                     ) : (
                       <span className="grid h-8 w-8 place-items-center rounded-full bg-[#FEA406] text-[12px] font-bold text-[#011957]">
-                        {user.name?.charAt(0)?.toUpperCase() || "U"}
+                        {safeStr(user.name)?.charAt(0)?.toUpperCase() || "U"}
                       </span>
                     )}
                     <span className="hidden max-w-[90px] truncate text-sm font-medium text-white lg:inline">
-                      {user.name?.split(" ")[0] || "User"}
+                      {safeStr(user.name)?.split(" ")[0] || "User"}
                     </span>
                     <Chev open={openMenu === "user"} />
                   </button>
                   {openMenu === "user" && (
                     <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-white/10 bg-[#042475] py-1 shadow-xl">
                       <div className="border-b border-white/10 px-4 py-3">
-                        <p className="truncate text-sm font-semibold text-white">{user.name}</p>
-                        <p className="truncate text-[12px] text-white/55">{user.email}</p>
+                        <p className="truncate text-sm font-semibold text-white">
+                          {safeStr(user.name) || "User"}
+                        </p>
+                        <p className="truncate text-[12px] text-white/55">
+                          {safeStr(user.email)}
+                        </p>
                       </div>
                       {[
                         { to: "/dashboard",        label: lang === "sw" ? "Dashibodi" : "Dashboard",       Icon: LayoutGrid },
@@ -465,15 +531,19 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
             </button>
             {mobileSub === "cat" && (
               <div className="mb-1 ml-2 border-l border-white/10 pl-3">
-                {categories.slice(0, 12).map((cat) => (
-                  <Link
-                    key={getCatKey(cat)}
-                    to={`/kategoria/${getCatKey(cat)}`}
-                    className="block rounded-lg px-3 py-2 text-sm text-white/65 hover:bg-white/[0.05] hover:text-white"
-                  >
-                    {getCatLabel(cat)}
-                  </Link>
-                ))}
+                {categories.slice(0, 12).map((cat) => {
+                  const catKey = getCatKey(cat);
+                  const catLabel = getCatLabel(cat);
+                  return (
+                    <Link
+                      key={catKey}
+                      to={`/kategoria/${catKey}`}
+                      className="block rounded-lg px-3 py-2 text-sm text-white/65 hover:bg-white/[0.05] hover:text-white"
+                    >
+                      {catLabel}
+                    </Link>
+                  );
+                })}
                 <Link
                   to="/kategoria"
                   className="block rounded-lg px-3 py-2 text-sm font-semibold text-[#FEA406] hover:bg-white/[0.05]"
@@ -514,8 +584,6 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                 ))}
               </div>
             )}
-
-            {/* ⬇️ LUGHA — Dropdown Toggle */}
             <button
               onClick={() => setMobileSub((v) => (v === "lang" ? null : "lang"))}
               className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
