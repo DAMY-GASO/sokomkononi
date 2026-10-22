@@ -29,6 +29,10 @@ import {
   TERMINAL_FAILURE,
 } from "../../../api/payments.js";
 
+// Majina ya status ambayo backend inaweza kurudisha kumaanisha "imelipwa".
+// (Kama backend yako inatumia jina jingine, liongeze hapa.)
+const SUCCESS_STATUSES = new Set(["SUCCESS", "SUCCESSFUL", "COMPLETED", "PAID"]);
+
 // ── Session keys ───────────────────────────────────────────
 const SS_ORDER_ID  = "pending_order_id";
 const SS_AMOUNT    = "pending_order_amount";
@@ -167,6 +171,7 @@ export default function PaymentGateway({
   const [simulated, setSimulated] = useState(false);
   const [channel, setChannel] = useState("");
   const [transid, setTransid] = useState("");
+  const [pollError, setPollError] = useState("");
 
   const pollSeqRef = useRef(0);
   const pollTimerRef = useRef(null);
@@ -221,6 +226,7 @@ export default function PaymentGateway({
     const controller = new AbortController();
     abortControllersRef.current.set(mySeq, controller);
     try {
+      let clientErrors = 0;
       for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
         if (isStale()) return;
         setAttempt(i + 1);
@@ -232,21 +238,67 @@ export default function PaymentGateway({
             { order_id: oid },
             { signal: controller.signal }
           );
-        } catch {
+          setPollError("");
+          clientErrors = 0;
+        } catch (err) {
           if (isStale()) return;
+          if (err?.name === "AbortError") return;
+          const code = err?.status;
+          console.warn(
+            "[PaymentGateway] order-status failed:",
+            code,
+            err?.data || err?.message || err
+          );
+
+          // Session imeisha — acha kuzunguka, lakini order_id inabaki kwenye session
+          if (code === 401 || code === 403) {
+            setError(
+              sw
+                ? "Session yako imeisha. Ingia tena, kisha fungua ukurasa huu — malipo yako yatathibitishwa kwa order hii."
+                : "Your session expired. Log in again and reopen this page — your payment will be re-checked with this order."
+            );
+            setStage("PROCESSING");
+            return;
+          }
+
+          // 400/404 mara kwa mara = tatizo la order/backend, si mtandao.
+          if (code === 400 || code === 404) {
+            clientErrors += 1;
+            if (clientErrors >= 3) {
+              setError(
+                sw
+                  ? `Imeshindwa kuthibitisha malipo (${code}). Usilipe tena. Wasiliana na msaada ukitaja order hii.`
+                  : `Could not confirm the payment (${code}). Do not pay again. Contact support with this order id.`
+              );
+              setStage("PROCESSING");
+              return;
+            }
+          }
+
+          setPollError(
+            sw
+              ? `Imeshindwa kuthibitisha (${code ?? "mtandao"}). Inajaribu tena...`
+              : `Could not confirm (${code ?? "network"}). Retrying...`
+          );
           await new Promise((resolve) => {
             pollTimerRef.current = setTimeout(resolve, POLL_INTERVAL_MS);
           });
           continue;
         }
 
-        const status = String(data?.payment_status || "").toUpperCase();
+        // Baadhi ya backends hufunika jibu ndani ya { data: {...} }
+        if (data?.payment_status == null && data?.data && typeof data.data === "object") {
+          data = data.data;
+        }
+
+        const status = String(data?.payment_status || data?.status || "").toUpperCase();
+        console.info("[PaymentGateway] order-status:", oid, status || "(empty)", data);
         setPollStatus(status);
         if (data?.channel) setChannel(data.channel);
         if (data?.simulated != null) setSimulated(Boolean(data.simulated));
         if (data?.transid) setTransid(data.transid);
 
-        if (status === "SUCCESS") {
+        if (SUCCESS_STATUSES.has(status)) {
           setTransid(data?.transid || data?.order_id || "");
           session.clear();
           setStage("SUCCESS");
@@ -325,7 +377,7 @@ export default function PaymentGateway({
       return;
     }
 
-    if (pstatus === "SUCCESS") {
+    if (SUCCESS_STATUSES.has(pstatus)) {
       setTransid(res.transid || oid || "");
       session.clear();
       setStage("SUCCESS");
@@ -355,12 +407,41 @@ export default function PaymentGateway({
   };
 
   const handleCancel = () => {
+    if (
+      stage === "POLLING" &&
+      !window.confirm(
+        sw
+          ? "Kama tayari umeingiza PIN, usighairi — pesa inaweza kukatwa. Una uhakika unataka kufunga?"
+          : "If you already entered your PIN, do not cancel — money may be deducted. Close anyway?"
+      )
+    ) {
+      return;
+    }
     pollSeqRef.current++;
     if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
     abortControllersRef.current.forEach((c) => { try { c.abort(); } catch {} });
     abortControllersRef.current.clear();
     session.clear();
     onCancel?.();
+  };
+
+  // Funga bila kufuta order_id — ukirudi ukurasa huu, uthibitisho unaendelea
+  const handleClosePending = () => {
+    pollSeqRef.current++;
+    if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    abortControllersRef.current.forEach((c) => { try { c.abort(); } catch {} });
+    abortControllersRef.current.clear();
+    onCancel?.();
+  };
+
+  // Angalia tena status ya order ile ile (bila kuanzisha malipo mapya)
+  const handleRecheck = () => {
+    if (!orderId) return;
+    setError("");
+    setPollError("");
+    setAttempt(0);
+    setStage("POLLING");
+    runPoll(orderId);
   };
 
   const handleRetry = () => {
@@ -372,6 +453,7 @@ export default function PaymentGateway({
     setAttempt(0);
     setOrderId(null);
     setPollStatus("");
+    setPollError("");
     setChannel("");
     setTransid("");
   };
@@ -443,21 +525,33 @@ export default function PaymentGateway({
           {sw ? "Malipo Yanachakatwa" : "Payment Processing"}
         </p>
         <p className="text-secondary text-body-sm mb-4">
-          {sw
-            ? "Malipo yako yanaendelea kuchakatwa. Angalia historia ya miamala yako baada ya dakika chache."
-            : "Your payment is still being processed. Check your transaction history in a few minutes."}
+          {error ||
+            (sw
+              ? "Malipo yako yanaendelea kuchakatwa. Kama umeshaingiza PIN, usilipe tena — bonyeza 'Thibitisha tena'."
+              : "Your payment is still being processed. If you already entered your PIN, do not pay again — press 'Check again'.")}
         </p>
         {orderId && (
           <p className="text-[10px] text-muted font-mono mb-4">
             {sw ? "Order" : "Order"}: {orderId}
           </p>
         )}
-        <button
-          onClick={handleCancel}
-          className="text-xs font-medium text-secondary hover:text-primary underline"
-        >
-          {sw ? "Funga" : "Close"}
-        </button>
+        {orderId && (
+          <button
+            onClick={handleRecheck}
+            style={{ background: COLORS.gold, color: COLORS.night }}
+            className="px-4 py-2 rounded-lg text-xs font-semibold mb-3"
+          >
+            {sw ? "Thibitisha tena" : "Check again"}
+          </button>
+        )}
+        <div>
+          <button
+            onClick={handleClosePending}
+            className="text-xs font-medium text-secondary hover:text-primary underline"
+          >
+            {sw ? "Funga" : "Close"}
+          </button>
+        </div>
       </div>
     );
   }
@@ -540,6 +634,16 @@ export default function PaymentGateway({
             ({attempt}/{MAX_POLL_ATTEMPTS})
           </span>
         </div>
+        {pollStatus && (
+          <p className="text-[11px] text-muted mb-2">
+            Status: {pollStatus}
+          </p>
+        )}
+        {pollError && (
+          <p className="text-[11px] mb-3" style={{ color: COLORS.rust }}>
+            {pollError}
+          </p>
+        )}
         {orderId && (
           <p className="text-[10px] text-muted font-mono mb-4">
             {sw ? "Order" : "Order"}: {orderId}
