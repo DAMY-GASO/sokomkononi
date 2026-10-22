@@ -1,3 +1,6 @@
+// ============================================================
+// ReportsSection.jsx
+// ============================================================
 import React, { useMemo, useState } from "react";
 import {
   Users, Home, Handshake, Wallet, TrendingUp, BarChart3, Eye,
@@ -8,6 +11,7 @@ import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useReports } from "../../../../config/reportsStore.js";
+import { useUsers } from "../../../../config/usersStore.js";   // ⬅️ MPYA
 import {
   useListings,
   useHydratePublicListings,
@@ -44,15 +48,21 @@ const DEAL_STATUS_COLORS = {
   cancelled:              "#6B7280",
 };
 
+// ⬅️ REKEBISHO: ongeza statuses zote
 const LISTING_STATUS_COLORS = {
-  live:            "#2F6D4F",
-  reserved:        "#FEA406",
-  sold:            "#7C3AED",
+  live: "#2F6D4F",
+  reserved: "#FEA406",
+  sold: "#7C3AED",
   pending_payment: "#D97706",
-  in_review:       "#0062FD",
-  rejected:        "#C1502E",
-  paused:          "#6B7280",
-  expired:         "#9CA3AF",
+  approved_pending_payment: "#0891B2",
+  pending_approval: "#0062FD",
+  paid_pending_approval: "#2563EB",
+  in_review: "#0062FD",
+  needs_edit: "#B45309",
+  draft: "#9CA3AF",
+  rejected: "#C1502E",
+  paused: "#6B7280",
+  expired: "#9CA3AF",
 };
 
 async function downloadReport(format, { period, from, to }) {
@@ -296,14 +306,15 @@ export default function ReportsSection() {
   useHydratePublicListings();
   const listings = useListings();
   const deals = useDeals();
+  const localUsers = useUsers();   // ⬅️ MPYA
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const locale = lang === "sw" ? "sw-TZ" : "en-US";
 
-  // ── Users donut (kutoka apiReports.users) ────────────────
+  // ── Users donut — tumia `useUsers()` (backend hairudishi `users` array) ──
   const usersDonut = useMemo(() => {
     let sellersOnly = 0, buyersOnly = 0, bothRoles = 0, neitherRole = 0, totalAdmins = 0;
-    const users = apiReports?.users || [];
+    const users = localUsers;
     users.forEach((u) => {
       const role = u.role || "Neither";
       if (role === "Admin") totalAdmins++;
@@ -315,21 +326,37 @@ export default function ReportsSection() {
     return [
       { label: t("Wauzaji Pekee", "Sellers Only"), value: sellersOnly, display: sellersOnly.toLocaleString("en-US"), color: "#FEA406" },
       { label: t("Wanunuzi Pekee", "Buyers Only"), value: buyersOnly, display: buyersOnly.toLocaleString("en-US"), color: "#2F6D4F" },
-      { label: t("Wote Wawili", "Both"),          value: bothRoles,   display: bothRoles.toLocaleString("en-US"),   color: "#7C3AED" },
-      { label: t("Wapya", "Neither"),             value: neitherRole, display: neitherRole.toLocaleString("en-US"), color: "#9CA3AF" },
-      { label: t("Admins", "Admins"),             value: totalAdmins, display: totalAdmins.toLocaleString("en-US"), color: "#DC2626" },
+      { label: t("Wote Wawili", "Both"), value: bothRoles, display: bothRoles.toLocaleString("en-US"), color: "#7C3AED" },
+      { label: t("Wapya", "Neither"), value: neitherRole, display: neitherRole.toLocaleString("en-US"), color: "#9CA3AF" },
+      { label: t("Admins", "Admins"), value: totalAdmins, display: totalAdmins.toLocaleString("en-US"), color: "#DC2626" },
     ].filter((d) => d.value > 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiReports?.users, lang]);
+  }, [localUsers, lang]);
 
-  // ── Listings donut ───────────────────────────────────────
+  const usersTotal = localUsers.length || 0;
+
+  // ── Listings donut — statuses zote ──
   const listingsDonut = useMemo(() => {
-    const statuses = ["live","reserved","sold","pending_payment","in_review","rejected","paused","expired"];
+    const statuses = [
+      "live", "reserved", "sold",
+      "pending_payment", "approved_pending_payment",
+      "pending_approval", "paid_pending_approval",
+      "in_review", "needs_edit", "draft",
+      "rejected", "paused", "expired",
+    ];
     const labels = {
-      live: t("Hai","Live"), reserved: t("Imehifadhiwa","Reserved"),
-      sold: t("Imeuzwa","Sold"), pending_payment: t("Haijalipwa","Unpaid"),
-      in_review: t("Inakaguliwa","In Review"), rejected: t("Imekataliwa","Rejected"),
-      paused: t("Imesimamishwa","Paused"), expired: t("Imeisha Muda","Expired"),
+      live: t("Hai", "Live"),
+      reserved: t("Imehifadhiwa", "Reserved"),
+      sold: t("Imeuzwa", "Sold"),
+      pending_payment: t("Haijalipwa", "Unpaid"),
+      approved_pending_payment: t("Inasubiri Malipo", "Awaiting Pay"),
+      pending_approval: t("Inasubiri Admin", "Pending Review"),
+      paid_pending_approval: t("Imelipwa", "Paid"),
+      in_review: t("Inakaguliwa", "In Review"),
+      needs_edit: t("Inahitaji Uhariri", "Needs Edit"),
+      draft: t("Rasimu", "Draft"),
+      rejected: t("Imekataliwa", "Rejected"),
+      paused: t("Imesimamishwa", "Paused"),
+      expired: t("Imeisha Muda", "Expired"),
     };
     return statuses
       .map((s) => {
@@ -338,13 +365,13 @@ export default function ReportsSection() {
           label: labels[s],
           value: count,
           display: count.toLocaleString("en-US"),
-          color: LISTING_STATUS_COLORS[s],
+          color: LISTING_STATUS_COLORS[s] || "#9CA3AF",
         };
       })
       .filter((d) => d.value > 0);
   }, [listings, lang]);
 
-  // ── Deals donut ──────────────────────────────────────────
+  // ── Deals donut ──
   const dealsDonut = useMemo(() => {
     const keys = Object.keys(DEAL_STATUS_COLORS);
     const labels = {
@@ -371,7 +398,7 @@ export default function ReportsSection() {
       .filter((d) => d.value > 0);
   }, [deals, lang]);
 
-  // ── Revenue donut — SASA INA `display` (commas!) ─────────
+  // ── Revenue donut ──
   const revenueDonut = useMemo(() => {
     const total = platformRevenue.total || 1;
     return platformRevenue.streams
@@ -381,14 +408,14 @@ export default function ReportsSection() {
         return {
           label: `${s.label} (${pct.toFixed(1)}%)`,
           value: value,
-          display: formatTZS(value),   // ⬅️ IMEONGEZWA — commas zinaonekana
+          display: formatTZS(value),
           color: STREAM_COLORS[s.key] || "#9CA3AF",
         };
       })
       .filter((d) => d.value > 0);
   }, [platformRevenue]);
 
-  // ── Revenue by day ───────────────────────────────────────
+  // ── Revenue by day ──
   const revenueByDay = useMemo(() => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -412,7 +439,7 @@ export default function ReportsSection() {
     return days;
   }, [platformRevenue, locale]);
 
-  // ── Revenue by month ─────────────────────────────────────
+  // ── Revenue by month ──
   const revenueByMonth = useMemo(() => {
     const out = [];
     const now = new Date();
@@ -431,7 +458,7 @@ export default function ReportsSection() {
     return out;
   }, [platformRevenue, locale]);
 
-  // ── Reports data ─────────────────────────────────────────
+  // ── Reports data ──
   const reports = useMemo(() => {
     const num = (v) => Number(v) || 0;
     const apiHasLoaded = apiReports?.source === "api";
@@ -588,13 +615,13 @@ export default function ReportsSection() {
             title={t("Mgawanyo wa Watumiaji", "User Breakdown")}
             icon={Users}
             iconColor="#2563EB"
-            hint={t(`${apiReports?.users?.length || 0} watumiaji`, `${apiReports?.users?.length || 0} users`)}
+            hint={t(`${usersTotal} watumiaji`, `${usersTotal} users`)}
           >
             <DonutChart
               data={usersDonut}
               size={180}
               thickness={26}
-              centerLabel={(apiReports?.users?.length || 0).toLocaleString("en-US")}
+              centerLabel={usersTotal.toLocaleString("en-US")}
               centerSub={t("Watumiaji", "Users")}
             />
           </ChartCard>
@@ -603,13 +630,13 @@ export default function ReportsSection() {
             title={t("Mali kwa Hali", "Listings by Status")}
             icon={Home}
             iconColor={COLORS.green}
-            hint={t(`${reports.totalListings} mali`, `${reports.totalListings} listings`)}
+            hint={t(`${listings.length} mali`, `${listings.length} listings`)}
           >
             <DonutChart
               data={listingsDonut}
               size={180}
               thickness={26}
-              centerLabel={reports.totalListings.toLocaleString("en-US")}
+              centerLabel={listings.length.toLocaleString("en-US")}
               centerSub={t("Mali", "Listings")}
             />
           </ChartCard>
