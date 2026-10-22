@@ -3,6 +3,7 @@
 //
 // Marekebisho:
 //  - Ongeza markSold() method — kwa seller kumark listing kama SOLD
+//  - Admin moderation routes zimehamishiwa /admin/listings/
 // ============================================================
 import { api } from "./client";
 
@@ -29,18 +30,14 @@ export const listingsApi = {
   create: (payload) => api.post("/listings/", payload),
 
   // ── Multipart: create listing + images in a single request ──
-  // body: FormData with category/title/description/price/location,
-  // optional latitude/longitude/address_text/attributes, plus `images` files.
   createWithImages: (formData) =>
     api.upload("/listings/create-with-images/", formData),
 
   // ── Update only location fields (JSON) ──
-  // payload: { latitude?, longitude?, location?, address_text? }
   updateLocation: (id, payload) =>
     api.patch(`/listings/${id}/location/`, payload),
 
   // ── Bulk image upload to an existing listing ──
-  // formData: FormData with `images` files (multiple)
   bulkUploadImages: (id, formData) =>
     api.upload(`/listings/${id}/images/bulk/`, formData),
 
@@ -55,8 +52,6 @@ export const listingsApi = {
   restore: (id) => api.post(`/listings/${id}/restore/`, {}),
 
   // ⬇️ MARK AS SOLD — seller ana-mark listing kama imeuzwa
-  // Backend: inabadilisha status → SOLD, inatuma notification kwa admins,
-  //          inaandika audit log
   markSold: (id) => api.post(`/listings/${id}/mark-sold/`, {}),
 
   // ----- Fee -----
@@ -103,28 +98,25 @@ export const listingsApi = {
   // ============================================================
   // ADMIN — Moderation
   // ============================================================
-  pending: () => api.get("/listings/admin/pending/"),
+  pending: () => api.get("/admin/listings/pending/"),
 
-  approve: (id) => api.post(`/listings/${id}/approve/`, {}),
+  approve: (id) => api.post(`/admin/listings/${id}/approve/`, {}),
 
   reject: (id, rejection_reason) =>
-    api.post(`/listings/${id}/reject/`, { rejection_reason }),
+    api.post(`/admin/listings/${id}/reject/`, { rejection_reason }),
 
   disapprove: (id, rejection_reason) =>
     api.post(`/listings/${id}/disapprove/`, { rejection_reason }),
 
   // ── Moderation mpya (Chaguo B) ───────────────────────────
-  // Admin ameomba uhariri — rudisha kwa seller kwa mabadiliko
   requestEdit: (id, reason) =>
-    api.post(`/listings/${id}/request-edit/`, { reason }),
+    api.post(`/admin/listings/${id}/request-edit/`, { reason }),
 
-  // Admin ameona ni nzuri — mwambie seller alipe fee
   requestPayment: (id, reason = "") =>
-    api.post(`/listings/${id}/request-payment/`, { reason }),
+    api.post(`/admin/listings/${id}/request-payment/`, { reason }),
 
-  // Admin analidhinisha mwisho baada ya fee kulipwa
   finalizeApproval: (id) =>
-    api.post(`/listings/${id}/finalize-approval/`, {}),
+    api.post(`/admin/listings/${id}/finalize-approval/`, {}),
 };
 
 export default listingsApi;

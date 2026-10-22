@@ -1,14 +1,5 @@
 // ============================================================
 // moderationStore.js — API-backed moderation queue + decisions
-// Backend:
-//   GET    /api/listings/admin/pending/
-//   POST   /api/listings/{id}/approve/
-//   POST   /api/listings/{id}/reject/
-//   POST   /api/listings/{id}/request-edit/
-//   POST   /api/listings/{id}/request-payment/
-//   POST   /api/listings/{id}/finalize-approval/
-//   PATCH  /api/listings/{id}/                 (fallback ya disapprove)
-//   DELETE /api/listings/{id}/?hard=true       (admin pekee)
 // ============================================================
 import { useEffect, useState } from "react";
 import { moderationApi } from "../api/moderation.js";
@@ -189,9 +180,7 @@ export async function requestEditListingAsync(
   }
   const target = findInQueue(listingId);
   try {
-    await api.post(`/listings/${listingId}/request-edit/`, {
-      reason: cleanReason,
-    });
+    await moderationApi.requestEdit(listingId, cleanReason);
   } catch (err) {
     return { ok: false, error: err };
   }
@@ -225,9 +214,7 @@ export async function requestPaymentListingAsync(
 ) {
   const target = findInQueue(listingId);
   try {
-    await api.post(`/listings/${listingId}/request-payment/`, {
-      reason: (reason || "").trim(),
-    });
+    await moderationApi.requestPayment(listingId, (reason || "").trim());
   } catch (err) {
     return { ok: false, error: err };
   }
@@ -259,7 +246,7 @@ export async function finalizeApprovalListingAsync(
 ) {
   const target = findInQueue(listingId);
   try {
-    await api.post(`/listings/${listingId}/finalize-approval/`, {});
+    await moderationApi.finalizeApproval(listingId);
   } catch (err) {
     return { ok: false, error: err };
   }
@@ -290,8 +277,7 @@ export async function disapproveListingAsync(
   reason = "",
   { adminName = "Admin" } = {}
 ) {
-  const cleanReason =
-    (reason || "").trim() || "Disapproved by admin";
+  const cleanReason = (reason || "").trim() || "Disapproved by admin";
 
   try {
     await moderationApi.disapprove(listingId, cleanReason);
