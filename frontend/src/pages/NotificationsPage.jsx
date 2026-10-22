@@ -1,37 +1,22 @@
 // ============================================================
 // NotificationsPage.jsx
 // Ukurasa wa taarifa za mtumiaji — bilingual + KILA KITU CENTERED.
-// notif.title na notif.body zinaweza kuwa { sw, en }.
+// + Side filter: notifications zinachujwa kwa "buyer" / "seller" / "both"
+// + Kila notification inaweza kubofywa → inafungua mahali sahihi
 // ============================================================
-
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Bell,
-  Check,
-  CheckCheck,
-  Trash2,
-  Rocket,
-  MessageSquare,
-  HandCoins,
-  Shield,
-  Clock,
-  Info,
-  Eye,
-  TrendingUp,
-  Megaphone,
-  Receipt,
-  BellRing,
+  Bell, Check, CheckCheck, Trash2, Rocket, MessageSquare,
+  HandCoins, Shield, Clock, Info, Eye, TrendingUp, Megaphone,
+  Receipt, BellRing,
 } from "lucide-react";
-import {
-  COLORS,
-  formatTZS,
-  timeAgo,
-} from "./dashboard/components/shared";
+import { COLORS, formatTZS, timeAgo } from "./dashboard/components/shared";
 import {
   useNotifications,
   getLocalizedField,
   resolveNotificationRoute,
+  resolveNotificationSide,
 } from "../config/notificationsStore.js";
 import { useDashboardSide } from "../config/dashboardSideStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
@@ -41,9 +26,6 @@ import { useToast } from "../components/Toast.jsx";
 // ============================================================
 // NOTIFICATION TYPES — icon + color
 // ============================================================
-// Rangi zinatoka kwenye logo. `color` ni CSS variable — itumike kupitia
-// style={{ color }} (si prop ya `color=` ya lucide, kwa sababu var() haifanyi
-// kazi ndani ya SVG attribute).
 const GOLD_BG = "rgba(254,164,6,0.14)";
 const GREEN_BG = "rgba(47,109,79,0.14)";
 const RUST_BG = "rgba(193,80,46,0.14)";
@@ -75,10 +57,8 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
   const title = getLocalizedField(notif.title, lang);
   const body = getLocalizedField(notif.body, lang);
 
-  // Determine the destination route from the notification type + payload.
   const target = resolveNotificationRoute(notif, side);
 
-  // Full date + time — not just "timeAgo".
   const when = notif.at ? new Date(notif.at) : null;
   const timeText = when && !Number.isNaN(when.getTime())
     ? when.toLocaleString(lang === "sw" ? "sw-TZ" : "en-US", {
@@ -115,7 +95,6 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
       }}
       className="rounded-xl border p-4 flex items-start gap-3 transition-all cursor-pointer hover:shadow-md hover:border-[#FEA406]/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FEA406]"
     >
-      {/* Icon */}
       <div
         style={{ background: config?.bg || "rgb(var(--c-page))" }}
         className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
@@ -123,7 +102,6 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
         <Icon size={18} style={{ color: config.color }} />
       </div>
 
-      {/* Body */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2 mb-1">
           <p
@@ -162,7 +140,6 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
         )}
       </div>
 
-      {/* Row actions (stop propagation so they don't trigger the card click) */}
       <div className="flex flex-col gap-1 shrink-0">
         {!notif.read && (
           <button
@@ -198,15 +175,27 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
 // ============================================================
 export default function NotificationsPage() {
   const { lang } = useLanguage();
-  const side = useDashboardSide();
+  const side = useDashboardSide(); // "buyer" | "seller" | "admin"
   const confirm = useConfirm();
   const toast = useToast();
   const { notifications, unreadCount, markRead, markAllRead, remove, clearAll } =
     useNotifications("user");
   const [filter, setFilter] = useState("all");
 
+  // ⬅️ Chuja kwa side (buyer/seller/both)
+  const sideFiltered = useMemo(() => {
+    return notifications.filter((n) => {
+      const nSide = resolveNotificationSide(n);
+      return nSide === "both" || nSide === side;
+    });
+  }, [notifications, side]);
+
+  const sideUnreadCount = sideFiltered.filter((n) => !n.read).length;
+
   const filtered =
-    filter === "unread" ? notifications.filter((n) => !n.read) : notifications;
+    filter === "unread"
+      ? sideFiltered.filter((n) => !n.read)
+      : sideFiltered;
 
   const handleMarkRead = (id) => markRead(id);
   const handleMarkAllRead = async () => {
@@ -251,9 +240,7 @@ export default function NotificationsPage() {
       className="bg-page w-full p-4 sm:p-6"
     >
       <div className="max-w-3xl mx-auto">
-        {/* ============================================================ */}
-        {/* HEADER — CENTERED */}
-        {/* ============================================================ */}
+        {/* HEADER */}
         <div className="mb-5 text-center">
           <div className="flex items-center justify-center gap-3 mb-1">
             <h1
@@ -262,12 +249,12 @@ export default function NotificationsPage() {
             >
               {lang === "sw" ? "Taarifa" : "Notifications"}
             </h1>
-            {unreadCount > 0 && (
+            {sideUnreadCount > 0 && (
               <span
                 style={{ background: COLORS.rust, color: "white" }}
                 className="text-xs font-bold px-2.5 py-1 rounded-full"
               >
-                {unreadCount}
+                {sideUnreadCount}
               </span>
             )}
           </div>
@@ -281,10 +268,8 @@ export default function NotificationsPage() {
           </p>
         </div>
 
-        {/* ============================================================ */}
-        {/* FILTER + ACTIONS — CENTERED */}
-        {/* ============================================================ */}
-        {notifications.length > 0 && (
+        {/* FILTER + ACTIONS */}
+        {sideFiltered.length > 0 && (
           <div className="flex flex-col items-center gap-3 mb-4">
             <div
               className="flex rounded-full border border-hairline bg-card p-1"
@@ -293,18 +278,18 @@ export default function NotificationsPage() {
                 onClick={() => setFilter("all")}
                 className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors ${filter === "all" ? "chip-active" : "text-primary"}`}
               >
-                {lang === "sw" ? "Zote" : "All"} ({notifications.length})
+                {lang === "sw" ? "Zote" : "All"} ({sideFiltered.length})
               </button>
               <button
                 onClick={() => setFilter("unread")}
                 className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors ${filter === "unread" ? "chip-active" : "text-primary"}`}
               >
-                {lang === "sw" ? "Hazijasomwa" : "Unread"} ({unreadCount})
+                {lang === "sw" ? "Hazijasomwa" : "Unread"} ({sideUnreadCount})
               </button>
             </div>
 
             <div className="flex items-center justify-center gap-2 flex-wrap">
-              {unreadCount > 0 && (
+              {sideUnreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
                   className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
@@ -334,9 +319,7 @@ export default function NotificationsPage() {
           </div>
         )}
 
-        {/* ============================================================ */}
-        {/* EMPTY STATE — CENTERED */}
-        {/* ============================================================ */}
+        {/* EMPTY STATE */}
         {filtered.length === 0 ? (
           <div
             className="rounded-2xl border-2 border-dashed border-hairline p-12 text-center bg-card"
@@ -368,9 +351,6 @@ export default function NotificationsPage() {
             </p>
           </div>
         ) : (
-          /* ============================================================ */
-          /* LIST — kadi zimeachwa kushoto kwa data nyingi */
-          /* ============================================================ */
           <div className="flex flex-col gap-3">
             {filtered.map((n) => (
               <NotificationItem
