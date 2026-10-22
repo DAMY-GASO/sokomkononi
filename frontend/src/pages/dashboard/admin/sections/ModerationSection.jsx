@@ -60,7 +60,7 @@ export default function ModerationSection() {
     const wantPaid =
       statusFilter === "paid_pending_approval" || statusFilter === "zote";
     const wantAwaitingPay =
-      statusFilter === "approved_pending_payment" ||
+      statusFilter === "approved_pending_payment" || statusFilter === "pending_approval" ||
       statusFilter === "zote";
     const wantNeedsEdit =
       statusFilter === "needs_edit" || statusFilter === "zote";
@@ -165,6 +165,11 @@ export default function ModerationSection() {
       label: { sw: "Zinasubiri", en: "Pending" },
       count: queue.filter((l) => !decided[String(l.id)]).length,
     },
+
+     {
+    key: "pending_approval",
+    label: { sw: "Zinasubiri Admin", en: "Pending Review" },
+     },
     {
       key: "paid_pending_approval",
       label: { sw: "Zimelipwa", en: "Paid" },
@@ -639,6 +644,8 @@ export default function ModerationSection() {
     }
 
     // Rejected — approve au futa
+        // ⬅️ REKEBISHO: Rejected — usiruhusu approve moja kwa moja.
+    // Badala yake, admin anaweza "Omba Uhariri" au "Omba Malipo".
     if (listing.status === "rejected") {
       return (
         <div
@@ -647,22 +654,34 @@ export default function ModerationSection() {
           }`}
         >
           <button
-            onClick={() => {
-              unmarkDecided(listing.id);
-              handleApprove(listing.id);
-            }}
+            onClick={() => openRequestEditModal(listing.id)}
+            disabled={isBusy}
+            style={{ color: "#B45309" }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-amber-50 disabled:opacity-50 ${
+              fullWidth ? "flex-1" : ""
+            }`}
+          >
+            {currentAction === "request_edit" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Pencil size={13} />
+            )}
+            {t("Omba Uhariri", "Request Edit")}
+          </button>
+          <button
+            onClick={() => openRequestPaymentModal(listing.id)}
             disabled={isBusy}
             style={{ color: COLORS.green }}
             className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
-            {currentAction === "approve" ? (
+            {currentAction === "request_payment" ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <CheckCircle size={13} />
+              <Wallet size={13} />
             )}
-            {t("Idhinisha", "Approve")}
+            {t("Omba Malipo", "Request Pay")}
           </button>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
           <button
@@ -683,7 +702,6 @@ export default function ModerationSection() {
         </div>
       );
     }
-
     // Sold / Rented — read-only
     if (listing.status === "sold" || listing.status === "rented") {
       return (

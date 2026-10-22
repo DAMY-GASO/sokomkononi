@@ -3,6 +3,7 @@
 // Seller — orodha ya mali zake (listings).
 // + Fix: category object (id, name, slug) haitupwi kwenye JSX
 // + Fix: clear legacy localStorage entries with object category
+// + REKEBISHO: filter ya pending_approval; isUnpaid inarudisha false
 // ============================================================
 import React, { useState, useMemo, useEffect } from "react";
 import {
@@ -76,6 +77,8 @@ function normalizeCategoryInCache() {
 
 // ============================================================
 // isUnpaid
+// ⬅️ REKEBISHO: pending_approval inarudisha false (haijalipwa bado,
+//    lakini si "unpaid" kwa maana ya fee — admin anakagua kwanza)
 // ============================================================
 function isUnpaid(listing) {
   if (!listing) return false;
@@ -90,7 +93,8 @@ function isUnpaid(listing) {
 
   if (
     ["draft", "live", "reserved", "sold", "paused", "in_review",
-     "rejected", "expired", "needs_edit", "paid_pending_approval"].includes(s)
+     "rejected", "expired", "needs_edit", "paid_pending_approval",
+     "pending_approval"].includes(s)
   ) {
     return false;
   }
@@ -219,7 +223,6 @@ function ListingCard({
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ⬇️ FIX: category LAZIMA iwe string
   const categorySlug = categoryToString(listing.category);
   const category = getCategory(categorySlug);
   const CategoryIcon = getCategoryIcon(category?.iconKey) || Tag;
@@ -394,6 +397,24 @@ function ListingCard({
               >
                 {t("Admin ameomba uhariri:", "Admin requested edit:")}{" "}
                 {listing.rejectionReason}
+              </p>
+            </div>
+          )}
+
+          {/* ⬅️ REKEBISHO: pending_approval banner */}
+          {listing.status === "pending_approval" && (
+            <div
+              className="mt-1.5 rounded-lg px-2.5 py-1.5"
+              style={{ background: "rgba(37,99,235,0.08)" }}
+            >
+              <p
+                className="text-[11px] font-semibold leading-tight"
+                style={{ color: "#2563EB" }}
+              >
+                {t(
+                  "Imewasilishwa — inasubiri admin akague",
+                  "Submitted — awaiting admin review"
+                )}
               </p>
             </div>
           )}
@@ -600,7 +621,6 @@ export default function MyListings({
   const [confirmSold, setConfirmSold] = useState(null);
   const [markingSold, setMarkingSold] = useState(false);
 
-  // ⬇️ FIX: ondoa object category kwenye localStorage mara moja
   useEffect(() => {
     normalizeCategoryInCache();
   }, []);
@@ -649,9 +669,14 @@ export default function MyListings({
     );
   }, [listings, filter, searchQuery]);
 
+  // ⬅️ REKEBISHO: ongeza filter ya pending_approval
   const filters = [
     { key: "all", label: { sw: "Zote", en: "All" } },
     { key: "unpaid", label: { sw: "Haijalipwa", en: "Unpaid" } },
+    {
+      key: "pending_approval",
+      label: { sw: "Inasubiri Admin", en: "Pending Review" },
+    },
     { key: "needs_edit", label: { sw: "Inahitaji Uhariri", en: "Needs Edit" } },
     {
       key: "approved_pending_payment",
@@ -756,14 +781,14 @@ export default function MyListings({
     });
   };
 
-  // Wasilisha draft kwa admin kukagua (malipo yanakuja baada ya kukubaliwa)
   const handleSubmitReview = async (id) => {
     if (busy[id]) return;
     try {
       await api.post(`/listings/${id}/publish/`, {});
+      // ⬅️ REKEBISHO: status mpya ni PENDING_APPROVAL (sio in_review)
       saveMyListings(
         getMyListings().map((l) =>
-          String(l.id) === String(id) ? { ...l, status: "in_review" } : l
+          String(l.id) === String(id) ? { ...l, status: "pending_approval" } : l
         )
       );
       toast.success(
