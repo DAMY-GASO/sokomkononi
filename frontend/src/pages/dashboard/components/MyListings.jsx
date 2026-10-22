@@ -8,7 +8,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   PlusCircle, Edit3, Trash2, Pause, Play, CheckCircle2,
   Rocket, TrendingUp, Megaphone, Eye, MapPin, Tag, Search,
-  Loader2, AlertTriangle, Wallet, AlertCircle, Pencil,
+  Loader2, AlertTriangle, Wallet, AlertCircle, Pencil, Send,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -22,6 +22,7 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { useToast } from "../../../components/Toast.jsx";
+import { api } from "../../../api/client.js";
 import { useConfirm } from "../../../components/ConfirmDialog.jsx";
 import { startUndo } from "../../../config/undoStore.js";
 import {
@@ -82,14 +83,13 @@ function isUnpaid(listing) {
 
   if (
     s === "pending_payment" ||
-    s === "draft" ||
     s === "approved_pending_payment"
   ) {
     return true;
   }
 
   if (
-    ["live", "reserved", "sold", "paused", "in_review",
+    ["draft", "live", "reserved", "sold", "paused", "in_review",
      "rejected", "expired", "needs_edit", "paid_pending_approval"].includes(s)
   ) {
     return false;
@@ -215,7 +215,7 @@ function ActionBtn({
 // ============================================================
 function ListingCard({
   listing, lang, onRemove, onBoost, onLeading, onAdvertise,
-  onPause, onResume, onMarkSold, onPay, onEdit, busy,
+  onPause, onResume, onMarkSold, onPay, onEdit, onSubmitReview, busy,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -467,6 +467,19 @@ function ListingCard({
           >
             <Pencil size={12} />
             {t("Hariri Sasa", "Edit Now")}
+          </button>
+        )}
+
+        {String(listing.status || "").toLowerCase() === "draft" && (
+          <button
+            type="button"
+            onClick={() => onSubmitReview?.(listing.id)}
+            disabled={isBusy}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
+            style={{ background: COLORS.rust, color: "white" }}
+          >
+            <Send size={12} />
+            {t("Wasilisha kwa Admin", "Submit for Review")}
           </button>
         )}
 
@@ -743,6 +756,31 @@ export default function MyListings({
     });
   };
 
+  // Wasilisha draft kwa admin kukagua (malipo yanakuja baada ya kukubaliwa)
+  const handleSubmitReview = async (id) => {
+    if (busy[id]) return;
+    try {
+      await api.post(`/listings/${id}/publish/`, {});
+      saveMyListings(
+        getMyListings().map((l) =>
+          String(l.id) === String(id) ? { ...l, status: "in_review" } : l
+        )
+      );
+      toast.success(
+        t(
+          "Tangazo limewasilishwa kwa admin. Utaarifiwa kulipa baada ya kukaguliwa.",
+          "Submitted for admin review. You'll be asked to pay after it's reviewed."
+        )
+      );
+    } catch (err) {
+      toast.error(
+        err?.data?.detail ||
+          err?.message ||
+          t("Imeshindwa kuwasilisha.", "Failed to submit.")
+      );
+    }
+  };
+
   const handleEdit = (id) => {
     if (onEdit) {
       onEdit(id);
@@ -863,6 +901,7 @@ export default function MyListings({
               onPause={onPause}
               onResume={onResume}
               onPay={goToPayment}
+              onSubmitReview={handleSubmitReview}
               onEdit={handleEdit}
               busy={busy[l.id]}
             />

@@ -19,6 +19,11 @@ import { saveFreshlyCreatedListing } from "../../../config/listingsStore.js";
 import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
+
+// Mtiririko: seller anawasilisha -> admin anakagua (na kujibu kwa ujumbe) ->
+// admin anaomba malipo -> seller analipa -> admin anaidhinisha mwisho.
+// Hakuna malipo wakati wa kuposti. Weka false kurudisha malipo ya papo hapo.
+const SUBMIT_FOR_REVIEW_FIRST = true;
 import ImageCropper from "../../../components/ImageCropper.jsx";
 import LocationPicker from "../../../components/LocationPicker.jsx";
 import {
@@ -609,15 +614,20 @@ export default function PostPropertyForm({
         }
       }
 
-      // Kama listing fee imezimwa → wasilisha kwa admin approval
-      if (listingFeeDisabled) {
+      // Wasilisha kwa admin kukagua kwanza (malipo yanakuja baadaye)
+      if (SUBMIT_FOR_REVIEW_FIRST || listingFeeDisabled) {
         console.info(
-          "[PostPropertyForm] Listing fee disabled — submitting for admin approval"
+          "[PostPropertyForm] Submitting for admin review (pay after approval)"
         );
         try {
           await api.post(`/listings/${listingId}/publish/`, {});
         } catch (pubErr) {
-          console.warn("[PostPropertyForm] publish endpoint missing:", pubErr);
+          console.warn("[PostPropertyForm] publish failed:", pubErr);
+          const msg = t(
+            "Tangazo limehifadhiwa lakini halijatumwa kwa admin. Fungua Mali Zangu na ubonyeze \"Wasilisha kwa Admin\".",
+            "Your listing was saved but not sent to admin. Open My Listings and press \"Submit for Review\"."
+          );
+          setWarnings((w) => (w.includes(msg) ? w : [...w, msg]));
         }
 
         setCreatedListing(created);
@@ -1088,8 +1098,8 @@ export default function PostPropertyForm({
           </h2>
           <p className="text-secondary text-sm mb-6">
             {t(
-              "Listing yako inasubiri idhini ya Admin. Utapata taarifa mara itakapoidhinishwa.",
-              "Your listing awaits admin approval. You'll be notified once it's approved."
+              "Admin atakagua tangazo lako na kukujibu kwa ujumbe. Likikubaliwa, utaarifiwa kulipa ada ya kuchapisha; baada ya kulipa, admin ataliidhinisha liwe hewani.",
+              "An admin will review your listing and reply with a message. If accepted, you'll be asked to pay the listing fee; after payment the admin approves it to go live."
             )}
           </p>
           <button

@@ -1,5 +1,18 @@
 // ============================================================
 // PayListingFee.jsx
+// Dedicated page for paying a single listing's fee.
+// Route: /dashboard/pay-listing?id=<listingId>
+//
+// Chaguo B flow:
+//   • Admin anaona listing kwenye moderation
+//   • Admin → "Omba Malipo" → listing.status = APPROVED_PENDING_PAYMENT
+//   • Seller anaona notification → PayListingFee
+//   • Seller analipa → listing.status = PAID_PENDING_APPROVAL
+//   • Admin analidhinisha mwisho → LIVE
+//
+// Reads ?id= from the query string, fetches that listing + its fee,
+// shows the amount, offers credits (if any) or FimiPay, then routes
+// the seller back to My Listings on success.
 // ============================================================
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
@@ -13,7 +26,7 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { api } from "../../../api/client.js";
 import { useAuth } from "../../../config/authStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
-import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
+import { checkCredit, hydrateUserCreditsFromApi } from "../../../config/userCreditsStore.js";
 import PaymentGateway from "./PaymentGateway";
 import ListingImage from "../../../components/ListingImage.jsx";
 
@@ -190,20 +203,11 @@ export default function PayListingFee() {
       }
 
       // ── Step 4: payable state check ─────────────────────────
-      // Chaguo B: seller anaweza kulipa tu ikiwa:
-      //   • DRAFT / PENDING_PAYMENT (legacy — seller anaunda, analipa papo)
-      //   • APPROVED_PENDING_PAYMENT (admin ameomba malipo)
+      // Seller analipa TU baada ya admin kukagua na kuomba malipo
+      // (APPROVED_PENDING_PAYMENT). Draft/rejected: wasilisha kwanza.
       const isPayable =
-        apiStatus === "PENDING_PAYMENT" ||
-        apiStatus === "DRAFT" ||
         apiStatus === "APPROVED_PENDING_PAYMENT" ||
-        apiStatus === "REJECTED" || // retry after rejection
-        [
-          "pending_payment",
-          "draft",
-          "approved_pending_payment",
-          "rejected",
-        ].includes(localStatus);
+        localStatus === "approved_pending_payment";
 
       if (apiStatus && !isPayable) {
         setFee(feeData);
@@ -290,8 +294,11 @@ export default function PayListingFee() {
     setBusy(true);
     setError("");
     try {
-      const consume = await consumeCreditAsync(user?.id, "listing");
-      if (!consume.success) {
+      // Backend (fee/pay/ yenye "credits") inakata credit YENYEWE ndani ya
+      // transaction moja na kuweka fee PAID. Usiite consumeCreditAsync hapa —
+      // ilikata credit ya pili (na ya kwanza ilipotea fee/pay/ ikishindwa).
+      const info = checkCredit(user?.id, "listing");
+      if (!info.hasCredit) {
         setError(
           t(
             "Credit haitoshi au imeisha muda.",
@@ -304,6 +311,7 @@ export default function PayListingFee() {
       await api.post(`/listings/${listingId}/fee/pay/`, {
         payment_reference: "credits",
       });
+      hydrateUserCreditsFromApi(user?.id).catch(() => {});
       setStage("success");
       setTimeout(() => navigate("/dashboard/listings"), 3000);
     } catch (err) {
