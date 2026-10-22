@@ -5,7 +5,7 @@
 //
 // Marekebisho:
 //  - Ongeza "Uthibitisho Wangu" (My Verification) kwenye quick actions
-//  - ⬅️ FIX: StepFlow namba zinaonekana (background + color)
+//  - FIX: StepFlow namba zinaonekana kwa kutumia inline styles zote
 // ============================================================
 
 import React, { useMemo, useState } from "react";
@@ -284,31 +284,80 @@ export default function SellerOverview({ onNavigate }) {
 }
 
 // ============================================================
-// STEP FLOW — ⬅️ FIX: namba zinaonekana (bg + text + leading-none)
+// STEP FLOW — inline styles zote (hakuna Tailwind inayoshinda)
 // ============================================================
 function StepFlow({ steps }) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-3">
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        justifyContent: "center",
+        columnGap: "6px",
+        rowGap: "12px",
+      }}
+    >
       {steps.map((step, i) => (
         <React.Fragment key={i}>
-          <div className="flex items-center gap-1.5 bg-[#F5F3EC] rounded-full pl-1.5 pr-3 py-1.5">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              background: "#F5F3EC",
+              borderRadius: "9999px",
+              paddingLeft: "6px",
+              paddingRight: "12px",
+              paddingTop: "6px",
+              paddingBottom: "6px",
+            }}
+          >
             <span
-              className="min-w-[20px] h-5 px-1 rounded-full bg-[#011957] text-white text-[11px] font-bold flex items-center justify-center shrink-0 leading-none tabular-nums"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "22px",
+                height: "22px",
+                minWidth: "22px",
+                maxWidth: "22px",
+                borderRadius: "9999px",
+                background: "#011957",
+                color: "#FFFFFF",
+                fontSize: "11px",
+                fontWeight: 700,
+                lineHeight: 1,
+                flexShrink: 0,
+                fontFamily: "inherit",
+                fontVariantNumeric: "tabular-nums",
+              }}
             >
               {i + 1}
             </span>
-            <span className="text-body-sm font-medium text-secondary whitespace-nowrap">
+            <span
+              style={{
+                fontSize: "13px",
+                fontWeight: 500,
+                color: "#4B5563",
+                whiteSpace: "nowrap",
+              }}
+            >
               {step}
             </span>
           </div>
           {i < steps.length - 1 && (
-            <ArrowRight size={14} className="text-muted shrink-0" />
+            <ArrowRight
+              size={14}
+              style={{ color: "#9CA3AF", flexShrink: 0 }}
+            />
           )}
         </React.Fragment>
       ))}
     </div>
   );
 }
+
 // ============================================================
 // JINSI YA KUUZA
 // ============================================================
@@ -328,7 +377,11 @@ function HowToSellGuide({ lang }) {
   const [hiddenThisSession, setHiddenThisSession] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
-      return window.sessionStorage.getItem("sokomkononi_seller_guide_hidden_session_v1") === "1";
+      return (
+        window.sessionStorage.getItem(
+          "sokomkononi_seller_guide_hidden_session_v1"
+        ) === "1"
+      );
     } catch {
       return false;
     }
@@ -341,10 +394,24 @@ function HowToSellGuide({ lang }) {
   const handleGotIt = () => {
     if (hideForever) {
       setDismissed(true);
-      try { window.localStorage.setItem("sokomkononi_seller_guide_dismissed_v1", "1"); } catch { /* noop */ }
+      try {
+        window.localStorage.setItem(
+          "sokomkononi_seller_guide_dismissed_v1",
+          "1"
+        );
+      } catch {
+        /* noop */
+      }
     } else {
       setHiddenThisSession(true);
-      try { window.sessionStorage.setItem("sokomkononi_seller_guide_hidden_session_v1", "1"); } catch { /* noop */ }
+      try {
+        window.sessionStorage.setItem(
+          "sokomkononi_seller_guide_hidden_session_v1",
+          "1"
+        );
+      } catch {
+        /* noop */
+      }
     }
   };
 
