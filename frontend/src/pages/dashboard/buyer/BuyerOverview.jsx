@@ -6,6 +6,7 @@
 //
 // Marekebisho:
 //  - Ongeza "Uthibitisho Wangu" (My Verification) kwenye quick actions
+//  - ⬅️ Chuja listings za seller mwenyewe (buyer haoni mali zake)
 // ============================================================
 
 import React, { useMemo, useState } from "react";
@@ -47,7 +48,7 @@ export default function BuyerOverview({ onNavigate }) {
   const navigate = useNavigate();
   const { lang } = useLanguage();
   const { user } = useAuth();
-  const listings = usePublicListings();
+  const publicListings = usePublicListings();
   const savedIds = useSavedIds();
   const recentlyViewedIds = useRecentlyViewedIds();
   const searches = useSearches();
@@ -56,6 +57,17 @@ export default function BuyerOverview({ onNavigate }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ============================================================
+  // ⬅️ Chuja listings za seller mwenyewe
+  // ============================================================
+  const listings = useMemo(() => {
+    if (!user?.id) return publicListings;
+    return publicListings.filter((l) => {
+      const sellerId = l.sellerId ?? l.seller_id ?? l.seller?.id ?? null;
+      return sellerId == null || String(sellerId) !== String(user.id);
+    });
+  }, [publicListings, user?.id]);
 
   // ============================================================
   // STATS
@@ -177,9 +189,7 @@ export default function BuyerOverview({ onNavigate }) {
 
   return (
     <div className="p-4 sm:p-6">
-      {/* ============================================================ */}
-      {/* WELCOME — CENTERED */}
-      {/* ============================================================ */}
+      {/* WELCOME */}
       <div className="mb-6 text-center">
         <h1 className="h-title">
           {t(
@@ -195,14 +205,10 @@ export default function BuyerOverview({ onNavigate }) {
         </p>
       </div>
 
-      {/* ============================================================ */}
-      {/* JINSI YA KUNUNUA — onboarding guide */}
-      {/* ============================================================ */}
+      {/* JINSI YA KUNUNUA */}
       <HowToBuyGuide lang={lang} />
 
-      {/* ============================================================ */}
-      {/* SEARCH BAR — CENTERED */}
-      {/* ============================================================ */}
+      {/* SEARCH BAR */}
       <form onSubmit={handleSearch} className="mb-6">
         <div className="relative max-w-2xl mx-auto">
           <Search
@@ -231,9 +237,7 @@ export default function BuyerOverview({ onNavigate }) {
         </div>
       </form>
 
-      {/* ============================================================ */}
       {/* QUICK STATS */}
-      {/* ============================================================ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatTile
           label={t("Mali Zinazopatikana", "Available Listings")}
@@ -265,9 +269,7 @@ export default function BuyerOverview({ onNavigate }) {
         />
       </div>
 
-      {/* ============================================================ */}
       {/* QUICK ACTIONS */}
-      {/* ============================================================ */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
         <h2 className="h-card mb-4 text-center">
           {t("Vitendo vya Haraka", "Quick Actions")}
@@ -293,9 +295,7 @@ export default function BuyerOverview({ onNavigate }) {
         </div>
       </div>
 
-      {/* ============================================================ */}
       {/* CATEGORIES */}
-      {/* ============================================================ */}
       <div className="mb-6">
         <div className="flex flex-col items-center gap-1 mb-4 text-center">
           <h2 className="h-card">{t("Kategoria", "Categories")}</h2>
@@ -324,9 +324,7 @@ export default function BuyerOverview({ onNavigate }) {
         </div>
       </div>
 
-      {/* ============================================================ */}
-      {/* SECTIONS ZA LISTINGS */}
-      {/* ============================================================ */}
+      {/* LISTINGS */}
       {recommended.length > 0 && (
         <ListingSection
           title={t("Zinazopendekezwa", "Recommended")}
@@ -375,9 +373,7 @@ export default function BuyerOverview({ onNavigate }) {
         />
       )}
 
-      {/* ============================================================ */}
       {/* RECENT ACTIVITY */}
-      {/* ============================================================ */}
       <RecentActivity onNavigate={onNavigate} side="buyer" />
     </div>
   );
@@ -412,7 +408,7 @@ function StepFlow({ steps }) {
 }
 
 // ============================================================
-// JINSI YA KUNUNUA — onboarding guide
+// JINSI YA KUNUNUA
 // ============================================================
 function HowToBuyGuide({ lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -509,7 +505,6 @@ function HowToBuyGuide({ lang }) {
         )}
       </div>
 
-      {/* ── Dismiss controls ─────────────────────────── */}
       <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
         <label className="flex items-center gap-2 cursor-pointer text-xs text-secondary order-2 sm:order-1">
           <input
@@ -534,7 +529,7 @@ function HowToBuyGuide({ lang }) {
 }
 
 // ============================================================
-// LISTING SECTION — header centered
+// LISTING SECTION
 // ============================================================
 function ListingSection({
   title,

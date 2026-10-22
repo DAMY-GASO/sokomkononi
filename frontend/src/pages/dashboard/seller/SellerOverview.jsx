@@ -5,6 +5,7 @@
 //
 // Marekebisho:
 //  - Ongeza "Uthibitisho Wangu" (My Verification) kwenye quick actions
+//  - ⬅️ FIX: StepFlow namba zinaonekana (background + color)
 // ============================================================
 
 import React, { useMemo, useState } from "react";
@@ -126,9 +127,7 @@ export default function SellerOverview({ onNavigate }) {
 
   return (
     <div className="p-4 sm:p-6">
-      {/* ============================================================ */}
-      {/* GREETING — CENTERED */}
-      {/* ============================================================ */}
+      {/* GREETING */}
       <div className="mb-6 text-center">
         <h1 className="h-title">
           {t(
@@ -144,14 +143,10 @@ export default function SellerOverview({ onNavigate }) {
         </p>
       </div>
 
-      {/* ============================================================ */}
-      {/* JINSI YA KUUZA — onboarding guide */}
-      {/* ============================================================ */}
+      {/* JINSI YA KUUZA */}
       <HowToSellGuide lang={lang} />
 
-      {/* ============================================================ */}
       {/* UNPAID LISTINGS BANNER */}
-      {/* ============================================================ */}
       {unpaidListings.length > 0 && (
         <div
           className="mb-5 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border px-4 py-3"
@@ -196,9 +191,7 @@ export default function SellerOverview({ onNavigate }) {
         </div>
       )}
 
-      {/* ============================================================ */}
       {/* STATS GRID */}
-      {/* ============================================================ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatTile
           label={t("Mali Hai", "Active Listings")}
@@ -226,9 +219,7 @@ export default function SellerOverview({ onNavigate }) {
         />
       </div>
 
-      {/* ============================================================ */}
       {/* SECONDARY STATS */}
-      {/* ============================================================ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <StatTile
           label={t("Jumla ya Mali", "Total Listings")}
@@ -260,9 +251,7 @@ export default function SellerOverview({ onNavigate }) {
         />
       </div>
 
-      {/* ============================================================ */}
-      {/* QUICK ACTIONS — header centered */}
-      {/* ============================================================ */}
+      {/* QUICK ACTIONS */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
         <h2 className="h-card mb-4 text-center">
           {t("Vitendo vya Haraka", "Quick Actions")}
@@ -288,16 +277,14 @@ export default function SellerOverview({ onNavigate }) {
         </div>
       </div>
 
-      {/* ============================================================
-          RECENT ACTIVITY
-          ============================================================ */}
+      {/* RECENT ACTIVITY */}
       <RecentActivity onNavigate={onNavigate} side="seller" />
     </div>
   );
 }
 
 // ============================================================
-// STEP FLOW — mfululizo wa hatua na mishale kati yake
+// STEP FLOW — ⬅️ FIX: namba zinaonekana (bg + text + leading-none)
 // ============================================================
 function StepFlow({ steps }) {
   return (
@@ -306,8 +293,7 @@ function StepFlow({ steps }) {
         <React.Fragment key={i}>
           <div className="flex items-center gap-1.5 bg-[#F5F3EC] rounded-full pl-1.5 pr-3 py-1.5">
             <span
-              style={{ background: COLORS.night, color: "white" }}
-              className="w-5 h-5 rounded-full text-body-sm font-bold flex items-center justify-center shrink-0"
+              className="min-w-[20px] h-5 px-1 rounded-full bg-[#011957] text-white text-[11px] font-bold flex items-center justify-center shrink-0 leading-none tabular-nums"
             >
               {i + 1}
             </span>
@@ -323,9 +309,8 @@ function StepFlow({ steps }) {
     </div>
   );
 }
-
 // ============================================================
-// JINSI YA KUUZA — onboarding guide kwa seller dashboard
+// JINSI YA KUUZA
 // ============================================================
 function HowToSellGuide({ lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -397,7 +382,6 @@ function HowToSellGuide({ lang }) {
         )}
       </div>
 
-      {/* ── Dismiss controls ─────────────────────────── */}
       <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
         <label className="flex items-center gap-2 cursor-pointer text-xs text-secondary order-2 sm:order-1">
           <input
