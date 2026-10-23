@@ -284,7 +284,7 @@ export default function SellerOverview({ onNavigate }) {
 }
 
 // ============================================================
-// STEP FLOW — inline styles zote (hakuna Tailwind inayoshinda)
+// STEP FLOW — inline styles zote + !important kuzuia CSS ya nje
 // ============================================================
 function StepFlow({ steps }) {
   return (
@@ -315,7 +315,7 @@ function StepFlow({ steps }) {
           >
             <span
               style={{
-                display: "inline-flex",
+                display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 width: "22px",
@@ -323,14 +323,15 @@ function StepFlow({ steps }) {
                 minWidth: "22px",
                 maxWidth: "22px",
                 borderRadius: "9999px",
-                background: "#011957",
-                color: "#FFFFFF",
-                fontSize: "11px",
-                fontWeight: 700,
-                lineHeight: 1,
+                background: "#011957 !important",
+                color: "#FFFFFF !important",
+                fontSize: "13px !important",
+                fontWeight: "700 !important",
+                lineHeight: "1 !important",
                 flexShrink: 0,
                 fontFamily: "inherit",
                 fontVariantNumeric: "tabular-nums",
+                textAlign: "center",
               }}
             >
               {i + 1}
@@ -357,7 +358,6 @@ function StepFlow({ steps }) {
     </div>
   );
 }
-
 // ============================================================
 // JINSI YA KUUZA
 // ============================================================

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Facebook, Instagram, Twitter, Linkedin, Youtube, Mail, Phone, MapPin, ArrowUpRight } from "lucide-react";
+import { Facebook, Instagram, Twitter, Linkedin, Youtube, Mail, Phone, MapPin, ArrowUpRight, MessageCircle } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAppStoreLinks } from "../config/systemSettingsStore.js";
 import { useAttribution } from "../context/AttributionContext.jsx";
@@ -18,7 +18,6 @@ const SOCIAL = [
 ];
 
 // SVG logos — public/assets/payments/*.svg
-// HAKIKISHA majina ya faili kwenye folder yanalingana EXACTLY na haya.
 const PAYMENTS = [
   { label: "M-Pesa",       src: "/assets/payments/mpesa.svg",      fallbackBg: "#2E9E44", fallbackFg: "#FFFFFF" },
   { label: "HaloPesa",     src: "/assets/payments/halopesa.svg",   fallbackBg: "#E33C2B", fallbackFg: "#FFFFFF" },
@@ -30,7 +29,7 @@ const PAYMENTS = [
   { label: "Mastercard",   src: "/assets/payments/mastercard.svg", fallbackBg: "#EB001B", fallbackFg: "#FFFFFF" },
 ];
 
-// Pay logo — rounded rectangle sawa kwa zote, logo inaadapt ndani
+// Pay logo — rounded rectangle ndogo, background nyeupe hafifu
 function PayLogo({ payment }) {
   const [err, setErr] = React.useState(false);
 
@@ -38,7 +37,7 @@ function PayLogo({ payment }) {
     return (
       <span
         title={payment.label}
-        className="flex h-10 w-16 items-center justify-center rounded-lg px-2 text-[10px] font-bold tracking-wide whitespace-nowrap shadow-sm"
+        className="flex h-8 w-14 items-center justify-center rounded-md px-1 text-[9px] font-bold tracking-wide whitespace-nowrap shadow-sm"
         style={{ background: payment.fallbackBg, color: payment.fallbackFg }}
       >
         {payment.label}
@@ -49,7 +48,7 @@ function PayLogo({ payment }) {
   return (
     <span
       title={payment.label}
-      className="flex h-10 w-16 items-center justify-center rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-white/20"
+      className="flex h-8 w-14 items-center justify-center rounded-md bg-white/95 p-1 shadow-sm ring-1 ring-white/10"
     >
       <img
         src={payment.src}
@@ -70,6 +69,9 @@ export default function Footer({ selectedLang: propLang }) {
   const { registerTap: registerLogoTap } = useAttribution();
   const playUrl = (appLinks?.play || "").trim() || STORE_FALLBACKS.play;
   const appStoreUrl = (appLinks?.appstore || "").trim() || STORE_FALLBACKS.appstore;
+
+  // WhatsApp number — format digits only
+  const whatsappNumber = "255743895038"; // +255 743 895 038
 
   const columns = [
     { title: t("Kampuni", "Company"), links: [
@@ -136,9 +138,9 @@ export default function Footer({ selectedLang: propLang }) {
         </div>
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="space-y-5 lg:col-span-4">
-            {/* Logo — favicon.svg moja kwa moja, hakuna circle nene */}
+            {/* Logo — tumia logo.webp halisi */}
             <Link to="/" onClick={registerLogoTap} className="inline-flex items-center gap-2.5">
-              <img src="/favicon.svg" alt="SokoMkononi" className="h-9 w-9 object-contain" />
+              <img src="/logo.webp" alt="SokoMkononi" className="h-9 w-9 rounded-full object-cover" />
               <span className="text-[16px] font-bold text-white">Soko<span className="text-[#FEA406]">Mkononi</span></span>
             </Link>
             <p className="max-w-xs text-sm leading-relaxed text-white/55">
@@ -146,7 +148,13 @@ export default function Footer({ selectedLang: propLang }) {
             </p>
             <ul className="space-y-2.5 text-sm">
               <li className="flex items-center gap-2.5 text-white/60"><Mail size={15} className="shrink-0 text-white/35" /><a href="mailto:support@sokomkononi.co.tz" className="hover:text-white">support@sokomkononi.co.tz</a></li>
-              <li className="flex items-center gap-2.5 text-white/60"><Phone size={15} className="shrink-0 text-white/35" /><a href="tel:+255743895038" className="hover:text-white">+255 743 895 038</a></li>
+              <li className="flex items-center gap-2.5 text-white/60">
+                <Phone size={15} className="shrink-0 text-white/35" />
+                <a href="tel:+255743895038" className="hover:text-white">+255 743 895 038</a>
+                <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="ml-1 grid h-6 w-6 place-items-center rounded-full bg-[#25D366] text-white transition-transform hover:scale-110">
+                  <MessageCircle size={12} />
+                </a>
+              </li>
               <li className="flex items-center gap-2.5 text-white/60"><MapPin size={15} className="shrink-0 text-white/35" />Dar es Salaam, Tanzania</li>
             </ul>
             <div className="flex items-center gap-2 pt-1">

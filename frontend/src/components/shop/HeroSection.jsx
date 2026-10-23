@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Search, ArrowRight, ShieldCheck, TrendingUp, Star, MapPin,
-  Sparkles, ChevronRight, Eye,
+  Sparkles, ChevronRight, Eye, Users, Home,
 } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import SearchBar from "../ui/SearchBar.jsx";
 import { usePublicListings } from "../../config/listingsStore.js";
+import { api } from "../../api/client.js";
 import { pickVariantUrl } from "../../utils/imageVariants.js";
 
 /* ── Safe color constants (always visible on the navy hero) ── */
@@ -174,6 +175,38 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
 
   const listings = usePublicListings();
 
+  // ── Public stats kutoka backend ──────────────────────────
+  const [publicStats, setPublicStats] = useState({
+    users: 0,
+    properties: 0,
+    rating: 4.7,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/stats/public/")
+      .then((res) => {
+        if (cancelled) return;
+        setPublicStats({
+          users: Number(res?.users) || 0,
+          properties: Number(res?.properties) || 0,
+          rating: Number(res?.rating) || 4.7,
+        });
+      })
+      .catch(() => {
+        // Fallback kwa listings za local
+        if (cancelled) return;
+        setPublicStats((s) => ({
+          ...s,
+          properties: listings.filter((l) => l.status === "live").length,
+        }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [listings]);
+
   const trending = useMemo(() => {
     if (!Array.isArray(listings) || listings.length === 0) return [];
     const live = listings.filter((l) => l.status === "live");
@@ -204,8 +237,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
     else navigate(trimmed ? `/tafuta?tafuta=${encodeURIComponent(trimmed)}` : "/tafuta");
   };
 
-  const liveCount = listings.filter((l) => l.status === "live").length;
-  const boostedCount = listings.filter((l) => l.isBoosted).length;
+  const liveCount = publicStats.properties || listings.filter((l) => l.status === "live").length;
 
   return (
     <section
@@ -284,7 +316,6 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
               {t(" kwa urahisi na uhakika.", " easily and with confidence.")}
             </h1>
 
-            {/* Subtitle — forced white in BOTH light and dark */}
             <p
               className="mt-5 min-h-[4rem] max-w-xl text-[15px] leading-relaxed sm:min-h-[3.5rem] sm:text-base"
               style={{ color: "#FFFFFF" }}
@@ -334,20 +365,20 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
               ))}
             </div>
 
-            {/* CTAs — only Buy Now + Sell Now (removed "Jinsi inavyofanya kazi") */}
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+            {/* CTAs — centered, equal width, larger text */}
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <button
                 type="button"
                 onClick={onBuyNow}
-                className="group relative inline-flex h-12 items-center gap-2 overflow-hidden rounded-full pl-1.5 pr-6 text-sm font-semibold transition-transform hover:-translate-y-0.5 active:translate-y-0"
+                className="group relative inline-flex h-14 w-full max-w-[280px] items-center justify-center gap-2.5 overflow-hidden rounded-full pl-2 pr-6 text-base font-bold transition-transform hover:-translate-y-0.5 active:translate-y-0 sm:w-auto sm:min-w-[200px]"
                 style={{
                   background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)",
                   color: "#011957",
                   boxShadow: "0 12px 36px -12px rgba(254,164,6,0.7)",
                 }}
               >
-                <span className="grid h-9 w-9 place-items-center rounded-full" style={{ background: "rgba(1,25,87,0.10)" }}>
-                  <Search size={16} />
+                <span className="grid h-10 w-10 place-items-center rounded-full" style={{ background: "rgba(1,25,87,0.10)" }}>
+                  <Search size={18} />
                 </span>
                 {t("Nunua Sasa", "Buy Now")}
                 <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-[1200ms] group-hover:translate-x-full" />
@@ -355,27 +386,40 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
               <button
                 type="button"
                 onClick={onSellNow}
-                className="group relative inline-flex h-12 items-center gap-2 overflow-hidden rounded-full pl-1.5 pr-6 text-sm font-semibold transition-transform hover:-translate-y-0.5 active:translate-y-0"
+                className="group relative inline-flex h-14 w-full max-w-[280px] items-center justify-center gap-2.5 overflow-hidden rounded-full pl-2 pr-6 text-base font-bold transition-transform hover:-translate-y-0.5 active:translate-y-0 sm:w-auto sm:min-w-[200px]"
                 style={{
                   background: "linear-gradient(135deg, #0062FD 0%, #0050D0 100%)",
                   color: "#FFFFFF",
                   boxShadow: "0 12px 36px -12px rgba(0,98,253,0.7)",
                 }}
               >
-                <span className="grid h-9 w-9 place-items-center rounded-full" style={{ background: "rgba(255,255,255,0.15)" }}>
-                  <TrendingUp size={16} />
+                <span className="grid h-10 w-10 place-items-center rounded-full" style={{ background: "rgba(255,255,255,0.15)" }}>
+                  <TrendingUp size={18} />
                 </span>
                 {t("Uza Sasa", "Sell Now")}
                 <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-[1200ms] group-hover:translate-x-full" />
               </button>
             </div>
 
-            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
-              <Stat icon={<MapPin size={15} />} value={`${Math.max(liveCount || 0, Number(stats.listings) || 0).toLocaleString()}${liveCount > 0 ? "+" : ""}`} label={t("Mali", "Listings")} />
+            {/* Stats — Users, Properties, Rated (kutoka API) */}
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 sm:justify-start">
+              <Stat
+                icon={<Users size={15} />}
+                value={(publicStats.users || 0).toLocaleString()}
+                label={t("Watumiaji", "Users")}
+              />
               <span aria-hidden="true" className="hidden h-8 w-px sm:block" style={{ background: "rgba(255,255,255,0.14)" }} />
-              <Stat icon={<ShieldCheck size={15} />} value={`${Math.max(boostedCount || 0, 0).toLocaleString()}${boostedCount > 0 ? "+" : ""}`} label={t("Zinazoangaziwa", "Boosted")} />
+              <Stat
+                icon={<Home size={15} />}
+                value={(publicStats.properties || 0).toLocaleString()}
+                label={t("Mali", "Properties")}
+              />
               <span aria-hidden="true" className="hidden h-8 w-px sm:block" style={{ background: "rgba(255,255,255,0.14)" }} />
-              <Stat icon={<Star size={14} style={{ fill: HERO_ACCENT }} />} value={stats.rating || "—"} label={t("Rated", "Rated")} />
+              <Stat
+                icon={<Star size={14} style={{ fill: HERO_ACCENT }} />}
+                value={publicStats.rating || "4.7"}
+                label={t("Rated", "Rated")}
+              />
             </div>
           </div>
 
@@ -387,14 +431,12 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
                 <FloatCard icon={<ShieldCheck size={16} />} title={t("Imethibitishwa", "Verified")} desc={t("Muuzaji halisi", "Real seller")} />
               </div>
               <div className="absolute -right-4 bottom-16 animate-float-slow" style={{ animationDelay: "240ms" }}>
-                <FloatCard icon={<TrendingUp size={16} />} title={`+${boostedCount || 320}`} desc={t("Mikataba leo", "Deals today")} />
+                <FloatCard icon={<TrendingUp size={16} />} title={`+${liveCount || 0}`} desc={t("Mali hai", "Live listings")} />
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* NOTE: bottom fade removed — hard edge instead. */}
     </section>
   );
 }

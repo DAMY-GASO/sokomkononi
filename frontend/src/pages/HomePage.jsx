@@ -71,7 +71,6 @@ export default function HomePage() {
   const featured = useMemo(() => liveListings.slice().sort((a, b) => { const aS = (a.isBoosted ? 2 : 0) + (a.views || 0) / 1000; const bS = (b.isBoosted ? 2 : 0) + (b.views || 0) / 1000; return bS - aS; }).slice(0, 8), [liveListings]);
   const newArrivals = useMemo(() => liveListings.slice().sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0)).slice(0, 6), [liveListings]);
   const boosted = useMemo(() => liveListings.filter((l) => l.isBoosted).slice(0, 4), [liveListings]);
-  const stats = useMemo(() => ({ listings: "12K+", users: "140K+", rating: "4.7" }), []);
   const testimonials = content?.testimonials || [];
 
   return (
@@ -79,7 +78,7 @@ export default function HomePage() {
       <Navbar categories={popularCategories} />
       <main>
         <BannerHero />
-        <HeroSection stats={stats} onBuyNow={handleBuyNow} onSellNow={handleSellNow} onSearch={handleSearch} />
+        <HeroSection onBuyNow={handleBuyNow} onSellNow={handleSellNow} onSearch={handleSearch} />
         <TrustBar />
         <FeaturedSection
           badge={lang === "sw" ? "Zinazopendekezwa" : "Featured"}

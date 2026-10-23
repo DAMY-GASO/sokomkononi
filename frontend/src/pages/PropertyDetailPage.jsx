@@ -166,18 +166,24 @@ function ImageGallery({ property, lang }) {
             </button>
           </>
         )}
-        <div className="absolute bottom-3 right-3 bg-black/60 text-white text-body-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10">
+
+        {/* Counter — JUU KULIA (ili isiingiliane na watermark ya chini kushoto) */}
+        <div className="absolute top-3 right-3 bg-black/60 text-white text-body-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10">
           <Camera size={14} />
           {currentIndex + 1} / {images.length}
         </div>
+
+        {/* Featured — JUU KUSHOTO */}
         {isFeatured && (
           <div className="absolute top-3 left-3 bg-gold text-night text-body-sm font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Star size={12} fill="#011957" />
             {t(lang, "Imeangaziwa", "Featured")}
           </div>
         )}
+
+        {/* Verified — CHINI KULIA (watermark ni chini kushoto) */}
         {isVerified && (
-          <div className="absolute top-3 right-3 bg-green text-white text-body-sm font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
+          <div className="absolute bottom-3 right-3 bg-green text-white text-body-sm font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Shield size={12} />
             {t(lang, "Imethibitishwa", "Verified")}
           </div>
@@ -187,7 +193,6 @@ function ImageGallery({ property, lang }) {
       {images.length > 1 && (
         <div className="flex gap-2 mt-3 overflow-x-auto pb-2 max-w-[640px] mx-auto">
           {images.map((img, idx) => {
-            // Images may be strings or { image_url, thumb, card, ... } objects.
             const thumbUrl =
               typeof img === "string" ? img : img?.thumb || img?.card || img?.image_url;
             const key = typeof img === "string" ? img : img?.image_url || idx;
@@ -214,7 +219,6 @@ function ImageGallery({ property, lang }) {
     </>
   );
 }
-
 function FeatureItem({ icon: Icon, label, value }) {
   return (
     <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100">

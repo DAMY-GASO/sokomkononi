@@ -9,7 +9,8 @@ export default function CategoryBento({ categories = [], listings = [] }) {
   const { lang } = useLanguage();
   const t = (sw, en) => (lang === "sw" ? sw : en);
   if (!categories.length) return null;
-  const top = categories.slice(0, 6);
+  // ⬅️ Ongeza categories ZOTE (sio 6 pekee)
+  const all = categories;
 
   return (
     <Section className="bg-[color:rgb(var(--c-page))]">
@@ -23,10 +24,9 @@ export default function CategoryBento({ categories = [], listings = [] }) {
         )}
       />
 
-      {/* Responsive grid: 2 cols on phone → 3 on tablet → 3 on desktop
-          (aspect-[4/3] keeps tiles readable at every width) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 stagger">
-        {top.map((cat) => {
+      {/* Responsive grid: 2 cols on phone → 3 on tablet → 4 on desktop */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 stagger">
+        {all.map((cat) => {
           const Icon = getCategoryIcon(cat.iconKey);
           const count = listings.filter(
             (l) => l.category === cat.key && l.status === "live"
@@ -41,7 +41,6 @@ export default function CategoryBento({ categories = [], listings = [] }) {
                          aspect-[5/4] sm:aspect-[4/3]
                          bg-card border border-[color:rgb(var(--c-hairline))] hover-lift"
             >
-              {/* Background layer */}
               {cat.imageUrl ? (
                 <img
                   src={cat.imageUrl}
@@ -59,14 +58,11 @@ export default function CategoryBento({ categories = [], listings = [] }) {
                 </div>
               )}
 
-              {/* Gradient scrim — same in light + dark because the
-                  bottom of the tile always has white text over it */}
               <div
                 aria-hidden="true"
                 className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent"
               />
 
-              {/* Text content — clipped, never overlaps the icon */}
               <div className="relative z-10 flex h-full min-w-0 flex-col justify-end p-3.5 sm:p-5">
                 <h3 className="line-clamp-2 text-[14px] font-bold leading-tight text-white sm:text-[16px]">
                   {label}

@@ -3,6 +3,7 @@ import {
   ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle,
   Wallet, Package, Receipt, Info,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom"; // ⬅️ IMEONGEZWA
 import { COLORS, formatTZS, calculateListingFee } from "./shared";
 import {
   useActiveCategories, getCategoryIcon, getCategoryIdByKey,
@@ -20,9 +21,6 @@ import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 
-// Mtiririko: seller anawasilisha -> admin anakagua (na kujibu kwa ujumbe) ->
-// admin anaomba malipo -> seller analipa -> admin anaidhinisha mwisho.
-// Hakuna malipo wakati wa kuposti. Weka false kurudisha malipo ya papo hapo.
 const SUBMIT_FOR_REVIEW_FIRST = true;
 import ImageCropper from "../../../components/ImageCropper.jsx";
 import LocationPicker from "../../../components/LocationPicker.jsx";
@@ -160,6 +158,7 @@ export default function PostPropertyForm({
   onGoToBoost = () => {},
 }) {
   const isEdit = mode === "edit" && !!initialData;
+  const navigate = useNavigate(); // ⬅️ KWA AJILI YA BACK ARROW
 
   const { lang } = useLanguage();
   const { user } = useAuth();
@@ -171,7 +170,6 @@ export default function PostPropertyForm({
   const [categoryKey, setCategoryKey] = useState(
     isEdit ? initialData.category : null
   );
-  // ⚠️ jina `categoryMode` (sio `mode`) ili kutopatana na prop `mode`
   const [categoryMode, setCategoryMode] = useState(
     isEdit ? initialData.attributes?.mode || null : null
   );
@@ -371,7 +369,7 @@ export default function PostPropertyForm({
     !duplicateWarning;
 
   const chooseCategory = (key) => {
-    if (isEdit) return; // hairuhusiwi kubadilisha category kwenye edit
+    if (isEdit) return;
     setCategoryKey(key);
     setCategoryMode(null);
     setExtra({});
@@ -433,9 +431,6 @@ export default function PostPropertyForm({
     setSubmitting(true);
     setError("");
 
-    // ═══════════════════════════════════════════════════════════
-    // EDIT MODE — rudisha payload kwa DashboardShell
-    // ═══════════════════════════════════════════════════════════
     if (isEdit) {
       const payload = {
         title: effectiveTitle,
@@ -460,7 +455,6 @@ export default function PostPropertyForm({
               t("Imeshindwa kuhifadhi.", "Failed to save.")
           );
         }
-        // Mafanikio: DashboardShell inaita handleNavClick("listings")
       } catch (err) {
         setError(
           err?.message || t("Hitilafu imetokea.", "Something went wrong.")
@@ -471,9 +465,6 @@ export default function PostPropertyForm({
       return;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // CREATE MODE (code yako ya awali)
-    // ═══════════════════════════════════════════════════════════
     try {
       const finalCheck = await checkDuplicateListingAsync({
         title: effectiveTitle,
@@ -514,7 +505,6 @@ export default function PostPropertyForm({
     }
 
     try {
-      // ── Single-call: create + upload images in one POST ──
       const { createListingWithImagesAsync } = await import("../../../config/listingsStore.js");
       const createRes = await createListingWithImagesAsync({
         payload: {
@@ -547,13 +537,8 @@ export default function PostPropertyForm({
       const created = createRes.raw;
       const listingId = createRes.listing.id;
 
-      // The multipart endpoint already uploaded the images — skip the loop.
-
       const inlineFee = Number(created?.fee_amount ?? 0);
 
-      // (images already uploaded in the create call)
-
-      // Category details
       const detailEndpoint = CATEGORY_DETAIL_ENDPOINT[categoryKey];
       if (detailEndpoint) {
         const detailBody = {};
@@ -614,11 +599,7 @@ export default function PostPropertyForm({
         }
       }
 
-      // Wasilisha kwa admin kukagua kwanza (malipo yanakuja baadaye)
       if (SUBMIT_FOR_REVIEW_FIRST || listingFeeDisabled) {
-        console.info(
-          "[PostPropertyForm] Submitting for admin review (pay after approval)"
-        );
         try {
           await api.post(`/listings/${listingId}/publish/`, {});
         } catch (pubErr) {
@@ -637,7 +618,6 @@ export default function PostPropertyForm({
         return;
       }
 
-      // Resolve fee
       const inlineFeeFromPayment = Number(
         created?.payment?.amount ?? created?.payment?.fee_amount ?? 0
       );
@@ -673,12 +653,6 @@ export default function PostPropertyForm({
       }
 
       if (!fee && listingFeeDisabled) isFreeCategoryLocal = true;
-
-      console.info("[PostPropertyForm] fee resolved:", {
-        fee,
-        source: feeSource,
-        categoryKey,
-      });
 
       setCreatedListing(created);
       setFeeAmount(fee);
@@ -1197,18 +1171,19 @@ export default function PostPropertyForm({
             if (cfgFee.isActive === false) {
               return (
                 <div
-                  className="mt-4 inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs"
+                  className="mt-4 inline-flex flex-col items-center gap-1 rounded-xl border px-4 py-3 text-xs text-center"
                   style={{
                     background: "rgba(47,109,79,0.10)",
                     borderColor: "rgba(47,109,79,0.35)",
                     color: COLORS.green,
                   }}
                 >
-                  <Check size={14} />
-                  {t(
-                    "Ada ya kuchapisha imezimwa — unaweka bure. Listing bado itapitia idhini ya Admin.",
-                    "Listing fee is disabled — post for free. Listing still requires admin approval."
-                  )}
+                  <p className="font-semibold">
+                    🇹🇿 Kiswahili: 🎉 Chapisha tangazo lako bila malipo na anza kuuza kupitia SokoMkononi leo!
+                  </p>
+                  <p className="font-semibold">
+                    🇬🇧 English: 🎉 List for free and start selling on SokoMkononi today!
+                  </p>
                 </div>
               );
             }
@@ -1225,7 +1200,7 @@ export default function PostPropertyForm({
             if (isFlat) {
               amount = flat;
               amountKnown = true;
-              basis = t("Ada ya moja kwa moja", "Flat fee");
+              basis = ""; // ⬅️ Ondoa "Flat fee"
             } else {
               basis = t(
                 `${(rate * 100).toFixed(2).replace(/\.?0+$/, "")}% ya bei ya mali`,
@@ -1262,9 +1237,11 @@ export default function PostPropertyForm({
                         ? formatTZS(amount)
                         : t("Itakokotolewa ukiweka bei", "Calculated after you enter a price")}
                   </b>
-                  <span className="ml-1.5 text-[11px] opacity-70">
-                    ({basis})
-                  </span>
+                  {basis && (
+                    <span className="ml-1.5 text-[11px] opacity-70">
+                      ({basis})
+                    </span>
+                  )}
                 </span>
               </div>
             );
@@ -1498,7 +1475,6 @@ export default function PostPropertyForm({
                 </Field>
               </div>
 
-              {/* Map picker — replaces/augments the text-only location */}
               <div className="mt-2">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-secondary block mb-2">
                   {t(

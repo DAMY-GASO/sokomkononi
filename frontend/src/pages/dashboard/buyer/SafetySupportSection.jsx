@@ -25,6 +25,7 @@ import {
   Send,
   Clock,
   Inbox,
+  MessageCircle, // ⬅️ IMEONGEZWA kwa ajili ya WhatsApp
 } from "lucide-react";
 import { COLORS, timeAgo } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -913,15 +914,25 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 support@sokomkononi.co.tz
               </span>
             </a>
-            <a
-              href="tel:+255743895038"
-              className="flex items-center justify-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
-            >
+            <div className="flex items-center justify-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors">
               <Phone size={16} className="text-muted" />
-              <span className="text-body-sm text-secondary">
+              <a
+                href="tel:+255743895038"
+                className="text-body-sm text-secondary hover:underline"
+              >
                 +255 743 895 038
-              </span>
-            </a>
+              </a>
+              {/* ⬅️ WHATSAPP BUTTON */}
+              <a
+                href="https://wa.me/255743895038"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="WhatsApp"
+                className="ml-1 flex h-7 w-7 items-center justify-center rounded-full bg-[#25D366] text-white transition-transform hover:scale-110"
+              >
+                <MessageCircle size={14} />
+              </a>
+            </div>
           </div>
         </div>
       </div>

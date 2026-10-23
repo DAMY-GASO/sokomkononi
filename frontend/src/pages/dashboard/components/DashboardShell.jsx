@@ -230,6 +230,18 @@ export default function DashboardShell() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  // ⬅️ MPYA: Zuia scroll ya body wakati mobile sidebar imefunguliwa
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
   useEffect(() => {
     const path = location.pathname;
     const editMatch = path.match(/^\/dashboard\/listings\/edit\/([^/]+)\/?$/);
@@ -860,7 +872,7 @@ export default function DashboardShell() {
 
       <div className="flex flex-1 relative">
         <aside
-          className="hidden md:flex w-56 shrink-0 border-r border-[rgb(var(--c-hairline))] flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto bg-[rgb(var(--c-page))]"
+          className="hidden md:flex w-56 shrink-0 border-r border-[rgb(var(--c-hairline))] flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto overscroll-contain bg-[rgb(var(--c-page))]"
         >
           {nav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeKey;
@@ -902,7 +914,7 @@ export default function DashboardShell() {
 
         {sidebarOpen && (
           <div className="md:hidden fixed inset-0 z-40 flex">
-            <div className="w-72 max-w-[85%] h-full pt-16 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto bg-[rgb(var(--c-page))]">
+            <div className="w-72 max-w-[85%] h-full pt-16 pb-4 px-3 flex flex-col gap-1 shadow-xl overflow-y-auto overscroll-contain bg-[rgb(var(--c-page))]">
               <div className="flex justify-end mb-2">
                 <button onClick={() => setSidebarOpen(false)} aria-label={t("Funga", "Close")} className="p-2 text-[rgb(var(--c-text-2))] hover:text-[rgb(var(--c-ink))]">
                   <X size={20} />

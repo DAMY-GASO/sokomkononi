@@ -373,37 +373,38 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                 {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
               </button>
 
-              {/* Language */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => toggleMenu("lang")}
-                  aria-expanded={openMenu === "lang"}
-                  className="hidden h-10 items-center gap-1.5 rounded-full border border-white/20 px-3 text-[12px] font-semibold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white sm:flex"
-                >
-                  <Globe size={13} />
-                  {currentLang.code}
-                </button>
-                {openMenu === "lang" && (
-                  <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-[#042475] py-1 shadow-xl">
-                    {languages.map((l) => (
-                      <button
-                        key={l.code}
-                        onClick={() => { setLang(l.code); setOpenMenu(null); }}
-                        className={cx(
-                          "flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors",
-                          lang === l.code
-                            ? "bg-white/[0.06] text-white"
-                            : "text-white/75 hover:bg-white/[0.04] hover:text-white"
-                        )}
-                      >
-                        {l.native}
-                        {lang === l.code && <span className="h-1.5 w-1.5 rounded-full bg-[#FEA406]" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {/* Language — visible on ALL screens (mobile + desktop) */}
+<div className="relative">
+  <button
+    type="button"
+    onClick={() => toggleMenu("lang")}
+    aria-expanded={openMenu === "lang"}
+    className="flex h-9 items-center gap-1 rounded-full border border-white/20 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white sm:h-10 sm:gap-1.5 sm:px-3 sm:text-[12px]"
+  >
+    <Globe size={12} className="sm:hidden" />
+    <Globe size={13} className="hidden sm:block" />
+    {currentLang.code}
+  </button>
+  {openMenu === "lang" && (
+    <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-[#042475] py-1 shadow-xl">
+      {languages.map((l) => (
+        <button
+          key={l.code}
+          onClick={() => { setLang(l.code); setOpenMenu(null); }}
+          className={cx(
+            "flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors",
+            lang === l.code
+              ? "bg-white/[0.06] text-white"
+              : "text-white/75 hover:bg-white/[0.04] hover:text-white"
+          )}
+        >
+          {l.native}
+          {lang === l.code && <span className="h-1.5 w-1.5 rounded-full bg-[#FEA406]" />}
+        </button>
+      ))}
+    </div>
+  )}
+</div>
 
               <NotificationBell />
 

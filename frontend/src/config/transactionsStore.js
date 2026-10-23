@@ -150,9 +150,8 @@ function normalizeMyTransaction(raw) {
   const type = normalizeType(raw.type ?? raw.transaction_type ?? raw.source);
 
   return {
-    // ── MPYA: raw_id (backend PK) ──
-    rawId: raw.raw_id ?? raw.id,   // ⬅️ tumia raw_id kama ipo
-    id: raw.id,                    // prefixed (fin_42)
+    rawId: raw.raw_id ?? raw.id,
+    id: raw.id,
     ref: raw.ref || raw.reference || `TXN-${raw.id}`,
     type,
     source: raw.source || "finance",
@@ -169,7 +168,8 @@ function normalizeMyTransaction(raw) {
     paymentReference: raw.payment_reference,
     method: raw.method || raw.payment_method || null,
     paidAt: raw.paid_at || raw.completed_at,
-    at: raw.created_at || raw.paid_at || raw.updated_at,
+    // ⬅️ FIX: paid_at kwanza, kisha created_at
+    at: raw.paid_at || raw.created_at || raw.updated_at,
     bundleId: raw.bundle_id,
     bundleName: raw.bundle_name,
     credits: raw.credits,
@@ -190,8 +190,7 @@ function normalizeTransactionRow(raw) {
   const type = normalizeType(raw.transaction_type ?? raw.type);
 
   return {
-    // ── MPYA: raw_id (backend PK) ──
-    rawId: raw.raw_id ?? raw.id,   // ⬅️ tumia raw_id kama ipo
+    rawId: raw.raw_id ?? raw.id,
     id: raw.id,
     ref: raw.reference || raw.ref || `TXN-${raw.id}`,
     type,
@@ -209,10 +208,10 @@ function normalizeTransactionRow(raw) {
     paymentReference: raw.payment_reference,
     method: raw.method || raw.payment_method || null,
     paidAt: raw.paid_at || raw.completed_at,
-    at: raw.created_at || raw.updated_at,
+    // ⬅️ FIX: paid_at kwanza, kisha created_at
+    at: raw.paid_at || raw.created_at || raw.updated_at,
   };
 }
-
 // ============================================================
 // HYDRATE FROM API — vyanzo viwili
 // ============================================================
