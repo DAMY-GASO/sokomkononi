@@ -370,7 +370,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
               <button
                 type="button"
                 onClick={onBuyNow}
-                className="group relative inline-flex h-14 w-full max-w-[280px] items-center justify-center gap-2.5 overflow-hidden rounded-full pl-2 pr-6 text-base font-bold transition-transform hover:-translate-y-0.5 active:translate-y-0 sm:w-auto sm:min-w-[200px]"
+                className="group relative inline-flex h-14 w-full max-w-[280px] items-center justify-center gap-2.5 overflow-hidden rounded-full pl-2 pr-6 text-lg sm:text-xl font-extrabold transition-transform hover:-translate-y-0.5 active:translate-y-0 sm:w-auto sm:min-w-[200px]"
                 style={{
                   background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)",
                   color: "#011957",
@@ -386,7 +386,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
               <button
                 type="button"
                 onClick={onSellNow}
-                className="group relative inline-flex h-14 w-full max-w-[280px] items-center justify-center gap-2.5 overflow-hidden rounded-full pl-2 pr-6 text-base font-bold transition-transform hover:-translate-y-0.5 active:translate-y-0 sm:w-auto sm:min-w-[200px]"
+                className="group relative inline-flex h-14 w-full max-w-[280px] items-center justify-center gap-2.5 overflow-hidden rounded-full pl-2 pr-6 text-lg sm:text-xl font-extrabold transition-transform hover:-translate-y-0.5 active:translate-y-0 sm:w-auto sm:min-w-[200px]"
                 style={{
                   background: "linear-gradient(135deg, #0062FD 0%, #0050D0 100%)",
                   color: "#FFFFFF",
