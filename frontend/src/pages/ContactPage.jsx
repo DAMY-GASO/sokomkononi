@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Mail, Phone, MapPin, Send, CheckCircle2, Loader2, AlertTriangle,
-  MessageSquare, Clock, ChevronDown, HelpCircle,
+  MessageSquare, Clock, ChevronDown, HelpCircle, MessageCircle,
 } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
@@ -10,7 +10,7 @@ import BottomNav from "../components/BottomNav.jsx";
 import NewsletterStrip from "../components/NewsletterStrip.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { contactApi } from "../api/contact.js";
-import { faqs } from "../config/FaqsData.js"; //
+import { faqs } from "../config/FaqsData.js";
 
 export default function ContactPage() {
   const { lang } = useLanguage();
@@ -20,7 +20,7 @@ export default function ContactPage() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
-  const [openFaq, setOpenFaq] = useState(null); // ⬅️ STATE MPYA KWA FAQ
+  const [openFaq, setOpenFaq] = useState(null);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -68,6 +68,7 @@ export default function ContactPage() {
       value: "+255 743 895 038",
       href: "tel:+255743895038",
       color: "#2F6D4F",
+      whatsapp: "https://wa.me/255743895038", // ⬅️ WhatsApp link
     },
     {
       Icon: MapPin,
@@ -147,7 +148,7 @@ export default function ContactPage() {
       {/* CONTACT CHANNELS */}
       <section className="container py-8 sm:py-10">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {channels.map(({ Icon, title, value, href, color }) => {
+          {channels.map(({ Icon, title, value, href, color, whatsapp }) => {
             const inner = (
               <>
                 <span
@@ -168,6 +169,19 @@ export default function ContactPage() {
                     {value}
                   </p>
                 </div>
+                {/* ⬅️ WHATSAPP BUTTON */}
+                {whatsapp && (
+                  <a
+                    href={whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="WhatsApp"
+                    className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white transition-transform hover:scale-110 self-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MessageCircle size={15} />
+                  </a>
+                )}
               </>
             );
 
@@ -323,7 +337,7 @@ export default function ContactPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════
-          FAQ SECTION — MPYA
+          FAQ SECTION
           ═══════════════════════════════════════════════════════ */}
       <section id="faq" className="border-t border-[color:rgb(var(--c-hairline))] bg-[color:rgb(var(--c-sand))]">
         <div className="container py-12 sm:py-16">

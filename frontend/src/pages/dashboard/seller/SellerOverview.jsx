@@ -284,74 +284,26 @@ export default function SellerOverview({ onNavigate }) {
 }
 
 // ============================================================
-// STEP FLOW — inline styles zote + !important kuzuia CSS ya nje
+// STEP FLOW — fananisha na BuyerOverview
 // ============================================================
 function StepFlow({ steps }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        justifyContent: "center",
-        columnGap: "6px",
-        rowGap: "12px",
-      }}
-    >
+    <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-3">
       {steps.map((step, i) => (
         <React.Fragment key={i}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              background: "#F5F3EC",
-              borderRadius: "9999px",
-              paddingLeft: "6px",
-              paddingRight: "12px",
-              paddingTop: "6px",
-              paddingBottom: "6px",
-            }}
-          >
+          <div className="flex items-center gap-1.5 bg-sand rounded-full pl-1.5 pr-3 py-1.5">
             <span
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "22px",
-                height: "22px",
-                minWidth: "22px",
-                maxWidth: "22px",
-                borderRadius: "9999px",
-                background: "#011957 !important",
-                color: "#FFFFFF !important",
-                fontSize: "13px !important",
-                fontWeight: "700 !important",
-                lineHeight: "1 !important",
-                flexShrink: 0,
-                fontFamily: "inherit",
-                fontVariantNumeric: "tabular-nums",
-                textAlign: "center",
-              }}
+              style={{ background: "#FEA406", color: "#011957" }}
+              className="w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 shadow-sm"
             >
               {i + 1}
             </span>
-            <span
-              style={{
-                fontSize: "13px",
-                fontWeight: 500,
-                color: "#4B5563",
-                whiteSpace: "nowrap",
-              }}
-            >
+            <span className="text-body-sm font-medium text-secondary whitespace-nowrap">
               {step}
             </span>
           </div>
           {i < steps.length - 1 && (
-            <ArrowRight
-              size={14}
-              style={{ color: "#9CA3AF", flexShrink: 0 }}
-            />
+            <ArrowRight size={14} className="text-muted shrink-0" />
           )}
         </React.Fragment>
       ))}
