@@ -3,8 +3,9 @@
 // Approve / Reject / Request Edit / Request Payment / Finalize
 //
 // Marekebisho:
-//  - Filter tab "Zilizouzwa" (sold)
-//  - Filter tab "Zilizoisha Muda" (expired)   ⬅️ MPYA
+//  - Normalize status (UPPERCASE kutoka backend → lowercase logic)
+//  - Fetch kwa UPPERCASE (PENDING_APPROVAL, PAID_PENDING_APPROVAL, n.k.)
+//  - Filter tab "Zilizouzwa" (sold), "Zilizoisha Muda" (expired)
 //  - Sold + Expired listings zinaonekana kwa admin (read-only)
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
@@ -29,6 +30,14 @@ import {
 } from "../../../../config/moderationStore.js";
 import { fetchListingsByStatusAsync } from "../../../../config/listingsStore.js";
 import AdminListingImageManager from "../components/AdminListingImageManager.jsx";
+
+// ============================================================
+// Normalize status: PENDING_APPROVAL → pending_approval
+// ============================================================
+function normalizeStatus(s) {
+  if (s == null) return "";
+  return String(s).trim().toLowerCase();
+}
 
 export default function ModerationSection() {
   const { lang } = useLanguage();
@@ -55,34 +64,34 @@ export default function ModerationSection() {
     setLoading(true);
     setError("");
 
-    const wantPending =
-      statusFilter === "in_review" || statusFilter === "zote";
+    const wantPending = statusFilter === "in_review" || statusFilter === "zote";
+    const wantPendingApproval =
+      statusFilter === "pending_approval" || statusFilter === "zote";
     const wantPaid =
       statusFilter === "paid_pending_approval" || statusFilter === "zote";
     const wantAwaitingPay =
-      statusFilter === "approved_pending_payment" || statusFilter === "pending_approval" ||
-      statusFilter === "zote";
+      statusFilter === "approved_pending_payment" || statusFilter === "zote";
     const wantNeedsEdit =
       statusFilter === "needs_edit" || statusFilter === "zote";
     const wantLive = statusFilter === "live" || statusFilter === "zote";
     const wantRejected =
       statusFilter === "rejected" || statusFilter === "zote";
-    const wantSold =
-      statusFilter === "sold" || statusFilter === "zote";
-    const wantExpired =
-      statusFilter === "expired" || statusFilter === "zote";   // ⬅️ MPYA
+    const wantSold = statusFilter === "sold" || statusFilter === "zote";
+    const wantExpired = statusFilter === "expired" || statusFilter === "zote";
 
     const tasks = [];
     if (wantPending) tasks.push(hydrateModerationQueueFromApi());
-    if (wantPaid) tasks.push(fetchListingsByStatusAsync("paid_pending_approval"));
+    // ⬅️ Fetch kwa UPPERCASE — backend inatumia uppercase
+    if (wantPendingApproval)
+      tasks.push(fetchListingsByStatusAsync("PENDING_APPROVAL"));
+    if (wantPaid) tasks.push(fetchListingsByStatusAsync("PAID_PENDING_APPROVAL"));
     if (wantAwaitingPay)
-      tasks.push(fetchListingsByStatusAsync("approved_pending_payment"));
-    if (wantNeedsEdit)
-      tasks.push(fetchListingsByStatusAsync("needs_edit"));
-    if (wantLive) tasks.push(fetchListingsByStatusAsync("live"));
-    if (wantRejected) tasks.push(fetchListingsByStatusAsync("rejected"));
-    if (wantSold) tasks.push(fetchListingsByStatusAsync("sold"));
-    if (wantExpired) tasks.push(fetchListingsByStatusAsync("expired"));   // ⬅️ MPYA
+      tasks.push(fetchListingsByStatusAsync("APPROVED_PENDING_PAYMENT"));
+    if (wantNeedsEdit) tasks.push(fetchListingsByStatusAsync("NEEDS_EDIT"));
+    if (wantLive) tasks.push(fetchListingsByStatusAsync("LIVE"));
+    if (wantRejected) tasks.push(fetchListingsByStatusAsync("REJECTED"));
+    if (wantSold) tasks.push(fetchListingsByStatusAsync("SOLD"));
+    if (wantExpired) tasks.push(fetchListingsByStatusAsync("EXPIRED"));
 
     Promise.all(tasks).then((results) => {
       if (cancelled) return;
@@ -120,11 +129,11 @@ export default function ModerationSection() {
   const filtered = useMemo(() => {
     const pending = queue
       .filter((l) => !decided[String(l.id)])
-      .map((l) => ({ ...l, status: "in_review" }));
+      .map((l) => ({ ...l, status: "PENDING_APPROVAL" }));
 
     const hist = Object.values(history)
       .filter((l) => !decided[String(l.id)])
-      .filter((l) => l.status !== "in_review");
+      .filter((l) => normalizeStatus(l.status) !== "in_review");
 
     const decidedEntries = Object.entries(decided)
       .map(([id, status]) => {
@@ -147,15 +156,19 @@ export default function ModerationSection() {
       });
       list = Array.from(map.values());
     } else {
-      const base = hist.filter((l) => l.status === statusFilter);
-      const dec = decidedEntries.filter((l) => l.status === statusFilter);
+      const base = hist.filter(
+        (l) => normalizeStatus(l.status) === statusFilter
+      );
+      const dec = decidedEntries.filter(
+        (l) => normalizeStatus(l.status) === statusFilter
+      );
       list = [...base, ...dec];
     }
 
     return [...list].sort(
       (a, b) =>
-        new Date(b.postedAt || 0).getTime() -
-        new Date(a.postedAt || 0).getTime()
+        new Date(b.postedAt || b.created_at || 0).getTime() -
+        new Date(a.postedAt || a.created_at || 0).getTime()
     );
   }, [queue, history, decided, statusFilter]);
 
@@ -165,11 +178,10 @@ export default function ModerationSection() {
       label: { sw: "Zinasubiri", en: "Pending" },
       count: queue.filter((l) => !decided[String(l.id)]).length,
     },
-
-     {
-    key: "pending_approval",
-    label: { sw: "Zinasubiri Admin", en: "Pending Review" },
-     },
+    {
+      key: "pending_approval",
+      label: { sw: "Zinasubiri Admin", en: "Pending Review" },
+    },
     {
       key: "paid_pending_approval",
       label: { sw: "Zimelipwa", en: "Paid" },
@@ -184,7 +196,7 @@ export default function ModerationSection() {
     },
     { key: "live", label: { sw: "Zimeidhinishwa", en: "Approved" } },
     { key: "sold", label: { sw: "Zilizouzwa", en: "Sold" } },
-    { key: "expired", label: { sw: "Zilizoisha Muda", en: "Expired" } },   // ⬅️ MPYA
+    { key: "expired", label: { sw: "Zilizoisha Muda", en: "Expired" } },
     { key: "rejected", label: { sw: "Zimekataliwa", en: "Rejected" } },
     { key: "zote", label: { sw: "Zote", en: "All" } },
   ];
@@ -228,12 +240,12 @@ export default function ModerationSection() {
     const res = await approveListingFromQueueAsync(listingId);
     clearBusy(listingId);
     if (res.ok) {
-      markDecided(listingId, "live");
+      markDecided(listingId, "LIVE");
       addToHistory({
         ...(snapshot || {}),
         ...(res.listing || {}),
         id: listingId,
-        status: "live",
+        status: "LIVE",
         approvedAt: new Date().toISOString(),
       });
     } else {
@@ -265,12 +277,12 @@ export default function ModerationSection() {
     clearBusy(listingId);
     setRejectModal(null);
     if (res.ok) {
-      markDecided(listingId, "rejected");
+      markDecided(listingId, "REJECTED");
       addToHistory({
         ...(snapshot || {}),
         ...(res.listing || {}),
         id: listingId,
-        status: "rejected",
+        status: "REJECTED",
         rejectionReason: reason,
         rejectedAt: new Date().toISOString(),
       });
@@ -305,11 +317,11 @@ export default function ModerationSection() {
     clearBusy(listingId);
     setRequestEditModal(null);
     if (res.ok) {
-      markDecided(listingId, "needs_edit");
+      markDecided(listingId, "NEEDS_EDIT");
       addToHistory({
         ...(snapshot || {}),
         id: listingId,
-        status: "needs_edit",
+        status: "NEEDS_EDIT",
         rejectionReason: reason,
       });
     } else {
@@ -333,11 +345,11 @@ export default function ModerationSection() {
     clearBusy(listingId);
     setRequestPaymentModal(null);
     if (res.ok) {
-      markDecided(listingId, "approved_pending_payment");
+      markDecided(listingId, "APPROVED_PENDING_PAYMENT");
       addToHistory({
         ...(snapshot || {}),
         id: listingId,
-        status: "approved_pending_payment",
+        status: "APPROVED_PENDING_PAYMENT",
       });
     } else {
       setError(res.error?.message || t("Imeshindwa.", "Failed."));
@@ -355,11 +367,11 @@ export default function ModerationSection() {
     const res = await finalizeApprovalListingAsync(listingId);
     clearBusy(listingId);
     if (res.ok) {
-      markDecided(listingId, "live");
+      markDecided(listingId, "LIVE");
       addToHistory({
         ...(snapshot || {}),
         id: listingId,
-        status: "live",
+        status: "LIVE",
         approvedAt: new Date().toISOString(),
       });
     } else {
@@ -387,13 +399,13 @@ export default function ModerationSection() {
     clearBusy(listingId);
     setDisapproveModal(null);
     if (res.ok) {
-      markDecided(listingId, "rejected");
+      markDecided(listingId, "REJECTED");
       setHistory((prev) => {
         const key = String(listingId);
         const existing = prev[key] || {};
         return {
           ...prev,
-          [key]: { ...existing, status: "rejected", rejectionReason: reason },
+          [key]: { ...existing, status: "REJECTED", rejectionReason: reason },
         };
       });
     } else {
@@ -420,7 +432,7 @@ export default function ModerationSection() {
     clearBusy(listingId);
     setDeleteModal(null);
     if (res.ok) {
-      markDecided(listingId, "deleted");
+      markDecided(listingId, "DELETED");
       removeFromHistory(listingId);
     } else {
       setError(
@@ -448,11 +460,70 @@ export default function ModerationSection() {
 
   // ── Action buttons kwa kila status ──────────────────────
   const renderActions = (listing, fullWidth = false) => {
+    const status = normalizeStatus(listing.status);   // ⬅️ NORMALIZED
     const isBusy = !!busy[listing.id];
     const currentAction = busy[listing.id];
 
     // Pending — admin ana chaguo 3
-    if (listing.status === "in_review") {
+    if (status === "in_review") {
+      return (
+        <div
+          className={`flex flex-wrap gap-2 ${
+            fullWidth ? "w-full" : "justify-end"
+          }`}
+        >
+          <button
+            onClick={() => openRequestEditModal(listing.id)}
+            disabled={isBusy}
+            style={{ color: "#B45309" }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-amber-50 disabled:opacity-50 ${
+              fullWidth ? "flex-1" : ""
+            }`}
+          >
+            {currentAction === "request_edit" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Pencil size={13} />
+            )}
+            {t("Omba Uhariri", "Request Edit")}
+          </button>
+          <button
+            onClick={() => openRejectModal(listing.id)}
+            disabled={isBusy}
+            style={{ color: COLORS.rust }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50 ${
+              fullWidth ? "flex-1" : ""
+            }`}
+          >
+            {currentAction === "reject" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <XCircle size={13} />
+            )}
+            {t("Kataa", "Reject")}
+          </button>
+          <button
+            onClick={() => openRequestPaymentModal(listing.id)}
+            disabled={isBusy}
+            style={{ color: COLORS.green }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50 ${
+              fullWidth ? "flex-1" : ""
+            }`}
+          >
+            {currentAction === "request_payment" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Wallet size={13} />
+            )}
+            {t("Omba Malipo", "Request Pay")}
+          </button>
+          <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
+        </div>
+      );
+    }
+
+    // PENDING_APPROVAL — mpya, admin anakagua kwanza
+    if (status === "pending_approval") {
       return (
         <div
           className={`flex flex-wrap gap-2 ${
@@ -510,7 +581,7 @@ export default function ModerationSection() {
     }
 
     // Paid — admin analidhinisha mwisho
-    if (listing.status === "paid_pending_approval") {
+    if (status === "paid_pending_approval") {
       return (
         <div
           className={`flex flex-wrap gap-2 ${
@@ -553,7 +624,7 @@ export default function ModerationSection() {
     }
 
     // Awaiting payment
-    if (listing.status === "approved_pending_payment") {
+    if (status === "approved_pending_payment") {
       return (
         <div
           className={`flex flex-wrap gap-2 ${
@@ -577,7 +648,7 @@ export default function ModerationSection() {
     }
 
     // Needs edit
-    if (listing.status === "needs_edit") {
+    if (status === "needs_edit") {
       return (
         <div
           className={`flex flex-wrap gap-2 ${
@@ -601,7 +672,7 @@ export default function ModerationSection() {
     }
 
     // Live — disapprove au futa
-    if (listing.status === "live") {
+    if (status === "live") {
       return (
         <div
           className={`flex flex-wrap gap-2 ${
@@ -643,10 +714,8 @@ export default function ModerationSection() {
       );
     }
 
-    // Rejected — approve au futa
-        // ⬅️ REKEBISHO: Rejected — usiruhusu approve moja kwa moja.
-    // Badala yake, admin anaweza "Omba Uhariri" au "Omba Malipo".
-    if (listing.status === "rejected") {
+    // Rejected — request edit au request payment
+    if (status === "rejected") {
       return (
         <div
           className={`flex flex-wrap gap-2 ${
@@ -702,8 +771,9 @@ export default function ModerationSection() {
         </div>
       );
     }
+
     // Sold / Rented — read-only
-    if (listing.status === "sold" || listing.status === "rented") {
+    if (status === "sold" || status === "rented") {
       return (
         <div
           className={`flex flex-wrap gap-2 ${
@@ -725,8 +795,8 @@ export default function ModerationSection() {
       );
     }
 
-    // ⬇️ MPYA: Expired — read-only (admin anaweza kuona tu)
-    if (listing.status === "expired") {
+    // Expired — read-only
+    if (status === "expired") {
       return (
         <div
           className={`flex flex-wrap gap-2 ${
@@ -857,7 +927,7 @@ export default function ModerationSection() {
                     >
                       <td className="px-5 py-3 text-sm font-medium text-primary">
                         {l.title}
-                        {l.status === "rejected" && l.rejectionReason && (
+                        {normalizeStatus(l.status) === "rejected" && l.rejectionReason && (
                           <p
                             className="text-xs font-normal mt-0.5"
                             style={{ color: COLORS.rust }}
@@ -865,7 +935,7 @@ export default function ModerationSection() {
                             {l.rejectionReason}
                           </p>
                         )}
-                        {l.status === "needs_edit" && l.rejectionReason && (
+                        {normalizeStatus(l.status) === "needs_edit" && l.rejectionReason && (
                           <p
                             className="text-xs font-normal mt-0.5"
                             style={{ color: "#B45309" }}
@@ -875,7 +945,9 @@ export default function ModerationSection() {
                         )}
                       </td>
                       <td className="px-5 py-3 text-sm text-secondary">
-                        {l.category}
+                        {typeof l.category === "object" && l.category !== null
+                          ? l.category.name || l.category.slug || "—"
+                          : l.category}
                       </td>
                       <td className="px-5 py-3 text-sm text-secondary">
                         {l.seller || l.seller_name}
@@ -921,9 +993,11 @@ export default function ModerationSection() {
                       {l.title}
                     </p>
                     <p className="text-xs text-secondary mt-0.5 truncate">
-                      {l.category}
+                      {typeof l.category === "object" && l.category !== null
+                        ? l.category.name || l.category.slug || "—"
+                        : l.category}
                     </p>
-                    {l.status === "rejected" && l.rejectionReason && (
+                    {normalizeStatus(l.status) === "rejected" && l.rejectionReason && (
                       <p
                         className="text-xs mt-1 line-clamp-2"
                         style={{ color: COLORS.rust }}
@@ -931,7 +1005,7 @@ export default function ModerationSection() {
                         {l.rejectionReason}
                       </p>
                     )}
-                    {l.status === "needs_edit" && l.rejectionReason && (
+                    {normalizeStatus(l.status) === "needs_edit" && l.rejectionReason && (
                       <p
                         className="text-xs mt-1 line-clamp-2"
                         style={{ color: "#B45309" }}

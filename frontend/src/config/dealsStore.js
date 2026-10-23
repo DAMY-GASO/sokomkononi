@@ -109,7 +109,12 @@ function resolveAskingPrice(raw, listing, listingId) {
 }
 
 function resolveCurrentOffer(raw, offers) {
-  const arr = Array.isArray(offers) ? offers : raw?.offers || [];
+  const all = Array.isArray(offers) ? offers : raw?.offers || [];
+  // Ofa zilizokataliwa hazihesabiwi kama "ofa ya sasa"
+  const arr = all.filter((o) => {
+    const s = String(o?.status || "").toUpperCase();
+    return s !== "DECLINED" && s !== "REJECTED";
+  });
   if (arr.length > 0) {
     const sorted = [...arr].sort(
       (a, b) =>

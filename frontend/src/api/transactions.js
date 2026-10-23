@@ -52,8 +52,13 @@ export const transactionsApi = {
     api.post(`/transactions/${id}/expire-inspection/`, {}),
 
   // ── MPYA ─────────────────────────────────────────────────
-  extendReservation: (id, additional_hours) =>
-    api.post(`/transactions/${id}/extend-reservation/`, { additional_hours }),
+  // Lazima ilipwe kwanza: extra = { payment_reference: "credits" } au
+  // { payment_method: "mobile"|"card", phone }
+  extendReservation: (id, additional_hours, extra = {}) =>
+    api.post(`/transactions/${id}/extend-reservation/`, {
+      additional_hours,
+      ...extra,
+    }),
 
   removeReservation: (id) =>
     api.post(`/transactions/${id}/remove-reservation/`, {}),

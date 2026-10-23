@@ -1,9 +1,7 @@
 // ============================================================
 // MyListings.jsx
 // Seller — orodha ya mali zake (listings).
-// + Fix: category object (id, name, slug) haitupwi kwenye JSX
-// + Fix: clear legacy localStorage entries with object category
-// + REKEBISHO: filter ya pending_approval; isUnpaid inarudisha false
+// + Normalize status (UPPERCASE kutoka backend → lowercase frontend)
 // ============================================================
 import React, { useState, useMemo, useEffect } from "react";
 import {
@@ -34,8 +32,13 @@ import {
 } from "../../../config/listingsStore.js";
 
 // ============================================================
-// Helper — toa string kutoka category (inaweza kuwa object)
+// Normalize status: PENDING_APPROVAL → pending_approval
 // ============================================================
+function normalizeStatus(s) {
+  if (s == null) return "";
+  return String(s).trim().toLowerCase();
+}
+
 function categoryToString(cat) {
   if (cat == null) return "";
   if (typeof cat === "string") return cat;
@@ -45,9 +48,6 @@ function categoryToString(cat) {
   return String(cat);
 }
 
-// ============================================================
-// Helper — ondoa object category kwenye localStorage
-// ============================================================
 function normalizeCategoryInCache() {
   try {
     const mine = getMyListings();
@@ -76,18 +76,13 @@ function normalizeCategoryInCache() {
 }
 
 // ============================================================
-// isUnpaid
-// ⬅️ REKEBISHO: pending_approval inarudisha false (haijalipwa bado,
-//    lakini si "unpaid" kwa maana ya fee — admin anakagua kwanza)
+// isUnpaid — uses normalized status
 // ============================================================
 function isUnpaid(listing) {
   if (!listing) return false;
-  const s = String(listing.status || "").toLowerCase();
+  const s = normalizeStatus(listing.status);
 
-  if (
-    s === "pending_payment" ||
-    s === "approved_pending_payment"
-  ) {
+  if (s === "pending_payment" || s === "approved_pending_payment") {
     return true;
   }
 
@@ -102,9 +97,6 @@ function isUnpaid(listing) {
   return listing.isPaid === false;
 }
 
-// ============================================================
-// getPhotos
-// ============================================================
 function getPhotos(listing) {
   if (!listing) return [];
   const arr =
@@ -223,6 +215,7 @@ function ListingCard({
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  const status = normalizeStatus(listing.status);   // ⬅️ NORMALIZED
   const categorySlug = categoryToString(listing.category);
   const category = getCategory(categorySlug);
   const CategoryIcon = getCategoryIcon(category?.iconKey) || Tag;
@@ -237,13 +230,10 @@ function ListingCard({
   const photos = getPhotos(listing);
   const hasManyPhotos = photos.length > 1;
 
-  const isLiveOrReserved =
-    listing.status === "live" || listing.status === "reserved";
+  const isLiveOrReserved = status === "live" || status === "reserved";
   const featured = isBoostActive(listing);
   const leading = isLeadingActive(listing);
-  const viewable = ["live", "reserved", "paused", "sold"].includes(
-    listing.status
-  );
+  const viewable = ["live", "reserved", "paused", "sold"].includes(status);
   const detailTo = `/mali/${listing.id}`;
 
   const Thumb = (
@@ -302,7 +292,7 @@ function ListingCard({
     <div
       className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl border-[1.5px] bg-white p-2 shadow-[0_1px_2px_rgba(1,25,87,0.04)] transition-all duration-200 hover:border-gold sm:p-2.5 ${
         featured ? "border-gold" : "border-sandline"
-      } ${listing.status === "sold" ? "opacity-80" : ""}`}
+      } ${status === "sold" ? "opacity-80" : ""}`}
     >
       <div className="flex min-w-0 items-start gap-3">
         {viewable ? (
@@ -339,7 +329,7 @@ function ListingCard({
 
           {isUnpaid(listing) &&
             listing.feeAmount > 0 &&
-            listing.status !== "approved_pending_payment" && (
+            status !== "approved_pending_payment" && (
               <div
                 className="mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5"
                 style={{
@@ -386,7 +376,7 @@ function ListingCard({
             )}
           </div>
 
-          {listing.status === "needs_edit" && (
+          {status === "needs_edit" && (
             <div
               className="mt-1.5 rounded-lg px-2.5 py-1.5"
               style={{ background: "rgba(180,83,9,0.08)" }}
@@ -401,8 +391,7 @@ function ListingCard({
             </div>
           )}
 
-          {/* ⬅️ REKEBISHO: pending_approval banner */}
-          {listing.status === "pending_approval" && (
+          {status === "pending_approval" && (
             <div
               className="mt-1.5 rounded-lg px-2.5 py-1.5"
               style={{ background: "rgba(37,99,235,0.08)" }}
@@ -419,7 +408,7 @@ function ListingCard({
             </div>
           )}
 
-          {listing.status === "approved_pending_payment" && (
+          {status === "approved_pending_payment" && (
             <div
               className="mt-1.5 rounded-lg px-2.5 py-1.5"
               style={{ background: "rgba(47,109,79,0.08)" }}
@@ -436,7 +425,7 @@ function ListingCard({
             </div>
           )}
 
-          {listing.status === "paid_pending_approval" && (
+          {status === "paid_pending_approval" && (
             <div
               className="mt-1.5 rounded-lg px-2.5 py-1.5"
               style={{ background: "rgba(37,99,235,0.08)" }}
@@ -453,7 +442,7 @@ function ListingCard({
             </div>
           )}
 
-          {listing.status === "rejected" && listing.rejectionReason && (
+          {status === "rejected" && listing.rejectionReason && (
             <p
               style={{ color: COLORS.rust }}
               className="mt-1.5 line-clamp-2 rounded-lg bg-red-50 px-2 py-1 text-[11px]"
@@ -465,7 +454,7 @@ function ListingCard({
       </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-sandline pt-2.5">
-        {listing.status === "approved_pending_payment" && (
+        {status === "approved_pending_payment" && (
           <button
             type="button"
             onClick={() => onPay?.(listing.id, listing)}
@@ -478,7 +467,7 @@ function ListingCard({
           </button>
         )}
 
-        {listing.status === "needs_edit" && (
+        {status === "needs_edit" && (
           <button
             type="button"
             onClick={() => onEdit?.(listing.id)}
@@ -491,7 +480,7 @@ function ListingCard({
           </button>
         )}
 
-        {String(listing.status || "").toLowerCase() === "draft" && (
+        {["draft", "pending_payment"].includes(status) && (
           <button
             type="button"
             onClick={() => onSubmitReview?.(listing.id)}
@@ -505,7 +494,7 @@ function ListingCard({
         )}
 
         {isUnpaid(listing) &&
-          listing.status !== "approved_pending_payment" && (
+          status !== "approved_pending_payment" && (
             <button
               type="button"
               onClick={() => onPay?.(listing.id, listing)}
@@ -552,7 +541,7 @@ function ListingCard({
           </>
         )}
 
-        {listing.status === "live" && (
+        {status === "live" && (
           <ActionBtn
             icon={Pause}
             label={t("Simamisha", "Pause")}
@@ -561,7 +550,7 @@ function ListingCard({
             disabled={isBusy}
           />
         )}
-        {listing.status === "paused" && (
+        {status === "paused" && (
           <ActionBtn
             icon={Play}
             label={t("Endelea", "Resume")}
@@ -647,7 +636,9 @@ export default function MyListings({
     if (filter === "unpaid") {
       list = list.filter((l) => isUnpaid(l));
     } else if (filter !== "all") {
-      list = list.filter((l) => l.status === filter);
+      list = list.filter(
+        (l) => normalizeStatus(l.status) === filter
+      );
     }
 
     if (searchQuery.trim()) {
@@ -669,7 +660,7 @@ export default function MyListings({
     );
   }, [listings, filter, searchQuery]);
 
-  // ⬅️ REKEBISHO: ongeza filter ya pending_approval
+  // ⬅️ Filter keys ni LOWERCASE (normalizeStatus inabadilisha)
   const filters = [
     { key: "all", label: { sw: "Zote", en: "All" } },
     { key: "unpaid", label: { sw: "Haijalipwa", en: "Unpaid" } },
@@ -686,7 +677,7 @@ export default function MyListings({
       key: "paid_pending_approval",
       label: { sw: "Inasubiri Idhini", en: "Pending Approval" },
     },
-    { key: "in_review", label: { sw: "Inasubiri Admin", en: "Admin Review" } },
+    { key: "in_review", label: { sw: "Inakaguliwa", en: "In Review" } },
     { key: "live", label: { sw: "Hai", en: "Live" } },
     { key: "reserved", label: { sw: "Imehifadhiwa", en: "Reserved" } },
     { key: "sold", label: { sw: "Imeuzwa", en: "Sold" } },
@@ -783,12 +774,14 @@ export default function MyListings({
 
   const handleSubmitReview = async (id) => {
     if (busy[id]) return;
+    setBusy((b) => ({ ...b, [id]: "submit" }));
     try {
       await api.post(`/listings/${id}/publish/`, {});
-      // ⬅️ REKEBISHO: status mpya ni PENDING_APPROVAL (sio in_review)
       saveMyListings(
         getMyListings().map((l) =>
-          String(l.id) === String(id) ? { ...l, status: "pending_approval" } : l
+          String(l.id) === String(id)
+            ? { ...l, status: "PENDING_APPROVAL" }
+            : l
         )
       );
       toast.success(
@@ -803,6 +796,12 @@ export default function MyListings({
           err?.message ||
           t("Imeshindwa kuwasilisha.", "Failed to submit.")
       );
+    } finally {
+      setBusy((b) => {
+        const n = { ...b };
+        delete n[id];
+        return n;
+      });
     }
   };
 
@@ -857,7 +856,7 @@ export default function MyListings({
               const count = listings.filter((l) => {
                 if (f.key === "all") return true;
                 if (f.key === "unpaid") return isUnpaid(l);
-                return l.status === f.key;
+                return normalizeStatus(l.status) === f.key;
               }).length;
               return (
                 <button

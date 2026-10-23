@@ -202,6 +202,11 @@ function normalizeTransactionRow(raw) {
       `Transaction #${raw.id}`,
     property: raw.listing_title || null,
     listingId: raw.listing,
+    reservationExpiresAt:
+      raw.reservation_expires_at ||
+      raw.reservation?.expires_at ||
+      raw.reserved_until ||
+      null,
     amount,
     status,
     paymentStatus: raw.payment_status,
@@ -416,9 +421,18 @@ export async function payReservationAsync(id, opts = {}) {
       payment_method: opts.paymentMethod || undefined,
       phone: opts.phone || undefined,
     });
-    // FimiPay order — caller polls status
-    if (raw?.order_id && !isCredits) {
-      return { ok: true, pending: true, orderId: raw.order_id, checkoutUrl: raw.payment_url || raw.checkout_url || null, transaction: _findTx(id) };
+    // FimiPay order — caller polls status.
+    // Backend inarudisha { reservation_id, payment_status, fimipay: {...} }
+    const fp = raw?.fimipay || raw;
+    if (fp?.order_id && !isCredits) {
+      return {
+        ok: true,
+        pending: true,
+        orderId: fp.order_id,
+        reference: fp.order_id,
+        checkoutUrl: fp.payment_url || fp.checkout_url || null,
+        transaction: _findTx(id),
+      };
     }
     const tx = normalizeTransactionRow(raw) || normalizeMyTransaction(raw);
     if (tx) _upsertTx(tx);
@@ -526,4 +540,53 @@ export function getDealTranscript(dealId, currentUserId = null, lang = "sw") {
   const tx = _findTx(dealId);
   if (!tx) return null;
   return { deal: tx, meta: { dealRoomId: tx.id, listingTitle: tx.listingTitle, buyerName: tx.buyerName, sellerName: tx.sellerName, status: tx.status }, messages: [] };
+}
+
+// ============================================================
+// EXTEND RESERVATION (ada inalipwa kwanza)
+// ============================================================
+export async function extendReservationAsync(id, additionalHours, opts = {}) {
+  if (!id) return { ok: false, error: new Error("Transaction id is required") };
+  try {
+    const raw = await _txApi.extendReservation(id, additionalHours, {
+      payment_reference: opts.paymentReference || undefined,
+      payment_method: opts.paymentMethod || undefined,
+      phone: opts.phone || undefined,
+    });
+    const fp = raw?.fimipay;
+    if (fp) {
+      return {
+        ok: true,
+        pending: true,
+        orderId: fp.order_id || null,
+        reference: fp.order_id || null,
+        checkoutUrl: fp.payment_url || fp.checkout_url || null,
+        extensionId: raw.extension_id,
+        fee: Number(raw.fee) || 0,
+      };
+    }
+    return { ok: true, pending: false, expiresAt: raw?.expires_at || null };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+// Subiri hadi expires_at ya reservation iongezeke (malipo yamethibitishwa)
+export async function pollExtensionAsync(
+  id,
+  previousExpiresAt,
+  { attempts = 15, intervalMs = 4000 } = {}
+) {
+  const before = previousExpiresAt ? new Date(previousExpiresAt).getTime() : 0;
+  for (let i = 0; i < attempts; i++) {
+    await new Promise((r) => setTimeout(r, intervalMs));
+    try {
+      const raw = await _txApi.detail(id);
+      const exp = raw?.reservation?.expires_at;
+      if (exp && new Date(exp).getTime() > before) {
+        return { ok: true, expiresAt: exp };
+      }
+    } catch { /* retry */ }
+  }
+  return { ok: false, error: new Error("Extension not confirmed yet") };
 }

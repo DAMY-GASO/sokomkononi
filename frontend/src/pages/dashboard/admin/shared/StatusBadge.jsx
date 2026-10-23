@@ -1,6 +1,7 @@
 import React from "react";
 
 const CONFIG = {
+  // ── User / account ─────────────────────────────────────
   active:      { label: { sw: "Hai", en: "Active" },     tone: "success" },
   pending:     { label: { sw: "Inasubiri", en: "Pending" }, tone: "warn" },
   inactive:    { label: { sw: "Haifanyi Kazi", en: "Inactive" }, tone: "muted" },
@@ -8,14 +9,24 @@ const CONFIG = {
   verified:    { label: { sw: "Imethibitishwa", en: "Verified" }, tone: "success" },
   unverified:  { label: { sw: "Haijathibitishwa", en: "Unverified" }, tone: "muted" },
   rejected:    { label: { sw: "Imekataliwa", en: "Rejected" }, tone: "danger" },
+
+  // ── Listing statuses (backend uses UPPERCASE) ──────────
   live:            { label: { sw: "Hai", en: "Live" },              tone: "success" },
   reserved:        { label: { sw: "Ina Reservation", en: "Reserved" }, tone: "gold" },
   in_review:       { label: { sw: "Inakaguliwa", en: "In Review" }, tone: "warn" },
   pending_payment: { label: { sw: "Inasubiri Malipo", en: "Pending Payment" }, tone: "warn" },
+  pending_approval:{ label: { sw: "Inasubiri Idhini ya Admin", en: "Pending Admin Review" }, tone: "warn" },
   draft:           { label: { sw: "Rasimu", en: "Draft" }, tone: "muted" },
   paused:          { label: { sw: "Imesimama", en: "Paused" }, tone: "muted" },
   sold:            { label: { sw: "Imeuzwa", en: "Sold" },          tone: "royal" },
   expired:         { label: { sw: "Muda Umeisha", en: "Expired" },  tone: "muted" },
+
+  // ── Moderation / payment statuses ──────────────────────
+  needs_edit:               { label: { sw: "Inahitaji Uhariri", en: "Needs Edit" }, tone: "warn" },
+  approved_pending_payment: { label: { sw: "Inasubiri Malipo", en: "Awaiting Payment" }, tone: "warn" },
+  paid_pending_approval:    { label: { sw: "Inasubiri Idhini", en: "Pending Final Approval" }, tone: "royal" },
+
+  // ── Transaction / deal statuses ────────────────────────
   completed:                 { label: { sw: "Imekamilika", en: "Completed" }, tone: "success" },
   negotiating:               { label: { sw: "Inajadiliwa", en: "Negotiating" }, tone: "warn" },
   offer_sent:                { label: { sw: "Ofa Imetumwa", en: "Offer Sent" }, tone: "warn" },
@@ -25,22 +36,27 @@ const CONFIG = {
   payment_proof_submitted:   { label: { sw: "Uthibitisho Umetumwa", en: "Proof Submitted" }, tone: "warn" },
   disputed:                  { label: { sw: "Mgogoro", en: "Disputed" }, tone: "danger" },
   cancelled:                 { label: { sw: "Imeghairiwa", en: "Cancelled" }, tone: "muted" },
+
+  // ── Support / ticket ───────────────────────────────────
   open:        { label: { sw: "Wazi", en: "Open" },        tone: "danger" },
   in_progress: { label: { sw: "Inaendelea", en: "In Progress" }, tone: "warn" },
   resolved:    { label: { sw: "Imetatuliwa", en: "Resolved" }, tone: "success" },
   closed:      { label: { sw: "Imefungwa", en: "Closed" }, tone: "muted" },
   approved:    { label: { sw: "Imeidhinishwa", en: "Approved" }, tone: "success" },
+
+  // ── Inspection / reservation flow ──────────────────────
   reserved_paid:         { label: { sw: "Reservation Imelipwa", en: "Reservation Paid" }, tone: "success" },
   inspecting:            { label: { sw: "Inakaguliwa", en: "Inspecting" }, tone: "royal" },
   decided_accept:        { label: { sw: "Imekubaliwa", en: "Accepted" }, tone: "success" },
   decided_reject:        { label: { sw: "Imekataliwa", en: "Rejected" }, tone: "danger" },
   awaiting_confirmation: { label: { sw: "Inasubiri Uthibitisho", en: "Awaiting Confirmation" }, tone: "royal" },
-
-  // ── Moderation statuses mpya ─────────────────────────────
-  needs_edit:              { label: { sw: "Inahitaji Uhariri", en: "Needs Edit" }, tone: "warn" },
-  approved_pending_payment: { label: { sw: "Inasubiri Malipo", en: "Awaiting Payment" }, tone: "warn" },
-  paid_pending_approval:   { label: { sw: "Inasubiri Idhini", en: "Pending Final Approval" }, tone: "royal" },
 };
+
+// ── Normalize: PENDING_APPROVAL → pending_approval ─────
+function normalizeStatus(status) {
+  if (status == null) return "";
+  return String(status).trim().toLowerCase();
+}
 
 const TONES = {
   success: "bg-[#2F6D4F]/10 text-[color:rgb(var(--c-success-text))] border-[#2F6D4F]/25",
@@ -52,7 +68,8 @@ const TONES = {
 };
 
 export default function StatusBadge({ status, lang = "sw" }) {
-  const c = CONFIG[status] || CONFIG.pending;
+  const key = normalizeStatus(status);
+  const c = CONFIG[key] || CONFIG.pending;
   return (
     <span className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none ${TONES[c.tone] || TONES.muted}`}>
       {c.label?.[lang] || c.label?.sw || status}

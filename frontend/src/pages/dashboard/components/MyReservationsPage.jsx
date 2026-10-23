@@ -25,6 +25,15 @@ import {
 import { COLORS, getCategory, formatTZS } from "./shared.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import {
+  getReservationTiers,
+  calcReservationFee,
+} from "../../../config/feePolicy.js";
+import { checkCredit } from "../../../config/userCreditsStore.js";
+import {
+  extendReservationAsync,
+  pollExtensionAsync,
+} from "../../../config/transactionsStore.js";
+import {
   useDeals,
   updateDeal as updateDealInStore,
   hydrateDealsFromApi,
@@ -126,15 +135,85 @@ function useCountdown(expiresAt, lang) {
 }
 
 // ============================================================
+// EXTEND (ada inalipwa KWANZA, kisha muda unaongezwa)
+// ============================================================
+async function runExtension({ deal, hours, user, lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const fee = calcReservationFee(hours);
+  let opts = {};
+
+  if (fee > 0) {
+    const credit = checkCredit(user?.id, "reservation");
+    if (
+      credit?.hasCredit &&
+      confirm(
+        t(
+          `Tumia reservation credit 1 kuongeza saa ${hours}?`,
+          `Use 1 reservation credit to extend by ${hours} hours?`
+        )
+      )
+    ) {
+      opts = { paymentReference: "credits" };
+    } else {
+      const ok = confirm(
+        t(
+          `Ada ya kuongeza saa ${hours} ni ${formatTZS(fee)}. Endelea kulipa?`,
+          `The fee to extend by ${hours} hours is ${formatTZS(fee)}. Continue to pay?`
+        )
+      );
+      if (!ok) return { cancelled: true };
+      const phone = prompt(
+        t(
+          "Namba ya simu ya Mobile Money (mf. 255712345678)",
+          "Mobile Money phone number (e.g. 255712345678)"
+        ),
+        user?.phone || deal.buyerPhone || ""
+      );
+      if (!phone) return { cancelled: true };
+      opts = { paymentMethod: "mobile", phone };
+    }
+  }
+
+  const res = await extendReservationAsync(deal.transactionId, hours, opts);
+  if (!res.ok) throw res.error;
+
+  if (!res.pending) return { paid: true };
+
+  if (res.checkoutUrl) {
+    try {
+      window.open(res.checkoutUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      /* noop */
+    }
+  }
+  alert(
+    t(
+      "Malipo yameanzishwa. Kamilisha malipo; muda utaongezwa mara moja baada ya malipo kuthibitishwa.",
+      "Payment started. Complete the payment; the time is added as soon as it is confirmed."
+    )
+  );
+  const poll = await pollExtensionAsync(
+    deal.transactionId,
+    deal.reservationExpiresAt
+  );
+  return { paid: poll.ok, pending: !poll.ok };
+}
+
+// ============================================================
 // RESERVATION CARD
 // ============================================================
 function ReservationCard({ deal, lang, onOpen, onRefresh }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const category = getCategory(deal.category);
   const Icon = getCategoryIcon(category?.iconKey);
   const status = getStatus(lang)[deal.status];
   const cd = useCountdown(
-    deal.status === "reserved" ? deal.reservationExpiresAt : null,
+    ["reserved", "awaiting_final_payment", "payment_proof_submitted"].includes(
+      deal.status
+    )
+      ? deal.reservationExpiresAt
+      : null,
     lang
   );
   const price =
@@ -166,15 +245,23 @@ function ReservationCard({ deal, lang, onOpen, onRefresh }) {
     }
     setActionBusy("extend");
     try {
-      await transactionsApi.extendReservation(
-        deal.transactionId,
-        additionalHours
-      );
+      const r = await runExtension({
+        deal,
+        hours: additionalHours,
+        user,
+        lang,
+      });
+      if (r.cancelled) return;
       alert(
-        t(
-          `Muda umeongezwa kwa saa ${additionalHours}.`,
-          `Extended by ${additionalHours} hours.`
-        )
+        r.paid
+          ? t(
+              `Muda umeongezwa kwa saa ${additionalHours}.`,
+              `Extended by ${additionalHours} hours.`
+            )
+          : t(
+              "Malipo bado hayajathibitishwa. Angalia tena baadaye.",
+              "Payment not confirmed yet. Please check again shortly."
+            )
       );
       onRefresh?.();
     } catch (err) {
@@ -627,10 +714,36 @@ export default function MyReservationsPage() {
         <ExpiringModal
           deal={expiringDeal}
           lang={lang}
-          onRenew={() => {
-            if (expiringDeal) {
-              handleDismissModal(expiringDeal.id);
-              navigate("/dashboard/buyer/reservations");
+          onRenew={async () => {
+            if (!expiringDeal) return;
+            const target = expiringDeal;
+            handleDismissModal(target.id);
+            if (!target.transactionId) return;
+            try {
+              // Tumia tier halali (backend inakataa saa zisizo kwenye tiers)
+              const active = getReservationTiers()
+                .filter((x) => x.is_active)
+                .sort((a, b) => a.hours - b.hours);
+              const tier = active.find((x) => x.hours === 24) || active[0];
+              if (!tier) throw new Error(
+                lang === "sw" ? "Hakuna muda wa kuongeza uliopo." : "No extension tier available."
+              );
+              const r = await runExtension({
+                deal: target,
+                hours: tier.hours,
+                user,
+                lang,
+              });
+              if (r.cancelled) return;
+              await handleRefresh();
+            } catch (err) {
+              alert(
+                err?.data?.detail ||
+                  err?.message ||
+                  (lang === "sw"
+                    ? "Imeshindwa kuongeza muda."
+                    : "Failed to extend.")
+              );
             }
           }}
           onCancel={() => {

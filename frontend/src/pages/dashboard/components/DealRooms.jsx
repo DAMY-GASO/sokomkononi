@@ -1432,9 +1432,17 @@ function DealDetail({
   const isSeller = side === "seller";
   const lastOffer = [...(deal.messages || [])]
     .reverse()
-    .find((m) => m.offerAmount);
+    .find(
+      (m) =>
+        m.offerAmount &&
+        !["declined", "rejected"].includes(
+          String(m.status || "").toLowerCase()
+        )
+    );
   const iMadeLastOffer = lastOffer?.sender === "me";
-  const canRespond = deal.currentOffer > 0 && !iMadeLastOffer;
+  // Kubali/Kataa inaonekana kwa upande uliopokea ofa tu
+  // (muuzaji akipokea ofa ya mnunuzi, mnunuzi akipokea bei ya muuzaji)
+  const canRespond = deal.currentOffer > 0 && !!lastOffer && !iMadeLastOffer;
 
   const waitingText = iMadeLastOffer
     ? lang === "sw"
@@ -1745,6 +1753,31 @@ function DealDetail({
             </div>
           );
         })}
+
+        {/* Ujumbe wa muuzaji baada ya ofa kukubaliwa (unaonekana kwa mnunuzi) */}
+        {deal.status === "accepted" &&
+          isBuyer &&
+          !deal.reservationPaidAt &&
+          !deal.transactionId && (
+            <div className="flex justify-start">
+              <div
+                style={{
+                  background: "white",
+                  color: COLORS.night,
+                  borderColor: COLORS.sandLine,
+                }}
+                className="border rounded-2xl px-4 py-2.5 max-w-[75%] text-sm"
+              >
+                {lang === "sw"
+                  ? `Nimekubaliana na ofa yako ya ${formatTZS(
+                      deal.currentOffer
+                    )}. Sasa unaweza kulipia ada ya kushikilia ili mali isichukuliwe mpaka utakaporejea. Baada ya kulipia, bofya kitufe cha "Wasiliana na Muuzaji" ili kuwasiliana nami moja kwa moja.`
+                  : `I've agreed to your offer of ${formatTZS(
+                      deal.currentOffer
+                    )}. You can now pay the reservation fee so the property isn't taken before you return. After paying, click the "Contact Seller" button to reach me directly.`}
+              </div>
+            </div>
+          )}
       </div>
 
       {/* Negotiation actions */}
@@ -1891,12 +1924,8 @@ function DealDetail({
               className="text-body-sm font-medium max-w-md"
             >
               {lang === "sw"
-                ? `Nimekubaliana na ofa yako ya ${formatTZS(
-                    deal.currentOffer
-                  )}. Sasa unaweza kulipia ada ya kushikilia ili mali isichukuliwe mpaka utakaporejea, ili uweze kuwasiliana nami moja kwa moja.`
-                : `I've accepted your offer of ${formatTZS(
-                    deal.currentOffer
-                  )}. You can now pay the reservation fee so the property isn't taken before you return, and so you can contact me directly.`}
+                ? "Hatua inayofuata: weka reservation ili kufungua mawasiliano ya muuzaji."
+                : "Next step: place a reservation to unlock the seller's contact."}
             </span>
             <button
               onClick={() => setReserveOpen(true)}
@@ -2572,7 +2601,13 @@ export default function DealRooms({
 
     const lastOffer = [...(deal.messages || [])]
       .reverse()
-      .find((m) => m.offerAmount);
+      .find(
+        (m) =>
+          m.offerAmount &&
+          !["declined", "rejected"].includes(
+            String(m.status || "").toLowerCase()
+          )
+      );
     if (!lastOffer) return;
 
     if (lastOffer.sender === "me") return;
@@ -2592,8 +2627,27 @@ export default function DealRooms({
     }
 
     if (newStatus === "declined") {
+      const roomId = deal.dealRoomId || deal.id;
+      // Weka alama ya "declined" kwenye ofa hii mara moja (UI)
+      updateDeal(id, (prev) => ({
+        ...prev,
+        currentOffer: 0,
+        messages: (prev.messages || []).map((m) =>
+          String(m.id) === String(lastOffer.id)
+            ? { ...m, status: "declined" }
+            : m
+        ),
+      }));
       try {
-        await dealsApi.sendDealMessage(deal.dealRoomId || deal.id, {
+        // Jaribu endpoint ya backend ili ofa ibaki declined baada ya refresh
+        try {
+          await dealsApi.declineOffer(roomId, lastOffer.id);
+        } catch (declineErr) {
+          if (declineErr?.status !== 404 && declineErr?.status !== 501) {
+            throw declineErr;
+          }
+        }
+        await dealsApi.sendDealMessage(roomId, {
           text:
             lang === "sw"
               ? `Ofa ya ${formatTZS(
@@ -2603,7 +2657,6 @@ export default function DealRooms({
                   lastOffer.offerAmount
                 )} was declined. Please make another offer.`,
         });
-        updateDeal(id, { currentOffer: 0 });
       } catch (msgErr) {
         console.warn("[DealRooms] decline message failed:", msgErr);
       }

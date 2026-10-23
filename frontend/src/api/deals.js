@@ -23,6 +23,9 @@ export const dealsApi = {
   acceptOffer: (dealRoomId, offerId) =>
     api.post(`/deals/${dealRoomId}/accept-offer/`, { offer_id: offerId }),
 
+  declineOffer: (dealRoomId, offerId) =>
+    api.post(`/deals/${dealRoomId}/decline-offer/`, { offer_id: offerId }),
+
   // ── Cancel ───────────────────────────────────────────────
   cancel: (dealRoomId, reason = "") =>
     api.post(`/deals/${dealRoomId}/cancel/`, { reason }),

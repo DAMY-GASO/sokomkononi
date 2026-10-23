@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
   ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle,
-  Wallet, Package, Receipt, Info,
+  Wallet, Package, Receipt, Info, Send,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom"; // ⬅️ IMEONGEZWA
+import { useNavigate } from "react-router-dom";
 import { COLORS, formatTZS, calculateListingFee } from "./shared";
 import {
   useActiveCategories, getCategoryIcon, getCategoryIdByKey,
@@ -158,7 +158,7 @@ export default function PostPropertyForm({
   onGoToBoost = () => {},
 }) {
   const isEdit = mode === "edit" && !!initialData;
-  const navigate = useNavigate(); // ⬅️ KWA AJILI YA BACK ARROW
+  const navigate = useNavigate();
 
   const { lang } = useLanguage();
   const { user } = useAuth();
@@ -599,21 +599,45 @@ export default function PostPropertyForm({
         }
       }
 
+      // ═══════════════════════════════════════════════════════════
+      // SUBMIT_FOR_REVIEW_FIRST — Chaguo B (publish, kisha admin)
+      // ═══════════════════════════════════════════════════════════
       if (SUBMIT_FOR_REVIEW_FIRST || listingFeeDisabled) {
+        let publishOk = false;
+        let publishErr = null;
         try {
           await api.post(`/listings/${listingId}/publish/`, {});
+          publishOk = true;
         } catch (pubErr) {
+          publishErr = pubErr;
           console.warn("[PostPropertyForm] publish failed:", pubErr);
-          const msg = t(
-            "Tangazo limehifadhiwa lakini halijatumwa kwa admin. Fungua Mali Zangu na ubonyeze \"Wasilisha kwa Admin\".",
-            "Your listing was saved but not sent to admin. Open My Listings and press \"Submit for Review\"."
-          );
-          setWarnings((w) => (w.includes(msg) ? w : [...w, msg]));
         }
 
         setCreatedListing(created);
         setFeeAmount(0);
-        setStage("done");
+
+        if (publishOk) {
+          setStage("done");
+          onSubmit?.(created);
+          return;
+        }
+
+        // ⬅️ publish imefeli — onyesha error halisi, usiruke done
+        setError(
+          t(
+            `Tangazo limehifadhiwa lakini halijatumwa kwa admin (${
+              publishErr?.data?.detail ||
+              publishErr?.message ||
+              "network error"
+            }). Nenda Mali Zangu na ubonyeze "Wasilisha kwa Admin".`,
+            `Listing saved but not submitted to admin (${
+              publishErr?.data?.detail ||
+              publishErr?.message ||
+              "network error"
+            }). Go to My Listings and click "Submit for Review".`
+          )
+        );
+        setStage("review");
         onSubmit?.(created);
         return;
       }
@@ -669,6 +693,26 @@ export default function PostPropertyForm({
             : null) ||
           err?.message ||
           t("Imeshindwa kuweka listing.", "Failed to create listing.")
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── Retry publish (kwa stage === "review" na feeAmount === 0) ─
+  const handleRetryPublish = async () => {
+    if (!createdListing) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await api.post(`/listings/${createdListing.id}/publish/`, {});
+      setStage("done");
+      onSubmit?.(createdListing);
+    } catch (err) {
+      setError(
+        err?.data?.detail ||
+          err?.message ||
+          t("Imeshindwa kuwasilisha.", "Failed to submit.")
       );
     } finally {
       setSubmitting(false);
@@ -817,6 +861,8 @@ export default function PostPropertyForm({
   // REVIEW STAGE (create mode pekee)
   // ═══════════════════════════════════════════════════════════
   if (!isEdit && (stage === "review" || stage === "paying")) {
+    const needsRetryPublish = stage === "review" && createdListing && feeAmount === 0 && !!error;
+
     return (
       <div
         className="w-full flex items-center justify-center p-6"
@@ -830,137 +876,34 @@ export default function PostPropertyForm({
             >
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ background: COLORS.green }}
+                style={{ background: needsRetryPublish ? COLORS.rust : COLORS.green }}
               >
-                <Check color={COLORS.sand} size={26} />
+                {needsRetryPublish ? (
+                  <AlertTriangle color={COLORS.sand} size={26} />
+                ) : (
+                  <Check color={COLORS.sand} size={26} />
+                )}
               </div>
               <h2 className="h-title mb-2">
-                {t("Listing imeundwa", "Listing Created")}
+                {needsRetryPublish
+                  ? t("Tangazo limehifadhiwa", "Listing Saved")
+                  : t("Listing imeundwa", "Listing Created")}
               </h2>
               <p className="text-secondary text-sm mb-5">
-                {t(
-                  "Lipa ada ili listing iwasilishwe kwa admin kuidhinisha.",
-                  "Pay the fee so the listing is submitted to admin for approval."
-                )}
-              </p>
-
-              <div
-                className="rounded-xl border p-4 mb-4"
-                style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-              >
-                <div className="flex justify-between text-sm">
-                  <span className="text-secondary">
-                    {t("Ada ya Kuchapisha", "Listing Fee")}
-                  </span>
-                  <span className="font-bold" style={{ color: COLORS.rust }}>
-                    {feeAmount > 0
-                      ? formatTZS(feeAmount)
-                      : t("Haijawekwa", "Not set")}
-                  </span>
-                </div>
-
-                {feeAmount === 0 && (
-                  <p
-                    className="mt-2 text-[11px] leading-snug"
-                    style={{ color: COLORS.rust }}
-                  >
-                    {t(
-                      "Ada ya kuchapisha haijawekwa kwa kategoria hii. Wasiliana na Admin ili kuweka kiasi kabla ya kuendelea.",
-                      "No listing fee is configured for this category. Contact Admin to set an amount before continuing."
+                {needsRetryPublish
+                  ? t(
+                      "Tangazo lako limehifadhiwa lakini halijatumwa kwa admin. Bonyeza kitufe hapa chini kujaribu tena.",
+                      "Your listing was saved but not sent to admin. Click the button below to retry."
+                    )
+                  : t(
+                      "Lipa ada ili listing iwasilishwe kwa admin kuidhinisha.",
+                      "Pay the fee so the listing is submitted to admin for approval."
                     )}
-                  </p>
-                )}
-              </div>
-
-              {hasCredit && (
-                <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col items-center gap-2 text-center">
-                  <div className="flex items-center gap-2">
-                    <Wallet size={16} color={COLORS.green} />
-                    <span className="text-body-sm text-[#2F6D4F] font-medium">
-                      {t(
-                        `Una Listing Credits ${listingCreditRemaining}`,
-                        `You have ${listingCreditRemaining} Listing Credits`
-                      )}
-                    </span>
-                  </div>
-                  <button
-                    onClick={handleUseCredit}
-                    className="w-full py-2.5 rounded-xl font-semibold text-body-sm bg-[#2F6D4F] text-white"
-                  >
-                    {t("Tumia Credit", "Use Credit")}
-                  </button>
-                </div>
-              )}
-
-              {listingBundles.length > 0 && (
-                <div className="flex justify-center gap-2 mb-4">
-                  <button
-                    onClick={() => setPaymentMode("flat")}
-                    className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border transition-colors"
-                    style={{
-                      background: paymentMode === "flat" ? COLORS.night : "white",
-                      color: paymentMode === "flat" ? COLORS.sand : COLORS.night,
-                      borderColor:
-                        paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
-                    }}
-                  >
-                    {t("Ada ya Kawaida", "Flat Fee")}
-                  </button>
-                  <button
-                    onClick={() => setPaymentMode("bundle")}
-                    className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border transition-colors"
-                    style={{
-                      background:
-                        paymentMode === "bundle" ? COLORS.night : "white",
-                      color:
-                        paymentMode === "bundle" ? COLORS.sand : COLORS.night,
-                      borderColor:
-                        paymentMode === "bundle" ? COLORS.night : COLORS.sandLine,
-                    }}
-                  >
-                    {t("Kifurushi (Bundle)", "Bundle Package")}
-                  </button>
-                </div>
-              )}
-
-              {paymentMode === "bundle" && listingBundles.length > 0 && (
-                <div className="flex flex-col gap-2 mb-4">
-                  {listingBundles.map((b) => {
-                    const selected = b.id === bundleId;
-                    const other = lang === "sw" ? "en" : "sw";
-                    const bName =
-                      b.name?.[lang] || b.name?.[other] || t("Kifurushi", "Bundle");
-                    return (
-                      <button
-                        key={b.id}
-                        onClick={() => setBundleId(b.id)}
-                        style={{
-                          borderColor: selected ? COLORS.gold : COLORS.sandLine,
-                          background: selected ? "rgba(232,163,61,0.08)" : "white",
-                        }}
-                        className="flex items-center justify-between gap-2 p-3 rounded-xl border text-left"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Package size={14} color={COLORS.gold} />
-                          <span className="text-sm font-semibold text-primary truncate">
-                            {bName}
-                          </span>
-                        </div>
-                        <span
-                          className="text-sm font-bold shrink-0"
-                          style={{ color: COLORS.rust }}
-                        >
-                          {formatTZS(b.price)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              </p>
 
               {error && (
                 <div
-                  className="rounded-lg px-3 py-2 mb-3 text-xs"
+                  className="rounded-lg px-3 py-2 mb-3 text-xs text-left"
                   style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
                 >
                   <AlertTriangle size={12} className="inline mr-1" />
@@ -979,31 +922,166 @@ export default function PostPropertyForm({
                 </div>
               )}
 
-              <button
-                onClick={
-                  isFreeCategory || listingFeeDisabled
-                    ? handleFreeSubmit
-                    : paymentMode === "flat"
-                      ? () => setStage("paying")
-                      : handleBeginBundlePurchase
-                }
-                disabled={
-                  submitting ||
-                  (feeAmount === 0 && !isFreeCategory && !listingFeeDisabled) ||
-                  (paymentMode === "bundle" && !selectedBundle)
-                }
-                style={{
-                  background: COLORS.gold,
-                  color: COLORS.night,
-                }}
-                className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50"
-              >
-                {feeAmount === 0
-                  ? t("Ada haijawekwa", "Fee not set")
-                  : paymentMode === "flat"
-                    ? t(`Lipa ${formatTZS(feeAmount)}`, `Pay ${formatTZS(feeAmount)}`)
-                    : t("Nunua Kifurushi", "Buy Bundle")}
-              </button>
+              {/* ⬅️ RETRY PUBLISH — inaonekana tu kama publish ilifeli */}
+              {needsRetryPublish && (
+                <button
+                  onClick={handleRetryPublish}
+                  disabled={submitting}
+                  style={{ background: COLORS.green, color: "white" }}
+                  className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60 mb-3"
+                >
+                  {submitting ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Send size={16} />
+                  )}
+                  {t("Jaribu Tena Kuwasilisha", "Retry Submit to Admin")}
+                </button>
+              )}
+
+              {!needsRetryPublish && (
+                <>
+                  <div
+                    className="rounded-xl border p-4 mb-4"
+                    style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
+                  >
+                    <div className="flex justify-between text-sm">
+                      <span className="text-secondary">
+                        {t("Ada ya Kuchapisha", "Listing Fee")}
+                      </span>
+                      <span className="font-bold" style={{ color: COLORS.rust }}>
+                        {feeAmount > 0                          ? formatTZS(feeAmount)
+                          : t("Haijawekwa", "Not set")}
+                      </span>
+                    </div>
+
+                    {feeAmount === 0 && (
+                      <p
+                        className="mt-2 text-[11px] leading-snug"
+                        style={{ color: COLORS.rust }}
+                      >
+                        {t(
+                          "Ada ya kuchapisha haijawekwa kwa kategoria hii. Wasiliana na Admin ili kuweka kiasi kabla ya kuendelea.",
+                          "No listing fee is configured for this category. Contact Admin to set an amount before continuing."
+                        )}
+                      </p>
+                    )}
+                  </div>
+
+                  {hasCredit && (
+                    <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col items-center gap-2 text-center">
+                      <div className="flex items-center gap-2">
+                        <Wallet size={16} color={COLORS.green} />
+                        <span className="text-body-sm text-[#2F6D4F] font-medium">
+                          {t(
+                            `Una Listing Credits ${listingCreditRemaining}`,
+                            `You have ${listingCreditRemaining} Listing Credits`
+                          )}
+                        </span>
+                      </div>
+                      <button
+                        onClick={handleUseCredit}
+                        className="w-full py-2.5 rounded-xl font-semibold text-body-sm bg-[#2F6D4F] text-white"
+                      >
+                        {t("Tumia Credit", "Use Credit")}
+                      </button>
+                    </div>
+                  )}
+
+                  {listingBundles.length > 0 && (
+                    <div className="flex justify-center gap-2 mb-4">
+                      <button
+                        onClick={() => setPaymentMode("flat")}
+                        className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border transition-colors"
+                        style={{
+                          background: paymentMode === "flat" ? COLORS.night : "white",
+                          color: paymentMode === "flat" ? COLORS.sand : COLORS.night,
+                          borderColor:
+                            paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
+                        }}
+                      >
+                        {t("Ada ya Kawaida", "Flat Fee")}
+                      </button>
+                      <button
+                        onClick={() => setPaymentMode("bundle")}
+                        className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border transition-colors"
+                        style={{
+                          background:
+                            paymentMode === "bundle" ? COLORS.night : "white",
+                          color:
+                            paymentMode === "bundle" ? COLORS.sand : COLORS.night,
+                          borderColor:
+                            paymentMode === "bundle" ? COLORS.night : COLORS.sandLine,
+                        }}
+                      >
+                        {t("Kifurushi (Bundle)", "Bundle Package")}
+                      </button>
+                    </div>
+                  )}
+
+                  {paymentMode === "bundle" && listingBundles.length > 0 && (
+                    <div className="flex flex-col gap-2 mb-4">
+                      {listingBundles.map((b) => {
+                        const selected = b.id === bundleId;
+                        const other = lang === "sw" ? "en" : "sw";
+                        const bName =
+                          b.name?.[lang] || b.name?.[other] || t("Kifurushi", "Bundle");
+                        return (
+                          <button
+                            key={b.id}
+                            onClick={() => setBundleId(b.id)}
+                            style={{
+                              borderColor: selected ? COLORS.gold : COLORS.sandLine,
+                              background: selected ? "rgba(232,163,61,0.08)" : "white",
+                            }}
+                            className="flex items-center justify-between gap-2 p-3 rounded-xl border text-left"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Package size={14} color={COLORS.gold} />
+                              <span className="text-sm font-semibold text-primary truncate">
+                                {bName}
+                              </span>
+                            </div>
+                            <span
+                              className="text-sm font-bold shrink-0"
+                              style={{ color: COLORS.rust }}
+                            >
+                              {formatTZS(b.price)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={
+                      isFreeCategory || listingFeeDisabled
+                        ? handleFreeSubmit
+                        : paymentMode === "flat"
+                          ? () => setStage("paying")
+                          : handleBeginBundlePurchase
+                    }
+                    disabled={
+                      submitting ||
+                      (feeAmount === 0 && !isFreeCategory && !listingFeeDisabled) ||
+                      (paymentMode === "bundle" && !selectedBundle)
+                    }
+                    style={{
+                      background: COLORS.gold,
+                      color: COLORS.night,
+                    }}
+                    className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50"
+                  >
+                    {feeAmount === 0
+                      ? t("Ada haijawekwa", "Fee not set")
+                      : paymentMode === "flat"
+                        ? t(`Lipa ${formatTZS(feeAmount)}`, `Pay ${formatTZS(feeAmount)}`)
+                        : t("Nunua Kifurushi", "Buy Bundle")}
+                  </button>
+                </>
+              )}
+
               <button
                 onClick={onGoToListings}
                 className="w-full py-2.5 mt-2 text-sm font-medium underline underline-offset-2"
@@ -1200,7 +1278,7 @@ export default function PostPropertyForm({
             if (isFlat) {
               amount = flat;
               amountKnown = true;
-              basis = ""; // ⬅️ Ondoa "Flat fee"
+              basis = "";
             } else {
               basis = t(
                 `${(rate * 100).toFixed(2).replace(/\.?0+$/, "")}% ya bei ya mali`,
