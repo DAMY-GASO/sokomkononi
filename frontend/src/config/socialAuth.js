@@ -34,7 +34,7 @@ export const APPLE_LOGIN_URL = `${API_ORIGIN}/accounts/apple/login/`;
 
 // ⬇️ Hii ni redirect_uri ambayo django-allauth itatuma kwa Apple.
 //    Lazima ilingane KABISA na "Return URLs" kwenye Apple Developer.
-export const APPLE_CALLBACK_URL = `${API_ORIGIN}/accounts/apple/login/callback/`;
+export const APPLE_CALLBACK_URL = `${API_ORIGIN}/accounts/apple/login/callback`;
 
 export const isGoogleEnabled = Boolean(GOOGLE_CLIENT_ID);
 export const isAppleEnabled = Boolean(APPLE_CLIENT_ID);
