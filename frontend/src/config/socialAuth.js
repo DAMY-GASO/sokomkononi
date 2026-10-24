@@ -1,24 +1,36 @@
 // ============================================================
 // socialAuth.js
-// Google Identity Services + Apple JS (in-browser popup flow).
-//
-// Vite bakes VITE_* into the bundle AT BUILD TIME. In Docker,
-// they must arrive via `ARG → ENV` before `npm run build`.
+// Google Identity Services (popup) + Apple via django-allauth (redirect)
 // ============================================================
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
-const APPLE_CLIENT_ID  = import.meta.env.VITE_APPLE_CLIENT_ID || "";
-const APPLE_REDIRECT_URI =
-  import.meta.env.VITE_APPLE_REDIRECT_URI ||
-  (typeof window !== "undefined" ? window.location.origin : "");
+
+// Services ID (sio App ID). Inatumika tu kuonyesha/kuficha kitufe.
+const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID || "";
+
+// URL ya backend inayoanzisha Apple login (django-allauth)
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "https://api.sokomkononi.co.tz/api";
+
+// /api ni suffix; tunahitaji origin pekee kwa /accounts/apple/login/
+const API_ORIGIN = (() => {
+  try {
+    const u = new URL(API_BASE_URL);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return "https://api.sokomkononi.co.tz";
+  }
+})();
+
+export const APPLE_LOGIN_URL = `${API_ORIGIN}/accounts/apple/login/`;
 
 export const isGoogleEnabled = Boolean(GOOGLE_CLIENT_ID);
-export const isAppleEnabled  = Boolean(APPLE_CLIENT_ID);
+export const isAppleEnabled = Boolean(APPLE_CLIENT_ID);
 
-// Dev-only diagnostics — verify env is picked up
 if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
   console.info("[socialAuth] Google client ID:", GOOGLE_CLIENT_ID ? "(set)" : "(missing)");
-  console.info("[socialAuth] Apple client ID:", APPLE_CLIENT_ID ? "(set)" : "(missing)");
+  console.info("[socialAuth] Apple client ID:", APPLE_CLIENT_ID || "(missing)");
+  console.info("[socialAuth] Apple login URL:", APPLE_LOGIN_URL);
 }
 
 // ── Script loader (cached) ─────────────────────────────────
@@ -40,7 +52,7 @@ function loadScript(src) {
   return scriptCache[src];
 }
 
-// ── Google ─────────────────────────────────────────────────
+// ── Google (HAIJAGUSWA) ────────────────────────────────────
 let googleInitialized = false;
 let googleCredentialHandler = null;
 
@@ -53,8 +65,6 @@ export async function renderGoogleButton(el, { onCredential, onError, locale = "
     return;
   }
 
-  // Merge into the existing handler so a second mount doesn't clobber
-  // the callback that Google's already-registered click handler points to.
   if (!googleCredentialHandler) googleCredentialHandler = {};
   googleCredentialHandler.onCredential = onCredential;
   googleCredentialHandler.onError = onError;
@@ -90,31 +100,10 @@ export async function renderGoogleButton(el, { onCredential, onError, locale = "
   });
 }
 
-// ── Apple ──────────────────────────────────────────────────
-let appleInitialized = false;
-
-export async function getAppleIdentity() {
+// ── Apple: redirect kwa django-allauth ─────────────────────
+export function redirectToAppleLogin() {
   if (!isAppleEnabled) throw new Error("Apple Sign-In not configured");
-  await loadScript("https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js");
-
-  if (!appleInitialized) {
-    window.AppleID.auth.init({
-      clientId: APPLE_CLIENT_ID,
-      scope: "name email",
-      redirectURI: APPLE_REDIRECT_URI,
-      usePopup: true,
-    });
-    appleInitialized = true;
-  }
-
-  const res = await window.AppleID.auth.signIn();
-  const idToken = res?.authorization?.id_token;
-  if (!idToken) throw new Error("Apple returned no id_token");
-  return {
-    idToken,
-    code: res.authorization.code || null,
-    user: res.user || null,
-  };
+  window.location.href = APPLE_LOGIN_URL;
 }
 
 export function isSocialCancel(err) {
@@ -126,4 +115,5 @@ export function isSocialCancel(err) {
   );
 }
 
+// Google login inatumia hii (haijaguswa)
 export { socialLoginAsync } from "./authStore.js";

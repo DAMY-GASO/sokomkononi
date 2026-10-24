@@ -15,7 +15,7 @@ import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
 import { initializeCategories, hydrateCategoriesFromApi } from "./config/categoriesStore.js";
 import { hydrateListingsFromApi, sweepGhostListings } from "./config/listingsStore.js";
 
-// ⬇️ Theme — weka kabla ya render ili kuzuia flash
+import AuthCallback from "./pages/Auth/AuthCallback.jsx"; 
 import { getTheme, applyTheme } from "./config/themeStore.js";
 
 import HomePage from "./pages/HomePage.jsx";
@@ -112,6 +112,7 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot-password" element={<ForgotpasswordPage />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
 
                 {/* PAYMENT RETURN — after FimiPay card redirect */}
                 <Route path="/payments/return" element={<PaymentReturnRoute />} />
