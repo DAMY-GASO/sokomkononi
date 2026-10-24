@@ -106,6 +106,26 @@ function failureMessage(status, lang) {
 }
 
 // ── Method row ─────────────────────────────────────────────
+// Backend error envelope: { error: { code, message, details?: [..], fields?: { f: [..] } } }
+// Rudisha ujumbe mahususi zaidi unaopatikana (details > fields > message), kisha fallback za zamani.
+function extractError(err) {
+  if (!err) return "";
+  if (typeof err === "string") return err;
+  const env = err?.data?.error ?? err?.error?.data?.error ?? null;
+  if (env) {
+    if (Array.isArray(env.details) && env.details[0]) return String(env.details[0]);
+    if (env.fields && typeof env.fields === "object") {
+      const first = Object.values(env.fields).flat()[0];
+      if (first) return String(first);
+    }
+    if (env.message) return String(env.message);
+  }
+  const d = err?.data;
+  if (typeof d?.detail === "string") return d.detail;
+  if (typeof d?.message === "string") return d.message;
+  return typeof err?.message === "string" ? err.message : "";
+}
+
 function MethodOption({ method, selected, onSelect, disabled }) {
   const Icon =
     method.icon === "card" ? CreditCard :
@@ -340,22 +360,15 @@ export default function PaymentGateway({
       res = await onInitiate({ methodKey: method.key, phone: cleanPhone });
     } catch (err) {
       setError(
-        err?.data?.detail && typeof err.data.detail === "string"
-          ? err.data.detail
-          : err?.message ||
-            (sw ? "Hitilafu ya mtandao. Jaribu tena." : "Network error. Try again.")
+        extractError(err) ||
+          (sw ? "Hitilafu ya mtandao. Jaribu tena." : "Network error. Try again.")
       );
       setStage("FAILED");
       return;
     }
 
     if (!res || res.ok === false) {
-      const detail =
-        (typeof res?.error?.data?.detail === "string" && res.error.data.detail) ||
-        (typeof res?.error?.data?.message === "string" && res.error.data.message) ||
-        (typeof res?.error?.message === "string" && res.error.message) ||
-        (typeof res?.error === "string" && res.error) ||
-        "";
+      const detail = extractError(res?.error);
       setError(detail || (sw ? "Malipo hayakuanza. Jaribu tena." : "Payment could not be started. Try again."));
       setStage("FAILED");
       return;
@@ -387,6 +400,19 @@ export default function PaymentGateway({
 
     if (TERMINAL_FAILURE.has(pstatus)) {
       setError(failureMessage(pstatus, lang));
+      setStage("FAILED");
+      return;
+    }
+
+    // Kadi/bank zinahitaji ukurasa wa malipo wa FimiPay. Bila URL hakuna pa kulipia, na kuendelea kwenye
+    // POLLING kungemwambia mteja wa kadi "angalia simu yako". Onyesha kosa wazi badala yake.
+    if (isCard && !res.gatewayUrl) {
+      console.warn("[PaymentGateway] card/bank order created but no gatewayUrl was returned", res);
+      setError(
+        sw
+          ? "Ukurasa wa malipo haukupatikana. Jaribu tena au tumia malipo ya simu."
+          : "The payment page could not be opened. Try again or use mobile money."
+      );
       setStage("FAILED");
       return;
     }
