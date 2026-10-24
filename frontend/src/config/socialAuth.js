@@ -1,6 +1,13 @@
 // ============================================================
 // socialAuth.js
 // Google Identity Services (popup) + Apple via django-allauth (redirect)
+//
+// MUHIMU:
+// - Apple haitumii popup hapa. Tunampeleka mtumiaji kwenye
+//   /accounts/apple/login/ ya backend (django-allauth).
+// - django-allauth itatuma redirect_uri = <backend>/accounts/apple/login/callback/
+// - Hakikisha redirect_uri hiyo imesajiliwa kwenye Apple Developer
+//   (Services ID → Return URLs) na domain imesajiliwa (Domains and Subdomains).
 // ============================================================
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -22,7 +29,12 @@ const API_ORIGIN = (() => {
   }
 })();
 
+// ⬇️ Hii ndio URL unayotumia kwa Apple login (django-allauth)
 export const APPLE_LOGIN_URL = `${API_ORIGIN}/accounts/apple/login/`;
+
+// ⬇️ Hii ni redirect_uri ambayo django-allauth itatuma kwa Apple.
+//    Lazima ilingane KABISA na "Return URLs" kwenye Apple Developer.
+export const APPLE_CALLBACK_URL = `${API_ORIGIN}/accounts/apple/login/callback/`;
 
 export const isGoogleEnabled = Boolean(GOOGLE_CLIENT_ID);
 export const isAppleEnabled = Boolean(APPLE_CLIENT_ID);
@@ -31,6 +43,7 @@ if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
   console.info("[socialAuth] Google client ID:", GOOGLE_CLIENT_ID ? "(set)" : "(missing)");
   console.info("[socialAuth] Apple client ID:", APPLE_CLIENT_ID || "(missing)");
   console.info("[socialAuth] Apple login URL:", APPLE_LOGIN_URL);
+  console.info("[socialAuth] Apple callback URL (expected):", APPLE_CALLBACK_URL);
 }
 
 // ── Script loader (cached) ─────────────────────────────────
@@ -102,7 +115,13 @@ export async function renderGoogleButton(el, { onCredential, onError, locale = "
 
 // ── Apple: redirect kwa django-allauth ─────────────────────
 export function redirectToAppleLogin() {
-  if (!isAppleEnabled) throw new Error("Apple Sign-In not configured");
+  if (!isAppleEnabled) {
+    throw new Error(
+      "Apple Sign-In not configured. Weka VITE_APPLE_CLIENT_ID kwenye .env."
+    );
+  }
+  // Tunampeleka mtumiaji kwenye backend; django-allauth itashughulikia
+  // OAuth na Apple, kisha itamrudisha kwenye /auth/callback?access=...&refresh=...
   window.location.href = APPLE_LOGIN_URL;
 }
 
