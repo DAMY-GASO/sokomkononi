@@ -4,7 +4,8 @@ import {
   isGoogleEnabled,
   isAppleEnabled,
   renderGoogleButton,
-  redirectToAppleLogin,
+  getAppleIdentity,
+  isSocialCancel,
   socialLoginAsync,
 } from "../config/socialAuth.js";
 
@@ -52,17 +53,25 @@ export default function SocialAuthButtons({ lang = "sw", onSuccess, showTerms = 
   }
   handlerRef.current = finish;
 
-  function handleApple() {
+  async function handleApple() {
     if (busyRef.current) return;
     setError("");
+    busyRef.current = true;
+    setBusy("apple");
+    let identity;
     try {
-      // Inampeleka mtumiaji kwenye /accounts/apple/login/ ya backend.
-      // Baada ya Apple callback, backend itamrudisha kwenye
-      // /auth/callback?access=...&refresh=...
-      redirectToAppleLogin();
+      identity = await getAppleIdentity();
     } catch (err) {
-      setError(err?.message || tx("Imeshindwa kuingia na Apple.", "Apple sign-in failed."));
+      busyRef.current = false;
+      setBusy("");
+      if (!isSocialCancel(err)) {
+        setError(err?.message || tx("Imeshindwa kuingia na Apple.", "Apple sign-in failed."));
+      }
+      return;
     }
+    busyRef.current = false;
+    setBusy("");
+    await finish("apple", identity);
   }
 
   useEffect(() => {
@@ -106,7 +115,9 @@ export default function SocialAuthButtons({ lang = "sw", onSuccess, showTerms = 
             className={`${base} bg-black text-white hover:bg-neutral-800`}
           >
             <AppleLogo />
-            {tx("Endelea na Apple", "Continue with Apple")}
+            {busy === "apple"
+              ? tx("Inaingia...", "Signing in...")
+              : tx("Endelea na Apple", "Continue with Apple")}
           </button>
         )}
       </div>

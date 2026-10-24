@@ -1,40 +1,17 @@
 // ============================================================
 // socialAuth.js
-// Google Identity Services (popup) + Apple via django-allauth (redirect)
-//
-// MUHIMU:
-// - Apple haitumii popup hapa. Tunampeleka mtumiaji kwenye
-//   /accounts/apple/login/ ya backend (django-allauth).
-// - django-allauth itatuma redirect_uri = <backend>/accounts/apple/login/callback/
-// - Hakikisha redirect_uri hiyo imesajiliwa kwenye Apple Developer
-//   (Services ID → Return URLs) na domain imesajiliwa (Domains and Subdomains).
+// Google Identity Services + Apple JS (in-browser popup flow)
 // ============================================================
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
-// Services ID (sio App ID). Inatumika tu kuonyesha/kuficha kitufe.
+// ⚠️ Services ID (sio App ID).
 const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID || "";
 
-// URL ya backend inayoanzisha Apple login (django-allauth)
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "https://api.sokomkononi.co.tz/api";
-
-// /api ni suffix; tunahitaji origin pekee kwa /accounts/apple/login/
-const API_ORIGIN = (() => {
-  try {
-    const u = new URL(API_BASE_URL);
-    return `${u.protocol}//${u.host}`;
-  } catch {
-    return "https://api.sokomkononi.co.tz";
-  }
-})();
-
-// ⬇️ Hii ndio URL unayotumia kwa Apple login (django-allauth)
-export const APPLE_LOGIN_URL = `${API_ORIGIN}/accounts/apple/login/`;
-
-// ⬇️ Hii ni redirect_uri ambayo django-allauth itatuma kwa Apple.
-//    Lazima ilingane KABISA na "Return URLs" kwenye Apple Developer.
-export const APPLE_CALLBACK_URL = `${API_ORIGIN}/accounts/apple/login/callback`;
+// Redirect URI kwa Apple JS (inahitajika hata kwa popup, lazima ilingane na Apple Developer)
+const APPLE_REDIRECT_URI =
+  import.meta.env.VITE_APPLE_REDIRECT_URI ||
+  (typeof window !== "undefined" ? window.location.origin : "");
 
 export const isGoogleEnabled = Boolean(GOOGLE_CLIENT_ID);
 export const isAppleEnabled = Boolean(APPLE_CLIENT_ID);
@@ -42,8 +19,7 @@ export const isAppleEnabled = Boolean(APPLE_CLIENT_ID);
 if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
   console.info("[socialAuth] Google client ID:", GOOGLE_CLIENT_ID ? "(set)" : "(missing)");
   console.info("[socialAuth] Apple client ID:", APPLE_CLIENT_ID || "(missing)");
-  console.info("[socialAuth] Apple login URL:", APPLE_LOGIN_URL);
-  console.info("[socialAuth] Apple callback URL (expected):", APPLE_CALLBACK_URL);
+  console.info("[socialAuth] Apple redirect URI:", APPLE_REDIRECT_URI);
 }
 
 // ── Script loader (cached) ─────────────────────────────────
@@ -113,16 +89,34 @@ export async function renderGoogleButton(el, { onCredential, onError, locale = "
   });
 }
 
-// ── Apple: redirect kwa django-allauth ─────────────────────
-export function redirectToAppleLogin() {
-  if (!isAppleEnabled) {
-    throw new Error(
-      "Apple Sign-In not configured. Weka VITE_APPLE_CLIENT_ID kwenye .env."
-    );
+// ── Apple: popup flow ──────────────────────────────────────
+let appleInitialized = false;
+
+export async function getAppleIdentity() {
+  if (!isAppleEnabled) throw new Error("Apple Sign-In not configured");
+  await loadScript(
+    "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"
+  );
+
+  if (!appleInitialized) {
+    window.AppleID.auth.init({
+      clientId: APPLE_CLIENT_ID,
+      scope: "name email",
+      redirectURI: APPLE_REDIRECT_URI,
+      usePopup: true,
+    });
+    appleInitialized = true;
   }
-  // Tunampeleka mtumiaji kwenye backend; django-allauth itashughulikia
-  // OAuth na Apple, kisha itamrudisha kwenye /auth/callback?access=...&refresh=...
-  window.location.href = APPLE_LOGIN_URL;
+
+  const res = await window.AppleID.auth.signIn();
+  const idToken = res?.authorization?.id_token;
+  if (!idToken) throw new Error("Apple returned no id_token");
+
+  return {
+    idToken,
+    code: res.authorization.code || null,
+    user: res.user || null, // { name: { firstName, lastName }, email }
+  };
 }
 
 export function isSocialCancel(err) {
