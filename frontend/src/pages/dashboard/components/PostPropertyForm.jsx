@@ -163,9 +163,14 @@ export default function PostPropertyForm({
     (b) => b.type === "listing"
   );
 
-  const [categoryKey, setCategoryKey] = useState(
-    isEdit ? initialData.category : null
-  );
+  // ✅ FIX: categoryKey inatumia key halisi kutoka categories store
+  const [categoryKey, setCategoryKey] = useState(() => {
+    if (!isEdit || !initialData) return null;
+    const found = categories.find(
+      (c) => c.key === initialData.category || c.slug === initialData.category
+    );
+    return found?.key || initialData.category || null;
+  });
   const [categoryMode, setCategoryMode] = useState(
     isEdit ? initialData.attributes?.mode || null : null
   );
@@ -211,6 +216,7 @@ export default function PostPropertyForm({
   const [warnings, setWarnings] = useState([]);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [isFreeCategory, setIsFreeCategory] = useState(false);
+  const [feeConfigLoaded, setFeeConfigLoaded] = useState(false);
 
   const [paymentMode, setPaymentMode] = useState("flat");
   const [bundleId, setBundleId] = useState(null);
@@ -279,16 +285,21 @@ export default function PostPropertyForm({
   const hasCredit = creditInfo.hasCredit;
   const listingCreditRemaining = creditInfo.remaining || 0;
 
+  // ✅ Hydrate fee config na uweke flag
   useEffect(() => {
-    hydrateListingFeeConfigsFromApi().catch((err) => {
-      console.warn("[PostPropertyForm] fee hydrate failed:", err);
-    });
+    hydrateListingFeeConfigsFromApi()
+      .then(() => setFeeConfigLoaded(true))
+      .catch((err) => {
+        console.warn("[PostPropertyForm] fee hydrate failed:", err);
+        setFeeConfigLoaded(true);
+      });
   }, []);
 
+  // ✅ FIX: listingFeeDisabled inakuwa true kama hakuna config au imezimwa
   const categoryFeeConfig = categoryKey ? getListingFeeConfig(categoryKey) : null;
   const listingFeeDisabled = categoryFeeConfig
     ? categoryFeeConfig.isActive === false
-    : false;
+    : true; // ⬅️ Kama hakuna config, fee ni bure
 
   const selectedBundle = listingBundles.find((b) => b.id === bundleId);
 
@@ -364,9 +375,15 @@ export default function PostPropertyForm({
     !submitting &&
     !duplicateWarning;
 
+  // ✅ FIX: chooseCategory inatumia key halisi
   const chooseCategory = (key) => {
     if (isEdit) return;
-    setCategoryKey(key);
+    const foundCategory = categories.find((c) => c.key === key);
+    if (!foundCategory) {
+      console.warn("[PostPropertyForm] Category not found for key:", key);
+      return;
+    }
+    setCategoryKey(foundCategory.key);
     setCategoryMode(null);
     setExtra({});
     setError("");
@@ -612,14 +629,12 @@ export default function PostPropertyForm({
         setCreatedListing(created);
         setFeeAmount(0);
 
-        // ✅ Kama listingFeeDisabled ni true, au publish imefanikiwa, mpeleke mtumiaji kwenye Done
         if (publishOk || listingFeeDisabled) {
           setStage("done");
           onSubmit?.(created);
           return;
         }
 
-        // Kama publish imefeli na fee haijazimwa, ndipo tunaonyesha kosa
         setError(
           t(
             `Tangazo limehifadhiwa lakini halijatumwa kwa admin (${
@@ -639,29 +654,24 @@ export default function PostPropertyForm({
         return;
       }
 
-      // ✅ HAPA NDIPO TUNAANGALIA CREDIT KABLA YA MALIPO
-      // Kama mtumiaji ana Listing Credit, tumia moja kwa moja
+      // ✅ AUTO-CONSUME CREDIT
       if (hasCredit) {
         try {
           const payRes = await api.post(`/listings/${listingId}/fee/pay/`, {
             payment_reference: "credits",
           });
-          // Credit imetumika kikamilifu
           onPaid?.(listingId, { alreadyPaid: true });
           setCreatedListing(created);
           setFeeAmount(0);
-          setIsFreeCategory(true); // Tunatumia hii kuonyesha "Free/Credit" kwenye UI
+          setIsFreeCategory(true);
           setStage("done");
           onSubmit?.(created);
           return;
         } catch (creditErr) {
           console.warn("[PostPropertyForm] credit consumption failed:", creditErr);
-          // Kama credit imefeli, endelea na malipo ya kawaida
-          // (au onyesha kosa)
         }
       }
 
-      // Kama hana credit, au credit imefeli, onyesha PaymentGateway
       const inlineFeeFromPayment = Number(
         created?.payment?.amount ?? created?.payment?.fee_amount ?? 0
       );
@@ -701,7 +711,7 @@ export default function PostPropertyForm({
       setCreatedListing(created);
       setFeeAmount(fee);
       setIsFreeCategory(Boolean(isFreeCategoryLocal));
-      setStage("review"); // Nenda kwenye Review (ambapo PaymentGateway iko)
+      setStage("review");
       onSubmit?.(created);
     } catch (err) {
       setError(
@@ -936,7 +946,6 @@ export default function PostPropertyForm({
                 </div>
               )}
 
-              {/* ⬅️ RETRY PUBLISH — inaonekana tu kama publish ilifeli */}
               {needsRetryPublish && (
                 <button
                   onClick={handleRetryPublish}
@@ -1224,11 +1233,11 @@ export default function PostPropertyForm({
                   )}
           </p>
           {/* FEE PREVIEW — create mode pekee */}
-          {!isEdit && category && (() => {
+          {!isEdit && category && feeConfigLoaded && (() => {
             const cfgFee = getListingFeeConfig(categoryKey);
 
-            // ✅ 1. Kama fee imezimwa kwa category hii, onyesha "Free" MOJA KWA MOJA
-            if (listingFeeDisabled) {
+            // ✅ Kama fee imezimwa AU hakuna config, onyesha "Free"
+            if (listingFeeDisabled || !cfgFee) {
               return (
                 <div
                   className="mt-4 inline-flex flex-col items-center gap-1 rounded-xl border px-4 py-3 text-xs text-center"
@@ -1248,48 +1257,7 @@ export default function PostPropertyForm({
               );
             }
 
-            // ✅ 2. Kama cfgFee haipo (na haijazimwa), ndipo onyesha red alert
-            if (!cfgFee) {
-              return (
-                <div
-                  className="mt-4 inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs"
-                  style={{
-                    background: "rgba(193,80,46,0.08)",
-                    borderColor: "rgba(193,80,46,0.3)",
-                    color: COLORS.rust,
-                  }}
-                >
-                  <AlertTriangle size={14} />
-                  {t(
-                    "Ada ya kuchapisha haijawekwa kwa kategoria hii bado. Wasiliana na Admin.",
-                    "No listing fee is configured for this category yet. Contact Admin."
-                  )}
-                </div>
-              );
-            }
-
-            // ✅ 3. Kama cfgFee ipo lakini isActive === false (redundant, lakini tunaiacha kwa usalama)
-            if (cfgFee.isActive === false) {
-              return (
-                <div
-                  className="mt-4 inline-flex flex-col items-center gap-1 rounded-xl border px-4 py-3 text-xs text-center"
-                  style={{
-                    background: "rgba(47,109,79,0.10)",
-                    borderColor: "rgba(47,109,79,0.35)",
-                    color: COLORS.green,
-                  }}
-                >
-                  <p className="font-semibold">
-                    🇹🇿 Kiswahili: 🎉 Chapisha tangazo lako bila malipo na anza kuuza kupitia SokoMkononi leo!
-                  </p>
-                  <p className="font-semibold">
-                    🇬🇧 English: 🎉 List for free and start selling on SokoMkononi today!
-                  </p>
-                </div>
-              );
-            }
-
-            // ✅ 4. Hesabu ya fee ya kawaida
+            // ✅ Hesabu ya fee ya kawaida
             const isFlat = String(cfgFee.feeMode || "PERCENTAGE").toUpperCase() === "FLAT";
             const flat = Number(cfgFee.flatFee) || 0;
             const rate = Number(cfgFee.rate) || 0;
