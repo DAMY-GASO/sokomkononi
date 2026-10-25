@@ -347,10 +347,10 @@ export default function ContactPage() {
                 <HelpCircle size={13} />
                 FAQ
               </span>
-              <h2 className="mt-4 text-[clamp(1.5rem,3vw,2rem)] font-bold text-primary">
-                {t("Maswali Yanayoulizwa Mara kwa Mara", "Frequently Asked Questions")}
-              </h2>
-              <p className="mx-auto mt-3 max-w-xl text-sm text-secondary">
+              <h2 className="mt-4 text-[clamp(1.5rem,3vw,2rem)] font-bold text-primary dark:text-white transition-colors">
+            {t("Maswali Yanayoulizwa Mara kwa Mara", "Frequently Asked Questions")}
+           </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-secondary dark:text-white/70 transition-colors">
                 {t(
                   "Majibu ya haraka kwa maswali yanayoulizwa mara kwa mara kuhusu SokoMkononi.",
                   "Quick answers to the most common questions about SokoMkononi."
