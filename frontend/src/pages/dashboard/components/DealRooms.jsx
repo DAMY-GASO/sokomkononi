@@ -1487,6 +1487,8 @@ function DealDetail({
   const canSeeContact = !!deal.canSeeContact;
   const phoneLocked = isBuyer && !reservationPaid;
 
+  // ✅ FIX: Reserve panel inafunguka TU pale ambapo ofa imekubaliwa
+  // na mnunuzi HAIJA weka reservation.
   useEffect(() => {
     setReserveOpen(
       deal.status === "accepted" &&
