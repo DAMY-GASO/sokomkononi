@@ -164,20 +164,20 @@ export default function ImageLightbox({
       {/* IMAGE AREA — kushoto/kulia + swipe                       */}
       {/* ═══════════════════════════════════════════════════════ */}
       <div
-        className="flex-1 relative overflow-hidden flex items-center justify-center px-2"
+        className="flex-1 relative overflow-hidden flex items-center justify-center px-2 pb-4"
         onClick={(e) => e.stopPropagation()}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Prev button — desktop */}
+        {/* Prev button — desktop (juu kushoto, sio pembeni kama mabano) */}
         {images.length > 1 && !zoomed && (
           <button
             onClick={prev}
-            className="hidden sm:flex absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center transition-colors z-10"
+            className="hidden sm:flex absolute left-4 top-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center transition-colors z-10"
             aria-label={t("Picha iliyotangulia", "Previous image")}
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={22} />
           </button>
         )}
 
@@ -213,55 +213,75 @@ export default function ImageLightbox({
           />
         </div>
 
-        {/* Next button — desktop */}
+        {/* Next button — desktop (juu kulia, sio pembeni kama mabano) */}
         {images.length > 1 && !zoomed && (
           <button
             onClick={next}
-            className="hidden sm:flex absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center transition-colors z-10"
+            className="hidden sm:flex absolute right-4 top-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white items-center justify-center transition-colors z-10"
             aria-label={t("Picha inayofuata", "Next image")}
           >
-            <ChevronRight size={24} />
+            <ChevronRight size={22} />
           </button>
         )}
       </div>
 
       {/* ═══════════════════════════════════════════════════════ */}
-      {/* BOTTOM — thumbnails                                    */}
+      {/* BOTTOM — thumbnails + mobile prev/next                   */}
       {/* ═══════════════════════════════════════════════════════ */}
       {images.length > 1 && (
         <div
-          className="shrink-0 px-3 sm:px-4 py-3 overflow-x-auto"
+          className="shrink-0 px-3 sm:px-4 py-3"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex gap-2 justify-center min-w-min">
-            {images.map((img, i) => {
-              const thumbSrc =
-                typeof img === "string"
-                  ? img
-                  : img?.thumb || img?.card || img?.image_url || img?.url || "";
-              const isActive = i === index;
-              return (
-                <button
-                  key={i}
-                  onClick={() => goTo(i)}
-                  className={`w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
-                    isActive
-                      ? "border-white opacity-100 scale-105"
-                      : "border-white/20 opacity-50 hover:opacity-80"
-                  }`}
-                  aria-label={`${t("Picha", "Image")} ${i + 1}`}
-                >
-                  <img
-                    src={thumbSrc}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    draggable={false}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              );
-            })}
+          {/* Mobile prev/next buttons — upande wa kushoto/kulia wa thumbnails */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <button
+              onClick={prev}
+              className="sm:hidden w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors shrink-0"
+              aria-label={t("Picha iliyotangulia", "Previous image")}
+            >
+              <ChevronLeft size={20} />
+            </button>
+
+            {/* Thumbnails */}
+            <div className="flex gap-2 justify-center overflow-x-auto flex-1 min-w-0">
+              {images.map((img, i) => {
+                const thumbSrc =
+                  typeof img === "string"
+                    ? img
+                    : img?.thumb || img?.card || img?.image_url || img?.url || "";
+                const isActive = i === index;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => goTo(i)}
+                    className={`w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
+                      isActive
+                        ? "border-white opacity-100 scale-105"
+                        : "border-white/20 opacity-50 hover:opacity-80"
+                    }`}
+                    aria-label={`${t("Picha", "Image")} ${i + 1}`}
+                  >
+                    <img
+                      src={thumbSrc}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      draggable={false}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={next}
+              className="sm:hidden w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors shrink-0"
+              aria-label={t("Picha inayofuata", "Next image")}
+            >
+              <ChevronRight size={20} />
+            </button>
           </div>
         </div>
       )}

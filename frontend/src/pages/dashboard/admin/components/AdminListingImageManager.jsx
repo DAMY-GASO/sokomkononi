@@ -6,6 +6,7 @@ import {
 import { listingsApi } from "../../../../api/listings.js";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 
+
 export default function AdminListingImageManager({ listing, onClose }) {
   const { lang } = useLanguage();
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -229,42 +230,40 @@ export default function AdminListingImageManager({ listing, onClose }) {
             <X size={24} />
           </button>
 
-          {/* Kitufe cha Nyuma (Prev) */}
-          {images.length > 1 && (
-            <button
-              type="button"
-              onClick={handlePrev}
-              className="absolute left-4 md:left-8 z-10 p-3 md:p-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-              aria-label={t("Nyuma", "Previous")}
-            >
-              <ChevronLeft size={36} />
-            </button>
-          )}
-
           {/* Picha */}
           <img
             src={pickImageSrc(images[activeIndex])}
             alt={`Image ${activeIndex + 1}`}
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+            className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
           />
-
-          {/* Kitufe cha Mbele (Next) */}
-          {images.length > 1 && (
-            <button
-              type="button"
-              onClick={handleNext}
-              className="absolute right-4 md:right-8 z-10 p-3 md:p-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-              aria-label={t("Mbele", "Next")}
-            >
-              <ChevronRight size={36} />
-            </button>
-          )}
 
           {/* Namba ya Picha (Counter) */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-md">
             {activeIndex + 1} / {images.length}
           </div>
+
+          {/* Vitufe vya Nyuma na Mbele (chini kando ya picha) */}
+          {images.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={handlePrev}
+                className="absolute left-4 bottom-6 z-10 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+                aria-label={t("Nyuma", "Previous")}
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                className="absolute right-4 bottom-6 z-10 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+                aria-label={t("Mbele", "Next")}
+              >
+                <ChevronRight size={24} />
+              </button>
+            </>
+          )}
         </div>
       )}
     </>

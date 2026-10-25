@@ -4,6 +4,7 @@
 // - CHAGUO A: buyer + seller wote wanaweza kutuma offers na kukubali
 // - Role-based filter (buyer/seller)
 // - Handle ?listing=X&action=reserve kutoka waiting list
+// - ✅ AUTO-CONSUME CREDIT kwenye handleReserveConfirm
 // ============================================================
 
 import React, { useState, useRef, useEffect } from "react";
@@ -1998,8 +1999,7 @@ function DealDetail({
       )}
 
       {deal.status === "awaiting_final_payment" && side === "buyer" && (
-        <PaymentProofPanel
-          deal={deal}
+        <PaymentProofPanel          deal={deal}
           lang={lang}
           onSubmit={(proof) => onProofSubmit(deal.id, proof)}
         />
@@ -2784,6 +2784,44 @@ export default function DealRooms({
       return;
     }
 
+    // ✅ AUTO-CONSUME CREDIT: Kama mtumiaji ana reservation credit, tumia moja kwa moja
+    if (method === "credits") {
+      try {
+        const payRes = await callApiOrFallback(() =>
+          payReservationAsync(txId, {
+            paymentReference: "credits",
+          })
+        );
+        if (!payRes.offline && !payRes.ok) {
+          alert(
+            payRes.error?.message ||
+              (lang === "sw"
+                ? "Imeshindwa kutumia credit."
+                : "Failed to use credit.")
+          );
+          return;
+        }
+        const expiresAt =
+          payRes.transaction?.reservationExpiresAt ||
+          new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+        return finalizeLocalReservation(id, deal, {
+          hours,
+          fee: 0,
+          method: "credits",
+          expiresAt,
+        });
+      } catch (err) {
+        alert(
+          err?.message ||
+            (lang === "sw"
+              ? "Imeshindwa kutumia credit."
+              : "Failed to use credit.")
+        );
+        return;
+      }
+    }
+
+    // Malipo ya kawaida (flat)
     const reserveRes = await callApiOrFallback(() =>
       createReservationAsync(txId, hours)
     );
@@ -2828,7 +2866,7 @@ export default function DealRooms({
 
     const payRes = await callApiOrFallback(() =>
       payReservationAsync(txId, {
-        paymentReference: method === "credits" ? "credits" : null,
+        paymentReference: null,
         paymentMethod: paymentMethodKey,
         phone: isMobile ? phone || "" : "",
       })
