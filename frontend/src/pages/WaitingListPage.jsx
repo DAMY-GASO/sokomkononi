@@ -2,8 +2,9 @@
 // WaitingListPage.jsx — Orodha ya Kusubiri (buyer)
 //
 // SASISHO:
+//  - Countdown inaonekana kwa waiting NA notified entries
 //  - Button "Reserve Sasa" kwa notified entries
-//  - Inampeleka deal room ya listing husika
+//  - Bilingual (SW/EN)
 // ============================================================
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -123,6 +124,10 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
     else navigate("/dashboard/buyer/deals");
   };
 
+  // ✅ Muda uliobaki wa reservation (kwa waiting na notified)
+  const hasCountdown = entry.reservationExpiresAt && 
+                       (entry.status === "waiting" || entry.status === "notified");
+
   return (
     <div
       style={{ background: "white", borderColor: COLORS.sandLine }}
@@ -182,6 +187,17 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
             {timeAgo(entry.joinedAt, lang)}
           </span>
         </div>
+
+        {/* ✅ Countdown kwa Waiting na Notified */}
+        {hasCountdown && (
+          <div className="flex items-center gap-2 mt-2">
+            <Clock3 size={12} color={COLORS.rust} />
+            <span className="text-[11px] font-medium" style={{ color: COLORS.rust }}>
+              {lang === "sw" ? "Reservation ya sasa inaisha baada ya:" : "Current reservation ends in:"}
+            </span>
+            <CountdownBadge to={entry.reservationExpiresAt} lang={lang} />
+          </div>
+        )}
 
         {entry.status === "notified" && (
           <div
