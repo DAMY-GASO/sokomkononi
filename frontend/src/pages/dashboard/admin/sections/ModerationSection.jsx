@@ -1,12 +1,8 @@
 // ============================================================
 // ModerationSection.jsx
 // Approve / Reject / Request Edit / Request Payment / Finalize
-//
-// Marekebisho:
-//  - Normalize status (UPPERCASE kutoka backend → lowercase logic)
-//  - Fetch kwa UPPERCASE (PENDING_APPROVAL, PAID_PENDING_APPROVAL, n.k.)
-//  - Filter tab "Zilizouzwa" (sold), "Zilizoisha Muda" (expired)
-//  - Sold + Expired listings zinaonekana kwa admin (read-only)
+//  - Bilingual support (SW/EN)
+//  - "Approve (Free)" button kama listing haina fee
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import {
@@ -81,7 +77,6 @@ export default function ModerationSection() {
 
     const tasks = [];
     if (wantPending) tasks.push(hydrateModerationQueueFromApi());
-    // ⬅️ Fetch kwa UPPERCASE — backend inatumia uppercase
     if (wantPendingApproval)
       tasks.push(fetchListingsByStatusAsync("PENDING_APPROVAL"));
     if (wantPaid) tasks.push(fetchListingsByStatusAsync("PAID_PENDING_APPROVAL"));
@@ -211,13 +206,6 @@ export default function ModerationSection() {
   const markDecided = (id, status) =>
     setDecided((d) => ({ ...d, [String(id)]: status }));
 
-  const unmarkDecided = (id) =>
-    setDecided((d) => {
-      const n = { ...d };
-      delete n[String(id)];
-      return n;
-    });
-
   const addToHistory = (listing) => {
     if (!listing || listing.id == null) return;
     setHistory((prev) => ({ ...prev, [String(listing.id)]: listing }));
@@ -345,11 +333,13 @@ export default function ModerationSection() {
     clearBusy(listingId);
     setRequestPaymentModal(null);
     if (res.ok) {
-      markDecided(listingId, "APPROVED_PENDING_PAYMENT");
+      // Kama ni free, backend itarudisha status LIVE moja kwa moja
+      const newStatus = res.listing?.status || "APPROVED_PENDING_PAYMENT";
+      markDecided(listingId, newStatus);
       addToHistory({
         ...(snapshot || {}),
         id: listingId,
-        status: "APPROVED_PENDING_PAYMENT",
+        status: newStatus,
       });
     } else {
       setError(res.error?.message || t("Imeshindwa.", "Failed."));
@@ -464,6 +454,13 @@ export default function ModerationSection() {
     const isBusy = !!busy[listing.id];
     const currentAction = busy[listing.id];
 
+    // ✅ Check kama listing haina fee (bure)
+    const isFree = 
+      listing.fee_amount === "0.00" || 
+      listing.fee_amount === null || 
+      listing.fee_amount === undefined ||
+      listing.payment_status === "FREE";
+
     // Pending — admin ana chaguo 3
     if (status === "in_review") {
       return (
@@ -560,6 +557,8 @@ export default function ModerationSection() {
             )}
             {t("Kataa", "Reject")}
           </button>
+          
+          {/* ✅ Kitufe cha "Omba Malipo" / "Idhinisha (Bure)" */}
           <button
             onClick={() => openRequestPaymentModal(listing.id)}
             disabled={isBusy}
@@ -570,10 +569,15 @@ export default function ModerationSection() {
           >
             {currentAction === "request_payment" ? (
               <Loader2 size={13} className="animate-spin" />
+            ) : isFree ? (
+              <CheckCheck size={13} />
             ) : (
               <Wallet size={13} />
             )}
-            {t("Omba Malipo", "Request Pay")}
+            {isFree 
+              ? t("Idhinisha (Bure)", "Approve (Free)") 
+              : t("Omba Malipo", "Request Pay")
+            }
           </button>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
         </div>

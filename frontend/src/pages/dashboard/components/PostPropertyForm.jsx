@@ -41,7 +41,7 @@ function Field({ label, children }) {
   );
 }
 
-// ✅ Theme-aware class kwa inputs zote (imeondoa inputStyle)
+// ✅ Theme-aware class kwa inputs zote
 const inputCls =
   "rounded-xl border border-hairline bg-card text-primary px-3 py-2.5 text-sm outline-none text-center w-full focus:border-gold focus:ring-1 focus:ring-gold transition-colors";
 
@@ -609,13 +609,14 @@ export default function PostPropertyForm({
         setCreatedListing(created);
         setFeeAmount(0);
 
-        if (publishOk) {
+        // ✅ Kama listingFeeDisabled ni true, au publish imefanikiwa, mpeleke mtumiaji kwenye Done
+        if (publishOk || listingFeeDisabled) {
           setStage("done");
           onSubmit?.(created);
           return;
         }
 
-        // ⬅️ publish imefeli — onyesha error halisi, usiruke done
+        // Kama publish imefeli na fee haijazimwa, ndipo tunaonyesha kosa
         setError(
           t(
             `Tangazo limehifadhiwa lakini halijatumwa kwa admin (${
