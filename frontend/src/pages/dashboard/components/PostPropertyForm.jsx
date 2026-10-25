@@ -1232,7 +1232,7 @@ export default function PostPropertyForm({
                     "Choose the category of the property you want to list"
                   )}
           </p>
-          {/* FEE PREVIEW — create mode pekee */}
+                    {/* FEE PREVIEW — create mode pekee */}
           {!isEdit && category && feeConfigLoaded && (() => {
             const cfgFee = getListingFeeConfig(categoryKey);
 
@@ -1240,19 +1240,20 @@ export default function PostPropertyForm({
             if (listingFeeDisabled || !cfgFee) {
               return (
                 <div
-                  className="mt-4 inline-flex flex-col items-center gap-1 rounded-xl border px-4 py-3 text-xs text-center"
+                  className="mt-4 inline-flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm"
                   style={{
                     background: "rgba(47,109,79,0.10)",
                     borderColor: "rgba(47,109,79,0.35)",
                     color: COLORS.green,
                   }}
                 >
-                  <p className="font-semibold">
-                    🇹🇿 Kiswahili: 🎉 Chapisha tangazo lako bila malipo na anza kuuza kupitia SokoMkononi leo!
-                  </p>
-                  <p className="font-semibold">
-                    🇬🇧 English: 🎉 List for free and start selling on SokoMkononi today!
-                  </p>
+                  <Check size={16} />
+                  <span className="font-medium leading-relaxed">
+                    {t(
+                      "🎉 Chapisha tangazo lako bila malipo na anza kuuza kupitia SokoMkononi leo!",
+                      "🎉 List for free and start selling on SokoMkononi today!"
+                    )}
+                  </span>
                 </div>
               );
             }
@@ -1316,8 +1317,8 @@ export default function PostPropertyForm({
               </div>
             );
           })()}
-        </div>
-
+          </div>
+          
         {/* Category picker — create mode pekee */}
         {!isEdit && !category && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
