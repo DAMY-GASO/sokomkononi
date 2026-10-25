@@ -38,6 +38,7 @@ function norm(raw) {
     joinedAt: raw.joined_at,
     notifiedAt: raw.notified_at,
     respondBy: raw.respond_by,
+    reservationExpiresAt: raw.reservation_expires_at,
     updatedAt: raw.updated_at,
   };
 }
@@ -120,12 +121,6 @@ export function useWaitingListCount() {
   return useWaitingList().length;
 }
 
-
-// ============================================================
-// RESERVATION EXPIRY — handled by backend cron. The frontend
-// no longer nudges the backend; a periodic hydrate on the
-// WaitingListPage shows queue progression.
-// ============================================================
 
 // ============================================================
 // useWaitingListState — exposes { list, loading, error } so pages

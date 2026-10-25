@@ -1201,6 +1201,28 @@ export default function PostPropertyForm({
           {!isEdit && category && (() => {
             const cfgFee = getListingFeeConfig(categoryKey);
 
+            // ✅ 1. Kama fee imezimwa kwa category hii, onyesha "Free" MOJA KWA MOJA
+            if (listingFeeDisabled) {
+              return (
+                <div
+                  className="mt-4 inline-flex flex-col items-center gap-1 rounded-xl border px-4 py-3 text-xs text-center"
+                  style={{
+                    background: "rgba(47,109,79,0.10)",
+                    borderColor: "rgba(47,109,79,0.35)",
+                    color: COLORS.green,
+                  }}
+                >
+                  <p className="font-semibold">
+                    🇹🇿 Kiswahili: 🎉 Chapisha tangazo lako bila malipo na anza kuuza kupitia SokoMkononi leo!
+                  </p>
+                  <p className="font-semibold">
+                    🇬🇧 English: 🎉 List for free and start selling on SokoMkononi today!
+                  </p>
+                </div>
+              );
+            }
+
+            // ✅ 2. Kama cfgFee haipo (na haijazimwa), ndipo onyesha red alert
             if (!cfgFee) {
               return (
                 <div
@@ -1220,6 +1242,7 @@ export default function PostPropertyForm({
               );
             }
 
+            // ✅ 3. Kama cfgFee ipo lakini isActive === false (redundant, lakini tunaiacha kwa usalama)
             if (cfgFee.isActive === false) {
               return (
                 <div
@@ -1240,6 +1263,7 @@ export default function PostPropertyForm({
               );
             }
 
+            // ✅ 4. Hesabu ya fee ya kawaida
             const isFlat = String(cfgFee.feeMode || "PERCENTAGE").toUpperCase() === "FLAT";
             const flat = Number(cfgFee.flatFee) || 0;
             const rate = Number(cfgFee.rate) || 0;
