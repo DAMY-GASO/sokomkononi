@@ -1,3 +1,6 @@
+// ============================================================
+// PostPropertyForm.jsx
+// ============================================================
 import React, { useState, useEffect } from "react";
 import {
   ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle,
@@ -636,6 +639,29 @@ export default function PostPropertyForm({
         return;
       }
 
+      // ✅ HAPA NDIPO TUNAANGALIA CREDIT KABLA YA MALIPO
+      // Kama mtumiaji ana Listing Credit, tumia moja kwa moja
+      if (hasCredit) {
+        try {
+          const payRes = await api.post(`/listings/${listingId}/fee/pay/`, {
+            payment_reference: "credits",
+          });
+          // Credit imetumika kikamilifu
+          onPaid?.(listingId, { alreadyPaid: true });
+          setCreatedListing(created);
+          setFeeAmount(0);
+          setIsFreeCategory(true); // Tunatumia hii kuonyesha "Free/Credit" kwenye UI
+          setStage("done");
+          onSubmit?.(created);
+          return;
+        } catch (creditErr) {
+          console.warn("[PostPropertyForm] credit consumption failed:", creditErr);
+          // Kama credit imefeli, endelea na malipo ya kawaida
+          // (au onyesha kosa)
+        }
+      }
+
+      // Kama hana credit, au credit imefeli, onyesha PaymentGateway
       const inlineFeeFromPayment = Number(
         created?.payment?.amount ?? created?.payment?.fee_amount ?? 0
       );
@@ -675,7 +701,7 @@ export default function PostPropertyForm({
       setCreatedListing(created);
       setFeeAmount(fee);
       setIsFreeCategory(Boolean(isFreeCategoryLocal));
-      setStage("review");
+      setStage("review"); // Nenda kwenye Review (ambapo PaymentGateway iko)
       onSubmit?.(created);
     } catch (err) {
       setError(
