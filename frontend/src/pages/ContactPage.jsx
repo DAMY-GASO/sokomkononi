@@ -68,7 +68,7 @@ export default function ContactPage() {
       value: "+255 743 895 038",
       href: "tel:+255743895038",
       color: "#2F6D4F",
-      whatsapp: "https://wa.me/255743895038", // ⬅️ WhatsApp link
+      whatsapp: "https://wa.me/255743895038",
     },
     {
       Icon: MapPin,
@@ -169,7 +169,6 @@ export default function ContactPage() {
                     {value}
                   </p>
                 </div>
-                {/* ⬅️ WHATSAPP BUTTON */}
                 {whatsapp && (
                   <a
                     href={whatsapp}
@@ -189,14 +188,14 @@ export default function ContactPage() {
               <a
                 key={title}
                 href={href}
-                className="flex items-start gap-3 rounded-2xl border border-[color:rgb(var(--c-hairline))] bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-5"
+                className="flex items-start gap-3 rounded-2xl border border-hairline bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-5"
               >
                 {inner}
               </a>
             ) : (
               <div
                 key={title}
-                className="flex items-start gap-3 rounded-2xl border border-[color:rgb(var(--c-hairline))] bg-card p-4 sm:p-5"
+                className="flex items-start gap-3 rounded-2xl border border-hairline bg-card p-4 sm:p-5"
               >
                 {inner}
               </div>
@@ -208,7 +207,7 @@ export default function ContactPage() {
       {/* MESSAGE FORM */}
       <section className="container pb-14 sm:pb-16">
         <div className="mx-auto max-w-2xl">
-          <div className="rounded-2xl border border-[color:rgb(var(--c-hairline))] bg-card p-6 sm:p-8">
+          <div className="rounded-2xl border border-hairline bg-card p-6 sm:p-8">
             {sent ? (
               <div className="py-8 text-center">
                 <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-[#2F6D4F]/10">
@@ -225,7 +224,7 @@ export default function ContactPage() {
                 </p>
                 <button
                   onClick={() => setSent(false)}
-                  className="mt-6 text-sm font-semibold text-[color:rgb(var(--c-royal))] hover:underline"
+                  className="mt-6 text-sm font-semibold text-primary hover:underline"
                 >
                   {t("Tuma ujumbe mwingine", "Send another message")}
                 </button>
@@ -316,14 +315,14 @@ export default function ContactPage() {
                     {t("Kwa msaada wa haraka, angalia", "For quick help, see our")}{" "}
                     <Link
                       to="/jinsi-ya-kununua"
-                      className="font-semibold text-[color:rgb(var(--c-royal))] hover:underline"
+                      className="font-semibold text-primary hover:underline"
                     >
                       {t("Jinsi Inavyofanya Kazi", "How It Works")}
                     </Link>{" "}
                     {t("au", "or")}{" "}
                     <a
                       href="#faq"
-                      className="font-semibold text-[color:rgb(var(--c-royal))] hover:underline"
+                      className="font-semibold text-primary hover:underline"
                     >
                       FAQ
                     </a>
@@ -336,21 +335,19 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          FAQ SECTION
-          ═══════════════════════════════════════════════════════ */}
-      <section id="faq" className="border-t border-[color:rgb(var(--c-hairline))] bg-[color:rgb(var(--c-sand))]">
+      {/* FAQ SECTION — ✅ FIX: Tumia bg-page (Tailwind class) */}
+      <section id="faq" className="border-t border-hairline bg-page">
         <div className="container py-12 sm:py-16">
           <div className="mx-auto max-w-3xl">
             <div className="mb-8 text-center">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[color:rgb(var(--c-hairline))] bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
+              <span className="inline-flex items-center gap-2 rounded-full border border-hairline bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-secondary">
                 <HelpCircle size={13} />
                 FAQ
               </span>
-              <h2 className="mt-4 text-[clamp(1.5rem,3vw,2rem)] font-bold text-primary dark:text-white transition-colors">
-            {t("Maswali Yanayoulizwa Mara kwa Mara", "Frequently Asked Questions")}
-           </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-secondary dark:text-white/70 transition-colors">
+              <h2 className="mt-4 text-[clamp(1.5rem,3vw,2rem)] font-bold text-primary">
+                {t("Maswali Yanayoulizwa Mara kwa Mara", "Frequently Asked Questions")}
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-sm text-secondary">
                 {t(
                   "Majibu ya haraka kwa maswali yanayoulizwa mara kwa mara kuhusu SokoMkononi.",
                   "Quick answers to the most common questions about SokoMkononi."
@@ -364,7 +361,7 @@ export default function ContactPage() {
                 return (
                   <div
                     key={index}
-                    className="overflow-hidden rounded-xl border border-[color:rgb(var(--c-hairline))] bg-card transition-shadow hover:shadow-sm"
+                    className="overflow-hidden rounded-xl border border-hairline bg-card transition-shadow hover:shadow-sm"
                   >
                     <button
                       type="button"
@@ -383,7 +380,7 @@ export default function ContactPage() {
                       />
                     </button>
                     {isOpen && (
-                      <div className="border-t border-[color:rgb(var(--c-hairline))] px-4 pb-4 pt-3 sm:px-5">
+                      <div className="border-t border-hairline px-4 pb-4 pt-3 sm:px-5">
                         <p className="whitespace-pre-line text-sm leading-relaxed text-secondary">
                           {faq.a[lang] || faq.a.sw}
                         </p>
@@ -399,7 +396,7 @@ export default function ContactPage() {
                 {t("Bado una swali?", "Still have a question?")}{" "}
                 <a
                   href="mailto:support@sokomkononi.co.tz"
-                  className="font-semibold text-[color:rgb(var(--c-royal))] hover:underline"
+                  className="font-semibold text-primary hover:underline"
                 >
                   {t("Wasiliana nasi", "Contact us")}
                 </a>
