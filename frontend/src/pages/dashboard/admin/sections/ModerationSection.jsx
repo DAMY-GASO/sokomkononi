@@ -1,6 +1,12 @@
 // ============================================================
 // ModerationSection.jsx
 // Approve / Reject / Request Edit / Request Payment / Finalize
+//
+// Marekebisho:
+//  - Normalize status (UPPERCASE kutoka backend → lowercase logic)
+//  - Fetch kwa UPPERCASE (PENDING_APPROVAL, PAID_PENDING_APPROVAL, n.k.)
+//  - Filter tab "Zilizouzwa" (sold), "Zilizoisha Muda" (expired)
+//  - Sold + Expired listings zinaonekana kwa admin (read-only)
 //  - Bilingual support (SW/EN)
 //  - "Approve (Free)" button kama listing haina fee
 // ============================================================

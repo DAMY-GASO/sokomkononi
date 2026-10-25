@@ -78,16 +78,41 @@ function reservedTimes(count, lang) {
   return lang === "sw" ? `mara ${n}` : `${n} ${n === 1 ? "time" : "times"}`;
 }
 
-function reservationCountdown(reservedUntil, lang) {
-  if (!reservedUntil) return "";
-  const ms = new Date(reservedUntil).getTime() - Date.now();
-  if (ms <= 0) return t(lang, "Inaisha hivi karibuni", "Ending soon");
-  const hours = Math.floor(ms / 3600000);
-  if (hours < 24) return t(lang, `Saa ${hours} zimebaki`, `${hours}hrs left`);
-  const days = Math.floor(hours / 24);
-  const remainingHours = hours % 24;
-  if (remainingHours === 0) return t(lang, `Siku ${days} zimebaki`, `${days} days left`);
-  return t(lang, `Siku ${days} ${remainingHours}saa zimebaki`, `${days}d ${remainingHours}h left`);
+// ✅ Countdown component kwa ajili ya reservation
+function ReservationCountdown({ expiresInSeconds, lang }) {
+  const [timeLeft, setTimeLeft] = useState(expiresInSeconds);
+
+  useEffect(() => {
+    setTimeLeft(expiresInSeconds);
+  }, [expiresInSeconds]);
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  if (timeLeft <= 0) {
+    return (
+      <span className="text-body-sm font-bold text-rust bg-rust/10 px-2.5 py-1 rounded-full flex items-center gap-1">
+        <Clock3 size={12} />
+        {t(lang, "Reservation Imeisha", "Reservation Expired")}
+      </span>
+    );
+  }
+
+  const hours = Math.floor(timeLeft / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
+  const seconds = timeLeft % 60;
+
+  return (
+    <span className="text-body-sm font-bold text-gold-ink bg-gold/20 px-2.5 py-1 rounded-full flex items-center gap-1">
+      <Clock3 size={12} />
+      {hours}h {String(minutes).padStart(2, "0")}m {String(seconds).padStart(2, "0")}s {t(lang, "imebaki", "left")}
+    </span>
+  );
 }
 
 function ImageGallery({ property, lang }) {
@@ -403,8 +428,13 @@ function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onCon
                 {t(lang, "Imewekewa Reservation", "Reserved")} {reservedTimes(property.reservationCount, lang)}{t(lang, " hadi sasa.", " so far.")}
               </p>
             )}
-            {isReserved && property.reservedUntil && (
-              <p className="text-body-sm text-gold-ink mt-1">{reservationCountdown(property.reservedUntil, lang)}</p>
+            {isReserved && property.time_left_seconds > 0 && (
+              <div className="mt-2">
+                <ReservationCountdown
+                  expiresInSeconds={property.time_left_seconds}
+                  lang={lang}
+                />
+              </div>
             )}
             <p className="text-body-sm text-gold-ink/80 mt-1">
               {t(lang, "Jiunge na Waiting List ili tukutaarifu papo hapo endapo itaachiwa huru.", "Join the Waiting List so we notify you immediately if it becomes available.")}
@@ -913,12 +943,20 @@ export default function PropertyDetailPage() {
                     </span>
                   )}
                   {property.status === "reserved" && (
-                    <span className="text-body-sm font-medium text-gold-ink bg-gold/20 px-2.5 py-1 rounded-full mb-1">
-                      {t(lang, "Ina Reservation", "Reserved")}
-                      {reservedTimes(property.reservationCount, lang)
-                        ? ` · ${reservedTimes(property.reservationCount, lang)}`
-                        : ""}
-                    </span>
+                    <>
+                      <span className="text-body-sm font-medium text-gold-ink bg-gold/20 px-2.5 py-1 rounded-full mb-1">
+                        {t(lang, "Ina Reservation", "Reserved")}
+                        {reservedTimes(property.reservationCount, lang)
+                          ? ` · ${reservedTimes(property.reservationCount, lang)}`
+                          : ""}
+                      </span>
+                      {property.time_left_seconds > 0 && (
+                        <ReservationCountdown
+                          expiresInSeconds={property.time_left_seconds}
+                          lang={lang}
+                        />
+                      )}
+                    </>
                   )}
                   {property.status === "sold" && (
                     <span className="text-body-sm font-medium text-white bg-night px-2.5 py-1 rounded-full mb-1">
