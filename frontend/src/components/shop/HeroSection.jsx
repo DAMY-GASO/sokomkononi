@@ -342,30 +342,35 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
               />
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: HERO_MUTED }}>
-                {t("Maarufu:", "Popular:")}
-              </span>
-              {[
-                { slug: "nyumba", label: t("Nyumba", "Houses") },
-                { slug: "viwanja", label: t("Viwanja", "Land") },
-                { slug: "magari", label: t("Magari", "Cars") },
-                { slug: "biashara", label: t("Biashara", "Business") },
-              ].map((c) => (
-                <Link
-                  key={c.slug}
-                  to={`/kategoria/${c.slug}`}
-                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors"
-                  style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.14)",
-                    color: HERO_TEXT,
-                  }}
-                >
-                  {c.label}
-                  <ChevronRight size={11} className="opacity-60" />
-                </Link>
-              ))}
+            {/* ✅ MAARUFU (POPULAR) — sasa ina scroll ya upande kwenye simu */}
+            <div className="mt-4 w-full">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[11px] font-medium uppercase tracking-wider shrink-0" style={{ color: HERO_MUTED }}>
+                  {t("Maarufu:", "Popular:")}
+                </span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+                {[
+                  { slug: "nyumba", label: t("Nyumba", "Houses") },
+                  { slug: "viwanja", label: t("Viwanja", "Land") },
+                  { slug: "magari", label: t("Magari", "Cars") },
+                  { slug: "biashara", label: t("Biashara", "Business") },
+                ].map((c) => (
+                  <Link
+                    key={c.slug}
+                    to={`/kategoria/${c.slug}`}
+                    className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors whitespace-nowrap shrink-0"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      color: HERO_TEXT,
+                    }}
+                  >
+                    {c.label}
+                    <ChevronRight size={11} className="opacity-60" />
+                  </Link>
+                ))}
+              </div>
             </div>
 
             {/* CTAs — centered, equal width, larger text */}

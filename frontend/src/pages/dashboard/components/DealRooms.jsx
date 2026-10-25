@@ -1902,10 +1902,10 @@ function DealDetail({
             {lang === "sw"
               ? `Mmekubaliana kwenye ${formatTZS(
                   deal.currentOffer
-                )}. Tunasubiri mnunuzi alipe Reservation Fee.`
+                )}. Tafadhali subiri majibu ya mnunuzi.`
               : `You agreed at ${formatTZS(
                   deal.currentOffer
-                )}. Waiting for the buyer to pay the Reservation Fee.`}
+                )}.  Please wait for the buyer’s response..`}
           </span>
         </div>
       )}

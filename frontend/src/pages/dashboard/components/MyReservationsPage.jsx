@@ -66,7 +66,7 @@ function isReservationPaid(deal) {
 // ============================================================
 const getStatus = (lang) => ({
   reserved: {
-    label: lang === "sw" ? "Kipindi cha Ukaguzi" : "Inspection Period",
+    label: lang === "sw" ? "Kipindi cha Ukaguzi" : "Reservation Period",
     bg: "rgba(16,26,46,0.08)",
     fg: COLORS.night,
   },

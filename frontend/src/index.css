@@ -745,3 +745,74 @@ html.dark [data-surface="sand"] .bg-white svg[stroke="#FEA406"] {
 [data-keep-light] button:last-child {
   color: #FF8A65 !important;
 }
+
+/* ============================================================
+   SAFARI / iOS FIXES — kuzuia UI kuvurugika
+   ============================================================ */
+
+/* 1. Zuia Safari kutafsiri upya ukubwa wa maandishi (text inflation) */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 2. Flex na Grid watoto wasivunje layout — hii ni muhimu sana kwa maneno marefu */
+.flex > *,
+.grid > * {
+  min-width: 0;
+}
+
+/* 3. Maneno marefu yasivunje layout — tumia break-word kwenye maandishi */
+.text-primary,
+.text-secondary,
+.text-muted,
+p,
+span,
+h1, h2, h3, h4, h5, h6,
+button,
+a {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* 4. Vitufe visivunjike kwenye simu — wawe na urefu wa kutosha */
+@media (max-width: 640px) {
+  button,
+  [role="button"],
+  a[role="button"] {
+    min-height: 40px;
+    white-space: normal; /* Ruhusu kuvunja kwa maneno marefu */
+  }
+}
+
+/* 5. Safari ina tatizo na input fields — hakikisha font-size ni 16px ili isizoom */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* 6. Safari modal/overlay — hakikisha haiscroll background */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* 7. Safari haielewi vizuri `gap` kwenye flex — ongeza margin kama fallback */
+@supports not (gap: 1rem) {
+  .flex > *:not(:last-child),
+  .grid > *:not(:last-child) {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* 8. Kuzuia muonekano mbaya kwenye iOS kwa grid ya 3+ columns */
+@media (max-width: 400px) {
+  .grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
