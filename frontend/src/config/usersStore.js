@@ -5,6 +5,9 @@
 //  - hydrateUsersFromApi inapokea na inapitisha `signal` kwa api.get
 //  - AbortError inarethrow ili component i-handle
 //  - write() hai-dispatch kama data haijabadilika (zuia loop)
+//  - permanentDeleteUserAsync: body moja kwa moja (sivyo { data: ... })
+//  - verifyUserAsync IMETOLEWA — verification inafanywa
+//    kwenye VerificationSection
 // ============================================================
 import { useEffect, useState, useCallback } from "react";
 import { api } from "../api/client";
@@ -32,7 +35,7 @@ function read() {
 function write(list) {
   if (typeof window === "undefined") return;
 
-  // ✅ FIX: Usiandike / usi-dispatch kama data haijabadilika
+  // Usiandike / usi-dispatch kama data haijabadilika
   const json = JSON.stringify(list);
   const prev = window.localStorage.getItem(KEY);
   if (prev === json) return;
@@ -197,7 +200,6 @@ export async function hydrateUsersFromApi(opts = {}, { signal } = {}) {
   if (verified && verified !== "all") params.set("verified", verified);
 
   try {
-    // ✅ FIX: Pitisha signal kwa api.get
     const d = await api.get(`/admin/users/?${params.toString()}`, { signal });
 
     const rawList = Array.isArray(d) ? d : d?.results || [];
@@ -253,7 +255,6 @@ export async function hydrateUsersFromApi(opts = {}, { signal } = {}) {
       hasPrev: !!d?.previous,
     };
   } catch (err) {
-    // ✅ FIX: Rethrow AbortError ili component i-handle
     if (err?.name === "AbortError") throw err;
     return { ok: false, error: err };
   }
@@ -317,21 +318,6 @@ export async function toggleUserStatusAsync(id, opts) {
 }
 
 // ============================================================
-// VERIFY
-// ============================================================
-export async function verifyUserAsync(id) {
-  try {
-    await api.post(`/admin/users/${id}/verify/`, {});
-    write(
-      read().map((x) => (x.id === id ? { ...x, isVerified: true } : x))
-    );
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
-}
-
-// ============================================================
 // DELETE (soft)
 // ============================================================
 export async function deleteUserAsync(id) {
@@ -377,8 +363,10 @@ export async function permanentDeleteUserAsync(id, { reason, confirmText } = {})
   }
 
   try {
+    // ✅ body moja kwa moja — api.delete(path, body)
     await api.delete(`/admin/users/${id}/permanent/`, {
-      data: { reason: cleanReason, confirm_text: cleanConfirm },
+      reason: cleanReason,
+      confirm_text: cleanConfirm,
     });
     write(read().filter((x) => x.id !== id));
     return { ok: true, deleted: true };

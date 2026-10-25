@@ -1,10 +1,12 @@
 // ============================================================
 // UserManagementSection.jsx
-// + FIX: loading inaisha KILA MARA (request sequence)
+// + Verify imeondolewa (verification iko VerificationSection)
+// + Permanent delete inafanya kazi (body moja kwa moja)
+// + Notifications zote ni bilingual (sw/en)
+// + loading inaisha KILA MARA (request sequence)
 // + AbortController + requestSeqRef (race-condition safe)
 // + skeleton inaonekana tu kwenye firstLoad
 // + timeout guard ya skeleton
-// + ONDOA listener ya "sokomkononi:users-updated" (infinite loop fix)
 // ============================================================
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
@@ -17,6 +19,9 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  CheckCircle2,
+  AlertCircle,
+  X,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -30,7 +35,6 @@ import {
   getUsers,
   activateUserAsync,
   suspendUserAsync,
-  verifyUserAsync,
   permanentDeleteUserAsync,
 } from "../../../../config/usersStore.js";
 
@@ -140,6 +144,42 @@ function CardSkeleton({ rows = 3 }) {
   );
 }
 
+// ============================================================
+// TOAST (bilingual)
+// ============================================================
+function Toast({ toast, onClose, lang }) {
+  if (!toast) return null;
+  const isError = toast.type === "error";
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-5 right-5 z-50 max-w-sm w-[calc(100%-2.5rem)] sm:w-auto rounded-xl border px-4 py-3 shadow-lg flex items-start gap-3"
+      style={{
+        background: isError ? "rgba(193,80,46,0.10)" : "rgba(47,109,79,0.10)",
+        borderColor: isError ? "rgba(193,80,46,0.35)" : "rgba(47,109,79,0.35)",
+        color: isError ? COLORS.dangerText : COLORS.successText,
+      }}
+    >
+      {isError ? (
+        <AlertCircle size={18} className="shrink-0 mt-0.5" />
+      ) : (
+        <CheckCircle2 size={18} className="shrink-0 mt-0.5" />
+      )}
+      <p className="text-xs font-semibold leading-relaxed flex-1">
+        {toast.message?.[lang] || toast.message?.sw}
+      </p>
+      <button
+        onClick={onClose}
+        className="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+        aria-label={lang === "sw" ? "Funga" : "Close"}
+      >
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
+
 export default function UserManagementSection() {
   const { lang } = useLanguage();
 
@@ -159,7 +199,20 @@ export default function UserManagementSection() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [suspendTarget, setSuspendTarget] = useState(null);
   const [busy, setBusy] = useState({});
-  const [error, setError] = useState("");
+
+  // Toast ya bilingual
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
+  const showToast = useCallback((message, type = "success") => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ message, type });
+    toastTimerRef.current = setTimeout(() => setToast(null), 5000);
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   // AbortController + sequence kwa race condition
   const abortRef = useRef(null);
@@ -174,7 +227,6 @@ export default function UserManagementSection() {
     async (p = 1) => {
       const seq = ++requestSeqRef.current;
 
-      // Cancel fetch iliyopita
       if (abortRef.current) {
         abortRef.current.abort();
       }
@@ -182,7 +234,6 @@ export default function UserManagementSection() {
       abortRef.current = controller;
 
       setLoading(true);
-      setError("");
 
       let res;
       try {
@@ -201,14 +252,12 @@ export default function UserManagementSection() {
         if (err?.name === "AbortError") return;
         res = { ok: false, error: err };
       } finally {
-        // Kila request inamaliza loading yake — race-safe
         if (seq === requestSeqRef.current) {
           setLoading(false);
           setFirstLoad(false);
         }
       }
 
-      // Stale request — acha
       if (seq !== requestSeqRef.current) return;
 
       if (res?.ok) {
@@ -217,9 +266,16 @@ export default function UserManagementSection() {
         setTotalPages(res.totalPages || 1);
         setCount(res.count || 0);
       } else if (res) {
-        setError(
-          res?.error?.message ||
-            t("Imeshindwa kupakia watumiaji.", "Failed to load users.")
+        showToast(
+          {
+            sw:
+              res?.error?.message ||
+              "Imeshindwa kupakia watumiaji. Jaribu tena.",
+            en:
+              res?.error?.message ||
+              "Failed to load users. Please try again.",
+          },
+          "error"
         );
         setUsers([]);
       }
@@ -228,7 +284,6 @@ export default function UserManagementSection() {
     [query, roleFilter, statusFilter, verifiedFilter]
   );
 
-  // Refetch kila filter inabadilika + mount
   useEffect(() => {
     fetchPage(1);
     return () => {
@@ -240,23 +295,18 @@ export default function UserManagementSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, roleFilter, statusFilter, verifiedFilter]);
 
-  // ❌ FIX: ONDOA listener ya "sokomkononi:users-updated"
-  // Kwa sababu write() ina-dispatch EV kila fetch inapokamilika,
-  // na listener hii inaita fetchPage tena → infinite loop.
-  // Component hii inajitegemea: fetchPage inaitwa kwenye filter changes
-  // na baada ya actions.
-
   // Timeout guard — skeleton isiwe milele
   useEffect(() => {
     if (!loading) return;
     const timer = setTimeout(() => {
       setLoading(false);
       setFirstLoad(false);
-      setError(
-        t(
-          "Inachukua muda mrefu kupakia. Tafadhali jaribu tena.",
-          "Loading is taking too long. Please try again."
-        )
+      showToast(
+        {
+          sw: "Inachukua muda mrefu kupakia. Tafadhali jaribu tena.",
+          en: "Loading is taking too long. Please try again.",
+        },
+        "error"
       );
     }, SKELETON_TIMEOUT_MS);
     return () => clearTimeout(timer);
@@ -271,7 +321,6 @@ export default function UserManagementSection() {
     if (u.status === "suspended") {
       (async () => {
         setBusy((b) => ({ ...b, [userId]: "toggle" }));
-        setError("");
         const res = await activateUserAsync(userId);
         setBusy((b) => {
           const n = { ...b };
@@ -279,11 +328,22 @@ export default function UserManagementSection() {
           return n;
         });
         if (!res.ok) {
-          setError(
-            res.error?.message ||
-              t("Imeshindwa kumwasha mtumiaji.", "Failed to activate user.")
+          showToast(
+            {
+              sw:
+                res.error?.message ||
+                "Imeshindwa kumwasha mtumiaji.",
+              en:
+                res.error?.message ||
+                "Failed to activate user.",
+            },
+            "error"
           );
         } else {
+          showToast({
+            sw: "Mtumiaji amewashwa kikamilifu.",
+            en: "User activated successfully.",
+          });
           fetchPage(page);
         }
       })();
@@ -296,7 +356,6 @@ export default function UserManagementSection() {
     const u = suspendTarget;
     if (!u) return;
     setBusy((b) => ({ ...b, [u.id]: "toggle" }));
-    setError("");
     const res = await suspendUserAsync(u.id, { reason });
     setBusy((b) => {
       const n = { ...b };
@@ -304,12 +363,23 @@ export default function UserManagementSection() {
       return n;
     });
     if (!res.ok) {
-      setError(
-        res.error?.message ||
-          t("Imeshindwa kumsimamisha mtumiaji.", "Failed to suspend user.")
+      showToast(
+        {
+          sw:
+            res.error?.message ||
+            "Imeshindwa kumsimamisha mtumiaji.",
+          en:
+            res.error?.message ||
+            "Failed to suspend user.",
+        },
+        "error"
       );
     } else {
       setSuspendTarget(null);
+      showToast({
+        sw: "Mtumiaji amesimamishwa.",
+        en: "User suspended.",
+      });
       fetchPage(page);
     }
   };
@@ -324,7 +394,6 @@ export default function UserManagementSection() {
     const u = deleteTarget;
     if (!u) return;
     setBusy((b) => ({ ...b, [u.id]: "delete" }));
-    setError("");
     const res = await permanentDeleteUserAsync(u.id, { reason, confirmText });
     setBusy((b) => {
       const n = { ...b };
@@ -332,32 +401,24 @@ export default function UserManagementSection() {
       return n;
     });
     if (!res.ok) {
-      setError(
-        res.error?.message ||
-          t("Imeshindwa kumfuta mtumiaji.", "Failed to delete user.")
+      showToast(
+        {
+          sw:
+            res.error?.message ||
+            "Imeshindwa kumfuta mtumiaji.",
+          en:
+            res.error?.message ||
+            "Failed to delete user.",
+        },
+        "error"
       );
     } else {
       setDeleteTarget(null);
       if (selectedUser?.id === u.id) setSelectedUser(null);
-      fetchPage(page);
-    }
-  };
-
-  const handleVerify = async (userId) => {
-    setBusy((b) => ({ ...b, [userId]: "verify" }));
-    setError("");
-    const res = await verifyUserAsync(userId);
-    setBusy((b) => {
-      const n = { ...b };
-      delete n[userId];
-      return n;
-    });
-    if (!res.ok) {
-      setError(
-        res.error?.message ||
-          t("Imeshindwa kuthibitisha mtumiaji.", "Failed to verify user.")
-      );
-    } else {
+      showToast({
+        sw: "Mtumiaji amefutwa kabisa.",
+        en: "User permanently deleted.",
+      });
       fetchPage(page);
     }
   };
@@ -365,7 +426,6 @@ export default function UserManagementSection() {
   // ── ActionButtons ──────────────────────────────────────────
   const ActionButtons = ({ user, fullWidth = false }) => {
     const isSuspended = user.status === "suspended";
-    const isVerified = user.isVerified;
     const isBusy = !!busy[user.id];
     const busyAction = busy[user.id];
 
@@ -375,37 +435,17 @@ export default function UserManagementSection() {
           fullWidth ? "w-full" : "justify-end"
         }`}
       >
-        {!isVerified && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleVerify(user.id);
-            }}
-            disabled={isBusy}
-            style={{
-              color: COLORS.successText,
-              borderColor: `${COLORS.green}33`,
-            }}
-            className={`inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              fullWidth ? "flex-1" : ""
-            }`}
-            title={t("Thibitisha", "Verify")}
-          >
-            {busyAction === "verify" ? (
-              <Loader2 size={13} className="animate-spin" />
-            ) : (
-              <ShieldCheck size={13} />
-            )}
-            {fullWidth && t("Thibitisha", "Verify")}
-          </button>
-        )}
-
         <button
           onClick={(e) => {
             e.stopPropagation();
             handleToggle(user.id);
           }}
           disabled={isBusy}
+          title={
+            isSuspended
+              ? t("Washa Tena", "Activate")
+              : t("Simamisha", "Suspend")
+          }
           style={{
             color: isSuspended ? COLORS.successText : COLORS.dangerText,
             borderColor: isSuspended
@@ -419,7 +459,8 @@ export default function UserManagementSection() {
           {busyAction === "toggle" ? (
             <>
               <Loader2 size={13} className="animate-spin" />
-              {fullWidth && t("Inafanya...", "Working...")}
+              {fullWidth &&
+                t("Inafanya...", "Working...")}
             </>
           ) : isSuspended ? (
             <>
@@ -549,22 +590,10 @@ export default function UserManagementSection() {
       <SectionHeader
         title={t("Usimamizi wa Watumiaji", "User Management")}
         subtitle={t(
-          "Dhibiti akaunti za watumiaji — thibitisha, simamisha, washa, au futa",
-          "Manage user accounts — verify, suspend, activate, or delete"
+          "Dhibiti akaunti za watumiaji — simamisha, washa, au futa",
+          "Manage user accounts — suspend, activate, or delete"
         )}
       />
-
-      {error && (
-        <div
-          style={{
-            background: "rgba(193,80,46,0.1)",
-            color: COLORS.dangerText,
-          }}
-          className="text-xs font-semibold px-3 py-2 rounded-lg mb-4"
-        >
-          {error}
-        </div>
-      )}
 
       {/* FILTERS */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4 flex-wrap">
@@ -683,6 +712,7 @@ export default function UserManagementSection() {
                               size={13}
                               style={{ color: COLORS.successText }}
                               className="shrink-0"
+                              title={t("Imethibitishwa", "Verified")}
                             />
                           )}
                         </div>
@@ -739,6 +769,7 @@ export default function UserManagementSection() {
                           size={13}
                           style={{ color: COLORS.successText }}
                           className="shrink-0"
+                          title={t("Imethibitishwa", "Verified")}
                         />
                       )}
                     </div>
@@ -805,6 +836,9 @@ export default function UserManagementSection() {
           busy={busy[suspendTarget.id] === "toggle"}
         />
       )}
+
+      {/* TOAST (bilingual) */}
+      <Toast toast={toast} onClose={() => setToast(null)} lang={lang} />
     </>
   );
 }
