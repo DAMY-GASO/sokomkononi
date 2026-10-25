@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MapPin, Camera } from "lucide-react";
+import { Heart, MapPin, Camera, Clock } from "lucide-react"; // ✅ Ongeza Clock
 import ListingImage from "./ListingImage.jsx";
 import { isBoostActive } from "../utils/listings.js";
 import { Badge, cx } from "./ui";
@@ -32,6 +32,43 @@ const STATUS = {
   sold: { sw: "Imeuzwa", en: "Sold", variant: "night" },
 };
 
+// ✅ MPYA: Reservation Countdown
+function ReservationCountdown({ expiresInSeconds, lang }) {
+  const [timeLeft, setTimeLeft] = useState(expiresInSeconds);
+
+  useEffect(() => {
+    setTimeLeft(expiresInSeconds);
+  }, [expiresInSeconds]);
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  if (timeLeft <= 0) {
+    return (
+      <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+        <Clock size={9} />
+        {lang === "sw" ? "Imeisha" : "Expired"}
+      </span>
+    );
+  }
+
+  const hours = Math.floor(timeLeft / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
+  const seconds = timeLeft % 60;
+
+  return (
+    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+      <Clock size={9} />
+      {hours}h {String(minutes).padStart(2, "0")}m {String(seconds).padStart(2, "0")}s
+    </span>
+  );
+}
+
 export default function ListingCard({
   listing,
   category: rawCategory,
@@ -42,7 +79,6 @@ export default function ListingCard({
   isSaved = false,
   onToggleSave,
 }) {
-  // ✅ FIX: category ni STRING kila mara (kama ni object, chukua key/slug/name)
   const categoryImageUrl = (() => {
     if (!rawCategory) return null;
     if (typeof rawCategory === "string") return null;
@@ -125,6 +161,13 @@ export default function ListingCard({
                 {chip[lang] || chip.sw}
               </Badge>
             )}
+            {/* ✅ MPYA: Countdown */}
+            {listing.status === "reserved" && listing.time_left_seconds > 0 && (
+              <ReservationCountdown
+                expiresInSeconds={listing.time_left_seconds}
+                lang={lang}
+              />
+            )}
           </div>
         </div>
         {HeartBtn}
@@ -151,7 +194,7 @@ export default function ListingCard({
           ratio="aspect-square"
           fallback={Icon ? <Icon size={44} strokeWidth={1.5} /> : null}
         />
-        <div className="absolute left-2.5 top-2.5 flex flex-col items-start gap-1">
+        <div className="absolute left-2.5 top-2.5 flex flex-col items-start gap-1 z-10">
           {featured && !sold && (
             <Badge variant="gold" className="shadow-sm">
               {lang === "sw" ? "Imeangaziwa" : "Featured"}
@@ -161,6 +204,13 @@ export default function ListingCard({
             <Badge variant={chip.variant} className="shadow-sm">
               {chip[lang] || chip.sw}
             </Badge>
+          )}
+          {/* ✅ MPYA: Countdown */}
+          {listing.status === "reserved" && listing.time_left_seconds > 0 && (
+            <ReservationCountdown
+              expiresInSeconds={listing.time_left_seconds}
+              lang={lang}
+            />
           )}
         </div>
         {extra > 0 && (
