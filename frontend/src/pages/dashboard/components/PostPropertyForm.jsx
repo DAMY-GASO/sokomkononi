@@ -41,7 +41,7 @@ function Field({ label, children }) {
   );
 }
 
-// ✅ FIX: Badilisha kutoka hardcoded inline styles kwenda Tailwind theme classes
+// ✅ Theme-aware class kwa inputs zote (imeondoa inputStyle)
 const inputCls =
   "rounded-xl border border-hairline bg-card text-primary px-3 py-2.5 text-sm outline-none text-center w-full focus:border-gold focus:ring-1 focus:ring-gold transition-colors";
 
@@ -857,16 +857,10 @@ export default function PostPropertyForm({
     const needsRetryPublish = stage === "review" && createdListing && feeAmount === 0 && !!error;
 
     return (
-      <div
-        className="w-full flex items-center justify-center p-6"
-        style={{ background: COLORS.sand, minHeight: "600px" }}
-      >
+      <div className="w-full flex items-center justify-center p-6 bg-page min-h-screen">
         <div className="max-w-md w-full">
           {stage === "review" && (
-            <div
-              className="text-center bg-white rounded-2xl border p-8"
-              style={{ borderColor: COLORS.sandLine }}
-            >
+            <div className="text-center bg-card rounded-2xl border border-hairline p-8">
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
                 style={{ background: needsRetryPublish ? COLORS.rust : COLORS.green }}
@@ -934,17 +928,13 @@ export default function PostPropertyForm({
 
               {!needsRetryPublish && (
                 <>
-                  <div
-                    className="rounded-xl border p-4 mb-4"
-                    style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
-                  >
+                  <div className="rounded-xl border border-hairline p-4 mb-4 bg-page">
                     <div className="flex justify-between text-sm">
                       <span className="text-secondary">
                         {t("Ada ya Kuchapisha", "Listing Fee")}
                       </span>
                       <span className="font-bold" style={{ color: COLORS.rust }}>
-                        {feeAmount > 0                          ? formatTZS(feeAmount)
-                          : t("Haijawekwa", "Not set")}
+                        {feeAmount > 0 ? formatTZS(feeAmount) : t("Haijawekwa", "Not set")}
                       </span>
                     </div>
 
@@ -987,10 +977,9 @@ export default function PostPropertyForm({
                         onClick={() => setPaymentMode("flat")}
                         className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border transition-colors"
                         style={{
-                          background: paymentMode === "flat" ? COLORS.night : "white",
-                          color: paymentMode === "flat" ? COLORS.sand : COLORS.night,
-                          borderColor:
-                            paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
+                          background: paymentMode === "flat" ? COLORS.night : "transparent",
+                          color: paymentMode === "flat" ? COLORS.sand : "inherit",
+                          borderColor: paymentMode === "flat" ? COLORS.night : COLORS.sandLine,
                         }}
                       >
                         {t("Ada ya Kawaida", "Flat Fee")}
@@ -999,12 +988,9 @@ export default function PostPropertyForm({
                         onClick={() => setPaymentMode("bundle")}
                         className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border transition-colors"
                         style={{
-                          background:
-                            paymentMode === "bundle" ? COLORS.night : "white",
-                          color:
-                            paymentMode === "bundle" ? COLORS.sand : COLORS.night,
-                          borderColor:
-                            paymentMode === "bundle" ? COLORS.night : COLORS.sandLine,
+                          background: paymentMode === "bundle" ? COLORS.night : "transparent",
+                          color: paymentMode === "bundle" ? COLORS.sand : "inherit",
+                          borderColor: paymentMode === "bundle" ? COLORS.night : COLORS.sandLine,
                         }}
                       >
                         {t("Kifurushi (Bundle)", "Bundle Package")}
@@ -1025,9 +1011,9 @@ export default function PostPropertyForm({
                             onClick={() => setBundleId(b.id)}
                             style={{
                               borderColor: selected ? COLORS.gold : COLORS.sandLine,
-                              background: selected ? "rgba(232,163,61,0.08)" : "white",
+                              background: selected ? "rgba(232,163,61,0.08)" : "transparent",
                             }}
-                            className="flex items-center justify-between gap-2 p-3 rounded-xl border text-left"
+                            className="flex items-center justify-between gap-2 p-3 rounded-xl border border-hairline text-left"
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <Package size={14} color={COLORS.gold} />
@@ -1077,7 +1063,7 @@ export default function PostPropertyForm({
 
               <button
                 onClick={onGoToListings}
-                className="w-full py-2.5 mt-2 text-sm font-medium underline underline-offset-2"
+                className="w-full py-2.5 mt-2 text-sm font-medium underline underline-offset-2 text-primary"
               >
                 {t("Angalia kwenye Mali Zangu", "View in My Listings")}
               </button>
@@ -1124,14 +1110,8 @@ export default function PostPropertyForm({
   // ═══════════════════════════════════════════════════════════
   if (!isEdit && stage === "done") {
     return (
-      <div
-        className="w-full flex items-center justify-center p-6"
-        style={{ background: COLORS.sand, minHeight: "600px" }}
-      >
-        <div
-          className="max-w-md w-full text-center bg-white rounded-2xl border p-8"
-          style={{ borderColor: COLORS.sandLine }}
-        >
+      <div className="w-full flex items-center justify-center p-6 bg-page min-h-screen">
+        <div className="max-w-md w-full text-center bg-card rounded-2xl border border-hairline p-8">
           <div
             className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
             style={{ background: COLORS.green }}
@@ -1156,7 +1136,7 @@ export default function PostPropertyForm({
           </button>
           <button
             onClick={reset}
-            className="w-full py-2 mt-2 text-body-sm font-medium"
+            className="w-full py-2 mt-2 text-body-sm font-medium text-primary"
           >
             {t("Weka Mali Nyingine", "Post Another Property")}
           </button>
@@ -1169,7 +1149,7 @@ export default function PostPropertyForm({
   // FORM STAGE
   // ═══════════════════════════════════════════════════════════
   return (
-    <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full p-4 sm:p-6">
+    <div className="bg-page min-h-screen w-full p-4 sm:p-6">
       {cropQueue.length > 0 && (
         <ImageCropper
           key={cropQueue[0].name + cropQueue[0].size + cropQueue.length}
@@ -1199,7 +1179,7 @@ export default function PostPropertyForm({
         )}
 
         <div className="mb-6 text-center">
-          <h1 className="h-title">
+          <h1 className="h-title text-primary">
             {isEdit
               ? t("Hariri Tangazo", "Edit Listing")
               : t("Weka Mali Yako", "Post Your Property")}
@@ -1330,8 +1310,7 @@ export default function PostPropertyForm({
                 <button
                   key={cat.key}
                   onClick={() => chooseCategory(cat.key)}
-                  style={{ borderColor: COLORS.sandLine, background: "white" }}
-                  className="flex flex-col items-center text-center gap-3 p-4 rounded-2xl border hover:shadow-sm transition-shadow overflow-hidden"
+                  className="flex flex-col items-center text-center gap-3 p-4 rounded-2xl border border-hairline bg-card hover:shadow-sm transition-shadow overflow-hidden"
                 >
                   {hasPhoto ? (
                     <img
@@ -1364,8 +1343,7 @@ export default function PostPropertyForm({
                 key={m.key}
                 type="button"
                 onClick={() => chooseMode(m.key)}
-                style={{ borderColor: COLORS.sandLine, background: "white" }}
-                className="rounded-2xl border p-5 text-center hover:shadow-sm transition-shadow"
+                className="rounded-2xl border border-hairline bg-card p-5 text-center hover:shadow-sm transition-shadow"
               >
                 <span className="block text-primary text-base font-semibold">
                   {m.label[lang]}
@@ -1382,7 +1360,7 @@ export default function PostPropertyForm({
         {category && (!needsMode || isEdit) && (
           <form
             onSubmit={handleFormSubmit}
-            className="mx-auto flex max-w-xl flex-col gap-5 rounded-3xl border-[1.5px] border-gold/60 bg-white p-4 shadow-[0_12px_32px_-18px_rgba(1,25,87,0.3)] sm:p-6"
+            className="mx-auto flex max-w-xl flex-col gap-5 rounded-3xl border-[1.5px] border-gold/60 bg-card p-4 shadow-[0_12px_32px_-18px_rgba(1,25,87,0.3)] sm:p-6"
           >
             <Field
               label={
@@ -1420,8 +1398,7 @@ export default function PostPropertyForm({
                 ))}
                 {photos.length < 8 && (
                   <label
-                    style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-                    className="w-20 h-20 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 cursor-pointer text-body-sm"
+                    className="w-20 h-20 rounded-xl border-2 border-dashed border-hairline flex flex-col items-center justify-center gap-1 cursor-pointer text-body-sm text-primary"
                   >
                     <ImagePlus size={18} />
                     {t("Ongeza", "Add")}
@@ -1439,7 +1416,6 @@ export default function PostPropertyForm({
 
             <Field label={`${titleLabel[lang] || titleLabel.sw} *`}>
               <input
-                style={inputStyle}
                 className={inputCls}
                 placeholder={
                   suggestedTitle
@@ -1461,10 +1437,7 @@ export default function PostPropertyForm({
             </Field>
 
             {visibleFields.length > 0 && (
-              <div
-                style={{ borderColor: COLORS.sandLine, background: "white" }}
-                className="rounded-2xl border p-4 flex flex-col gap-4"
-              >
+              <div className="rounded-2xl border border-hairline p-4 flex flex-col gap-4 bg-page">
                 <span
                   style={{ color: COLORS.rust }}
                   className="text-body-sm font-semibold text-center"
@@ -1489,17 +1462,13 @@ export default function PostPropertyForm({
               </div>
             )}
 
-            <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-2xl border p-4 flex flex-col gap-4"
-            >
+            <div className="rounded-2xl border border-hairline p-4 flex flex-col gap-4 bg-page">
               <span className="text-primary text-sm font-medium text-center">
                 {locationLabel[lang] || locationLabel.sw} *
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Field label={`${t("Mkoa", "Region")} *`}>
                   <select
-                    style={inputStyle}
                     className={inputCls}
                     value={loc.mkoa}
                     onChange={(e) =>
@@ -1520,7 +1489,6 @@ export default function PostPropertyForm({
                 </Field>
                 <Field label={t("Wilaya", "District")}>
                   <input
-                    style={inputStyle}
                     className={inputCls}
                     list="dl-wilaya"
                     placeholder={t("mfano: Kinondoni", "e.g. Kinondoni")}
@@ -1537,7 +1505,6 @@ export default function PostPropertyForm({
                 </Field>
                 <Field label={`${t("Eneo", "Area")} *`}>
                   <input
-                    style={inputStyle}
                     className={inputCls}
                     placeholder={t("mfano: Mbezi Beach", "e.g. Mbezi Beach")}
                     value={loc.eneo}
@@ -1576,7 +1543,6 @@ export default function PostPropertyForm({
               }${priceMeta.optional ? "" : " *"}`}
             >
               <input
-                style={inputStyle}
                 type="text"
                 inputMode="numeric"
                 className={inputCls}
@@ -1598,7 +1564,6 @@ export default function PostPropertyForm({
 
             <Field label={descLabel[lang] || descLabel.sw}>
               <textarea
-                style={inputStyle}
                 rows={4}
                 className={`${inputCls} resize-none`}
                 placeholder={t("Eleza kwa ufupi...", "Briefly describe...")}
@@ -1638,13 +1603,7 @@ export default function PostPropertyForm({
             )}
 
             {cfg.modes && !isEdit && (
-              <p
-                className="text-center text-xs text-secondary rounded-xl px-3 py-2"
-                style={{
-                  background: "white",
-                  border: `1px solid ${COLORS.sandLine}`,
-                }}
-              >
+              <p className="text-center text-xs text-secondary rounded-xl px-3 py-2 border border-hairline bg-page">
                 {t(
                   "Mawasiliano yote yatafanyika kupitia Deal Room — hakuna haja ya kuweka namba ya simu.",
                   "All contact happens through the Deal Room — no need to add a phone number."
@@ -1668,11 +1627,11 @@ export default function PostPropertyForm({
             <button
               type="submit"
               disabled={!canSubmit || submitting}
-              style={{
-                background: canSubmit ? COLORS.gold : COLORS.sandLine,
-                color: canSubmit ? COLORS.night : "rgba(16,26,46,0.4)",
-              }}
-              className="w-full py-3.5 rounded-xl font-semibold text-sm transition-colors disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                canSubmit
+                  ? "bg-gold text-night hover:brightness-110"
+                  : "bg-ink/10 text-muted cursor-not-allowed"
+              }`}
             >
               {submitting ? (
                 <>
@@ -1692,8 +1651,7 @@ export default function PostPropertyForm({
               <button
                 type="button"
                 onClick={onGoToListings}
-                className="w-full py-2.5 rounded-xl text-sm font-medium border"
-                style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
+                className="w-full py-2.5 rounded-xl text-sm font-medium border border-hairline text-primary hover:bg-ink/5 transition-colors"
               >
                 {t("Ghairi", "Cancel")}
               </button>
