@@ -175,7 +175,7 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
 
   const listings = usePublicListings();
 
-  // ── Public stats kutoka backend ──────────────────────────
+  // ── Public stats kutoka backend (Njia mbadala ya kutafuta data) ──
   const [publicStats, setPublicStats] = useState({
     users: 0,
     properties: 0,
@@ -184,24 +184,32 @@ export default function HeroSection({ stats = {}, onBuyNow, onSellNow, onSearch 
 
   useEffect(() => {
     let cancelled = false;
-    api
-      .get("/stats/public/")
+
+    // 1. Hesabu mali (properties) kutoka kwenye listings zilizopo kwenye store
+    const liveListings = listings.filter((l) => l.status === "live");
+    const liveCount = liveListings.length;
+
+    // 2. Jaribu kupata idadi ya watumiaji. 
+    // Kwa kuwa hii ni admin dashboard, tunajaribu kuita /admin/users/.
+    // Kama itafeli (mfano kwa mtumiaji wa kawaida), tunabaki na 0.
+    api.get("/admin/users/?page_size=1")
       .then((res) => {
         if (cancelled) return;
         setPublicStats({
-          users: Number(res?.users) || 0,
-          properties: Number(res?.properties) || 0,
-          rating: Number(res?.rating) || 4.7,
+          users: Number(res?.count) || 0,
+          properties: liveCount,
+          rating: 4.7,
         });
       })
       .catch(() => {
-        // Fallback kwa listings za local
         if (cancelled) return;
+        // Kama API ya users inafeli, tunaweka properties tu
         setPublicStats((s) => ({
           ...s,
-          properties: listings.filter((l) => l.status === "live").length,
+          properties: liveCount,
         }));
       });
+
     return () => {
       cancelled = true;
     };
