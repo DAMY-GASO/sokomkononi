@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
   X, ImagePlus, Star, Loader2, AlertTriangle,
-  RefreshCw, Info, ChevronLeft, ChevronRight, Maximize2,
+  RefreshCw, Info, Maximize2,
 } from "lucide-react";
 import { listingsApi } from "../../../../api/listings.js";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
-
+import ImageLightbox from "../../../../components/ImageLightbox.jsx";
 
 export default function AdminListingImageManager({ listing, onClose }) {
   const { lang } = useLanguage();
@@ -14,9 +14,8 @@ export default function AdminListingImageManager({ listing, onClose }) {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  // State kwa ajili ya Lightbox (Picha inayotazamwa kwa ukubwa mkubwa)
-  const [activeIndex, setActiveIndex] = useState(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [initialIndex, setInitialIndex] = useState(0);
 
   const fetchImages = async () => {
     setLoading(true);
@@ -48,30 +47,15 @@ export default function AdminListingImageManager({ listing, onClose }) {
   const pickImageSrc = (img) =>
     img?.detail || img?.card || img?.image_url || img?.thumb || img?.url || null;
 
-  // ── Lightbox Navigation ───────────────────────────────────
-  const handleNext = useCallback((e) => {
-    e?.stopPropagation();
-    setActiveIndex((prev) => (prev + 1) % images.length);
-  }, [images.length]);
-
-  const handlePrev = useCallback((e) => {
-    e?.stopPropagation();
-    setActiveIndex((prev) => (prev - 1 + images.length) % images.length);
-  }, [images.length]);
-
-  // Keyboard navigation (Left/Right arrows) wakati Lightbox iko wazi
-  useEffect(() => {
-    if (activeIndex === null) return;
-    
-    const handleKeyDown = (e) => {
-      if (e.key === "ArrowRight") handleNext();
-      if (e.key === "ArrowLeft") handlePrev();
-      if (e.key === "Escape") setActiveIndex(null);
-    };
-    
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeIndex, handleNext, handlePrev]);
+  // ✅ Picha zinazotumwa kwenye ImageLightbox
+  const lightboxImages = images
+    .map((img) => ({
+      id: img.id,
+      image_url: pickImageSrc(img),
+      thumb: img.thumb || img.card || pickImageSrc(img),
+      card: img.card || pickImageSrc(img),
+    }))
+    .filter((img) => img.image_url);
 
   return (
     <>
@@ -157,7 +141,10 @@ export default function AdminListingImageManager({ listing, onClose }) {
                         {src ? (
                           <button
                             type="button"
-                            onClick={() => setActiveIndex(index)}
+                            onClick={() => {
+                              setInitialIndex(index);
+                              setLightboxOpen(true);
+                            }}
                             className="block h-full w-full cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-[color:rgb(var(--c-royal))] focus:ring-inset"
                           >
                             <img
@@ -168,7 +155,6 @@ export default function AdminListingImageManager({ listing, onClose }) {
                                 e.currentTarget.style.opacity = 0.3;
                               }}
                             />
-                            {/* Icon ya Kupanua inaonekana ukiweka mouse juu */}
                             <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                               <Maximize2 size={24} className="text-white opacity-0 transition-opacity group-hover:opacity-100 drop-shadow-md" />
                             </div>
@@ -209,63 +195,15 @@ export default function AdminListingImageManager({ listing, onClose }) {
         </div>
       </div>
 
-      {/* ── LIGHTBOX (Picha Kubwa) ────────────────────────── */}
-      {activeIndex !== null && images[activeIndex] && (
-        <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 backdrop-blur-md"
-          onClick={() => setActiveIndex(null)}
-          role="dialog"
-          aria-modal="true"
-        >
-          {/* Kitufe cha Kufunga (X) */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setActiveIndex(null);
-            }}
-            className="absolute top-4 right-4 z-10 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-            aria-label={t("Funga", "Close")}
-          >
-            <X size={24} />
-          </button>
-
-          {/* Picha */}
-          <img
-            src={pickImageSrc(images[activeIndex])}
-            alt={`Image ${activeIndex + 1}`}
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
-          />
-
-          {/* Namba ya Picha (Counter) */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-md">
-            {activeIndex + 1} / {images.length}
-          </div>
-
-          {/* Vitufe vya Nyuma na Mbele (chini kando ya picha) */}
-          {images.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={handlePrev}
-                className="absolute left-4 bottom-6 z-10 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
-                aria-label={t("Nyuma", "Previous")}
-              >
-                <ChevronLeft size={24} />
-              </button>
-              <button
-                type="button"
-                onClick={handleNext}
-                className="absolute right-4 bottom-6 z-10 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
-                aria-label={t("Mbele", "Next")}
-              >
-                <ChevronRight size={24} />
-              </button>
-            </>
-          )}
-        </div>
-      )}
+      {/* ✅ ImageLightbox moja inayotumika kwa wote */}
+      <ImageLightbox
+        images={lightboxImages}
+        initialIndex={initialIndex}
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        lang={lang}
+        alt={listing.title || ""}
+      />
     </>
   );
 }
