@@ -24,6 +24,9 @@ export default function ImageLightbox({
   const touchDeltaX = useRef(0);
   const [dragOffset, setDragOffset] = useState(0);
 
+  // ✅ HOOKS ZOTE ZINAPASWA KUITWA KABLA YA RETURN NULL
+  const lastTapRef = useRef(0);
+
   // ── Reset wakati open inabadilika ──
   useEffect(() => {
     if (open) {
@@ -44,7 +47,6 @@ export default function ImageLightbox({
     };
 
     window.addEventListener("keydown", handleKey);
-    // Zuia scroll ya background
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -55,6 +57,7 @@ export default function ImageLightbox({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, index]);
 
+  // ✅ SASA RETURN NULL INAKUJA BAADA YA HOOKS ZOTE
   if (!open || images.length === 0) return null;
 
   const current = images[index];
@@ -94,7 +97,6 @@ export default function ImageLightbox({
     const dx = touch.clientX - touchStartX.current;
     const dy = touch.clientY - touchStartY.current;
 
-    // Kama ni horizontal zaidi ya vertical — fanya swipe
     if (Math.abs(dx) > Math.abs(dy)) {
       touchDeltaX.current = dx;
       setDragOffset(dx);
@@ -104,7 +106,7 @@ export default function ImageLightbox({
   const handleTouchEnd = () => {
     if (zoomed) return;
     const dx = touchDeltaX.current;
-    const threshold = 60; // px
+    const threshold = 60;
 
     if (dx < -threshold) next();
     else if (dx > threshold) prev();
@@ -116,7 +118,6 @@ export default function ImageLightbox({
   };
 
   // ── Double-tap zoom (touch) / double-click zoom ──
-  const lastTapRef = useRef(0);
   const handleTap = () => {
     const now = Date.now();
     if (now - lastTapRef.current < 300) {
@@ -170,7 +171,6 @@ export default function ImageLightbox({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Image container — imejikita katikati */}
         <div
           className="relative w-full h-full flex items-center justify-center"
           style={{
