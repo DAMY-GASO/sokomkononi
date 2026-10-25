@@ -6,6 +6,7 @@
 //  - Receipt download inatumia rawId (backend ID halisi)
 //  - Download history: rekodi kila download (success + failed)
 //  - Re-download kutoka history
+//  - ✅ AUTO-CONSUME CREDIT kwenye handleModalConfirm
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import {
@@ -381,15 +382,50 @@ export default function MyTransactionsPage() {
     }
   };
 
-  const handleModalConfirm = () => {
+  // ✅ AUTO-CONSUME CREDIT kwenye handleModalConfirm
+  const handleModalConfirm = async () => {
+    // 1. Kama ni bure (isFree), pakua moja kwa moja
     if (isFree) {
       performDownload();
       return;
     }
+
+    // 2. Kama ana credit, tumia moja kwa moja (AUTO-CONSUME)
     if (hasCredit) {
-      handleCreditDownload();
-      return;
+      try {
+        const res = await consumeCreditAsync(user?.id, "success");
+        if (res.success || res.ok) {
+          // Credit imetumika, sasa pakua
+          await performDownload();
+          return;
+        } else {
+          // Credit imefeli — endelea kwenye malipo ya kawaida
+          setFeeError(
+            t(
+              "Imeshindwa kutumia credit. Jaribu tena.",
+              "Failed to use credit. Try again."
+            )
+          );
+          setShowDownloadModal(false);
+          setFeePayStage("select");
+          setFeePayError("");
+          setShowFeePayModal(true);
+          return;
+        }
+      } catch (err) {
+        setFeeError(
+          err?.message ||
+            t("Imeshindwa kutumia credit.", "Failed to use credit.")
+        );
+        setShowDownloadModal(false);
+        setFeePayStage("select");
+        setFeePayError("");
+        setShowFeePayModal(true);
+        return;
+      }
     }
+
+    // 3. Kama hana credit na si bure, onyesha malipo
     setShowDownloadModal(false);
     setFeePayStage("select");
     setFeePayError("");

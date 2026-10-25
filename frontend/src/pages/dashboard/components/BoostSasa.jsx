@@ -3,6 +3,7 @@
 // + Inaonyesha discount ya campaign kwenye packages
 // + Bei 0 → inaonyesha "Bure" (sio "TZS 0")
 // + feeFree (admin amezima boost fee) → inafanya kazi bila package
+// + ✅ AUTO-CONSUME CREDIT kama mtumiaji ana boost credit
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -425,6 +426,34 @@ export default function BoostSasa({
     setError("");
     try {
       const raw = await createBoostOnBackend();
+
+      // ✅ AUTO-CONSUME CREDIT: Kama mtumiaji ana boost credit, tumia moja kwa moja
+      if (hasCredit) {
+        try {
+          const paid = await boostingApi.pay(raw.id, {
+            payment_reference: "credits",
+          });
+          const activated = paid?.boost || paid?.data?.boost || null;
+          setDone({
+            listing: selectedListing,
+            pkg: flatPackage,
+            boost: activated,
+            mode: "credit",
+          });
+          setStage("done");
+          onBoosted(selectedListing.id, {
+            boostTier: flatPackage?.key || "credits",
+            boostExpiresAt: activated?.expires_at,
+          });
+          setCreating(false);
+          return;
+        } catch (creditErr) {
+          console.warn("[BoostSasa] credit consumption failed:", creditErr);
+          // Kama credit imefeli, endelea na malipo ya kawaida
+        }
+      }
+
+      // Kama hana credit, au credit imefeli, endelea na PaymentGateway
       setPendingBoost({
         id: raw.id,
         listing: selectedListing,

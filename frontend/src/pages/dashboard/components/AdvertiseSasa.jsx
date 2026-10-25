@@ -374,6 +374,24 @@ export default function AdvertiseSasa({
     setError("");
     try {
       const { bannerId } = await createPendingBanner();
+      
+      // ✅ AUTO-CONSUME CREDIT: Kama mtumiaji ana ads credit, tumia moja kwa moja
+      if (hasCredit) {
+        try {
+          const raw = await api.post(`/banners/${bannerId}/pay/`, {
+            payment_reference: "credits",
+          });
+          onAdvertised(selectedListing.id, null);
+          setDone({ listing: selectedListing, banner: raw?.banner || null });
+          setBusy(false);
+          return;
+        } catch (creditErr) {
+          console.warn("[AdvertiseSasa] credit consumption failed:", creditErr);
+          // Kama credit imefeli, endelea na malipo ya kawaida
+        }
+      }
+
+      // Kama hana credit, au credit imefeli, endelea na PaymentGateway
       setPendingBanner({
         id: bannerId,
         listing: selectedListing,

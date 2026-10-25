@@ -5,6 +5,7 @@
 //   B. Bundle            → POST /bundles/purchases/ → /pay/ → credits
 //   C. Credit            → apply → pay {payment_reference: "credits"}
 //   D. Skip fee          → apply → pay {payment_reference: "free"}
+//   ✅ AUTO-CONSUME CREDIT kama mtumiaji ana leading credit
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -370,6 +371,28 @@ export default function LeadingSasa({
     setError("");
     try {
       const purchaseId = await createPendingPurchase();
+
+      // ✅ AUTO-CONSUME CREDIT: Kama mtumiaji ana leading credit, tumia moja kwa moja
+      if (hasCredit) {
+        try {
+          await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {
+            payment_reference: "credits",
+          });
+          const days = selectedPackage?.days || 1;
+          const expiresAt = new Date(
+            Date.now() + days * 86400000
+          ).toISOString();
+          onLead(selectedListing.id, { leadingExpiresAt: expiresAt });
+          setDone({ listing: selectedListing });
+          setBusy(false);
+          return;
+        } catch (creditErr) {
+          console.warn("[LeadingSasa] credit consumption failed:", creditErr);
+          // Kama credit imefeli, endelea na malipo ya kawaida
+        }
+      }
+
+      // Kama hana credit, au credit imefeli, endelea na PaymentGateway
       setPendingPurchase({
         id: purchaseId,
         listing: selectedListing,
