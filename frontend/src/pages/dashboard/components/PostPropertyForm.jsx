@@ -41,13 +41,9 @@ function Field({ label, children }) {
   );
 }
 
-const inputStyle = {
-  background: COLORS.sand,
-  borderColor: COLORS.sandLine,
-  color: COLORS.night,
-};
+// ✅ FIX: Badilisha kutoka hardcoded inline styles kwenda Tailwind theme classes
 const inputCls =
-  "rounded-xl border px-3 py-2.5 text-sm outline-none text-center w-full";
+  "rounded-xl border border-hairline bg-card text-primary px-3 py-2.5 text-sm outline-none text-center w-full focus:border-gold focus:ring-1 focus:ring-gold transition-colors";
 
 // ── SchemaField ─────────────────────────────────────────────
 function SchemaField({ f, value, onChange, lang }) {
@@ -61,7 +57,6 @@ function SchemaField({ f, value, onChange, lang }) {
   if (f.type === "select") {
     control = (
       <select
-        style={inputStyle}
         className={inputCls}
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
@@ -77,7 +72,6 @@ function SchemaField({ f, value, onChange, lang }) {
   } else if (f.type === "textarea") {
     control = (
       <textarea
-        style={inputStyle}
         rows={3}
         className={`${inputCls} resize-none`}
         placeholder={placeholder}
@@ -89,7 +83,6 @@ function SchemaField({ f, value, onChange, lang }) {
     control = (
       <>
         <input
-          style={inputStyle}
           className={inputCls}
           type={
             f.type === "number"
