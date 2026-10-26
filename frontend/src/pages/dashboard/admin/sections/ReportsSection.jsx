@@ -534,7 +534,7 @@ export default function ReportsSection() {
     };
   }, [apiReports, listings, deals, locale]);
 
-    // ✅ Deals Status as Percentages (Jumla yake = 100)
+     // ✅ Deals Status as Percentages (Jumla yake = 100%)
   const dealsStatusData = useMemo(() => {
     const keys = ["negotiating", "accepted", "reserved", "completed", "cancelled"];
     const labels = {
@@ -545,20 +545,53 @@ export default function ReportsSection() {
       cancelled: t("Imeghairiwa", "Cancelled"),
     };
 
-    // ✅ Hesabu jumla ya deals zilizopo kwenye makundi haya 5 pekee
+    // Hesabu jumla ya deals zilizopo kwenye makundi haya 5 pekee
     const totalInBuckets = keys.reduce(
       (sum, k) => sum + (reports.dealsByStatus?.[k] || 0),
       0
     );
-    const total = totalInBuckets || 1; // Kama ni sifuri, tumia 1 kuepuka division by zero
+
+    if (totalInBuckets === 0) {
+      return keys.map((k) => ({
+        label: labels[k],
+        value: 0,
+        display: `0% (0)`,
+        color: DEAL_STATUS_COLORS[k] || COLORS.gold,
+      }));
+    }
+
+    // ✅ Largest Remainder Method — hakikisha jumla = 100%
+    const raw = keys.map((k) => {
+      const count = reports.dealsByStatus?.[k] || 0;
+      const rawPct = (count / totalInBuckets) * 100;
+      return {
+        key: k,
+        count,
+        rawPct,
+        floor: Math.floor(rawPct),
+        remainder: rawPct - Math.floor(rawPct),
+      };
+    });
+
+    // Jumla ya floors (msingi wa 100)
+    const sumFloors = raw.reduce((s, p) => s + p.floor, 0);
+    let toDistribute = 100 - sumFloors;
+
+    // Panga kwa remainder kushuka, toa +1 kwa wale wenye remainder kubwa
+    const sortedByRemainder = [...raw].sort((a, b) => b.remainder - a.remainder);
+    const adjustedPct = new Map();
+    sortedByRemainder.forEach((p, idx) => {
+      const extra = idx < toDistribute ? 1 : 0;
+      adjustedPct.set(p.key, p.floor + extra);
+    });
 
     return keys.map((k) => {
-      const count = reports.dealsByStatus?.[k] || 0;
-      const pct = (count / total) * 100;
+      const item = raw.find((p) => p.key === k);
+      const pct = adjustedPct.get(k) || 0;
       return {
         label: labels[k],
         value: pct,
-        display: `${pct.toFixed(0)}% (${count})`,
+        display: `${pct}% (${item?.count || 0})`,
         color: DEAL_STATUS_COLORS[k] || COLORS.gold,
       };
     });
