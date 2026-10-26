@@ -1,13 +1,6 @@
 import React from "react";
 import { toneText } from "./constants.js";
 
-/* ============================================================
-   Lightweight SVG chart components — no external dependencies.
-   All colors are fixed brand values (they read well on both
-   light and dark surfaces). Text uses `currentColor` so it
-   inherits the theme automatically.
-   ============================================================ */
-
 const FONT = "system-ui, -apple-system, Segoe UI, sans-serif";
 
 /* ── DONUT CHART ─────────────────────────────────────────── */
@@ -25,7 +18,6 @@ export function DonutChart({
   const cy = size / 2;
   const C = 2 * Math.PI * r;
 
-  // Build segments
   let acc = 0;
   const segments = data
     .filter((d) => Number(d.value) > 0)
@@ -53,7 +45,6 @@ export function DonutChart({
         aria-label="Donut chart"
         style={{ flexShrink: 0 }}
       >
-        {/* Background circle */}
         <circle
           cx={cx} cy={cy} r={r}
           fill="none"
@@ -61,7 +52,6 @@ export function DonutChart({
           strokeOpacity="0.08"
           strokeWidth={thickness}
         />
-        {/* Segments */}
         <g transform={`rotate(-90 ${cx} ${cy})`}>
           {segments.map((s, i) => (
             <circle
@@ -76,7 +66,6 @@ export function DonutChart({
             />
           ))}
         </g>
-        {/* Center label */}
         {(centerLabel || centerSub) && (
           <g>
             {centerLabel && (
@@ -106,7 +95,6 @@ export function DonutChart({
         )}
       </svg>
 
-      {/* Legend */}
       {segments.length > 0 && (
         <ul className="flex w-full min-w-0 flex-col gap-2 sm:max-w-[260px]">
           {segments.map((s, i) => (
@@ -168,14 +156,16 @@ export function VBarChart({
   height = 180,
   valueFormat,
   emptyText = "—",
+  maxValue = null,
 }) {
-  const max = Math.max(...data.map((d) => Number(d.value) || 0), 1);
+  const max = maxValue || Math.max(...data.map((d) => Number(d.value) || 0), 1);
+  
   if (data.length === 0) {
     return <p className="py-6 text-center text-xs text-muted">{emptyText}</p>;
   }
   return (
     <div
-      className="flex w-full items-end justify-between gap-1"
+      className="flex w-full items-stretch justify-between gap-1"
       style={{ height }}
     >
       {data.map((d, i) => {
@@ -184,7 +174,7 @@ export function VBarChart({
         return (
           <div
             key={i}
-            className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
+            className="flex h-full min-w-0 flex-1 flex-col items-center gap-1.5"
           >
             <span className="truncate text-[9px] tabular-nums text-muted sm:text-[10px]">
               {v > 0 && valueFormat ? valueFormat(v) : v > 0 ? v : ""}
@@ -193,9 +183,11 @@ export function VBarChart({
               <div
                 className="w-full max-w-[28px] rounded-t-md transition-all duration-700"
                 style={{
-                  height: `${Math.max(pct, v > 0 ? 4 : 1)}%`,
+                  /* ✅ Badilisha urefu wa chini kuwa 8px (au 2%) ili isionekane kama mstari mwembamba */
+                  height: `${Math.max(pct, v > 0 ? 8 : 2)}%`,
                   background: d.color || "#FEA406",
-                  minHeight: v > 0 ? 3 : 1,
+                  /* ✅ Ongeza minHeight wa 8px kwa bar zote */
+                  minHeight: v > 0 ? 8 : 4,
                 }}
                 title={`${d.label}: ${v}`}
               />

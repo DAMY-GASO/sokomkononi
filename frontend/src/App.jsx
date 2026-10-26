@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
 import ScrollToHash from "./components/ScrollToHash.jsx";
 import { ToastProvider } from "./components/Toast.jsx";
@@ -45,6 +45,18 @@ import ProfilePage from "./pages/ProfilePage.jsx";
 import BundlesPage from "./pages/BundlesPage.jsx";
 import DashboardShell from "./pages/dashboard/components/DashboardShell.jsx";
 import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
+
+// ✅ Component mpya: inahakikisha kila ukurasa mpya unaanza juu,
+// lakini inaruhusu gestures za simu (back/forward) kufanya kazi.
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
 
 function BrowseRoute() {
   const { lang } = useLanguage();
@@ -98,6 +110,8 @@ function App() {
           <UndoToast />
           <ConfirmProvider>
             <Router>
+              {/* ✅ Inasaidia gestures za simu na kurudi juu kwa ukurasa mpya */}
+              <ScrollToTop />
               <ScrollToHash />
               <Routes>
                 {/* PUBLIC */}
