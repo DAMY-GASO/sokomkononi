@@ -728,10 +728,14 @@ export default function ReportsSection() {
             iconColor={COLORS.green}
           >
             <VBarChart
-              data={(reports.listingsGrowth || []).map((d) => ({ ...d, color: COLORS.green }))}
-              height={180}
-              valueFormat={(v) => v.toLocaleString("en-US")}
-            />
+  data={(reports.listingsGrowth || []).map((d) => ({
+    label: d.label || d.date,
+    value: d.count || 0,
+    color: COLORS.green,
+  }))}
+  height={180}
+  valueFormat={(v) => v.toLocaleString("en-US")}
+/>
           </ChartCard>
 
           {/* ✅ Deals Status - VBarChart inayojumlisha 100% */}
