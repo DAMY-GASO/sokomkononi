@@ -14,8 +14,7 @@ import {
   useHydratePublicListings,
 } from "../../../../config/listingsStore.js";
 import { useDeals } from "../../../../config/dealsStore.js";
-import { usePlatformRevenue, localDayKey, isRevenueTransaction } from "../shared/revenue.js";
-import { useTransactions } from "../../../../config/transactionsStore.js"; // ✅ Ongeza hii
+import { usePlatformRevenue, localDayKey } from "../shared/revenue.js";
 import {
   DonutChart,
   HBarChart,
@@ -315,7 +314,6 @@ export default function ReportsSection() {
   const { lang } = useLanguage();
   const apiReports = useReports(lang);
   const platformRevenue = usePlatformRevenue("all");
-  const transactions = useTransactions(); // ✅ Tumia hii kwa ajili ya chati za siku/miezi
   useHydratePublicListings();
   const listings = useListings();
   const deals = useDeals();
@@ -443,50 +441,29 @@ export default function ReportsSection() {
       .filter((d) => d.value > 0);
   }, [platformRevenue]);
 
-  // ✅ Revenue by Month - Tumia transactions
+  // ✅ Revenue by Month - Tumia apiReports.revenueByMonth
   const revenueByMonth = useMemo(() => {
-    const out = [];
-    const now = new Date();
-    const revenueSource = (transactions || []).filter(isRevenueTransaction);
-    
-    for (let i = 5; i >= 0; i--) {
-      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
-      const label = start.toLocaleDateString(locale, { month: "short" });
-      let total = 0;
-      revenueSource.forEach((tr) => {
-        const dt = new Date(tr.at);
-        if (dt >= start && dt <= end) total += Number(tr.amount) || 0;
-      });
-      out.push({ label, value: total });
+    const apiMonths = apiReports?.revenueByMonth;
+    if (Array.isArray(apiMonths) && apiMonths.length > 0) {
+      return apiMonths.map((m) => ({
+        label: m.label || m.month || "—",
+        value: Number(m.total) || 0,
+      }));
     }
-    return out;
-  }, [transactions, locale]);
+    return [];
+  }, [apiReports]);
 
-  // ✅ Revenue by Day - Tumia transactions
+  // ✅ Revenue by Day - Tumia apiReports.revenueByDay
   const revenueByDay = useMemo(() => {
-    const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
-      d.setDate(d.getDate() - i);
-      days.push({
-        key: localDayKey(d),
-        label: d.toLocaleDateString(locale, { weekday: "short" }),
-        value: 0,
-      });
+    const apiDays = apiReports?.revenueByDay;
+    if (Array.isArray(apiDays) && apiDays.length > 0) {
+      return apiDays.map((d) => ({
+        label: d.label || d.date || "—",
+        value: Number(d.total) || 0,
+      }));
     }
-    const byKey = Object.fromEntries(days.map((d) => [d.key, d]));
-    const revenueSource = (transactions || []).filter(isRevenueTransaction);
-    
-    revenueSource.forEach((tr) => {
-      const dt = new Date(tr.at);
-      if (Number.isNaN(dt.getTime())) return;
-      const key = localDayKey(dt);
-      if (byKey[key]) byKey[key].value += Number(tr.amount) || 0;
-    });
-    return days;
-  }, [transactions, locale]);
+    return [];
+  }, [apiReports]);
 
   const hasRevenueByDay = revenueByDay.some((d) => d.value > 0);
 
@@ -557,7 +534,7 @@ export default function ReportsSection() {
     };
   }, [apiReports, listings, deals, locale]);
 
-  // ✅ Deals Status as Percentages (Jumla yake = 100)
+    // ✅ Deals Status as Percentages (Jumla yake = 100)
   const dealsStatusData = useMemo(() => {
     const keys = ["negotiating", "accepted", "reserved", "completed", "cancelled"];
     const labels = {
@@ -567,14 +544,20 @@ export default function ReportsSection() {
       completed: t("Imekamilika", "Completed"),
       cancelled: t("Imeghairiwa", "Cancelled"),
     };
-    const total = reports.totalDeals || 1;
-    
-    return keys.map(k => {
+
+    // ✅ Hesabu jumla ya deals zilizopo kwenye makundi haya 5 pekee
+    const totalInBuckets = keys.reduce(
+      (sum, k) => sum + (reports.dealsByStatus?.[k] || 0),
+      0
+    );
+    const total = totalInBuckets || 1; // Kama ni sifuri, tumia 1 kuepuka division by zero
+
+    return keys.map((k) => {
       const count = reports.dealsByStatus?.[k] || 0;
       const pct = (count / total) * 100;
       return {
         label: labels[k],
-        value: pct, 
+        value: pct,
         display: `${pct.toFixed(0)}% (${count})`,
         color: DEAL_STATUS_COLORS[k] || COLORS.gold,
       };

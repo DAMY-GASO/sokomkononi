@@ -3,7 +3,7 @@
 // Drawer ya mawasiliano ya upande wa pili (buyer au seller)
 // wakati wa inspection. Inaonyesha jina, simu, email, button
 // za "Piga Simu" / "Tuma Email", na "Pakua Mazungumzo".
-// Inatumika kwenye DealRoom (baada ya reservation kulipwa).
+// Inatumika kwenye DealRoom (mawasiliano ni bure — hakuna kulazimisha malipo).
 // ============================================================
 import React, { useState } from "react";
 import {
@@ -131,8 +131,8 @@ export default function ContactDrawer({
             }}
           >
             {t(
-              "Mawasiliano yamefunguliwa kwa sababu reservation imelipwa. Tafadhali wasiliana kwa heshima na kwa lengo la ukaguzi.",
-              "Contact unlocked because the reservation has been paid. Please communicate respectfully and for inspection purposes."
+              "Mawasiliano ni bure. Wasiliana moja kwa moja kwa heshima — hakuna haja ya kulipia reservation.",
+              "Contact is free. Communicate directly and respectfully — no reservation payment required."
             )}
           </p>
 
