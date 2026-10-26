@@ -1,14 +1,28 @@
 import React, { useMemo, useState } from "react";
 import {
-  Users, Home, Handshake, Wallet, TrendingUp, BarChart3, Eye,
-  MapPin, Tag, Download, FileText, FileSpreadsheet, File, Loader2, Calendar, UserPlus
+  Users,
+  Home,
+  Handshake,
+  Wallet,
+  TrendingUp,
+  BarChart3,
+  Eye,
+  MapPin,
+  Tag,
+  Download,
+  FileText,
+  FileSpreadsheet,
+  File,
+  Loader2,
+  Calendar,
+  UserPlus,
 } from "lucide-react";
 import { COLORS, formatTZS, getCategory } from "../shared/constants.js";
 import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useReports } from "../../../../config/reportsStore.js";
-import { useUsers } from "../../../../config/usersStore.js"; 
+import { useUsers } from "../../../../config/usersStore.js";
 import {
   useListings,
   useHydratePublicListings,
@@ -39,25 +53,25 @@ const formatDateTZ = (dateString) => {
 };
 
 const STREAM_COLORS = {
-  listing:     "#0891B2",
+  listing: "#0891B2",
   reservation: "#2F6D4F",
-  boost:       "#FEA406",
-  leading:     "#7C3AED",
-  advertise:   "#C1502E",
-  success:     "#2563EB",
-  bundle:      "#DB2777",
+  boost: "#FEA406",
+  leading: "#7C3AED",
+  advertise: "#C1502E",
+  success: "#2563EB",
+  bundle: "#DB2777",
 };
 
 const DEAL_STATUS_COLORS = {
-  negotiating:            "#FEA406",
-  offer_sent:             "#D97706",
-  accepted:               "#2F6D4F",
-  reserved:               "#0062FD",
+  negotiating: "#FEA406",
+  offer_sent: "#D97706",
+  accepted: "#2F6D4F",
+  reserved: "#0062FD",
   awaiting_final_payment: "#2563EB",
-  payment_proof_submitted:"#7C3AED",
-  completed:              "#059669",
-  disputed:               "#C1502E",
-  cancelled:              "#6B7280",
+  payment_proof_submitted: "#7C3AED",
+  completed: "#059669",
+  disputed: "#C1502E",
+  cancelled: "#6B7280",
 };
 
 const LISTING_STATUS_COLORS = {
@@ -92,21 +106,23 @@ async function downloadReport(format, { period, from, to }) {
   const res = await fetch(`${base}${path}`, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "Accept-Language": (typeof window !== "undefined" && window.__SMK_LANG__) || "sw",
+      "Accept-Language":
+        (typeof window !== "undefined" && window.__SMK_LANG__) || "sw",
     },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.detail || err?.error?.message || `Download failed (${res.status})`);
+    throw new Error(
+      err?.detail || err?.error?.message || `Download failed (${res.status})`
+    );
   }
   const data = await res.blob();
   const url = window.URL.createObjectURL(data);
   const a = document.createElement("a");
   a.href = url;
   const ext = format === "doc" ? "docx" : format;
-  const suffix = period === "custom"
-    ? `${from || "start"}_to_${to || "end"}`
-    : period;
+  const suffix =
+    period === "custom" ? `${from || "start"}_to_${to || "end"}` : period;
   a.download = `ripoti_${suffix}_${new Date().toISOString().slice(0, 10)}.${ext}`;
   document.body.appendChild(a);
   a.click();
@@ -140,7 +156,9 @@ function DownloadPanel({ lang }) {
 
   const handleDownload = async (format) => {
     if (period === "custom" && (!from || !to)) {
-      setError(t("Chagua tarehe ya kuanza na kumaliza.", "Select start and end date."));
+      setError(
+        t("Chagua tarehe ya kuanza na kumaliza.", "Select start and end date.")
+      );
       return;
     }
     setBusy(format);
@@ -288,7 +306,9 @@ function ChartCard({ title, icon: Icon, iconColor, hint, children }) {
       <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
           <Icon size={16} color={iconColor} className="shrink-0" />
-          <h3 className="text-sm font-semibold text-primary truncate">{title}</h3>
+          <h3 className="text-sm font-semibold text-primary truncate">
+            {title}
+          </h3>
         </div>
         {hint && (
           <span className="shrink-0 text-[10px] font-medium text-muted">
@@ -317,14 +337,18 @@ export default function ReportsSection() {
   useHydratePublicListings();
   const listings = useListings();
   const deals = useDeals();
-  const localUsers = useUsers(); 
+  const localUsers = useUsers();
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const locale = lang === "sw" ? "sw-TZ" : "en-US";
 
   // ── Users Breakdown ──
   const usersDonut = useMemo(() => {
-    let sellersOnly = 0, buyersOnly = 0, bothRoles = 0, neitherRole = 0, totalAdmins = 0;
+    let sellersOnly = 0,
+      buyersOnly = 0,
+      bothRoles = 0,
+      neitherRole = 0,
+      totalAdmins = 0;
     const users = localUsers;
     users.forEach((u) => {
       const role = u.role || "Neither";
@@ -335,27 +359,59 @@ export default function ReportsSection() {
       else neitherRole++;
     });
     return [
-      { label: t("Wauzaji Pekee", "Sellers Only"), value: sellersOnly, display: sellersOnly.toLocaleString("en-US"), color: "#FEA406" },
-      { label: t("Wanunuzi Pekee", "Buyers Only"), value: buyersOnly, display: buyersOnly.toLocaleString("en-US"), color: "#2F6D4F" },
-      { label: t("Wote Wawili", "Both"), value: bothRoles, display: bothRoles.toLocaleString("en-US"), color: "#7C3AED" },
-      { label: t("Wapya", "Neither"), value: neitherRole, display: neitherRole.toLocaleString("en-US"), color: "#9CA3AF" },
-      { label: t("Admins", "Admins"), value: totalAdmins, display: totalAdmins.toLocaleString("en-US"), color: "#DC2626" },
+      {
+        label: t("Wauzaji Pekee", "Sellers Only"),
+        value: sellersOnly,
+        display: sellersOnly.toLocaleString("en-US"),
+        color: "#FEA406",
+      },
+      {
+        label: t("Wanunuzi Pekee", "Buyers Only"),
+        value: buyersOnly,
+        display: buyersOnly.toLocaleString("en-US"),
+        color: "#2F6D4F",
+      },
+      {
+        label: t("Wote Wawili", "Both"),
+        value: bothRoles,
+        display: bothRoles.toLocaleString("en-US"),
+        color: "#7C3AED",
+      },
+      {
+        label: t("Wapya", "Neither"),
+        value: neitherRole,
+        display: neitherRole.toLocaleString("en-US"),
+        color: "#9CA3AF",
+      },
+      {
+        label: t("Admins", "Admins"),
+        value: totalAdmins,
+        display: totalAdmins.toLocaleString("en-US"),
+        color: "#DC2626",
+      },
     ].filter((d) => d.value > 0);
   }, [localUsers, lang]);
 
   const usersTotal = localUsers.length || 0;
 
-  // ✅ Users Growth Data (Cumulative - Jumla ya Watumiaji)
+  // ✅ Users Growth Data (Cumulative)
   const usersGrowthData = useMemo(() => {
     const growth = apiReports?.usersGrowth || [];
     const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const dayColors = {
-      Mon: "#2563EB", Tue: "#7C3AED", Wed: "#DB2777",
-      Thu: "#EA580C", Fri: "#CA8A04", Sat: "#16A34A", Sun: "#DC2626",
+      Mon: "#2563EB",
+      Tue: "#7C3AED",
+      Wed: "#DB2777",
+      Thu: "#EA580C",
+      Fri: "#CA8A04",
+      Sat: "#16A34A",
+      Sun: "#DC2626",
     };
 
     const dayMap = {};
-    daysOfWeek.forEach((day) => { dayMap[day] = 0; });
+    daysOfWeek.forEach((day) => {
+      dayMap[day] = 0;
+    });
 
     const recent = growth.slice(-7);
     recent.forEach((d) => {
@@ -363,12 +419,16 @@ export default function ReportsSection() {
         try {
           const dateObj = new Date(d.date);
           if (!isNaN(dateObj.getTime())) {
-            const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
+            const dayName = dateObj.toLocaleDateString("en-US", {
+              weekday: "short",
+            });
             if (dayMap[dayName] !== undefined) {
-              dayMap[dayName] = d.cumulative || 0; // ✅ Tumia Cumulative
+              dayMap[dayName] = d.cumulative || 0;
             }
           }
-        } catch (err) { /* Ignore */ }
+        } catch (err) {
+          /* Ignore */
+        }
       }
     });
 
@@ -383,43 +443,69 @@ export default function ReportsSection() {
   // ── Listings Breakdown ──
   const listingsDonut = useMemo(() => {
     const statuses = [
-      "live", "reserved", "sold", "pending_payment", "approved_pending_payment",
-      "pending_approval", "paid_pending_approval", "in_review", "needs_edit", "draft",
-      "rejected", "paused", "expired",
+      "live",
+      "reserved",
+      "sold",
+      "pending_payment",
+      "approved_pending_payment",
+      "pending_approval",
+      "paid_pending_approval",
+      "in_review",
+      "needs_edit",
+      "draft",
+      "rejected",
+      "paused",
+      "expired",
     ];
     const labels = {
-      live: t("Hai", "Live"), reserved: t("Imehifadhiwa", "Reserved"), sold: t("Imeuzwa", "Sold"),
-      pending_payment: t("Haijalipwa", "Unpaid"), approved_pending_payment: t("Inasubiri Malipo", "Awaiting Pay"),
-      pending_approval: t("Inasubiri Admin", "Pending Review"), paid_pending_approval: t("Imelipwa", "Paid"),
-      in_review: t("Inakaguliwa", "In Review"), needs_edit: t("Inahitaji Uhariri", "Needs Edit"),
-      draft: t("Rasimu", "Draft"), rejected: t("Imekataliwa", "Rejected"),
-      paused: t("Imesimamishwa", "Paused"), expired: t("Imeisha Muda", "Expired"),
+      live: t("Hai", "Live"),
+      reserved: t("Imehifadhiwa", "Reserved"),
+      sold: t("Imeuzwa", "Sold"),
+      pending_payment: t("Haijalipwa", "Unpaid"),
+      approved_pending_payment: t("Inasubiri Malipo", "Awaiting Pay"),
+      pending_approval: t("Inasubiri Admin", "Pending Review"),
+      paid_pending_approval: t("Imelipwa", "Paid"),
+      in_review: t("Inakaguliwa", "In Review"),
+      needs_edit: t("Inahitaji Uhariri", "Needs Edit"),
+      draft: t("Rasimu", "Draft"),
+      rejected: t("Imekataliwa", "Rejected"),
+      paused: t("Imesimamishwa", "Paused"),
+      expired: t("Imeisha Muda", "Expired"),
     };
     return statuses
       .map((s) => {
         const count = listings.filter((l) => l.status === s).length;
         return {
-          label: labels[s], value: count, display: count.toLocaleString("en-US"),
+          label: labels[s],
+          value: count,
+          display: count.toLocaleString("en-US"),
           color: LISTING_STATUS_COLORS[s] || "#9CA3AF",
         };
       })
       .filter((d) => d.value > 0);
   }, [listings, lang]);
 
-  // ── Deals Breakdown ──
+  // ── Deals Breakdown (Donut) ──
   const dealsDonut = useMemo(() => {
     const keys = Object.keys(DEAL_STATUS_COLORS);
     const labels = {
-      negotiating: t("Inajadiliwa","Negotiating"), offer_sent: t("Ofa Imetumwa","Offer Sent"),
-      accepted: t("Imekubaliwa","Accepted"), reserved: t("Imehifadhiwa","Reserved"),
-      awaiting_final_payment: t("Malipo ya Mwisho","Final Payment"), payment_proof_submitted: t("Uthibitisho","Proof Sent"),
-      completed: t("Imekamilika","Completed"), disputed: t("Mgogoro","Disputed"), cancelled: t("Imeghairiwa","Cancelled"),
+      negotiating: t("Inajadiliwa", "Negotiating"),
+      offer_sent: t("Ofa Imetumwa", "Offer Sent"),
+      accepted: t("Imekubaliwa", "Accepted"),
+      reserved: t("Imehifadhiwa", "Reserved"),
+      awaiting_final_payment: t("Malipo ya Mwisho", "Final Payment"),
+      payment_proof_submitted: t("Uthibitisho", "Proof Sent"),
+      completed: t("Imekamilika", "Completed"),
+      disputed: t("Mgogoro", "Disputed"),
+      cancelled: t("Imeghairiwa", "Cancelled"),
     };
     return keys
       .map((k) => {
         const count = deals.filter((d) => d.status === k).length;
         return {
-          label: labels[k], value: count, display: count.toLocaleString("en-US"),
+          label: labels[k],
+          value: count,
+          display: count.toLocaleString("en-US"),
           color: DEAL_STATUS_COLORS[k],
         };
       })
@@ -435,20 +521,28 @@ export default function ReportsSection() {
         const pct = (value / total) * 100;
         return {
           label: `${s.label} (${pct.toFixed(1)}%)`,
-          value: value, display: formatTZS(value),
+          value: value,
+          display: formatTZS(value),
           color: STREAM_COLORS[s.key] || "#9CA3AF",
         };
       })
       .filter((d) => d.value > 0);
   }, [platformRevenue]);
 
-  // ✅ revenueByMonth
+  // ── Revenue by Month ──
   const revenueByMonth = useMemo(() => {
     const out = [];
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
       const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+      const end = new Date(
+        now.getFullYear(),
+        now.getMonth() - i + 1,
+        0,
+        23,
+        59,
+        59
+      );
       const label = start.toLocaleDateString(locale, { month: "short" });
       let total = 0;
       const revenueSource = platformRevenue.transactions || [];
@@ -461,7 +555,7 @@ export default function ReportsSection() {
     return out;
   }, [platformRevenue, locale]);
 
-  // ── Revenue by Day (Timezone Fixed)
+  // ── Revenue by Day ──
   const revenueByDay = useMemo(() => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -485,6 +579,8 @@ export default function ReportsSection() {
     return days;
   }, [platformRevenue, locale]);
 
+  const hasRevenueByDay = revenueByDay.some((d) => d.value > 0);
+
   // ── Reports Data ──
   const reports = useMemo(() => {
     const num = (v) => Number(v) || 0;
@@ -503,11 +599,17 @@ export default function ReportsSection() {
     const dealsByStatus = Object.values(apiStatus).some((v) => num(v) > 0)
       ? apiStatus
       : {
-          negotiating: byStatus("negotiating"), accepted: byStatus("accepted"),
-          reserved: byStatus("reserved"), completed: byStatus("completed"), cancelled: byStatus("cancelled"),
+          negotiating: byStatus("negotiating"),
+          accepted: byStatus("accepted"),
+          reserved: byStatus("reserved"),
+          completed: byStatus("completed"),
+          cancelled: byStatus("cancelled"),
         };
     const totalDeals = pick(apiReports.totalDeals, deals.length);
-    const completedDeals = pick(apiReports.completedDeals, byStatus("completed"));
+    const completedDeals = pick(
+      apiReports.completedDeals,
+      byStatus("completed")
+    );
 
     const lsStatus = (st) => listings.filter((l) => l.status === st).length;
     const perDay = {};
@@ -528,24 +630,41 @@ export default function ReportsSection() {
         e.views += num(l.views);
         m.set(k, e);
       });
-      return Array.from(m.values()).sort((a, b) => b.views - a.views || b.count - a.count).slice(0, 5);
+      return Array.from(m.values())
+        .sort((a, b) => b.views - a.views || b.count - a.count)
+        .slice(0, 5);
     };
-    const topCategoriesLocal = group((l) => l.category).map((g) => ({ key: g.key, count: g.count, views: g.views }));
-    const topLocationsLocal = group((l) => String(l.location || "").trim()).map((g) => ({ name: g.key, count: g.count, views: g.views }));
+    const topCategoriesLocal = group((l) => l.category).map((g) => ({
+      key: g.key,
+      count: g.count,
+      views: g.views,
+    }));
+    const topLocationsLocal = group((l) =>
+      String(l.location || "").trim()
+    ).map((g) => ({ name: g.key, count: g.count, views: g.views }));
     const mostViewedLocal = listings
       .filter((l) => num(l.views) > 0)
       .sort((a, b) => num(b.views) - num(a.views))
       .slice(0, 5)
-      .map((l) => ({ id: l.id, title: l.title, views: num(l.views), price: l.price }));
+      .map((l) => ({
+        id: l.id,
+        title: l.title,
+        views: num(l.views),
+        price: l.price,
+      }));
 
     return {
       ...apiReports,
       totalListings: pick(apiReports.totalListings, listings.length),
       liveListings: pick(apiReports.liveListings, lsStatus("live")),
       soldListings: pick(apiReports.soldListings, lsStatus("sold")),
-      totalDeals, completedDeals,
+      totalDeals,
+      completedDeals,
       dealsByStatus,
-      mostViewedListings: pickList(apiReports.mostViewedListings, mostViewedLocal),
+      mostViewedListings: pickList(
+        apiReports.mostViewedListings,
+        mostViewedLocal
+      ),
       topCategories: pickList(apiReports.topCategories, topCategoriesLocal),
       topLocations: pickList(apiReports.topLocations, topLocationsLocal),
       topSellers: pickList(apiReports.topSellers, []),
@@ -554,7 +673,13 @@ export default function ReportsSection() {
 
   // ✅ Deals Status as Percentages (Jumla yake = 100)
   const dealsStatusData = useMemo(() => {
-    const keys = ["negotiating", "accepted", "reserved", "completed", "cancelled"];
+    const keys = [
+      "negotiating",
+      "accepted",
+      "reserved",
+      "completed",
+      "cancelled",
+    ];
     const labels = {
       negotiating: t("Inajadiliwa", "Negotiating"),
       accepted: t("Imekubaliwa", "Accepted"),
@@ -563,13 +688,13 @@ export default function ReportsSection() {
       cancelled: t("Imeghairiwa", "Cancelled"),
     };
     const total = reports.totalDeals || 1;
-    
-    return keys.map(k => {
+
+    return keys.map((k) => {
       const count = reports.dealsByStatus?.[k] || 0;
       const pct = (count / total) * 100;
       return {
         label: labels[k],
-        value: pct, 
+        value: pct,
         display: `${pct.toFixed(0)}% (${count})`,
         color: DEAL_STATUS_COLORS[k] || COLORS.gold,
       };
@@ -598,7 +723,10 @@ export default function ReportsSection() {
             title={t("Mapato kwa Njia", "Revenue by Stream")}
             icon={Wallet}
             iconColor={COLORS.gold}
-            hint={t(`Jumla: ${formatTZS(platformRevenue.total)}`, `Total: ${formatTZS(platformRevenue.total)}`)}
+            hint={t(
+              `Jumla: ${formatTZS(platformRevenue.total)}`,
+              `Total: ${formatTZS(platformRevenue.total)}`
+            )}
           >
             {platformRevenue.loading ? (
               <LoadingBlock />
@@ -618,11 +746,26 @@ export default function ReportsSection() {
             iconColor={COLORS.gold}
             hint={t("Mwenendo wa kila siku", "Daily trend")}
           >
-            <VBarChart
-              data={revenueByDay.map(d => ({ ...d, color: COLORS.gold }))}
-              height={180}
-              valueFormat={(v) => (v >= 1_000_000 ? `${Math.round(v / 1_000_000)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v)}
-            />
+            {!hasRevenueByDay ? (
+              <p className="py-6 text-center text-xs text-muted">
+                {t(
+                  "Hakuna mapato kwa siku 7 zilizopita",
+                  "No revenue in the last 7 days"
+                )}
+              </p>
+            ) : (
+              <VBarChart
+                data={revenueByDay.map((d) => ({ ...d, color: COLORS.gold }))}
+                height={180}
+                valueFormat={(v) =>
+                  v >= 1_000_000
+                    ? `${Math.round(v / 1_000_000)}M`
+                    : v >= 1000
+                    ? `${Math.round(v / 1000)}k`
+                    : v
+                }
+              />
+            )}
           </ChartCard>
 
           <ChartCard
@@ -632,9 +775,18 @@ export default function ReportsSection() {
             hint={t("Kwa mwezi", "Per month")}
           >
             <VBarChart
-              data={revenueByMonth.map((m) => ({ ...m, color: COLORS.rust }))}
+              data={revenueByMonth.map((m) => ({
+                ...m,
+                color: COLORS.rust,
+              }))}
               height={180}
-              valueFormat={(v) => (v >= 1_000_000 ? `${Math.round(v / 1_000_000)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v)}
+              valueFormat={(v) =>
+                v >= 1_000_000
+                  ? `${Math.round(v / 1_000_000)}M`
+                  : v >= 1000
+                  ? `${Math.round(v / 1000)}k`
+                  : v
+              }
             />
           </ChartCard>
         </div>
@@ -725,12 +877,18 @@ export default function ReportsSection() {
         </h3>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-5">
           <ChartCard
-            title={t("Ukuaji wa Mali (Siku 30)", "Listings Growth (Last 30 Days)")}
+            title={t(
+              "Ukuaji wa Mali (Siku 30)",
+              "Listings Growth (Last 30 Days)"
+            )}
             icon={BarChart3}
             iconColor={COLORS.green}
           >
             <VBarChart
-              data={(reports.listingsGrowth || []).map((d) => ({ ...d, color: COLORS.green }))}
+              data={(reports.listingsGrowth || []).map((d) => ({
+                ...d,
+                color: COLORS.green,
+              }))}
               height={180}
               valueFormat={(v) => v.toLocaleString("en-US")}
             />
@@ -745,7 +903,7 @@ export default function ReportsSection() {
             <VBarChart
               data={dealsStatusData}
               height={180}
-              maxValue={100} // ✅ Hii inafanya kiwango cha juu kiwe 100%
+              maxValue={100}
               valueFormat={(v) => `${v.toFixed(0)}%`}
             />
           </ChartCard>
@@ -821,7 +979,15 @@ export default function ReportsSection() {
                     label={l.title}
                     sub={formatTZS(l.price)}
                     value={`${(l.views || 0).toLocaleString("en-US")}`}
-                    color={i === 0 ? COLORS.gold : i === 1 ? "#9CA3AF" : i === 2 ? "#CD7F32" : COLORS.green}
+                    color={
+                      i === 0
+                        ? COLORS.gold
+                        : i === 1
+                        ? "#9CA3AF"
+                        : i === 2
+                        ? "#CD7F32"
+                        : COLORS.green
+                    }
                   />
                 ))}
               </div>
@@ -846,7 +1012,15 @@ export default function ReportsSection() {
                     label={s.name || "—"}
                     sub={`${s.listings || 0} ${t("mali", "listings")}`}
                     value={`${(s.views || 0).toLocaleString("en-US")}`}
-                    color={i === 0 ? COLORS.gold : i === 1 ? "#9CA3AF" : i === 2 ? "#CD7F32" : "#7C3AED"}
+                    color={
+                      i === 0
+                        ? COLORS.gold
+                        : i === 1
+                        ? "#9CA3AF"
+                        : i === 2
+                        ? "#CD7F32"
+                        : "#7C3AED"
+                    }
                   />
                 ))}
               </div>
