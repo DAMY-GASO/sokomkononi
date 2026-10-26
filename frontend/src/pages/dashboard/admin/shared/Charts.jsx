@@ -162,7 +162,7 @@ export function HBarChart({ data = [], valueFormat, emptyText = "—" }) {
   );
 }
 
-/* ── VERTICAL BAR CHART ──────────────────────────────────── */
+/* ── VERTICAL BAR CHART (✅ IMEREKEBISHWA) ───────────────── */
 export function VBarChart({
   data = [],
   height = 180,
@@ -175,7 +175,7 @@ export function VBarChart({
   }
   return (
     <div
-      className="flex w-full items-end justify-between gap-1"
+      className="flex w-full items-stretch justify-between gap-1" // ✅ Badilisha items-end kuwa items-stretch
       style={{ height }}
     >
       {data.map((d, i) => {
@@ -184,7 +184,7 @@ export function VBarChart({
         return (
           <div
             key={i}
-            className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
+            className="flex h-full min-w-0 flex-1 flex-col items-center gap-1.5" // ✅ Ongeza h-full
           >
             <span className="truncate text-[9px] tabular-nums text-muted sm:text-[10px]">
               {v > 0 && valueFormat ? valueFormat(v) : v > 0 ? v : ""}
