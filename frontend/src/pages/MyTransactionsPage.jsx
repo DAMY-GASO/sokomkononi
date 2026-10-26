@@ -1,12 +1,6 @@
 // ============================================================
 // MyTransactionsPage.jsx
 // Miamala Yangu — completed pekee + receipt download + period report.
-//
-// SASISHO:
-//  - Receipt download inatumia rawId (backend ID halisi)
-//  - Download history: rekodi kila download (success + failed)
-//  - Re-download kutoka history
-//  - ✅ AUTO-CONSUME CREDIT kwenye handleModalConfirm
 // ============================================================
 import React, { useState, useEffect, useMemo } from "react";
 import {
@@ -118,6 +112,21 @@ const PERIOD_OPTIONS = [
   { key: "year", label: { sw: "Mwaka Huu", en: "This Year" }, days: 365 },
   { key: "all", label: { sw: "Zote", en: "All Time" }, days: null },
 ];
+
+// ✅ Timezone Helper
+const formatDateTZ = (dateString) => {
+  if (!dateString) return "";
+  const d = new Date(dateString);
+  return new Intl.DateTimeFormat("sw-TZ", {
+    timeZone: "Africa/Dar_es_Salaam",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+};
 
 // ============================================================
 // MAIN COMPONENT
@@ -287,7 +296,6 @@ export default function MyTransactionsPage() {
     setDownloading(true);
     setFeeError("");
 
-    // ── Rekodi kama pending (kama ni download mpya) ──
     let entry = null;
     if (!entryId) {
       entry = addDownloadEntry({
@@ -306,7 +314,6 @@ export default function MyTransactionsPage() {
       try {
         blob = await downloadFile(path);
       } catch (err) {
-        // ── Update status failed ──
         if (entry) {
           updateDownloadEntry(entry.id, {
             status: "failed",
@@ -337,7 +344,6 @@ export default function MyTransactionsPage() {
         return;
       }
 
-      // ── Download file ──
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;
@@ -350,7 +356,6 @@ export default function MyTransactionsPage() {
       a.remove();
       window.URL.revokeObjectURL(downloadUrl);
 
-      // ── Update status success ──
       if (entry) {
         updateDownloadEntry(entry.id, { status: "completed" });
       } else if (entryId) {
@@ -382,24 +387,19 @@ export default function MyTransactionsPage() {
     }
   };
 
-  // ✅ AUTO-CONSUME CREDIT kwenye handleModalConfirm
   const handleModalConfirm = async () => {
-    // 1. Kama ni bure (isFree), pakua moja kwa moja
     if (isFree) {
       performDownload();
       return;
     }
 
-    // 2. Kama ana credit, tumia moja kwa moja (AUTO-CONSUME)
     if (hasCredit) {
       try {
         const res = await consumeCreditAsync(user?.id, "success");
         if (res.success || res.ok) {
-          // Credit imetumika, sasa pakua
           await performDownload();
           return;
         } else {
-          // Credit imefeli — endelea kwenye malipo ya kawaida
           setFeeError(
             t(
               "Imeshindwa kutumia credit. Jaribu tena.",
@@ -425,7 +425,6 @@ export default function MyTransactionsPage() {
       }
     }
 
-    // 3. Kama hana credit na si bure, onyesha malipo
     setShowDownloadModal(false);
     setFeePayStage("select");
     setFeePayError("");
@@ -876,7 +875,7 @@ export default function MyTransactionsPage() {
                     </p>
                   )}
                   <p className="text-[11px] text-muted mt-1">
-                    {tr.ref} · {timeAgo(tr.at, lang)}
+                    {tr.ref} · {formatDateTZ(tr.at)} {/* ✅ Tumia formatDateTZ */}
                   </p>
                 </div>
 
