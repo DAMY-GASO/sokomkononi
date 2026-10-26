@@ -348,27 +348,15 @@ export default function ReportsSection() {
   // ✅ Users Growth Data (Cumulative - Jumla ya Watumiaji)
   const usersGrowthData = useMemo(() => {
     const growth = apiReports?.usersGrowth || [];
-    
-    // Siku zote 7 za wiki
     const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    
-    // Rangi tofauti kwa kila siku
     const dayColors = {
-      Mon: "#2563EB",
-      Tue: "#7C3AED",
-      Wed: "#DB2777",
-      Thu: "#EA580C",
-      Fri: "#CA8A04",
-      Sat: "#16A34A",
-      Sun: "#DC2626",
+      Mon: "#2563EB", Tue: "#7C3AED", Wed: "#DB2777",
+      Thu: "#EA580C", Fri: "#CA8A04", Sat: "#16A34A", Sun: "#DC2626",
     };
 
     const dayMap = {};
-    daysOfWeek.forEach((day) => {
-      dayMap[day] = 0;
-    });
+    daysOfWeek.forEach((day) => { dayMap[day] = 0; });
 
-    // Chukua siku 7 za mwisho kutoka backend
     const recent = growth.slice(-7);
     recent.forEach((d) => {
       if (d.date) {
@@ -377,17 +365,13 @@ export default function ReportsSection() {
           if (!isNaN(dateObj.getTime())) {
             const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
             if (dayMap[dayName] !== undefined) {
-              // ✅ Tumia CUMULATIVE (Jumla) badala ya count (Wapya)
-              dayMap[dayName] = d.cumulative || 0;
+              dayMap[dayName] = d.cumulative || 0; // ✅ Tumia Cumulative
             }
           }
-        } catch (err) {
-          // Ignore
-        }
+        } catch (err) { /* Ignore */ }
       }
     });
 
-    // Rudisha siku zote 7 kwa mpangilio
     return daysOfWeek.map((day) => ({
       label: day,
       value: dayMap[day] || 0,
@@ -399,34 +383,23 @@ export default function ReportsSection() {
   // ── Listings Breakdown ──
   const listingsDonut = useMemo(() => {
     const statuses = [
-      "live", "reserved", "sold",
-      "pending_payment", "approved_pending_payment",
-      "pending_approval", "paid_pending_approval",
-      "in_review", "needs_edit", "draft",
+      "live", "reserved", "sold", "pending_payment", "approved_pending_payment",
+      "pending_approval", "paid_pending_approval", "in_review", "needs_edit", "draft",
       "rejected", "paused", "expired",
     ];
     const labels = {
-      live: t("Hai", "Live"),
-      reserved: t("Imehifadhiwa", "Reserved"),
-      sold: t("Imeuzwa", "Sold"),
-      pending_payment: t("Haijalipwa", "Unpaid"),
-      approved_pending_payment: t("Inasubiri Malipo", "Awaiting Pay"),
-      pending_approval: t("Inasubiri Admin", "Pending Review"),
-      paid_pending_approval: t("Imelipwa", "Paid"),
-      in_review: t("Inakaguliwa", "In Review"),
-      needs_edit: t("Inahitaji Uhariri", "Needs Edit"),
-      draft: t("Rasimu", "Draft"),
-      rejected: t("Imekataliwa", "Rejected"),
-      paused: t("Imesimamishwa", "Paused"),
-      expired: t("Imeisha Muda", "Expired"),
+      live: t("Hai", "Live"), reserved: t("Imehifadhiwa", "Reserved"), sold: t("Imeuzwa", "Sold"),
+      pending_payment: t("Haijalipwa", "Unpaid"), approved_pending_payment: t("Inasubiri Malipo", "Awaiting Pay"),
+      pending_approval: t("Inasubiri Admin", "Pending Review"), paid_pending_approval: t("Imelipwa", "Paid"),
+      in_review: t("Inakaguliwa", "In Review"), needs_edit: t("Inahitaji Uhariri", "Needs Edit"),
+      draft: t("Rasimu", "Draft"), rejected: t("Imekataliwa", "Rejected"),
+      paused: t("Imesimamishwa", "Paused"), expired: t("Imeisha Muda", "Expired"),
     };
     return statuses
       .map((s) => {
         const count = listings.filter((l) => l.status === s).length;
         return {
-          label: labels[s],
-          value: count,
-          display: count.toLocaleString("en-US"),
+          label: labels[s], value: count, display: count.toLocaleString("en-US"),
           color: LISTING_STATUS_COLORS[s] || "#9CA3AF",
         };
       })
@@ -437,23 +410,16 @@ export default function ReportsSection() {
   const dealsDonut = useMemo(() => {
     const keys = Object.keys(DEAL_STATUS_COLORS);
     const labels = {
-      negotiating: t("Inajadiliwa","Negotiating"),
-      offer_sent: t("Ofa Imetumwa","Offer Sent"),
-      accepted: t("Imekubaliwa","Accepted"),
-      reserved: t("Imehifadhiwa","Reserved"),
-      awaiting_final_payment: t("Malipo ya Mwisho","Final Payment"),
-      payment_proof_submitted: t("Uthibitisho","Proof Sent"),
-      completed: t("Imekamilika","Completed"),
-      disputed: t("Mgogoro","Disputed"),
-      cancelled: t("Imeghairiwa","Cancelled"),
+      negotiating: t("Inajadiliwa","Negotiating"), offer_sent: t("Ofa Imetumwa","Offer Sent"),
+      accepted: t("Imekubaliwa","Accepted"), reserved: t("Imehifadhiwa","Reserved"),
+      awaiting_final_payment: t("Malipo ya Mwisho","Final Payment"), payment_proof_submitted: t("Uthibitisho","Proof Sent"),
+      completed: t("Imekamilika","Completed"), disputed: t("Mgogoro","Disputed"), cancelled: t("Imeghairiwa","Cancelled"),
     };
     return keys
       .map((k) => {
         const count = deals.filter((d) => d.status === k).length;
         return {
-          label: labels[k],
-          value: count,
-          display: count.toLocaleString("en-US"),
+          label: labels[k], value: count, display: count.toLocaleString("en-US"),
           color: DEAL_STATUS_COLORS[k],
         };
       })
@@ -469,8 +435,7 @@ export default function ReportsSection() {
         const pct = (value / total) * 100;
         return {
           label: `${s.label} (${pct.toFixed(1)}%)`,
-          value: value,
-          display: formatTZS(value),
+          value: value, display: formatTZS(value),
           color: STREAM_COLORS[s.key] || "#9CA3AF",
         };
       })
@@ -496,7 +461,7 @@ export default function ReportsSection() {
     return out;
   }, [platformRevenue, locale]);
 
-  // ── Revenue by Day (Timezone Fixed) ──
+  // ── Revenue by Day (Timezone Fixed)
   const revenueByDay = useMemo(() => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -538,11 +503,8 @@ export default function ReportsSection() {
     const dealsByStatus = Object.values(apiStatus).some((v) => num(v) > 0)
       ? apiStatus
       : {
-          negotiating: byStatus("negotiating"),
-          accepted: byStatus("accepted"),
-          reserved: byStatus("reserved"),
-          completed: byStatus("completed"),
-          cancelled: byStatus("cancelled"),
+          negotiating: byStatus("negotiating"), accepted: byStatus("accepted"),
+          reserved: byStatus("reserved"), completed: byStatus("completed"), cancelled: byStatus("cancelled"),
         };
     const totalDeals = pick(apiReports.totalDeals, deals.length);
     const completedDeals = pick(apiReports.completedDeals, byStatus("completed"));
@@ -590,6 +552,30 @@ export default function ReportsSection() {
     };
   }, [apiReports, listings, deals, locale]);
 
+  // ✅ Deals Status as Percentages (Jumla yake = 100)
+  const dealsStatusData = useMemo(() => {
+    const keys = ["negotiating", "accepted", "reserved", "completed", "cancelled"];
+    const labels = {
+      negotiating: t("Inajadiliwa", "Negotiating"),
+      accepted: t("Imekubaliwa", "Accepted"),
+      reserved: t("Imehifadhiwa", "Reserved"),
+      completed: t("Imekamilika", "Completed"),
+      cancelled: t("Imeghairiwa", "Cancelled"),
+    };
+    const total = reports.totalDeals || 1;
+    
+    return keys.map(k => {
+      const count = reports.dealsByStatus?.[k] || 0;
+      const pct = (count / total) * 100;
+      return {
+        label: labels[k],
+        value: pct, 
+        display: `${pct.toFixed(0)}% (${count})`,
+        color: DEAL_STATUS_COLORS[k] || COLORS.gold,
+      };
+    });
+  }, [reports, lang]);
+
   return (
     <div className="w-full max-w-7xl mx-auto">
       <SectionHeader
@@ -632,10 +618,10 @@ export default function ReportsSection() {
             iconColor={COLORS.gold}
             hint={t("Mwenendo wa kila siku", "Daily trend")}
           >
-            <LineChart
-              data={revenueByDay}
-              color={COLORS.gold}
-              valueFormat={formatTZS}
+            <VBarChart
+              data={revenueByDay.map(d => ({ ...d, color: COLORS.gold }))}
+              height={180}
+              valueFormat={(v) => (v >= 1_000_000 ? `${Math.round(v / 1_000_000)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v)}
             />
           </ChartCard>
 
@@ -675,7 +661,6 @@ export default function ReportsSection() {
             />
           </ChartCard>
 
-          {/* ✅ Users Growth Bar Chart (Cumulative) */}
           <ChartCard
             title={t("Ukuaji wa Watumiaji (Siku 7)", "Users Growth (7 Days)")}
             icon={UserPlus}
@@ -751,37 +736,18 @@ export default function ReportsSection() {
             />
           </ChartCard>
 
+          {/* ✅ Deals Status - VBarChart inayojumlisha 100% */}
           <ChartCard
             title={t("Mgawanyo wa Deals kwa Hali", "Deals by Status")}
             icon={Handshake}
             iconColor="#2563EB"
           >
-            <div className="flex flex-col gap-2">
-              {[
-                { key: "negotiating", label: t("Inajadiliwa", "Negotiating"), color: "#2563EB" },
-                { key: "accepted", label: t("Imekubaliwa", "Accepted"), color: COLORS.green },
-                { key: "reserved", label: t("Imehifadhiwa", "Reserved"), color: COLORS.gold },
-                { key: "completed", label: t("Imekamilika", "Completed"), color: COLORS.green },
-                { key: "cancelled", label: t("Imeghairiwa", "Cancelled"), color: COLORS.night },
-              ].map(({ key, label, color }) => {
-                const count = reports.dealsByStatus?.[key] || 0;
-                const total = reports.totalDeals || 1;
-                const pct = (count / total) * 100;
-                return (
-                  <div key={key} className="min-w-0">
-                    <div className="flex items-center justify-between text-xs mb-1 gap-2">
-                      <span className="text-secondary truncate">{label}</span>
-                      <span className="font-semibold text-primary shrink-0">
-                        {count.toLocaleString("en-US")} ({pct.toFixed(0)}%)
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div style={{ background: color, width: `${pct}%` }} className="h-full rounded-full transition-all" />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <VBarChart
+              data={dealsStatusData}
+              height={180}
+              maxValue={100} // ✅ Hii inafanya kiwango cha juu kiwe 100%
+              valueFormat={(v) => `${v.toFixed(0)}%`}
+            />
           </ChartCard>
         </div>
       </div>
