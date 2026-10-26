@@ -150,15 +150,14 @@ export function HBarChart({ data = [], valueFormat, emptyText = "—" }) {
   );
 }
 
-/* ── VERTICAL BAR CHART (✅ IMEREKEBISHWA NA maxValue) ───── */
+/* ── VERTICAL BAR CHART ──────────────────────────────────── */
 export function VBarChart({
   data = [],
   height = 180,
   valueFormat,
   emptyText = "—",
-  maxValue = null, // ✅ Ongeza prop hii
+  maxValue = null,
 }) {
-  // Kama maxValue imetolewa, tumia hiyo (mfano 100 kwa asilimia)
   const max = maxValue || Math.max(...data.map((d) => Number(d.value) || 0), 1);
   
   if (data.length === 0) {
@@ -184,9 +183,11 @@ export function VBarChart({
               <div
                 className="w-full max-w-[28px] rounded-t-md transition-all duration-700"
                 style={{
-                  height: `${Math.max(pct, v > 0 ? 4 : 1)}%`,
+                  /* ✅ Badilisha urefu wa chini kuwa 8px (au 2%) ili isionekane kama mstari mwembamba */
+                  height: `${Math.max(pct, v > 0 ? 8 : 2)}%`,
                   background: d.color || "#FEA406",
-                  minHeight: v > 0 ? 3 : 1,
+                  /* ✅ Ongeza minHeight wa 8px kwa bar zote */
+                  minHeight: v > 0 ? 8 : 4,
                 }}
                 title={`${d.label}: ${v}`}
               />
