@@ -8,7 +8,7 @@
 // ============================================================
 
 import React, { useState, useRef, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -38,6 +38,9 @@ import {
   Flag,
   MessageSquare,
   Download,
+  MoreVertical,
+  UserRound,
+  LogOut,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS, timeAgo } from "./shared";
 import {
@@ -122,27 +125,6 @@ function isBankMethod(m) {
     s.includes("card") ||
     s.includes("kadi")
   );
-}
-
-const PHONE_PATTERNS = [
-  /\b0[4-9]\d{7,8}\b/,
-  /\+255\d{7,9}\b/,
-  /\b255\d{7,9}\b/,
-  /\+254\d{7,9}\b/,
-  /\b254\d{7,9}\b/,
-  /\b07\d{8}\b/,
-  /\+256\d{7,9}\b/,
-  /\b256\d{7,9}\b/,
-  /\+\d{8,15}\b/,
-  /\b\d{9,15}\b/,
-  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
-];
-
-function containsContactInfo(text) {
-  if (!text) return false;
-  const t = String(text).trim();
-  if (!t) return false;
-  return PHONE_PATTERNS.some((re) => re.test(t));
 }
 
 async function callApiOrFallback(apiCall) {
@@ -1026,8 +1008,8 @@ function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
           {!isFeeDisabled && (
             <p className="text-secondary text-body-sm text-center">
               {lang === "sw"
-                ? "Ukilipa Reservation Fee utaona namba ya simu ya muuzaji ili muwasiliane."
-                : "Once you pay the Reservation Fee you'll see the seller's phone number so you can get in touch."}
+                ? "Ukilipa Reservation Fee, mali hii itashikiliwa kwa jina lako kwa muda uliochagua na itaonekana kwenye My Reservations."
+                : "Once you pay the Reservation Fee, this item is held for you for the chosen time and appears in My Reservations."}
             </p>
           )}
 
@@ -1414,6 +1396,28 @@ function DealDetail({
   const [reportBusy, setReportBusy] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
   const [contactDrawerOpen, setContactDrawerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Funga menu ukibofya nje yake au ukibonyeza Escape
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    const onKey = (e) => e.key === "Escape" && setMenuOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   const category = getCategory(deal.category);
   const CategoryIcon = getCategoryIcon(category?.iconKey);
@@ -1485,19 +1489,33 @@ function DealDetail({
     "completed",
   ];
   const reservationPaid = reservationPaidStatuses.includes(deal.status);
-  const canSeeContact = !!deal.canSeeContact;
-  const phoneLocked = isBuyer && !reservationPaid;
 
-  // ✅ FIX: Reserve panel inafunguka TU pale ambapo ofa imekubaliwa
-  // na mnunuzi HAIJA weka reservation.
+  // Mawasiliano ni huru: hakuna tena kufungwa na Reservation Fee.
+  // Reservation sasa ni hiari — mnunuzi anaweza kuiweka wakati wowote
+  // kupitia menu (vidoti vitatu) -> "Reserve this item".
+  const canReserve =
+    isBuyer &&
+    ["negotiating", "offer_sent", "accepted"].includes(deal.status) &&
+    !deal.pendingPayment &&
+    !deal.reservationPaidAt;
+
+  // Funga panel unapobadilisha deal
   useEffect(() => {
-    setReserveOpen(
+    setReserveOpen(false);
+  }, [deal.id]);
+
+  // Panel inafunguka yenyewe ofa ikikubaliwa (na kutoka waiting list).
+  // Haifungwi hapa ili isifunge panel aliyoifungua mtumiaji kwa menu.
+  useEffect(() => {
+    if (
       deal.status === "accepted" &&
-        isBuyer &&
-        !deal.pendingPayment &&
-        !deal.reservationPaidAt &&
-        !deal.transactionId
-    );
+      isBuyer &&
+      !deal.pendingPayment &&
+      !deal.reservationPaidAt &&
+      !deal.transactionId
+    ) {
+      setReserveOpen(true);
+    }
   }, [
     deal.id,
     deal.status,
@@ -1511,20 +1529,32 @@ function DealDetail({
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    if (!isSeller && !reservationPaid) {
-      if (containsContactInfo(trimmed)) {
-        setChatError(
-          lang === "sw"
-            ? "Hairuhusiwi kutuma namba ya simu, email, au taarifa za mawasiliano kwenye chat. Tafadhali lipia Reservation Fee kwanza ili kuona taarifa za muuzaji."
-            : "You can't share phone numbers, emails, or contact info in chat. Please pay the Reservation Fee first to see the seller's contact details."
-        );
-        return;
-      }
-    }
-
     setChatError("");
     onSendMessage(deal.id, trimmed);
     setText("");
+  };
+
+  // Exit: rudi hatua moja nyuma ulipokuwa kabla ya kuingia Deal Room.
+  // Mobile (ulifungua kutoka kwenye orodha) -> rudi kwenye orodha ya deals.
+  // Vinginevyo (ulikuja kwa link kutoka property page, au desktop) -> history back.
+  const handleExit = () => {
+    setMenuOpen(false);
+    const params = new URLSearchParams(window.location.search);
+    const enteredViaLink = params.has("deal") || params.has("listing");
+    const isMobileView =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(max-width: 767px)").matches;
+    const idx = window.history.state?.idx;
+    const hasHistory =
+      typeof idx === "number" ? idx > 0 : window.history.length > 1;
+
+    if (isMobileView && !enteredViaLink) {
+      onBack();
+    } else if (hasHistory) {
+      navigate(-1);
+    } else {
+      onBack();
+    }
   };
 
   const handleOffer = () => {
@@ -1645,6 +1675,93 @@ function DealDetail({
         >
           <Flag size={15} />
         </button>
+
+        {/* Menu ya vidoti vitatu */}
+        <div className="relative shrink-0" ref={menuRef}>
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            style={{ color: COLORS.night }}
+            className="p-1.5 rounded-full hover:bg-black/5 transition-colors"
+            aria-label={lang === "sw" ? "Menyu" : "Menu"}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+          >
+            <MoreVertical size={18} />
+          </button>
+
+          {menuOpen && (
+            <div
+              role="menu"
+              style={{
+                background: "white",
+                borderColor: COLORS.sandLine,
+                boxShadow: "0 12px 32px rgba(16,26,46,0.18)",
+              }}
+              className="absolute right-0 top-full mt-1 z-50 w-56 rounded-xl border py-1.5"
+            >
+              <button
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setContactDrawerOpen(true);
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-black/5"
+                style={{ color: COLORS.night }}
+              >
+                <UserRound size={15} />
+                {isBuyer
+                  ? lang === "sw"
+                    ? "Profile ya Muuzaji"
+                    : "Seller's Profile"
+                  : lang === "sw"
+                    ? "Profile ya Mnunuzi"
+                    : "Buyer's Profile"}
+              </button>
+
+              {isBuyer &&
+                (canReserve || reservationPaid || deal.pendingPayment) && (
+                  <button
+                    role="menuitem"
+                    disabled={!canReserve}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setReserveOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-black/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ color: canReserve ? COLORS.green : COLORS.night }}
+                  >
+                    <CreditCard size={15} />
+                    {canReserve
+                      ? lang === "sw"
+                        ? "Reserve mali hii"
+                        : "Reserve this item"
+                      : reservationPaid
+                        ? lang === "sw"
+                          ? "Tayari imewekewa Reservation"
+                          : "Already reserved"
+                        : lang === "sw"
+                          ? "Malipo yanasubiriwa"
+                          : "Payment pending"}
+                  </button>
+                )}
+
+              <div
+                style={{ borderColor: COLORS.sandLine }}
+                className="my-1 border-t"
+              />
+
+              <button
+                role="menuitem"
+                onClick={handleExit}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-black/5"
+                style={{ color: COLORS.rust }}
+              >
+                <LogOut size={15} />
+                {lang === "sw" ? "Toka kwenye Deal Room" : "Exit this deal room"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Price strip */}
@@ -1661,41 +1778,6 @@ function DealDetail({
           {formatTZS(deal.currentOffer)}
         </span>
       </div>
-
-      {/* Contact button */}
-      {canSeeContact && (
-        <button
-          onClick={() => setContactDrawerOpen(true)}
-          style={{ background: COLORS.green, color: "white" }}
-          className="mx-4 mt-2 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 transition-opacity"
-        >
-          <MessageSquare size={14} />
-          {isBuyer
-            ? lang === "sw"
-              ? "Wasiliana na Muuzaji"
-              : "Contact Seller"
-            : lang === "sw"
-              ? "Wasiliana na Mnunuzi"
-              : "Contact Buyer"}
-        </button>
-      )}
-
-      {phoneLocked && (
-        <div
-          style={{
-            background: "rgba(16,26,46,0.04)",
-            borderColor: COLORS.sandLine,
-          }}
-          className="flex items-center justify-center gap-2 px-4 py-2 border-b text-body-sm text-center"
-        >
-          <Lock size={13} className="shrink-0" color={COLORS.night} />
-          <span className="text-secondary">
-            {lang === "sw"
-              ? "Namba ya simu ya muuzaji itaonekana baada ya kulipa Reservation Fee."
-              : "The seller's phone number unlocks after you pay the Reservation Fee."}
-          </span>
-        </div>
-      )}
 
       {/* Messages */}
       <div
@@ -1774,10 +1856,10 @@ function DealDetail({
                 {lang === "sw"
                   ? `Nimekubaliana na ofa yako ya ${formatTZS(
                       deal.currentOffer
-                    )}. Sasa unaweza kulipia ada ya kushikilia ili mali isichukuliwe mpaka utakaporejea. Baada ya kulipia, bofya kitufe cha "Wasiliana na Muuzaji" ili kuwasiliana nami moja kwa moja.`
+                    )}. Sasa unaweza kuweka Reservation ili mali isichukuliwe mpaka utakaporejea. Tunaweza kuendelea kuwasiliana hapa hapa kwenye chat.`
                   : `I've agreed to your offer of ${formatTZS(
                       deal.currentOffer
-                    )}. You can now pay the reservation fee so the property isn't taken before you return. After paying, click the "Contact Seller" button to reach me directly.`}
+                    )}. You can now reserve the item so it isn't taken before you return. We can keep chatting right here.`}
               </div>
             </div>
           )}
@@ -1927,8 +2009,8 @@ function DealDetail({
               className="text-body-sm font-medium max-w-md"
             >
               {lang === "sw"
-                ? "Hatua inayofuata: weka reservation ili kufungua mawasiliano ya muuzaji."
-                : "Next step: place a reservation to unlock the seller's contact."}
+                ? "Hatua inayofuata: weka reservation ili kushikilia mali hii."
+                : "Next step: place a reservation to hold this item."}
             </span>
             <button
               onClick={() => setReserveOpen(true)}
@@ -1940,7 +2022,7 @@ function DealDetail({
           </div>
         )}
 
-      {deal.status === "accepted" && isBuyer && reserveOpen && (
+      {reserveOpen && canReserve && (
         <ReservationPanel
           deal={deal}
           lang={lang}
