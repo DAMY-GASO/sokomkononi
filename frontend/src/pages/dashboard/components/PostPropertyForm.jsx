@@ -405,7 +405,13 @@ export default function PostPropertyForm({
   };
   const clearCategory = () => {
     if (isEdit) return;
-    chooseCategory(null);
+    // Rudisha moja kwa moja kwenye orodha ya categories
+    // (chooseCategory(null) ilirudi mapema kwa sababu null haipo kwenye categories)
+    setCategoryKey(null);
+    setCategoryMode(null);
+    setExtra({});
+    setError("");
+    setDuplicateWarning(null);
   };
   const chooseMode = (m) => {
     setCategoryMode(m);
