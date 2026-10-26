@@ -345,7 +345,7 @@ export default function ReportsSection() {
 
   const usersTotal = localUsers.length || 0;
 
-  // ✅ Users Growth Data (Cumulative)
+    // ✅ Users Growth Data (Cumulative)
   const usersGrowthData = useMemo(() => {
     const growth = apiReports?.usersGrowth || [];
     const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -360,11 +360,14 @@ export default function ReportsSection() {
     recent.forEach((d) => {
       if (d.date) {
         try {
-          const dateObj = new Date(d.date);
+          // ✅ Parse as LOCAL date (epuka UTC shift)
+          const [year, month, day] = d.date.split("-").map(Number);
+          const dateObj = new Date(year, month - 1, day);
+          
           if (!isNaN(dateObj.getTime())) {
             const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
             if (dayMap[dayName] !== undefined) {
-              dayMap[dayName] = d.cumulative || 0; // ✅ Tumia Cumulative
+              dayMap[dayName] = d.cumulative || 0;
             }
           }
         } catch (err) { /* Ignore */ }
@@ -378,7 +381,7 @@ export default function ReportsSection() {
       color: dayColors[day],
     }));
   }, [apiReports]);
-
+  
   // ── Listings Breakdown ──
   const listingsDonut = useMemo(() => {
     const statuses = [
