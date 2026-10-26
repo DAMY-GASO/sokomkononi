@@ -345,40 +345,49 @@ export default function ReportsSection() {
 
   const usersTotal = localUsers.length || 0;
 
-
-// ✅ Users Growth Donut
-const usersGrowthDonut = useMemo(() => {
-  const growth = apiReports?.usersGrowth || [];
-  if (growth.length === 0) return [];
-  
-  // Tunachukua siku 7 za mwisho tu kwa ajili ya donut
-  const recent = growth.slice(-7);
-  
-  return recent.map((d) => {
-    // ✅ Badilisha "2026-10-25" kuwa "Jumatatu", "Jumanne", n.k.
-    let dayLabel = "—";
-    if (d.date) {
-      try {
-        const dateObj = new Date(d.date);
-        if (!isNaN(dateObj.getTime())) {
-          dayLabel = dateObj.toLocaleDateString(locale, { weekday: "short" });
-        }
-      } catch (err) {
-        dayLabel = d.label || d.date;
-      }
-    } else if (d.label) {
-      dayLabel = d.label;
-    }
+  // ✅ Users Growth Data (Kwa ajili ya Bar Chart)
+  const usersGrowthData = useMemo(() => {
+    const growth = apiReports?.usersGrowth || [];
     
-    return {
-      label: dayLabel,
-      value: d.count || 0,
-      display: (d.count || 0).toLocaleString("en-US"),
-      color: COLORS.royal,
-    };
-  }).filter((d) => d.value > 0);
-}, [apiReports, locale]);
-  
+    // Tunachukua siku 7 za mwisho
+    const recent = growth.slice(-7);
+    
+    // Rangi tofauti kwa kila siku
+    const dayColors = [
+      "#2563EB", // Monday - Blue
+      "#7C3AED", // Tuesday - Purple
+      "#DB2777", // Wednesday - Pink
+      "#EA580C", // Thursday - Orange
+      "#CA8A04", // Friday - Yellow
+      "#16A34A", // Saturday - Green
+      "#DC2626", // Sunday - Red
+    ];
+
+    return recent.map((d, index) => {
+      let dayLabel = "—";
+      if (d.date) {
+        try {
+          const dateObj = new Date(d.date);
+          if (!isNaN(dateObj.getTime())) {
+            // Pata jina la siku kwa Kiingereza (Mon, Tue, n.k.)
+            dayLabel = dateObj.toLocaleDateString("en-US", { weekday: "short" });
+          }
+        } catch (err) {
+          dayLabel = d.label || d.date;
+        }
+      } else if (d.label) {
+        dayLabel = d.label;
+      }
+
+      return {
+        label: dayLabel,
+        value: d.count || 0,
+        display: (d.count || 0).toLocaleString("en-US"),
+        color: dayColors[index % dayColors.length],
+      };
+    });
+  }, [apiReports]);
+
   // ── Listings Breakdown ──
   const listingsDonut = useMemo(() => {
     const statuses = [
@@ -460,7 +469,7 @@ const usersGrowthDonut = useMemo(() => {
       .filter((d) => d.value > 0);
   }, [platformRevenue]);
 
-  // ⚠️ HII HAPA: revenueByMonth (Ilikuwa imesahaulika)
+  // ✅ revenueByMonth
   const revenueByMonth = useMemo(() => {
     const out = [];
     const now = new Date();
@@ -622,7 +631,6 @@ const usersGrowthDonut = useMemo(() => {
             />
           </ChartCard>
 
-          {/* ✅ HAPA NDIPO revenueByMonth INATUMIKA */}
           <ChartCard
             title={t("Mapato — Miezi 6", "Revenue — Last 6 Months")}
             icon={BarChart3}
@@ -659,23 +667,22 @@ const usersGrowthDonut = useMemo(() => {
             />
           </ChartCard>
 
+          {/* ✅ Users Growth Bar Chart */}
           <ChartCard
             title={t("Ukuaji wa Watumiaji (Siku 7)", "Users Growth (7 Days)")}
             icon={UserPlus}
             iconColor={COLORS.royal}
             hint={t("Watumiaji wapya", "New users")}
           >
-            {usersGrowthDonut.length === 0 ? (
+            {usersGrowthData.length === 0 ? (
               <p className="py-6 text-center text-xs text-muted">
                 {t("Hakuna data bado", "No data yet")}
               </p>
             ) : (
-              <DonutChart
-                data={usersGrowthDonut}
-                size={180}
-                thickness={26}
-                centerLabel={usersGrowthDonut.reduce((a, b) => a + b.value, 0).toLocaleString("en-US")}
-                centerSub={t("Wapya", "New")}
+              <VBarChart
+                data={usersGrowthData}
+                height={180}
+                valueFormat={(v) => v.toLocaleString("en-US")}
               />
             )}
           </ChartCard>
