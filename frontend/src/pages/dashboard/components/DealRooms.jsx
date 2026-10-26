@@ -5,6 +5,8 @@
 // - Role-based filter (buyer/seller)
 // - Handle ?listing=X&action=reserve kutoka waiting list
 // - ✅ AUTO-CONSUME CREDIT kwenye handleReserveConfirm
+// - ✅ RESERVATION NI HIARI: hakuna prompts za kulazimisha malipo
+// - ✅ FINALIZE TU: buyer anaweza kukamilisha deal baada ya kureserve
 // ============================================================
 
 import React, { useState, useRef, useEffect } from "react";
@@ -23,9 +25,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertTriangle,
-  RefreshCcw,
   Ban,
-  SearchCheck,
   Upload,
   FileImage,
   ThumbsDown,
@@ -239,237 +239,6 @@ function formatHours(hours, lang) {
       : `${hours} hrs (${days} days)`;
   }
   return lang === "sw" ? `Saa ${hours}` : `${hours} hrs`;
-}
-
-// ============================================================
-// INSPECTION PANEL
-// ============================================================
-function InspectionPanel({ deal, onResolve, lang }) {
-  const [step, setStep] = useState("choose");
-  const [pendingKey, setPendingKey] = useState(null);
-  const [note, setNote] = useState("");
-
-  const options = [
-    {
-      key: "READY_FOR_FINAL_PAYMENT",
-      label:
-        lang === "sw"
-          ? "Tayari — Endelea na Malipo ya Mwisho"
-          : "Ready — Proceed to Final Payment",
-      desc:
-        lang === "sw"
-          ? "Nimeridhika baada ya ukaguzi, mali/bidhaa ni sawa na maelezo."
-          : "I'm satisfied with the inspection; the property matches the description.",
-      icon: CheckCircle2,
-      tone: {
-        fg: COLORS.green,
-        bg: "rgba(47,109,79,0.08)",
-        border: COLORS.green,
-      },
-    },
-    {
-      key: "REQUEST_NEGOTIATION",
-      label:
-        lang === "sw"
-          ? "Omba Negotiation Nyingine"
-          : "Request Another Negotiation",
-      desc:
-        lang === "sw"
-          ? "Ukaguzi umeonyesha jambo linalohitaji majadiliano ya bei/masharti."
-          : "The inspection revealed something that needs further negotiation.",
-      icon: RefreshCcw,
-      tone: {
-        fg: "#8A5A16",
-        bg: "rgba(232,163,61,0.12)",
-        border: COLORS.gold,
-      },
-    },
-    {
-      key: "NOT_AS_DESCRIBED",
-      label:
-        lang === "sw" ? "Sio Kama Ilivyoelezwa" : "Not As Described",
-      desc:
-        lang === "sw"
-          ? "Kuna tofauti kubwa kati ya maelezo na hali halisi — hii ni mgogoro."
-          : "Major discrepancy between the description and reality — this is a dispute.",
-      icon: AlertTriangle,
-      tone: {
-        fg: COLORS.rust,
-        bg: "rgba(193,80,46,0.1)",
-        border: COLORS.rust,
-      },
-    },
-    {
-      key: "CANCEL",
-      label: lang === "sw" ? "Ghairi Deal" : "Cancel Deal",
-      desc:
-        lang === "sw"
-          ? "Sitaki kuendelea na ununuzi huu."
-          : "I don't want to continue with this purchase.",
-      icon: Ban,
-      tone: {
-        fg: COLORS.night,
-        bg: "rgba(16,26,46,0.05)",
-        border: COLORS.sandLine,
-      },
-    },
-  ];
-
-  const pendingOption = options.find((o) => o.key === pendingKey);
-
-  const handleChoose = (key) => {
-    if (key === "NOT_AS_DESCRIBED" || key === "CANCEL") {
-      setPendingKey(key);
-      setStep("reason");
-    } else {
-      onResolve(key, "");
-    }
-  };
-
-  const handleSubmitReason = () => {
-    if (pendingKey === "NOT_AS_DESCRIBED" && !note.trim()) return;
-    onResolve(pendingKey, note.trim());
-  };
-
-  return (
-    <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="border-t px-3 sm:px-4 py-3 flex flex-col gap-3"
-    >
-      {step === "choose" && (
-        <>
-          <div className="flex flex-col items-center text-center gap-2">
-            <div className="flex items-center gap-2">
-              <SearchCheck size={14} color={COLORS.night} />
-              <p className="text-primary text-body-sm font-semibold">
-                {lang === "sw"
-                  ? "Kipindi cha Ukaguzi — chagua hatua inayofuata"
-                  : "Inspection Period — choose next step"}
-              </p>
-            </div>
-            {deal.reservationExpiresAt && (
-              <span
-                style={{ color: COLORS.rust }}
-                className="text-body-sm font-semibold"
-              >
-                {lang === "sw" ? "Inaisha" : "Ends"}:{" "}
-                {new Date(deal.reservationExpiresAt).toLocaleString(
-                  lang === "sw" ? "sw-TZ" : "en-US"
-                )}
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            {options.map((opt) => (
-              <button
-                key={opt.key}
-                onClick={() => handleChoose(opt.key)}
-                style={{
-                  borderColor: opt?.tone?.border || "#E5E1D5",
-                  background: opt?.tone?.bg || "#FFFFFF",
-                }}
-                className="flex flex-col items-center text-center gap-2 rounded-xl border px-3 py-3"
-              >
-                <opt.icon size={16} color={opt.tone.fg} />
-                <div>
-                  <p
-                    style={{ color: opt.tone.fg }}
-                    className="text-body-sm font-semibold"
-                  >
-                    {opt.label}
-                  </p>
-                  <p className="text-secondary text-body-sm mt-0.5">
-                    {opt.desc}
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      {step === "reason" && (
-        <>
-          <div className="flex flex-col items-center text-center gap-2">
-            <pendingOption.icon size={14} color={pendingOption.tone.fg} />
-            <p className="text-primary text-body-sm font-semibold">
-              {pendingOption.label}
-            </p>
-          </div>
-
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder={
-              pendingKey === "NOT_AS_DESCRIBED"
-                ? lang === "sw"
-                  ? "Eleza tofauti ulizoziona (lazima ujaze hii kwa mgogoro)..."
-                  : "Describe the discrepancies you saw (required for disputes)..."
-                : lang === "sw"
-                  ? "Sababu (hiari)..."
-                  : "Reason (optional)..."
-            }
-            rows={3}
-            style={{
-              background: COLORS.sand,
-              borderColor: COLORS.sandLine,
-              color: COLORS.night,
-            }}
-            className="w-full rounded-lg border px-3 py-2 text-sm outline-none resize-none text-center"
-          />
-
-          {pendingKey === "NOT_AS_DESCRIBED" && !note.trim() && (
-            <p
-              style={{ color: COLORS.rust }}
-              className="text-body-sm text-center"
-            >
-              {lang === "sw"
-                ? "Tafadhali eleza tofauti kabla ya kuendelea, ili timu ya SokoMkononi iweze kusaidia."
-                : "Please describe the discrepancies before continuing so our team can assist."}
-            </p>
-          )}
-
-          <p className="text-muted text-body-sm text-center">
-            {lang === "sw"
-              ? `Reservation Fee uliyolipa (${formatTZS(
-                  deal.reservationFee || 0
-                )}) ni mapato ya SokoMkononi na haitarejeshwa.`
-              : `The Reservation Fee you paid (${formatTZS(
-                  deal.reservationFee || 0
-                )}) is SokoMkononi revenue and is non-refundable.`}
-          </p>
-
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={() => {
-                setStep("choose");
-                setPendingKey(null);
-                setNote("");
-              }}
-              style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-              className="text-body-sm font-semibold px-3 py-2 rounded-lg border"
-            >
-              {lang === "sw" ? "Rudi Nyuma" : "Back"}
-            </button>
-            <button
-              onClick={handleSubmitReason}
-              disabled={pendingKey === "NOT_AS_DESCRIBED" && !note.trim()}
-              style={{
-                background: pendingOption.tone.fg,
-                color: "white",
-                opacity:
-                  pendingKey === "NOT_AS_DESCRIBED" && !note.trim() ? 0.5 : 1,
-              }}
-              className="flex-1 text-body-sm font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
-            >
-              {lang === "sw" ? "Thibitisha" : "Confirm"}
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
 }
 
 // ============================================================
@@ -1504,26 +1273,8 @@ function DealDetail({
     setReserveOpen(false);
   }, [deal.id]);
 
-  // Panel inafunguka yenyewe ofa ikikubaliwa (na kutoka waiting list).
-  // Haifungwi hapa ili isifunge panel aliyoifungua mtumiaji kwa menu.
-  useEffect(() => {
-    if (
-      deal.status === "accepted" &&
-      isBuyer &&
-      !deal.pendingPayment &&
-      !deal.reservationPaidAt &&
-      !deal.transactionId
-    ) {
-      setReserveOpen(true);
-    }
-  }, [
-    deal.id,
-    deal.status,
-    isBuyer,
-    deal.pendingPayment,
-    deal.reservationPaidAt,
-    deal.transactionId,
-  ]);
+  // ✅ Reservation ni hiari: hakuna panel inayojifungua yenyewe.
+  // Buyer anaweza kuiweka kupitia menu (vidoti vitatu) wakati wowote.
 
   const handleSend = () => {
     const trimmed = text.trim();
@@ -1745,6 +1496,28 @@ function DealDetail({
                   </button>
                 )}
 
+              {/* ✅ MPYA: Finalize Deal kwenye menu (baada ya kureserve) */}
+              {isBuyer && deal.status === "reserved" && (
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onInspectionResolve(
+                      deal.id,
+                      "READY_FOR_FINAL_PAYMENT",
+                      ""
+                    );
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-black/5"
+                  style={{ color: COLORS.green }}
+                >
+                  <CheckCircle2 size={15} />
+                  {lang === "sw"
+                    ? "Nimeridhika — Kamilisha Deal"
+                    : "I'm satisfied — Finalize Deal"}
+                </button>
+              )}
+
               <div
                 style={{ borderColor: COLORS.sandLine }}
                 className="my-1 border-t"
@@ -1839,27 +1612,27 @@ function DealDetail({
           );
         })}
 
-        {/* Ujumbe wa muuzaji baada ya ofa kukubaliwa (unaonekana kwa mnunuzi) */}
+        {/* ✅ Baada ya ofa kukubaliwa — hakuna prompt ya malipo */}
         {deal.status === "accepted" &&
           isBuyer &&
           !deal.reservationPaidAt &&
           !deal.transactionId && (
-            <div className="flex justify-start">
+            <div className="flex justify-center my-1">
               <div
                 style={{
-                  background: "white",
-                  color: COLORS.night,
+                  background: "rgba(47,109,79,0.08)",
+                  color: COLORS.green,
                   borderColor: COLORS.sandLine,
                 }}
-                className="border rounded-2xl px-4 py-2.5 max-w-[75%] text-sm"
+                className="border rounded-xl px-3.5 py-2 max-w-[90%] text-body-sm text-center font-medium"
               >
                 {lang === "sw"
-                  ? `Nimekubaliana na ofa yako ya ${formatTZS(
+                  ? `Mmekubaliana bei ya ${formatTZS(
                       deal.currentOffer
-                    )}. Sasa unaweza kuweka Reservation ili mali isichukuliwe mpaka utakaporejea. Tunaweza kuendelea kuwasiliana hapa hapa kwenye chat.`
-                  : `I've agreed to your offer of ${formatTZS(
+                    )}. Endelea kuwasiliana na muuzaji hapa.`
+                  : `You've agreed at ${formatTZS(
                       deal.currentOffer
-                    )}. You can now reserve the item so it isn't taken before you return. We can keep chatting right here.`}
+                    )}. Continue chatting with the seller here.`}
               </div>
             </div>
           )}
@@ -1992,36 +1765,7 @@ function DealDetail({
         </div>
       )}
 
-      {deal.status === "accepted" &&
-        isBuyer &&
-        !reserveOpen &&
-        !deal.reservationPaidAt &&
-        !deal.transactionId && (
-          <div
-            style={{
-              borderColor: COLORS.sandLine,
-              background: "rgba(47,109,79,0.08)",
-            }}
-            className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t"
-          >
-            <span
-              style={{ color: COLORS.green }}
-              className="text-body-sm font-medium max-w-md"
-            >
-              {lang === "sw"
-                ? "Hatua inayofuata: weka reservation ili kushikilia mali hii."
-                : "Next step: place a reservation to hold this item."}
-            </span>
-            <button
-              onClick={() => setReserveOpen(true)}
-              style={{ background: COLORS.green, color: "white" }}
-              className="text-body-sm font-semibold px-3 py-2 rounded-lg"
-            >
-              {lang === "sw" ? "Weka Reservation" : "Place Reservation"}
-            </button>
-          </div>
-        )}
-
+      {/* ✅ Reservation panel — inafunguliwa TU kwa hiari kupitia menu */}
       {reserveOpen && canReserve && (
         <ReservationPanel
           deal={deal}
@@ -2070,18 +1814,61 @@ function DealDetail({
         </div>
       )}
 
+      {/* ✅ Buyer reserved — info + Finalize inline button (hakuna negotiate/cancel) */}
       {deal.status === "reserved" && side === "buyer" && (
-        <InspectionPanel
-          deal={deal}
-          lang={lang}
-          onResolve={(key, note) =>
-            onInspectionResolve(deal.id, key, note)
-          }
-        />
+        <div
+          style={{
+            borderColor: COLORS.sandLine,
+            background: "rgba(47,109,79,0.08)",
+          }}
+          className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t"
+        >
+          <ShieldCheck size={16} color={COLORS.green} />
+          <span
+            style={{ color: COLORS.green }}
+            className="text-body-sm font-medium max-w-md"
+          >
+            {lang === "sw"
+              ? `Mali imeshikiliwa kwa ajili yako${
+                  deal.reservationExpiresAt
+                    ? ` hadi ${new Date(
+                        deal.reservationExpiresAt
+                      ).toLocaleString("sw-TZ")}`
+                    : ""
+                }. Ukisharidhika, unaweza kuendelea na malipo ya mwisho.`
+              : `This item is held for you${
+                  deal.reservationExpiresAt
+                    ? ` until ${new Date(
+                        deal.reservationExpiresAt
+                      ).toLocaleString("en-US")}`
+                    : ""
+                }. When satisfied, you can proceed to final payment.`}
+          </span>
+          <button
+            onClick={() =>
+              onInspectionResolve(
+                deal.id,
+                "READY_FOR_FINAL_PAYMENT",
+                ""
+              )
+            }
+            style={{
+              borderColor: COLORS.green,
+              color: COLORS.green,
+              background: "transparent",
+            }}
+            className="text-body-sm font-semibold px-3 py-1.5 rounded-lg border"
+          >
+            {lang === "sw"
+              ? "Nimeridhika — Endelea"
+              : "I'm satisfied — Continue"}
+          </button>
+        </div>
       )}
 
       {deal.status === "awaiting_final_payment" && side === "buyer" && (
-        <PaymentProofPanel          deal={deal}
+        <PaymentProofPanel
+          deal={deal}
           lang={lang}
           onSubmit={(proof) => onProofSubmit(deal.id, proof)}
         />
@@ -2259,27 +2046,7 @@ function DealDetail({
         </div>
       )}
 
-      {/* Floating "Lipia Reservation" */}
-      {isBuyer &&
-        deal.status === "accepted" &&
-        !reserveOpen &&
-        !deal.pendingPayment &&
-        !deal.reservationPaidAt &&
-        !deal.transactionId &&
-        (deal.reservationFee ?? 0) > 0 && (
-          <button
-            onClick={() => setReserveOpen(true)}
-            style={{
-              background: COLORS.green,
-              color: "white",
-              boxShadow: "0 8px 24px rgba(47,109,79,0.35)",
-            }}
-            className="fixed bottom-24 right-4 z-40 flex items-center gap-2 text-sm font-bold px-5 py-3 rounded-full animate-pulse"
-          >
-            <CreditCard size={16} />
-            {lang === "sw" ? "Lipia Reservation" : "Pay Reservation"}
-          </button>
-        )}
+      {/* ✅ Floating "Lipia Reservation" imeondolewa — reservation ni hiari */}
 
       {/* Report Modal */}
       {reportOpen && (
