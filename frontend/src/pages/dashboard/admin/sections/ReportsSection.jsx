@@ -345,20 +345,24 @@ export default function ReportsSection() {
 
   const usersTotal = localUsers.length || 0;
 
-  // ✅ Users Growth Donut
-  const usersGrowthDonut = useMemo(() => {
-    const growth = apiReports?.usersGrowth || [];
-    if (growth.length === 0) return [];
-    
-    const recent = growth.slice(-7);
-    return recent.map((d) => ({
-      label: new Date(d.date).toLocaleDateString(locale, { weekday: "short" }),
-      value: d.count || 0,
-      display: (d.count || 0).toLocaleString("en-US"),
-      color: COLORS.royal,
-    })).filter((d) => d.value > 0);
-  }, [apiReports, locale]);
 
+// ✅ Users Growth Donut
+const usersGrowthDonut = useMemo(() => {
+  const growth = apiReports?.usersGrowth || [];
+  if (growth.length === 0) return [];
+  
+  // Tunachukua siku 7 za mwisho tu kwa ajili ya donut
+  const recent = growth.slice(-7);
+  
+  return recent.map((d) => ({
+    // ✅ Tumia label moja kwa moja (mfano: "25/10", "24/10")
+    label: d.label || d.date || "—", 
+    value: d.count || 0,
+    display: (d.count || 0).toLocaleString("en-US"),
+    color: COLORS.royal,
+  })).filter((d) => d.value > 0);
+}, [apiReports, locale]);
+  
   // ── Listings Breakdown ──
   const listingsDonut = useMemo(() => {
     const statuses = [
