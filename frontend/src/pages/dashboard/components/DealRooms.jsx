@@ -7,6 +7,7 @@
 // - ✅ AUTO-CONSUME CREDIT kwenye handleReserveConfirm
 // - ✅ RESERVATION NI HIARI: hakuna prompts za kulazimisha malipo
 // - ✅ FINALIZE TU: buyer anaweza kukamilisha deal baada ya kureserve
+// - ✅ REJECT PROOF: seller anaweza kukataa uthibitisho wa malipo
 // ============================================================
 
 import React, { useState, useRef, useEffect } from "react";
@@ -64,6 +65,7 @@ import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
 import { dealsApi } from "../../../api/deals.js";
+import { transactionsApi } from "../../../api/transactions.js";
 import ContactDrawer from "../../../components/ContactDrawer.jsx";
 
 import {
@@ -1169,7 +1171,6 @@ function DealDetail({
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
-  // Funga menu ukibofya nje yake au ukibonyeza Escape
   useEffect(() => {
     if (!menuOpen) return;
     const onDown = (e) => {
@@ -1214,8 +1215,6 @@ function DealDetail({
         )
     );
   const iMadeLastOffer = lastOffer?.sender === "me";
-  // Kubali/Kataa inaonekana kwa upande uliopokea ofa tu
-  // (muuzaji akipokea ofa ya mnunuzi, mnunuzi akipokea bei ya muuzaji)
   const canRespond = deal.currentOffer > 0 && !!lastOffer && !iMadeLastOffer;
 
   const waitingText = iMadeLastOffer
@@ -1259,22 +1258,15 @@ function DealDetail({
   ];
   const reservationPaid = reservationPaidStatuses.includes(deal.status);
 
-  // Mawasiliano ni huru: hakuna tena kufungwa na Reservation Fee.
-  // Reservation sasa ni hiari — mnunuzi anaweza kuiweka wakati wowote
-  // kupitia menu (vidoti vitatu) -> "Reserve this item".
   const canReserve =
     isBuyer &&
     ["negotiating", "offer_sent", "accepted"].includes(deal.status) &&
     !deal.pendingPayment &&
     !deal.reservationPaidAt;
 
-  // Funga panel unapobadilisha deal
   useEffect(() => {
     setReserveOpen(false);
   }, [deal.id]);
-
-  // ✅ Reservation ni hiari: hakuna panel inayojifungua yenyewe.
-  // Buyer anaweza kuiweka kupitia menu (vidoti vitatu) wakati wowote.
 
   const handleSend = () => {
     const trimmed = text.trim();
@@ -1285,9 +1277,6 @@ function DealDetail({
     setText("");
   };
 
-  // Exit: rudi hatua moja nyuma ulipokuwa kabla ya kuingia Deal Room.
-  // Mobile (ulifungua kutoka kwenye orodha) -> rudi kwenye orodha ya deals.
-  // Vinginevyo (ulikuja kwa link kutoka property page, au desktop) -> history back.
   const handleExit = () => {
     setMenuOpen(false);
     const params = new URLSearchParams(window.location.search);
@@ -1496,7 +1485,7 @@ function DealDetail({
                   </button>
                 )}
 
-              {/* ✅ MPYA: Finalize Deal kwenye menu (baada ya kureserve) */}
+              {/* Finalize Deal (baada ya kureserve) */}
               {isBuyer && deal.status === "reserved" && (
                 <button
                   role="menuitem"
@@ -1612,7 +1601,6 @@ function DealDetail({
           );
         })}
 
-        {/* ✅ Baada ya ofa kukubaliwa — hakuna prompt ya malipo */}
         {deal.status === "accepted" &&
           isBuyer &&
           !deal.reservationPaidAt &&
@@ -1765,7 +1753,7 @@ function DealDetail({
         </div>
       )}
 
-      {/* ✅ Reservation panel — inafunguliwa TU kwa hiari kupitia menu */}
+      {/* Reservation panel — hiari kupitia menu */}
       {reserveOpen && canReserve && (
         <ReservationPanel
           deal={deal}
@@ -1814,7 +1802,7 @@ function DealDetail({
         </div>
       )}
 
-      {/* ✅ Buyer reserved — info + Finalize inline button (hakuna negotiate/cancel) */}
+      {/* Buyer reserved — info + Finalize inline button */}
       {deal.status === "reserved" && side === "buyer" && (
         <div
           style={{
@@ -2046,8 +2034,6 @@ function DealDetail({
         </div>
       )}
 
-      {/* ✅ Floating "Lipia Reservation" imeondolewa — reservation ni hiari */}
-
       {/* Report Modal */}
       {reportOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -2238,7 +2224,6 @@ export default function DealRooms({
     }
   }, [initialDealId]);
 
-  // Handle ?listing=X&action=reserve kutoka waiting list
   useEffect(() => {
     if (actionParam !== "reserve" || !listingIdParam) return;
     const targetDeal = deals.find(
@@ -2479,7 +2464,6 @@ export default function DealRooms({
 
     if (newStatus === "declined") {
       const roomId = deal.dealRoomId || deal.id;
-      // Weka alama ya "declined" kwenye ofa hii mara moja (UI)
       updateDeal(id, (prev) => ({
         ...prev,
         currentOffer: 0,
@@ -2490,7 +2474,6 @@ export default function DealRooms({
         ),
       }));
       try {
-        // Jaribu endpoint ya backend ili ofa ibaki declined baada ya refresh
         try {
           await dealsApi.declineOffer(roomId, lastOffer.id);
         } catch (declineErr) {
@@ -2633,7 +2616,6 @@ export default function DealRooms({
       return;
     }
 
-    // ✅ AUTO-CONSUME CREDIT: Kama mtumiaji ana reservation credit, tumia moja kwa moja
     if (method === "credits") {
       try {
         const payRes = await callApiOrFallback(() =>
@@ -2670,7 +2652,6 @@ export default function DealRooms({
       }
     }
 
-    // Malipo ya kawaida (flat)
     const reserveRes = await callApiOrFallback(() =>
       createReservationAsync(txId, hours)
     );
@@ -3059,6 +3040,7 @@ export default function DealRooms({
     });
   };
 
+  // ✅ REJECT PROOF — inatumia endpoint mpya (reject-payment-proof)
   const handleProofReject = async (id, reason) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
@@ -3074,10 +3056,7 @@ export default function DealRooms({
     }
 
     const apiRes = await callApiOrFallback(() =>
-      submitDecisionAsync(txId, {
-        buyerDecision: "REJECT",
-        buyerDecisionNote: reason || "",
-      })
+      transactionsApi.rejectPaymentProof(txId, reason || "")
     );
     if (!apiRes.offline && !apiRes.ok) {
       alert(
