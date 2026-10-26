@@ -3040,7 +3040,10 @@ export default function DealRooms({
     });
   };
 
-  // ✅ REJECT PROOF — inatumia endpoint mpya (reject-payment-proof)
+    // ✅ REJECT PROOF — inatumia endpoint mpya (reject-payment-proof)
+  // TUMIA try/catch badala ya callApiOrFallback kwa sababu
+  // transactionsApi.rejectPaymentProof inarudisha raw transaction object
+  // (si { ok: true, transaction } wrapper).
   const handleProofReject = async (id, reason) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
@@ -3055,12 +3058,11 @@ export default function DealRooms({
       return;
     }
 
-    const apiRes = await callApiOrFallback(() =>
-      transactionsApi.rejectPaymentProof(txId, reason || "")
-    );
-    if (!apiRes.offline && !apiRes.ok) {
+    try {
+      await transactionsApi.rejectPaymentProof(txId, reason || "");
+    } catch (err) {
       alert(
-        apiRes.error?.message ||
+        err?.message ||
           (lang === "sw" ? "Imeshindwa kutuma." : "Failed to send.")
       );
       return;
