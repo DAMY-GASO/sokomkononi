@@ -39,6 +39,11 @@ export const transactionsApi = {
   confirmPayment: (id, confirmation_note = "") =>
     api.post(`/transactions/${id}/confirm-payment/`, { confirmation_note }),
 
+  // ✅ MPYA: Muuzaji anakataa uthibitisho wa malipo — proof inafutwa,
+  // buyer anaweza kupakia tena.
+  rejectPaymentProof: (id, reason = "") =>
+    api.post(`/transactions/${id}/reject-payment-proof/`, { reason }),
+
   cancel: (id, cancellation_reason) =>
     api.post(`/transactions/${id}/cancel/`, { cancellation_reason }),
 
@@ -51,9 +56,7 @@ export const transactionsApi = {
   expireInspection: (id) =>
     api.post(`/transactions/${id}/expire-inspection/`, {}),
 
-  // ── MPYA ─────────────────────────────────────────────────
-  // Lazima ilipwe kwanza: extra = { payment_reference: "credits" } au
-  // { payment_method: "mobile"|"card", phone }
+  // ── Extend / Remove reservation ──────────────────────────
   extendReservation: (id, additional_hours, extra = {}) =>
     api.post(`/transactions/${id}/extend-reservation/`, {
       additional_hours,
