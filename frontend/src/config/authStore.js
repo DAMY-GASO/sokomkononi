@@ -276,6 +276,9 @@ export async function loginAsync({ identifier, password, captcha_token }) {
   }
   try {
     const data = await authApi.login({ identifier, password, captcha_token });
+    if (data?.requires_2fa) {
+      return { ok: false, requires2fa: true, codeToken: data.code_token };
+    }
     const me = data?.user ?? (await authApi.me());
     if (getSessionScope() === "user" && computeIsAdmin(me)) {
       hardReset();
@@ -294,6 +297,39 @@ export async function loginAsync({ identifier, password, captcha_token }) {
   } catch (err) {
     hardReset();
     console.warn("[authStore] login failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+export async function verify2faLoginAsync({ codeToken, code }) {
+  if (!codeToken || !code) {
+    return { ok: false, error: new Error("code inahitajika") };
+  }
+  try {
+    const data = await apiClient.post("/auth/2fa/login/", {
+      code_token: codeToken,
+      code: String(code).trim(),
+    });
+    if (data?.access)
+      setTokens({ access: data.access, refresh: data.refresh });
+    const me = data?.user ?? (await authApi.me());
+    if (getSessionScope() === "user" && computeIsAdmin(me)) {
+      hardReset();
+      return {
+        ok: false,
+        code: "ADMIN_BLOCKED",
+        error: new Error(ADMIN_BLOCKED_MESSAGE),
+      };
+    }
+    wipeDataCachesOnLogin();
+    const user = normalizeUserFromApi(me);
+    saveUser(user);
+    resetHydrateCache();
+    lastHydrateAt = Date.now();
+    return { ok: true, user };
+  } catch (err) {
+    // Usifanye hardReset: mtumiaji anaweza kujaribu code tena
+    console.warn("[authStore] 2fa login failed:", err);
     return { ok: false, error: err };
   }
 }

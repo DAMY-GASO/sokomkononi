@@ -10,10 +10,12 @@ export const securityApi = {
   twoFactorVerify: ({ code }) => api.post("/auth/2fa/verify/", { code }),
   twoFactorDisable: ({ password, code }) =>
     api.post("/auth/2fa/disable/", { password, code }),
-  twoFactorRecoveryCodes: () => api.post("/auth/2fa/recovery-codes/", {}),
+  // Inahitaji code ya sasa ya authenticator
+  twoFactorRecoveryCodes: ({ code } = {}) =>
+    api.post("/auth/2fa/recovery-codes/", { code }),
   // Login step (only if backend returns requires_2fa on /auth/login/)
-  twoFactorLogin: ({ temp_token, code }) =>
-    api.post("/auth/2fa/login/", { temp_token, code }),
+  twoFactorLogin: ({ code_token, code }) =>
+    api.post("/auth/2fa/login/", { code_token, code }),
 
   // ── Active sessions ─────────────────────────────────────
   sessions: () => api.get("/auth/sessions/"),

@@ -873,7 +873,14 @@ function SecurityTab({ lang, user }) {
         </div>
       </form>
 
-      <TwoFactorCard lang={lang} user={user} />
+      {!(
+        user?.role === "Admin" ||
+        user?.role === "admin" ||
+        user?.isStaff === true ||
+        user?.is_staff === true ||
+        user?.isSuperuser === true ||
+        user?.is_superuser === true
+      ) && <TwoFactorCard lang={lang} user={user} />}
 
       <SessionsCard lang={lang} user={user} />
 

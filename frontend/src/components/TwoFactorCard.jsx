@@ -6,6 +6,9 @@ import { Shield, Loader2, CheckCircle2, Copy, AlertTriangle } from "lucide-react
 import { COLORS } from "../pages/dashboard/components/shared";
 import { securityApi } from "../api/security.js";
 
+const errMsg = (err, fallback) =>
+  err?.data?.detail || err?.message || fallback;
+
 export default function TwoFactorCard({ lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [status, setStatus] = useState(null); // { enabled: bool }
@@ -40,7 +43,7 @@ export default function TwoFactorCard({ lang }) {
       const s = await securityApi.twoFactorSetup();
       setSetup(s);
     } catch (err) {
-      setError(err?.message || t("Imeshindwa kuanza.", "Failed to start."));
+      setError(errMsg(err, t("Imeshindwa kuanza.", "Failed to start.")));
     } finally { setBusy(false); }
   };
 
@@ -48,14 +51,14 @@ export default function TwoFactorCard({ lang }) {
     if (!code.trim()) return;
     setBusy(true); setError("");
     try {
-      await securityApi.twoFactorVerify({ code: code.trim() });
-      const r = await securityApi.twoFactorRecoveryCodes().catch(() => null);
-      if (r) setRecovery(r?.codes || []);
+      const r = await securityApi.twoFactorVerify({ code: code.trim() });
+      // Recovery codes zinakuja moja kwa moja kwenye jibu la verify
+      setRecovery(r?.recovery_codes || []);
       setStatus({ enabled: true });
       setSetup(null);
       setCode("");
     } catch (err) {
-      setError(err?.message || t("Msimbo si sahihi.", "Invalid code."));
+      setError(errMsg(err, t("Msimbo si sahihi.", "Invalid code.")));
     } finally { setBusy(false); }
   };
 
@@ -68,9 +71,10 @@ export default function TwoFactorCard({ lang }) {
     try {
       await securityApi.twoFactorDisable({ password, code: code.trim() });
       setStatus({ enabled: false });
+      setRecovery(null);
       setCode(""); setPassword("");
     } catch (err) {
-      setError(err?.message || t("Imeshindwa kuzima.", "Failed to disable."));
+      setError(errMsg(err, t("Imeshindwa kuzima.", "Failed to disable.")));
     } finally { setBusy(false); }
   };
 

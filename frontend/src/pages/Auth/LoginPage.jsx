@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { loginAsync } from "../../config/authStore.js";
+import { loginAsync, verify2faLoginAsync } from "../../config/authStore.js";
 import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
 import Captcha, { isCaptchaEnabled } from "../../components/Captcha.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
@@ -50,6 +50,36 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
 
+  // 2FA step
+  const [codeToken, setCodeToken] = useState("");
+  const [twoFaCode, setTwoFaCode] = useState("");
+  const [useRecovery, setUseRecovery] = useState(false);
+
+  function cancel2fa() {
+    setCodeToken("");
+    setTwoFaCode("");
+    setUseRecovery(false);
+    setError("");
+  }
+
+  async function handle2faSubmit(e) {
+    e.preventDefault();
+    const code = twoFaCode.trim();
+    if (!code) {
+      setError(tx("Weka nambari.", "Enter the code."));
+      return;
+    }
+    setError("");
+    setLoading(true);
+    const res = await verify2faLoginAsync({ codeToken, code });
+    setLoading(false);
+    if (!res.ok) {
+      setError(getErrorMessage(res.error, tx("Nambari si sahihi.", "Invalid code.")));
+      return;
+    }
+    finishLogin();
+  }
+
   function finishLogin() {
     const { from, ...restState } = location.state || {};
     const redirectTo = from || searchParams.get("redirect") || "/dashboard";
@@ -85,6 +115,12 @@ export default function LoginPage() {
     });
     setLoading(false);
 
+    if (res.requires2fa) {
+      setCodeToken(res.codeToken);
+      setTwoFaCode("");
+      setUseRecovery(false);
+      return;
+    }
     if (!res.ok) {
       setError(getErrorMessage(res.error, t("login_error_default")));
       return;
@@ -137,71 +173,143 @@ export default function LoginPage() {
 
         <div className="flex items-center justify-center px-5 sm:px-10 py-10 md:py-12 bg-white">
           <div className="w-full max-w-sm">
-            <h1 className="h-title mb-1 text-center">{t("login_heading")}</h1>
-            <p className="text-secondary text-body-sm mb-7 text-center">{t("login_subtext")}</p>
+            {codeToken ? (
+              <>
+                <h1 className="h-title mb-1 text-center">
+                  {tx("Uthibitisho wa Hatua 2", "Two-Step Verification")}
+                </h1>
+                <p className="text-secondary text-body-sm mb-7 text-center">
+                  {useRecovery
+                    ? tx("Weka mojawapo ya recovery codes zako.", "Enter one of your recovery codes.")
+                    : tx(
+                        "Fungua authenticator app yako na weka nambari ya tarakimu 6.",
+                        "Open your authenticator app and enter the 6-digit code."
+                      )}
+                </p>
 
-            <SocialAuthButtons lang={lang} onSuccess={finishLogin} />
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-body-sm font-semibold text-secondary mb-1.5">
-                  {tx("Barua pepe", "Email")}
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">{icons.mail}</span>
+                <form onSubmit={handle2faSubmit} className="space-y-4">
                   <input
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
-                    value={form.identifier}
-                    onChange={(e) => setForm({ ...form, identifier: e.target.value })}
+                    type="text"
+                    inputMode={useRecovery ? "text" : "numeric"}
+                    autoComplete="one-time-code"
+                    autoFocus
+                    maxLength={useRecovery ? 12 : 6}
+                    placeholder={useRecovery ? "XXXXXXXXXX" : "123456"}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-3 text-center text-xl tracking-[0.35em] focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+                    value={twoFaCode}
+                    onChange={(e) =>
+                      setTwoFaCode(
+                        useRecovery
+                          ? e.target.value.toUpperCase()
+                          : e.target.value.replace(/\D/g, "")
+                      )
+                    }
                   />
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-body-sm font-semibold text-secondary mb-1.5">
-                  {t("login_password_placeholder")}
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">{icons.lock}</span>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  />
+                  {error && <p className="text-rust text-body-sm text-center">{error}</p>}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn disabled:cursor-not-allowed"
+                  >
+                    {loading ? t("login_submitting") : tx("Thibitisha", "Verify")}
+                  </button>
+                </form>
+
+                <div className="mt-5 flex flex-col items-center gap-2 text-body-sm">
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary transition-colors"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => {
+                      setUseRecovery((v) => !v);
+                      setTwoFaCode("");
+                      setError("");
+                    }}
+                    className="text-royal font-semibold hover:underline"
                   >
-                    {showPassword ? icons.eye : icons.eyeOff}
+                    {useRecovery
+                      ? tx("Tumia nambari ya authenticator", "Use authenticator code")
+                      : tx("Tumia recovery code", "Use a recovery code")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancel2fa}
+                    className="text-secondary hover:underline"
+                  >
+                    {tx("Rudi nyuma", "Back")}
                   </button>
                 </div>
-              </div>
+              </>
+            ) : (
+              <>
+                <h1 className="h-title mb-1 text-center">{t("login_heading")}</h1>
+                <p className="text-secondary text-body-sm mb-7 text-center">{t("login_subtext")}</p>
 
-              <div className="text-right">
-                <Link to="/forgot-password" className="text-royal text-body-sm font-semibold hover:underline">
-                  {t("login_forgot_password")}
-                </Link>
-              </div>
+                <SocialAuthButtons lang={lang} onSuccess={finishLogin} />
 
-              <Captcha onVerify={setCaptchaToken} onExpire={() => setCaptchaToken("")} />
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-body-sm font-semibold text-secondary mb-1.5">
+                      {tx("Barua pepe", "Email")}
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">{icons.mail}</span>
+                      <input
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+                        value={form.identifier}
+                        onChange={(e) => setForm({ ...form, identifier: e.target.value })}
+                      />
+                    </div>
+                  </div>
 
-              {error && <p className="text-rust text-body-sm">{error}</p>}
+                  <div>
+                    <label className="block text-body-sm font-semibold text-secondary mb-1.5">
+                      {t("login_password_placeholder")}
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">{icons.lock}</span>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 focus:outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 transition-colors"
+                        value={form.password}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary transition-colors"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? icons.eye : icons.eyeOff}
+                      </button>
+                    </div>
+                  </div>
 
-              <button
-                type="submit"
-                disabled={loading || (isCaptchaEnabled && !captchaToken)}
-                className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn disabled:cursor-not-allowed"
-              >
-                {loading ? t("login_submitting") : t("login_submit")}
-              </button>
-            </form>
+                  <div className="text-right">
+                    <Link to="/forgot-password" className="text-royal text-body-sm font-semibold hover:underline">
+                      {t("login_forgot_password")}
+                    </Link>
+                  </div>
+
+                  <Captcha onVerify={setCaptchaToken} onExpire={() => setCaptchaToken("")} />
+
+                  {error && <p className="text-rust text-body-sm">{error}</p>}
+
+                  <button
+                    type="submit"
+                    disabled={loading || (isCaptchaEnabled && !captchaToken)}
+                    className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn disabled:cursor-not-allowed"
+                  >
+                    {loading ? t("login_submitting") : t("login_submit")}
+                  </button>
+                </form>
+
+              </>
+            )}
 
             <p className="mt-6 text-body-sm text-secondary text-center">
               {t("login_no_account")}{" "}
