@@ -131,8 +131,8 @@ export default function ContactDrawer({
             }}
           >
             {t(
-              "Mawasiliano ni bure. Wasiliana moja kwa moja kwa heshima — hakuna haja ya kulipia reservation.",
-              "Contact is free. Communicate directly and respectfully — no reservation payment required."
+              "Wasiliana moja kwa moja kwa heshima.",
+              "Communicate directly and respectfully."
             )}
           </p>
 
