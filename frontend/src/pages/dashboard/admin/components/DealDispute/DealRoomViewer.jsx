@@ -41,7 +41,7 @@ function InfoRow({ icon: Icon, label, value, color = COLORS.night }) {
 }
 
 // ============================================================
-// DOWNLOAD BAR (MPYA)
+// DOWNLOAD BAR
 // ============================================================
 function DownloadBar({ dealId, deal, lang }) {
   const [downloading, setDownloading] = useState(null);
@@ -55,24 +55,29 @@ function DownloadBar({ dealId, deal, lang }) {
     setDownloading(format);
 
     try {
-      // Read the deal from the store, OR fall back to the `deal` prop passed
-      // in by the parent — so admin transcript works even when the deal has
-      // never been hydrated locally (admin-only flow).
+      // Chukua deal kutoka store au prop
       const source = getDealTranscript(dealId, null, lang)?.deal || deal;
       if (!source) {
         throw new Error(t("Deal haipatikani.", "Deal not found."));
       }
 
-      const labelSender = (m) => {
-        if (m.senderId != null && source.buyerId != null && String(m.senderId) === String(source.buyerId)) {
-          return "buyer";
+      // ✅ Function ya kutambua mtumaji (buyer/seller/admin) kwa majina
+      const getSenderLabel = (m) => {
+        if (m.senderId != null) {
+          if (String(m.senderId) === String(source.buyerId)) {
+            return source.buyerName || t("Mnunuzi", "Buyer");
+          }
+          if (String(m.senderId) === String(source.sellerId)) {
+            return source.sellerName || t("Muuzaji", "Seller");
+          }
         }
-        if (m.senderId != null && source.sellerId != null && String(m.senderId) === String(source.sellerId)) {
-          return "seller";
-        }
-        return "admin";
+        // Kama senderId haipo, tumia m.sender (kama ilivyo)
+        if (m.sender === "buyer") return source.buyerName || t("Mnunuzi", "Buyer");
+        if (m.sender === "seller") return source.sellerName || t("Muuzaji", "Seller");
+        return t("Admin", "Admin");
       };
 
+      // ✅ Tengeneza transcript na majina ya wazungumzaji
       const transcript = {
         deal: source,
         meta: {
@@ -116,7 +121,7 @@ function DownloadBar({ dealId, deal, lang }) {
         },
         messages: (source.messages || []).map((m) => ({
           ...m,
-          sender: labelSender(m),
+          sender: getSenderLabel(m), // ✅ Tumia jina halisi
         })),
       };
 
@@ -205,7 +210,6 @@ export default function DealRoomViewer({
   const hasReservation =
     (deal.reservationFee ?? 0) > 0 || Boolean(deal.reservationPaidAt);
 
-  // ── Report context (kama ipo) ──
   const reports = Array.isArray(deal.reports) ? deal.reports : [];
   const hasReports = reports.length > 0;
 
@@ -246,7 +250,7 @@ export default function DealRoomViewer({
         </button>
       </div>
 
-      {/* ── MPYA: Report alert (kama deal ina reports) ── */}
+      {/* Reports */}
       {hasReports && (
         <div
           style={{
@@ -294,7 +298,7 @@ export default function DealRoomViewer({
         </div>
       )}
 
-      {/* Parties */}
+      {/* Parties — ✅ Ongeza majina ya Buyer na Seller */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="border rounded-lg px-3 py-2.5 flex flex-col gap-1.5"
@@ -302,13 +306,13 @@ export default function DealRoomViewer({
         <InfoRow
           icon={User}
           label={t("Mnunuzi", "Buyer")}
-          value={deal.buyerName || "—"}
+          value={`${deal.buyerName || "—"} (ID: ${deal.buyerId || "—"})`}
           color={COLORS.green}
         />
         <InfoRow
           icon={User}
           label={t("Muuzaji", "Seller")}
-          value={deal.sellerName || "—"}
+          value={`${deal.sellerName || "—"} (ID: ${deal.sellerId || "—"})`}
           color={COLORS.gold}
         />
         <InfoRow
@@ -364,14 +368,15 @@ export default function DealRoomViewer({
             icon={Calendar}
             label={t("Reservation Inaisha", "Reservation Expires")}
             value={new Date(deal.reservationExpiresAt).toLocaleString(
-              lang === "sw" ? "sw-TZ" : "en-US"
+              lang === "sw" ? "sw-TZ" : "en-US",
+              { timeZone: "Africa/Dar_es_Salaam" } // ✅ Timezone fix
             )}
             color={COLORS.rust}
           />
         )}
       </div>
 
-      {/* ── MPYA: Download transcript (admin) ── */}
+      {/* Download */}
       <DownloadBar dealId={deal.id} deal={deal} lang={lang} />
 
       {/* Payment Proof */}
