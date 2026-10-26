@@ -1,8 +1,3 @@
-// ============================================================
-// reportsStore.js
-// Backend: GET /api/finance/reports/   (Admin)
-// Inarudisha camelCase: totalUsers, totalSellers, usersGrowth, n.k.
-// ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 
@@ -32,7 +27,7 @@ const EMPTY = {
     disputed: 0,
     cancelled: 0,
   },
-  topSellers: [],
+  topSellers: [], // ✅ Rudisha
   mostViewedListings: [],
   topCategories: [],
   topLocations: [],
@@ -107,10 +102,7 @@ function buildFromApi(raw) {
     })),
 
     dealsByStatus: {
-      negotiating: pickNum(
-        src.dealsByStatus || src.deals_by_status,
-        "negotiating"
-      ),
+      negotiating: pickNum(src.dealsByStatus || src.deals_by_status, "negotiating"),
       accepted: pickNum(src.dealsByStatus || src.deals_by_status, "accepted"),
       reserved: pickNum(src.dealsByStatus || src.deals_by_status, "reserved"),
       completed: pickNum(src.dealsByStatus || src.deals_by_status, "completed"),
@@ -124,11 +116,7 @@ function buildFromApi(raw) {
       views: Number(s.views) || 0,
     })),
 
-    mostViewedListings: pickArr(
-      src,
-      "mostViewedListings",
-      "most_viewed_listings"
-    ).map((l) => ({
+    mostViewedListings: pickArr(src, "mostViewedListings", "most_viewed_listings").map((l) => ({
       id: l.id,
       title: l.title || "—",
       views: Number(l.views) || 0,
