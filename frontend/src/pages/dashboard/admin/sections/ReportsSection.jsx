@@ -354,13 +354,29 @@ const usersGrowthDonut = useMemo(() => {
   // Tunachukua siku 7 za mwisho tu kwa ajili ya donut
   const recent = growth.slice(-7);
   
-  return recent.map((d) => ({
-    // ✅ Tumia label moja kwa moja (mfano: "25/10", "24/10")
-    label: d.label || d.date || "—", 
-    value: d.count || 0,
-    display: (d.count || 0).toLocaleString("en-US"),
-    color: COLORS.royal,
-  })).filter((d) => d.value > 0);
+  return recent.map((d) => {
+    // ✅ Badilisha "2026-10-25" kuwa "Jumatatu", "Jumanne", n.k.
+    let dayLabel = "—";
+    if (d.date) {
+      try {
+        const dateObj = new Date(d.date);
+        if (!isNaN(dateObj.getTime())) {
+          dayLabel = dateObj.toLocaleDateString(locale, { weekday: "short" });
+        }
+      } catch (err) {
+        dayLabel = d.label || d.date;
+      }
+    } else if (d.label) {
+      dayLabel = d.label;
+    }
+    
+    return {
+      label: dayLabel,
+      value: d.count || 0,
+      display: (d.count || 0).toLocaleString("en-US"),
+      color: COLORS.royal,
+    };
+  }).filter((d) => d.value > 0);
 }, [apiReports, locale]);
   
   // ── Listings Breakdown ──
