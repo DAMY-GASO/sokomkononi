@@ -1,30 +1,24 @@
-// ============================================================
-// PostPropertyForm.jsx
-// ============================================================
 import React, { useState, useEffect } from "react";
 import {
   ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle,
-  Wallet, Package, Receipt, Info, Send,
+  Wallet, Package, Receipt, Send,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { COLORS, formatTZS, calculateListingFee } from "./shared";
 import {
   useActiveCategories, getCategoryIcon, getCategoryIdByKey,
 } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
-import { checkCredit, consumeCreditAsync } from "../../../config/userCreditsStore.js";
+import { checkCredit } from "../../../config/userCreditsStore.js";
 import { checkDuplicateListingAsync } from "../../../config/listingsStore.js";
 import {
   getListingFeeConfig,
   hydrateListingFeeConfigsFromApi,
 } from "../../../config/listingFeeStore.js";
-import { saveFreshlyCreatedListing } from "../../../config/listingsStore.js";
 import { useActiveBundles } from "../../../config/bundlesStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
-
-const SUBMIT_FOR_REVIEW_FIRST = true;
 import ImageCropper from "../../../components/ImageCropper.jsx";
 import LocationPicker from "../../../components/LocationPicker.jsx";
 import {
@@ -35,6 +29,8 @@ import {
   WILAYA_SUGGESTIONS,
 } from "../../../config/categorySchemas.js";
 
+const SUBMIT_FOR_REVIEW_FIRST = true;
+
 function Field({ label, children }) {
   return (
     <label className="flex flex-col gap-1.5 text-center">
@@ -44,11 +40,9 @@ function Field({ label, children }) {
   );
 }
 
-// ✅ Theme-aware class kwa inputs zote
 const inputCls =
   "rounded-xl border border-hairline bg-card text-primary px-3 py-2.5 text-sm outline-none text-center w-full focus:border-gold focus:ring-1 focus:ring-gold transition-colors";
 
-// ── SchemaField ─────────────────────────────────────────────
 function SchemaField({ f, value, onChange, lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const label = (f.label?.[lang] || f.label?.sw) + (f.required ? " *" : "");
@@ -87,13 +81,7 @@ function SchemaField({ f, value, onChange, lang }) {
       <>
         <input
           className={inputCls}
-          type={
-            f.type === "number"
-              ? "number"
-              : f.type === "date"
-                ? "date"
-                : "text"
-          }
+          type={f.type === "number" ? "number" : f.type === "date" ? "date" : "text"}
           inputMode={f.type === "number" ? "numeric" : undefined}
           min={f.type === "date" ? today : f.min}
           max={f.max}
@@ -142,12 +130,9 @@ const CATEGORY_DETAIL_ENDPOINT = {
   mashine: "equipment-details",
 };
 
-// ============================================================
-// MAIN COMPONENT
-// ============================================================
 export default function PostPropertyForm({
-  mode = "create",           // "create" | "edit"
-  initialData = null,        // listing ya kuhariri (edit mode)
+  mode = "create",
+  initialData = null,
   onSubmit = () => {},
   onGoToListings = () => {},
   onPaid = () => {},
@@ -155,15 +140,12 @@ export default function PostPropertyForm({
 }) {
   const isEdit = mode === "edit" && !!initialData;
   const navigate = useNavigate();
-
+  const location = useLocation();
   const { lang } = useLanguage();
   const { user } = useAuth();
   const categories = useActiveCategories();
-  const listingBundles = useActiveBundles().filter(
-    (b) => b.type === "listing"
-  );
+  const listingBundles = useActiveBundles().filter((b) => b.type === "listing");
 
-  // ✅ FIX: categoryKey inatumia key halisi kutoka categories store
   const [categoryKey, setCategoryKey] = useState(() => {
     if (!isEdit || !initialData) return null;
     const found = categories.find(
@@ -186,14 +168,10 @@ export default function PostPropertyForm({
     return { mkoa: "", wilaya: "", eneo: "" };
   });
   const [lat, setLat] = useState(
-    isEdit && initialData
-      ? (initialData.latitude != null ? Number(initialData.latitude) : null)
-      : null
+    isEdit && initialData ? (initialData.latitude != null ? Number(initialData.latitude) : null) : null
   );
   const [lng, setLng] = useState(
-    isEdit && initialData
-      ? (initialData.longitude != null ? Number(initialData.longitude) : null)
-      : null
+    isEdit && initialData ? (initialData.longitude != null ? Number(initialData.longitude) : null) : null
   );
   const [addressText, setAddressText] = useState(
     isEdit && initialData ? (initialData.address_text || "") : ""
@@ -245,16 +223,14 @@ export default function PostPropertyForm({
 
   const [extra, setExtra] = useState(() => {
     if (!isEdit || !initialData?.attributes) return {};
-    const { region, district, area, mode: _m, ...rest } =
-      initialData.attributes || {};
+    const { region, district, area, mode: _m, ...rest } = initialData.attributes || {};
     return rest;
   });
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const category = categories.find((c) => c.key === categoryKey);
-  const categoryLabel =
-    category?.label?.[lang] || category?.label?.sw || "";
+  const categoryLabel = category?.label?.[lang] || category?.label?.sw || "";
 
   const cfg = getPostingConfig(categoryKey);
   const activeMode = cfg.modes?.find((m) => m.key === categoryMode) || null;
@@ -265,27 +241,20 @@ export default function PostPropertyForm({
     activeMode?.titleLabel || cfg.titleLabel || { sw: "Jina la Mali", en: "Property Title" };
   const titlePlaceholder =
     activeMode?.titlePlaceholder ||
-    cfg.titlePlaceholder || {
-      sw: "mfano: Nyumba ya Ghorofa Mbezi Beach",
-      en: "e.g. Mbezi Beach Apartment Building",
-    };
+    cfg.titlePlaceholder || { sw: "mfano: Nyumba ya Ghorofa Mbezi Beach", en: "e.g. Mbezi Beach Apartment Building" };
   const locationLabel =
     activeMode?.locationLabel || cfg.locationLabel || { sw: "Mahali", en: "Location" };
-  const descLabel =
-    activeMode?.descLabel || { sw: "Maelezo", en: "Description" };
+  const descLabel = activeMode?.descLabel || { sw: "Maelezo", en: "Description" };
   const photosOptional = Boolean(cfg.photosOptional);
 
   const suggestedTitle = cfg.autoTitle ? cfg.autoTitle(extra) : "";
   const effectiveTitle = base.title.trim();
-  const locationString = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa]
-    .filter(Boolean)
-    .join(", ");
+  const locationString = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa].filter(Boolean).join(", ");
 
   const creditInfo = checkCredit(user?.id, "listing");
   const hasCredit = creditInfo.hasCredit;
   const listingCreditRemaining = creditInfo.remaining || 0;
 
-  // ✅ Hydrate fee config na uweke flag
   useEffect(() => {
     hydrateListingFeeConfigsFromApi()
       .then(() => setFeeConfigLoaded(true))
@@ -295,11 +264,8 @@ export default function PostPropertyForm({
       });
   }, []);
 
-  // ✅ FIX: listingFeeDisabled inakuwa true kama hakuna config au imezimwa
   const categoryFeeConfig = categoryKey ? getListingFeeConfig(categoryKey) : null;
-  const listingFeeDisabled = categoryFeeConfig
-    ? categoryFeeConfig.isActive === false
-    : true; // ⬅️ Kama hakuna config, fee ni bure
+  const listingFeeDisabled = categoryFeeConfig ? categoryFeeConfig.isActive === false : true;
 
   const selectedBundle = listingBundles.find((b) => b.id === bundleId);
 
@@ -309,9 +275,6 @@ export default function PostPropertyForm({
     }
   }, [listingBundles, bundleId]);
 
-  // ============================================================
-  // REAL-TIME DUPLICATE CHECK (debounced) — ruka kwa edit mode
-  // ============================================================
   useEffect(() => {
     if (isEdit) return;
     if (!categoryKey || !effectiveTitle || !base.price || !loc.eneo) {
@@ -340,8 +303,20 @@ export default function PostPropertyForm({
     }, 800);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveTitle, base.price, loc.mkoa, loc.wilaya, loc.eneo, categoryKey, isEdit]);
+
+  // ✅ Mobile Navigation (Back button / gestures)
+  useEffect(() => {
+    window.history.pushState({ stage }, "", location.pathname);
+    const handlePopState = () => {
+      if (stage !== "form") {
+        setStage("form");
+        setError("");
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [stage, location.pathname]);
 
   const handlePhotoAdd = (e) => {
     const files = Array.from(e.target.files || []).slice(0, 8 - photos.length);
@@ -350,9 +325,7 @@ export default function PostPropertyForm({
   };
   const handleCropDone = (cropped) => {
     setPhotos((p) =>
-      p.length >= 8
-        ? p
-        : [...p, { file: cropped, url: URL.createObjectURL(cropped) }]
+      p.length >= 8 ? p : [...p, { file: cropped, url: URL.createObjectURL(cropped) }]
     );
     setCropQueue((q) => q.slice(1));
   };
@@ -375,14 +348,10 @@ export default function PostPropertyForm({
     !submitting &&
     !duplicateWarning;
 
-  // ✅ FIX: chooseCategory inatumia key halisi
   const chooseCategory = (key) => {
     if (isEdit) return;
     const foundCategory = categories.find((c) => c.key === key);
-    if (!foundCategory) {
-      console.warn("[PostPropertyForm] Category not found for key:", key);
-      return;
-    }
+    if (!foundCategory) return;
     setCategoryKey(foundCategory.key);
     setCategoryMode(null);
     setExtra({});
@@ -400,8 +369,7 @@ export default function PostPropertyForm({
 
   const buildSummary = () => {
     const lines = [];
-    if (activeMode)
-      lines.push(`${t("Aina", "Type")}: ${activeMode.label[lang]}`);
+    if (activeMode) lines.push(`${t("Aina", "Type")}: ${activeMode.label[lang]}`);
     visibleFields.forEach((f) => {
       const v = extra[f.key];
       if (v === undefined || v === null || String(v).trim() === "") return;
@@ -437,7 +405,6 @@ export default function PostPropertyForm({
     setPendingBundlePurchase(null);
   };
 
-  // ── Step 1: submit (create au edit) ──────────────────────
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -469,9 +436,7 @@ export default function PostPropertyForm({
           );
         }
       } catch (err) {
-        setError(
-          err?.message || t("Hitilafu imetokea.", "Something went wrong.")
-        );
+        setError(err?.message || t("Hitilafu imetokea.", "Something went wrong."));
       } finally {
         setSubmitting(false);
       }
@@ -508,10 +473,7 @@ export default function PostPropertyForm({
     const categoryId = getCategoryIdByKey(categoryKey);
     if (!categoryId) {
       setError(
-        t(
-          "Category haina backend id. Hydrate kwanza.",
-          "Category has no backend id. Hydrate first."
-        )
+        t("Category haina backend id. Hydrate kwanza.", "Category has no backend id. Hydrate first.")
       );
       setSubmitting(false);
       return;
@@ -524,9 +486,7 @@ export default function PostPropertyForm({
           category: categoryId,
           category_key: categoryKey,
           title: effectiveTitle,
-          description: [base.description.trim(), buildSummary()]
-            .filter(Boolean)
-            .join("\n\n"),
+          description: [base.description.trim(), buildSummary()].filter(Boolean).join("\n\n"),
           price: Number(cleanPriceInput(base.price)) || 0,
           location: locationString,
           latitude: lat,
@@ -549,23 +509,14 @@ export default function PostPropertyForm({
 
       const created = createRes.raw;
       const listingId = createRes.listing.id;
-
       const inlineFee = Number(created?.fee_amount ?? 0);
 
       const detailEndpoint = CATEGORY_DETAIL_ENDPOINT[categoryKey];
       if (detailEndpoint) {
         const detailBody = {};
-        const FUEL_MAP = {
-          Petrol: "PETROL",
-          Diesel: "DIESEL",
-          Hybrid: "HYBRID",
-          "Umeme (EV)": "ELECTRIC",
-        };
-        const SIZE_UNIT_MAP = {
-          Sqm: "SQM",
-          Ekari: "ACRE",
-          Hekta: "HECTARE",
-        };
+        const FUEL_MAP = { Petrol: "PETROL", Diesel: "DIESEL", Hybrid: "HYBRID", "Umeme (EV)": "ELECTRIC" };
+        const SIZE_UNIT_MAP = { Sqm: "SQM", Ekari: "ACRE", Hekta: "HECTARE" };
+        
         if (categoryKey === "nyumba") {
           if (extra.vyumba) detailBody.bedrooms = Number(extra.vyumba);
           if (extra.bafu) detailBody.bathrooms = Number(extra.bafu);
@@ -590,9 +541,7 @@ export default function PostPropertyForm({
           if (extra.mileage) detailBody.mileage_km = Number(extra.mileage);
           detailBody.vehicle_type = "CAR";
           detailBody.fuel_type = FUEL_MAP[extra.mafuta] || "PETROL";
-          detailBody.transmission = String(
-            extra.transmission || "Automatic"
-          ).toUpperCase();
+          detailBody.transmission = String(extra.transmission || "Automatic").toUpperCase();
         } else if (categoryKey === "biashara") {
           detailBody.business_type = extra.aina || "General";
         } else if (categoryKey === "mashine") {
@@ -612,9 +561,6 @@ export default function PostPropertyForm({
         }
       }
 
-      // ═══════════════════════════════════════════════════════════
-      // SUBMIT_FOR_REVIEW_FIRST — Chaguo B (publish, kisha admin)
-      // ═══════════════════════════════════════════════════════════
       if (SUBMIT_FOR_REVIEW_FIRST || listingFeeDisabled) {
         let publishOk = false;
         let publishErr = null;
@@ -638,14 +584,10 @@ export default function PostPropertyForm({
         setError(
           t(
             `Tangazo limehifadhiwa lakini halijatumwa kwa admin (${
-              publishErr?.data?.detail ||
-              publishErr?.message ||
-              "network error"
+              publishErr?.data?.detail || publishErr?.message || "network error"
             }). Nenda Mali Zangu na ubonyeze "Wasilisha kwa Admin".`,
             `Listing saved but not submitted to admin (${
-              publishErr?.data?.detail ||
-              publishErr?.message ||
-              "network error"
+              publishErr?.data?.detail || publishErr?.message || "network error"
             }). Go to My Listings and click "Submit for Review".`
           )
         );
@@ -654,12 +596,9 @@ export default function PostPropertyForm({
         return;
       }
 
-      // ✅ AUTO-CONSUME CREDIT
       if (hasCredit) {
         try {
-          const payRes = await api.post(`/listings/${listingId}/fee/pay/`, {
-            payment_reference: "credits",
-          });
+          await api.post(`/listings/${listingId}/fee/pay/`, { payment_reference: "credits" });
           onPaid?.(listingId, { alreadyPaid: true });
           setCreatedListing(created);
           setFeeAmount(0);
@@ -672,9 +611,7 @@ export default function PostPropertyForm({
         }
       }
 
-      const inlineFeeFromPayment = Number(
-        created?.payment?.amount ?? created?.payment?.fee_amount ?? 0
-      );
+      const inlineFeeFromPayment = Number(created?.payment?.amount ?? created?.payment?.fee_amount ?? 0);
       let fee = inlineFee || inlineFeeFromPayment;
       let feeSource = fee > 0 ? "inline" : "backend";
 
@@ -694,14 +631,8 @@ export default function PostPropertyForm({
           if (!fee && !backendFree) throw new Error("Backend returned zero fee");
         } catch (feeErr) {
           feeSource = "local";
-          console.warn(
-            "[PostPropertyForm] backend fee missing, falling back to local:",
-            feeErr?.status || feeErr?.message
-          );
-          const local = calculateListingFee(
-            categoryKey,
-            cleanPriceInput(base.price)
-          );
+          console.warn("[PostPropertyForm] backend fee missing, falling back to local:", feeErr?.status || feeErr?.message);
+          const local = calculateListingFee(categoryKey, cleanPriceInput(base.price));
           fee = Number(local?.fee) || 0;
         }
       }
@@ -717,9 +648,7 @@ export default function PostPropertyForm({
       setError(
         err?.data?.detail ||
           (err?.data && typeof err.data === "object"
-            ? Object.values(err.data)
-                .flat()
-                .find((v) => typeof v === "string")
+            ? Object.values(err.data).flat().find((v) => typeof v === "string")
             : null) ||
           err?.message ||
           t("Imeshindwa kuweka listing.", "Failed to create listing.")
@@ -729,7 +658,6 @@ export default function PostPropertyForm({
     }
   };
 
-  // ── Retry publish (kwa stage === "review" na feeAmount === 0) ─
   const handleRetryPublish = async () => {
     if (!createdListing) return;
     setSubmitting(true);
@@ -739,30 +667,21 @@ export default function PostPropertyForm({
       setStage("done");
       onSubmit?.(createdListing);
     } catch (err) {
-      setError(
-        err?.data?.detail ||
-          err?.message ||
-          t("Imeshindwa kuwasilisha.", "Failed to submit.")
-      );
+      setError(err?.data?.detail || err?.message || t("Imeshindwa kuwasilisha.", "Failed to submit."));
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ── Flat fee payment ────────────────────────────────────
   const handleFeeInitiate = async ({ methodKey, phone } = {}) => {
     if (!createdListing) return { ok: false, error: new Error("no listing") };
     try {
-      const res = await api.post(
-        `/listings/${createdListing.id}/fee/pay/`,
-        {
-          payment_method: methodKey || "",
-          phone: phone || "",
-        }
-      );
+      const res = await api.post(`/listings/${createdListing.id}/fee/pay/`, {
+        payment_method: methodKey || "",
+        phone: phone || "",
+      });
       const candidates = [res?.fimipay, res?.data?.fimipay, res?.data, res].filter(Boolean);
-      const payload =
-        candidates.find((c) => c && (c.order_id || c.payment_status)) || {};
+      const payload = candidates.find((c) => c && (c.order_id || c.payment_status)) || {};
 
       return {
         ok: true,
@@ -788,17 +707,11 @@ export default function PostPropertyForm({
     if (!createdListing || !user) return;
     setError("");
     try {
-      await api.post(`/listings/${createdListing.id}/fee/pay/`, {
-        payment_reference: "credits",
-      });
+      await api.post(`/listings/${createdListing.id}/fee/pay/`, { payment_reference: "credits" });
       onPaid?.(createdListing.id, { alreadyPaid: true });
       setStage("done");
     } catch (err) {
-      setError(
-        err?.data?.detail ||
-          err?.message ||
-          t("Imeshindwa kutumia credit.", "Failed to use credit.")
-      );
+      setError(err?.data?.detail || err?.message || t("Imeshindwa kutumia credit.", "Failed to use credit."));
     }
   };
 
@@ -807,17 +720,11 @@ export default function PostPropertyForm({
     setSubmitting(true);
     setError("");
     try {
-      await api.post(`/listings/${createdListing.id}/fee/pay/`, {
-        payment_reference: "free",
-      });
+      await api.post(`/listings/${createdListing.id}/fee/pay/`, { payment_reference: "free" });
       onPaid?.(createdListing.id, { alreadyPaid: true });
       setStage("done");
     } catch (err) {
-      setError(
-        err?.data?.detail ||
-          err?.message ||
-          t("Imeshindwa kuwasilisha.", "Failed to submit.")
-      );
+      setError(err?.data?.detail || err?.message || t("Imeshindwa kuwasilisha.", "Failed to submit."));
     } finally {
       setSubmitting(false);
     }
@@ -828,11 +735,8 @@ export default function PostPropertyForm({
     setSubmitting(true);
     setError("");
     try {
-      const purchase = await api.post("/bundles/purchases/", {
-        bundle: selectedBundle.id,
-      });
-      const purchaseId =
-        purchase?.id || purchase?.purchase_id || purchase?.purchaseId;
+      const purchase = await api.post("/bundles/purchases/", { bundle: selectedBundle.id });
+      const purchaseId = purchase?.id || purchase?.purchase_id || purchase?.purchaseId;
       if (!purchaseId) throw new Error("Backend did not return purchase id.");
       setPendingBundlePurchase({ id: purchaseId, bundle: selectedBundle });
       setStage("paying");
@@ -840,10 +744,7 @@ export default function PostPropertyForm({
       setError(
         err?.data?.detail ||
           err?.message ||
-          t(
-            "Imeshindwa kununua kifurushi. Jaribu tena.",
-            "Could not purchase bundle. Try again."
-          )
+          t("Imeshindwa kununua kifurushi. Jaribu tena.", "Could not purchase bundle. Try again.")
       );
     } finally {
       setSubmitting(false);
@@ -853,13 +754,10 @@ export default function PostPropertyForm({
   const handleBundlePaymentInitiate = async ({ methodKey, phone } = {}) => {
     if (!pendingBundlePurchase) return { ok: false, error: new Error("no bundle") };
     try {
-      const paid = await api.post(
-        `/bundles/purchases/${pendingBundlePurchase.id}/pay/`,
-        {
-          payment_method: methodKey || "",
-          phone: phone || "",
-        }
-      );
+      const paid = await api.post(`/bundles/purchases/${pendingBundlePurchase.id}/pay/`, {
+        payment_method: methodKey || "",
+        phone: phone || "",
+      });
       const fimipay = paid?.fimipay || paid?.data?.fimipay || {};
       return {
         ok: true,
@@ -876,9 +774,7 @@ export default function PostPropertyForm({
   const handleBundlePaymentSuccess = async () => {
     if (!createdListing) return;
     try {
-      await api.post(`/listings/${createdListing.id}/fee/pay/`, {
-        payment_reference: "credits",
-      });
+      await api.post(`/listings/${createdListing.id}/fee/pay/`, { payment_reference: "credits" });
       onPaid?.(createdListing.id, { alreadyPaid: true });
       setStage("done");
     } catch (err) {
@@ -887,9 +783,6 @@ export default function PostPropertyForm({
     }
   };
 
-  // ═══════════════════════════════════════════════════════════
-  // REVIEW STAGE (create mode pekee)
-  // ═══════════════════════════════════════════════════════════
   if (!isEdit && (stage === "review" || stage === "paying")) {
     const needsRetryPublish = stage === "review" && createdListing && feeAmount === 0 && !!error;
 
@@ -953,11 +846,7 @@ export default function PostPropertyForm({
                   style={{ background: COLORS.green, color: "white" }}
                   className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60 mb-3"
                 >
-                  {submitting ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Send size={16} />
-                  )}
+                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                   {t("Jaribu Tena Kuwasilisha", "Retry Submit to Admin")}
                 </button>
               )}
@@ -975,10 +864,7 @@ export default function PostPropertyForm({
                     </div>
 
                     {feeAmount === 0 && (
-                      <p
-                        className="mt-2 text-[11px] leading-snug"
-                        style={{ color: COLORS.rust }}
-                      >
+                      <p className="mt-2 text-[11px] leading-snug" style={{ color: COLORS.rust }}>
                         {t(
                           "Ada ya kuchapisha haijawekwa kwa kategoria hii. Wasiliana na Admin ili kuweka kiasi kabla ya kuendelea.",
                           "No listing fee is configured for this category. Contact Admin to set an amount before continuing."
@@ -1039,8 +925,7 @@ export default function PostPropertyForm({
                       {listingBundles.map((b) => {
                         const selected = b.id === bundleId;
                         const other = lang === "sw" ? "en" : "sw";
-                        const bName =
-                          b.name?.[lang] || b.name?.[other] || t("Kifurushi", "Bundle");
+                        const bName = b.name?.[lang] || b.name?.[other] || t("Kifurushi", "Bundle");
                         return (
                           <button
                             key={b.id}
@@ -1057,10 +942,7 @@ export default function PostPropertyForm({
                                 {bName}
                               </span>
                             </div>
-                            <span
-                              className="text-sm font-bold shrink-0"
-                              style={{ color: COLORS.rust }}
-                            >
+                            <span className="text-sm font-bold shrink-0" style={{ color: COLORS.rust }}>
                               {formatTZS(b.price)}
                             </span>
                           </button>
@@ -1082,10 +964,7 @@ export default function PostPropertyForm({
                       (feeAmount === 0 && !isFreeCategory && !listingFeeDisabled) ||
                       (paymentMode === "bundle" && !selectedBundle)
                     }
-                    style={{
-                      background: COLORS.gold,
-                      color: COLORS.night,
-                    }}
+                    style={{ background: COLORS.gold, color: COLORS.night }}
                     className="w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50"
                   >
                     {feeAmount === 0
@@ -1110,10 +989,7 @@ export default function PostPropertyForm({
             <PaymentGateway
               amount={feeAmount}
               title={t("Ada ya Kuchapisha", "Listing Fee")}
-              description={t(
-                `Kuchapisha "${effectiveTitle}"`,
-                `Publishing "${effectiveTitle}"`
-              )}
+              description={t(`Kuchapisha "${effectiveTitle}"`, `Publishing "${effectiveTitle}"`)}
               onInitiate={handleFeeInitiate}
               onSuccess={handleFeeSuccess}
               onCancel={() => setStage("review")}
@@ -1124,10 +1000,7 @@ export default function PostPropertyForm({
             <PaymentGateway
               amount={pendingBundlePurchase?.bundle?.price || 0}
               title={t("Nunua Kifurushi cha Listing", "Buy Listing Bundle")}
-              description={t(
-                `Credits zitaingizwa kwenye akaunti yako`,
-                `Credits will be added to your account`
-              )}
+              description={t("Credits zitaingizwa kwenye akaunti yako", "Credits will be added to your account")}
               onInitiate={handleBundlePaymentInitiate}
               onSuccess={handleBundlePaymentSuccess}
               onCancel={() => {
@@ -1141,22 +1014,14 @@ export default function PostPropertyForm({
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // DONE STAGE
-  // ═══════════════════════════════════════════════════════════
   if (!isEdit && stage === "done") {
     return (
       <div className="w-full flex items-center justify-center p-6 bg-page min-h-screen">
         <div className="max-w-md w-full text-center bg-card rounded-2xl border border-hairline p-8">
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ background: COLORS.green }}
-          >
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: COLORS.green }}>
             <Check color={COLORS.sand} size={26} />
           </div>
-          <h2 className="h-title mb-2">
-            {t("Listing imewasilishwa!", "Listing Submitted!")}
-          </h2>
+          <h2 className="h-title mb-2">{t("Listing imewasilishwa!", "Listing Submitted!")}</h2>
           <p className="text-secondary text-sm mb-6">
             {t(
               "Admin atakagua tangazo lako na kukujibu kwa ujumbe. Likikubaliwa, utaarifiwa kulipa ada ya kuchapisha; baada ya kulipa, admin ataliidhinisha liwe hewani.",
@@ -1170,10 +1035,7 @@ export default function PostPropertyForm({
           >
             {t("Nenda kwenye Mali Zangu", "Go to My Listings")}
           </button>
-          <button
-            onClick={reset}
-            className="w-full py-2 mt-2 text-body-sm font-medium text-primary"
-          >
+          <button onClick={reset} className="w-full py-2 mt-2 text-body-sm font-medium text-primary">
             {t("Weka Mali Nyingine", "Post Another Property")}
           </button>
         </div>
@@ -1181,9 +1043,6 @@ export default function PostPropertyForm({
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // FORM STAGE
-  // ═══════════════════════════════════════════════════════════
   return (
     <div className="bg-page min-h-screen w-full p-4 sm:p-6">
       {cropQueue.length > 0 && (
@@ -1197,13 +1056,10 @@ export default function PostPropertyForm({
         />
       )}
       <div className="max-w-2xl mx-auto">
-
         {category && !isEdit && (
           <div className="flex justify-center mb-3">
             <button
-              onClick={() =>
-                activeMode ? setCategoryMode(null) : clearCategory()
-              }
+              onClick={() => (activeMode ? setCategoryMode(null) : clearCategory())}
               className="text-primary flex items-center gap-1 text-sm font-medium opacity-70"
             >
               <ChevronLeft size={16} />{" "}
@@ -1216,9 +1072,7 @@ export default function PostPropertyForm({
 
         <div className="mb-6 text-center">
           <h1 className="h-title text-primary">
-            {isEdit
-              ? t("Hariri Tangazo", "Edit Listing")
-              : t("Weka Mali Yako", "Post Your Property")}
+            {isEdit ? t("Hariri Tangazo", "Edit Listing") : t("Weka Mali Yako", "Post Your Property")}
           </h1>
           <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
             {isEdit
@@ -1227,16 +1081,11 @@ export default function PostPropertyForm({
                 ? `${t("Category", "Category")}: ${categoryLabel}${
                     activeMode ? ` — ${activeMode.label[lang]}` : ""
                   }`
-                : t(
-                    "Chagua category ya mali unayotaka kuiweka",
-                    "Choose the category of the property you want to list"
-                  )}
+                : t("Chagua category ya mali unayotaka kuiweka", "Choose the category of the property you want to list")}
           </p>
-                    {/* FEE PREVIEW — create mode pekee */}
           {!isEdit && category && feeConfigLoaded && (() => {
             const cfgFee = getListingFeeConfig(categoryKey);
 
-            // ✅ Kama fee imezimwa AU hakuna config, onyesha "Free"
             if (listingFeeDisabled || !cfgFee) {
               return (
                 <div
@@ -1258,7 +1107,6 @@ export default function PostPropertyForm({
               );
             }
 
-            // ✅ Hesabu ya fee ya kawaida
             const isFlat = String(cfgFee.feeMode || "PERCENTAGE").toUpperCase() === "FLAT";
             const flat = Number(cfgFee.flatFee) || 0;
             const rate = Number(cfgFee.rate) || 0;
@@ -1271,7 +1119,6 @@ export default function PostPropertyForm({
             if (isFlat) {
               amount = flat;
               amountKnown = true;
-              basis = "";
             } else {
               basis = t(
                 `${(rate * 100).toFixed(2).replace(/\.?0+$/, "")}% ya bei ya mali`,
@@ -1308,18 +1155,13 @@ export default function PostPropertyForm({
                         ? formatTZS(amount)
                         : t("Itakokotolewa ukiweka bei", "Calculated after you enter a price")}
                   </b>
-                  {basis && (
-                    <span className="ml-1.5 text-[11px] opacity-70">
-                      ({basis})
-                    </span>
-                  )}
+                  {basis && <span className="ml-1.5 text-[11px] opacity-70">({basis})</span>}
                 </span>
               </div>
             );
           })()}
-          </div>
-          
-        {/* Category picker — create mode pekee */}
+        </div>
+
         {!isEdit && !category && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {categories.map((cat) => {
@@ -1339,23 +1181,17 @@ export default function PostPropertyForm({
                       className="w-full aspect-square rounded-xl object-cover object-center"
                     />
                   ) : (
-                    <div
-                      style={{ background: COLORS.night }}
-                      className="w-10 h-10 rounded-xl flex items-center justify-center"
-                    >
+                    <div style={{ background: COLORS.night }} className="w-10 h-10 rounded-xl flex items-center justify-center">
                       <Icon size={18} color={COLORS.gold} />
                     </div>
                   )}
-                  <span className="text-primary text-sm font-semibold">
-                    {catLabel}
-                  </span>
+                  <span className="text-primary text-sm font-semibold">{catLabel}</span>
                 </button>
               );
             })}
           </div>
         )}
 
-        {/* Mode picker — create mode pekee */}
         {!isEdit && category && needsMode && (
           <div className="max-w-md mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
             {cfg.modes.map((m) => (
@@ -1365,18 +1201,13 @@ export default function PostPropertyForm({
                 onClick={() => chooseMode(m.key)}
                 className="rounded-2xl border border-hairline bg-card p-5 text-center hover:shadow-sm transition-shadow"
               >
-                <span className="block text-primary text-base font-semibold">
-                  {m.label[lang]}
-                </span>
-                <span className="block text-secondary text-xs mt-1">
-                  {m.desc[lang]}
-                </span>
+                <span className="block text-primary text-base font-semibold">{m.label[lang]}</span>
+                <span className="block text-secondary text-xs mt-1">{m.desc[lang]}</span>
               </button>
             ))}
           </div>
         )}
 
-        {/* FORM */}
         {category && (!needsMode || isEdit) && (
           <form
             onSubmit={handleFormSubmit}
@@ -1385,27 +1216,14 @@ export default function PostPropertyForm({
             <Field
               label={
                 photosOptional
-                  ? t(
-                      "Picha (hiari, mpaka 8) — zitakatwa kuwa mraba",
-                      "Photos (optional, up to 8) — cropped to square"
-                    )
-                  : t(
-                      "Picha za Mali (angalau 1, mpaka 8) — zitakatwa kuwa mraba",
-                      "Property Photos (at least 1, up to 8) — cropped to square"
-                    )
+                  ? t("Picha (hiari, mpaka 8) — zitakatwa kuwa mraba", "Photos (optional, up to 8) — cropped to square")
+                  : t("Picha za Mali (angalau 1, mpaka 8) — zitakatwa kuwa mraba", "Property Photos (at least 1, up to 8) — cropped to square")
               }
             >
               <div className="flex flex-wrap justify-center gap-2">
                 {photos.map((p, i) => (
-                  <div
-                    key={i}
-                    className="relative w-20 h-20 aspect-square rounded-xl overflow-hidden"
-                  >
-                    <img
-                      src={p.url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
+                  <div key={i} className="relative w-20 h-20 aspect-square rounded-xl overflow-hidden">
+                    <img src={p.url} alt="" className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => removePhoto(i)}
@@ -1417,18 +1235,10 @@ export default function PostPropertyForm({
                   </div>
                 ))}
                 {photos.length < 8 && (
-                  <label
-                    className="w-20 h-20 rounded-xl border-2 border-dashed border-hairline flex flex-col items-center justify-center gap-1 cursor-pointer text-body-sm text-primary"
-                  >
+                  <label className="w-20 h-20 rounded-xl border-2 border-dashed border-hairline flex flex-col items-center justify-center gap-1 cursor-pointer text-body-sm text-primary">
                     <ImagePlus size={18} />
                     {t("Ongeza", "Add")}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      hidden
-                      onChange={handlePhotoAdd}
-                    />
+                    <input type="file" accept="image/*" multiple hidden onChange={handlePhotoAdd} />
                   </label>
                 )}
               </div>
@@ -1448,28 +1258,19 @@ export default function PostPropertyForm({
               {suggestedTitle && !base.title.trim() && (
                 <span className="text-[11px] text-secondary">
                   {t("Kidokezo", "Hint")}: <b>{suggestedTitle}</b> —{" "}
-                  {t(
-                    "unaweza kuandika jina lako mwenyewe",
-                    "you can write your own title"
-                  )}
+                  {t("unaweza kuandika jina lako mwenyewe", "you can write your own title")}
                 </span>
               )}
             </Field>
 
             {visibleFields.length > 0 && (
               <div className="rounded-2xl border border-hairline p-4 flex flex-col gap-4 bg-page">
-                <span
-                  style={{ color: COLORS.rust }}
-                  className="text-body-sm font-semibold text-center"
-                >
+                <span style={{ color: COLORS.rust }} className="text-body-sm font-semibold text-center">
                   {t("Taarifa za Ziada", "Additional Details")} — {categoryLabel}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {visibleFields.map((f) => (
-                    <div
-                      key={f.key}
-                      className={f.type === "textarea" ? "sm:col-span-2" : ""}
-                    >
+                    <div key={f.key} className={f.type === "textarea" ? "sm:col-span-2" : ""}>
                       <SchemaField
                         f={f}
                         lang={lang}
@@ -1491,19 +1292,11 @@ export default function PostPropertyForm({
                   <select
                     className={inputCls}
                     value={loc.mkoa}
-                    onChange={(e) =>
-                      setLoc({
-                        mkoa: e.target.value,
-                        wilaya: "",
-                        eneo: loc.eneo,
-                      })
-                    }
+                    onChange={(e) => setLoc({ mkoa: e.target.value, wilaya: "", eneo: loc.eneo })}
                   >
                     <option value="">{t("Chagua...", "Choose...")}</option>
                     {TZ_REGIONS.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
+                      <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
                 </Field>
@@ -1513,9 +1306,7 @@ export default function PostPropertyForm({
                     list="dl-wilaya"
                     placeholder={t("mfano: Kinondoni", "e.g. Kinondoni")}
                     value={loc.wilaya}
-                    onChange={(e) =>
-                      setLoc({ ...loc, wilaya: e.target.value })
-                    }
+                    onChange={(e) => setLoc({ ...loc, wilaya: e.target.value })}
                   />
                   <datalist id="dl-wilaya">
                     {(WILAYA_SUGGESTIONS[loc.mkoa] || []).map((w) => (
@@ -1535,10 +1326,7 @@ export default function PostPropertyForm({
 
               <div className="mt-2">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-secondary block mb-2">
-                  {t(
-                    "Mahali halisi kwenye ramani (hiari, lakini inashauriwa)",
-                    "Exact location on the map (optional, but recommended)"
-                  )}
+                  {t("Mahali halisi kwenye ramani (hiari, lakini inashauriwa)", "Exact location on the map (optional, but recommended)")}
                 </span>
                 <LocationPicker
                   value={{ latitude: lat, longitude: lng }}
@@ -1557,27 +1345,18 @@ export default function PostPropertyForm({
               </div>
             </div>
 
-            <Field
-              label={`${
-                priceMeta.label[lang] || priceMeta.label.sw
-              }${priceMeta.optional ? "" : " *"}`}
-            >
+            <Field label={`${priceMeta.label[lang] || priceMeta.label.sw}${priceMeta.optional ? "" : " *"}`}>
               <input
                 type="text"
                 inputMode="numeric"
                 className={inputCls}
                 placeholder={t("mfano: 85,000,000", "e.g. 85,000,000")}
                 value={formatPriceInput(base.price)}
-                onChange={(e) =>
-                  setBase({ ...base, price: cleanPriceInput(e.target.value) })
-                }
+                onChange={(e) => setBase({ ...base, price: cleanPriceInput(e.target.value) })}
               />
               {priceMeta.optional && (
                 <span className="text-[11px] text-secondary">
-                  {t(
-                    "Hiari — acha wazi kama inajadiliwa.",
-                    "Optional — leave empty if negotiable."
-                  )}
+                  {t("Hiari — acha wazi kama inajadiliwa.", "Optional — leave empty if negotiable.")}
                 </span>
               )}
             </Field>
@@ -1588,9 +1367,7 @@ export default function PostPropertyForm({
                 className={`${inputCls} resize-none`}
                 placeholder={t("Eleza kwa ufupi...", "Briefly describe...")}
                 value={base.description}
-                onChange={(e) =>
-                  setBase({ ...base, description: e.target.value })
-                }
+                onChange={(e) => setBase({ ...base, description: e.target.value })}
               />
             </Field>
 
@@ -1605,17 +1382,11 @@ export default function PostPropertyForm({
               >
                 <AlertTriangle size={16} className="shrink-0 mt-0.5" />
                 <div className="min-w-0">
-                  <p className="font-semibold mb-0.5">
-                    {t("Tangazo linalofanana lipo", "Similar listing exists")}
-                  </p>
+                  <p className="font-semibold mb-0.5">{t("Tangazo linalofanana lipo", "Similar listing exists")}</p>
                   <p className="text-xs leading-relaxed">
                     {t(
-                      `Umekwisha kuweka tangazo "${
-                        duplicateWarning.title || ""
-                      }" lenye bei sawa na mahali sawa. Tafadhali badilisha jina, bei, au mahali ili kuendelea.`,
-                      `You already have a listing "${
-                        duplicateWarning.title || ""
-                      }" with the same price and location. Please change the title, price, or location to continue.`
+                      `Umekwisha kuweka tangazo "${duplicateWarning.title || ""}" lenye bei sawa na mahali sawa. Tafadhali badilisha jina, bei, au mahali ili kuendelea.`,
+                      `You already have a listing "${duplicateWarning.title || ""}" with the same price and location. Please change the title, price, or location to continue.`
                     )}
                   </p>
                 </div>
@@ -1634,10 +1405,7 @@ export default function PostPropertyForm({
             {error && (
               <div
                 className="rounded-xl px-4 py-3 flex items-start gap-2 text-sm"
-                style={{
-                  background: "rgba(193,80,46,0.1)",
-                  color: COLORS.rust,
-                }}
+                style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
               >
                 <AlertTriangle size={14} className="shrink-0 mt-0.5" />
                 <span className="min-w-0 break-words">{error}</span>
@@ -1648,17 +1416,13 @@ export default function PostPropertyForm({
               type="submit"
               disabled={!canSubmit || submitting}
               className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-                canSubmit
-                  ? "bg-gold text-night hover:brightness-110"
-                  : "bg-ink/10 text-muted cursor-not-allowed"
+                canSubmit ? "bg-gold text-night hover:brightness-110" : "bg-ink/10 text-muted cursor-not-allowed"
               }`}
             >
               {submitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />{" "}
-                  {isEdit
-                    ? t("Inahifadhi...", "Saving...")
-                    : t("Inawasilisha...", "Submitting...")}
+                  {isEdit ? t("Inahifadhi...", "Saving...") : t("Inawasilisha...", "Submitting...")}
                 </>
               ) : isEdit ? (
                 t("Hifadhi Mabadiliko", "Save Changes")
