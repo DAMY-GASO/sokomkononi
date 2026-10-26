@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle,
   Wallet, Package, Receipt, Send,
@@ -305,18 +305,63 @@ export default function PostPropertyForm({
     return () => clearTimeout(timer);
   }, [effectiveTitle, base.price, loc.mkoa, loc.wilaya, loc.eneo, categoryKey, isEdit]);
 
-  // ✅ Mobile Navigation (Back button / gestures)
+  // ✅ Mobile Navigation: back button/gesture inarudi hatua moja moja
+  // (paying → review → form, option → category → category list)
+  // Kila hatua mbele inaongeza history entry moja; back ya simu inaiondoa moja moja.
+  const historyDepthRef = useRef(0);
+  const ignorePopRef = useRef(0);
+
+  const stepLevel = stage === "paying" ? 2 : stage === "review" ? 1 : 0;
+  const formLevel = isEdit ? 0 : (categoryKey ? 1 : 0) + (categoryMode ? 1 : 0);
+  const navLevel = stepLevel + formLevel;
+
+  // Sawazisha history na level ya sasa (mbele = push, nyuma kwa button ya ndani = go(-n))
   useEffect(() => {
-    window.history.pushState({ stage }, "", location.pathname);
+    const depth = historyDepthRef.current;
+    if (navLevel > depth) {
+      for (let i = depth; i < navLevel; i++) {
+        window.history.pushState(
+          { ...(window.history.state || {}), ppfStep: i + 1 },
+          "",
+          window.location.href
+        );
+      }
+      historyDepthRef.current = navLevel;
+    } else if (navLevel < depth) {
+      // Mtumiaji amerudi kwa button ya ndani (mf. "Change Category") —
+      // ondoa entries za ziada ili back ya simu isibaki "imekufa"
+      const diff = depth - navLevel;
+      ignorePopRef.current += 1;
+      historyDepthRef.current = navLevel;
+      window.history.go(-diff);
+    }
+  }, [navLevel]);
+
+  // Back ya simu / gesture
+  useEffect(() => {
     const handlePopState = () => {
-      if (stage !== "form") {
-        setStage("form");
-        setError("");
+      if (ignorePopRef.current > 0) {
+        ignorePopRef.current -= 1;
+        return;
+      }
+      if (historyDepthRef.current === 0) return; // hakuna cha kurudi — acha router ifanye kazi yake
+
+      historyDepthRef.current -= 1; // browser tayari imerudi nyuma entry moja
+      setError("");
+
+      if (stage === "paying") setStage("review");
+      else if (stage === "review") setStage("form");
+      else if (!isEdit && categoryMode) setCategoryMode(null);
+      else if (!isEdit && categoryKey) {
+        setCategoryKey(null);
+        setCategoryMode(null);
+        setExtra({});
+        setDuplicateWarning(null);
       }
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [stage, location.pathname]);
+  }, [stage, categoryKey, categoryMode, isEdit]);
 
   const handlePhotoAdd = (e) => {
     const files = Array.from(e.target.files || []).slice(0, 8 - photos.length);
