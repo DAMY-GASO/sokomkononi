@@ -534,7 +534,7 @@ export default function ReportsSection() {
     };
   }, [apiReports, listings, deals, locale]);
 
-  // ✅ Deals Status as Percentages (Jumla yake = 100)
+    // ✅ Deals Status as Percentages (Jumla yake = 100)
   const dealsStatusData = useMemo(() => {
     const keys = ["negotiating", "accepted", "reserved", "completed", "cancelled"];
     const labels = {
@@ -544,14 +544,20 @@ export default function ReportsSection() {
       completed: t("Imekamilika", "Completed"),
       cancelled: t("Imeghairiwa", "Cancelled"),
     };
-    const total = reports.totalDeals || 1;
-    
-    return keys.map(k => {
+
+    // ✅ Hesabu jumla ya deals zilizopo kwenye makundi haya 5 pekee
+    const totalInBuckets = keys.reduce(
+      (sum, k) => sum + (reports.dealsByStatus?.[k] || 0),
+      0
+    );
+    const total = totalInBuckets || 1; // Kama ni sifuri, tumia 1 kuepuka division by zero
+
+    return keys.map((k) => {
       const count = reports.dealsByStatus?.[k] || 0;
       const pct = (count / total) * 100;
       return {
         label: labels[k],
-        value: pct, 
+        value: pct,
         display: `${pct.toFixed(0)}% (${count})`,
         color: DEAL_STATUS_COLORS[k] || COLORS.gold,
       };
