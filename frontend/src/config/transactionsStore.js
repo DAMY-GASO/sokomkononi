@@ -1,12 +1,13 @@
 // ============================================================
-// transactionsStore.js — v3
+// transactionsStore.js — v4
 // Inaunganisha finance + transactions API
 // Ina-normalize status/type kwa usahihi
 //
-// SASISHO:
-//  - rawId: hifadhi backend ID halisi (bila prefix)
-//  - id: prefixed ID kwa localStorage (fin_42, tx_7)
-//  - receipts/downloads zinatumia rawId
+// SASISHO v4:
+//  - FIX: _findTx na _upsertTx sasa zina-handle rawId na prefixed id
+//         (fin_42, tx_7) kwa usahihi — mzunguko wa lifecycle hautavunjika
+//         baada ya hydration.
+//  - FIX: payReservationAsync ina-guard null kabla ya _upsertTx.
 // ============================================================
 import { useEffect, useState } from "react";
 import { financeApi } from "../api/finance.js";
@@ -168,7 +169,6 @@ function normalizeMyTransaction(raw) {
     paymentReference: raw.payment_reference,
     method: raw.method || raw.payment_method || null,
     paidAt: raw.paid_at || raw.completed_at,
-    // ⬅️ FIX: paid_at kwanza, kisha created_at
     at: raw.paid_at || raw.created_at || raw.updated_at,
     bundleId: raw.bundle_id,
     bundleName: raw.bundle_name,
@@ -213,10 +213,10 @@ function normalizeTransactionRow(raw) {
     paymentReference: raw.payment_reference,
     method: raw.method || raw.payment_method || null,
     paidAt: raw.paid_at || raw.completed_at,
-    // ⬅️ FIX: paid_at kwanza, kisha created_at
     at: raw.paid_at || raw.created_at || raw.updated_at,
   };
 }
+
 // ============================================================
 // HYDRATE FROM API — vyanzo viwili
 // ============================================================
@@ -344,10 +344,8 @@ export function useFeeTransactions() {
 }
 
 // ============================================================
-// LIFECYCLE API (migrated from transactionLifecycleStore)
+// LIFECYCLE API
 // ============================================================
-// These are the operations DealRooms.jsx / PayListingFee / etc. need.
-// They wrap transactionsApi.* and share the same normalized store.
 import { transactionsApi as _txApi } from "../api/transactions.js";
 
 export const TX_STATUS = {
@@ -364,13 +362,62 @@ export const TX_STATUS = {
   EXPIRED: "expired",
 };
 
-function _findTx(id) {
-  return readFromStorage().find((t) => String(t.id) === String(id)) || null;
+// ── FIX: Strip hydration prefix ili rawId na prefixed id zilingane ──
+function _stripPrefix(id) {
+  const s = String(id ?? "");
+  if (s.startsWith("fin_") || s.startsWith("tx_")) return s.slice(4);
+  return s;
 }
+
+function _findTx(id) {
+  if (id == null) return null;
+  const key = _stripPrefix(id);
+  if (!key) return null;
+  return (
+    readFromStorage().find((t) => {
+      const tid = _stripPrefix(t.id);
+      const traw = _stripPrefix(t.rawId);
+      return tid === key || traw === key;
+    }) || null
+  );
+}
+
 function _upsertTx(tx) {
   if (!tx) return;
-  const list = readFromStorage().filter((t) => String(t.id) !== String(tx.id));
-  saveTransactions([tx, ...list]);
+  const key = _stripPrefix(tx.id ?? tx.rawId);
+  if (!key) {
+    // Fallback: no id — prepend only, avoid wiping existing entries
+    saveTransactions([tx, ...readFromStorage()]);
+    return;
+  }
+
+  const current = readFromStorage();
+  const existing = current.find((t) => {
+    const tid = _stripPrefix(t.id);
+    const traw = _stripPrefix(t.rawId);
+    return tid === key || traw === key;
+  });
+
+  const merged = { ...tx };
+
+  // Preserve hydrated prefix on id so the list stays consistent
+  if (
+    existing &&
+    (String(existing.id).startsWith("tx_") ||
+      String(existing.id).startsWith("fin_"))
+  ) {
+    merged.id = existing.id;
+  }
+  if (existing && existing.rawId != null && merged.rawId == null) {
+    merged.rawId = existing.rawId;
+  }
+
+  const list = current.filter((t) => {
+    const tid = _stripPrefix(t.id);
+    const traw = _stripPrefix(t.rawId);
+    return tid !== key && traw !== key;
+  });
+  saveTransactions([merged, ...list]);
 }
 
 async function _mutate({ id, patch, apiCall }) {
@@ -413,7 +460,15 @@ export async function payReservationAsync(id, opts = {}) {
   if (!id) return { ok: false, error: new Error("Transaction id is required") };
   const isCredits = opts.paymentReference === "credits";
   if (isCredits) {
-    _upsertTx({ ..._findTx(id), status: TX_STATUS.RESERVED_PAID, reservationPaidAt: new Date().toISOString() });
+    const current = _findTx(id);
+    if (!current) {
+      return { ok: false, error: new Error("Transaction not found") };
+    }
+    _upsertTx({
+      ...current,
+      status: TX_STATUS.RESERVED_PAID,
+      reservationPaidAt: new Date().toISOString(),
+    });
   }
   try {
     const raw = await _txApi.payReservation(id, {
