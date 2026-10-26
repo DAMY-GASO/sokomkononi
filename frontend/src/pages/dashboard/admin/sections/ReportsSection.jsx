@@ -345,47 +345,55 @@ export default function ReportsSection() {
 
   const usersTotal = localUsers.length || 0;
 
-  // ✅ Users Growth Data (Kwa ajili ya Bar Chart)
+  // ✅ Users Growth Data (Cumulative - Jumla ya Watumiaji)
   const usersGrowthData = useMemo(() => {
     const growth = apiReports?.usersGrowth || [];
     
-    // Tunachukua siku 7 za mwisho
-    const recent = growth.slice(-7);
+    // Siku zote 7 za wiki
+    const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     
     // Rangi tofauti kwa kila siku
-    const dayColors = [
-      "#2563EB", // Monday - Blue
-      "#7C3AED", // Tuesday - Purple
-      "#DB2777", // Wednesday - Pink
-      "#EA580C", // Thursday - Orange
-      "#CA8A04", // Friday - Yellow
-      "#16A34A", // Saturday - Green
-      "#DC2626", // Sunday - Red
-    ];
+    const dayColors = {
+      Mon: "#2563EB",
+      Tue: "#7C3AED",
+      Wed: "#DB2777",
+      Thu: "#EA580C",
+      Fri: "#CA8A04",
+      Sat: "#16A34A",
+      Sun: "#DC2626",
+    };
 
-    return recent.map((d, index) => {
-      let dayLabel = "—";
+    const dayMap = {};
+    daysOfWeek.forEach((day) => {
+      dayMap[day] = 0;
+    });
+
+    // Chukua siku 7 za mwisho kutoka backend
+    const recent = growth.slice(-7);
+    recent.forEach((d) => {
       if (d.date) {
         try {
           const dateObj = new Date(d.date);
           if (!isNaN(dateObj.getTime())) {
-            // Pata jina la siku kwa Kiingereza (Mon, Tue, n.k.)
-            dayLabel = dateObj.toLocaleDateString("en-US", { weekday: "short" });
+            const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
+            if (dayMap[dayName] !== undefined) {
+              // ✅ Tumia CUMULATIVE (Jumla) badala ya count (Wapya)
+              dayMap[dayName] = d.cumulative || 0;
+            }
           }
         } catch (err) {
-          dayLabel = d.label || d.date;
+          // Ignore
         }
-      } else if (d.label) {
-        dayLabel = d.label;
       }
-
-      return {
-        label: dayLabel,
-        value: d.count || 0,
-        display: (d.count || 0).toLocaleString("en-US"),
-        color: dayColors[index % dayColors.length],
-      };
     });
+
+    // Rudisha siku zote 7 kwa mpangilio
+    return daysOfWeek.map((day) => ({
+      label: day,
+      value: dayMap[day] || 0,
+      display: (dayMap[day] || 0).toLocaleString("en-US"),
+      color: dayColors[day],
+    }));
   }, [apiReports]);
 
   // ── Listings Breakdown ──
@@ -667,12 +675,12 @@ export default function ReportsSection() {
             />
           </ChartCard>
 
-          {/* ✅ Users Growth Bar Chart */}
+          {/* ✅ Users Growth Bar Chart (Cumulative) */}
           <ChartCard
             title={t("Ukuaji wa Watumiaji (Siku 7)", "Users Growth (7 Days)")}
             icon={UserPlus}
             iconColor={COLORS.royal}
-            hint={t("Watumiaji wapya", "New users")}
+            hint={t("Jumla ya watumiaji", "Total users")}
           >
             {usersGrowthData.length === 0 ? (
               <p className="py-6 text-center text-xs text-muted">
