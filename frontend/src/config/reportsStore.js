@@ -1,3 +1,4 @@
+// reportsStore.js
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 
@@ -19,6 +20,7 @@ const EMPTY = {
   usersGrowth: [],
   listingsGrowth: [],
   revenueByMonth: [],
+  revenueByDay: [], // ✅ MPYA
   dealsByStatus: {
     negotiating: 0,
     accepted: 0,
@@ -27,7 +29,7 @@ const EMPTY = {
     disputed: 0,
     cancelled: 0,
   },
-  topSellers: [], // ✅ Rudisha
+  topSellers: [],
   mostViewedListings: [],
   topCategories: [],
   topLocations: [],
@@ -98,6 +100,13 @@ function buildFromApi(raw) {
     revenueByMonth: pickArr(src, "revenueByMonth", "revenue_by_month").map((d) => ({
       date: d.date || d.month || d.label,
       label: d.label || d.month || "",
+      total: Number(d.total ?? d.revenue) || 0,
+    })),
+
+    // ✅ MPYA: revenueByDay
+    revenueByDay: pickArr(src, "revenueByDay", "revenue_by_day").map((d) => ({
+      date: d.date || d.day || d.label,
+      label: d.label || d.date || d.day || "",
       total: Number(d.total ?? d.revenue) || 0,
     })),
 
