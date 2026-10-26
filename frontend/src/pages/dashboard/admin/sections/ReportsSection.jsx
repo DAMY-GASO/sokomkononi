@@ -23,7 +23,7 @@ import {
   MiniRow,
 } from "../shared/Charts.jsx";
 
-// ✅ Timezone Fix: Africa/Dar_es_Salaam (UTC+3)
+// ✅ Timezone Fix
 const formatDateTZ = (dateString) => {
   if (!dateString) return "";
   const d = new Date(dateString);
@@ -345,12 +345,11 @@ export default function ReportsSection() {
 
   const usersTotal = localUsers.length || 0;
 
-  // ✅ MPYA: Users Growth Donut
+  // ✅ Users Growth Donut
   const usersGrowthDonut = useMemo(() => {
     const growth = apiReports?.usersGrowth || [];
     if (growth.length === 0) return [];
     
-    // Tunachukua siku 7 za mwisho tu kwa ajili ya donut
     const recent = growth.slice(-7);
     return recent.map((d) => ({
       label: new Date(d.date).toLocaleDateString(locale, { weekday: "short" }),
@@ -440,6 +439,25 @@ export default function ReportsSection() {
       })
       .filter((d) => d.value > 0);
   }, [platformRevenue]);
+
+  // ⚠️ HII HAPA: revenueByMonth (Ilikuwa imesahaulika)
+  const revenueByMonth = useMemo(() => {
+    const out = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+      const label = start.toLocaleDateString(locale, { month: "short" });
+      let total = 0;
+      const revenueSource = platformRevenue.transactions || [];
+      revenueSource.forEach((tr) => {
+        const dt = new Date(tr.at);
+        if (dt >= start && dt <= end) total += Number(tr.amount) || 0;
+      });
+      out.push({ label, value: total });
+    }
+    return out;
+  }, [platformRevenue, locale]);
 
   // ── Revenue by Day (Timezone Fixed) ──
   const revenueByDay = useMemo(() => {
@@ -531,7 +549,7 @@ export default function ReportsSection() {
       mostViewedListings: pickList(apiReports.mostViewedListings, mostViewedLocal),
       topCategories: pickList(apiReports.topCategories, topCategoriesLocal),
       topLocations: pickList(apiReports.topLocations, topLocationsLocal),
-      topSellers: pickList(apiReports.topSellers, []), // ✅ Rudisha Top Sellers
+      topSellers: pickList(apiReports.topSellers, []),
     };
   }, [apiReports, listings, deals, locale]);
 
@@ -584,6 +602,7 @@ export default function ReportsSection() {
             />
           </ChartCard>
 
+          {/* ✅ HAPA NDIPO revenueByMonth INATUMIKA */}
           <ChartCard
             title={t("Mapato — Miezi 6", "Revenue — Last 6 Months")}
             icon={BarChart3}
@@ -620,7 +639,6 @@ export default function ReportsSection() {
             />
           </ChartCard>
 
-          {/* ✅ MPYA: Users Growth Donut */}
           <ChartCard
             title={t("Ukuaji wa Watumiaji (Siku 7)", "Users Growth (7 Days)")}
             icon={UserPlus}
@@ -809,7 +827,6 @@ export default function ReportsSection() {
             )}
           </ChartCard>
 
-          {/* ✅ MPYA: Top Sellers by Views */}
           <ChartCard
             title={t("Wauzaji Bora (kwa Views)", "Top Sellers (by Views)")}
             icon={Users}
