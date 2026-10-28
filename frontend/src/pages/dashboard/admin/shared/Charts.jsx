@@ -157,12 +157,21 @@ export function VBarChart({
   valueFormat,
   emptyText = "—",
   maxValue = null,
+  tickEvery = null, // mfano 5 = onyesha lebo/namba kila bar ya 5 + ya mwisho
 }) {
   const max = maxValue || Math.max(...data.map((d) => Number(d.value) || 0), 1);
-  
+
   if (data.length === 0) {
     return <p className="py-6 text-center text-xs text-muted">{emptyText}</p>;
   }
+
+  const last = data.length - 1;
+  const isTick = (i) =>
+    !tickEvery ||
+    i === last ||
+    (i % tickEvery === 0 && last - i >= Math.ceil(tickEvery / 2));
+  const textCls = tickEvery ? "whitespace-nowrap" : "truncate";
+
   return (
     <div
       className="flex w-full items-stretch justify-between gap-1"
@@ -171,29 +180,30 @@ export function VBarChart({
       {data.map((d, i) => {
         const v = Number(d.value) || 0;
         const pct = max > 0 ? (v / max) * 100 : 0;
+        const tick = isTick(i);
         return (
           <div
             key={i}
             className="flex h-full min-w-0 flex-1 flex-col items-center gap-1.5"
           >
-            <span className="truncate text-[9px] tabular-nums text-muted sm:text-[10px]">
-              {v > 0 && valueFormat ? valueFormat(v) : v > 0 ? v : ""}
+            <span className={`${textCls} text-[9px] tabular-nums text-muted sm:text-[10px]`}>
+              {tick && v > 0 ? (valueFormat ? valueFormat(v) : v) : "\u00A0"}
             </span>
             <div className="flex w-full flex-1 items-end justify-center">
               <div
                 className="w-full max-w-[28px] rounded-t-md transition-all duration-700"
                 style={{
-                  /* ✅ Badilisha urefu wa chini kuwa 8px (au 2%) ili isionekane kama mstari mwembamba */
                   height: `${Math.max(pct, v > 0 ? 8 : 2)}%`,
                   background: d.color || "#FEA406",
-                  /* ✅ Ongeza minHeight wa 8px kwa bar zote */
                   minHeight: v > 0 ? 8 : 4,
                 }}
                 title={`${d.label}: ${v}`}
               />
             </div>
-            <span className="w-full truncate text-center text-[9px] text-muted sm:text-[10px]">
-              {d.label}
+            <span
+              className={`${tickEvery ? "whitespace-nowrap" : "w-full truncate"} text-center text-[9px] text-muted sm:text-[10px]`}
+            >
+              {tick ? d.label : "\u00A0"}
             </span>
           </div>
         );

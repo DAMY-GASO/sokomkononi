@@ -537,6 +537,31 @@ export default function ReportsSection() {
     };
   }, [apiReports, listings, deals, locale]);
 
+  // ✅ Listings Growth (Cumulative) - siku mpya + zilizopita
+  const listingsGrowthData = useMemo(() => {
+    const growth = reports.listingsGrowth || [];
+    const monthsSw = ["Jan","Feb","Mac","Apr","Mei","Jun","Jul","Ago","Sep","Okt","Nov","Des"];
+
+    // Mali zilizokuwepo kabla ya dirisha la siku 30
+    const windowSum = growth.reduce((sum, d) => sum + (Number(d.count) || 0), 0);
+    let running = Math.max((Number(reports.totalListings) || 0) - windowSum, 0);
+
+    return growth.map((d) => {
+      running = d.cumulative != null
+        ? Number(d.cumulative)
+        : running + (Number(d.count) || 0);
+
+      // Tarehe fupi: "28 Sep"
+      let short = d.label || d.date || "";
+      if (typeof d.date === "string" && /^\d{4}-\d{2}-\d{2}/.test(d.date)) {
+        const [, m, day] = d.date.split("-").map(Number);
+        short = `${day} ${monthsSw[m - 1]}`;
+      }
+
+      return { label: short, value: running, color: COLORS.green };
+    });
+  }, [reports.listingsGrowth, reports.totalListings]);
+
      // ✅ Deals Status as Percentages (Jumla yake = 100%)
   const dealsStatusData = useMemo(() => {
     const keys = ["negotiating", "accepted", "reserved", "completed", "cancelled"];
@@ -762,16 +787,20 @@ export default function ReportsSection() {
             title={t("Ukuaji wa Mali (Siku 30)", "Listings Growth (Last 30 Days)")}
             icon={BarChart3}
             iconColor={COLORS.green}
+            hint={t("Jumla ya mali", "Total listings")}
           >
-            <VBarChart
-  data={(reports.listingsGrowth || []).map((d) => ({
-    label: d.label || d.date,
-    value: d.count || 0,
-    color: COLORS.green,
-  }))}
-  height={180}
-  valueFormat={(v) => v.toLocaleString("en-US")}
-/>
+            {listingsGrowthData.length === 0 ? (
+              <p className="py-6 text-center text-xs text-muted">
+                {t("Hakuna data bado", "No data yet")}
+              </p>
+            ) : (
+              <VBarChart
+                data={listingsGrowthData}
+                height={180}
+                tickEvery={5}
+                valueFormat={(v) => v.toLocaleString("en-US")}
+              />
+            )}
           </ChartCard>
 
           {/* ✅ Deals Status - VBarChart inayojumlisha 100% */}
