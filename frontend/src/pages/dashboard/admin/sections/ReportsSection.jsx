@@ -537,30 +537,48 @@ export default function ReportsSection() {
     };
   }, [apiReports, listings, deals, locale]);
 
-  // ✅ Listings Growth (Cumulative) - siku mpya + zilizopita
+  // ✅ Listings Growth (Cumulative) — inatoka kwenye `listings` zile zile
+  // zinazotumika Overview na Donut, hivyo jumla ya mwisho ni sawa kila mahali.
   const listingsGrowthData = useMemo(() => {
-    const growth = reports.listingsGrowth || [];
     const monthsSw = ["Jan","Feb","Mac","Apr","Mei","Jun","Jul","Ago","Sep","Okt","Nov","Des"];
+    const DAYS = 30;
 
-    // Mali zilizokuwepo kabla ya dirisha la siku 30
-    const windowSum = growth.reduce((sum, d) => sum + (Number(d.count) || 0), 0);
-    let running = Math.max((Number(reports.totalListings) || 0) - windowSum, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endMs = today.getTime() + 24 * 60 * 60 * 1000;
 
-    return growth.map((d) => {
-      running = d.cumulative != null
-        ? Number(d.cumulative)
-        : running + (Number(d.count) || 0);
+    const days = [];
+    for (let i = DAYS - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      days.push(d);
+    }
+    const startMs = days[0].getTime();
 
-      // Tarehe fupi: "28 Sep"
-      let short = d.label || d.date || "";
-      if (typeof d.date === "string" && /^\d{4}-\d{2}-\d{2}/.test(d.date)) {
-        const [, m, day] = d.date.split("-").map(Number);
-        short = `${day} ${monthsSw[m - 1]}`;
+    // before = mali zilizokuwepo kabla ya dirisha (au zisizo na tarehe sahihi)
+    let before = 0;
+    const perDay = {};
+    listings.forEach((l) => {
+      const d = new Date(l.postedAt);
+      if (Number.isNaN(d.getTime()) || d.getTime() < startMs) {
+        before += 1;
+        return;
       }
-
-      return { label: short, value: running, color: COLORS.green };
+      const day = d.getTime() >= endMs ? today : d;
+      const k = localDayKey(day);
+      perDay[k] = (perDay[k] || 0) + 1;
     });
-  }, [reports.listingsGrowth, reports.totalListings]);
+
+    let running = before;
+    return days.map((d) => {
+      running += perDay[localDayKey(d)] || 0;
+      return {
+        label: `${d.getDate()} ${monthsSw[d.getMonth()]}`,
+        value: running,
+        color: COLORS.green,
+      };
+    });
+  }, [listings]);
 
      // ✅ Deals Status as Percentages (Jumla yake = 100%)
   const dealsStatusData = useMemo(() => {
