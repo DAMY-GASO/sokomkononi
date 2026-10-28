@@ -64,6 +64,8 @@ const ALL_STATUS_FETCH = [
   "REJECTED",
   "SOLD",
   "EXPIRED",
+  "RESERVED",
+  "DRAFT",
 ];
 
 export default function ModerationSection() {
@@ -105,6 +107,8 @@ export default function ModerationSection() {
       statusFilter === "rejected" || statusFilter === "zote";
     const wantSold = statusFilter === "sold" || statusFilter === "zote";
     const wantExpired = statusFilter === "expired" || statusFilter === "zote";
+    const wantReserved = statusFilter === "reserved" || statusFilter === "zote";
+    const wantDraft = statusFilter === "pending_payment" || statusFilter === "zote";
 
     const tasks = [];
     if (wantPending) tasks.push(hydrateModerationQueueFromApi());
@@ -118,6 +122,8 @@ export default function ModerationSection() {
     if (wantRejected) tasks.push(fetchListingsByStatusAsync("REJECTED"));
     if (wantSold) tasks.push(fetchListingsByStatusAsync("SOLD"));
     if (wantExpired) tasks.push(fetchListingsByStatusAsync("EXPIRED"));
+    if (wantReserved) tasks.push(fetchListingsByStatusAsync("RESERVED"));
+    if (wantDraft) tasks.push(fetchListingsByStatusAsync("DRAFT"));
 
     Promise.all(tasks).then((results) => {
       if (cancelled) return;
@@ -256,8 +262,10 @@ export default function ModerationSection() {
       label: { sw: "Zinahitaji Uhariri", en: "Needs Edit" },
     },
     { key: "live", label: { sw: "Zimeidhinishwa", en: "Approved" } },
+    { key: "reserved", label: { sw: "Zimehifadhiwa", en: "Reserved" } },
     { key: "sold", label: { sw: "Zilizouzwa", en: "Sold" } },
     { key: "expired", label: { sw: "Zilizoisha Muda", en: "Expired" } },
+    { key: "pending_payment", label: { sw: "Rasimu", en: "Drafts" } },
     { key: "rejected", label: { sw: "Zimekataliwa", en: "Rejected" } },
     { key: "zote", label: { sw: "Zote", en: "All" } },
   ];
@@ -500,10 +508,21 @@ export default function ModerationSection() {
       markDecided(listingId, "DELETED");
       removeFromHistory(listingId);
     } else {
-      setError(
-        res.error?.message ||
-          t("Imeshindwa kufuta listing.", "Failed to delete listing.")
-      );
+      const detail = String(res.error?.data?.detail || res.error?.message || "");
+      if (/foreign key|conversations/i.test(detail)) {
+        // Mali ina mazungumzo (conversations) — backend haikuruhusu kufuta kabisa
+        setError(
+          t(
+            "Mali hii ina mazungumzo ya wanunuzi, kwa hiyo haiwezi kufutwa kabisa. Tumia Disapprove ili iondolewe kwenye soko.",
+            "This listing has buyer conversations, so it can't be permanently deleted. Use Disapprove to take it off the marketplace."
+          )
+        );
+      } else {
+        setError(
+          res.error?.message ||
+            t("Imeshindwa kufuta listing.", "Failed to delete listing.")
+        );
+      }
     }
   };
 
@@ -886,6 +905,61 @@ export default function ModerationSection() {
           >
             <Clock size={13} />
             {t("Imeisha Muda", "Expired")}
+          </span>
+          <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
+          <button
+            onClick={() => openDeleteModal(listing.id)}
+            disabled={isBusy}
+            style={{ color: "#DC2626", borderColor: "rgba(220,38,38,0.4)" }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 ${
+              fullWidth ? "flex-1" : ""
+            }`}
+          >
+            {currentAction === "delete" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Trash2 size={13} />
+            )}
+            {t("Futa", "Delete")}
+          </button>
+        </div>
+      );
+    }
+
+    // Reserved — mnunuzi ameihifadhi, admin anaona tu (read-only)
+    if (status === "reserved") {
+      return (
+        <div
+          className={`flex flex-wrap gap-2 ${
+            fullWidth ? "w-full" : "justify-end"
+          }`}
+        >
+          <span
+            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg"
+            style={{ background: "rgba(254,164,6,0.12)", color: "#B45309" }}
+          >
+            <Clock size={13} />
+            {t("Imehifadhiwa", "Reserved")}
+          </span>
+          <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
+        </div>
+      );
+    }
+
+    // Draft / pending_payment — muuzaji hajawasilisha bado
+    if (status === "pending_payment" || status === "draft") {
+      return (
+        <div
+          className={`flex flex-wrap gap-2 ${
+            fullWidth ? "w-full" : "justify-end"
+          }`}
+        >
+          <span
+            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg"
+            style={{ background: "rgba(156,163,175,0.15)", color: "#6B7280" }}
+          >
+            <Clock size={13} />
+            {t("Haijawasilishwa", "Not submitted")}
           </span>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
           <button

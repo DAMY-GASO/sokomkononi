@@ -1,5 +1,17 @@
 // ============================================================
 // listingsStore.js
+// FIX: normalizer maps boosted_until → boostExpiresAt so the
+//      dashboard's isBoostActive() actually fires for API data.
+// NEW: checkDuplicateListing + checkDuplicateListingAsync — zuia
+//      seller kuweka listing inayofanana na iliyopo.
+// NEW: attributes (JSONField) inasomwa kutoka API na kuhifadhiwa.
+// NEW: restoreListingAsync — rejesha listing iliyofutwa (undo).
+//
+// Marekebisho ya mwisho:
+//  - usePublicListings: ondoa "sold" — haionekani public
+//  - markSoldAsync: tumia listingsApi.markSold (kwa notification)
+//  - ✅ FIX: normalizeListingFromApi — category ni STRING kila mara
+//    (React Error #31: "Objects are not valid as a React child")
 // ============================================================
 import { useEffect, useMemo, useState } from "react";
 import { getPlatformPolicy } from "./systemSettingsStore.js";
@@ -131,6 +143,9 @@ if (typeof window !== "undefined") {
   try { window.localStorage.removeItem(LEGACY_KEY); } catch { /* noop */ }
 }
 
+// PUBLIC_KEY and MINE_KEY are intentionally separate: hydrating the
+// public list must never overwrite the seller's own listings
+// (which include drafts / pending payments the public endpoint hides).
 function snapshot() { return { pub: readKey(PUBLIC_KEY), mine: readKey(MINE_KEY) }; }
 function restore(snap) {
   writeKey(PUBLIC_KEY, snap.pub, true);
@@ -319,6 +334,8 @@ export function useListings() { return useStoreValue(getListings); }
 export function useMyListings() { return useStoreValue(getMyListings); }
 
 // ============================================================
+// usePublicListings
+// ⬇️ Marekebisho: "sold" IMEONDOLEWA — haionekani kwenye kurasa za umma.
 // ============================================================
 export function usePublicListings() {
   const listings = useStoreValue(getPublicListings);
@@ -398,6 +415,7 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
   else if (Array.isArray(raw.images)) photos = raw.images;
   else if (Array.isArray(raw.gallery)) photos = raw.gallery;
 
+  // Preserve variant URLs so the frontend can pick the right size per context.
   photos = photos
     .map((img) => {
       if (typeof img === "string") return img;
@@ -420,6 +438,7 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
       typeof p === "string" ? p === singleImage : p.image_url === singleImage
     );
     if (!hasSingle) {
+      // Try to hydrate variants from the raw single image if it's an object.
       const rawObj = raw.image || raw.primary_image || null;
       if (rawObj && typeof rawObj === "object") {
         photos.unshift({
@@ -435,7 +454,14 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     }
   }
 
-  // ────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────
+  // ✅ CATEGORY — LAZIMA iwe STRING (slug)
+  // Backend inaweza kurudisha:
+  //   - raw.category = "nyumba" (string slug) ✅
+  //   - raw.category = 5 (FK id number) ⚠️
+  //   - raw.category = {id, name, slug} (object) ⚠️
+  //   - raw.category_slug = "nyumba" (string) ✅
+  //   - raw.category_id = 5 (number) ⚠️
   // ─────────────────────────────────────────────────────────
   const categoryObj = raw.category;
 
@@ -451,14 +477,19 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
       "";
   }
 
+  // Fallback kwa `category_slug` (string)
   if (!rawCategorySlug && raw.category_slug) {
     rawCategorySlug = String(raw.category_slug);
   }
 
+  // ✅ Normalize kwa seed key (mfano "nyumba-majengo" → "nyumba")
+  // Hii inahakikisha `category` ni STRING inayolingana na `cat.key`
+  // kwenye categoriesStore (frontend)
   const category = rawCategorySlug
     ? (getSeedKeyFromSlug(rawCategorySlug) || rawCategorySlug)
     : null;
 
+  // ✅ categoryId — number au null, kwa filtering
   let categoryId = null;
   if (categoryObj && typeof categoryObj === "object" && categoryObj.id != null) {
     const n = Number(categoryObj.id);
@@ -481,6 +512,7 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     null;
 
   if (!status) {
+    // Unknown backend status — do NOT fabricate. Skip so callers' filter(Boolean) drops it.
     console.warn("[listingsStore] unknown status, skipping listing:", raw.status, raw.id);
     return null;
   }
@@ -534,13 +566,16 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
     title: raw.title || raw.name || "",
     description: raw.description || "",
     price: Number(raw.price) || 0,
+    // ✅ category ni STRING (slug) — sio object
     category,
+    // ✅ categoryId ni number au null
     categoryId,
     location: raw.location || raw.region || raw.address || "",
     attributes: raw.attributes || {},
     region: raw.region || raw.location || "",
     status,
     views: Number(raw.views_count ?? raw.views) || 0,
+    // Mara tangazo lilipowekewa reservation (kutoka backend: reservation_count)
     reservationCount: Number(raw.reservation_count ?? raw.reservationCount) || 0,
     inquiries: Number(raw.inquiries) || 0,
     verified: Boolean(raw.verified ?? raw.is_verified),
@@ -608,6 +643,9 @@ export async function hydrateListingsFromApi() {
 
 let _myListingsUserId = null;
 
+// Statuses the seller's own dashboard must always show. The public
+// /listings/ endpoint only returns LIVE-ish statuses, so we also hit
+// the seller-specific helpers and merge the results by id.
 const _SELLER_STATUS_CANDIDATES = [
   "PENDING_APPROVAL",
   "REJECTED",
@@ -654,11 +692,17 @@ async function _fetchMyListingsImpl({ refreshUser = false } = {}) {
       .map((r) => normalizeListingFromApi(r))
       .filter(Boolean);
 
+    // Preserve *recent* locally-created entries the backend hasn't returned
+    // yet (from a POST /listings/ that just completed). Anything older than
+    // 60 seconds with a temp_ id is a ghost — the POST failed — so drop it.
     const localExisting = readKey(MINE_KEY);
     const fetchedIds = new Set(normalized.map((l) => String(l.id)));
     const now = Date.now();
     const GHOST_MS = 60 * 1000;
     const localOnly = localExisting.filter((l) => {
+      // Only keep short-lived temp entries; anything with a real backend id
+      // must be reflected by the server. If a listing disappears from the
+      // API (admin hard-delete), we must drop it locally too.
       const isTemp = String(l.id).startsWith("temp_");
       if (!isTemp) return false;
       const age = now - new Date(l.postedAt || 0).getTime();
@@ -730,9 +774,7 @@ export async function fetchPendingListingsAsync() {
 }
 
 const API_STATUS_FOR_FILTER = {
-  // "AVAILABLE" ni jina la zamani la live kwenye backend (frontend inaiweka
-  // kama live). Tunaomba zote mbili ili listings za zamani zisipotee.
-  live: ["LIVE", "AVAILABLE"],
+  live: ["LIVE"],
   rejected: ["REJECTED"],
   in_review: ["PENDING_APPROVAL"],
   pending_payment: ["PENDING_PAYMENT", "DRAFT"],
@@ -757,6 +799,14 @@ export async function fetchListingsByStatusAsync(frontendStatus, params = {}) {
     API_STATUS_FOR_FILTER[key] ||
     [LISTING_STATUS_MAP[frontendStatus] || frontendStatus];
 
+  // NOTE: an empty response (200 + `results: []`) is a VALID success.
+  // Only 4xx/5xx/network failures should fall through to the next
+  // candidate or the local cache. Treating empty as failure was
+  // blanking the "Rejected" tab whenever no listing was rejected yet.
+  //
+  // Candidates zote zinaombwa na matokeo yanaunganishwa (kwa id), kwa sababu
+  // status moja ya frontend inaweza kuwa na majina mawili kwenye backend
+  // (mf. live = LIVE na AVAILABLE).
   const merged = new Map();
   const used = [];
   let lastErr = null;
@@ -767,6 +817,9 @@ export async function fetchListingsByStatusAsync(frontendStatus, params = {}) {
       used.push(apiStatus);
     } catch (err) {
       lastErr = err;
+      // 400/404/405 mean the backend doesn't recognize this status
+      // string; try the next candidate. Anything else is fatal for this
+      // fetch — stop and let the caller decide.
       if ([400, 404, 405].includes(err?.status)) continue;
       break;
     }
