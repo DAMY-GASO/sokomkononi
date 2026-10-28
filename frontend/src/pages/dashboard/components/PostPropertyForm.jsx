@@ -1074,10 +1074,15 @@ export default function PostPropertyForm({
           </div>
           <h2 className="h-title mb-2">{t("Listing imewasilishwa!", "Listing Submitted!")}</h2>
           <p className="text-secondary text-sm mb-6">
-            {t(
-              "Admin atakagua tangazo lako na kukujibu kwa ujumbe. Likikubaliwa, utaarifiwa kulipa ada ya kuchapisha; baada ya kulipa, admin ataliidhinisha liwe hewani.",
-              "An admin will review your listing and reply with a message. If accepted, you'll be asked to pay the listing fee; after payment the admin approves it to go live."
-            )}
+            {isFreeCategory || listingFeeDisabled
+              ? t(
+                  "Admin atakagua tangazo lako. Likikubaliwa litakuwa hewani moja kwa moja — hakuna ada ya kulipa.",
+                  "An admin will review your listing. Once approved it goes live right away — there is no fee to pay."
+                )
+              : t(
+                  "Admin atakagua tangazo lako na kukujibu kwa ujumbe. Likikubaliwa, utaarifiwa kulipa ada ya kuchapisha; baada ya kulipa, admin ataliidhinisha liwe hewani.",
+                  "An admin will review your listing and reply with a message. If accepted, you'll be asked to pay the listing fee; after payment the admin approves it to go live."
+                )}
           </p>
           <button
             onClick={onGoToListings}

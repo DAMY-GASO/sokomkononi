@@ -206,24 +206,48 @@ export async function requestEditListingAsync(
 
 // ============================================================
 // REQUEST PAYMENT — admin ameona ni nzuri, mwambie alipe
+// Kama listing ni BURE (isFree) → haina cha kulipa, inakuwa LIVE.
+// Status ya mwisho inachukuliwa kutoka majibu ya backend; ikikosekana,
+// tunatumia isFree kuamua (live) au (approved_pending_payment).
 // ============================================================
+const KNOWN_LISTING_STATUSES = [
+  "live",
+  "approved_pending_payment",
+  "paid_pending_approval",
+  "pending_approval",
+  "pending_payment",
+];
+
 export async function requestPaymentListingAsync(
   listingId,
   reason = "",
-  { adminName = "Admin" } = {}
+  { adminName = "Admin", isFree = false } = {}
 ) {
   const target = findInQueue(listingId);
+  let resp;
   try {
-    await moderationApi.requestPayment(listingId, (reason || "").trim());
+    resp = await moderationApi.requestPayment(listingId, (reason || "").trim());
   } catch (err) {
     return { ok: false, error: err };
   }
+
+  const apiStatus = String(
+    resp?.status ?? resp?.listing?.status ?? resp?.data?.status ?? ""
+  )
+    .trim()
+    .toLowerCase();
+  const finalStatus = KNOWN_LISTING_STATUSES.includes(apiStatus)
+    ? apiStatus
+    : isFree
+    ? "live"
+    : "approved_pending_payment";
+
   removeFromQueue(listingId);
-  decideListing(listingId, "approved_pending_payment");
+  decideListing(listingId, finalStatus);
   recordDecision({
     listingId,
     listingTitle: target?.title,
-    action: "requested_payment",
+    action: finalStatus === "live" ? "approved" : "requested_payment",
     reason: (reason || "").trim(),
     adminName,
   });
@@ -232,7 +256,8 @@ export async function requestPaymentListingAsync(
     listing: {
       ...(target || {}),
       id: listingId,
-      status: "approved_pending_payment",
+      status: finalStatus,
+      ...(finalStatus === "live" ? { approvedAt: new Date().toISOString() } : {}),
     },
   };
 }

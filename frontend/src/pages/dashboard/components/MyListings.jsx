@@ -76,10 +76,22 @@ function normalizeCategoryInCache() {
 }
 
 // ============================================================
+// Listing ya BURE (admin amezima fee) — haina cha kulipa
+// ============================================================
+function isFreeListing(listing) {
+  if (!listing) return false;
+  const ps = String(listing.paymentStatus ?? listing.payment_status ?? "").toUpperCase();
+  if (ps === "FREE") return true;
+  const raw = listing.feeAmount ?? listing.fee_amount;
+  return raw !== null && raw !== undefined && raw !== "" && Number(raw) === 0;
+}
+
+// ============================================================
 // isUnpaid — uses normalized status
 // ============================================================
 function isUnpaid(listing) {
   if (!listing) return false;
+  if (isFreeListing(listing)) return false;
   const s = normalizeStatus(listing.status);
 
   if (s === "pending_payment" || s === "approved_pending_payment") {
@@ -400,10 +412,15 @@ function ListingCard({
                 className="text-[11px] font-semibold leading-tight"
                 style={{ color: "#2563EB" }}
               >
-                {t(
-                  "Imewasilishwa — inasubiri admin akague",
-                  "Submitted — awaiting admin review"
-                )}
+                {isFreeListing(listing)
+                  ? t(
+                      "Imewasilishwa — inasubiri admin akague (hakuna ada ya kulipa)",
+                      "Submitted — awaiting admin review (no fee to pay)"
+                    )
+                  : t(
+                      "Imewasilishwa — inasubiri admin akague",
+                      "Submitted — awaiting admin review"
+                    )}
               </p>
             </div>
           )}
@@ -417,10 +434,15 @@ function ListingCard({
                 className="text-[11px] font-semibold leading-tight"
                 style={{ color: COLORS.green }}
               >
-                {t(
-                  "Admin amekagua — lipa ada ili liidhinishwe",
-                  "Admin reviewed — pay fee to publish"
-                )}
+                {isFreeListing(listing)
+                  ? t(
+                      "Admin amekagua — linasubiri kuchapishwa (hakuna ada)",
+                      "Admin reviewed — about to be published (no fee)"
+                    )
+                  : t(
+                      "Admin amekagua — lipa ada ili liidhinishwe",
+                      "Admin reviewed — pay fee to publish"
+                    )}
               </p>
             </div>
           )}
@@ -454,7 +476,7 @@ function ListingCard({
       </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-sandline pt-2.5">
-        {status === "approved_pending_payment" && (
+        {status === "approved_pending_payment" && !isFreeListing(listing) && (
           <button
             type="button"
             onClick={() => onPay?.(listing.id, listing)}
@@ -784,11 +806,17 @@ export default function MyListings({
             : l
         )
       );
+      const submitted = listings.find((l) => String(l.id) === String(id));
       toast.success(
-        t(
-          "Tangazo limewasilishwa kwa admin. Utaarifiwa kulipa baada ya kukaguliwa.",
-          "Submitted for admin review. You'll be asked to pay after it's reviewed."
-        )
+        isFreeListing(submitted)
+          ? t(
+              "Tangazo limewasilishwa kwa admin. Likikubaliwa litakuwa hewani — hakuna ada.",
+              "Submitted for admin review. Once approved it goes live — no fee."
+            )
+          : t(
+              "Tangazo limewasilishwa kwa admin. Utaarifiwa kulipa baada ya kukaguliwa.",
+              "Submitted for admin review. You'll be asked to pay after it's reviewed."
+            )
       );
     } catch (err) {
       toast.error(

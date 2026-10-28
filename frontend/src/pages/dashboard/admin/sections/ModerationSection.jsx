@@ -41,6 +41,31 @@ function normalizeStatus(s) {
   return String(s).trim().toLowerCase();
 }
 
+// ============================================================
+// Je, listing hii ni BURE (admin amezima fee)?
+// Inasoma fields za snake_case na camelCase.
+// ============================================================
+function isListingFree(listing) {
+  if (!listing) return false;
+  const ps = String(listing.payment_status ?? listing.paymentStatus ?? "").toUpperCase();
+  if (ps === "FREE") return true;
+  if (listing.is_free === true || listing.isFree === true) return true;
+  const raw = listing.fee_amount ?? listing.feeAmount;
+  return raw === null || raw === undefined || raw === "" || Number(raw) === 0;
+}
+
+// Statuses zote zinazopakiwa mara moja ili tabs ziwe na counts sahihi
+const ALL_STATUS_FETCH = [
+  "PENDING_APPROVAL",
+  "PAID_PENDING_APPROVAL",
+  "APPROVED_PENDING_PAYMENT",
+  "NEEDS_EDIT",
+  "LIVE",
+  "REJECTED",
+  "SOLD",
+  "EXPIRED",
+];
+
 export default function ModerationSection() {
   const { lang } = useLanguage();
   const queue = useModerationQueue({ hydrate: false });
@@ -127,6 +152,29 @@ export default function ModerationSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, lang]);
 
+  // ✅ Pakia statuses zote mara moja (mara ya kwanza) ili tabs zote zionyeshe counts
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(ALL_STATUS_FETCH.map((st) => fetchListingsByStatusAsync(st))).then(
+      (results) => {
+        if (cancelled) return;
+        const fetched = results.flatMap((r) => r?.listings || []);
+        if (!fetched.length) return;
+        setHistory((prev) => {
+          const next = { ...prev };
+          fetched.forEach((l) => {
+            if (!l || l.id == null) return;
+            next[String(l.id)] = { ...l, ...(prev[String(l.id)] || {}) };
+          });
+          return next;
+        });
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const filtered = useMemo(() => {
     const pending = queue
       .filter((l) => !decided[String(l.id)])
@@ -173,7 +221,19 @@ export default function ModerationSection() {
     );
   }, [queue, history, decided, statusFilter]);
 
-  const filters = [
+  // ✅ Counts za kila tab (kutoka history + maamuzi ya admin)
+  const statusCounts = useMemo(() => {
+    const c = { _all: 0 };
+    Object.entries(history).forEach(([id, l]) => {
+      const st = normalizeStatus(decided[id] ?? l.status);
+      if (st === "deleted") return;
+      c[st] = (c[st] || 0) + 1;
+      c._all += 1;
+    });
+    return c;
+  }, [history, decided]);
+
+  const baseFilters = [
     {
       key: "in_review",
       label: { sw: "Zinasubiri", en: "Pending" },
@@ -201,6 +261,12 @@ export default function ModerationSection() {
     { key: "rejected", label: { sw: "Zimekataliwa", en: "Rejected" } },
     { key: "zote", label: { sw: "Zote", en: "All" } },
   ];
+
+  const filters = baseFilters.map((f) =>
+    f.count !== undefined
+      ? f
+      : { ...f, count: f.key === "zote" ? statusCounts._all : statusCounts[f.key] || 0 }
+  );
 
   const clearBusy = (id) =>
     setBusy((b) => {
@@ -324,28 +390,31 @@ export default function ModerationSection() {
   };
 
   // ── REQUEST PAYMENT ─────────────────────────────────────
-  const openRequestPaymentModal = (id) => {
+  const openRequestPaymentModal = (id, isFree = false) => {
     if (busy[id]) return;
     setError("");
-    setRequestPaymentModal({ listingId: id, reason: "" });
+    setRequestPaymentModal({ listingId: id, reason: "", isFree });
   };
   const submitRequestPayment = async () => {
     if (!requestPaymentModal) return;
-    const { listingId, reason } = requestPaymentModal;
+    const { listingId, reason, isFree } = requestPaymentModal;
     setBusy((b) => ({ ...b, [listingId]: "request_payment" }));
     setError("");
     const snapshot = queue.find((q) => String(q.id) === String(listingId));
-    const res = await requestPaymentListingAsync(listingId, reason);
+    const res = await requestPaymentListingAsync(listingId, reason, { isFree });
     clearBusy(listingId);
     setRequestPaymentModal(null);
     if (res.ok) {
       // Kama ni free, backend itarudisha status LIVE moja kwa moja
-      const newStatus = res.listing?.status || "APPROVED_PENDING_PAYMENT";
-      markDecided(listingId, newStatus);
+      const newStatus =
+        res.listing?.status || (isFree ? "LIVE" : "APPROVED_PENDING_PAYMENT");
+      const finalStatus = String(newStatus).toUpperCase();
+      markDecided(listingId, finalStatus);
       addToHistory({
         ...(snapshot || {}),
+        ...(res.listing || {}),
         id: listingId,
-        status: newStatus,
+        status: finalStatus,
       });
     } else {
       setError(res.error?.message || t("Imeshindwa.", "Failed."));
@@ -461,11 +530,11 @@ export default function ModerationSection() {
     const currentAction = busy[listing.id];
 
     // ✅ Check kama listing haina fee (bure)
-    const isFree = 
-      listing.fee_amount === "0.00" || 
-      listing.fee_amount === null || 
-      listing.fee_amount === undefined ||
-      listing.payment_status === "FREE";
+    const isFree = isListingFree(listing);
+    const PayIcon = isFree ? CheckCheck : Wallet;
+    const payLabel = isFree
+      ? t("Idhinisha (Bure)", "Approve (Free)")
+      : t("Omba Malipo", "Request Pay");
 
     // Pending — admin ana chaguo 3
     if (status === "in_review") {
@@ -506,7 +575,7 @@ export default function ModerationSection() {
             {t("Kataa", "Reject")}
           </button>
           <button
-            onClick={() => openRequestPaymentModal(listing.id)}
+            onClick={() => openRequestPaymentModal(listing.id, isFree)}
             disabled={isBusy}
             style={{ color: COLORS.green }}
             className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50 ${
@@ -516,9 +585,9 @@ export default function ModerationSection() {
             {currentAction === "request_payment" ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <Wallet size={13} />
+              <PayIcon size={13} />
             )}
-            {t("Omba Malipo", "Request Pay")}
+            {payLabel}
           </button>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
         </div>
@@ -566,7 +635,7 @@ export default function ModerationSection() {
           
           {/* ✅ Kitufe cha "Omba Malipo" / "Idhinisha (Bure)" */}
           <button
-            onClick={() => openRequestPaymentModal(listing.id)}
+            onClick={() => openRequestPaymentModal(listing.id, isFree)}
             disabled={isBusy}
             style={{ color: COLORS.green }}
             className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50 ${
@@ -575,15 +644,10 @@ export default function ModerationSection() {
           >
             {currentAction === "request_payment" ? (
               <Loader2 size={13} className="animate-spin" />
-            ) : isFree ? (
-              <CheckCheck size={13} />
             ) : (
-              <Wallet size={13} />
+              <PayIcon size={13} />
             )}
-            {isFree 
-              ? t("Idhinisha (Bure)", "Approve (Free)") 
-              : t("Omba Malipo", "Request Pay")
-            }
+            {payLabel}
           </button>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
         </div>
@@ -748,7 +812,7 @@ export default function ModerationSection() {
             {t("Omba Uhariri", "Request Edit")}
           </button>
           <button
-            onClick={() => openRequestPaymentModal(listing.id)}
+            onClick={() => openRequestPaymentModal(listing.id, isFree)}
             disabled={isBusy}
             style={{ color: COLORS.green }}
             className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50 ${
@@ -758,9 +822,9 @@ export default function ModerationSection() {
             {currentAction === "request_payment" ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <Wallet size={13} />
+              <PayIcon size={13} />
             )}
-            {t("Omba Malipo", "Request Pay")}
+            {payLabel}
           </button>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
           <button
@@ -1163,17 +1227,28 @@ export default function ModerationSection() {
                 className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                 style={{ background: "rgba(47,109,79,0.1)" }}
               >
-                <Wallet size={18} color={COLORS.green} />
+                {requestPaymentModal.isFree ? (
+                  <CheckCheck size={18} color={COLORS.green} />
+                ) : (
+                  <Wallet size={18} color={COLORS.green} />
+                )}
               </div>
               <div>
                 <h3 className="text-base font-semibold text-primary">
-                  {t("Omba Malipo", "Request Payment")}
+                  {requestPaymentModal.isFree
+                    ? t("Idhinisha (Bure)", "Approve (Free)")
+                    : t("Omba Malipo", "Request Payment")}
                 </h3>
                 <p className="text-xs text-secondary mt-0.5">
-                  {t(
-                    "Mwambie muuzaji alipe ada ya kuchapisha",
-                    "Ask seller to pay the listing fee"
-                  )}
+                  {requestPaymentModal.isFree
+                    ? t(
+                        "Hakuna ada — tangazo litaonekana hewani mara moja",
+                        "No fee — the listing will go live right away"
+                      )
+                    : t(
+                        "Mwambie muuzaji alipe ada ya kuchapisha",
+                        "Ask seller to pay the listing fee"
+                      )}
                 </p>
               </div>
             </div>
@@ -1204,7 +1279,9 @@ export default function ModerationSection() {
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white"
                 style={{ background: COLORS.green }}
               >
-                {t("Tuma Ombi la Malipo", "Request Payment")}
+                {requestPaymentModal.isFree
+                  ? t("Idhinisha Sasa", "Approve Now")
+                  : t("Tuma Ombi la Malipo", "Request Payment")}
               </button>
             </div>
           </div>
