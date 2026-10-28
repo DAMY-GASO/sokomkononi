@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { loginAsync, verify2faLoginAsync } from "../../config/authStore.js";
+import { loginAsync, verify2faLoginAsync, socialLoginAsync } from "../../config/authStore.js";
+import { consumeGoogleRedirect } from "../../config/socialAuth.js";
 import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
 import Captcha, { isCaptchaEnabled } from "../../components/Captcha.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
@@ -54,6 +55,27 @@ export default function LoginPage() {
   const [codeToken, setCodeToken] = useState("");
   const [twoFaCode, setTwoFaCode] = useState("");
   const [useRecovery, setUseRecovery] = useState(false);
+
+  // Google redirect flow (iPhone/Safari): Google inarudisha mtumiaji hapa
+  // akiwa na #id_token=... kwenye URL.
+  useEffect(() => {
+    const g = consumeGoogleRedirect();
+    if (!g) return;
+    if (g.error) {
+      setError(tx("Imeshindwa kuingia na Google. Jaribu tena.", "Google sign-in failed. Please try again."));
+      return;
+    }
+    setLoading(true);
+    socialLoginAsync({ provider: "google", idToken: g.idToken }).then((res) => {
+      setLoading(false);
+      if (!res.ok) {
+        setError(getErrorMessage(res.error, tx("Imeshindwa kuingia na Google. Jaribu tena.", "Google sign-in failed. Please try again.")));
+        return;
+      }
+      navigate(g.redirect || searchParams.get("redirect") || "/dashboard", { replace: true });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function cancel2fa() {
     setCodeToken("");
