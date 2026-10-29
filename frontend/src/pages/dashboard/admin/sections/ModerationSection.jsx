@@ -65,7 +65,7 @@ const ALL_STATUS_FETCH = [
   "SOLD",
   "EXPIRED",
   "RESERVED",
-  "DRAFT",
+  "pending_payment", // inaomba PENDING_PAYMENT na DRAFT, matokeo yanaunganishwa
 ];
 
 export default function ModerationSection() {
@@ -123,7 +123,7 @@ export default function ModerationSection() {
     if (wantSold) tasks.push(fetchListingsByStatusAsync("SOLD"));
     if (wantExpired) tasks.push(fetchListingsByStatusAsync("EXPIRED"));
     if (wantReserved) tasks.push(fetchListingsByStatusAsync("RESERVED"));
-    if (wantDraft) tasks.push(fetchListingsByStatusAsync("DRAFT"));
+    if (wantDraft) tasks.push(fetchListingsByStatusAsync("pending_payment"));
 
     Promise.all(tasks).then((results) => {
       if (cancelled) return;
