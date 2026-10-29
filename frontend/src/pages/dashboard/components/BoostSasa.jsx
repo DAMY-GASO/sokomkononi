@@ -4,6 +4,7 @@
 // + Bei 0 → inaonyesha "Bure" (sio "TZS 0")
 // + feeFree (admin amezima boost fee) → inafanya kazi bila package
 // + ✅ AUTO-CONSUME CREDIT kama mtumiaji ana boost credit
+// + ✅ PENDING/ACTIVE status — inaonyesha boost iliyopo
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -41,6 +42,8 @@ import { checkCredit } from "../../../config/userCreditsStore.js";
 import { boostingApi } from "../../../api/boosting.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
+import PendingPurchasePanel from "./PendingPurchasePanel";
+import { getPurchaseStatus } from "../../../api/purchaseStatus.js";
 
 // ============================================================
 // HELPERS
@@ -348,6 +351,10 @@ export default function BoostSasa({
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
   const [error, setError] = useState("");
 
+  // ── MPYA: hali ya boost iliyopo (active/pending) ──
+  const [existingBoost, setExistingBoost] = useState(null);
+  const [loadingBoostStatus, setLoadingBoostStatus] = useState(false);
+
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   useEffect(() => {
@@ -379,6 +386,35 @@ export default function BoostSasa({
     }
   }, [initialListingId, liveListings]);
 
+  // ── MPYA: pata status ya boost kwa listing iliyochaguliwa ──
+  useEffect(() => {
+    if (!selectedId) {
+      setExistingBoost(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingBoostStatus(true);
+    getPurchaseStatus("boosting", selectedId)
+      .then((data) => {
+        if (cancelled) return;
+        if (!data) return setExistingBoost(null);
+        if (data.has_pending) {
+          return setExistingBoost({ type: "pending", data: data.pending });
+        }
+        if (data.has_active) {
+          return setExistingBoost({ type: "active", data: data.active });
+        }
+        setExistingBoost(null);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingBoost(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingBoostStatus(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedId]);
+
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const flatPackage = boostPackages.find((p) => p.id === flatPackageId);
   const selectedBundle = boostBundles.find((b) => b.id === bundleId);
@@ -391,21 +427,24 @@ export default function BoostSasa({
     ? feeFree || !flatPackage.price || Number(flatPackage.price) <= 0
     : false;
 
-  // ── canBoost: feeFree haihitaji package ──
+  // ── canBoost: feeFree haihitaji package; existingBoost inazuia ──
   const canBoost =
     feeLoaded &&
     Boolean(selectedListing) &&
+    !existingBoost &&
+    !loadingBoostStatus &&
     (feeFree
       ? true
       : (paymentMode === "flat" && Boolean(flatPackage)) ||
         (paymentMode === "bundle" && Boolean(selectedBundle)));
 
   // ── createBoostOnBackend: package optional kama feeFree ──
-    const createBoostOnBackend = async () => {
-    // Backend inahitaji `package` kila wakati (hata feeFree),
-    // kwa sababu ListingBoost.package ni FK bila null=True.
-    const packageId = flatPackage?.id ?? boostPackages[0]?.id;
-    if (!packageId) {
+  const createBoostOnBackend = async () => {
+    // Backend inahitaji `package` kama fee inatumika. Kama fee imezimwa,
+    // `package` inaweza kuwa null.
+    const packageId = flatPackage?.id ?? boostPackages[0]?.id ?? null;
+
+    if (!feeFree && !packageId) {
       throw new Error(
         t(
           "Hakuna boost package inayopatikana kwa sasa.",
@@ -413,16 +452,16 @@ export default function BoostSasa({
         )
       );
     }
+
     const raw = await boostingApi.create({
       listing: selectedListing.id,
       package: packageId,
     });
     return raw;
   };
-  
+
   const handleBeginFlatPayment = async () => {
     if (!selectedListing || creating) return;
-    // feeFree inaenda handleFreeBoost, sio hapa
     if (!feeFree && !flatPackage) return;
 
     setCreating(true);
@@ -430,7 +469,7 @@ export default function BoostSasa({
     try {
       const raw = await createBoostOnBackend();
 
-      // ✅ AUTO-CONSUME CREDIT: Kama mtumiaji ana boost credit, tumia moja kwa moja
+      // ✅ AUTO-CONSUME CREDIT
       if (hasCredit) {
         try {
           const paid = await boostingApi.pay(raw.id, {
@@ -452,11 +491,9 @@ export default function BoostSasa({
           return;
         } catch (creditErr) {
           console.warn("[BoostSasa] credit consumption failed:", creditErr);
-          // Kama credit imefeli, endelea na malipo ya kawaida
         }
       }
 
-      // Kama hana credit, au credit imefeli, endelea na PaymentGateway
       setPendingBoost({
         id: raw.id,
         listing: selectedListing,
@@ -791,7 +828,40 @@ export default function BoostSasa({
           </div>
         )}
 
-        {hasCredit && stage !== "paying" && (
+        {/* ── MPYA: PENDING panel ── */}
+        {existingBoost?.type === "pending" && (
+          <PendingPurchasePanel
+            module="boosting"
+            pending={existingBoost.data}
+            onComplete={(p) => {
+              setPendingBoost({
+                id: p.id,
+                listing: selectedListing,
+                package: flatPackage || boostPackages[0] || null,
+              });
+              setStage("paying");
+            }}
+            onCancelled={() => setExistingBoost(null)}
+          />
+        )}
+
+        {/* ── MPYA: ACTIVE banner ── */}
+        {existingBoost?.type === "active" && (
+          <div
+            className="rounded-xl border px-4 py-3 mb-4 flex items-center gap-2"
+            style={{ background: "rgba(47,109,79,0.1)", borderColor: COLORS.green }}
+          >
+            <Check size={16} color={COLORS.green} />
+            <span className="text-sm font-semibold" style={{ color: COLORS.green }}>
+              {t(
+                `Boost inafanya kazi hadi ${new Date(existingBoost.data.expires_at).toLocaleDateString("sw-TZ")}`,
+                `Boost active until ${new Date(existingBoost.data.expires_at).toLocaleDateString("en-US")}`
+              )}
+            </span>
+          </div>
+        )}
+
+        {hasCredit && stage !== "paying" && !existingBoost && (
           <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <Wallet size={16} color={COLORS.green} />
@@ -816,7 +886,7 @@ export default function BoostSasa({
           </div>
         )}
 
-        {feeFree && stage !== "paying" && (
+        {feeFree && stage !== "paying" && !existingBoost && (
           <div
             className="rounded-xl border px-4 py-3 mb-4 flex items-center gap-2 text-sm"
             style={{
@@ -835,7 +905,7 @@ export default function BoostSasa({
           </div>
         )}
 
-        {stage !== "paying" && (
+        {stage !== "paying" && !existingBoost && !loadingBoostStatus && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               1.{" "}
@@ -855,7 +925,7 @@ export default function BoostSasa({
           </>
         )}
 
-        {liveListings.length > 0 && stage !== "paying" && (
+        {liveListings.length > 0 && stage !== "paying" && !existingBoost && !loadingBoostStatus && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               2.{" "}

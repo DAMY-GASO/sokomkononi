@@ -1,11 +1,6 @@
 // ============================================================
 // AdvertiseSasa.jsx (production + bundle + credits + packages)
-// Flow:
-//   A. Package flat fee  → POST /banners/ → /pay/ (FimiPay)
-//   B. Bundle            → POST /bundles/purchases/ → /pay/ → credits
-//                          kisha POST /banners/ → /pay/ {payment_reference: "credits"}
-//   C. Credit            → POST /banners/ → /pay/ {payment_reference: "credits"}
-//   D. Skip fee          → POST /banners/ → /pay/ {payment_reference: "free"}
+// + ✅ PENDING/ACTIVE status — inaonyesha banner iliyopo
 // ============================================================
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -30,6 +25,8 @@ import { checkCredit } from "../../../config/userCreditsStore.js";
 import { createBannerAdAsync } from "../../../config/bannerAdsStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
+import PendingPurchasePanel from "./PendingPurchasePanel";
+import { getPurchaseStatus } from "../../../api/purchaseStatus.js";
 
 function getLocalized(field, lang) {
   if (!field) return "";
@@ -261,6 +258,10 @@ export default function AdvertiseSasa({
   const [pendingBanner, setPendingBanner] = useState(null);
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
 
+  // ── MPYA: hali ya banner iliyopo ──
+  const [existingBanner, setExistingBanner] = useState(null);
+  const [loadingBannerStatus, setLoadingBannerStatus] = useState(false);
+
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   // Hydrate
@@ -296,9 +297,42 @@ export default function AdvertiseSasa({
     }
   }, [adsBundles, bundleId]);
 
+  // ── MPYA: pata status ya banner kwa listing ──
+  useEffect(() => {
+    if (!selectedId) {
+      setExistingBanner(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingBannerStatus(true);
+    getPurchaseStatus("banners", selectedId)
+      .then((data) => {
+        if (cancelled) return;
+        if (!data) return setExistingBanner(null);
+        if (data.has_pending) {
+          return setExistingBanner({ type: "pending", data: data.pending });
+        }
+        if (data.has_active) {
+          return setExistingBanner({ type: "active", data: data.active });
+        }
+        setExistingBanner(null);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingBanner(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingBannerStatus(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedId]);
+
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const alreadyAdvertising = selectedListing ? activeBannerListingIds.has(selectedListing.id) : false;
-  const canAdvertise = Boolean(selectedListing) && !alreadyAdvertising;
+  const canAdvertise =
+    Boolean(selectedListing) &&
+    !alreadyAdvertising &&
+    !existingBanner &&
+    !loadingBannerStatus;
 
   const selectedPackage = advertisementPackages.find((p) => p.id === packageId);
   const selectedBundle = adsBundles.find((b) => b.id === bundleId);
@@ -320,7 +354,8 @@ export default function AdvertiseSasa({
 
   // ── Create PENDING banner ──────────────────────────────────
   const createPendingBanner = async () => {
-    if (!selectedPackage?.id) {
+    const packageId = selectedPackage?.id ?? advertisementPackages[0]?.id ?? null;
+    if (!feeDisabled && !packageId) {
       throw new Error(
         t(
           "Hakuna advertisement package inayopatikana.",
@@ -330,7 +365,7 @@ export default function AdvertiseSasa({
     }
     const created = await api.post("/banners/", {
       listing: selectedListing.id,
-      package: selectedPackage.id,
+      package: packageId,
     });
     const bannerId = created?.id;
     if (!bannerId) {
@@ -374,8 +409,8 @@ export default function AdvertiseSasa({
     setError("");
     try {
       const { bannerId } = await createPendingBanner();
-      
-      // ✅ AUTO-CONSUME CREDIT: Kama mtumiaji ana ads credit, tumia moja kwa moja
+
+      // ✅ AUTO-CONSUME CREDIT
       if (hasCredit) {
         try {
           const raw = await api.post(`/banners/${bannerId}/pay/`, {
@@ -387,11 +422,9 @@ export default function AdvertiseSasa({
           return;
         } catch (creditErr) {
           console.warn("[AdvertiseSasa] credit consumption failed:", creditErr);
-          // Kama credit imefeli, endelea na malipo ya kawaida
         }
       }
 
-      // Kama hana credit, au credit imefeli, endelea na PaymentGateway
       setPendingBanner({
         id: bannerId,
         listing: selectedListing,
@@ -598,8 +631,41 @@ export default function AdvertiseSasa({
           </div>
         )}
 
+        {/* ── MPYA: PENDING panel ── */}
+        {existingBanner?.type === "pending" && (
+          <PendingPurchasePanel
+            module="banners"
+            pending={existingBanner.data}
+            onComplete={(p) => {
+              setPendingBanner({
+                id: p.id,
+                listing: selectedListing,
+                package: selectedPackage || advertisementPackages[0] || null,
+              });
+              setStage("paying");
+            }}
+            onCancelled={() => setExistingBanner(null)}
+          />
+        )}
+
+        {/* ── MPYA: ACTIVE banner ── */}
+        {existingBanner?.type === "active" && (
+          <div
+            className="rounded-xl border px-4 py-3 mb-4 flex items-center gap-2"
+            style={{ background: "rgba(47,109,79,0.1)", borderColor: COLORS.green }}
+          >
+            <Check size={16} color={COLORS.green} />
+            <span className="text-sm font-semibold" style={{ color: COLORS.green }}>
+              {t(
+                `Tangazo linafanya kazi hadi ${new Date(existingBanner.data.expires_at).toLocaleDateString("sw-TZ")}`,
+                `Banner active until ${new Date(existingBanner.data.expires_at).toLocaleDateString("en-US")}`
+              )}
+            </span>
+          </div>
+        )}
+
         {/* Fee disabled banner */}
-        {feeDisabled && stage !== "paying" && (
+        {feeDisabled && stage !== "paying" && !existingBanner && (
           <div className="rounded-xl border px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left"
                style={{ background: "rgba(47,109,79,0.1)", borderColor: "rgba(47,109,79,0.35)", color: COLORS.green }}>
             <div className="flex items-center gap-2">
@@ -612,7 +678,7 @@ export default function AdvertiseSasa({
         )}
 
         {/* Credit banner */}
-        {hasCredit && stage !== "paying" && (
+        {hasCredit && stage !== "paying" && !existingBanner && (
           <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <Wallet size={16} color={COLORS.green} />
@@ -634,7 +700,7 @@ export default function AdvertiseSasa({
         )}
 
         {/* 1. Chagua Mali */}
-        {stage !== "paying" && (
+        {stage !== "paying" && !existingBanner && !loadingBannerStatus && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               1. {t("Chagua Mali (Live pekee)", "Select Property (Live only)")}
@@ -652,7 +718,7 @@ export default function AdvertiseSasa({
         )}
 
         {/* 2. Packages / Njia ya Malipo */}
-        {liveListings.length > 0 && stage !== "paying" && (
+        {liveListings.length > 0 && stage !== "paying" && !existingBanner && !loadingBannerStatus && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               2.{" "}

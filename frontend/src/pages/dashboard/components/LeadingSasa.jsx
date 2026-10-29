@@ -1,11 +1,6 @@
 // ============================================================
 // LeadingSasa.jsx (production + bundle + credits + packages)
-// Flow:
-//   A. Package flat fee  → apply → pay (FimiPay)
-//   B. Bundle            → POST /bundles/purchases/ → /pay/ → credits
-//   C. Credit            → apply → pay {payment_reference: "credits"}
-//   D. Skip fee          → apply → pay {payment_reference: "free"}
-//   ✅ AUTO-CONSUME CREDIT kama mtumiaji ana leading credit
+// + ✅ PENDING/ACTIVE status — inaonyesha leading iliyopo
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -30,6 +25,8 @@ import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
+import PendingPurchasePanel from "./PendingPurchasePanel";
+import { getPurchaseStatus } from "../../../api/purchaseStatus.js";
 
 function getLocalized(field, lang) {
   if (!field) return "";
@@ -250,16 +247,20 @@ export default function LeadingSasa({
       : liveListings[0]?.id ?? null
   );
 
-  const [paymentMode, setPaymentMode] = useState("flat"); // "flat" | "bundle"
+  const [paymentMode, setPaymentMode] = useState("flat");
   const [packageId, setPackageId] = useState(null);
   const [bundleId, setBundleId] = useState(null);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(null);
-  const [stage, setStage] = useState("select"); // select | paying
+  const [stage, setStage] = useState("select");
   const [pendingPurchase, setPendingPurchase] = useState(null);
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
+
+  // ── MPYA: hali ya leading iliyopo ──
+  const [existingLeading, setExistingLeading] = useState(null);
+  const [loadingLeadingStatus, setLoadingLeadingStatus] = useState(false);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -296,6 +297,35 @@ export default function LeadingSasa({
     }
   }, [leadingBundles, bundleId]);
 
+  // ── MPYA: pata status ya leading kwa listing ──
+  useEffect(() => {
+    if (!selectedId) {
+      setExistingLeading(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingLeadingStatus(true);
+    getPurchaseStatus("leading", selectedId)
+      .then((data) => {
+        if (cancelled) return;
+        if (!data) return setExistingLeading(null);
+        if (data.has_pending) {
+          return setExistingLeading({ type: "pending", data: data.pending });
+        }
+        if (data.has_active) {
+          return setExistingLeading({ type: "active", data: data.active });
+        }
+        setExistingLeading(null);
+      })
+      .catch(() => {
+        if (!cancelled) setExistingLeading(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingLeadingStatus(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedId]);
+
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const selectedPackage = leadingPackages.find((p) => p.id === packageId);
   const selectedBundle = leadingBundles.find((b) => b.id === bundleId);
@@ -306,6 +336,8 @@ export default function LeadingSasa({
 
   const canLead =
     Boolean(selectedListing) &&
+    !existingLeading &&
+    !loadingLeadingStatus &&
     (feeDisabled
       ? Boolean(selectedPackage)
       : paymentMode === "flat"
@@ -314,7 +346,8 @@ export default function LeadingSasa({
 
   // ── Create pending purchase ────────────────────────────────
   const createPendingPurchase = async () => {
-    if (!selectedPackage?.id) {
+    const pkgId = selectedPackage?.id ?? leadingPackages[0]?.id ?? null;
+    if (!feeDisabled && !pkgId) {
       throw new Error(
         t(
           "Hakuna leading package inayopatikana.",
@@ -324,7 +357,7 @@ export default function LeadingSasa({
     }
     const purchase = await api.post("/leading-fees/purchases/apply/", {
       listing: selectedListing.id,
-      package: selectedPackage.id,
+      package: pkgId,
     });
     const purchaseId =
       purchase?.id || purchase?.purchase_id || purchase?.purchaseId;
@@ -339,7 +372,7 @@ export default function LeadingSasa({
     return purchaseId;
   };
 
-  // ── PATH A: SKIP FEE (is_enabled = false) ──────────────────
+  // ── PATH A: SKIP FEE ───────────────────────────────────────
   const handleSkipFee = async () => {
     if (!canLead || busy) return;
     setBusy(true);
@@ -364,7 +397,7 @@ export default function LeadingSasa({
     }
   };
 
-  // ── PATH B: FLAT (package) ─────────────────────────────────
+  // ── PATH B: FLAT ───────────────────────────────────────────
   const handleBeginFlatPayment = async () => {
     if (!canLead || busy) return;
     setBusy(true);
@@ -372,7 +405,7 @@ export default function LeadingSasa({
     try {
       const purchaseId = await createPendingPurchase();
 
-      // ✅ AUTO-CONSUME CREDIT: Kama mtumiaji ana leading credit, tumia moja kwa moja
+      // ✅ AUTO-CONSUME CREDIT
       if (hasCredit) {
         try {
           await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {
@@ -388,11 +421,9 @@ export default function LeadingSasa({
           return;
         } catch (creditErr) {
           console.warn("[LeadingSasa] credit consumption failed:", creditErr);
-          // Kama credit imefeli, endelea na malipo ya kawaida
         }
       }
 
-      // Kama hana credit, au credit imefeli, endelea na PaymentGateway
       setPendingPurchase({
         id: purchaseId,
         listing: selectedListing,
@@ -614,8 +645,41 @@ export default function LeadingSasa({
           </div>
         )}
 
+        {/* ── MPYA: PENDING panel ── */}
+        {existingLeading?.type === "pending" && (
+          <PendingPurchasePanel
+            module="leading"
+            pending={existingLeading.data}
+            onComplete={(p) => {
+              setPendingPurchase({
+                id: p.id,
+                listing: selectedListing,
+                package: selectedPackage || leadingPackages[0] || null,
+              });
+              setStage("paying");
+            }}
+            onCancelled={() => setExistingLeading(null)}
+          />
+        )}
+
+        {/* ── MPYA: ACTIVE banner ── */}
+        {existingLeading?.type === "active" && (
+          <div
+            className="rounded-xl border px-4 py-3 mb-4 flex items-center gap-2"
+            style={{ background: "rgba(47,109,79,0.1)", borderColor: COLORS.green }}
+          >
+            <Check size={16} color={COLORS.green} />
+            <span className="text-sm font-semibold" style={{ color: COLORS.green }}>
+              {t(
+                `Leading inafanya kazi hadi ${new Date(existingLeading.data.expires_at).toLocaleDateString("sw-TZ")}`,
+                `Leading active until ${new Date(existingLeading.data.expires_at).toLocaleDateString("en-US")}`
+              )}
+            </span>
+          </div>
+        )}
+
         {/* Fee disabled banner */}
-        {feeDisabled && stage !== "paying" && (
+        {feeDisabled && stage !== "paying" && !existingLeading && (
           <div className="rounded-xl border px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left"
                style={{ background: "rgba(47,109,79,0.1)", borderColor: "rgba(47,109,79,0.35)", color: COLORS.green }}>
             <div className="flex items-center gap-2">
@@ -628,7 +692,7 @@ export default function LeadingSasa({
         )}
 
         {/* Credit banner */}
-        {hasCredit && stage !== "paying" && (
+        {hasCredit && stage !== "paying" && !existingLeading && (
           <div className="rounded-xl bg-[#2F6D4F]/10 border border-[#2F6D4F]/25 px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <Wallet size={16} color={COLORS.green} />
@@ -650,7 +714,7 @@ export default function LeadingSasa({
         )}
 
         {/* 1. Chagua Mali */}
-        {stage !== "paying" && (
+        {stage !== "paying" && !existingLeading && !loadingLeadingStatus && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               1. {t("Chagua Mali (Live pekee)", "Select Property (Live only)")}
@@ -661,8 +725,8 @@ export default function LeadingSasa({
           </>
         )}
 
-        {/* 2. Chagua Package / Njia ya Malipo */}
-        {liveListings.length > 0 && stage !== "paying" && (
+        {/* 2. Chagua Package */}
+        {liveListings.length > 0 && stage !== "paying" && !existingLeading && !loadingLeadingStatus && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               2.{" "}
@@ -671,7 +735,6 @@ export default function LeadingSasa({
                 : t("Chagua Njia ya Malipo", "Choose Payment Option")}
             </p>
 
-            {/* Payment mode toggle (flat vs bundle) */}
             <div className={`flex justify-center gap-2 mb-4${feeDisabled ? " hidden" : ""}`}>
               <button
                 onClick={() => setPaymentMode("flat")}
@@ -699,7 +762,6 @@ export default function LeadingSasa({
               )}
             </div>
 
-            {/* Packages grid */}
             {paymentMode === "flat" && (
               <>
                 {leadingPackages.length === 0 ? (
@@ -723,7 +785,6 @@ export default function LeadingSasa({
               </>
             )}
 
-            {/* Bundle cards */}
             {paymentMode === "bundle" && (
               <>
                 {leadingBundles.length === 0 ? (
@@ -746,7 +807,6 @@ export default function LeadingSasa({
               </>
             )}
 
-            {/* Total + CTA */}
             <div className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"
                  style={{ borderColor: COLORS.sandLine, background: "white" }}>
               <div>
