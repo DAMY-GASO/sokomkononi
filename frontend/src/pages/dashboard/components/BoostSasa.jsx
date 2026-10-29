@@ -401,8 +401,11 @@ export default function BoostSasa({
         (paymentMode === "bundle" && Boolean(selectedBundle)));
 
   // ── createBoostOnBackend: package optional kama feeFree ──
-  const createBoostOnBackend = async () => {
-    if (!feeFree && !flatPackage?.id) {
+    const createBoostOnBackend = async () => {
+    // Backend inahitaji `package` kila wakati (hata feeFree),
+    // kwa sababu ListingBoost.package ni FK bila null=True.
+    const packageId = flatPackage?.id ?? boostPackages[0]?.id;
+    if (!packageId) {
       throw new Error(
         t(
           "Hakuna boost package inayopatikana kwa sasa.",
@@ -412,11 +415,11 @@ export default function BoostSasa({
     }
     const raw = await boostingApi.create({
       listing: selectedListing.id,
-      ...(flatPackage?.id ? { package: flatPackage.id } : {}),
+      package: packageId,
     });
     return raw;
   };
-
+  
   const handleBeginFlatPayment = async () => {
     if (!selectedListing || creating) return;
     // feeFree inaenda handleFreeBoost, sio hapa
