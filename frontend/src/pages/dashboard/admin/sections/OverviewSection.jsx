@@ -70,6 +70,12 @@ export default function OverviewSection() {
 
   const totalListings = listings.length;
 
+  // Rasimu = mali ambazo muuzaji hajawasilisha (status pending_payment/DRAFT)
+  const draftListings = useMemo(
+    () => listings.filter((l) => l.status === "pending_payment").length,
+    [listings]
+  );
+
   const pendingPayments = useMemo(
     () => transactions.filter((tr) => tr.status === "pending").length,
     [transactions]
@@ -99,6 +105,7 @@ export default function OverviewSection() {
 
   const activityStats = [
     { id: "listings",        label: t("Mali Zote", "Total Listings"),             value: totalListings.toLocaleString("en-US"),   icon: Home,          color: COLORS.green },
+    { id: "draftListings",   label: t("Rasimu (Haijawasilishwa)", "Drafts (Not submitted)"), value: draftListings.toLocaleString("en-US"), icon: Tag, color: "#9CA3AF" },
     { id: "pendingListings", label: t("Mali Zinazosubiri", "Pending Listings"),   value: pendingCount.toLocaleString("en-US"),    icon: ClipboardList, color: "#D97706" },
     { id: "activeDeals",     label: t("Deals Hai", "Active Deals"),               value: activeDeals.length.toLocaleString("en-US"), icon: ShoppingBag, color: "#2563EB" },
     { id: "completedDeals",  label: t("Deals Zilizokamilika", "Completed Deals"), value: completedDeals.toLocaleString("en-US"),  icon: CheckCircle2,  color: COLORS.green },
@@ -147,7 +154,7 @@ export default function OverviewSection() {
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
           {t("Shughuli", "Activity")}
         </h3>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
           {activityStats.map((s) => <StatCard key={s.id} {...s} />)}
         </div>
       </div>

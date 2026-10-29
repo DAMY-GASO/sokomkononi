@@ -391,7 +391,7 @@ export default function ReportsSection() {
     ];
     const labels = {
       live: t("Hai", "Live"), reserved: t("Imehifadhiwa", "Reserved"), sold: t("Imeuzwa", "Sold"),
-      pending_payment: t("Haijalipwa", "Unpaid"), approved_pending_payment: t("Inasubiri Malipo", "Awaiting Pay"),
+      pending_payment: t("Rasimu (Haijawasilishwa)", "Drafts (Not submitted)"), approved_pending_payment: t("Inasubiri Malipo", "Awaiting Pay"),
       pending_approval: t("Inasubiri Admin", "Pending Review"), paid_pending_approval: t("Imelipwa", "Paid"),
       in_review: t("Inakaguliwa", "In Review"), needs_edit: t("Inahitaji Uhariri", "Needs Edit"),
       draft: t("Rasimu", "Draft"), rejected: t("Imekataliwa", "Rejected"),
