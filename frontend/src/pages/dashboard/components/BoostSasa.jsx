@@ -1,11 +1,10 @@
 // ============================================================
-// BoostSasa.jsx (production + bundle + credits support)
-// + Inaonyesha discount ya campaign kwenye packages
-// + Bei 0 → inaonyesha "Bure" (sio "TZS 0")
+// BoostSasa.jsx
 // + feeFree (admin amezima boost fee) → inafanya kazi bila package
-// + ✅ AUTO-CONSUME CREDIT kama mtumiaji ana boost credit
+// + ✅ AUTO-CONSUME CREDIT
 // + ✅ PENDING/ACTIVE status — inaonyesha boost iliyopo
-// + ✅ Defensive: timeout, data.pending &&, console.log
+// + ✅ Clear existing kabla ya request mpya (epuka cache ya listing ya awali)
+// + ✅ Defensive: data.pending &&, console.log, timeout (purchaseStatus.js)
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -13,12 +12,10 @@ import {
   Check,
   MapPin,
   TrendingUp,
-  Clock,
   Loader2,
   AlertTriangle,
   Wallet,
   Package,
-  Sparkles,
 } from "lucide-react";
 import {
   COLORS,
@@ -388,6 +385,8 @@ export default function BoostSasa({
   }, [initialListingId, liveListings]);
 
   // ── MPYA: pata status ya boost kwa listing iliyochaguliwa ──
+  // Tofauti na awali: `setExistingBoost(null)` inaitwa KABLA ya
+  // request mpya ili data ya listing ya awali isionekane.
   useEffect(() => {
     if (!selectedId) {
       setExistingBoost(null);
@@ -395,12 +394,13 @@ export default function BoostSasa({
       return;
     }
     let cancelled = false;
+    setExistingBoost(null);
     setLoadingBoostStatus(true);
     console.log("[BoostSasa] fetching status for listing", selectedId);
     getPurchaseStatus("boosting", selectedId)
       .then((data) => {
         if (cancelled) return;
-        console.log("[BoostSasa] status response:", data);
+        console.log("[BoostSasa] status response for", selectedId, ":", data);
         if (!data) return setExistingBoost(null);
         if (data.has_pending && data.pending) {
           return setExistingBoost({ type: "pending", data: data.pending });
@@ -415,7 +415,7 @@ export default function BoostSasa({
         if (!cancelled) setExistingBoost(null);
       })
       .finally(() => {
-        console.log("[BoostSasa] loadingBoostStatus → false");
+        console.log("[BoostSasa] loadingBoostStatus → false for", selectedId);
         if (!cancelled) setLoadingBoostStatus(false);
       });
     return () => {
@@ -451,7 +451,7 @@ export default function BoostSasa({
     console.log("[BoostSasa] createBoostOnBackend called", {
       feeFree,
       flatPackage: flatPackage?.id,
-      boostPackages: boostPackages.length,
+      boostPackagesCount: boostPackages.length,
     });
     const packageId = flatPackage?.id ?? boostPackages[0]?.id ?? null;
     console.log("[BoostSasa] packageId:", packageId);
@@ -788,12 +788,12 @@ export default function BoostSasa({
     selectedListing: selectedListing?.id,
     feeLoaded,
     feeFree,
-    existingBoost,
+    existingBoost: existingBoost ? existingBoost.type : null,
     loadingBoostStatus,
     canBoost,
     flatPackage: flatPackage?.id,
-    boostPackages: boostPackages.length,
-    liveListings: liveListings.length,
+    boostPackagesCount: boostPackages.length,
+    liveListingsCount: liveListings.length,
   });
 
   if (stage === "done" && done) {

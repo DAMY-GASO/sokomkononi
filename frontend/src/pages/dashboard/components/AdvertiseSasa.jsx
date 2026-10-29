@@ -1,10 +1,12 @@
 // ============================================================
 // AdvertiseSasa.jsx (production + bundle + credits + packages)
 // + ✅ PENDING/ACTIVE status — inaonyesha banner iliyopo
+// + ✅ Clear existing kabla ya request mpya
+// + ✅ Defensive: data.pending &&, console.log, timeout
 // ============================================================
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Megaphone, MapPin, Sparkles, Loader2, AlertTriangle,
+  Megaphone, MapPin, Loader2, AlertTriangle,
   Wallet, Package, Check,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS } from "./shared";
@@ -22,7 +24,6 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";
-import { createBannerAdAsync } from "../../../config/bannerAdsStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 import PendingPurchasePanel from "./PendingPurchasePanel";
@@ -264,7 +265,6 @@ export default function AdvertiseSasa({
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // Hydrate
   useEffect(() => {
     let cancelled = false;
     Promise.allSettled([
@@ -280,7 +280,6 @@ export default function AdvertiseSasa({
     }
   }, [initialListingId, liveListings]);
 
-  // Auto-select first package
   useEffect(() => {
     if (!advertisementPackages.length) {
       if (packageId !== null) setPackageId(null);
@@ -301,23 +300,28 @@ export default function AdvertiseSasa({
   useEffect(() => {
     if (!selectedId) {
       setExistingBanner(null);
+      setLoadingBannerStatus(false);
       return;
     }
     let cancelled = false;
+    setExistingBanner(null);
     setLoadingBannerStatus(true);
+    console.log("[AdvertiseSasa] fetching status for listing", selectedId);
     getPurchaseStatus("banners", selectedId)
       .then((data) => {
         if (cancelled) return;
+        console.log("[AdvertiseSasa] status response for", selectedId, ":", data);
         if (!data) return setExistingBanner(null);
-        if (data.has_pending) {
+        if (data.has_pending && data.pending) {
           return setExistingBanner({ type: "pending", data: data.pending });
         }
-        if (data.has_active) {
+        if (data.has_active && data.active) {
           return setExistingBanner({ type: "active", data: data.active });
         }
         setExistingBanner(null);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("[AdvertiseSasa] status fetch failed:", err);
         if (!cancelled) setExistingBanner(null);
       })
       .finally(() => {
@@ -350,12 +354,11 @@ export default function AdvertiseSasa({
         : Boolean(selectedBundle));
 
   const adLabel = getLocalized(adFee.label, lang) || "Advertisement";
-  const adDesc = getLocalized(adFee.desc, lang);
 
   // ── Create PENDING banner ──────────────────────────────────
   const createPendingBanner = async () => {
-    const packageId = selectedPackage?.id ?? advertisementPackages[0]?.id ?? null;
-    if (!feeDisabled && !packageId) {
+    const pkgId = selectedPackage?.id ?? advertisementPackages[0]?.id ?? null;
+    if (!feeDisabled && !pkgId) {
       throw new Error(
         t(
           "Hakuna advertisement package inayopatikana.",
@@ -365,7 +368,7 @@ export default function AdvertiseSasa({
     }
     const created = await api.post("/banners/", {
       listing: selectedListing.id,
-      package: packageId,
+      package: pkgId,
     });
     const bannerId = created?.id;
     if (!bannerId) {
@@ -392,6 +395,7 @@ export default function AdvertiseSasa({
       onAdvertised(selectedListing.id, null);
       setDone({ listing: selectedListing, banner: null });
     } catch (err) {
+      console.error("[AdvertiseSasa] handleSkipFee error:", err);
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -402,7 +406,7 @@ export default function AdvertiseSasa({
     }
   };
 
-  // ── PATH B: FLAT (package) ─────────────────────────────────
+  // ── PATH B: FLAT ───────────────────────────────────────────
   const handleBeginFlatPayment = async () => {
     if (!canAdvertise || busy) return;
     setBusy(true);
@@ -410,7 +414,6 @@ export default function AdvertiseSasa({
     try {
       const { bannerId } = await createPendingBanner();
 
-      // ✅ AUTO-CONSUME CREDIT
       if (hasCredit) {
         try {
           const raw = await api.post(`/banners/${bannerId}/pay/`, {
@@ -432,6 +435,7 @@ export default function AdvertiseSasa({
       });
       setStage("paying");
     } catch (err) {
+      console.error("[AdvertiseSasa] handleBeginFlatPayment error:", err);
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -479,6 +483,7 @@ export default function AdvertiseSasa({
       onAdvertised(selectedListing.id, null);
       setDone({ listing: selectedListing, banner: raw?.banner || null });
     } catch (err) {
+      console.error("[AdvertiseSasa] handleUseCredit error:", err);
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -571,6 +576,19 @@ export default function AdvertiseSasa({
     setPendingBundlePurchase(null);
     setError("");
   };
+
+  // ── DEBUG ────────────────────────────────────────────────
+  console.log("[AdvertiseSasa] RENDER STATE", {
+    selectedId,
+    selectedListing: selectedListing?.id,
+    feeEnabled,
+    existingBanner: existingBanner ? existingBanner.type : null,
+    loadingBannerStatus,
+    canAdvertise,
+    canProceed,
+    selectedPackage: selectedPackage?.id,
+    alreadyAdvertising,
+  });
 
   // ── DONE SCREEN ────────────────────────────────────────────
   if (done) {
@@ -727,7 +745,6 @@ export default function AdvertiseSasa({
                 : t("Chagua Njia ya Malipo", "Choose Payment Option")}
             </p>
 
-            {/* Payment mode toggle */}
             <div className={`flex justify-center gap-2 mb-4${feeDisabled ? " hidden" : ""}`}>
               <button
                 onClick={() => setPaymentMode("flat")}
@@ -755,7 +772,6 @@ export default function AdvertiseSasa({
               )}
             </div>
 
-            {/* Packages grid */}
             {paymentMode === "flat" && (
               <>
                 {advertisementPackages.length === 0 ? (
@@ -779,7 +795,6 @@ export default function AdvertiseSasa({
               </>
             )}
 
-            {/* Bundle cards */}
             {paymentMode === "bundle" && (
               <>
                 {adsBundles.length === 0 ? (
@@ -802,7 +817,6 @@ export default function AdvertiseSasa({
               </>
             )}
 
-            {/* Total + CTA */}
             <div className="rounded-2xl border p-4 flex flex-col items-center text-center gap-3 mb-4"
                  style={{ borderColor: COLORS.sandLine, background: "white" }}>
               <div>

@@ -1,10 +1,12 @@
 // ============================================================
 // LeadingSasa.jsx (production + bundle + credits + packages)
 // + ✅ PENDING/ACTIVE status — inaonyesha leading iliyopo
+// + ✅ Clear existing kabla ya request mpya
+// + ✅ Defensive: data.pending &&, console.log, timeout
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
-  TrendingUp, MapPin, Search, Loader2, AlertTriangle,
+  TrendingUp, MapPin, Loader2, AlertTriangle,
   Wallet, Package, Check,
 } from "lucide-react";
 import {
@@ -264,7 +266,6 @@ export default function LeadingSasa({
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // Hydrate
   useEffect(() => {
     let cancelled = false;
     Promise.allSettled([
@@ -280,7 +281,6 @@ export default function LeadingSasa({
     }
   }, [initialListingId, liveListings]);
 
-  // Auto-select first package
   useEffect(() => {
     if (!leadingPackages.length) {
       if (packageId !== null) setPackageId(null);
@@ -301,23 +301,28 @@ export default function LeadingSasa({
   useEffect(() => {
     if (!selectedId) {
       setExistingLeading(null);
+      setLoadingLeadingStatus(false);
       return;
     }
     let cancelled = false;
+    setExistingLeading(null);
     setLoadingLeadingStatus(true);
+    console.log("[LeadingSasa] fetching status for listing", selectedId);
     getPurchaseStatus("leading", selectedId)
       .then((data) => {
         if (cancelled) return;
+        console.log("[LeadingSasa] status response for", selectedId, ":", data);
         if (!data) return setExistingLeading(null);
-        if (data.has_pending) {
+        if (data.has_pending && data.pending) {
           return setExistingLeading({ type: "pending", data: data.pending });
         }
-        if (data.has_active) {
+        if (data.has_active && data.active) {
           return setExistingLeading({ type: "active", data: data.active });
         }
         setExistingLeading(null);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("[LeadingSasa] status fetch failed:", err);
         if (!cancelled) setExistingLeading(null);
       })
       .finally(() => {
@@ -387,6 +392,7 @@ export default function LeadingSasa({
       onLead(selectedListing.id, { leadingExpiresAt: expiresAt });
       setDone({ listing: selectedListing });
     } catch (err) {
+      console.error("[LeadingSasa] handleSkipFee error:", err);
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -405,7 +411,6 @@ export default function LeadingSasa({
     try {
       const purchaseId = await createPendingPurchase();
 
-      // ✅ AUTO-CONSUME CREDIT
       if (hasCredit) {
         try {
           await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {
@@ -431,6 +436,7 @@ export default function LeadingSasa({
       });
       setStage("paying");
     } catch (err) {
+      console.error("[LeadingSasa] handleBeginFlatPayment error:", err);
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -482,6 +488,7 @@ export default function LeadingSasa({
       onLead(selectedListing.id, { leadingExpiresAt: expiresAt });
       setDone({ listing: selectedListing });
     } catch (err) {
+      console.error("[LeadingSasa] handleUseCredit error:", err);
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -585,6 +592,17 @@ export default function LeadingSasa({
     setPendingBundlePurchase(null);
     setError("");
   };
+
+  // ── DEBUG ────────────────────────────────────────────────
+  console.log("[LeadingSasa] RENDER STATE", {
+    selectedId,
+    selectedListing: selectedListing?.id,
+    feeEnabled,
+    existingLeading: existingLeading ? existingLeading.type : null,
+    loadingLeadingStatus,
+    canLead,
+    selectedPackage: selectedPackage?.id,
+  });
 
   // ── DONE SCREEN ────────────────────────────────────────────
   if (done) {
