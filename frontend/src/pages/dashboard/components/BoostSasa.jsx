@@ -5,6 +5,7 @@
 // + feeFree (admin amezima boost fee) → inafanya kazi bila package
 // + ✅ AUTO-CONSUME CREDIT kama mtumiaji ana boost credit
 // + ✅ PENDING/ACTIVE status — inaonyesha boost iliyopo
+// + ✅ Defensive: timeout, data.pending &&, console.log
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -390,29 +391,36 @@ export default function BoostSasa({
   useEffect(() => {
     if (!selectedId) {
       setExistingBoost(null);
+      setLoadingBoostStatus(false);
       return;
     }
     let cancelled = false;
     setLoadingBoostStatus(true);
+    console.log("[BoostSasa] fetching status for listing", selectedId);
     getPurchaseStatus("boosting", selectedId)
       .then((data) => {
         if (cancelled) return;
+        console.log("[BoostSasa] status response:", data);
         if (!data) return setExistingBoost(null);
-        if (data.has_pending) {
+        if (data.has_pending && data.pending) {
           return setExistingBoost({ type: "pending", data: data.pending });
         }
-        if (data.has_active) {
+        if (data.has_active && data.active) {
           return setExistingBoost({ type: "active", data: data.active });
         }
         setExistingBoost(null);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("[BoostSasa] status fetch failed:", err);
         if (!cancelled) setExistingBoost(null);
       })
       .finally(() => {
+        console.log("[BoostSasa] loadingBoostStatus → false");
         if (!cancelled) setLoadingBoostStatus(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [selectedId]);
 
   const selectedListing = liveListings.find((l) => l.id === selectedId);
@@ -440,9 +448,13 @@ export default function BoostSasa({
 
   // ── createBoostOnBackend: package optional kama feeFree ──
   const createBoostOnBackend = async () => {
-    // Backend inahitaji `package` kama fee inatumika. Kama fee imezimwa,
-    // `package` inaweza kuwa null.
+    console.log("[BoostSasa] createBoostOnBackend called", {
+      feeFree,
+      flatPackage: flatPackage?.id,
+      boostPackages: boostPackages.length,
+    });
     const packageId = flatPackage?.id ?? boostPackages[0]?.id ?? null;
+    console.log("[BoostSasa] packageId:", packageId);
 
     if (!feeFree && !packageId) {
       throw new Error(
@@ -457,6 +469,7 @@ export default function BoostSasa({
       listing: selectedListing.id,
       package: packageId,
     });
+    console.log("[BoostSasa] create response:", raw);
     return raw;
   };
 
@@ -501,6 +514,7 @@ export default function BoostSasa({
       });
       setStage("paying");
     } catch (err) {
+      console.error("[BoostSasa] create boost failed:", err);
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -563,6 +577,7 @@ export default function BoostSasa({
         boostExpiresAt: activated?.expires_at,
       });
     } catch (err) {
+      console.error("[BoostSasa] use credit failed:", err);
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -702,14 +717,36 @@ export default function BoostSasa({
 
   // ── handleFreeBoost: package optional kama feeFree ──
   const handleFreeBoost = async () => {
-    if (!selectedListing || creating) return;
-    if (!feeFree && !flatPackage) return;
+    console.log("[BoostSasa] handleFreeBoost CALLED", {
+      selectedListing: selectedListing?.id,
+      creating,
+      feeFree,
+      flatPackage: flatPackage?.id,
+      canBoost,
+    });
+
+    if (!selectedListing) {
+      console.warn("[BoostSasa] no selected listing");
+      setError(t("Hakuna mali iliyochaguliwa.", "No listing selected."));
+      return;
+    }
+    if (creating) {
+      console.warn("[BoostSasa] already creating");
+      return;
+    }
+    if (!feeFree && !flatPackage) {
+      console.warn("[BoostSasa] no package and fee not free");
+      setError(t("Hakuna package iliyochaguliwa.", "No package selected."));
+      return;
+    }
 
     setCreating(true);
     setError("");
     try {
       const raw = await createBoostOnBackend();
+      console.log("[BoostSasa] boost created, now paying free");
       const paid = await boostingApi.pay(raw.id, {});
+      console.log("[BoostSasa] pay response:", paid);
       const activated = paid?.boost || paid?.data?.boost || null;
       setDone({
         listing: selectedListing,
@@ -723,6 +760,7 @@ export default function BoostSasa({
         boostExpiresAt: activated?.expires_at,
       });
     } catch (err) {
+      console.error("[BoostSasa] handleFreeBoost error:", err);
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -743,6 +781,20 @@ export default function BoostSasa({
     setPendingBundlePurchase(null);
     setError("");
   };
+
+  // ── DEBUG ────────────────────────────────────────────────
+  console.log("[BoostSasa] RENDER STATE", {
+    selectedId,
+    selectedListing: selectedListing?.id,
+    feeLoaded,
+    feeFree,
+    existingBoost,
+    loadingBoostStatus,
+    canBoost,
+    flatPackage: flatPackage?.id,
+    boostPackages: boostPackages.length,
+    liveListings: liveListings.length,
+  });
 
   if (stage === "done" && done) {
     const doneTitle =
