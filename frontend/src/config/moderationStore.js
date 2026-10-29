@@ -295,6 +295,33 @@ export async function finalizeApprovalListingAsync(
 }
 
 // ============================================================
+// RELEASE RESERVATION — mnunuzi ameshindwa kununua:
+// backend inaghairi deals zinazoshikilia mali na kuirudisha LIVE.
+// Ada ya reservation HAIRUDISHWI (sera ya jukwaa).
+// ============================================================
+export async function releaseReservationAsync(
+  listingId,
+  reason = "",
+  { adminName = "Admin" } = {}
+) {
+  const cleanReason = (reason || "").trim();
+  try {
+    await moderationApi.releaseReservation(listingId, cleanReason);
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+
+  decideListing(listingId, "live");
+  recordDecision({
+    listingId,
+    action: "reservation_released",
+    reason: cleanReason,
+    adminName,
+  });
+  return { ok: true, listing: { id: listingId, status: "live" } };
+}
+
+// ============================================================
 // DISAPPROVE — rudisha listing iliyoidhinishwa kuwa rejected
 // ============================================================
 export async function disapproveListingAsync(

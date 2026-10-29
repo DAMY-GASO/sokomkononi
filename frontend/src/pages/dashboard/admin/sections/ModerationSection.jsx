@@ -29,6 +29,7 @@ import {
   finalizeApprovalListingAsync,
   disapproveListingAsync,
   deleteListingFromModerationAsync,
+  releaseReservationAsync,
 } from "../../../../config/moderationStore.js";
 import { fetchListingsByStatusAsync } from "../../../../config/listingsStore.js";
 import AdminListingImageManager from "../components/AdminListingImageManager.jsx";
@@ -81,6 +82,7 @@ export default function ModerationSection() {
   const [requestPaymentModal, setRequestPaymentModal] = useState(null);
   const [disapproveModal, setDisapproveModal] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
+  const [releaseModal, setReleaseModal] = useState(null);
   const [imageListing, setImageListing] = useState(null);
   const [decided, setDecided] = useState({});
 
@@ -526,6 +528,35 @@ export default function ModerationSection() {
     }
   };
 
+  // ── RELEASE RESERVATION (mnunuzi ameshindwa kununua) ────
+  const openReleaseModal = (id) => {
+    if (busy[id]) return;
+    setError("");
+    setReleaseModal({ listingId: id, reason: "" });
+  };
+  const submitRelease = async () => {
+    if (!releaseModal) return;
+    const { listingId, reason } = releaseModal;
+    setBusy((b) => ({ ...b, [listingId]: "release" }));
+    setError("");
+    const res = await releaseReservationAsync(listingId, reason);
+    clearBusy(listingId);
+    setReleaseModal(null);
+    if (res.ok) {
+      markDecided(listingId, "LIVE");
+      setHistory((prev) => ({
+        ...prev,
+        [String(listingId)]: { ...(prev[String(listingId)] || {}), id: listingId, status: "LIVE" },
+      }));
+    } else {
+      setError(
+        res.error?.data?.detail ||
+          res.error?.message ||
+          t("Imeshindwa kurudisha mali hewani.", "Failed to put the listing back live.")
+      );
+    }
+  };
+
   // ── Manage Images ───────────────────────────────────────
   const ManageImagesBtn = ({ listing, fullWidth }) => (
     <button
@@ -941,6 +972,21 @@ export default function ModerationSection() {
             <Clock size={13} />
             {t("Imehifadhiwa", "Reserved")}
           </span>
+          <button
+            onClick={() => openReleaseModal(listing.id)}
+            disabled={isBusy}
+            style={{ color: COLORS.green, borderColor: `${COLORS.green}66` }}
+            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-green-50 disabled:opacity-50 ${
+              fullWidth ? "flex-1" : ""
+            }`}
+          >
+            {currentAction === "release" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <RotateCcw size={13} />
+            )}
+            {t("Rudisha Hewani", "Put Back Live")}
+          </button>
           <ManageImagesBtn listing={listing} fullWidth={fullWidth} />
         </div>
       );
@@ -1464,6 +1510,61 @@ export default function ModerationSection() {
                 style={{ background: "#DC2626" }}
               >
                 {t("Futa Kabisa", "Delete Permanently")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── RELEASE RESERVATION MODAL ───────────────────── */}
+      {releaseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: "rgba(47,109,79,0.12)" }}
+              >
+                <RotateCcw size={18} color={COLORS.green} />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-primary">
+                  {t("Rudisha Mali Hewani?", "Put Listing Back Live?")}
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  {t(
+                    "Reservation itaghairiwa na ada ya reservation HAITARUDISHWA.",
+                    "The reservation will be cancelled and the reservation fee will NOT be refunded."
+                  )}
+                </p>
+              </div>
+            </div>
+            <textarea
+              value={releaseModal.reason}
+              onChange={(e) =>
+                setReleaseModal((p) => ({ ...p, reason: e.target.value }))
+              }
+              rows={3}
+              autoFocus
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none focus:border-[#2F6D4F] mb-3"
+              placeholder={t(
+                "Sababu (hiari) — mfano: Mnunuzi hakukamilisha malipo",
+                "Reason (optional) — e.g. Buyer did not complete payment"
+              )}
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setReleaseModal(null)}
+                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+              >
+                {t("Ghairi", "Cancel")}
+              </button>
+              <button
+                onClick={submitRelease}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white"
+                style={{ background: COLORS.green }}
+              >
+                {t("Rudisha Hewani", "Put Back Live")}
               </button>
             </div>
           </div>

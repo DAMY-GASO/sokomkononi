@@ -29,6 +29,10 @@ export const moderationApi = {
   requestPayment: (listingId, reason = "") =>
     api.post(`/admin/listings/${listingId}/request-payment/`, { reason }),
 
+  // Mnunuzi ameshindwa kununua — rudisha mali LIVE (ada hairudishwi)
+  releaseReservation: (listingId, reason = "") =>
+    api.post(`/admin/listings/${listingId}/release-reservation/`, { reason }),
+
   // Admin analidhinisha mwisho baada ya fee kulipwa
   finalizeApproval: (listingId) =>
     api.post(`/admin/listings/${listingId}/finalize-approval/`, {}),
