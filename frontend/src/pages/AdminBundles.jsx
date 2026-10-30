@@ -1,17 +1,5 @@
 // ============================================================
 // AdminBundles.jsx
-// Admin anaweza kuongeza/kubadilisha/kufuta bundles.
-// FIXED: uses async CRUD (API-backed) — no more local-only writes.
-// Types: listing, leading, boost, reservation, success, ads,
-//        premium, package
-//
-// Marekebisho:
-//  - TYPE_LABELS.success → "Mafanikio" / "Success"
-//  - credits default → {} (sio { listing: 1 })
-//  - code value → form.code (sio form.code || form.id)
-//  - CODE_DISPLAY: badilisha `b_listing_starter` → "Listing Starter"
-//  - displayBundleCode(): fallback kwa codes zisizojulikana
-//  - Search inajumuisha displayCode
 // ============================================================
 import React, { useState } from "react";
 import {
@@ -592,7 +580,7 @@ export default function AdminBundles() {
           )}
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
           <div className="relative flex-1">
             <input
               type="text"
@@ -607,7 +595,16 @@ export default function AdminBundles() {
               className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
             />
           </div>
-          <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0">
+          
+          {/* ✅ FIX: Filters scroll — kitufe cha kwanza kinaonekana, scroll pande zote mbili */}
+          <div 
+            className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 -mx-1 px-1"
+            style={{
+              scrollbarWidth: "thin",
+              WebkitOverflowScrolling: "touch",
+              scrollBehavior: "smooth",
+            }}
+          >
             {["all", ...Object.keys(TYPE_LABELS)].map((key) => {
               const label =
                 key === "all"
