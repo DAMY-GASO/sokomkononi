@@ -512,11 +512,11 @@ export default function AuditLogsSection() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-primary break-words">
-            {logs.length} {t("matendo yame-logiwa", "actions logged")}
+            {logs.length} {t("matendo yaliyofanyika", "actions logged")}
           </p>
           <p className="text-xs text-secondary mt-0.5 break-words">
             {t(
-              "Kumbukumbu za matendo zinaonyesha kila hatua ya Admin. Unaweza kufuta moja moja au zote.",
+              "Kumbukumbu za matendo zinaonyesha kila hatua ya msimamizi. Unaweza kufuta moja moja au zote.",
               "Audit logs show every Admin action. You can delete one by one or all."
             )}
           </p>
@@ -723,7 +723,7 @@ export default function AuditLogsSection() {
         open={confirmClear}
         busy={!!busy.clearAll}
         danger
-        title={t("Futa Logs Zote?", "Clear All Logs?")}
+        title={t("Futa Matendo Yote?", "Clear All Logs?")}
         description={t(
           `Logs zote ${logs.length} zitafutwa kabisa. Hatua hii haiwezi kurudishwa.`,
           `All ${logs.length} logs will be permanently deleted. This action cannot be undone.`
