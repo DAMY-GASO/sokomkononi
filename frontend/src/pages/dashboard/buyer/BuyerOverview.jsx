@@ -7,6 +7,7 @@
 // Marekebisho:
 //  - Ongeza "Uthibitisho Wangu" (My Verification) kwenye quick actions
 //  - ⬅️ Chuja listings za seller mwenyewe (buyer haoni mali zake)
+//  - ✅ Ondoa hatua za "Jinsi ya Kununua" — badala yake kitufe kikubwa
 // ============================================================
 
 import React, { useMemo, useState } from "react";
@@ -27,6 +28,7 @@ import {
   ArrowRight,
   Lock,
   X,
+  BookOpen,
 } from "lucide-react";
 import { COLORS, formatTZS } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -205,8 +207,31 @@ export default function BuyerOverview({ onNavigate }) {
         </p>
       </div>
 
-      {/* JINSI YA KUNUNUA */}
-      <HowToBuyGuide lang={lang} />
+      {/* ✅ KITUFE KIKUBWA: Jinsi ya Kununua (Badala ya Steps) */}
+      <button
+        type="button"
+        onClick={() => navigate("/jinsi-ya-kununua")}
+        className="w-full flex items-center gap-3 bg-white rounded-xl border border-gray-100 p-4 mb-6 hover:border-gold hover:shadow-sm transition-all text-left"
+      >
+        <div
+          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: "rgba(0,98,253,0.08)" }}
+        >
+          <BookOpen size={22} color={COLORS.royal} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-primary text-sm">
+            {t("Jinsi ya Kununua", "How to Buy")}
+          </p>
+          <p className="text-body-sm text-secondary mt-0.5">
+            {t(
+              "Bonyeza hapa kuelewa hatua zote za ununuzi",
+              "Tap here to understand all steps of a purchase"
+            )}
+          </p>
+        </div>
+        <ArrowRight size={18} className="text-muted shrink-0" />
+      </button>
 
       {/* SEARCH BAR */}
       <form onSubmit={handleSearch} className="mb-6">
@@ -375,155 +400,6 @@ export default function BuyerOverview({ onNavigate }) {
 
       {/* RECENT ACTIVITY */}
       <RecentActivity onNavigate={onNavigate} side="buyer" />
-    </div>
-  );
-}
-
-// ============================================================
-// STEP FLOW
-// ============================================================
-function StepFlow({ steps }) {
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-3">
-      {steps.map((step, i) => (
-        <React.Fragment key={i}>
-          <div className="flex items-center gap-1.5 bg-sand rounded-full pl-1.5 pr-3 py-1.5">
-            <span
-              style={{ background: "#FEA406", color: "#011957" }}
-              className="w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 shadow-sm"
-            >
-              {i + 1}
-            </span>
-            <span className="text-body-sm font-medium text-secondary whitespace-nowrap">
-              {step}
-            </span>
-          </div>
-          {i < steps.length - 1 && (
-            <ArrowRight size={14} className="text-muted shrink-0" />
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================
-// JINSI YA KUNUNUA
-// ============================================================
-function HowToBuyGuide({ lang }) {
-  const t = (sw, en) => (lang === "sw" ? sw : en);
-  const STORAGE_KEY = "sokomkononi_buyer_guide_dismissed_v1";
-
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return window.localStorage.getItem(STORAGE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
-
-  const [hiddenThisSession, setHiddenThisSession] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return window.sessionStorage.getItem("sokomkononi_buyer_guide_hidden_session_v1") === "1";
-    } catch {
-      return false;
-    }
-  });
-
-  const [hideForever, setHideForever] = useState(false);
-
-  if (dismissed || hiddenThisSession) return null;
-
-  const handleGotIt = () => {
-    if (hideForever) {
-      setDismissed(true);
-      try { window.localStorage.setItem("sokomkononi_buyer_guide_dismissed_v1", "1"); } catch { /* noop */ }
-    } else {
-      setHiddenThisSession(true);
-      try { window.sessionStorage.setItem("sokomkononi_buyer_guide_hidden_session_v1", "1"); } catch { /* noop */ }
-    }
-  };
-
-  const stepsBeforeNote = [
-    t('Bonyeza "Nunua Sasa"', 'Tap "Buy Now"'),
-    t("Chagua Aina ya Mali", "Choose Property Type"),
-    t(
-      "Tafuta na Chagua Mali Unayoitaka",
-      "Search and Select the Property You Want"
-    ),
-    t(
-      "Wasiliana na Muuzaji kupitia Deal Room",
-      "Contact the Seller via the Deal Room"
-    ),
-    t("Fanya Makubaliano ya Bei", "Negotiate the Price"),
-    t("Muuzaji Akikubali", "Once the Seller Accepts"),
-    t("Lipia Reservation", "Pay the Reservation Fee"),
-  ];
-
-  const stepsAfterNote = [
-    t("Kamilisha Malipo", "Complete Payment"),
-    t("Kamilisha Mchakato wa Ununuzi", "Complete the Purchase Process"),
-  ];
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <span className="w-4" aria-hidden="true" />
-        <h2 className="h-card text-center flex-1">
-          {t("Jinsi ya Kununua", "How to Buy")}
-        </h2>
-        <span className="w-4" aria-hidden="true" />
-      </div>
-
-      <StepFlow steps={stepsBeforeNote} />
-
-      <div
-        style={{ background: "rgba(0,98,253,0.07)", color: COLORS.royalDark }}
-        className="flex items-start gap-2 rounded-lg px-3 py-3 my-4 max-w-2xl mx-auto text-body-sm leading-relaxed"
-      >
-        <Lock size={14} className="shrink-0 mt-0.5" />
-        <span>
-          {t(
-            "Reservation huweka mali kwenye hali ya kuhifadhiwa kwa muda maalum, huku ukikamilisha hatua muhimu kama ukaguzi wa mali, uthibitishaji wa nyaraka na maandalizi ya malipo.",
-            "A Reservation holds the property for a set period while you complete key steps such as inspecting the property, verifying documents, and preparing payment."
-          )}
-        </span>
-      </div>
-
-      <StepFlow steps={stepsAfterNote} />
-
-      <div
-        style={{ background: "rgba(47,109,79,0.08)", color: COLORS.green }}
-        className="text-center text-body-sm font-medium rounded-lg px-4 py-3 mt-4 max-w-2xl mx-auto"
-      >
-        🎉{" "}
-        {t(
-          "Hongera! Umefanikiwa kukamilisha ununuzi wa mali kupitia SokoMkononi.",
-          "Congratulations! You've successfully completed a property purchase through SokoMkononi."
-        )}
-      </div>
-
-      <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <label className="flex items-center gap-2 cursor-pointer text-xs text-secondary order-2 sm:order-1">
-          <input
-            type="checkbox"
-            checked={hideForever}
-            onChange={(e) => setHideForever(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300 text-[#FEA406] focus:ring-[#FEA406]"
-          />
-          <span>{t("Usinionyeshe tena", "Don't show this again")}</span>
-        </label>
-        <button
-          type="button"
-          onClick={handleGotIt}
-          style={{ background: COLORS.gold, color: COLORS.night }}
-          className="w-full sm:w-auto text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors hover:opacity-90 order-1 sm:order-2"
-        >
-          {t("Sawa, nimeelewa", "Got it, thanks")}
-        </button>
-      </div>
     </div>
   );
 }

@@ -5,10 +5,11 @@
 //
 // Marekebisho:
 //  - Ongeza "Uthibitisho Wangu" (My Verification) kwenye quick actions
-//  - FIX: StepFlow namba zinaonekana kwa kutumia inline styles zote
+//  - ✅ Ondoa hatua za "Jinsi ya Kuuza" — badala yake kitufe kikubwa
 // ============================================================
 
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ListChecks,
   Eye,
@@ -25,6 +26,7 @@ import {
   Shield,
   ShieldCheck,
   MessageSquarePlus,
+  BookOpen,
 } from "lucide-react";
 import { COLORS } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -35,6 +37,7 @@ import StatTile from "./StatTile.jsx";
 import RecentActivity from "../components/RecentActivity.jsx";
 
 export default function SellerOverview({ onNavigate }) {
+  const navigate = useNavigate();
   const { lang } = useLanguage();
   const { user } = useAuth();
   const listings = useMyListings();
@@ -84,7 +87,7 @@ export default function SellerOverview({ onNavigate }) {
   }, [listings, deals]);
 
   // ============================================================
-  // QUICK ACTIONS — bilingual kamili
+  // QUICK ACTIONS
   // ============================================================
   const quickActions = [
     {
@@ -143,8 +146,31 @@ export default function SellerOverview({ onNavigate }) {
         </p>
       </div>
 
-      {/* JINSI YA KUUZA */}
-      <HowToSellGuide lang={lang} />
+      {/* ✅ KITUFE KIKUBWA: Jinsi ya Kuuza (Badala ya Steps) */}
+      <button
+        type="button"
+        onClick={() => navigate("/jinsi-ya-kununua#kuuza")}
+        className="w-full flex items-center gap-3 bg-white rounded-xl border border-gray-100 p-4 mb-6 hover:border-gold hover:shadow-sm transition-all text-left"
+      >
+        <div
+          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: "rgba(47,109,79,0.1)" }}
+        >
+          <BookOpen size={22} color={COLORS.green} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-primary text-sm">
+            {t("Jinsi ya Kuuza", "How to Sell")}
+          </p>
+          <p className="text-body-sm text-secondary mt-0.5">
+            {t(
+              "Bonyeza hapa kuelewa hatua zote za uuzaji",
+              "Tap here to understand all steps of selling"
+            )}
+          </p>
+        </div>
+        <ArrowRight size={18} className="text-muted shrink-0" />
+      </button>
 
       {/* UNPAID LISTINGS BANNER */}
       {unpaidListings.length > 0 && (
@@ -279,147 +305,6 @@ export default function SellerOverview({ onNavigate }) {
 
       {/* RECENT ACTIVITY */}
       <RecentActivity onNavigate={onNavigate} side="seller" />
-    </div>
-  );
-}
-
-// ============================================================
-// STEP FLOW — fananisha na BuyerOverview
-// ============================================================
-function StepFlow({ steps }) {
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-3">
-      {steps.map((step, i) => (
-        <React.Fragment key={i}>
-          <div className="flex items-center gap-1.5 bg-sand rounded-full pl-1.5 pr-3 py-1.5">
-            <span
-              style={{ background: "#FEA406", color: "#011957" }}
-              className="w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 shadow-sm"
-            >
-              {i + 1}
-            </span>
-            <span className="text-body-sm font-medium text-secondary whitespace-nowrap">
-              {step}
-            </span>
-          </div>
-          {i < steps.length - 1 && (
-            <ArrowRight size={14} className="text-muted shrink-0" />
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
-// ============================================================
-// JINSI YA KUUZA
-// ============================================================
-function HowToSellGuide({ lang }) {
-  const t = (sw, en) => (lang === "sw" ? sw : en);
-  const STORAGE_KEY = "sokomkononi_seller_guide_dismissed_v1";
-
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return window.localStorage.getItem(STORAGE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
-
-  const [hiddenThisSession, setHiddenThisSession] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return (
-        window.sessionStorage.getItem(
-          "sokomkononi_seller_guide_hidden_session_v1"
-        ) === "1"
-      );
-    } catch {
-      return false;
-    }
-  });
-
-  const [hideForever, setHideForever] = useState(false);
-
-  if (dismissed || hiddenThisSession) return null;
-
-  const handleGotIt = () => {
-    if (hideForever) {
-      setDismissed(true);
-      try {
-        window.localStorage.setItem(
-          "sokomkononi_seller_guide_dismissed_v1",
-          "1"
-        );
-      } catch {
-        /* noop */
-      }
-    } else {
-      setHiddenThisSession(true);
-      try {
-        window.sessionStorage.setItem(
-          "sokomkononi_seller_guide_hidden_session_v1",
-          "1"
-        );
-      } catch {
-        /* noop */
-      }
-    }
-  };
-
-  const steps = [
-    t('Bonyeza "Uza Sasa"', 'Tap "Sell Now"'),
-    t("Chagua Aina ya Mali", "Choose Property Type"),
-    t("Weka Picha za Mali (1–8)", "Upload Property Photos (1–8)"),
-    t("Jaza Taarifa Zote za Mali", "Fill In All Property Details"),
-    t("Wasilisha Taarifa", "Submit Your Details"),
-    t("Lipia Huduma ya Kuchapisha", "Pay the Publishing Fee"),
-    t("Chagua Njia ya Malipo", "Choose a Payment Method"),
-    t("Kamilisha Malipo", "Complete Payment"),
-  ];
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 mb-6">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <span className="w-4" aria-hidden="true" />
-        <h2 className="h-card text-center flex-1">
-          {t("Jinsi ya Kuuza", "How to Sell")}
-        </h2>
-        <span className="w-4" aria-hidden="true" />
-      </div>
-
-      <StepFlow steps={steps} />
-
-      <div
-        style={{ background: "rgba(47,109,79,0.08)", color: COLORS.green }}
-        className="text-center text-body-sm font-medium rounded-lg px-4 py-3 mt-4 max-w-2xl mx-auto"
-      >
-        🎉{" "}
-        {t(
-          "Hongera! Mali yako sasa imechapishwa kwenye SokoMkononi na iko tayari kuonekana na wanunuzi.",
-          "Congratulations! Your property has been published on SokoMkononi and is now visible to buyers."
-        )}
-      </div>
-
-      <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <label className="flex items-center gap-2 cursor-pointer text-xs text-secondary order-2 sm:order-1">
-          <input
-            type="checkbox"
-            checked={hideForever}
-            onChange={(e) => setHideForever(e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300 text-[#FEA406] focus:ring-[#FEA406]"
-          />
-          <span>{t("Usinionyeshe tena", "Don't show this again")}</span>
-        </label>
-        <button
-          type="button"
-          onClick={handleGotIt}
-          style={{ background: COLORS.gold, color: COLORS.night }}
-          className="w-full sm:w-auto text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors hover:opacity-90 order-1 sm:order-2"
-        >
-          {t("Sawa, nimeelewa", "Got it, thanks")}
-        </button>
-      </div>
     </div>
   );
 }
