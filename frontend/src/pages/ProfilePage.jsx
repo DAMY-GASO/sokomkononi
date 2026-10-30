@@ -1,16 +1,10 @@
 // ============================================================
 // ProfilePage.jsx
 // Wasifu — bilingual kamili + PageLoader.
-// + Delete Account (API)
-// + 2FA
-// + Data halisi: taarifa, mapendeleo (profileApi.js)
-// + Guard: Admin hawezi kujifuta
-// + Auto-refresh: refreshUserAsync kwenye mount + event listeners
-// + Badge ya currentRole (Seller / Buyer / Both)
 // ============================================================
 
 import { COLORS } from "./dashboard/components/shared.js";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   useAuth,
@@ -19,7 +13,7 @@ import {
   changePasswordAsync,
   deleteAccountAsync,
   updateAvatarAsync,
-  refreshUserAsync,   // ← MPYA
+  refreshUserAsync,
 } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import Navbar from "../components/Navbar.jsx";
@@ -33,7 +27,7 @@ import {
   User, Mail, Phone, MapPin, Camera, Pencil, Check, X, Shield, Lock,
   Bell, Globe, Eye, EyeOff, LogOut, Trash2, Home, Heart, MessageSquare,
   Star, Calendar, Settings, ChevronRight, AlertTriangle, Tag,
-  ShoppingBag, Loader2, Copy, KeyRound,
+  ShoppingBag, Loader2, Copy, KeyRound, ChevronLeft,
 } from "lucide-react";
 
 import PageLoader from "../components/PageLoader.jsx";
@@ -173,7 +167,7 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
 }
 
 // ============================================================
-// OVERVIEW TAB (bila stats)
+// OVERVIEW TAB
 // ============================================================
 function OverviewTab({ user, lang }) {
   const bioText =
@@ -833,7 +827,7 @@ function SecurityTab({ lang, user }) {
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
+                               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary"
               >
                 {showConfirm ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
@@ -962,14 +956,11 @@ function SecurityTab({ lang, user }) {
 function NotificationsTab({ lang }) {
   const DEFAULT_PREFS = {
     email_deals: true,
-    email_messages: true,
+    email_properties: true,
     email_promotions: false,
     email_newsletter: true,
-    sms_deals: true,
-    sms_messages: false,
-    sms_promotions: false,
     push_deals: true,
-    push_messages: true,
+    push_properties: true,
     push_promotions: false,
   };
 
@@ -1038,25 +1029,17 @@ function NotificationsTab({ lang }) {
     {
       title: lang === "sw" ? "Barua Pepe" : "Email",
       items: [
-        { key: "email_deals", label: lang === "sw" ? "Deals na Mali" : "Deals and Properties" },
-        { key: "email_messages", label: lang === "sw" ? "Ujumbe" : "Messages" },
+        { key: "email_deals", label: lang === "sw" ? "Deals (Deal Room)" : "Deals (Deal Room)" },
+        { key: "email_properties", label: lang === "sw" ? "Mali (Properties)" : "Properties" },
         { key: "email_promotions", label: lang === "sw" ? "Matangazo" : "Promotions" },
         { key: "email_newsletter", label: lang === "sw" ? "Newsletter" : "Newsletter" },
       ],
     },
     {
-      title: "SMS",
-      items: [
-        { key: "sms_deals", label: lang === "sw" ? "Deals na Mali" : "Deals and Properties" },
-        { key: "sms_messages", label: lang === "sw" ? "Ujumbe" : "Messages" },
-        { key: "sms_promotions", label: lang === "sw" ? "Matangazo" : "Promotions" },
-      ],
-    },
-    {
       title: lang === "sw" ? "Taarifa za Ndani" : "Push Notifications",
       items: [
-        { key: "push_deals", label: lang === "sw" ? "Deals na Mali" : "Deals and Properties" },
-        { key: "push_messages", label: lang === "sw" ? "Ujumbe" : "Messages" },
+        { key: "push_deals", label: lang === "sw" ? "Deals (Deal Room)" : "Deals (Deal Room)" },
+        { key: "push_properties", label: lang === "sw" ? "Mali (Properties)" : "Properties" },
         { key: "push_promotions", label: lang === "sw" ? "Matangazo" : "Promotions" },
       ],
     },
@@ -1340,6 +1323,21 @@ export default function ProfilePage() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("overview");
+  const tabsRef = useRef(null);
+  const [showScrollLeft, setShowScrollLeft] = useState(false);
+
+  // ✅ FIX: Ongeza ufuatiliaji wa scroll kwa tabs
+  useEffect(() => {
+    const el = tabsRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      setShowScrollLeft(el.scrollLeft > 10);
+    };
+
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const dashboardSide = useDashboardSide();
   const [viewMode, setViewModeState] = useState(dashboardSide);
@@ -1348,7 +1346,6 @@ export default function ProfilePage() {
     setViewModeState(dashboardSide);
   }, [dashboardSide]);
 
-  // ── Refresh user kutoka backend ili isVerified iwe live ─────
   useEffect(() => {
     if (user?.id) {
       refreshUserAsync();
@@ -1356,7 +1353,6 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Sikiliza events ili refresh mara moja ──────────────────
   useEffect(() => {
     const onRefresh = () => {
       if (user?.id) refreshUserAsync();
@@ -1405,7 +1401,6 @@ export default function ProfilePage() {
 
   const avatarUrl = user.avatar || user.avatarUrl || user.avatar_url || null;
 
-  // Verified badge text kulingana na currentRole
   const verifiedLabel = (() => {
     if (!user.isVerified) return null;
     const role = user.currentRole || "neither";
@@ -1501,8 +1496,18 @@ export default function ProfilePage() {
       </section>
 
       <div className="bg-white border-b border-gray-100 sticky top-16 z-40">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="flex justify-center overflow-x-auto -mb-px">
+        <div className="max-w-5xl mx-auto px-4 relative">
+          {/* ✅ FIX: Tabs scroll — kitufe cha kwanza kinaonekana, scroll pande zote mbili */}
+          <div
+            ref={tabsRef}
+            className="flex overflow-x-auto -mb-px"
+            style={{
+              scrollbarWidth: "thin",
+              WebkitOverflowScrolling: "touch",
+              scrollBehavior: "smooth",
+              overscrollBehaviorX: "contain",
+            }}
+          >
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -1522,6 +1527,21 @@ export default function ProfilePage() {
               );
             })}
           </div>
+
+          {/* ✅ Kitufe cha kurudi kushoto (kinaonekana tu kwenye simu) */}
+          {showScrollLeft && (
+            <button
+              onClick={() => {
+                if (tabsRef.current) {
+                  tabsRef.current.scrollTo({ left: 0, behavior: "smooth" });
+                }
+              }}
+              className="sm:hidden fixed bottom-20 left-4 z-40 bg-white border border-gray-200 rounded-full p-2 shadow-lg"
+              aria-label={lang === "sw" ? "Rudi kushoto" : "Scroll left"}
+            >
+              <ChevronLeft size={18} />
+            </button>
+          )}
         </div>
       </div>
 
