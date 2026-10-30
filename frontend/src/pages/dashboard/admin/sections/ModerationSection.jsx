@@ -1,19 +1,11 @@
 // ============================================================
 // ModerationSection.jsx
 // Approve / Reject / Request Edit / Request Payment / Finalize
-//
-// Marekebisho:
-//  - Normalize status (UPPERCASE kutoka backend → lowercase logic)
-//  - Fetch kwa UPPERCASE (PENDING_APPROVAL, PAID_PENDING_APPROVAL, n.k.)
-//  - Filter tab "Zilizouzwa" (sold), "Zilizoisha Muda" (expired)
-//  - Sold + Expired listings zinaonekana kwa admin (read-only)
-//  - Bilingual support (SW/EN)
-//  - "Approve (Free)" button kama listing haina fee
 // ============================================================
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   CheckCircle, XCircle, MoreVertical, Loader2, Trash2, RotateCcw,
-  Image, Pencil, Wallet, CheckCheck, ShoppingBag, Clock,
+  Image, Pencil, Wallet, CheckCheck, ShoppingBag, Clock, ChevronLeft,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -44,7 +36,6 @@ function normalizeStatus(s) {
 
 // ============================================================
 // Je, listing hii ni BURE (admin amezima fee)?
-// Inasoma fields za snake_case na camelCase.
 // ============================================================
 function isListingFree(listing) {
   if (!listing) return false;
@@ -85,10 +76,26 @@ export default function ModerationSection() {
   const [releaseModal, setReleaseModal] = useState(null);
   const [imageListing, setImageListing] = useState(null);
   const [decided, setDecided] = useState({});
+  const [showScrollLeft, setShowScrollLeft] = useState(false);
+
+  const filtersRef = useRef(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const formatTZS = (amount) =>
     "TZS " + Math.round(amount || 0).toLocaleString("en-US");
+
+  // ✅ FIX: Ongeza ufuatiliaji wa scroll ili kitufe cha "Rudi Kushoto" kionekane
+  useEffect(() => {
+    const el = filtersRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      setShowScrollLeft(el.scrollLeft > 10);
+    };
+
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -278,7 +285,7 @@ export default function ModerationSection() {
       : { ...f, count: f.key === "zote" ? statusCounts._all : statusCounts[f.key] || 0 }
   );
 
-  const clearBusy = (id) =>
+    const clearBusy = (id) =>
     setBusy((b) => {
       const n = { ...b };
       delete n[id];
@@ -415,7 +422,6 @@ export default function ModerationSection() {
     clearBusy(listingId);
     setRequestPaymentModal(null);
     if (res.ok) {
-      // Kama ni free, backend itarudisha status LIVE moja kwa moja
       const newStatus =
         res.listing?.status || (isFree ? "LIVE" : "APPROVED_PENDING_PAYMENT");
       const finalStatus = String(newStatus).toUpperCase();
@@ -512,7 +518,6 @@ export default function ModerationSection() {
     } else {
       const detail = String(res.error?.data?.detail || res.error?.message || "");
       if (/foreign key|conversations/i.test(detail)) {
-        // Mali ina mazungumzo (conversations) — backend haikuruhusu kufuta kabisa
         setError(
           t(
             "Mali hii ina mazungumzo ya wanunuzi, kwa hiyo haiwezi kufutwa kabisa. Tumia Disapprove ili iondolewe kwenye soko.",
@@ -573,13 +578,12 @@ export default function ModerationSection() {
     </button>
   );
 
-  // ── Action buttons kwa kila status ──────────────────────
+    // ── Action buttons kwa kila status ──────────────────────
   const renderActions = (listing, fullWidth = false) => {
-    const status = normalizeStatus(listing.status);   // ⬅️ NORMALIZED
+    const status = normalizeStatus(listing.status);
     const isBusy = !!busy[listing.id];
     const currentAction = busy[listing.id];
 
-    // ✅ Check kama listing haina fee (bure)
     const isFree = isListingFree(listing);
     const PayIcon = isFree ? CheckCheck : Wallet;
     const payLabel = isFree
@@ -683,7 +687,6 @@ export default function ModerationSection() {
             {t("Kataa", "Reject")}
           </button>
           
-          {/* ✅ Kitufe cha "Omba Malipo" / "Idhinisha (Bure)" */}
           <button
             onClick={() => openRequestPaymentModal(listing.id, isFree)}
             disabled={isBusy}
@@ -823,7 +826,7 @@ export default function ModerationSection() {
             onClick={() => openDeleteModal(listing.id)}
             disabled={isBusy}
             style={{ color: "#DC2626", borderColor: "rgba(220,38,38,0.4)" }}
-            className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 ${
+                        className={`inline-flex items-center justify-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border hover:bg-red-50 disabled:opacity-50 ${
               fullWidth ? "flex-1" : ""
             }`}
           >
@@ -1060,7 +1063,17 @@ export default function ModerationSection() {
         </div>
       )}
 
-      <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full">
+      {/* ✅ FIX: Filters scroll — pande zote mbili, scrollbar inayoonekana */}
+      <div 
+        ref={filtersRef}
+        className="flex gap-2 mb-4 overflow-x-auto pb-2 w-full"
+        style={{
+          scrollbarWidth: "thin",
+          WebkitOverflowScrolling: "touch",
+          scrollBehavior: "smooth",
+          overscrollBehaviorX: "contain",
+        }}
+      >
         {filters.map((f) => (
           <button
             key={f.key}
@@ -1078,6 +1091,21 @@ export default function ModerationSection() {
           </button>
         ))}
       </div>
+
+      {/* ✅ Kitufe cha kurudi kushoto (kinaonekana tu kwenye simu) */}
+      {showScrollLeft && (
+        <button
+          onClick={() => {
+            if (filtersRef.current) {
+              filtersRef.current.scrollTo({ left: 0, behavior: "smooth" });
+            }
+          }}
+          className="sm:hidden fixed bottom-20 left-4 z-40 bg-white border border-gray-200 rounded-full p-2 shadow-lg"
+          aria-label={t("Rudi kushoto", "Scroll left")}
+        >
+          <ChevronLeft size={18} />
+        </button>
+      )}
 
       {loading && (
         <div className="flex items-center justify-center py-8 text-muted text-sm gap-2">
