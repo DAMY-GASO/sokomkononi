@@ -465,10 +465,10 @@ export default function BoostSasa({
       );
     }
 
-    const raw = await boostingApi.create({
-      listing: selectedListing.id,
-      package: packageId,
-    });
+    // Fee imezimwa → package ni optional; tuma tu kama ipo
+    const payload = { listing: selectedListing.id };
+    if (packageId) payload.package = packageId;
+    const raw = await boostingApi.create(payload);
     console.log("[BoostSasa] create response:", raw);
     return raw;
   };
@@ -979,12 +979,11 @@ export default function BoostSasa({
 
         {liveListings.length > 0 && stage !== "paying" && !existingBoost && !loadingBoostStatus && (
           <>
-            <p className="text-primary text-sm font-medium mb-3 text-center">
-              2.{" "}
-              {feeFree
-                ? t("Chagua kifurushi (Bure)", "Choose Package (Free)")
-                : t("Chagua Njia ya Malipo", "Choose Payment Option")}
-            </p>
+            {!feeFree && (
+              <p className="text-primary text-sm font-medium mb-3 text-center">
+                2. {t("Chagua Njia ya Malipo", "Choose Payment Option")}
+              </p>
+            )}
 
             <div
               className={`flex justify-center gap-2 mb-4${
@@ -1023,7 +1022,7 @@ export default function BoostSasa({
               )}
             </div>
 
-            {paymentMode === "flat" && (
+            {!feeFree && paymentMode === "flat" && (
               <>
                 {boostPackages.length === 0 ? (
                   <p className="text-muted text-sm text-center py-6">
@@ -1054,7 +1053,7 @@ export default function BoostSasa({
               </>
             )}
 
-            {paymentMode === "bundle" && (
+            {!feeFree && paymentMode === "bundle" && (
               <>
                 {boostBundles.length === 0 ? (
                   <p className="text-muted text-sm text-center py-6">

@@ -334,6 +334,10 @@ export default function LeadingSasa({
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const selectedPackage = leadingPackages.find((p) => p.id === packageId);
   const selectedBundle = leadingBundles.find((b) => b.id === bundleId);
+  // Muda wa leading: kutoka package; bila package backend hutumia default siku 7 (168h)
+  const leadDays = selectedPackage
+    ? selectedPackage.days || selectedPackage.duration_days || 1
+    : 7;
 
   const creditInfo = checkCredit(user?.id, "leading");
   const hasCredit = creditInfo.hasCredit && feeEnabled;
@@ -344,7 +348,7 @@ export default function LeadingSasa({
     !existingLeading &&
     !loadingLeadingStatus &&
     (feeDisabled
-      ? Boolean(selectedPackage)
+      ? true // fee imezimwa: package haihitajiki
       : paymentMode === "flat"
         ? Boolean(selectedPackage)
         : Boolean(selectedBundle));
@@ -360,10 +364,10 @@ export default function LeadingSasa({
         )
       );
     }
-    const purchase = await api.post("/leading-fees/purchases/apply/", {
-      listing: selectedListing.id,
-      package: pkgId,
-    });
+    // Fee imezimwa → package ni optional; tuma tu kama ipo
+    const payload = { listing: selectedListing.id };
+    if (pkgId) payload.package = pkgId;
+    const purchase = await api.post("/leading-fees/purchases/apply/", payload);
     const purchaseId =
       purchase?.id || purchase?.purchase_id || purchase?.purchaseId;
     if (!purchaseId) {
@@ -385,7 +389,7 @@ export default function LeadingSasa({
     try {
       const purchaseId = await createPendingPurchase();
       await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {});
-      const days = selectedPackage?.days || 1;
+      const days = leadDays;
       const expiresAt = new Date(
         Date.now() + days * 86400000
       ).toISOString();
@@ -416,7 +420,7 @@ export default function LeadingSasa({
           await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {
             payment_reference: "credits",
           });
-          const days = selectedPackage?.days || 1;
+          const days = leadDays;
           const expiresAt = new Date(
             Date.now() + days * 86400000
           ).toISOString();
@@ -481,7 +485,7 @@ export default function LeadingSasa({
       await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {
         payment_reference: "credits",
       });
-      const days = selectedPackage?.days || 1;
+      const days = leadDays;
       const expiresAt = new Date(
         Date.now() + days * 86400000
       ).toISOString();
@@ -571,7 +575,7 @@ export default function LeadingSasa({
         await api.post(`/leading-fees/purchases/${purchaseId}/pay/`, {
           payment_reference: "credits",
         });
-        const days = selectedPackage?.days || 1;
+        const days = leadDays;
         const expiresAt = new Date(
           Date.now() + days * 86400000
         ).toISOString();
@@ -746,12 +750,11 @@ export default function LeadingSasa({
         {/* 2. Chagua Package */}
         {liveListings.length > 0 && stage !== "paying" && !existingLeading && !loadingLeadingStatus && (
           <>
-            <p className="text-primary text-sm font-medium mb-3 text-center">
-              2.{" "}
-              {feeDisabled
-                ? t("Chagua Package (Bure)", "Choose Package (Free)")
-                : t("Chagua Njia ya Malipo", "Choose Payment Option")}
-            </p>
+            {!feeDisabled && (
+              <p className="text-primary text-sm font-medium mb-3 text-center">
+                2. {t("Chagua Njia ya Malipo", "Choose Payment Option")}
+              </p>
+            )}
 
             <div className={`flex justify-center gap-2 mb-4${feeDisabled ? " hidden" : ""}`}>
               <button
@@ -780,7 +783,7 @@ export default function LeadingSasa({
               )}
             </div>
 
-            {paymentMode === "flat" && (
+            {!feeDisabled && paymentMode === "flat" && (
               <>
                 {leadingPackages.length === 0 ? (
                   <p className="text-muted text-sm text-center py-6">
@@ -803,7 +806,7 @@ export default function LeadingSasa({
               </>
             )}
 
-            {paymentMode === "bundle" && (
+            {!feeDisabled && paymentMode === "bundle" && (
               <>
                 {leadingBundles.length === 0 ? (
                   <p className="text-muted text-sm text-center py-6">

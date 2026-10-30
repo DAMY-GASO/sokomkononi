@@ -348,7 +348,7 @@ export default function AdvertiseSasa({
   const canProceed =
     canAdvertise &&
     (feeDisabled
-      ? Boolean(selectedPackage)
+      ? true // fee imezimwa: package haihitajiki
       : paymentMode === "flat"
         ? Boolean(selectedPackage)
         : Boolean(selectedBundle));
@@ -366,10 +366,10 @@ export default function AdvertiseSasa({
         )
       );
     }
-    const created = await api.post("/banners/", {
-      listing: selectedListing.id,
-      package: pkgId,
-    });
+    // Fee imezimwa → package ni optional; tuma tu kama ipo
+    const payload = { listing: selectedListing.id };
+    if (pkgId) payload.package = pkgId;
+    const created = await api.post("/banners/", payload);
     const bannerId = created?.id;
     if (!bannerId) {
       throw new Error(
@@ -738,12 +738,11 @@ export default function AdvertiseSasa({
         {/* 2. Packages / Njia ya Malipo */}
         {liveListings.length > 0 && stage !== "paying" && !existingBanner && !loadingBannerStatus && (
           <>
-            <p className="text-primary text-sm font-medium mb-3 text-center">
-              2.{" "}
-              {feeDisabled
-                ? t("Chagua Package (Bure)", "Choose Package (Free)")
-                : t("Chagua Njia ya Malipo", "Choose Payment Option")}
-            </p>
+            {!feeDisabled && (
+              <p className="text-primary text-sm font-medium mb-3 text-center">
+                2. {t("Chagua Njia ya Malipo", "Choose Payment Option")}
+              </p>
+            )}
 
             <div className={`flex justify-center gap-2 mb-4${feeDisabled ? " hidden" : ""}`}>
               <button
@@ -772,7 +771,7 @@ export default function AdvertiseSasa({
               )}
             </div>
 
-            {paymentMode === "flat" && (
+            {!feeDisabled && paymentMode === "flat" && (
               <>
                 {advertisementPackages.length === 0 ? (
                   <p className="text-muted text-sm text-center py-6">
@@ -795,7 +794,7 @@ export default function AdvertiseSasa({
               </>
             )}
 
-            {paymentMode === "bundle" && (
+            {!feeDisabled && paymentMode === "bundle" && (
               <>
                 {adsBundles.length === 0 ? (
                   <p className="text-muted text-sm text-center py-6">
