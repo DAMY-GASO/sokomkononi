@@ -3,6 +3,7 @@
 // + ✅ PENDING/ACTIVE status — inaonyesha banner iliyopo
 // + ✅ Clear existing kabla ya request mpya
 // + ✅ Defensive: data.pending &&, console.log, timeout
+// + ✅ FIXED: Inaonyesha Listing Picker hata kama banner ipo, na kitufe cha "Change Listing"
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -259,7 +260,7 @@ export default function AdvertiseSasa({
   const [pendingBanner, setPendingBanner] = useState(null);
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
 
-  // ── MPYA: hali ya banner iliyopo ──
+  // ── hali ya banner iliyopo ──
   const [existingBanner, setExistingBanner] = useState(null);
   const [loadingBannerStatus, setLoadingBannerStatus] = useState(false);
 
@@ -296,7 +297,7 @@ export default function AdvertiseSasa({
     }
   }, [adsBundles, bundleId]);
 
-  // ── MPYA: pata status ya banner kwa listing ──
+  // ── pata status ya banner kwa listing ──
   useEffect(() => {
     if (!selectedId) {
       setExistingBanner(null);
@@ -332,6 +333,8 @@ export default function AdvertiseSasa({
 
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const alreadyAdvertising = selectedListing ? activeBannerListingIds.has(selectedListing.id) : false;
+  
+  // ✅ canAdvertise inazuia malipo kama tayari kuna tangazo
   const canAdvertise =
     Boolean(selectedListing) &&
     !alreadyAdvertising &&
@@ -348,7 +351,7 @@ export default function AdvertiseSasa({
   const canProceed =
     canAdvertise &&
     (feeDisabled
-      ? true // fee imezimwa: package haihitajiki
+      ? true 
       : paymentMode === "flat"
         ? Boolean(selectedPackage)
         : Boolean(selectedBundle));
@@ -366,7 +369,6 @@ export default function AdvertiseSasa({
         )
       );
     }
-    // Fee imezimwa → package ni optional; tuma tu kama ipo
     const payload = { listing: selectedListing.id };
     if (pkgId) payload.package = pkgId;
     const created = await api.post("/banners/", payload);
@@ -577,19 +579,6 @@ export default function AdvertiseSasa({
     setError("");
   };
 
-  // ── DEBUG ────────────────────────────────────────────────
-  console.log("[AdvertiseSasa] RENDER STATE", {
-    selectedId,
-    selectedListing: selectedListing?.id,
-    feeEnabled,
-    existingBanner: existingBanner ? existingBanner.type : null,
-    loadingBannerStatus,
-    canAdvertise,
-    canProceed,
-    selectedPackage: selectedPackage?.id,
-    alreadyAdvertising,
-  });
-
   // ── DONE SCREEN ────────────────────────────────────────────
   if (done) {
     const doneTitle =
@@ -649,7 +638,7 @@ export default function AdvertiseSasa({
           </div>
         )}
 
-        {/* ── MPYA: PENDING panel ── */}
+        {/* ── PENDING panel ── */}
         {existingBanner?.type === "pending" && (
           <PendingPurchasePanel
             module="banners"
@@ -666,19 +655,35 @@ export default function AdvertiseSasa({
           />
         )}
 
-        {/* ── MPYA: ACTIVE banner ── */}
+        {/* ── ACTIVE banner (Imeongezwa kitufe cha kubadilisha mali) ── */}
         {existingBanner?.type === "active" && (
           <div
-            className="rounded-xl border px-4 py-3 mb-4 flex items-center gap-2"
+            className="rounded-xl border px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3"
             style={{ background: "rgba(47,109,79,0.1)", borderColor: COLORS.green }}
           >
-            <Check size={16} color={COLORS.green} />
-            <span className="text-sm font-semibold" style={{ color: COLORS.green }}>
-              {t(
-                `Tangazo linafanya kazi hadi ${new Date(existingBanner.data.expires_at).toLocaleDateString("sw-TZ")}`,
-                `Banner active until ${new Date(existingBanner.data.expires_at).toLocaleDateString("en-US")}`
-              )}
-            </span>
+            <div className="flex items-center gap-2">
+              <Check size={16} color={COLORS.green} />
+              <span className="text-sm font-semibold" style={{ color: COLORS.green }}>
+                {t(
+                  `Tangazo linafanya kazi hadi ${new Date(existingBanner.data.expires_at).toLocaleDateString("sw-TZ")}`,
+                  `Banner active until ${new Date(existingBanner.data.expires_at).toLocaleDateString("en-US")}`
+                )}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                const otherListing = liveListings.find(l => l.id !== selectedId);
+                if (otherListing) {
+                  setSelectedId(otherListing.id);
+                } else {
+                  setSelectedId(null); 
+                }
+              }}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border shadow-sm shrink-0"
+              style={{ borderColor: COLORS.green, color: COLORS.green }}
+            >
+              {t("Chagua Mali Nyingine", "Change Listing")}
+            </button>
           </div>
         )}
 
@@ -717,8 +722,8 @@ export default function AdvertiseSasa({
           </div>
         )}
 
-        {/* 1. Chagua Mali */}
-        {stage !== "paying" && !existingBanner && !loadingBannerStatus && (
+        {/* 1. Chagua Mali (Listing Picker) - Sasa inaonekana hata kama kuna existingBanner */}
+        {stage !== "paying" && !loadingBannerStatus && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               1. {t("Chagua Mali (Live pekee)", "Select Property (Live only)")}
@@ -736,7 +741,7 @@ export default function AdvertiseSasa({
         )}
 
         {/* 2. Packages / Njia ya Malipo */}
-        {liveListings.length > 0 && stage !== "paying" && !existingBanner && !loadingBannerStatus && (
+        {liveListings.length > 0 && stage !== "paying" && !loadingBannerStatus && (
           <>
             {!feeDisabled && (
               <p className="text-primary text-sm font-medium mb-3 text-center">
