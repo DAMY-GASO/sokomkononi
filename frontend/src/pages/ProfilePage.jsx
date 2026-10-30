@@ -1029,8 +1029,8 @@ function NotificationsTab({ lang }) {
     {
       title: lang === "sw" ? "Barua Pepe" : "Email",
       items: [
-        { key: "email_deals", label: lang === "sw" ? "Deals (Deal Room)" : "Deals (Deal Room)" },
-        { key: "email_properties", label: lang === "sw" ? "Mali (Properties)" : "Properties" },
+        { key: "email_deals", label: lang === "sw" ? "Vyumba vya majadiliano" : "Deal Room" },
+        { key: "email_properties", label: lang === "sw" ? "Mali" : "Listings" },
         { key: "email_promotions", label: lang === "sw" ? "Matangazo" : "Promotions" },
         { key: "email_newsletter", label: lang === "sw" ? "Newsletter" : "Newsletter" },
       ],
@@ -1038,8 +1038,8 @@ function NotificationsTab({ lang }) {
     {
       title: lang === "sw" ? "Taarifa za Ndani" : "Push Notifications",
       items: [
-        { key: "push_deals", label: lang === "sw" ? "Deals (Deal Room)" : "Deals (Deal Room)" },
-        { key: "push_properties", label: lang === "sw" ? "Mali (Properties)" : "Properties" },
+        { key: "push_deals", label: lang === "sw" ? "Vyumba vya majadiliano" : "Deal Room" },
+        { key: "push_properties", label: lang === "sw" ? "Mali" : "Listings" },
         { key: "push_promotions", label: lang === "sw" ? "Matangazo" : "Promotions" },
       ],
     },
