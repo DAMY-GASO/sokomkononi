@@ -3,6 +3,7 @@
 // + ✅ PENDING/ACTIVE status — inaonyesha leading iliyopo
 // + ✅ Clear existing kabla ya request mpya
 // + ✅ Defensive: data.pending &&, console.log, timeout
+// + ✅ FIXED: Inaonyesha Listing Picker hata kama leading ipo, na kitufe cha "Change Listing"
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -260,7 +261,7 @@ export default function LeadingSasa({
   const [pendingPurchase, setPendingPurchase] = useState(null);
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
 
-  // ── MPYA: hali ya leading iliyopo ──
+  // ── hali ya leading iliyopo ──
   const [existingLeading, setExistingLeading] = useState(null);
   const [loadingLeadingStatus, setLoadingLeadingStatus] = useState(false);
 
@@ -297,7 +298,7 @@ export default function LeadingSasa({
     }
   }, [leadingBundles, bundleId]);
 
-  // ── MPYA: pata status ya leading kwa listing ──
+  // ── pata status ya leading kwa listing ──
   useEffect(() => {
     if (!selectedId) {
       setExistingLeading(null);
@@ -334,7 +335,7 @@ export default function LeadingSasa({
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const selectedPackage = leadingPackages.find((p) => p.id === packageId);
   const selectedBundle = leadingBundles.find((b) => b.id === bundleId);
-  // Muda wa leading: kutoka package; bila package backend hutumia default siku 7 (168h)
+  
   const leadDays = selectedPackage
     ? selectedPackage.days || selectedPackage.duration_days || 1
     : 7;
@@ -343,12 +344,13 @@ export default function LeadingSasa({
   const hasCredit = creditInfo.hasCredit && feeEnabled;
   const leadingCreditRemaining = creditInfo.remaining || 0;
 
+  // ✅ canLead inazuia malipo kama tayari kuna leading
   const canLead =
     Boolean(selectedListing) &&
     !existingLeading &&
     !loadingLeadingStatus &&
     (feeDisabled
-      ? true // fee imezimwa: package haihitajiki
+      ? true 
       : paymentMode === "flat"
         ? Boolean(selectedPackage)
         : Boolean(selectedBundle));
@@ -364,7 +366,6 @@ export default function LeadingSasa({
         )
       );
     }
-    // Fee imezimwa → package ni optional; tuma tu kama ipo
     const payload = { listing: selectedListing.id };
     if (pkgId) payload.package = pkgId;
     const purchase = await api.post("/leading-fees/purchases/apply/", payload);
@@ -597,17 +598,6 @@ export default function LeadingSasa({
     setError("");
   };
 
-  // ── DEBUG ────────────────────────────────────────────────
-  console.log("[LeadingSasa] RENDER STATE", {
-    selectedId,
-    selectedListing: selectedListing?.id,
-    feeEnabled,
-    existingLeading: existingLeading ? existingLeading.type : null,
-    loadingLeadingStatus,
-    canLead,
-    selectedPackage: selectedPackage?.id,
-  });
-
   // ── DONE SCREEN ────────────────────────────────────────────
   if (done) {
     const doneTitle =
@@ -667,7 +657,7 @@ export default function LeadingSasa({
           </div>
         )}
 
-        {/* ── MPYA: PENDING panel ── */}
+        {/* ── PENDING panel ── */}
         {existingLeading?.type === "pending" && (
           <PendingPurchasePanel
             module="leading"
@@ -684,19 +674,35 @@ export default function LeadingSasa({
           />
         )}
 
-        {/* ── MPYA: ACTIVE banner ── */}
+        {/* ── ACTIVE banner (Imeongezwa kitufe cha kubadilisha mali) ── */}
         {existingLeading?.type === "active" && (
           <div
-            className="rounded-xl border px-4 py-3 mb-4 flex items-center gap-2"
+            className="rounded-xl border px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3"
             style={{ background: "rgba(47,109,79,0.1)", borderColor: COLORS.green }}
           >
-            <Check size={16} color={COLORS.green} />
-            <span className="text-sm font-semibold" style={{ color: COLORS.green }}>
-              {t(
-                `Leading inafanya kazi hadi ${new Date(existingLeading.data.expires_at).toLocaleDateString("sw-TZ")}`,
-                `Leading active until ${new Date(existingLeading.data.expires_at).toLocaleDateString("en-US")}`
-              )}
-            </span>
+            <div className="flex items-center gap-2">
+              <Check size={16} color={COLORS.green} />
+              <span className="text-sm font-semibold" style={{ color: COLORS.green }}>
+                {t(
+                  `Leading inafanya kazi hadi ${new Date(existingLeading.data.expires_at).toLocaleDateString("sw-TZ")}`,
+                  `Leading active until ${new Date(existingLeading.data.expires_at).toLocaleDateString("en-US")}`
+                )}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                const otherListing = liveListings.find(l => l.id !== selectedId);
+                if (otherListing) {
+                  setSelectedId(otherListing.id);
+                } else {
+                  setSelectedId(null); 
+                }
+              }}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border shadow-sm shrink-0"
+              style={{ borderColor: COLORS.green, color: COLORS.green }}
+            >
+              {t("Chagua Mali Nyingine", "Change Listing")}
+            </button>
           </div>
         )}
 
@@ -735,8 +741,8 @@ export default function LeadingSasa({
           </div>
         )}
 
-        {/* 1. Chagua Mali */}
-        {stage !== "paying" && !existingLeading && !loadingLeadingStatus && (
+        {/* 1. Chagua Mali (Listing Picker) - Sasa inaonekana hata kama kuna existingLeading */}
+        {stage !== "paying" && !loadingLeadingStatus && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               1. {t("Chagua Mali (Live pekee)", "Select Property (Live only)")}
@@ -747,8 +753,8 @@ export default function LeadingSasa({
           </>
         )}
 
-        {/* 2. Chagua Package */}
-        {liveListings.length > 0 && stage !== "paying" && !existingLeading && !loadingLeadingStatus && (
+        {/* 2. Chagua Package - Sasa inaonekana hata kama kuna existingLeading */}
+        {liveListings.length > 0 && stage !== "paying" && !loadingLeadingStatus && (
           <>
             {!feeDisabled && (
               <p className="text-primary text-sm font-medium mb-3 text-center">
@@ -855,7 +861,7 @@ export default function LeadingSasa({
                       : handleBeginBundlePayment
                 }
                 disabled={!canLead || busy}
-                style={{
+                  style={{
                   background: canLead && !busy ? COLORS.gold : COLORS.sandLine,
                   color: canLead && !busy ? COLORS.night : "rgba(16,26,46,0.4)",
                 }}
