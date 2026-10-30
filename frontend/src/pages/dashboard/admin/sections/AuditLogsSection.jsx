@@ -1,12 +1,6 @@
 // ============================================================
 // AuditLogsSection.jsx
 // Admin — Audit Logs (nani, lini, nini).
-//
-// Marekebisho:
-//  - Delete button kwa kila log (moja moja)
-//  - "Clear All" button (zote)
-//  - Detail modal ya kufungua log
-//  - Actions zote zina icons
 // ============================================================
 
 import React, { useState, useMemo } from "react";
@@ -49,14 +43,7 @@ import {
 
 // ============================================================
 // LOCALIZED LOG TEXT
-// `target` na `details` zinaweza kuja kwa njia hizi (zote zinaungwa mkono):
-//   1. object:        details: { sw: "...", en: "..." }
-//   2. sehemu mbili:  details + detailsEn  (au details_en / detailsSw / details_sw)
-//   3. string moja:   details: "..."  → inaonyeshwa kama ilivyo (haiwezi kutafsiriwa
-//      kwenye frontend; backend inapaswa kutuma matoleo mawili au object)
 // ============================================================
-// Logs za zamani za mfumo wenyewe (audit.deleted / audit.cleared) ziliandikwa kwa lugha moja
-// kabla ya `details_sw/details_en` kuwepo — hizi tunazitafsiri hapa kutoka kwenye muundo wake.
 function legacyDetails(log, lang) {
   const raw = typeof log?.details === "string" ? log.details : "";
   if (!raw) return "";
@@ -82,13 +69,19 @@ function legacyDetails(log, lang) {
 function pickText(log, field, lang) {
   if (!log) return "";
   const v = log[field];
+  
+  // ✅ Kama ni object (mfano details_bilingual)
   if (v && typeof v === "object") return v[lang] || v.sw || v.en || "";
+  
+  // ✅ Kama kuna detailsSw/detailsEn
   const sw = log[`${field}Sw`] ?? log[`${field}_sw`];
   const en = log[`${field}En`] ?? log[`${field}_en`];
+  
   if (!sw && !en && field === "details") {
     const legacy = legacyDetails(log, lang);
     if (legacy) return legacy;
   }
+  
   if (lang === "en") return en || v || sw || "";
   return sw || v || en || "";
 }
@@ -97,68 +90,80 @@ function pickText(log, field, lang) {
 // ACTION ICONS
 // ============================================================
 const ACTION_ICONS = {
-  // Listings
   "listing.approved": CheckCircle,
   "listing.rejected": XCircle,
   "listing.deleted": Trash2,
   "listing.restored": RotateCcw,
+  "listing.disapproved": XCircle,
+  "listing.marked_sold": CheckCircle,
+  "listing.request_edit": FileText,
+  "listing.request_payment": DollarSign,
+  "listing.finalize_approved": CheckCircle,
+  "listing.bulk_approved": CheckCircle,
+  "listing.bulk_rejected": XCircle,
+  "listing.bulk_deleted": Trash2,
 
-  // Users
   "user.suspended": AlertTriangle,
   "user.activated": CheckCircle,
   "user.verified": ShieldCheck,
   "user.deleted": Trash2,
+  "user.updated": User,
+  "user.permanent_deleted": Trash2,
 
-  // Verifications
   "verification.approved": ShieldCheck,
   "verification.rejected": XCircle,
 
-  // Deals / Disputes
   "dispute.resolved": AlertTriangle,
   "deal.cancelled": XCircle,
+  "deal.cancelled_by_admin": XCircle,
+  "deal.reported": AlertTriangle,
   "refund.issued": DollarSign,
 
-  // Fees
   "fee.updated": DollarSign,
+  "fee.created": DollarSign,
+  "fee.deleted": Trash2,
 
-  // Categories
   "category.created": Tag,
   "category.updated": Tag,
   "category.deleted": Trash2,
+  "category.reordered": Tag,
 
-  // Announcements
   "announcement.created": Megaphone,
   "announcement.sent": Megaphone,
   "announcement.deleted": Trash2,
 
-  // Content
   "content.banner.created": ImageIcon,
   "content.banner.updated": ImageIcon,
   "content.banner.deleted": Trash2,
 
-  // Bundles
   "bundle.created": Package,
   "bundle.updated": Package,
   "bundle.deleted": Trash2,
 
-  // RBAC
   "rbac.role.created": ShieldCheck,
   "rbac.role.updated": ShieldCheck,
   "rbac.role.deleted": Trash2,
   "rbac.staff.assigned": UserCog,
   "rbac.staff.removed": UserCog,
 
-  // Trash
+  "ticket.created": FileText,
+  "ticket.message_added": FileText,
+  "ticket.attachments_uploaded": FileText,
+  "ticket.status_changed": FileText,
+  "ticket.priority_changed": FileText,
+  "ticket.assigned": UserCog,
+  "ticket.deleted": Trash2,
+
   "trash.restored": RotateCcw,
   "trash.hard_deleted": Trash2,
+  "trash.refunds_created": DollarSign,
+  "trash.cascade_deleted": Trash2,
   "core.purge_soft_deleted": Trash2,
 
-  // System
   "webhook.created": Webhook,
   "webhook.deleted": Trash2,
   "system.policy.updated": ShieldCheck,
 
-  // Audit
   "audit.deleted": Trash2,
   "audit.cleared": Trash2,
 };
@@ -253,7 +258,6 @@ function LogDetailModal({ log, lang, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50">
       <div className="bg-card rounded-t-2xl sm:rounded-2xl max-w-lg w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="sticky top-0 bg-card border-b border-hairline p-4 sm:p-5 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div
@@ -280,23 +284,19 @@ function LogDetailModal({ log, lang, onClose }) {
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-4 sm:p-5 space-y-4">
-          {/* Admin */}
           <Field
             icon={User}
             label={t("Msimamizi", "Admin")}
             value={log.adminName || "—"}
           />
 
-          {/* Time */}
           <Field
             icon={Clock}
             label={t("Muda", "Time")}
             value={formatDate(log.at)}
           />
 
-          {/* Target */}
           {pickText(log, "target", lang) && (
             <Field
               icon={Tag}
@@ -305,7 +305,6 @@ function LogDetailModal({ log, lang, onClose }) {
             />
           )}
 
-          {/* Details */}
           {pickText(log, "details", lang) && (
             <div>
               <p className="text-[10px] font-semibold text-muted uppercase mb-1 flex items-center gap-1">
@@ -321,7 +320,6 @@ function LogDetailModal({ log, lang, onClose }) {
             </div>
           )}
 
-          {/* IP */}
           {log.ipAddress && (
             <Field
               icon={Globe}
@@ -331,7 +329,6 @@ function LogDetailModal({ log, lang, onClose }) {
             />
           )}
 
-          {/* Request Path */}
           {log.requestPath && (
             <Field
               icon={Route}
@@ -341,7 +338,6 @@ function LogDetailModal({ log, lang, onClose }) {
             />
           )}
 
-          {/* User Agent */}
           {log.userAgent && (
             <Field
               icon={Monitor}
@@ -350,7 +346,6 @@ function LogDetailModal({ log, lang, onClose }) {
             />
           )}
 
-          {/* Log ID */}
           <Field
             icon={Hash}
             label={t("Log ID", "Log ID")}
@@ -424,9 +419,6 @@ export default function AuditLogsSection() {
     return result;
   }, [logs, actionFilter, query, lang]);
 
-  // ============================================================
-  // HANDLERS
-  // ============================================================
   const handleRemoveConfirm = async () => {
     if (!confirmDelete) return;
     const id = confirmDelete.id;
@@ -464,7 +456,6 @@ export default function AuditLogsSection() {
       );
     } else {
       setError("");
-      // Reflect the actual count cleared
       window.dispatchEvent(new CustomEvent("sokomkononi:toast", {
         detail: {
           type: "success",
@@ -509,7 +500,6 @@ export default function AuditLogsSection() {
         </div>
       )}
 
-      {/* Summary + Clear All */}
       <div
         style={{ borderColor: "rgb(var(--c-hairline))", background: "rgb(var(--c-card))" }}
         className="rounded-xl border p-3 sm:p-4 mb-5 flex items-start gap-3 flex-wrap w-full min-w-0"
@@ -548,10 +538,9 @@ export default function AuditLogsSection() {
         )}
       </div>
 
-      {/* Action filter */}
       {logs.length > 0 && (
         <div className="flex justify-center gap-2 mb-4 overflow-x-auto pb-2 w-full min-w-0">
-          <button
+                    <button
             onClick={() => setActionFilter("all")}
             className={`text-xs font-semibold px-3 py-1.5 rounded-full border border-hairline whitespace-nowrap shrink-0 ${
               actionFilter === "all" ? "chip-active" : "bg-card text-primary"

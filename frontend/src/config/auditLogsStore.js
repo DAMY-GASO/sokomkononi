@@ -14,12 +14,22 @@ export const AUDIT_ACTIONS = [
   { key: "listing.rejected", label: { sw: "Kataa Mali", en: "Reject Listing" }, color: "rust" },
   { key: "listing.deleted", label: { sw: "Futa Mali", en: "Delete Listing" }, color: "rust" },
   { key: "listing.restored", label: { sw: "Rejesha Mali", en: "Restore Listing" }, color: "green" },
+  { key: "listing.disapproved", label: { sw: "Ondoa Idhini ya Mali", en: "Disapprove Listing" }, color: "rust" },
+  { key: "listing.marked_sold", label: { sw: "Weka kama Imeuzwa", en: "Mark as Sold" }, color: "gold" },
+  { key: "listing.request_edit", label: { sw: "Omba Uhariri", en: "Request Edit" }, color: "gold" },
+  { key: "listing.request_payment", label: { sw: "Omba Malipo", en: "Request Payment" }, color: "gold" },
+  { key: "listing.finalize_approved", label: { sw: "Idhinisha Mwisho", en: "Finalize Approval" }, color: "green" },
+  { key: "listing.bulk_approved", label: { sw: "Idhinisha kwa Pamoja", en: "Bulk Approve" }, color: "green" },
+  { key: "listing.bulk_rejected", label: { sw: "Kataa kwa Pamoja", en: "Bulk Reject" }, color: "rust" },
+  { key: "listing.bulk_deleted", label: { sw: "Futa kwa Pamoja", en: "Bulk Delete" }, color: "rust" },
 
   // Users
   { key: "user.suspended", label: { sw: "Simamisha Mtumiaji", en: "Suspend User" }, color: "rust" },
   { key: "user.activated", label: { sw: "Washa Mtumiaji", en: "Activate User" }, color: "green" },
   { key: "user.verified", label: { sw: "Thibitisha Mtumiaji", en: "Verify User" }, color: "green" },
   { key: "user.deleted", label: { sw: "Futa Mtumiaji", en: "Delete User" }, color: "rust" },
+  { key: "user.updated", label: { sw: "Badilisha Mtumiaji", en: "Update User" }, color: "gold" },
+  { key: "user.permanent_deleted", label: { sw: "Futa Mtumiaji Kabisa", en: "Permanently Delete User" }, color: "rust" },
 
   // Verifications
   { key: "verification.approved", label: { sw: "Idhinisha Uthibitisho", en: "Approve Verification" }, color: "green" },
@@ -28,15 +38,20 @@ export const AUDIT_ACTIONS = [
   // Deals / Disputes
   { key: "dispute.resolved", label: { sw: "Tatua Mgogoro", en: "Resolve Dispute" }, color: "gold" },
   { key: "deal.cancelled", label: { sw: "Ghairi Deal", en: "Cancel Deal" }, color: "rust" },
+  { key: "deal.cancelled_by_admin", label: { sw: "Ghairi Deal (Admin)", en: "Cancel Deal (Admin)" }, color: "rust" },
+  { key: "deal.reported", label: { sw: "Ripoti Deal", en: "Report Deal" }, color: "rust" },
   { key: "refund.issued", label: { sw: "Toa Refund", en: "Issue Refund" }, color: "gold" },
 
   // Fees
   { key: "fee.updated", label: { sw: "Badilisha Ada", en: "Update Fee" }, color: "gold" },
+  { key: "fee.created", label: { sw: "Ongeza Ada", en: "Create Fee" }, color: "green" },
+  { key: "fee.deleted", label: { sw: "Futa Ada", en: "Delete Fee" }, color: "rust" },
 
   // Categories
   { key: "category.created", label: { sw: "Ongeza Kategoria", en: "Create Category" }, color: "green" },
   { key: "category.updated", label: { sw: "Badilisha Kategoria", en: "Update Category" }, color: "gold" },
   { key: "category.deleted", label: { sw: "Futa Kategoria", en: "Delete Category" }, color: "rust" },
+  { key: "category.reordered", label: { sw: "Panga Kategoria", en: "Reorder Categories" }, color: "gold" },
 
   // Announcements
   { key: "announcement.created", label: { sw: "Unda Tangazo", en: "Create Announcement" }, color: "gold" },
@@ -60,9 +75,20 @@ export const AUDIT_ACTIONS = [
   { key: "rbac.staff.assigned", label: { sw: "Ongeza Mfanyakazi", en: "Assign Staff" }, color: "green" },
   { key: "rbac.staff.removed", label: { sw: "Ondoa Mfanyakazi", en: "Remove Staff" }, color: "rust" },
 
+  // Tickets
+  { key: "ticket.created", label: { sw: "Unda Tiketi", en: "Create Ticket" }, color: "green" },
+  { key: "ticket.message_added", label: { sw: "Ongeza Ujumbe", en: "Add Message" }, color: "gold" },
+  { key: "ticket.attachments_uploaded", label: { sw: "Pakia Viambatisho", en: "Upload Attachments" }, color: "gold" },
+  { key: "ticket.status_changed", label: { sw: "Badilisha Hali ya Tiketi", en: "Change Ticket Status" }, color: "gold" },
+  { key: "ticket.priority_changed", label: { sw: "Badilisha Kipaumbele", en: "Change Priority" }, color: "gold" },
+  { key: "ticket.assigned", label: { sw: "Kabidhi Tiketi", en: "Assign Ticket" }, color: "green" },
+  { key: "ticket.deleted", label: { sw: "Futa Tiketi", en: "Delete Ticket" }, color: "rust" },
+
   // Trash
   { key: "trash.restored", label: { sw: "Rejesha kutoka Trash", en: "Restore from Trash" }, color: "green" },
   { key: "trash.hard_deleted", label: { sw: "Futa Kabisa", en: "Permanent Delete" }, color: "rust" },
+  { key: "trash.refunds_created", label: { sw: "Unda Marejesho", en: "Create Refunds" }, color: "gold" },
+  { key: "trash.cascade_deleted", label: { sw: "Futa Vilivyohusiana", en: "Cascade Delete" }, color: "rust" },
   { key: "core.purge_soft_deleted", label: { sw: "Safisha Trash", en: "Purge Trash" }, color: "rust" },
 
   // System
@@ -89,8 +115,13 @@ function write(list) {
   window.localStorage.setItem(KEY, JSON.stringify(list.slice(0, 500)));
   window.dispatchEvent(new Event(EV));
 }
+
 function norm(raw) {
   if (!raw) return null;
+  
+  // ✅ Kusoma `details_bilingual` kutoka API (kama ipo)
+  const bilingual = raw.details_bilingual || {};
+  
   return {
     id: raw.id,
     action: raw.action,
@@ -98,10 +129,10 @@ function norm(raw) {
     adminUserId: raw.admin_user,
     target: raw.target || "",
     targetId: raw.target_id,
-    // details: toleo la zamani (fallback). detailsSw/detailsEn: logs mpya zenye lugha mbili.
+    // ✅ Hifadhi details zote kwa usahihi
     details: raw.details || raw.details_sw || raw.details_en || "",
-    detailsSw: raw.details_sw || "",
-    detailsEn: raw.details_en || "",
+    detailsSw: raw.details_sw || bilingual.sw || "",
+    detailsEn: raw.details_en || bilingual.en || "",
     ipAddress: raw.ip_address || null,
     userAgent: raw.user_agent || null,
     requestPath: raw.request_path || null,
