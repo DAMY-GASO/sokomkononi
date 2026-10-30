@@ -80,10 +80,20 @@ function normalizeCategoryInCache() {
 // ============================================================
 function isFreeListing(listing) {
   if (!listing) return false;
+  
+  // ✅ Imeongezwa: Kama cache yetu mpya imeweka paymentStatus kuwa FREE
+  if (listing.paymentStatus === "FREE" || listing.payment_status === "FREE") return true;
+  
   const ps = String(listing.paymentStatus ?? listing.payment_status ?? "").toUpperCase();
   if (ps === "FREE") return true;
+  
   const raw = listing.feeAmount ?? listing.fee_amount;
-  return raw !== null && raw !== undefined && raw !== "" && Number(raw) === 0;
+  if (raw !== null && raw !== undefined && raw !== "" && Number(raw) === 0) return true;
+  
+  // ✅ Kama ni pending_approval na hana feeAmount, inamaanisha ni free listing
+  if (normalizeStatus(listing.status) === "pending_approval" && !raw) return true;
+
+  return false;
 }
 
 // ============================================================
@@ -91,7 +101,8 @@ function isFreeListing(listing) {
 // ============================================================
 function isUnpaid(listing) {
   if (!listing) return false;
-  if (isFreeListing(listing)) return false;
+  if (isFreeListing(listing)) return false; // ✅ Inarudi false kwa free listings
+  
   const s = normalizeStatus(listing.status);
 
   if (s === "pending_payment" || s === "approved_pending_payment") {
@@ -101,7 +112,7 @@ function isUnpaid(listing) {
   if (
     ["draft", "live", "reserved", "sold", "paused", "in_review",
      "rejected", "expired", "needs_edit", "paid_pending_approval",
-     "pending_approval"].includes(s)
+     "pending_approval"].includes(s) // ✅ pending_approval imo hapa, hivyo haitakuwa unpaid
   ) {
     return false;
   }
@@ -109,25 +120,6 @@ function isUnpaid(listing) {
   return listing.isPaid === false;
 }
 
-function getPhotos(listing) {
-  if (!listing) return [];
-  const arr =
-    (Array.isArray(listing.photos) && listing.photos) ||
-    (Array.isArray(listing.images) && listing.images) ||
-    [];
-  const urls = arr
-    .map((img) => {
-      if (!img) return null;
-      if (typeof img === "string") return img;
-      return (
-        img.image_url || img.url || img.image || img.src || img.file || null
-      );
-    })
-    .filter(Boolean);
-  if (urls.length) return urls;
-  if (listing.imageUrl) return [listing.imageUrl];
-  return [];
-}
 
 // ============================================================
 // MARK SOLD CONFIRM MODAL

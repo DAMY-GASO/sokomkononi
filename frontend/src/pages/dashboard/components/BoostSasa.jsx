@@ -5,6 +5,7 @@
 // + ✅ PENDING/ACTIVE status — inaonyesha boost iliyopo
 // + ✅ Clear existing kabla ya request mpya (epuka cache ya listing ya awali)
 // + ✅ Defensive: data.pending &&, console.log, timeout (purchaseStatus.js)
+// + ✅ FIXED: Inaonyesha Listing Picker na Packages hata kama boost ipo (kulingana na Advertise/Leading)
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
@@ -385,8 +386,6 @@ export default function BoostSasa({
   }, [initialListingId, liveListings]);
 
   // ── MPYA: pata status ya boost kwa listing iliyochaguliwa ──
-  // Tofauti na awali: `setExistingBoost(null)` inaitwa KABLA ya
-  // request mpya ili data ya listing ya awali isionekane.
   useEffect(() => {
     if (!selectedId) {
       setExistingBoost(null);
@@ -435,7 +434,6 @@ export default function BoostSasa({
     ? feeFree || !flatPackage.price || Number(flatPackage.price) <= 0
     : false;
 
-  // ── canBoost: feeFree haihitaji package; existingBoost inazuia ──
   const canBoost =
     feeLoaded &&
     Boolean(selectedListing) &&
@@ -446,15 +444,8 @@ export default function BoostSasa({
       : (paymentMode === "flat" && Boolean(flatPackage)) ||
         (paymentMode === "bundle" && Boolean(selectedBundle)));
 
-  // ── createBoostOnBackend: package optional kama feeFree ──
   const createBoostOnBackend = async () => {
-    console.log("[BoostSasa] createBoostOnBackend called", {
-      feeFree,
-      flatPackage: flatPackage?.id,
-      boostPackagesCount: boostPackages.length,
-    });
     const packageId = flatPackage?.id ?? boostPackages[0]?.id ?? null;
-    console.log("[BoostSasa] packageId:", packageId);
 
     if (!feeFree && !packageId) {
       throw new Error(
@@ -465,11 +456,9 @@ export default function BoostSasa({
       );
     }
 
-    // Fee imezimwa → package ni optional; tuma tu kama ipo
     const payload = { listing: selectedListing.id };
     if (packageId) payload.package = packageId;
     const raw = await boostingApi.create(payload);
-    console.log("[BoostSasa] create response:", raw);
     return raw;
   };
 
@@ -482,7 +471,6 @@ export default function BoostSasa({
     try {
       const raw = await createBoostOnBackend();
 
-      // ✅ AUTO-CONSUME CREDIT
       if (hasCredit) {
         try {
           const paid = await boostingApi.pay(raw.id, {
@@ -715,27 +703,13 @@ export default function BoostSasa({
     }
   };
 
-  // ── handleFreeBoost: package optional kama feeFree ──
   const handleFreeBoost = async () => {
-    console.log("[BoostSasa] handleFreeBoost CALLED", {
-      selectedListing: selectedListing?.id,
-      creating,
-      feeFree,
-      flatPackage: flatPackage?.id,
-      canBoost,
-    });
-
     if (!selectedListing) {
-      console.warn("[BoostSasa] no selected listing");
       setError(t("Hakuna mali iliyochaguliwa.", "No listing selected."));
       return;
     }
-    if (creating) {
-      console.warn("[BoostSasa] already creating");
-      return;
-    }
+    if (creating) return;
     if (!feeFree && !flatPackage) {
-      console.warn("[BoostSasa] no package and fee not free");
       setError(t("Hakuna package iliyochaguliwa.", "No package selected."));
       return;
     }
@@ -744,9 +718,7 @@ export default function BoostSasa({
     setError("");
     try {
       const raw = await createBoostOnBackend();
-      console.log("[BoostSasa] boost created, now paying free");
       const paid = await boostingApi.pay(raw.id, {});
-      console.log("[BoostSasa] pay response:", paid);
       const activated = paid?.boost || paid?.data?.boost || null;
       setDone({
         listing: selectedListing,
@@ -781,20 +753,6 @@ export default function BoostSasa({
     setPendingBundlePurchase(null);
     setError("");
   };
-
-  // ── DEBUG ────────────────────────────────────────────────
-  console.log("[BoostSasa] RENDER STATE", {
-    selectedId,
-    selectedListing: selectedListing?.id,
-    feeLoaded,
-    feeFree,
-    existingBoost: existingBoost ? existingBoost.type : null,
-    loadingBoostStatus,
-    canBoost,
-    flatPackage: flatPackage?.id,
-    boostPackagesCount: boostPackages.length,
-    liveListingsCount: liveListings.length,
-  });
 
   if (stage === "done" && done) {
     const doneTitle =
@@ -880,7 +838,7 @@ export default function BoostSasa({
           </div>
         )}
 
-        {/* ── MPYA: PENDING panel ── */}
+        {/* ── PENDING panel ── */}
         {existingBoost?.type === "pending" && (
           <PendingPurchasePanel
             module="boosting"
@@ -897,19 +855,35 @@ export default function BoostSasa({
           />
         )}
 
-        {/* ── MPYA: ACTIVE banner ── */}
+        {/* ── ACTIVE banner (Imeongezwa kitufe cha kubadilisha mali) ── */}
         {existingBoost?.type === "active" && (
           <div
-            className="rounded-xl border px-4 py-3 mb-4 flex items-center gap-2"
+            className="rounded-xl border px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3"
             style={{ background: "rgba(47,109,79,0.1)", borderColor: COLORS.green }}
           >
-            <Check size={16} color={COLORS.green} />
-            <span className="text-sm font-semibold" style={{ color: COLORS.green }}>
-              {t(
-                `Boost inafanya kazi hadi ${new Date(existingBoost.data.expires_at).toLocaleDateString("sw-TZ")}`,
-                `Boost active until ${new Date(existingBoost.data.expires_at).toLocaleDateString("en-US")}`
-              )}
-            </span>
+            <div className="flex items-center gap-2">
+              <Check size={16} color={COLORS.green} />
+              <span className="text-sm font-semibold" style={{ color: COLORS.green }}>
+                {t(
+                  `Boost inafanya kazi hadi ${new Date(existingBoost.data.expires_at).toLocaleDateString("sw-TZ")}`,
+                  `Boost active until ${new Date(existingBoost.data.expires_at).toLocaleDateString("en-US")}`
+                )}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                const otherListing = liveListings.find(l => l.id !== selectedId);
+                if (otherListing) {
+                  setSelectedId(otherListing.id);
+                } else {
+                  setSelectedId(null); 
+                }
+              }}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border shadow-sm shrink-0"
+              style={{ borderColor: COLORS.green, color: COLORS.green }}
+            >
+              {t("Chagua Mali Nyingine", "Change Listing")}
+            </button>
           </div>
         )}
 
@@ -957,7 +931,8 @@ export default function BoostSasa({
           </div>
         )}
 
-        {stage !== "paying" && !existingBoost && !loadingBoostStatus && (
+        {/* 1. Chagua Mali (Listing Picker) - Sasa inaonekana hata kama kuna existingBoost */}
+        {stage !== "paying" && !loadingBoostStatus && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               1.{" "}
@@ -977,7 +952,8 @@ export default function BoostSasa({
           </>
         )}
 
-        {liveListings.length > 0 && stage !== "paying" && !existingBoost && !loadingBoostStatus && (
+        {/* 2. Chagua Njia ya Malipo (Packages) - Sasa inaonekana hata kama kuna existingBoost */}
+        {liveListings.length > 0 && stage !== "paying" && !loadingBoostStatus && (
           <>
             {!feeFree && (
               <p className="text-primary text-sm font-medium mb-3 text-center">

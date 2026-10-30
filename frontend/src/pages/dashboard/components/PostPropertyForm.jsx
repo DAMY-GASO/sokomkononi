@@ -11,7 +11,11 @@ import {
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";
-import { checkDuplicateListingAsync } from "../../../config/listingsStore.js";
+import { 
+  checkDuplicateListingAsync, 
+  saveMyListings, 
+  getMyListings 
+} from "../../../config/listingsStore.js"; // ✅ Imeongezwa saveMyListings & getMyListings
 import {
   getListingFeeConfig,
   hydrateListingFeeConfigsFromApi,
@@ -305,9 +309,7 @@ export default function PostPropertyForm({
     return () => clearTimeout(timer);
   }, [effectiveTitle, base.price, loc.mkoa, loc.wilaya, loc.eneo, categoryKey, isEdit]);
 
-  // ✅ Mobile Navigation: back button/gesture inarudi hatua moja moja
-  // (paying → review → form, option → category → category list)
-  // Kila hatua mbele inaongeza history entry moja; back ya simu inaiondoa moja moja.
+  // ✅ Mobile Navigation
   const historyDepthRef = useRef(0);
   const ignorePopRef = useRef(0);
 
@@ -315,7 +317,6 @@ export default function PostPropertyForm({
   const formLevel = isEdit ? 0 : (categoryKey ? 1 : 0) + (categoryMode ? 1 : 0);
   const navLevel = stepLevel + formLevel;
 
-  // Sawazisha history na level ya sasa (mbele = push, nyuma kwa button ya ndani = go(-n))
   useEffect(() => {
     const depth = historyDepthRef.current;
     if (navLevel > depth) {
@@ -328,8 +329,6 @@ export default function PostPropertyForm({
       }
       historyDepthRef.current = navLevel;
     } else if (navLevel < depth) {
-      // Mtumiaji amerudi kwa button ya ndani (mf. "Change Category") —
-      // ondoa entries za ziada ili back ya simu isibaki "imekufa"
       const diff = depth - navLevel;
       ignorePopRef.current += 1;
       historyDepthRef.current = navLevel;
@@ -337,16 +336,15 @@ export default function PostPropertyForm({
     }
   }, [navLevel]);
 
-  // Back ya simu / gesture
   useEffect(() => {
     const handlePopState = () => {
       if (ignorePopRef.current > 0) {
         ignorePopRef.current -= 1;
         return;
       }
-      if (historyDepthRef.current === 0) return; // hakuna cha kurudi — acha router ifanye kazi yake
+      if (historyDepthRef.current === 0) return;
 
-      historyDepthRef.current -= 1; // browser tayari imerudi nyuma entry moja
+      historyDepthRef.current -= 1;
       setError("");
 
       if (stage === "paying") setStage("review");
@@ -405,8 +403,6 @@ export default function PostPropertyForm({
   };
   const clearCategory = () => {
     if (isEdit) return;
-    // Rudisha moja kwa moja kwenye orodha ya categories
-    // (chooseCategory(null) ilirudi mapema kwa sababu null haipo kwenye categories)
     setCategoryKey(null);
     setCategoryMode(null);
     setExtra({});
@@ -431,7 +427,7 @@ export default function PostPropertyForm({
     return lines.join("\n");
   };
 
-  const reset = () => {
+    const reset = () => {
     setStage("form");
     setWarnings([]);
     setCreatedListing(null);
@@ -627,6 +623,23 @@ export default function PostPropertyForm({
         setFeeAmount(0);
 
         if (publishOk || listingFeeDisabled) {
+          // ✅ REKEBISHO: Sasisha kache ya MyListings papo hapo ili status isomeke vizuri
+          try {
+            const currentCache = getMyListings();
+            let updatedCache = currentCache.map((l) =>
+              String(l.id) === String(listingId)
+                ? { ...l, status: "PENDING_APPROVAL", paymentStatus: "FREE" }
+                : l
+            );
+            // Kama listing haipo kwenye cache (kwa sababu ni mpya), tunaiongeza mbele
+            if (!updatedCache.find((l) => String(l.id) === String(listingId))) {
+              updatedCache.unshift({ ...created, status: "PENDING_APPROVAL", paymentStatus: "FREE" });
+            }
+            saveMyListings(updatedCache);
+          } catch (e) {
+            console.warn("[PostPropertyForm] cache update failed", e);
+          }
+
           setStage("done");
           onSubmit?.(created);
           return;
@@ -715,6 +728,23 @@ export default function PostPropertyForm({
     setError("");
     try {
       await api.post(`/listings/${createdListing.id}/publish/`, {});
+      
+      // ✅ REKEBISHO: Sasisha kache hapa pia
+      try {
+        const currentCache = getMyListings();
+        let updatedCache = currentCache.map((l) =>
+          String(l.id) === String(createdListing.id)
+            ? { ...l, status: "PENDING_APPROVAL", paymentStatus: "FREE" }
+            : l
+        );
+        if (!updatedCache.find((l) => String(l.id) === String(createdListing.id))) {
+          updatedCache.unshift({ ...createdListing, status: "PENDING_APPROVAL", paymentStatus: "FREE" });
+        }
+        saveMyListings(updatedCache);
+      } catch (e) {
+        console.warn("[PostPropertyForm] cache update failed", e);
+      }
+
       setStage("done");
       onSubmit?.(createdListing);
     } catch (err) {
@@ -724,7 +754,7 @@ export default function PostPropertyForm({
     }
   };
 
-  const handleFeeInitiate = async ({ methodKey, phone } = {}) => {
+    const handleFeeInitiate = async ({ methodKey, phone } = {}) => {
     if (!createdListing) return { ok: false, error: new Error("no listing") };
     try {
       const res = await api.post(`/listings/${createdListing.id}/fee/pay/`, {
@@ -1065,7 +1095,7 @@ export default function PostPropertyForm({
     );
   }
 
-  if (!isEdit && stage === "done") {
+    if (!isEdit && stage === "done") {
     return (
       <div className="w-full flex items-center justify-center p-6 bg-page min-h-screen">
         <div className="max-w-md w-full text-center bg-card rounded-2xl border border-hairline p-8">

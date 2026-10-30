@@ -25,6 +25,8 @@ export default function ContactPage() {
   const submit = async (e) => {
     e.preventDefault();
     if (busy) return;
+
+    // 1. Validation ya Msingi
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
       setError(t("Jaza sehemu zote tatu.", "Please fill in all three fields."));
       return;
@@ -33,8 +35,15 @@ export default function ContactPage() {
       setError(t("Barua pepe si sahihi.", "That email doesn't look right."));
       return;
     }
+    // 2. Validation ya Urefu wa Ujumbe (Kulingana na Backend)
+    if (form.message.trim().length < 10) {
+      setError(t("Ujumbe lazima uwe na angalau herufi 10.", "Message must be at least 10 characters."));
+      return;
+    }
+
     setBusy(true);
     setError("");
+
     try {
       await contactApi.submit({
         name: form.name.trim(),
@@ -44,11 +53,29 @@ export default function ContactPage() {
       setSent(true);
       setForm({ name: "", email: "", message: "" });
     } catch (err) {
-      setError(
-        err?.data?.detail ||
-          err?.message ||
-          t("Imeshindwa kutuma ujumbe. Jaribu tena.", "Couldn't send. Please try again.")
+      console.error("API Error Details:", err); // Kwa ajili ya debugging
+
+      let errorMsg = t(
+        "Imeshindwa kutuma ujumbe. Jaribu tena.",
+        "Couldn't send. Please try again."
       );
+
+      // 3. Kusoma makosa kutoka kwenye muundo wa Backend yako
+      if (err?.error?.fields) {
+        const fieldErrors = err.error.fields;
+        const firstField = Object.keys(fieldErrors)[0];
+        if (firstField && Array.isArray(fieldErrors[firstField])) {
+          errorMsg = fieldErrors[firstField][0]; // Mfano: "Ujumbe lazima uwe na angalau herufi 10."
+        }
+      } else if (err?.error?.message) {
+        errorMsg = err.error.message;
+      } else if (err?.data?.detail) {
+        errorMsg = err.data.detail;
+      } else if (err?.message) {
+        errorMsg = err.message;
+      }
+
+      setError(errorMsg);
     } finally {
       setBusy(false);
     }
@@ -283,6 +310,10 @@ export default function ContactPage() {
                       className="textarea min-h-[140px]"
                       disabled={busy}
                     />
+                    {/* Kionyeshi cha urefu wa ujumbe */}
+                    <p className={`mt-1 text-right text-xs ${form.message.trim().length > 0 && form.message.trim().length < 10 ? "text-[#C1502E]" : "text-secondary"}`}>
+                      {form.message.trim().length}/10 {t("herufi", "characters")}
+                    </p>
                   </label>
 
                   {error && (
@@ -335,7 +366,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* FAQ SECTION — ✅ FIX: Tumia bg-page (Tailwind class) */}
+      {/* FAQ SECTION */}
       <section id="faq" className="border-t border-hairline bg-page">
         <div className="container py-12 sm:py-16">
           <div className="mx-auto max-w-3xl">
