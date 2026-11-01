@@ -14,13 +14,37 @@ const MODULE_URLS = {
   leading: "/leading-fees/purchases",
 };
 
-const STATUS_TIMEOUT_MS = 5000;
+const STATUS_TIMEOUT_MS = 8000;
+
+// ============================================================
+// CACHE ndogo (kwa session) — ili kurudi kwenye ukurasa kusionyeshe
+// "loading" tena. Thamani: object ya status AU null (= hakuna purchase).
+// Majibu ya "unknown" HAYAWEKWI kwenye cache.
+// ============================================================
+const _cache = new Map();
+const _key = (module, listingId) => `${module}:${listingId}`;
+
+/** Rudisha status iliyo kwenye cache, au `undefined` kama haipo. */
+export function peekPurchaseStatus(module, listingId) {
+  return _cache.get(_key(module, listingId));
+}
+
+export function invalidatePurchaseStatus(module) {
+  if (!module) return _cache.clear();
+  const prefix = `${module}:`;
+  for (const k of Array.from(_cache.keys())) {
+    if (k.startsWith(prefix)) _cache.delete(k);
+  }
+}
 
 /**
  * Pata hali ya purchase (boost/banner/leading) kwa listing.
  *
- * Kumbuka: kama request inashindwa (404, CORS, network, timeout),
- * tunarudisha `null` ili UI isikwame kwenye loading milele.
+ * Matokeo:
+ *   - object ya status      → backend ilijibu
+ *   - null                  → backend ilijibu 404 (HAKUNA purchase)
+ *   - { unknown: true }     → timeout / network / 5xx — hali HAIJULIKANI.
+ *                             UI isiruhusu malipo mapya mpaka ithibitishwe.
  *
  * @param {"boosting"|"banners"|"leading"} module
  * @param {number} listingId
@@ -30,39 +54,44 @@ export async function getPurchaseStatus(module, listingId) {
   const base = MODULE_URLS[module];
   if (!base) {
     console.warn(`[purchaseStatus] Unknown module: ${module}`);
-    return null;
+    return { unknown: true };
   }
   const url = `${base}/status/${listingId}/`;
 
   let timer = null;
   try {
-    // Timeout ya sekunde 5 — kama request haipati resolve/reject, tunarudisha null.
     const timeoutPromise = new Promise((resolve) => {
       timer = setTimeout(() => {
         console.warn("[purchaseStatus] timeout:", url);
-        resolve(null);
+        resolve({ unknown: true });
       }, STATUS_TIMEOUT_MS);
     });
 
-    const result = await Promise.race([
-      api.get(url),
-      timeoutPromise,
-    ]);
+    const result = await Promise.race([api.get(url), timeoutPromise]);
 
     if (timer) clearTimeout(timer);
-    return result ?? null;
+    if (result && result.unknown) return result;
+
+    const value = result ?? null;
+    _cache.set(_key(module, listingId), value);
+    return value;
   } catch (err) {
     if (timer) clearTimeout(timer);
-    if (err?.status === 404) return null;
-    // Kwa makosa mengine (CORS, network, 500), rudisha null ili
-    // UI isikwame. Tuna-log kwa debugging.
+    if (err?.status === 404) {
+      _cache.set(_key(module, listingId), null);
+      return null;
+    }
     console.warn("[purchaseStatus] error:", url, err?.message || err);
-    return null;
+    return { unknown: true };
   }
 }
 
 export async function cancelPendingPurchase(module, purchaseId) {
   const base = MODULE_URLS[module];
   if (!base) throw new Error(`Unknown purchase module: ${module}`);
-  return api.post(`${base}/${purchaseId}/cancel/`, {});
+  try {
+    return await api.post(`${base}/${purchaseId}/cancel/`, {});
+  } finally {
+    invalidatePurchaseStatus(module);
+  }
 }

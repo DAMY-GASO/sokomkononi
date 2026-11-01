@@ -5,7 +5,7 @@
 // + ✅ Defensive: data.pending &&, console.log, timeout
 // + ✅ FIXED: Inaonyesha Listing Picker hata kama leading ipo, na kitufe cha "Change Listing"
 // ============================================================
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   TrendingUp, MapPin, Loader2, AlertTriangle,
   Wallet, Package, Check,
@@ -29,7 +29,10 @@ import { checkCredit } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 import PendingPurchasePanel from "./PendingPurchasePanel";
-import { getPurchaseStatus } from "../../../api/purchaseStatus.js";
+import {
+  getPurchaseStatus,
+  peekPurchaseStatus,
+} from "../../../api/purchaseStatus.js";
 
 function getLocalized(field, lang) {
   if (!field) return "";
@@ -235,7 +238,10 @@ export default function LeadingSasa({
 }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
-  const liveListings = listings.filter((l) => l.status === "live");
+  const liveListings = useMemo(
+    () => listings.filter((l) => l.status === "live"),
+    [listings]
+  );
 
   const leadingFee = useLeadingFeeConfig();
   const leadingPackages = useLeadingPackages();
@@ -263,18 +269,23 @@ export default function LeadingSasa({
 
   // ── hali ya leading iliyopo ──
   const [existingLeading, setExistingLeading] = useState(null);
-  const [loadingLeadingStatus, setLoadingLeadingStatus] = useState(false);
+  // ✅ Anza na true kama kuna listing — inazuia "onekana → futika → onekana"
+  const [loadingLeadingStatus, setLoadingLeadingStatus] = useState(() => Boolean(selectedId));
+  const [statusTick, setStatusTick] = useState(0); // kwa kitufe cha "Jaribu tena"
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     let cancelled = false;
     Promise.allSettled([
       hydrateLeadingFeeFromApi(),
       hydrateLeadingPackagesFromApi(),
-    ]).then(() => { if (cancelled) return; });
+    ]).then(() => { if (!cancelled) setHydrated(true); });
     return () => { cancelled = true; };
   }, []);
+  // ✅ Kama packages tayari zipo (cache/store), usionyeshe spinner kabisa
+  const pageReady = hydrated || leadingPackages.length > 0;
 
   useEffect(() => {
     if (initialListingId && liveListings.some((l) => l.id === initialListingId)) {
@@ -306,31 +317,45 @@ export default function LeadingSasa({
       return;
     }
     let cancelled = false;
-    setExistingLeading(null);
-    setLoadingLeadingStatus(true);
-    console.log("[LeadingSasa] fetching status for listing", selectedId);
+
+    const apply = (data) => {
+      if (!data) return setExistingLeading(null);
+      // Hali haijulikani (timeout/network) — USIRUHUSU malipo mapya
+      if (data.unknown) return setExistingLeading({ type: "unknown" });
+      if (data.has_pending && data.pending) {
+        return setExistingLeading({ type: "pending", data: data.pending });
+      }
+      if (data.has_active && data.active) {
+        return setExistingLeading({ type: "active", data: data.active });
+      }
+      return setExistingLeading(null);
+    };
+
+    // ✅ Kama tuna cache, onyesha papo hapo (bila loading) kisha refresh kimya
+    const cached = peekPurchaseStatus("leading", selectedId);
+    if (cached !== undefined) {
+      apply(cached);
+      setLoadingLeadingStatus(false);
+    } else {
+      setExistingLeading(null);
+      setLoadingLeadingStatus(true);
+    }
+
     getPurchaseStatus("leading", selectedId)
       .then((data) => {
-        if (cancelled) return;
-        console.log("[LeadingSasa] status response for", selectedId, ":", data);
-        if (!data) return setExistingLeading(null);
-        if (data.has_pending && data.pending) {
-          return setExistingLeading({ type: "pending", data: data.pending });
-        }
-        if (data.has_active && data.active) {
-          return setExistingLeading({ type: "active", data: data.active });
-        }
-        setExistingLeading(null);
+        if (!cancelled) apply(data);
       })
       .catch((err) => {
         console.error("[LeadingSasa] status fetch failed:", err);
-        if (!cancelled) setExistingLeading(null);
+        if (!cancelled) setExistingLeading({ type: "unknown" });
       })
       .finally(() => {
         if (!cancelled) setLoadingLeadingStatus(false);
       });
-    return () => { cancelled = true; };
-  }, [selectedId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, statusTick]);
 
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const selectedPackage = leadingPackages.find((p) => p.id === packageId);
@@ -635,6 +660,22 @@ export default function LeadingSasa({
     );
   }
 
+  if (!pageReady) {
+    return (
+      <div
+        style={{ background: COLORS.sand, minHeight: "600px" }}
+        className="w-full flex items-center justify-center"
+      >
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 size={28} className="animate-spin" color={COLORS.gold} />
+          <p className="text-secondary text-sm">
+            {t("Inapakia mipangilio...", "Loading settings...")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // ── MAIN RENDER ────────────────────────────────────────────
   return (
     <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full p-4 sm:p-6">
@@ -658,6 +699,29 @@ export default function LeadingSasa({
         )}
 
         {/* ── PENDING panel ── */}
+        {/* ── Hali haijathibitishwa (network/timeout) ── */}
+        {existingLeading?.type === "unknown" && (
+          <div
+            className="rounded-xl border px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm"
+            style={{ background: "rgba(193,80,46,0.08)", borderColor: COLORS.rust, color: COLORS.rust }}
+          >
+            <span className="flex items-center gap-2">
+              <AlertTriangle size={14} />
+              {t(
+                "Imeshindwa kuthibitisha hali ya mali hii. Angalia mtandao kisha ujaribu tena.",
+                "Couldn't verify this listing's status. Check your connection and try again."
+              )}
+            </span>
+            <button
+              onClick={() => setStatusTick((n) => n + 1)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border shadow-sm shrink-0"
+              style={{ borderColor: COLORS.rust, color: COLORS.rust }}
+            >
+              {t("Jaribu tena", "Retry")}
+            </button>
+          </div>
+        )}
+
         {existingLeading?.type === "pending" && (
           <PendingPurchasePanel
             module="leading"
@@ -742,7 +806,7 @@ export default function LeadingSasa({
         )}
 
         {/* 1. Chagua Mali (Listing Picker) - Sasa inaonekana hata kama kuna existingLeading */}
-        {stage !== "paying" && !loadingLeadingStatus && (
+        {stage !== "paying" && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               1. {t("Chagua Mali (Live pekee)", "Select Property (Live only)")}
@@ -754,8 +818,15 @@ export default function LeadingSasa({
         )}
 
         {/* 2. Chagua Package - Sasa inaonekana hata kama kuna existingLeading */}
-        {liveListings.length > 0 && stage !== "paying" && !loadingLeadingStatus && (
-          <>
+        {liveListings.length > 0 && stage !== "paying" && (
+          <div
+            style={{
+              opacity: loadingLeadingStatus ? 0.5 : 1,
+              pointerEvents: loadingLeadingStatus ? "none" : "auto",
+              transition: "opacity 150ms",
+            }}
+            aria-busy={loadingLeadingStatus}
+          >
             {!feeDisabled && (
               <p className="text-primary text-sm font-medium mb-3 text-center">
                 2. {t("Chagua Njia ya Malipo", "Choose Payment Option")}
@@ -881,7 +952,7 @@ export default function LeadingSasa({
                     : t("Nunua Kifurushi", "Buy Bundle")}
               </button>
             </div>
-          </>
+          </div>
         )}
 
         {/* Payment Gateway */}

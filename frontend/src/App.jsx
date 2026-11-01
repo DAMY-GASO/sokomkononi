@@ -140,44 +140,10 @@ function App() {
                 <Route path="/mali-zote" element={<AllListingsPage />} />
                 <Route path="/bundles" element={<BundlesPage />} />
 
-                {/* DASHBOARD — SELLER */}
-                <Route path="/dashboard" element={<DashboardShell />} />
-                <Route path="/dashboard/seller" element={<DashboardShell />} />
-                <Route path="/dashboard/overview" element={<DashboardShell />} />
-                <Route path="/dashboard/post" element={<DashboardShell />} />
-                <Route path="/dashboard/pay-listing" element={<DashboardShell />} />
-                <Route path="/dashboard/listings" element={<DashboardShell />} />
-                <Route path="/dashboard/leads" element={<DashboardShell />} />
-                <Route path="/dashboard/saved" element={<DashboardShell />} />
-                <Route path="/dashboard/boost" element={<DashboardShell />} />
-                <Route path="/dashboard/leading" element={<DashboardShell />} />
-                <Route path="/dashboard/advertise" element={<DashboardShell />} />
-                <Route path="/dashboard/bundles" element={<DashboardShell />} />
-                <Route path="/dashboard/deals" element={<DashboardShell />} />
-                <Route path="/dashboard/notifications" element={<DashboardShell />} />
-                <Route path="/dashboard/transactions" element={<DashboardShell />} />
-                <Route path="/dashboard/activity" element={<DashboardShell />} />
-                <Route path="/dashboard/verification" element={<DashboardShell />} />
-                <Route path="/dashboard/safety" element={<DashboardShell />} />
-                <Route path="/dashboard/feedback" element={<DashboardShell />} />
-                <Route path="/dashboard/listings/edit/:id" element={<DashboardShell />} />
-
-                {/* DASHBOARD — BUYER */}
-                <Route path="/dashboard/buyer" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/overview" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/browse" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/saved" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/searches" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/bundles" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/deals" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/notifications" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/waiting" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/transactions" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/safety" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/feedback" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/activity" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/verification" element={<DashboardShell />} />
-                <Route path="/dashboard/buyer/reservations" element={<DashboardShell />} />
+                {/* DASHBOARD — SELLER + BUYER
+                    Route MOJA: DashboardShell inajengwa mara moja tu na
+                    inasoma URL yenyewe (URL_TO_STATE). Hakuna remount kati ya kurasa. */}
+                <Route path="/dashboard/*" element={<DashboardShell />} />
 
                 {/* ADMIN */}
                 <Route path={ADMIN_LOGIN_PATH} element={<AdminLoginPage />} />

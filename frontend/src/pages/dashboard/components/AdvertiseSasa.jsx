@@ -5,7 +5,7 @@
 // + ✅ Defensive: data.pending &&, console.log, timeout
 // + ✅ FIXED: Inaonyesha Listing Picker hata kama banner ipo, na kitufe cha "Change Listing"
 // ============================================================
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Megaphone, MapPin, Loader2, AlertTriangle,
   Wallet, Package, Check,
@@ -28,7 +28,10 @@ import { checkCredit } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 import PendingPurchasePanel from "./PendingPurchasePanel";
-import { getPurchaseStatus } from "../../../api/purchaseStatus.js";
+import {
+  getPurchaseStatus,
+  peekPurchaseStatus,
+} from "../../../api/purchaseStatus.js";
 
 function getLocalized(field, lang) {
   if (!field) return "";
@@ -231,7 +234,10 @@ export default function AdvertiseSasa({
 }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
-  const liveListings = listings.filter((l) => l.status === "live");
+  const liveListings = useMemo(
+    () => listings.filter((l) => l.status === "live"),
+    [listings]
+  );
 
   const adFee = useAdvertisementFeeConfig();
   const advertisementPackages = useAdvertisementPackages();
@@ -262,18 +268,23 @@ export default function AdvertiseSasa({
 
   // ── hali ya banner iliyopo ──
   const [existingBanner, setExistingBanner] = useState(null);
-  const [loadingBannerStatus, setLoadingBannerStatus] = useState(false);
+  // ✅ Anza na true kama kuna listing — inazuia "onekana → futika → onekana"
+  const [loadingBannerStatus, setLoadingBannerStatus] = useState(() => Boolean(selectedId));
+  const [statusTick, setStatusTick] = useState(0); // kwa kitufe cha "Jaribu tena"
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     let cancelled = false;
     Promise.allSettled([
       hydrateAdvertisementFeeFromApi(),
       hydrateAdvertisementPackagesFromApi(),
-    ]).then(() => { if (cancelled) return; });
+    ]).then(() => { if (!cancelled) setHydrated(true); });
     return () => { cancelled = true; };
   }, []);
+  // ✅ Kama packages tayari zipo (cache/store), usionyeshe spinner kabisa
+  const pageReady = hydrated || advertisementPackages.length > 0;
 
   useEffect(() => {
     if (initialListingId && liveListings.some((l) => l.id === initialListingId)) {
@@ -305,31 +316,45 @@ export default function AdvertiseSasa({
       return;
     }
     let cancelled = false;
-    setExistingBanner(null);
-    setLoadingBannerStatus(true);
-    console.log("[AdvertiseSasa] fetching status for listing", selectedId);
+
+    const apply = (data) => {
+      if (!data) return setExistingBanner(null);
+      // Hali haijulikani (timeout/network) — USIRUHUSU malipo mapya
+      if (data.unknown) return setExistingBanner({ type: "unknown" });
+      if (data.has_pending && data.pending) {
+        return setExistingBanner({ type: "pending", data: data.pending });
+      }
+      if (data.has_active && data.active) {
+        return setExistingBanner({ type: "active", data: data.active });
+      }
+      return setExistingBanner(null);
+    };
+
+    // ✅ Kama tuna cache, onyesha papo hapo (bila loading) kisha refresh kimya
+    const cached = peekPurchaseStatus("banners", selectedId);
+    if (cached !== undefined) {
+      apply(cached);
+      setLoadingBannerStatus(false);
+    } else {
+      setExistingBanner(null);
+      setLoadingBannerStatus(true);
+    }
+
     getPurchaseStatus("banners", selectedId)
       .then((data) => {
-        if (cancelled) return;
-        console.log("[AdvertiseSasa] status response for", selectedId, ":", data);
-        if (!data) return setExistingBanner(null);
-        if (data.has_pending && data.pending) {
-          return setExistingBanner({ type: "pending", data: data.pending });
-        }
-        if (data.has_active && data.active) {
-          return setExistingBanner({ type: "active", data: data.active });
-        }
-        setExistingBanner(null);
+        if (!cancelled) apply(data);
       })
       .catch((err) => {
         console.error("[AdvertiseSasa] status fetch failed:", err);
-        if (!cancelled) setExistingBanner(null);
+        if (!cancelled) setExistingBanner({ type: "unknown" });
       })
       .finally(() => {
         if (!cancelled) setLoadingBannerStatus(false);
       });
-    return () => { cancelled = true; };
-  }, [selectedId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, statusTick]);
 
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const alreadyAdvertising = selectedListing ? activeBannerListingIds.has(selectedListing.id) : false;
@@ -616,6 +641,22 @@ export default function AdvertiseSasa({
     );
   }
 
+  if (!pageReady) {
+    return (
+      <div
+        style={{ background: COLORS.sand, minHeight: "600px" }}
+        className="w-full flex items-center justify-center"
+      >
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 size={28} className="animate-spin" color={COLORS.gold} />
+          <p className="text-secondary text-sm">
+            {t("Inapakia mipangilio...", "Loading settings...")}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // ── MAIN RENDER ────────────────────────────────────────────
   return (
     <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full p-4 sm:p-6">
@@ -639,6 +680,29 @@ export default function AdvertiseSasa({
         )}
 
         {/* ── PENDING panel ── */}
+        {/* ── Hali haijathibitishwa (network/timeout) ── */}
+        {existingBanner?.type === "unknown" && (
+          <div
+            className="rounded-xl border px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm"
+            style={{ background: "rgba(193,80,46,0.08)", borderColor: COLORS.rust, color: COLORS.rust }}
+          >
+            <span className="flex items-center gap-2">
+              <AlertTriangle size={14} />
+              {t(
+                "Imeshindwa kuthibitisha hali ya mali hii. Angalia mtandao kisha ujaribu tena.",
+                "Couldn't verify this listing's status. Check your connection and try again."
+              )}
+            </span>
+            <button
+              onClick={() => setStatusTick((n) => n + 1)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border shadow-sm shrink-0"
+              style={{ borderColor: COLORS.rust, color: COLORS.rust }}
+            >
+              {t("Jaribu tena", "Retry")}
+            </button>
+          </div>
+        )}
+
         {existingBanner?.type === "pending" && (
           <PendingPurchasePanel
             module="banners"
@@ -723,7 +787,7 @@ export default function AdvertiseSasa({
         )}
 
         {/* 1. Chagua Mali (Listing Picker) - Sasa inaonekana hata kama kuna existingBanner */}
-        {stage !== "paying" && !loadingBannerStatus && (
+        {stage !== "paying" && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               1. {t("Chagua Mali (Live pekee)", "Select Property (Live only)")}
@@ -741,8 +805,15 @@ export default function AdvertiseSasa({
         )}
 
         {/* 2. Packages / Njia ya Malipo */}
-        {liveListings.length > 0 && stage !== "paying" && !loadingBannerStatus && (
-          <>
+        {liveListings.length > 0 && stage !== "paying" && (
+          <div
+            style={{
+              opacity: loadingBannerStatus ? 0.5 : 1,
+              pointerEvents: loadingBannerStatus ? "none" : "auto",
+              transition: "opacity 150ms",
+            }}
+            aria-busy={loadingBannerStatus}
+          >
             {!feeDisabled && (
               <p className="text-primary text-sm font-medium mb-3 text-center">
                 2. {t("Chagua Njia ya Malipo", "Choose Payment Option")}
@@ -866,7 +937,7 @@ export default function AdvertiseSasa({
                     : t("Nunua Kifurushi", "Buy Bundle")}
               </button>
             </div>
-          </>
+          </div>
         )}
 
         {/* Payment Gateway */}

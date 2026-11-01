@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search, Bell, Menu, X, PlusCircle, ListChecks, Rocket, MessagesSquare,
@@ -55,11 +55,11 @@ import NotificationsPage from "../../NotificationsPage.jsx";
 import MyTransactionsPage from "../../MyTransactionsPage.jsx";
 import WaitingListPage from "../../WaitingListPage.jsx";
 import BundlesPage from "../../BundlesPage.jsx";
+import NotFoundPage from "../../NotFoundPage.jsx";
 import {
   useWaitingList,
   leaveWaitingList,
 } from "../../../config/waitingListStore.js";
-import PageLoader from "../../../components/PageLoader.jsx";
 
 const SELLER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
@@ -181,13 +181,6 @@ export default function DashboardShell() {
   const { user } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
 
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const id = setTimeout(() => setReady(true), 300);
-    return () => clearTimeout(id);
-  }, []);
-
   const isAdminUser =
     user?.role === "Admin" ||
     user?.role === "admin" ||
@@ -202,9 +195,19 @@ export default function DashboardShell() {
     fetchMyListingsFromApi();
   }, [user?.id, isAdminUser]);
 
-  const [side, setSide] = useState("seller");
-  const [activeKey, setActiveKey] = useState("overview");
-  const [editListingId, setEditListingId] = useState(null);
+  // ✅ URL ndiyo chanzo kimoja cha ukweli (side / activeKey / editListingId).
+  // Hakuna state + effect tena, kwa hiyo hakuna render ya "ukurasa wa zamani".
+  const { side, activeKey, editListingId, known } = useMemo(() => {
+    const path = location.pathname.replace(/\/+$/, "") || "/";
+    const edit = path.match(/^\/dashboard\/listings\/edit\/([^/]+)$/);
+    if (edit) {
+      return { side: "seller", activeKey: "listings", editListingId: edit[1], known: true };
+    }
+    const m = URL_TO_STATE[path];
+    return m
+      ? { side: m.side, activeKey: m.key, editListingId: null, known: true }
+      : { side: "seller", activeKey: "overview", editListingId: null, known: false };
+  }, [location.pathname]);
   const [tickerIndex, setTickerIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -242,22 +245,6 @@ export default function DashboardShell() {
     };
   }, [sidebarOpen]);
 
-  useEffect(() => {
-    const path = location.pathname;
-    const editMatch = path.match(/^\/dashboard\/listings\/edit\/([^/]+)\/?$/);
-    if (editMatch) {
-      setSide("seller");
-      setActiveKey("listings");
-      setEditListingId(editMatch[1]);
-      return;
-    }
-    const match = URL_TO_STATE[path];
-    if (match) {
-      setSide(match.side);
-      setActiveKey(match.key);
-      setEditListingId(null);
-    }
-  }, [location.pathname]);
 
   useEffect(() => {
     setDashboardSide(side);
@@ -339,8 +326,6 @@ export default function DashboardShell() {
 
   const handleNavClick = useCallback(
     (key) => {
-      setActiveKey(key);
-      setEditListingId(null);
       const url = STATE_TO_URL[side]?.[key];
       if (url) navigate(url);
     },
@@ -387,9 +372,6 @@ export default function DashboardShell() {
 
   const handleSideChange = useCallback(
     (newSide) => {
-      setSide(newSide);
-      setActiveKey("overview");
-      setEditListingId(null);
       const url = STATE_TO_URL[newSide]?.overview;
       if (url) navigate(url);
     },
@@ -621,6 +603,9 @@ export default function DashboardShell() {
     );
   };
 
+  // ✅ Njia isiyojulikana chini ya /dashboard/* → NotFound
+  if (!known) return <NotFoundPage />;
+
   if (isAdminUser) {
     return (
       <div style={{ minHeight: "100vh" }} className="bg-page w-full flex items-center justify-center p-6">
@@ -646,8 +631,6 @@ export default function DashboardShell() {
       </div>
     );
   }
-
-  if (!ready) return <PageLoader lang={lang} />;
 
   return (
     <div data-surface="sand" className="bg-page w-full flex flex-col pb-16 md:pb-0 min-h-screen">

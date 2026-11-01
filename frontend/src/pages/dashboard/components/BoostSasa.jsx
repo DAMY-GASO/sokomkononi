@@ -7,7 +7,7 @@
 // + ✅ Defensive: data.pending &&, console.log, timeout (purchaseStatus.js)
 // + ✅ FIXED: Inaonyesha Listing Picker na Packages hata kama boost ipo (kulingana na Advertise/Leading)
 // ============================================================
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Rocket,
   Check,
@@ -42,7 +42,10 @@ import { boostingApi } from "../../../api/boosting.js";
 import { api } from "../../../api/client.js";
 import PaymentGateway from "./PaymentGateway";
 import PendingPurchasePanel from "./PendingPurchasePanel";
-import { getPurchaseStatus } from "../../../api/purchaseStatus.js";
+import {
+  getPurchaseStatus,
+  peekPurchaseStatus,
+} from "../../../api/purchaseStatus.js";
 
 // ============================================================
 // HELPERS
@@ -314,7 +317,10 @@ export default function BoostSasa({
 }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
-  const liveListings = listings.filter((l) => l.status === "live");
+  const liveListings = useMemo(
+    () => listings.filter((l) => l.status === "live"),
+    [listings]
+  );
   const boostPackages = useActiveBoostPackages();
   const { loaded: feeLoaded, enabled: feeEnabled } = useBoostFee();
   const feeFree = feeLoaded && !feeEnabled;
@@ -352,7 +358,9 @@ export default function BoostSasa({
 
   // ── MPYA: hali ya boost iliyopo (active/pending) ──
   const [existingBoost, setExistingBoost] = useState(null);
-  const [loadingBoostStatus, setLoadingBoostStatus] = useState(false);
+  // ✅ Anza na true kama kuna listing — inazuia "onekana → futika → onekana"
+  const [loadingBoostStatus, setLoadingBoostStatus] = useState(() => Boolean(selectedId));
+  const [statusTick, setStatusTick] = useState(0); // kwa kitufe cha "Jaribu tena"
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -393,34 +401,45 @@ export default function BoostSasa({
       return;
     }
     let cancelled = false;
-    setExistingBoost(null);
-    setLoadingBoostStatus(true);
-    console.log("[BoostSasa] fetching status for listing", selectedId);
+
+    const apply = (data) => {
+      if (!data) return setExistingBoost(null);
+      // Hali haijulikani (timeout/network) — USIRUHUSU malipo mapya
+      if (data.unknown) return setExistingBoost({ type: "unknown" });
+      if (data.has_pending && data.pending) {
+        return setExistingBoost({ type: "pending", data: data.pending });
+      }
+      if (data.has_active && data.active) {
+        return setExistingBoost({ type: "active", data: data.active });
+      }
+      return setExistingBoost(null);
+    };
+
+    // ✅ Kama tuna cache, onyesha papo hapo (bila loading) kisha refresh kimya
+    const cached = peekPurchaseStatus("boosting", selectedId);
+    if (cached !== undefined) {
+      apply(cached);
+      setLoadingBoostStatus(false);
+    } else {
+      setExistingBoost(null);
+      setLoadingBoostStatus(true);
+    }
+
     getPurchaseStatus("boosting", selectedId)
       .then((data) => {
-        if (cancelled) return;
-        console.log("[BoostSasa] status response for", selectedId, ":", data);
-        if (!data) return setExistingBoost(null);
-        if (data.has_pending && data.pending) {
-          return setExistingBoost({ type: "pending", data: data.pending });
-        }
-        if (data.has_active && data.active) {
-          return setExistingBoost({ type: "active", data: data.active });
-        }
-        setExistingBoost(null);
+        if (!cancelled) apply(data);
       })
       .catch((err) => {
         console.error("[BoostSasa] status fetch failed:", err);
-        if (!cancelled) setExistingBoost(null);
+        if (!cancelled) setExistingBoost({ type: "unknown" });
       })
       .finally(() => {
-        console.log("[BoostSasa] loadingBoostStatus → false for", selectedId);
         if (!cancelled) setLoadingBoostStatus(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [selectedId]);
+  }, [selectedId, statusTick]);
 
   const selectedListing = liveListings.find((l) => l.id === selectedId);
   const flatPackage = boostPackages.find((p) => p.id === flatPackageId);
@@ -839,6 +858,29 @@ export default function BoostSasa({
         )}
 
         {/* ── PENDING panel ── */}
+        {/* ── Hali haijathibitishwa (network/timeout) ── */}
+        {existingBoost?.type === "unknown" && (
+          <div
+            className="rounded-xl border px-4 py-3 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm"
+            style={{ background: "rgba(193,80,46,0.08)", borderColor: COLORS.rust, color: COLORS.rust }}
+          >
+            <span className="flex items-center gap-2">
+              <AlertTriangle size={14} />
+              {t(
+                "Imeshindwa kuthibitisha hali ya mali hii. Angalia mtandao kisha ujaribu tena.",
+                "Couldn't verify this listing's status. Check your connection and try again."
+              )}
+            </span>
+            <button
+              onClick={() => setStatusTick((n) => n + 1)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border shadow-sm shrink-0"
+              style={{ borderColor: COLORS.rust, color: COLORS.rust }}
+            >
+              {t("Jaribu tena", "Retry")}
+            </button>
+          </div>
+        )}
+
         {existingBoost?.type === "pending" && (
           <PendingPurchasePanel
             module="boosting"
@@ -932,7 +974,7 @@ export default function BoostSasa({
         )}
 
         {/* 1. Chagua Mali (Listing Picker) - Sasa inaonekana hata kama kuna existingBoost */}
-        {stage !== "paying" && !loadingBoostStatus && (
+        {stage !== "paying" && (
           <>
             <p className="text-primary text-sm font-medium mb-3 text-center">
               1.{" "}
@@ -953,8 +995,15 @@ export default function BoostSasa({
         )}
 
         {/* 2. Chagua Njia ya Malipo (Packages) - Sasa inaonekana hata kama kuna existingBoost */}
-        {liveListings.length > 0 && stage !== "paying" && !loadingBoostStatus && (
-          <>
+        {liveListings.length > 0 && stage !== "paying" && (
+          <div
+            style={{
+              opacity: loadingBoostStatus ? 0.5 : 1,
+              pointerEvents: loadingBoostStatus ? "none" : "auto",
+              transition: "opacity 150ms",
+            }}
+            aria-busy={loadingBoostStatus}
+          >
             {!feeFree && (
               <p className="text-primary text-sm font-medium mb-3 text-center">
                 2. {t("Chagua Njia ya Malipo", "Choose Payment Option")}
@@ -1113,7 +1162,7 @@ export default function BoostSasa({
                     : t("Nunua Kifurushi", "Buy Bundle")}
               </button>
             </div>
-          </>
+          </div>
         )}
 
         {stage === "paying" && (
