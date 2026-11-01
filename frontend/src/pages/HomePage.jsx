@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowRight, Search, MessageSquare, KeyRound } from "lucide-react";
 
@@ -20,6 +20,144 @@ import { usePopularCategories } from "../config/categoriesStore.js";
 import { useContent } from "../config/contentStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { Section, SectionHeader, Card } from "../components/ui";
+
+// ============================================================
+// HELPERS — vigezo vya kila sehemu ya homepage
+// ============================================================
+
+// Mali yenye "search priority" (imelipiwa Leading Fee).
+// ⚠️ Kama jina la field kwenye listing yako ni tofauti, rekebisha HAPA tu.
+function isLeadingListing(l) {
+  if (!l) return false;
+  if (
+    l.isLeading === true ||
+    l.is_leading === true ||
+    l.leading === true ||
+    l.leadingActive === true ||
+    l.hasSearchPriority === true ||
+    l.searchPriority === true
+  ) {
+    return true;
+  }
+  const until =
+    l.leadingUntil ||
+    l.leading_until ||
+    l.leadingExpiresAt ||
+    l.leading_expires_at;
+  if (until) {
+    const ts = new Date(until).getTime();
+    return Number.isFinite(ts) && ts > Date.now();
+  }
+  return false;
+}
+
+// Category ya listing inaweza kuwa id, slug, jina, au object {id, name, slug}.
+function listingCategoryKeys(l) {
+  const c = l?.category ?? l?.categoryId ?? l?.category_id ?? l?.categorySlug;
+  const out = [];
+  const push = (v) => {
+    if (v === null || v === undefined || v === "") return;
+    out.push(String(v).toLowerCase());
+  };
+  if (c && typeof c === "object") {
+    push(c.id);
+    push(c.slug);
+    push(c.name);
+  } else {
+    push(c);
+  }
+  push(l?.categorySlug);
+  return out;
+}
+
+function categoryKeys(cat) {
+  const out = [];
+  [cat?.id, cat?.slug, cat?.key, cat?.name].forEach((v) => {
+    if (v !== null && v !== undefined && v !== "") out.push(String(v).toLowerCase());
+  });
+  return out;
+}
+
+// ============================================================
+// FAIR ROTATION + TIER PRIORITY
+// - Mali zenye kifurushi cha juu zinatangulia (tier ya juu kwanza)
+// - Ndani ya tier ile ile, mpangilio unazunguka (rotation) ili kila
+//   aliyelipa apate nafasi kwa zamu — si views nyingi tu.
+// ⚠️ Majina ya fields za tier hayajathibitishwa; rekebisha hapa tu.
+// ============================================================
+const DEDUPE_SECTIONS = true; // mali moja isionekane kwenye sehemu zaidi ya moja
+const ROTATION_WINDOW_MS = 10 * 60 * 1000; // rotation inabadilika kila dakika 10
+
+const num = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+function leadingTier(l) {
+  return num(
+    l.leadingPriority ?? l.leading_priority ?? l.leadingTier ??
+    l.leadingPackage?.priority ?? l.leadingPackage?.price ??
+    l.leadingPrice ?? l.leading_price
+  );
+}
+
+function boostTier(l) {
+  return num(
+    l.boostPriority ?? l.boost_priority ?? l.boostTier ??
+    l.boostPackage?.priority ?? l.boostPackage?.price ??
+    l.boostPrice ?? l.boost_price
+  );
+}
+
+// PRNG yenye seed (mulberry32) — matokeo ni thabiti ndani ya dirisha moja
+function mulberry32(seed) {
+  let a = seed | 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffled(arr, rand) {
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+function rotateByTier(list, getTier, seed, limit) {
+  const groups = new Map();
+  list.forEach((l) => {
+    const t = getTier(l);
+    if (!groups.has(t)) groups.set(t, []);
+    groups.get(t).push(l);
+  });
+  const rand = mulberry32(seed);
+  const out = [];
+  for (const t of Array.from(groups.keys()).sort((a, b) => b - a)) {
+    out.push(...shuffled(groups.get(t), rand));
+    if (out.length >= limit) break;
+  }
+  return out.slice(0, limit);
+}
+
+function ViewAllCategories({ lang }) {
+  return (
+    <div className="mx-auto flex max-w-7xl justify-center px-4 pb-10 pt-2 sm:px-6">
+      <Link
+        to="/kategoria"
+        className="inline-flex items-center gap-2 rounded-full bg-[#FEA406] px-6 py-3 text-sm font-bold text-[#011957] shadow-sm transition-transform hover:scale-[1.02]"
+      >
+        {lang === "sw" ? "Ona Kategoria Zote" : "View All Categories"}
+        <ArrowRight size={16} />
+      </Link>
+    </div>
+  );
+}
 
 function HowItWorks() {
   const { lang } = useLanguage();
@@ -61,6 +199,7 @@ export default function HomePage() {
   const popularCategories = usePopularCategories();
   const content = useContent();
   const savedIds = useSavedIds();
+  const [rotationSeed] = useState(() => Math.floor(Date.now() / ROTATION_WINDOW_MS));
 
   const handleBuyNow = () => { if (user) navigate("/dashboard/buyer"); else navigate("/register?intent=buy"); };
   const handleSellNow = () => { if (user) navigate("/dashboard/post"); else navigate("/register?intent=sell"); };
@@ -68,9 +207,51 @@ export default function HomePage() {
   const handleToggleSave = (id, listing) => toggleSaved(id, listing);
 
   const liveListings = useMemo(() => publicListings.filter((l) => l.status === "live"), [publicListings]);
-  const featured = useMemo(() => liveListings.slice().sort((a, b) => { const aS = (a.isBoosted ? 2 : 0) + (a.views || 0) / 1000; const bS = (b.isBoosted ? 2 : 0) + (b.views || 0) / 1000; return bS - aS; }).slice(0, 8), [liveListings]);
-  const newArrivals = useMemo(() => liveListings.slice().sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0)).slice(0, 6), [liveListings]);
-  const boosted = useMemo(() => liveListings.filter((l) => l.isBoosted).slice(0, 4), [liveListings]);
+  // 1) Zinazopendekezwa → mali zenye search priority (Leading Fee).
+  //    Tier ya juu kwanza; ndani ya tier moja zinazunguka kwa haki.
+  const featured = useMemo(
+    () => rotateByTier(liveListings.filter(isLeadingListing), leadingTier, rotationSeed, 8),
+    [liveListings, rotationSeed]
+  );
+
+  // 2) Zinazopendekezwa kwa wiki → mali zilizofanyiwa boosting (tier + rotation)
+  const boosted = useMemo(() => {
+    const used = new Set(featured.map((l) => l.id));
+    const pool = liveListings.filter(
+      (l) => l.isBoosted && (!DEDUPE_SECTIONS || !used.has(l.id))
+    );
+    return rotateByTier(pool, boostTier, rotationSeed + 1, 4);
+  }, [liveListings, featured, rotationSeed]);
+
+  // 3) Mali Mpya → zilizoongezwa karibuni, bila zile zilizokwisha kuonyeshwa juu
+  const newArrivals = useMemo(() => {
+    const used = new Set();
+    if (DEDUPE_SECTIONS) {
+      featured.forEach((l) => used.add(l.id));
+      boosted.forEach((l) => used.add(l.id));
+    }
+    return liveListings
+      .filter((l) => !used.has(l.id))
+      .sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0))
+      .slice(0, 6);
+  }, [liveListings, featured, boosted]);
+
+  // 4) Categories → zenye mali tu, zenye mali nyingi zinatangulia
+  const categoriesWithListings = useMemo(() => {
+    const counts = new Map();
+    (popularCategories || []).forEach((c, idx) => {
+      const keys = new Set(categoryKeys(c));
+      let n = 0;
+      liveListings.forEach((l) => {
+        if (listingCategoryKeys(l).some((k) => keys.has(k))) n += 1;
+      });
+      if (n > 0) counts.set(c, { n, idx });
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1].n - a[1].n || a[1].idx - b[1].idx)
+      .map(([c]) => c);
+  }, [popularCategories, liveListings]);
+
   const testimonials = content?.testimonials || [];
 
   return (
@@ -80,13 +261,20 @@ export default function HomePage() {
         <BannerHero />
         <HeroSection onBuyNow={handleBuyNow} onSellNow={handleSellNow} onSearch={handleSearch} />
         <TrustBar />
-        <FeaturedSection
-          badge={lang === "sw" ? "Zinazopendekezwa" : "Featured"}
-          title={lang === "sw" ? "Mali Zinazopendekezwa" : "Featured Listings"}
-          subtitle={lang === "sw" ? "Chaguo letu lililochaguliwa la mali zinazovutia." : "Our hand-picked selection of trending properties."}
-          listings={featured} viewAllTo="/mali-zote" savedIds={savedIds} onToggleSave={handleToggleSave}
-        />
-        <CategoryBento categories={popularCategories} listings={liveListings} />
+        {featured.length > 0 && (
+          <FeaturedSection
+            badge={lang === "sw" ? "Zinazopendekezwa" : "Featured"}
+            title={lang === "sw" ? "Mali Zinazopendekezwa" : "Featured Listings"}
+            subtitle={lang === "sw" ? "Mali zenye kipaumbele cha utafutaji kutoka kwa wauzaji wetu." : "Priority listings from our sellers."}
+            listings={featured} viewAllTo="/mali-zote" savedIds={savedIds} onToggleSave={handleToggleSave}
+          />
+        )}
+        {categoriesWithListings.length > 0 && (
+          <>
+            <CategoryBento categories={categoriesWithListings} listings={liveListings} />
+            <ViewAllCategories lang={lang} />
+          </>
+        )}
         <HowItWorks />
         <FeaturedSection
           gridCols="grid-cols-2 sm:grid-cols-3"
