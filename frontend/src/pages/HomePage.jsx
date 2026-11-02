@@ -12,13 +12,14 @@ import NewsletterStrip from "../components/NewsletterStrip.jsx";
 import HeroSection from "../components/shop/HeroSection.jsx";
 import TrustBar from "../components/shop/TrustBar.jsx";
 import FeaturedSection from "../components/shop/FeaturedSection.jsx";
-import AdvertisedSection from "../components/shop/AdvertisedSection.jsx"; 
+import AdvertisedSection from "../components/shop/AdvertisedSection.jsx";
 import CategoryBento from "../components/shop/CategoryBento.jsx";
 import TestimonialsSection from "../components/shop/TestimonialsSection.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
 import { usePopularCategories } from "../config/categoriesStore.js";
 import { useContent } from "../config/contentStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
+import { useActiveBannerAds } from "../config/bannerAdsStore.js"; // <-- Muhimu kwa Advertised
 import { Section, SectionHeader, Card } from "../components/ui";
 import {
   ROTATION_WINDOW_MS,
@@ -114,6 +115,7 @@ export default function HomePage() {
   const popularCategories = usePopularCategories();
   const content = useContent();
   const savedIds = useSavedIds();
+  const activeBanners = useActiveBannerAds(); // <-- Banners halisi za matangazo
   const [rotationSeed] = useState(() => Math.floor(Date.now() / ROTATION_WINDOW_MS));
 
   const handleBuyNow = () => { if (user) navigate("/dashboard/buyer"); else navigate("/register?intent=buy"); };
@@ -129,14 +131,31 @@ export default function HomePage() {
     [liveListings, rotationSeed]
   );
 
-  // 2) ADVERTISED (Mpya) - Mali 8
+  // 2) ADVERTISED (kutoka banners) - Mali 8
   const advertised = useMemo(() => {
     const used = new Set(featured.map((l) => l.id));
+    
+    // Pata listingId zote zilizo kwenye banners hai
+    const bannerListingIds = activeBanners
+      .filter((b) => b.listingId)
+      .map((b) => String(b.listingId));
+    
+    // Chuja listings zenye banners, bila kurudia
     const pool = liveListings.filter(
-      (l) => (l.isAdvertised || l.is_advertised || l.advertisedActive) && (!DEDUPE_SECTIONS || !used.has(l.id))
+      (l) => bannerListingIds.includes(String(l.id)) && (!DEDUPE_SECTIONS || !used.has(l.id))
     );
-    return rotateByTier(pool, () => 1, rotationSeed + 2, 8);
-  }, [liveListings, featured, rotationSeed]);
+
+    // Panga kwa tarehe ya kuisha (zinazokaribia kuisha kwanza)
+    return pool
+      .sort((a, b) => {
+        const aBanner = activeBanners.find((b) => String(b.listingId) === String(a.id));
+        const bBanner = activeBanners.find((b) => String(b.listingId) === String(b.id));
+        const aExp = aBanner?.expiresAt ? new Date(aBanner.expiresAt).getTime() : 0;
+        const bExp = bBanner?.expiresAt ? new Date(bBanner.expiresAt).getTime() : 0;
+        return aExp - bExp;
+      })
+      .slice(0, 8);
+  }, [liveListings, featured, activeBanners]);
 
   // 3) TRENDING (Boost) - Mali 8
   const boosted = useMemo(() => {
@@ -209,7 +228,7 @@ export default function HomePage() {
           </>
         )}
 
-        {/* 3. ADVERTISED LISTINGS (Mpya) */}
+        {/* 3. ADVERTISED LISTINGS (kutoka banners) */}
         {advertised.length > 0 && (
           <AdvertisedSection
             badge={lang === "sw" ? "Matangazo" : "Advertised"}
@@ -219,6 +238,7 @@ export default function HomePage() {
             viewAllTo="/mali-zote?aina=tangazo" 
             savedIds={savedIds} 
             onToggleSave={handleToggleSave}
+            banners={activeBanners} // <-- Pitisha banners kwa countdown
           />
         )}
 

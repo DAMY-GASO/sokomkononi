@@ -87,25 +87,18 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
   // ✅ SAFE: getCatLabel sasa inarudisha STRING kila mara
   const getCatLabel = (cat) => {
     if (!cat) return "";
-    // 1. Jaribu label[lang]
     const labelLang = safeStr(cat.label?.[lang]);
     if (labelLang) return labelLang;
-    // 2. Jaribu label.sw
     const labelSw = safeStr(cat.label?.sw);
     if (labelSw) return labelSw;
-    // 3. Jaribu label.en
     const labelEn = safeStr(cat.label?.en);
     if (labelEn) return labelEn;
-    // 4. Jaribu label kama string
     const labelStr = safeStr(cat.label);
     if (labelStr) return labelStr;
-    // 5. Jaribu name
     const name = safeStr(cat.name);
     if (name) return name;
-    // 6. Jaribu key
     const key = safeStr(cat.key);
     if (key) return key;
-    // 7. Jaribu slug
     const slug = safeStr(cat.slug);
     if (slug) return slug;
     return "";
@@ -330,6 +323,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                   <NavLink to="/kuhusu" className={navLinkCls}>
                     {lang === "sw" ? "Kuhusu" : "About"}
                   </NavLink>
+                  {/* ✅ Matangazo → /mali-zote */}
                   <NavLink to="/mali-zote" className={navLinkCls}>
                     {lang === "sw" ? "Matangazo" : "Ads"}
                   </NavLink>
@@ -550,8 +544,9 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                 </Link>
               </div>
             )}
+            {/* ✅ Matangazo → /mali-zote (mobile) */}
             <Link
-              to="/tafuta"
+              to="/mali-zote"
               className="flex items-center rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
             >
               {lang === "sw" ? "Matangazo" : "Ads"}
