@@ -19,7 +19,7 @@ import { usePublicListings } from "../config/listingsStore.js";
 import { usePopularCategories } from "../config/categoriesStore.js";
 import { useContent } from "../config/contentStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
-import { useActiveBannerAds } from "../config/bannerAdsStore.js"; // <-- Muhimu kwa Advertised
+import { useActiveBannerAds } from "../config/bannerAdsStore.js";
 import { Section, SectionHeader, Card } from "../components/ui";
 import {
   ROTATION_WINDOW_MS,
@@ -115,7 +115,7 @@ export default function HomePage() {
   const popularCategories = usePopularCategories();
   const content = useContent();
   const savedIds = useSavedIds();
-  const activeBanners = useActiveBannerAds(); // <-- Banners halisi za matangazo
+  const activeBanners = useActiveBannerAds();
   const [rotationSeed] = useState(() => Math.floor(Date.now() / ROTATION_WINDOW_MS));
 
   const handleBuyNow = () => { if (user) navigate("/dashboard/buyer"); else navigate("/register?intent=buy"); };
@@ -134,18 +134,12 @@ export default function HomePage() {
   // 2) ADVERTISED (kutoka banners) - Mali 8
   const advertised = useMemo(() => {
     const used = new Set(featured.map((l) => l.id));
-    
-    // Pata listingId zote zilizo kwenye banners hai
     const bannerListingIds = activeBanners
       .filter((b) => b.listingId)
       .map((b) => String(b.listingId));
-    
-    // Chuja listings zenye banners, bila kurudia
     const pool = liveListings.filter(
       (l) => bannerListingIds.includes(String(l.id)) && (!DEDUPE_SECTIONS || !used.has(l.id))
     );
-
-    // Panga kwa tarehe ya kuisha (zinazokaribia kuisha kwanza)
     return pool
       .sort((a, b) => {
         const aBanner = activeBanners.find((b) => String(b.listingId) === String(a.id));
@@ -209,7 +203,7 @@ export default function HomePage() {
         <BannerHero />
         <HeroSection onBuyNow={handleBuyNow} onSellNow={handleSellNow} onSearch={handleSearch} />
         <TrustBar />
-        
+
         {/* 1. FEATURED LISTINGS */}
         {featured.length > 0 && (
           <FeaturedSection
@@ -228,29 +222,29 @@ export default function HomePage() {
           </>
         )}
 
-        {/* 3. ADVERTISED LISTINGS (kutoka banners) */}
+        {/* 3. ADVERTISED LISTINGS (kutoka banners, na Countdown) */}
         {advertised.length > 0 && (
           <AdvertisedSection
             badge={lang === "sw" ? "Matangazo" : "Advertised"}
             title={lang === "sw" ? "Matangazo ya Washirika" : "Sponsored Listings"}
             subtitle={lang === "sw" ? "Mali zilizolipiwa kuonekana hapa." : "Promoted listings from our partners."}
-            listings={advertised} 
-            viewAllTo="/mali-zote?aina=tangazo" 
-            savedIds={savedIds} 
+            listings={advertised}
+            viewAllTo="/mali-zote?aina=tangazo"
+            savedIds={savedIds}
             onToggleSave={handleToggleSave}
-            banners={activeBanners} // <-- Pitisha banners kwa countdown
+            banners={activeBanners}
           />
         )}
 
         {/* 4. HOW IT WORKS */}
         <HowItWorks />
 
-        {/* 5. TRENDING LISTINGS (Boost) */}
+        {/* 5. TRENDING — kadi za kawaida zenye lebo "Inavuma" / "Trending" */}
         {boosted.length > 0 && (
           <FeaturedSection
             badge={lang === "sw" ? "Inavuma" : "Trending"}
             title={lang === "sw" ? "Mali Zinazovuma" : "Trending Listings"}
-            subtitle={lang === "sw" ? "Mali zilizolipiwa Boost na zinapata umaarufu." : "Boosted listings gaining popularity."}
+            subtitle={lang === "sw" ? "Mali zinazopata umaarufu sasa hivi." : "Listings gaining popularity right now."}
             listings={boosted} viewAllTo="/mali-zote" savedIds={savedIds} onToggleSave={handleToggleSave}
           />
         )}

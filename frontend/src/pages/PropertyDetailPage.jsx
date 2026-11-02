@@ -279,9 +279,6 @@ function FeaturesSection({ property, lang }) {
   );
 }
 
-// ============================================================
-// ATTRIBUTES TABLE
-// ============================================================
 function AttributesTable({ property, lang }) {
   const rows = useMemo(() => {
     const out = [];
@@ -374,19 +371,46 @@ function AttributesTable({ property, lang }) {
   );
 }
 
-function SellerCard({ property, status, alreadyOnWaitlist, onJoinWaitlist, onContact, onReportSeller, lang, isOwner = false, editTo }) {
+// ============================================================
+// SELLER CARD (bila WhatsApp; ina profile picture)
+// ============================================================
+function SellerCard({
+  property,
+  status,
+  alreadyOnWaitlist,
+  onJoinWaitlist,
+  onContact,
+  onReportSeller,
+  lang,
+  isOwner = false,
+  editTo,
+}) {
   const isReserved = status === "reserved";
   const isSold = status === "sold";
   const isUnavailable = isReserved || isSold;
   const sellerName = property.seller_name || t(lang, "Muuzaji", "Seller");
   const sellerInitial = sellerName.charAt(0).toUpperCase();
+  const sellerAvatar =
+    property.seller_avatar ||
+    property.sellerAvatar ||
+    property.seller?.avatar ||
+    null;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5">
       <div className="flex items-center gap-4 mb-4">
-        <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center text-gold-ink font-bold text-xl flex-shrink-0">
-          {sellerInitial}
-        </div>
+        {/* ✅ Profile picture ya muuzaji */}
+        {sellerAvatar ? (
+          <img
+            src={sellerAvatar}
+            alt={sellerName}
+            className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center text-gold-ink font-bold text-xl flex-shrink-0">
+            {sellerInitial}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-primary truncate">{sellerName}</h3>
@@ -523,7 +547,6 @@ export default function PropertyDetailPage() {
     [allListings, id]
   );
 
-  // Je, mtumiaji ni mmiliki wa tangazo hili?
   const ownerId =
     property?.sellerId ??
     property?.seller_id ??
@@ -542,9 +565,6 @@ export default function PropertyDetailPage() {
   const [contactLoading, setContactLoading] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
 
-  // ============================================================
-  // IMAGE PIPELINE
-  // ============================================================
   const [fetchedImages, setFetchedImages] = useState([]);
 
   useEffect(() => {
@@ -610,7 +630,6 @@ export default function PropertyDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [property?.id]);
 
-  // Record in "Recently Viewed"
   useEffect(() => {
     if (property?.id) trackViewed(property.id);
   }, [property?.id]);
@@ -645,18 +664,26 @@ export default function PropertyDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, property]);
 
-  // ✅ Similar Listings: mali 4 zenye category sawa, bila ya sasa
+  // ✅ Similar Listings: hadi 12, kipaumbele kwa Leading kisha views nyingi
   const similarListings = useMemo(() => {
     if (!property) return [];
-    return allListings
-      .filter(
-        (l) =>
-          String(l.id) !== String(property.id) &&
-          l.category === property.category &&
-          (l.status === "live" || l.status === "reserved")
-      )
-      .sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0))
-      .slice(0, 4);
+    const candidates = allListings.filter(
+      (l) =>
+        String(l.id) !== String(property.id) &&
+        l.category === property.category &&
+        (l.status === "live" || l.status === "reserved")
+    );
+    return candidates
+      .sort((a, b) => {
+        const aLead = isLeadingActive(a) ? 1 : 0;
+        const bLead = isLeadingActive(b) ? 1 : 0;
+        if (aLead !== bLead) return bLead - aLead;
+        const aViews = Number(a.views) || 0;
+        const bViews = Number(b.views) || 0;
+        if (aViews !== bViews) return bViews - aViews;
+        return new Date(b.postedAt || 0) - new Date(a.postedAt || 0);
+      })
+      .slice(0, 12);
   }, [allListings, property]);
 
   if (!hydrated && !property) {
@@ -1118,7 +1145,6 @@ export default function PropertyDetailPage() {
         </div>
       </div>
 
-      {/* ✅ Similar Listings */}
       {similarListings.length > 0 && (
         <SimilarListings listings={similarListings} lang={lang} />
       )}

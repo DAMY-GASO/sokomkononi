@@ -1,9 +1,7 @@
 // ============================================================
 // ContactDrawer.jsx
 // Drawer ya mawasiliano ya upande wa pili (buyer au seller)
-// wakati wa inspection. Inaonyesha jina, simu, email, button
-// za "Piga Simu" / "Tuma Email", na "Pakua Mazungumzo".
-// Inatumika kwenye DealRoom (mawasiliano ni bure — hakuna kulazimisha malipo).
+// wakati wa inspection. Inaonyesha public profile info.
 // ============================================================
 import React, { useState } from "react";
 import {
@@ -14,16 +12,33 @@ import {
   ShieldCheck,
   Download,
   Loader2,
+  User as UserIcon,
 } from "lucide-react";
 import { COLORS } from "../pages/dashboard/components/shared.js";
 import { getDealTranscript } from "../config/dealsStore.js";
 
+// ── WhatsApp Icon halisi ──
+function WhatsAppIcon({ size = 16, className = "" }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
 export default function ContactDrawer({
   open,
   onClose,
-  contact,         
-  dealId,           
-  currentUserId,    
+  contact,
+  dealId,
+  currentUserId,
   lang = "sw",
 }) {
   const [downloading, setDownloading] = useState(false);
@@ -40,6 +55,8 @@ export default function ContactDrawer({
         : t("Mtu", "Person");
 
   const initial = (contact?.name || "?").charAt(0).toUpperCase();
+  const avatar = contact?.avatar || contact?.avatarUrl || null;
+  const whatsappNumber = contact?.whatsapp || (contact?.phone ? String(contact.phone).replace(/\D/g, "") : "");
 
   // ── Download transcript ─────────────────────────────────
   const handleDownload = async (format) => {
@@ -71,10 +88,8 @@ export default function ContactDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Overlay */}
       <div className="flex-1 bg-black/40" onClick={onClose} />
 
-      {/* Drawer */}
       <div
         className="w-full sm:w-96 sm:max-w-md h-full bg-white shadow-2xl overflow-y-auto flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -85,8 +100,8 @@ export default function ContactDrawer({
           style={{ borderColor: COLORS.sandLine, background: "white" }}
         >
           <h3 className="font-semibold text-gray-800 text-sm sm:text-base flex items-center gap-2">
-            <MessageSquare size={16} color={COLORS.green} />
-            {t("Wasiliana", "Contact")}
+            <UserIcon size={16} color={COLORS.green} />
+            {t("Wasifu wa Mtumiaji", "User Profile")}
           </h3>
           <button
             onClick={onClose}
@@ -103,12 +118,20 @@ export default function ContactDrawer({
           style={{ borderColor: COLORS.sandLine }}
         >
           <div className="flex items-center gap-3">
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold shrink-0"
-              style={{ background: `${COLORS.gold}25`, color: "#8A5A16" }}
-            >
-              {initial}
-            </div>
+            {avatar ? (
+              <img
+                src={avatar}
+                alt={contact?.name || ""}
+                className="w-14 h-14 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold shrink-0"
+                style={{ background: `${COLORS.gold}25`, color: "#8A5A16" }}
+              >
+                {initial}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-gray-800 truncate">
                 {contact?.name || "—"}
@@ -216,10 +239,35 @@ export default function ContactDrawer({
                   {t("Barua Pepe", "Email")}
                 </p>
                 <p className="text-xs text-muted italic">
-                  {t("Hapatikani", "Not available")}
+                  {t("Hapotikani", "Not available")}
                 </p>
               </div>
             </div>
+          )}
+
+          {/* ✅ WhatsApp */}
+          {whatsappNumber && (
+            <a
+              href={`https://wa.me/${whatsappNumber}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 p-3 rounded-xl border hover:bg-gray-50 transition-colors"
+              style={{ borderColor: COLORS.sandLine }}
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-[#25D366]"
+              >
+                <WhatsAppIcon size={16} className="text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] text-muted uppercase font-semibold">
+                  WhatsApp
+                </p>
+                <p className="text-sm font-semibold text-primary truncate">
+                  {contact.phone || whatsappNumber}
+                </p>
+              </div>
+            </a>
           )}
         </div>
 
@@ -264,27 +312,38 @@ export default function ContactDrawer({
         </div>
 
         {/* Actions */}
-        {(contact?.phone || contact?.email) && (
+        {(contact?.phone || contact?.email || whatsappNumber) && (
           <div
-            className="p-4 border-t flex gap-2"
+            className="p-4 border-t flex gap-2 flex-wrap"
             style={{ borderColor: COLORS.sandLine }}
           >
             {contact.phone && (
               <a
                 href={`tel:${contact.phone}`}
                 style={{ background: COLORS.green, color: "white" }}
-                className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg"
+                className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg min-w-[100px]"
               >
                 <Phone size={14} /> {t("Piga Simu", "Call")}
+              </a>
+            )}
+            {whatsappNumber && (
+              <a
+                href={`https://wa.me/${whatsappNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ background: "#25D366", color: "white" }}
+                className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg min-w-[100px]"
+              >
+                <WhatsAppIcon size={14} /> WhatsApp
               </a>
             )}
             {contact.email && (
               <a
                 href={`mailto:${contact.email}`}
                 style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-                className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg border bg-white"
+                className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg border bg-white min-w-[100px]"
               >
-                <Mail size={14} /> {t("Tuma Email", "Send Email")}
+                <Mail size={14} /> {t("Tuma Email", "Email")}
               </a>
             )}
           </div>
