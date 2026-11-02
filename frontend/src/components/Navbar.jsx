@@ -252,21 +252,21 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
             </button>
 
             <Link
-  to="/"
-  onClick={handleLogoClick}
-  className="flex min-w-0 shrink items-center gap-2.5 select-none"
->
-  <img
-    src="/logo.webp"
-    alt="SokoMkononi"
-    width={32}
-    height={32}
-    className="h-8 w-8 shrink-0 rounded-full"
-  />
-  <span className="whitespace-nowrap text-[15px] font-bold tracking-tight sm:text-[16px]">
-    Soko<span className="text-gold">Mkononi</span>
-  </span>
-</Link>
+              to="/"
+              onClick={handleLogoClick}
+              className="flex min-w-0 shrink items-center gap-2.5 select-none"
+            >
+              <img
+                src="/logo.webp"
+                alt="SokoMkononi"
+                width={32}
+                height={32}
+                className="h-8 w-8 shrink-0 rounded-full"
+              />
+              <span className="whitespace-nowrap text-[15px] font-bold tracking-tight sm:text-[16px]">
+                Soko<span className="text-gold">Mkononi</span>
+              </span>
+            </Link>
 
             {/* ── Center: nav links ────────────────────────── */}
             <nav className="ml-3 hidden min-w-0 flex-1 items-center gap-0.5 lg:flex">
@@ -374,37 +374,37 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
               </button>
 
               {/* Language — visible on ALL screens (mobile + desktop) */}
-<div className="relative">
-  <button
-    type="button"
-    onClick={() => toggleMenu("lang")}
-    aria-expanded={openMenu === "lang"}
-    className="flex h-9 items-center gap-1 rounded-full border border-white/20 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white sm:h-10 sm:gap-1.5 sm:px-3 sm:text-[12px]"
-  >
-    <Globe size={12} className="sm:hidden" />
-    <Globe size={13} className="hidden sm:block" />
-    {currentLang.code}
-  </button>
-  {openMenu === "lang" && (
-    <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-night-soft py-1 shadow-xl">
-      {languages.map((l) => (
-        <button
-          key={l.code}
-          onClick={() => { setLang(l.code); setOpenMenu(null); }}
-          className={cx(
-            "flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors",
-            lang === l.code
-              ? "bg-white/[0.06] text-white"
-              : "text-white/75 hover:bg-white/[0.04] hover:text-white"
-          )}
-        >
-          {l.native}
-          {lang === l.code && <span className="h-1.5 w-1.5 rounded-full bg-gold" />}
-        </button>
-      ))}
-    </div>
-  )}
-</div>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => toggleMenu("lang")}
+                  aria-expanded={openMenu === "lang"}
+                  className="flex h-9 items-center gap-1 rounded-full border border-white/20 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white sm:h-10 sm:gap-1.5 sm:px-3 sm:text-[12px]"
+                >
+                  <Globe size={12} className="sm:hidden" />
+                  <Globe size={13} className="hidden sm:block" />
+                  {currentLang.code}
+                </button>
+                {openMenu === "lang" && (
+                  <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-night-soft py-1 shadow-xl">
+                    {languages.map((l) => (
+                      <button
+                        key={l.code}
+                        onClick={() => { setLang(l.code); setOpenMenu(null); }}
+                        className={cx(
+                          "flex w-full items-center justify-between px-4 py-2.5 text-sm transition-colors",
+                          lang === l.code
+                            ? "bg-white/[0.06] text-white"
+                            : "text-white/75 hover:bg-white/[0.04] hover:text-white"
+                        )}
+                      >
+                        {l.native}
+                        {lang === l.code && <span className="h-1.5 w-1.5 rounded-full bg-gold" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <NotificationBell />
 
@@ -440,9 +440,6 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                         </p>
                       </div>
                       {[
-                        { to: "/dashboard",        label: lang === "sw" ? "Dashibodi" : "Dashboard",       Icon: LayoutGrid },
-                        { to: "/dashboard/post",   label: lang === "sw" ? "Uza Sasa" : "Sell Now",         Icon: Plus },
-                        { to: "/dashboard/buyer",  label: lang === "sw" ? "Nunua Sasa" : "Buy Now",        Icon: Package },
                         { to: "/wasifu",           label: lang === "sw" ? "Wasifu" : "Profile",            Icon: UserIcon },
                         { to: "/alika-marafiki",   label: lang === "sw" ? "Alika Marafiki" : "Invite Friends", Icon: Users },
                       ].map(({ to, label, Icon }) => (
