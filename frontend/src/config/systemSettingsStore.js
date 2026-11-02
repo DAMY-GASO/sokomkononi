@@ -6,7 +6,7 @@
 //   - Sub-admins zimeondolewa (tumia RBACSection).
 //   - Webhooks: events zimeongezwa (7 total).
 //   - Webhooks: active normalization (raw.active !== false).
-//   - ContactInfo: imeongezwa (email, phone, whatsapp, address).
+//   - ContactInfo: imeongezwa (email, phone, whatsapp, address) — API.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -177,7 +177,7 @@ export function useAppStoreLinks() {
 }
 
 // ============================================================
-// CONTACT INFO (MPYA)
+// CONTACT INFO
 // ============================================================
 const contactInfo = makeSlice(
   "sokomkononi_contact_info_v1",
