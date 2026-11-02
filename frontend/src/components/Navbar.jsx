@@ -330,7 +330,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                   <NavLink to="/kuhusu" className={navLinkCls}>
                     {lang === "sw" ? "Kuhusu" : "About"}
                   </NavLink>
-                  <NavLink to="/tafuta" className={navLinkCls}>
+                  <NavLink to="/mali-zote" className={navLinkCls}>
                     {lang === "sw" ? "Matangazo" : "Ads"}
                   </NavLink>
 
