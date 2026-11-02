@@ -1,9 +1,10 @@
 // ============================================================
 // AllListingsPage.jsx — /mali-zote
 // ✅ FIX: Category matching inatumia safeStr, hakuna object
+// ✅ NEW: Sort By (Mpya, Bei, Maarufu)
 // ============================================================
 import React, { useMemo, useState } from "react";
-import { Home as HomeIcon } from "lucide-react";
+import { Home as HomeIcon, ChevronDown } from "lucide-react"; // <-- Ongeza ChevronDown
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
@@ -25,12 +26,9 @@ export default function AllListingsPage() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ✅ FIX: Hakuna tena `categories` prop kwa Navbar (Navbar inachukua
-  //    yenyewe kutoka useActiveCategories + usePublicListings).
-  //    Hii inaepuka mismatch ya `l.category === cat.key`.
-
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [rotationSeed] = useState(currentRotationSeed);
+  const [sortBy, setSortBy] = useState("newest"); // <-- Mpya
 
   // Mali zenye search priority (Leading Fee) zinatangulia na kuzunguka kwa haki;
   // zingine zinafuata kwa mpangilio wa mpya → za zamani.
@@ -45,10 +43,19 @@ export default function AllListingsPage() {
     [allListings, rotationSeed]
   );
 
-  const visibleListings = liveListings.slice(0, visibleCount);
-  const hasMore = visibleCount < liveListings.length;
+  // ✅ Sort By
+  const sortedListings = useMemo(() => {
+    const arr = [...liveListings];
+    if (sortBy === "price_low") return arr.sort((a, b) => (a.price || 0) - (b.price || 0));
+    if (sortBy === "price_high") return arr.sort((a, b) => (b.price || 0) - (a.price || 0));
+    if (sortBy === "popular") return arr.sort((a, b) => (b.views || 0) - (a.views || 0));
+    // newest (default)
+    return arr.sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0));
+  }, [liveListings, sortBy]);
 
-  // ✅ FIX: category lookup kwa key (string)
+  const visibleListings = sortedListings.slice(0, visibleCount);
+  const hasMore = visibleCount < sortedListings.length;
+
   const categoryByKey = useMemo(() => {
     const map = new Map();
     activeCategories.forEach((c) => {
@@ -75,7 +82,27 @@ export default function AllListingsPage() {
           </p>
         </div>
 
-        {liveListings.length === 0 ? (
+        {/* ✅ Sort By Toolbar */}
+        <div className="mb-4 flex items-center justify-end gap-2">
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="cursor-pointer appearance-none rounded-lg border border-[color:rgb(var(--c-hairline))] bg-card px-3 py-2 pr-8 text-sm font-medium text-primary outline-none focus:border-[color:rgb(var(--c-gold))]"
+            >
+              <option value="newest">{t("Mpya Kwanza", "Newest First")}</option>
+              <option value="price_low">{t("Bei: Chini → Juu", "Price: Low → High")}</option>
+              <option value="price_high">{t("Bei: Juu → Chini", "Price: High → Low")}</option>
+              <option value="popular">{t("Maarufu", "Popular")}</option>
+            </select>
+            <ChevronDown
+              size={14}
+              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted"
+            />
+          </div>
+        </div>
+
+        {sortedListings.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-hairline p-10 sm:p-16 text-center bg-page">
             <HomeIcon size={44} className="mx-auto text-muted mb-3" />
             <p className="text-sm text-secondary">
@@ -86,7 +113,6 @@ export default function AllListingsPage() {
           <>
             <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4">
               {visibleListings.map((l) => {
-                // ✅ FIX: l.category ni STRING (slug) — sio object
                 const cat = categoryByKey.get(String(l.category));
                 const Icon = getCategoryIcon(cat?.iconKey || "Home");
                 return (

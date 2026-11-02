@@ -6,6 +6,7 @@
 //   - Sub-admins zimeondolewa (tumia RBACSection).
 //   - Webhooks: events zimeongezwa (7 total).
 //   - Webhooks: active normalization (raw.active !== false).
+//   - ContactInfo: imeongezwa (email, phone, whatsapp, address).
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -176,6 +177,59 @@ export function useAppStoreLinks() {
 }
 
 // ============================================================
+// CONTACT INFO (MPYA)
+// ============================================================
+const contactInfo = makeSlice(
+  "sokomkononi_contact_info_v1",
+  "sokomkononi:contact-info-updated",
+  {
+    email: "support@sokomkononi.co.tz",
+    phone: "+255743895038",
+    whatsapp: "255743895038",
+    address: "Dar es Salaam, Tanzania",
+  }
+);
+
+export function getContactInfo() {
+  return contactInfo.read();
+}
+
+export async function hydrateContactInfoFromApi() {
+  try {
+    const d = await api.get("/system-settings/contact-info/");
+    contactInfo.save({
+      email: d?.email || "support@sokomkononi.co.tz",
+      phone: d?.phone || "+255743895038",
+      whatsapp: d?.whatsapp || "255743895038",
+      address: d?.address || "Dar es Salaam, Tanzania",
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export async function saveContactInfoAsync(info) {
+  const payload = {
+    email: info.email || "",
+    phone: info.phone || "",
+    whatsapp: info.whatsapp || "",
+    address: info.address || "",
+  };
+  try {
+    await api.post("/system-settings/contact-info/", payload);
+    contactInfo.save(payload);
+    return { ok: true, info: payload };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export function useContactInfo() {
+  return contactInfo.useSlice(hydrateContactInfoFromApi);
+}
+
+// ============================================================
 // PLATFORM POLICY
 // ============================================================
 const platformPolicy = makeSlice(
@@ -227,10 +281,11 @@ export function usePlatformPolicy() {
 // BULK HYDRATE
 // ============================================================
 export async function hydrateAllSystemSettings() {
-  const [w, a, p] = await Promise.all([
+  const [w, a, c, p] = await Promise.all([
     hydrateWebhooksFromApi(),
     hydrateAppStoreLinksFromApi(),
+    hydrateContactInfoFromApi(),
     hydratePlatformPolicyFromApi(),
   ]);
-  return { webhooks: w, appStore: a, policy: p };
+  return { webhooks: w, appStore: a, contactInfo: c, policy: p };
 }

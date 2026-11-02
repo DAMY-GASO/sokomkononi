@@ -11,6 +11,7 @@ import BottomNav from "../components/BottomNav.jsx";
 import ListingImage from "../components/ListingImage.jsx";
 import ListingMap from "../components/ListingMap.jsx";
 import BenefitTiles from "../components/shop/BenefitTiles.jsx";
+import SimilarListings from "../components/shop/SimilarListings.jsx";
 import {
   MapPin, Bed, Bath, Maximize, Calendar, Heart, Share2, Phone,
   MessageSquare, ChevronLeft, ChevronRight, CheckCircle, Shield,
@@ -40,7 +41,6 @@ import {
 } from "./dashboard/components/shared";
 
 // Mmiliki wa tangazo anapelekwa hapa kuhariri.
-// Route hii inashughulikiwa na DashboardShell.
 const ownerEditPath = (id) => `/dashboard/listings/edit/${id}`;
 
 const CATEGORY_ICONS = {
@@ -73,7 +73,6 @@ function timeAgo(dateStr, lang) {
     ? t(lang, "Mwezi 1 uliopita", "1 month ago")
     : t(lang, `Miezi ${months} iliyopita`, `${months} months ago`);
 }
-// Mara ambazo mali imewekewa reservation (kwa wanunuzi wengine kuona demand)
 function reservedTimes(count, lang) {
   const n = Number(count) || 0;
   if (n < 1) return "";
@@ -194,13 +193,11 @@ function ImageGallery({ property, lang }) {
           </>
         )}
 
-        {/* Counter — JUU KULIA (ili isiingiliane na watermark ya chini kushoto) */}
         <div className="absolute top-3 right-3 bg-black/60 text-white text-body-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 z-10">
           <Camera size={14} />
           {currentIndex + 1} / {images.length}
         </div>
 
-        {/* Featured — JUU KUSHOTO */}
         {isFeatured && (
           <div className="absolute top-3 left-3 bg-gold text-night text-body-sm font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Star size={12} fill="#011957" />
@@ -208,7 +205,6 @@ function ImageGallery({ property, lang }) {
           </div>
         )}
 
-        {/* Verified — CHINI KULIA (watermark ni chini kushoto) */}
         {isVerified && (
           <div className="absolute bottom-3 right-3 bg-green text-white text-body-sm font-bold px-3 py-1.5 rounded-full flex items-center gap-1 z-10">
             <Shield size={12} />
@@ -246,6 +242,7 @@ function ImageGallery({ property, lang }) {
     </>
   );
 }
+
 function FeatureItem({ icon: Icon, label, value }) {
   return (
     <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100">
@@ -584,7 +581,6 @@ export default function PropertyDetailPage() {
             l.imageUrl,
           ].filter(Boolean);
           if (urls.length > 0) {
-            console.log("[PropertyDetail] images from detail endpoint:", urls);
             setFetchedImages(urls);
             return;
           }
@@ -599,7 +595,6 @@ export default function PropertyDetailPage() {
         if (imagesRes?.ok) {
           const urls = extractUrls(imagesRes.images);
           if (urls.length > 0) {
-            console.log("[PropertyDetail] images from /images/ endpoint:", urls);
             setFetchedImages(urls);
             return;
           }
@@ -607,12 +602,6 @@ export default function PropertyDetailPage() {
       } catch (err) {
         console.warn("[PropertyDetail] images fetch failed:", err);
       }
-
-      console.warn(
-        "[PropertyDetail] no images found for listing",
-        property.id,
-        "— check backend /listings/ and /listings/{id}/images/"
-      );
     })();
 
     return () => {
@@ -655,6 +644,20 @@ export default function PropertyDetailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, property]);
+
+  // ✅ Similar Listings: mali 4 zenye category sawa, bila ya sasa
+  const similarListings = useMemo(() => {
+    if (!property) return [];
+    return allListings
+      .filter(
+        (l) =>
+          String(l.id) !== String(property.id) &&
+          l.category === property.category &&
+          (l.status === "live" || l.status === "reserved")
+      )
+      .sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0))
+      .slice(0, 4);
+  }, [allListings, property]);
 
   if (!hydrated && !property) {
     return (
@@ -731,7 +734,6 @@ export default function PropertyDetailPage() {
     }
   };
 
-  // Mawasiliano yote sasa yanaanzia Deal Room (hakuna Messages page tena).
   const handleContact = () => {
     handleStartDealRoom();
   };
@@ -753,7 +755,6 @@ export default function PropertyDetailPage() {
         buyerName: user.name || user.fullName || "",
       });
       if (res?.ok && res?.deal?.id) {
-        // Deal ya zamani imeghairiwa/kufungwa → ifufue ili mazungumzo ya awali yabaki
         const prevStatus = String(res.deal.status || "").toLowerCase();
         if (prevStatus === "cancelled" || prevStatus === "declined") {
           try {
@@ -1064,7 +1065,6 @@ export default function PropertyDetailPage() {
               </div>
             </div>
 
-            {/* Benefit tiles — matches the product-detail template */}
             <BenefitTiles />
           </div>
 
@@ -1117,6 +1117,11 @@ export default function PropertyDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ✅ Similar Listings */}
+      {similarListings.length > 0 && (
+        <SimilarListings listings={similarListings} lang={lang} />
+      )}
 
       <Footer />
       <BottomNav />
