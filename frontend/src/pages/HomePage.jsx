@@ -12,8 +12,8 @@ import NewsletterStrip from "../components/NewsletterStrip.jsx";
 import HeroSection from "../components/shop/HeroSection.jsx";
 import TrustBar from "../components/shop/TrustBar.jsx";
 import FeaturedSection from "../components/shop/FeaturedSection.jsx";
+import AdvertisedSection from "../components/shop/AdvertisedSection.jsx"; 
 import CategoryBento from "../components/shop/CategoryBento.jsx";
-import CountdownSaleSection from "../components/shop/CountdownSaleSection.jsx";
 import TestimonialsSection from "../components/shop/TestimonialsSection.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
 import { usePopularCategories } from "../config/categoriesStore.js";
@@ -32,7 +32,6 @@ import {
 // HELPERS — vigezo vya kila sehemu ya homepage
 // ============================================================
 
-// Category ya listing inaweza kuwa id, slug, jina, au object {id, name, slug}.
 function listingCategoryKeys(l) {
   const c = l?.category ?? l?.categoryId ?? l?.category_id ?? l?.categorySlug;
   const out = [];
@@ -123,36 +122,50 @@ export default function HomePage() {
   const handleToggleSave = (id, listing) => toggleSaved(id, listing);
 
   const liveListings = useMemo(() => publicListings.filter((l) => l.status === "live"), [publicListings]);
-  // 1) Zinazopendekezwa → mali zenye search priority (Leading Fee).
-  //    Tier ya juu kwanza; ndani ya tier moja zinazunguka kwa haki.
+
+  // 1) FEATURED (Leading) - Mali 8
   const featured = useMemo(
     () => rotateByTier(liveListings.filter(isLeadingListing), leadingTier, rotationSeed, 8),
     [liveListings, rotationSeed]
   );
 
-  // 2) Zinazopendekezwa kwa wiki → mali zilizofanyiwa boosting (tier + rotation)
-  const boosted = useMemo(() => {
+  // 2) ADVERTISED (Mpya) - Mali 8
+  const advertised = useMemo(() => {
     const used = new Set(featured.map((l) => l.id));
     const pool = liveListings.filter(
-      (l) => l.isBoosted && (!DEDUPE_SECTIONS || !used.has(l.id))
+      (l) => (l.isAdvertised || l.is_advertised || l.advertisedActive) && (!DEDUPE_SECTIONS || !used.has(l.id))
     );
-    return rotateByTier(pool, boostTier, rotationSeed + 1, 4);
+    return rotateByTier(pool, () => 1, rotationSeed + 2, 8);
   }, [liveListings, featured, rotationSeed]);
 
-  // 3) Mali Mpya → zilizoongezwa karibuni, bila zile zilizokwisha kuonyeshwa juu
+  // 3) TRENDING (Boost) - Mali 8
+  const boosted = useMemo(() => {
+    const used = new Set();
+    if (DEDUPE_SECTIONS) {
+      featured.forEach((l) => used.add(l.id));
+      advertised.forEach((l) => used.add(l.id));
+    }
+    const pool = liveListings.filter(
+      (l) => (l.isBoosted || l.boostedUntil || l.boostExpiresAt) && (!DEDUPE_SECTIONS || !used.has(l.id))
+    );
+    return rotateByTier(pool, boostTier, rotationSeed + 1, 8);
+  }, [liveListings, featured, advertised, rotationSeed]);
+
+  // 4) NEW ARRIVALS - Mali 8
   const newArrivals = useMemo(() => {
     const used = new Set();
     if (DEDUPE_SECTIONS) {
       featured.forEach((l) => used.add(l.id));
+      advertised.forEach((l) => used.add(l.id));
       boosted.forEach((l) => used.add(l.id));
     }
     return liveListings
       .filter((l) => !used.has(l.id))
       .sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0))
-      .slice(0, 6);
-  }, [liveListings, featured, boosted]);
+      .slice(0, 8);
+  }, [liveListings, featured, advertised, boosted]);
 
-  // 4) Categories → zenye mali tu, zenye mali nyingi zinatangulia
+  // 5) Categories → zenye mali tu, zenye mali nyingi zinatangulia
   const categoriesWithListings = useMemo(() => {
     const counts = new Map();
     (popularCategories || []).forEach((c, idx) => {
@@ -177,6 +190,8 @@ export default function HomePage() {
         <BannerHero />
         <HeroSection onBuyNow={handleBuyNow} onSellNow={handleSellNow} onSearch={handleSearch} />
         <TrustBar />
+        
+        {/* 1. FEATURED LISTINGS */}
         {featured.length > 0 && (
           <FeaturedSection
             badge={lang === "sw" ? "Zinazopendekezwa" : "Featured"}
@@ -185,15 +200,44 @@ export default function HomePage() {
             listings={featured} viewAllTo="/mali-zote" savedIds={savedIds} onToggleSave={handleToggleSave}
           />
         )}
+
+        {/* 2. CATEGORIES */}
         {categoriesWithListings.length > 0 && (
           <>
             <CategoryBento categories={categoriesWithListings} listings={liveListings} />
             <ViewAllCategories lang={lang} />
           </>
         )}
+
+        {/* 3. ADVERTISED LISTINGS (Mpya) */}
+        {advertised.length > 0 && (
+          <AdvertisedSection
+            badge={lang === "sw" ? "Matangazo" : "Advertised"}
+            title={lang === "sw" ? "Matangazo ya Washirika" : "Sponsored Listings"}
+            subtitle={lang === "sw" ? "Mali zilizolipiwa kuonekana hapa." : "Promoted listings from our partners."}
+            listings={advertised} 
+            viewAllTo="/mali-zote?aina=tangazo" 
+            savedIds={savedIds} 
+            onToggleSave={handleToggleSave}
+          />
+        )}
+
+        {/* 4. HOW IT WORKS */}
         <HowItWorks />
+
+        {/* 5. TRENDING LISTINGS (Boost) */}
+        {boosted.length > 0 && (
+          <FeaturedSection
+            badge={lang === "sw" ? "Inavuma" : "Trending"}
+            title={lang === "sw" ? "Mali Zinazovuma" : "Trending Listings"}
+            subtitle={lang === "sw" ? "Mali zilizolipiwa Boost na zinapata umaarufu." : "Boosted listings gaining popularity."}
+            listings={boosted} viewAllTo="/mali-zote" savedIds={savedIds} onToggleSave={handleToggleSave}
+          />
+        )}
+
+        {/* 6. NEW ARRIVALS */}
         <FeaturedSection
-          gridCols="grid-cols-2 sm:grid-cols-3"
+          gridCols="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
           badge={lang === "sw" ? "Mali Mpya" : "Just Added"}
           title={lang === "sw" ? "Mali Zilizoongezwa Hivi Karibuni" : "New Arrivals"}
           subtitle={lang === "sw" ? "Mali zilizowekwa hivi karibuni na wauzaji wetu." : "Fresh listings from our trusted sellers."}
@@ -201,7 +245,8 @@ export default function HomePage() {
           viewAllLabel={lang === "sw" ? "Ona Zote" : "See All"}
           savedIds={savedIds} onToggleSave={handleToggleSave}
         />
-        {boosted.length > 0 && <CountdownSaleSection listings={boosted} savedIds={savedIds} onToggleSave={handleToggleSave} />}
+
+        {/* 7. TESTIMONIALS & NEWSLETTER */}
         <TestimonialsSection testimonials={testimonials} />
         <NewsletterStrip variant="compact" />
       </main>
