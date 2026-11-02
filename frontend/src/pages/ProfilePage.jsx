@@ -86,8 +86,8 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div className="bg-white rounded-2xl max-w-md w-full p-6">
         <div className="text-center mb-5">
-          <div className="w-14 h-14 rounded-full bg-[#C1502E]/20 flex items-center justify-center mx-auto mb-3">
-            <Trash2 size={26} className="text-[#C1502E]" />
+          <div className="w-14 h-14 rounded-full bg-rust/20 flex items-center justify-center mx-auto mb-3">
+            <Trash2 size={26} className="text-rust" />
           </div>
           <h3 className="text-primary">
             {t("Futa Akaunti?", "Delete Account?")}
@@ -110,7 +110,7 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
             rows={3}
             disabled={deleting}
             placeholder={t("Kwa nini unaondoka?", "Why are you leaving?")}
-            className="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#FEA406] resize-none disabled:opacity-50"
+            className="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-gold resize-none disabled:opacity-50"
           />
         </label>
 
@@ -127,12 +127,12 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
             onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
             disabled={deleting}
             placeholder={requiredText}
-            className="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C1502E] text-center font-mono disabled:opacity-50"
+            className="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-rust text-center font-mono disabled:opacity-50"
           />
         </label>
 
         {error && (
-          <p className="text-sm text-[#C1502E] text-center mb-3">{error}</p>
+          <p className="text-sm text-rust text-center mb-3">{error}</p>
         )}
 
         <div className="flex gap-2">
@@ -146,7 +146,7 @@ function DeleteAccountModal({ onClose, onConfirm, lang, deleting }) {
           <button
             onClick={handleConfirm}
             disabled={deleting}
-            className="flex-1 py-2.5 bg-[#C1502E] text-white rounded-lg text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-1.5"
+            className="flex-1 py-2.5 bg-rust text-white rounded-lg text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-1.5"
           >
             {deleting ? (
               <>
@@ -339,14 +339,14 @@ function EditProfileTab({ user, lang }) {
         </h3>
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-[#FEA406]/10 flex items-center justify-center text-[#FEA406] font-bold text-3xl overflow-hidden">
+            <div className="w-20 h-20 rounded-full bg-gold/10 flex items-center justify-center text-gold-ink font-bold text-3xl overflow-hidden">
               {avatar ? (
                 <img src={avatar} alt="" className="w-full h-full object-cover" />
               ) : (
                 user.name?.charAt(0) || "U"
               )}
             </div>
-            <label className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#FEA406] text-[#101A2E] flex items-center justify-center cursor-pointer hover:bg-[#D98706] transition-colors">
+            <label className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-gold text-night flex items-center justify-center cursor-pointer hover:bg-flame transition-colors">
               <Camera size={14} />
               <input
                 type="file"
@@ -387,7 +387,7 @@ function EditProfileTab({ user, lang }) {
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#FEA406] focus:ring-2 focus:ring-[#FEA406]/20 transition-colors text-center"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
             </div>
           </div>
@@ -428,7 +428,7 @@ function EditProfileTab({ user, lang }) {
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#FEA406] focus:ring-2 focus:ring-[#FEA406]/20 transition-colors text-center"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
             </div>
           </div>
@@ -446,7 +446,7 @@ function EditProfileTab({ user, lang }) {
                 type="text"
                 value={form.location}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-[#FEA406] focus:ring-2 focus:ring-[#FEA406]/20 transition-colors text-center"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
             </div>
           </div>
@@ -459,7 +459,7 @@ function EditProfileTab({ user, lang }) {
               rows={4}
               value={form.bio}
               onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FEA406] focus:ring-2 focus:ring-[#FEA406]/20 transition-colors resize-none text-center"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors resize-none text-center"
               placeholder={
                 lang === "sw"
                   ? "Andika kuhusu wewe mwenyewe..."
@@ -472,13 +472,13 @@ function EditProfileTab({ user, lang }) {
 
       <div className="flex flex-col items-center gap-2">
         {error && (
-          <p className="flex items-center gap-1.5 text-sm text-[#C1502E]">
+          <p className="flex items-center gap-1.5 text-sm text-rust">
             <AlertTriangle size={14} />
             {error}
           </p>
         )}
         {saved && (
-          <span className="flex items-center gap-1.5 text-sm text-[#2F6D4F] font-medium">
+          <span className="flex items-center gap-1.5 text-sm text-green font-medium">
             <Check size={16} />
             {lang === "sw" ? "Imehifadhiwa!" : "Saved!"}
           </span>
@@ -486,7 +486,7 @@ function EditProfileTab({ user, lang }) {
         <button
           type="submit"
           disabled={saving}
-          className="px-6 py-2.5 bg-[#FEA406] hover:bg-[#D98706] text-[#101A2E] rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
+          className="px-6 py-2.5 bg-gold hover:bg-flame text-night rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
         >
           {saving
             ? lang === "sw"
@@ -772,7 +772,7 @@ function SecurityTab({ lang, user }) {
                 type={showCurrent ? "text" : "password"}
                 value={form.current}
                 onChange={(e) => setForm({ ...form, current: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#FEA406] focus:ring-2 focus:ring-[#FEA406]/20 transition-colors text-center"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
               <button
                 type="button"
@@ -797,7 +797,7 @@ function SecurityTab({ lang, user }) {
                 type={showNew ? "text" : "password"}
                 value={form.new}
                 onChange={(e) => setForm({ ...form, new: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#FEA406] focus:ring-2 focus:ring-[#FEA406]/20 transition-colors text-center"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
               <button
                 type="button"
@@ -822,7 +822,7 @@ function SecurityTab({ lang, user }) {
                 type={showConfirm ? "text" : "password"}
                 value={form.confirm}
                 onChange={(e) => setForm({ ...form, confirm: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#FEA406] focus:ring-2 focus:ring-[#FEA406]/20 transition-colors text-center"
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-colors text-center"
               />
               <button
                 type="button"
@@ -835,14 +835,14 @@ function SecurityTab({ lang, user }) {
           </div>
 
           {error && (
-            <p className="text-sm text-[#C1502E] flex items-center justify-center gap-1.5">
+            <p className="text-sm text-rust flex items-center justify-center gap-1.5">
               <AlertTriangle size={14} />
               {error}
             </p>
           )}
 
           {saved && (
-            <p className="text-sm text-[#2F6D4F] flex items-center justify-center gap-1.5">
+            <p className="text-sm text-green flex items-center justify-center gap-1.5">
               <Check size={16} />
               {lang === "sw" ? "Nenosiri limebadilishwa!" : "Password changed!"}
             </p>
@@ -851,7 +851,7 @@ function SecurityTab({ lang, user }) {
           <button
             type="submit"
             disabled={saving}
-            className="w-full px-6 py-2.5 bg-[#FEA406] hover:bg-[#D98706] text-[#101A2E] rounded-lg font-semibold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
+            className="w-full px-6 py-2.5 bg-gold hover:bg-flame text-night rounded-lg font-semibold text-sm transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
           >
             {saving ? (
               <>
@@ -891,8 +891,8 @@ function SecurityTab({ lang, user }) {
 
         if (isUserAdmin) {
           return (
-            <div className="bg-white rounded-xl border border-[#FEA406]/30 p-5">
-              <h3 className="font-semibold text-[#FEA406] mb-4 flex items-center justify-center gap-2 text-center">
+            <div className="bg-white rounded-xl border border-gold/30 p-5">
+              <h3 className="font-semibold text-gold-ink mb-4 flex items-center justify-center gap-2 text-center">
                 <Shield size={18} />
                 {lang === "sw" ? "Akaunti ya Admin" : "Admin Account"}
               </h3>
@@ -908,8 +908,8 @@ function SecurityTab({ lang, user }) {
         }
 
         return (
-          <div className="bg-white rounded-xl border border-[#C1502E]/30 p-5">
-            <h3 className="font-semibold text-[#C1502E] mb-4 flex items-center justify-center gap-2 text-center">
+          <div className="bg-white rounded-xl border border-rust/30 p-5">
+            <h3 className="font-semibold text-rust mb-4 flex items-center justify-center gap-2 text-center">
               <AlertTriangle size={18} />
               {lang === "sw" ? "Eneo la Hatari" : "Danger Zone"}
             </h3>
@@ -927,7 +927,7 @@ function SecurityTab({ lang, user }) {
                 </div>
                 <button
                   onClick={() => setShowDeleteModal(true)}
-                  className="px-4 py-2 border border-[#C1502E] text-[#C1502E] rounded-lg text-sm font-medium hover:bg-[#C1502E]/5 transition-colors flex items-center gap-1.5"
+                  className="px-4 py-2 border border-rust text-rust rounded-lg text-sm font-medium hover:bg-rust/5 transition-colors flex items-center gap-1.5"
                 >
                   <Trash2 size={14} />
                   {lang === "sw" ? "Futa Akaunti" : "Delete Account"}
@@ -1012,7 +1012,7 @@ function NotificationsTab({ lang }) {
     <button
       onClick={onChange}
       className={`relative w-11 h-6 rounded-full transition-colors ${
-        checked ? "bg-[#FEA406]" : "bg-gray-200"
+        checked ? "bg-gold" : "bg-gray-200"
       }`}
       role="switch"
       aria-checked={checked}
@@ -1081,11 +1081,11 @@ function NotificationsTab({ lang }) {
       ))}
 
       {error && (
-        <p className="text-sm text-[#C1502E] text-center">{error}</p>
+        <p className="text-sm text-rust text-center">{error}</p>
       )}
 
       {saved && (
-        <p className="text-sm text-[#2F6D4F] text-center flex items-center justify-center gap-1.5">
+        <p className="text-sm text-green text-center flex items-center justify-center gap-1.5">
           <Check size={14} />
           {lang === "sw" ? "Imehifadhiwa" : "Saved"}
         </p>
@@ -1186,7 +1186,7 @@ function PreferencesTab({ lang, setLang }) {
             <select
               value={prefs.language}
               onChange={(e) => handleLanguageChange(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FEA406] text-center"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold text-center"
             >
               <option value="sw">Kiswahili</option>
               <option value="en">English</option>
@@ -1200,7 +1200,7 @@ function PreferencesTab({ lang, setLang }) {
             <select
               value={prefs.currency}
               onChange={(e) => setPrefs({ ...prefs, currency: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FEA406] text-center"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold text-center"
             >
               <option value="TZS">TZS - Tanzania Shilling</option>
               <option value="USD">USD - US Dollar</option>
@@ -1214,7 +1214,7 @@ function PreferencesTab({ lang, setLang }) {
             <select
               value={prefs.region}
               onChange={(e) => setPrefs({ ...prefs, region: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#FEA406] text-center"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-gold text-center"
             >
               {REGIONS.map((r) => (
                 <option key={r} value={r}>
@@ -1245,7 +1245,7 @@ function PreferencesTab({ lang, setLang }) {
             <button
               onClick={() => setPrefs({ ...prefs, showPhone: !prefs.showPhone })}
               className={`relative w-11 h-6 rounded-full transition-colors ${
-                prefs.showPhone ? "bg-[#FEA406]" : "bg-gray-200"
+                prefs.showPhone ? "bg-gold" : "bg-gray-200"
               }`}
             >
               <span
@@ -1270,7 +1270,7 @@ function PreferencesTab({ lang, setLang }) {
             <button
               onClick={() => setPrefs({ ...prefs, showEmail: !prefs.showEmail })}
               className={`relative w-11 h-6 rounded-full transition-colors ${
-                prefs.showEmail ? "bg-[#FEA406]" : "bg-gray-200"
+                prefs.showEmail ? "bg-gold" : "bg-gray-200"
               }`}
             >
               <span
@@ -1285,13 +1285,13 @@ function PreferencesTab({ lang, setLang }) {
 
       <div className="flex flex-col items-center gap-2">
         {error && (
-          <p className="flex items-center gap-1.5 text-sm text-[#C1502E]">
+          <p className="flex items-center gap-1.5 text-sm text-rust">
             <AlertTriangle size={14} />
             {error}
           </p>
         )}
         {saved && (
-          <span className="flex items-center gap-1.5 text-sm text-[#2F6D4F] font-medium">
+          <span className="flex items-center gap-1.5 text-sm text-green font-medium">
             <Check size={16} />
             {lang === "sw" ? "Imehifadhiwa!" : "Saved!"}
           </span>
@@ -1299,7 +1299,7 @@ function PreferencesTab({ lang, setLang }) {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-6 py-2.5 bg-[#FEA406] hover:bg-[#D98706] text-[#101A2E] rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
+          className="px-6 py-2.5 bg-gold hover:bg-flame text-night rounded-lg font-semibold text-sm transition-colors disabled:opacity-60"
         >
           {saving
             ? lang === "sw"
@@ -1390,7 +1390,7 @@ export default function ProfilePage() {
           </p>
           <Link
             to="/login"
-            className="mt-4 inline-block px-5 py-2 bg-[#FEA406] text-[#101A2E] rounded-lg font-semibold text-sm"
+            className="mt-4 inline-block px-5 py-2 bg-gold text-night rounded-lg font-semibold text-sm"
           >
             {lang === "sw" ? "Ingia" : "Login"}
           </Link>
@@ -1422,11 +1422,11 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <section className="dark-surface bg-[#101A2E] text-white py-12 px-4">
+      <section className="dark-surface bg-night text-white py-12 px-4">
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col items-center text-center gap-4">
             <div className="relative flex-shrink-0">
-              <div className="w-24 h-24 rounded-full bg-[#FEA406] flex items-center justify-center text-[#101A2E] font-bold text-4xl overflow-hidden">
+              <div className="w-24 h-24 rounded-full bg-gold flex items-center justify-center text-night font-bold text-4xl overflow-hidden">
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
@@ -1438,7 +1438,7 @@ export default function ProfilePage() {
                 )}
               </div>
               {user.isVerified && (
-                <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#2F6D4F] flex items-center justify-center border-2 border-[#101A2E]">
+                <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-green flex items-center justify-center border-2 border-night">
                   <Check size={14} color="white" />
                 </div>
               )}
@@ -1451,7 +1451,7 @@ export default function ProfilePage() {
               <p className="text-white/60 text-sm mt-1">{user.email || "—"}</p>
               <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
                 {user.isVerified && verifiedLabel && (
-                  <span className="text-body-sm font-medium bg-[#2F6D4F]/20 text-[#2F6D4F] px-3 py-1 rounded-full flex items-center gap-1">
+                  <span className="text-body-sm font-medium bg-green text-white px-3 py-1 rounded-full flex items-center gap-1">
                     <Shield size={12} />
                     {verifiedLabel}
                   </span>
@@ -1464,7 +1464,7 @@ export default function ProfilePage() {
                 onClick={() => setViewMode("seller")}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                   viewMode === "seller"
-                    ? "bg-[#FEA406] text-[#101A2E]"
+                    ? "bg-gold text-night"
                     : "text-white/70 hover:text-white"
                 }`}
               >
@@ -1475,7 +1475,7 @@ export default function ProfilePage() {
                 onClick={() => setViewMode("buyer")}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                   viewMode === "buyer"
-                    ? "bg-[#FEA406] text-[#101A2E]"
+                    ? "bg-gold text-night"
                     : "text-white/70 hover:text-white"
                 }`}
               >
@@ -1517,7 +1517,7 @@ export default function ProfilePage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                     isActive
-                      ? "border-[#FEA406] text-[#FEA406]"
+                      ? "border-gold text-gold-ink"
                       : "border-transparent text-secondary hover:text-secondary"
                   }`}
                 >

@@ -42,6 +42,7 @@ import {
   MoreVertical,
   UserRound,
   LogOut,
+  RotateCcw,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS, timeAgo } from "./shared";
 import {
@@ -67,6 +68,9 @@ import { api } from "../../../api/client.js";
 import { dealsApi } from "../../../api/deals.js";
 import { transactionsApi } from "../../../api/transactions.js";
 import ContactDrawer from "../../../components/ContactDrawer.jsx";
+import ErrorCallout from "../../../components/ErrorCallout.jsx";
+import { explainApiError } from "../../../api/apiErrors.js";
+import { reopenDealRoom } from "../../../api/dealReopen.js";
 
 import {
   createTransactionAsync,
@@ -232,6 +236,9 @@ const PAYMENT_METHODS = [
   "HaloPesa",
   "Benki (CRDB)",
 ];
+
+// Deal zilizofungwa ambazo mtumiaji anaweza kuzifufua (mazungumzo yanabaki)
+const REVIVABLE_STATUSES = ["cancelled", "declined"];
 
 function formatHours(hours, lang) {
   if (hours % 24 === 0) {
@@ -1147,6 +1154,7 @@ function DealDetail({
   onSendMessage,
   onSendOffer,
   onRespond,
+  onReopen,
   onReserveConfirm,
   onInspectionResolve,
   onProofSubmit,
@@ -1168,6 +1176,8 @@ function DealDetail({
   const [reportSuccess, setReportSuccess] = useState(false);
   const [contactDrawerOpen, setContactDrawerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [reopening, setReopening] = useState(false);
+  const [reopenInfo, setReopenInfo] = useState(null);
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
@@ -1210,7 +1220,7 @@ function DealDetail({
     .find(
       (m) =>
         m.offerAmount &&
-        !["declined", "rejected"].includes(
+        !["declined", "rejected", "cancelled"].includes(
           String(m.status || "").toLowerCase()
         )
     );
@@ -1295,6 +1305,26 @@ function DealDetail({
     } else {
       onBack();
     }
+  };
+
+  const handleReopenClick = async () => {
+    if (!onReopen || reopening) return;
+    setReopening(true);
+    setReopenInfo(null);
+    const res = await onReopen(deal.id);
+    if (!res?.ok) {
+      setReopenInfo(
+        explainApiError(res?.error, {
+          lang,
+          action: "reopen_deal",
+          fallback:
+            lang === "sw"
+              ? "Imeshindwa kufufua mazungumzo."
+              : "Could not reopen the conversation.",
+        })
+      );
+    }
+    setReopening(false);
   };
 
   const handleOffer = () => {
@@ -1969,20 +1999,65 @@ function DealDetail({
         </div>
       )}
 
-      {deal.status === "cancelled" && (
+      {REVIVABLE_STATUSES.includes(deal.status) && (
         <div
           style={{
             borderColor: COLORS.sandLine,
             background: "rgba(16,26,46,0.04)",
           }}
-          className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t"
+          className="flex flex-col items-center text-center gap-3 px-3 sm:px-4 py-4 border-t"
         >
           <Ban size={16} color={COLORS.night} />
-          <span className="text-primary text-body-sm font-medium max-w-md">
-            {lang === "sw"
-              ? "Deal hii imeghairiwa. Reservation Fee haitarejeshwa."
-              : "This deal has been cancelled. Reservation Fee is non-refundable."}
-          </span>
+          <div className="max-w-md space-y-1">
+            <p className="text-primary text-body-sm font-medium">
+              {deal.status === "cancelled"
+                ? lang === "sw"
+                  ? "Deal hii imeghairiwa."
+                  : "This deal has been cancelled."
+                : lang === "sw"
+                  ? "Deal hii imefungwa."
+                  : "This deal is closed."}
+            </p>
+            <p className="text-secondary text-body-sm">
+              {lang === "sw"
+                ? "Mazungumzo yenu yote yamehifadhiwa. Mmoja wenu akifufua, mnaendelea kujadiliana kutoka mlipoishia."
+                : "Your whole conversation is saved. If either of you reopens it, you continue from where you left off."}
+            </p>
+            {deal.status === "cancelled" && (
+              <p className="text-muted text-xs">
+                {lang === "sw"
+                  ? "Reservation Fee iliyolipwa haitarejeshwa. Ukihitaji kureserve tena, utaanza mchakato huo upya."
+                  : "Any Reservation Fee already paid is non-refundable. If you need to reserve again, that step starts over."}
+              </p>
+            )}
+          </div>
+          {onReopen && deal.canReopen !== false && deal.can_reopen !== false && (
+            <button
+              type="button"
+              onClick={handleReopenClick}
+              disabled={reopening}
+              className="btn btn-primary btn-sm inline-flex items-center gap-2 disabled:opacity-60"
+            >
+              {reopening ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <RotateCcw size={14} />
+              )}
+              {lang === "sw" ? "Fufua mazungumzo" : "Reopen conversation"}
+            </button>
+          )}
+          {(deal.canReopen === false || deal.can_reopen === false) && (
+            <p className="text-muted text-xs max-w-md">
+              {lang === "sw"
+                ? "Deal hii haiwezi kufufuliwa moja kwa moja. Wasiliana na support@sokomkononi.co.tz ukihitaji msaada."
+                : "This deal can't be reopened directly. Contact support@sokomkononi.co.tz if you need help."}
+            </p>
+          )}
+          {reopenInfo && (
+            <div className="w-full max-w-md">
+              <ErrorCallout info={reopenInfo} />
+            </div>
+          )}
         </div>
       )}
 
@@ -2440,7 +2515,7 @@ export default function DealRooms({
       .find(
         (m) =>
           m.offerAmount &&
-          !["declined", "rejected"].includes(
+          !["declined", "rejected", "cancelled"].includes(
             String(m.status || "").toLowerCase()
           )
       );
@@ -2495,6 +2570,31 @@ export default function DealRooms({
         console.warn("[DealRooms] decline message failed:", msgErr);
       }
       return;
+    }
+  };
+
+  // Fufua deal iliyoghairiwa/kufungwa. Backend inarudisha status → "negotiating"
+  // na kuhifadhi ujumbe wote; hapa tunarefresh detail tu.
+  const handleReopen = async (id) => {
+    const deal = deals.find((d) => String(d.id) === String(id));
+    if (!deal) return { ok: false };
+    const roomId = deal.dealRoomId || deal.id;
+    try {
+      await reopenDealRoom(roomId);
+      const detail = await fetchDealDetailAsync(roomId);
+      if (detail?.ok && detail.deal) {
+        updateDealInStore(id, detail.deal);
+      } else {
+        updateDealInStore(id, (prev) => ({
+          ...prev,
+          status: "negotiating",
+          currentOffer: 0,
+        }));
+      }
+      return { ok: true };
+    } catch (err) {
+      console.warn("[DealRooms] reopen failed:", err);
+      return { ok: false, error: err };
     }
   };
 
@@ -3154,6 +3254,7 @@ export default function DealRooms({
               onSendMessage={handleSendMessage}
               onSendOffer={handleSendOffer}
               onRespond={handleRespond}
+              onReopen={handleReopen}
               onReserveConfirm={handleReserveConfirm}
               onInspectionResolve={handleInspectionResolve}
               onProofSubmit={handleProofSubmit}

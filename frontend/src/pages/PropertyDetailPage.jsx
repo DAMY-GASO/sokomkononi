@@ -25,6 +25,8 @@ import {
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { useWaitingList, joinWaitingListAsync } from "../config/waitingListStore.js";
 import { getOrCreateDealAsync } from "../config/dealsStore.js";
+import { reopenDealRoom } from "../api/dealReopen.js";
+import { explainApiError } from "../api/apiErrors.js";
 import { trackViewed } from "../config/recentlyViewedStore.js";
 import { pickVariantUrl } from "../utils/imageVariants.js";
 import {
@@ -751,6 +753,15 @@ export default function PropertyDetailPage() {
         buyerName: user.name || user.fullName || "",
       });
       if (res?.ok && res?.deal?.id) {
+        // Deal ya zamani imeghairiwa/kufungwa → ifufue ili mazungumzo ya awali yabaki
+        const prevStatus = String(res.deal.status || "").toLowerCase();
+        if (prevStatus === "cancelled" || prevStatus === "declined") {
+          try {
+            await reopenDealRoom(res.deal.dealRoomId || res.deal.id);
+          } catch (reopenErr) {
+            alert(explainApiError(reopenErr, { lang, action: "reopen_deal" }).message);
+          }
+        }
         navigate(`/dashboard/buyer/deals?deal=${res.deal.id}`);
       } else {
         console.error("[PropertyDetail] deal create failed:", res?.error);
