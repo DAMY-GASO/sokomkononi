@@ -252,21 +252,21 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
             </button>
 
             <Link
-              to="/"
-              onClick={handleLogoClick}
-              className="flex min-w-0 shrink select-none items-center gap-2.5"
-            >
-              <img
-                src="/logo.webp"
-                alt="SokoMkononi"
-                width={32}
-                height={32}
-                className="h-8 w-8 rounded-full"
-              />
-              <span className="truncate text-[16px] font-bold tracking-tight max-[380px]:hidden">
-                Soko<span className="text-gold">Mkononi</span>
-              </span>
-            </Link>
+  to="/"
+  onClick={handleLogoClick}
+  className="flex min-w-0 shrink items-center gap-2.5 select-none"
+>
+  <img
+    src="/logo.webp"
+    alt="SokoMkononi"
+    width={32}
+    height={32}
+    className="h-8 w-8 shrink-0 rounded-full"
+  />
+  <span className="whitespace-nowrap text-[15px] font-bold tracking-tight sm:text-[16px]">
+    Soko<span className="text-gold">Mkononi</span>
+  </span>
+</Link>
 
             {/* ── Center: nav links ────────────────────────── */}
             <nav className="ml-3 hidden min-w-0 flex-1 items-center gap-0.5 lg:flex">
