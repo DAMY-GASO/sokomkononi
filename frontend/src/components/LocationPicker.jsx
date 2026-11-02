@@ -130,15 +130,56 @@ export default function LocationPicker({
   const [geoError, setGeoError] = useState("");
   const [accuracy, setAccuracy] = useState(null);
   const watchRef = useRef(null);
+  const timerRef = useRef(null);
   const reqRef = useRef(0);
+  const autoTriedRef = useRef(false);
+  const [permState, setPermState] = useState("unknown"); // granted | prompt | denied | unknown
 
   const stopWatch = () => {
     if (watchRef.current != null && navigator.geolocation) {
       navigator.geolocation.clearWatch(watchRef.current);
     }
     watchRef.current = null;
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
   };
   useEffect(() => stopWatch, []);
+
+  /* Fuatilia hali ya ruhusa ya location (Chrome/Android/iOS 16+) */
+  useEffect(() => {
+    let status = null;
+    let cancelled = false;
+    if (navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: "geolocation" })
+        .then((st) => {
+          if (cancelled) return;
+          status = st;
+          setPermState(st.state);
+          st.onchange = () => setPermState(st.state);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+      if (status) status.onchange = null;
+    };
+  }, []);
+
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const inAppBrowser = /FBAN|FBAV|Instagram|TikTok|Snapchat|MicroMessenger|Twitter|Line\//i.test(ua);
+
+  const deniedHelp = () =>
+    isIOS
+      ? t(
+          "Location imezuiwa. iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using. Kisha kwenye Safari bofya aA → Website Settings → Location → Allow. Pia washa Precise Location.",
+          "Location is blocked. iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using. Then in Safari tap aA → Website Settings → Location → Allow. Also turn on Precise Location."
+        )
+      : t(
+          "Location imezuiwa. Bofya alama ya kufuli kwenye anwani ya tovuti → Permissions → Location → Allow. Hakikisha Location ya simu imewashwa (High accuracy). Au bofya ramani kuchagua eneo.",
+          "Location is blocked. Tap the lock icon in the address bar → Permissions → Location → Allow. Make sure phone Location is on (high accuracy). Or tap the map to choose."
+        );
 
   useEffect(() => {
     if (hasCoords) setPosition([Number(lat), Number(lng)]);
@@ -173,6 +214,14 @@ export default function LocationPicker({
       setGeoError(t("Kivinjari chako hakitumii geolocation.", "Your browser doesn't support geolocation."));
       return;
     }
+    if (window.isSecureContext === false) {
+      setGeoError(t("Location inahitaji HTTPS. Fungua tovuti kwa https://.", "Location requires HTTPS. Open the site over https://."));
+      return;
+    }
+    if (permState === "denied") {
+      setGeoError(deniedHelp());
+      return;
+    }
     stopWatch();
     setLocating(true);
     setGeoError("");
@@ -180,21 +229,33 @@ export default function LocationPicker({
 
     let best = null;
     let done = false;
-    let timer = null;
     const finish = () => {
       if (done) return;
       done = true;
-      clearTimeout(timer);
       stopWatch();
       setLocating(false);
-      if (best) handlePick(best.latitude, best.longitude);
-      else setGeoError(t("Mahali haipatikani. Bofya kwenye ramani kuchagua.", "Couldn't get a fix. Tap the map to choose."));
+      if (!best) {
+        setGeoError(t("Mahali haipatikani. Bofya kwenye ramani kuchagua.", "Couldn't get a fix. Tap the map to choose."));
+        return;
+      }
+      handlePick(best.latitude, best.longitude);
+      if (best.accuracy > 100) {
+        setGeoError(
+          t(
+            `Usahihi ni mdogo (±${Math.round(best.accuracy)} m). Washa GPS/Precise Location, toka nje ya jengo, au buruta alama kwenye eneo sahihi.`,
+            `Low accuracy (±${Math.round(best.accuracy)} m). Turn on GPS/Precise Location, step outside, or drag the pin to the exact spot.`
+          )
+        );
+      }
     };
-    timer = setTimeout(finish, 10000); // subiri hadi sekunde 10 kwa GPS bora
 
+    // Muda wa kuchagua "Allow" haujumuishwi: kipima muda cha uboreshaji kinaanza
+    // baada ya usomaji wa KWANZA tu, kisha tunasubiri GPS iwe bora zaidi (hadi sekunde 8).
     watchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
+        if (done) return;
         const c = pos.coords;
+        if (!best) timerRef.current = setTimeout(finish, 8000);
         if (!best || c.accuracy < best.accuracy) {
           best = { latitude: c.latitude, longitude: c.longitude, accuracy: c.accuracy };
           setAccuracy(Math.round(c.accuracy));
@@ -203,28 +264,30 @@ export default function LocationPicker({
       },
       (err) => {
         if (done) return;
+        if (best) return finish();
         done = true;
-        clearTimeout(timer);
         stopWatch();
         setLocating(false);
-        if (best) {
-          handlePick(best.latitude, best.longitude);
-          return;
-        }
         setGeoError(
           err?.code === 1
-            ? t(
-                "Ruhusa ya mahali imekataliwa. Washa Location kwa browser yako kwenye settings za simu, au bofya ramani kuchagua eneo.",
-                "Location permission denied. Enable Location for your browser in phone settings, or tap the map to choose."
-              )
+            ? deniedHelp()
             : err?.code === 3
-            ? t("Muda umeisha. Jaribu tena au bofya ramani.", "Timed out. Try again or tap the map.")
-            : t("Mahali haipatikani kwa sasa. Bofya ramani kuchagua.", "Position unavailable. Tap the map to choose.")
+            ? t("Muda umeisha. Hakikisha GPS imewashwa, kisha jaribu tena au bofya ramani.", "Timed out. Make sure GPS is on, then try again or tap the map.")
+            : t("Mahali haipatikani kwa sasa. Washa Location ya simu au bofya ramani.", "Position unavailable. Turn on phone Location or tap the map.")
         );
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     );
   };
+
+  /* Ruhusa ikishatolewa awali, tafuta mahali bila kubofya (hakuna prompt mpya) */
+  useEffect(() => {
+    if (permState === "granted" && !hasCoords && !autoTriedRef.current) {
+      autoTriedRef.current = true;
+      handleUseMyLocation();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permState]);
 
   const handleClear = () => {
     stopWatch();
@@ -269,6 +332,15 @@ export default function LocationPicker({
           </span>
         )}
       </div>
+
+      {inAppBrowser && (
+        <p className="text-[11px] text-[#C1502E]">
+          {t(
+            "Unatumia browser ya ndani ya app (Instagram/Facebook/TikTok), ambayo mara nyingi huzuia location. Fungua tovuti kwenye Safari au Chrome.",
+            "You're in an in-app browser (Instagram/Facebook/TikTok), which often blocks location. Open the site in Safari or Chrome."
+          )}
+        </p>
+      )}
 
       {geoError && (
         <p className="text-[11px] text-[#C1502E]">{geoError}</p>
