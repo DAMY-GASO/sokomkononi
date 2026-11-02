@@ -107,7 +107,21 @@ export class ApiError extends Error {
   constructor(status, data, opts = {}) {
     const env = data?.error && typeof data.error === "object" ? data.error : null;
     const detail = env?.detail || data?.detail;
+    // Sababu halisi ya validation (field au details) iwe mbele ya ujumbe wa jumla.
+    const firstField =
+      env?.fields && typeof env.fields === "object"
+        ? Object.entries(env.fields)
+            .map(([k, v]) => {
+              const m = [].concat(v)[0];
+              return typeof m === "string" ? `${k}: ${m}` : null;
+            })
+            .find(Boolean) || null
+        : null;
+    const firstDetail =
+      Array.isArray(env?.details) && typeof env.details[0] === "string" ? env.details[0] : null;
     const msg =
+      firstField ||
+      firstDetail ||
       (typeof env?.message === "string" && env.message) ||
       (typeof detail === "string" && detail) ||
       (typeof data?.message === "string" && data.message) ||

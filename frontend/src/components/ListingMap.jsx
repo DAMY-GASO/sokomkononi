@@ -21,9 +21,11 @@ const BRAND_MARKER = L.divIcon({
  * Returns null when lat/lng are missing (safe to render unconditionally).
  */
 export default function ListingMap({ latitude, longitude, title, location }) {
+  // Number(null) === 0, kwa hiyo kagua null/"" kwanza ili tangazo bila pin lisionyeshe (0,0).
+  if (latitude == null || longitude == null || latitude === "" || longitude === "") return null;
   const lat = Number(latitude);
   const lng = Number(longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return null;
 
   const pos = [lat, lng];
 

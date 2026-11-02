@@ -1285,8 +1285,9 @@ export async function createListingWithImagesAsync({ payload, images = [] }) {
     fd.append("location", payload.location);
 
     if (payload.latitude != null && payload.longitude != null) {
-      fd.append("latitude", String(payload.latitude));
-      fd.append("longitude", String(payload.longitude));
+      const r6 = (n) => Number(Number(n).toFixed(6));
+      fd.append("latitude", String(r6(payload.latitude)));
+      fd.append("longitude", String(r6(payload.longitude)));
     }
     if (payload.address_text) {
       fd.append("address_text", payload.address_text);

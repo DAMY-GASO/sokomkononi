@@ -180,6 +180,9 @@ export default function PostPropertyForm({
   const [addressText, setAddressText] = useState(
     isEdit && initialData ? (initialData.address_text || "") : ""
   );
+  const [geoSearching, setGeoSearching] = useState(false);
+  const skipForwardRef = useRef(null);   // maandishi ya eneo yaliyotoka kwenye ramani
+  const initialLocRef = useRef(null);    // eneo la awali la tangazo (edit mode)
 
   const [photos, setPhotos] = useState(() => {
     if (!isEdit || !initialData) return [];
@@ -254,6 +257,67 @@ export default function PostPropertyForm({
   const suggestedTitle = cfg.autoTitle ? cfg.autoTitle(extra) : "";
   const effectiveTitle = base.title.trim();
   const locationString = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa].filter(Boolean).join(", ");
+  if (initialLocRef.current === null) initialLocRef.current = isEdit ? locationString : "";
+
+  /* Ramani → fomu: jaza Mkoa/Wilaya/Eneo kutoka eneo lililochaguliwa */
+  const handleMapAddress = (addr, parts) => {
+    setAddressText(addr);
+    if (!parts) return;
+    setLoc((prev) => {
+      const regionChanged = parts.region && parts.region !== prev.mkoa;
+      const next = {
+        mkoa: parts.region || prev.mkoa,
+        wilaya: parts.district || (regionChanged ? "" : prev.wilaya),
+        eneo: parts.area || (regionChanged ? "" : prev.eneo),
+      };
+      skipForwardRef.current = [next.eneo.trim(), next.wilaya.trim(), next.mkoa]
+        .filter(Boolean)
+        .join(", ");
+      return next;
+    });
+  };
+
+  /* Fomu → ramani: mtumiaji akiandika eneo, pin ihamie huko (debounce 1s) */
+  useEffect(() => {
+    if (isEdit && locationString === initialLocRef.current) return; // usihamishe pin ya tangazo lililopo
+    if (!loc.mkoa || !loc.eneo.trim()) return;
+    if (locationString === skipForwardRef.current) return;          // maandishi yametoka kwenye ramani
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      setGeoSearching(true);
+      try {
+        const search = async (q) => {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tz&q=${encodeURIComponent(q)}`,
+            { signal: ctrl.signal }
+          );
+          const data = res.ok ? await res.json() : [];
+          return data?.[0] || null;
+        };
+        const full = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa, "Tanzania"].filter(Boolean).join(", ");
+        const hit = (await search(full)) || (loc.wilaya.trim()
+          ? await search([loc.eneo.trim(), loc.mkoa, "Tanzania"].join(", "))
+          : null);
+        if (hit && !ctrl.signal.aborted) {
+          setLat(Number(Number(hit.lat).toFixed(6)));
+          setLng(Number(Number(hit.lon).toFixed(6)));
+          setAddressText(hit.display_name || "");
+        }
+      } catch {
+        /* aborted au mtandao — ramani ni hiari */
+      } finally {
+        if (!ctrl.signal.aborted) setGeoSearching(false);
+      }
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+      setGeoSearching(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationString]);
 
   const creditInfo = checkCredit(user?.id, "listing");
   const hasCredit = creditInfo.hasCredit;
@@ -464,6 +528,9 @@ export default function PostPropertyForm({
         description: base.description.trim(),
         price: Number(cleanPriceInput(base.price)) || 0,
         location: locationString,
+        latitude: lat,
+        longitude: lng,
+        address_text: addressText,
         attributes: {
           ...extra,
           ...(categoryMode ? { mode: categoryMode } : {}),
@@ -571,9 +638,9 @@ export default function PostPropertyForm({
           const PROPERTY_TYPE_MAP = {
             "Nyumba ya Kawaida": "HOUSE",
             "Apartment": "APARTMENT",
-            "Villa": "VILLA",
-            "Studio / Chumba": "STUDIO",
-            "Townhouse": "TOWNHOUSE",
+            "Villa": "HOUSE",
+            "Studio / Chumba": "APARTMENT",
+            "Townhouse": "HOUSE",
           };
           detailBody.property_type = PROPERTY_TYPE_MAP[extra.aina] || "HOUSE";
         } else if (categoryKey === "viwanja") {
@@ -1420,9 +1487,14 @@ export default function PostPropertyForm({
                     setLat(newLat);
                     setLng(newLng);
                   }}
-                  onAddressResolved={(addr) => setAddressText(addr)}
+                  onAddressResolved={handleMapAddress}
                   compact
                 />
+                {geoSearching && (
+                  <p className="mt-1 text-[11px] text-secondary">
+                    {t("Inatafuta eneo kwenye ramani...", "Locating on the map...")}
+                  </p>
+                )}
                 {addressText && (
                   <p className="mt-2 text-[11px] text-secondary leading-snug">
                     <span className="font-semibold">{t("Anwani:", "Address:")}</span> {addressText}
