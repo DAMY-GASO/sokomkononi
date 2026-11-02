@@ -131,6 +131,24 @@ const CODE_MESSAGES = {
       steps: ["Ukihitaji kuendelea na muuzaji huyu, anzisha mazungumzo mapya kutoka kwenye ukurasa wa mali."],
     },
   },
+  NOT_DEAL_PARTICIPANT: {
+    en: {
+      title: "You're not part of this conversation",
+      message: "Only the buyer and seller in this Deal Room can perform this action.",
+      steps: [
+        "If you're the buyer or seller, open your Deal Rooms and try again.",
+        "If you think this is a mistake, email support@sokomkononi.co.tz with the deal number.",
+      ],
+    },
+    sw: {
+      title: "Wewe si sehemu ya mazungumzo haya",
+      message: "Ni mnunuzi na muuzaji wa Deal Room hii pekee wanaoweza kufanya kitendo hiki.",
+      steps: [
+        "Kama wewe ni mnunuzi au muuzaji, fungua Deal Rooms zako kisha ujaribu tena.",
+        "Ukiona ni kosa, tuandikie support@sokomkononi.co.tz ukitaja namba ya deal.",
+      ],
+    },
+  },
 };
 
 // Maandishi ya kawaida ya DRF/Django ya 403 — hayasaidii mtumiaji, hatuyaonyeshi ghafi.
