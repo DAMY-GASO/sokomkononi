@@ -57,9 +57,10 @@ export function toneText(color) {
   return TONE_TEXT[color.trim().toUpperCase()] || color;
 }
 
+// Font moja kwa mfumo mzima — inalingana na body (index.css) na tailwind.config.js
 export const FONTS = {
-  display: "'Inter', system-ui, -apple-system, sans-serif",
-  body: "'Inter', system-ui, -apple-system, sans-serif",
+  display: "'Open Sans', system-ui, -apple-system, 'Segoe UI', sans-serif",
+  body: "'Open Sans', system-ui, -apple-system, 'Segoe UI', sans-serif",
 };
 
 // ============================================================

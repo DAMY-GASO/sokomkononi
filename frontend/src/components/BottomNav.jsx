@@ -1,6 +1,5 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, PlusCircle, MessageSquare, LayoutGrid, Heart } from "lucide-react";
 import { useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useDashboardSide } from "../config/dashboardSideStore.js";
@@ -94,9 +93,16 @@ export default function BottomNav() {
   const listingsLink = "/mali-zote";
 
   return (
-    <nav className="bottom-nav safe-bottom">
+    <nav
+      className="bottom-nav safe-bottom"
+      aria-label={lang === "sw" ? "Menyu kuu" : "Main navigation"}
+    >
       {/* Home — wote */}
-      <Link to="/" className={`nav-item ${isActive("/") ? "active" : ""}`}>
+      <Link
+        to="/"
+        className={`nav-item ${isActive("/") ? "active" : ""}`}
+        aria-current={isActive("/") ? "page" : undefined}
+      >
         {icons.home}
         <span>{t("nav_home")}</span>
       </Link>
@@ -105,6 +111,7 @@ export default function BottomNav() {
         to={secondLink}
         state={!user ? { from: secondTarget } : undefined}
         className={`nav-item ${isActive(secondTarget) ? "active" : ""}`}
+        aria-current={isActive(secondTarget) ? "page" : undefined}
       >
         {secondIcon}
         <span>{secondLabel}</span>
@@ -121,6 +128,7 @@ export default function BottomNav() {
         to={dealsLink}
         state={!user ? { from: dealsTarget } : undefined}
         className={`nav-item ${isActive(dealsLink) ? "active" : ""}`}
+        aria-current={isActive(dealsLink) ? "page" : undefined}
       >
         <span className="relative">
           {icons.deals}
@@ -129,7 +137,11 @@ export default function BottomNav() {
       </Link>
 
       {/* Listings — wote */}
-      <Link to={listingsLink} className={`nav-item ${isActive(listingsLink) ? "active" : ""}`}>
+      <Link
+        to={listingsLink}
+        className={`nav-item ${isActive(listingsLink) ? "active" : ""}`}
+        aria-current={isActive(listingsLink) ? "page" : undefined}
+      >
         {icons.listings}
         <span>{lang === "sw" ? "Mali Zote" : "All Listings"}</span>
       </Link>

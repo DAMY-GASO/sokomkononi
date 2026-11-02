@@ -4,18 +4,59 @@ import { Facebook, Instagram, Twitter, Linkedin, Youtube, Mail, Phone, MapPin, A
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAppStoreLinks } from "../config/systemSettingsStore.js";
 import { useAttribution } from "../context/AttributionContext.jsx";
+import { useActiveCategories } from "../config/categoriesStore.js";
+import { usePublicListings } from "../config/listingsStore.js";
 
-const STORE_FALLBACKS = {
-  play: "https://play.google.com/store/apps/details?id=co.tz.sokomkononi.app",
-  appstore: "https://apps.apple.com/app/sokomkononi/id0000000000",
+// ── Viungo vya Play Store / App Store ──────────────────────────
+// Vinaonyeshwa TU kama ni URL halisi ya store (kutoka admin settings).
+// Kabla app haijachapishwa, sehemu ya "Pakua App" inafichwa kabisa, ili
+// search engines zisihifadhi viungo vya bandia.
+function validPlayUrl(u) {
+  try {
+    const x = new URL(u);
+    return (
+      x.protocol === "https:" &&
+      x.hostname === "play.google.com" &&
+      x.pathname.startsWith("/store/apps/details") &&
+      !!x.searchParams.get("id")
+    );
+  } catch {
+    return false;
+  }
+}
+function validAppStoreUrl(u) {
+  try {
+    const x = new URL(u);
+    const m = x.pathname.match(/\/id(\d{6,})/);
+    return (
+      x.protocol === "https:" &&
+      (x.hostname === "apps.apple.com" || x.hostname === "itunes.apple.com") &&
+      !!m &&
+      Number(m[1]) > 0
+    );
+  } catch {
+    return false;
+  }
+}
+
+// ── Mitandao ya kijamii ───────────────────────────────────────
+// Weka URL kamili ya ukurasa wenu (mf. https://instagram.com/sokomkononi).
+// Zilizo tupu HAZIONEKANI — viungo vya "facebook.com" tupu viliwapeleka
+// watu kwenye ukurasa wa mbele wa mtandao huo, si wenu.
+const SOCIAL_URLS = {
+  facebook: "",
+  instagram: "",
+  x: "",
+  linkedin: "",
+  youtube: "",
 };
 const SOCIAL = [
-  { href: "https://facebook.com",  icon: Facebook,  label: "Facebook"  },
-  { href: "https://instagram.com", icon: Instagram, label: "Instagram" },
-  { href: "https://twitter.com",   icon: Twitter,   label: "X"         },
-  { href: "https://linkedin.com",  icon: Linkedin,  label: "LinkedIn"  },
-  { href: "https://youtube.com",   icon: Youtube,   label: "YouTube"   },
-];
+  { href: SOCIAL_URLS.facebook,  icon: Facebook,  label: "Facebook"  },
+  { href: SOCIAL_URLS.instagram, icon: Instagram, label: "Instagram" },
+  { href: SOCIAL_URLS.x,         icon: Twitter,   label: "X"         },
+  { href: SOCIAL_URLS.linkedin,  icon: Linkedin,  label: "LinkedIn"  },
+  { href: SOCIAL_URLS.youtube,   icon: Youtube,   label: "YouTube"   },
+].filter((x) => /^https:\/\//.test(x.href));
 
 // SVG logos — public/assets/payments/*.svg
 const PAYMENTS = [
@@ -67,8 +108,27 @@ export default function Footer({ selectedLang: propLang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [appLinks] = useAppStoreLinks();
   const { registerTap: registerLogoTap } = useAttribution();
-  const playUrl = (appLinks?.play || "").trim() || STORE_FALLBACKS.play;
-  const appStoreUrl = (appLinks?.appstore || "").trim() || STORE_FALLBACKS.appstore;
+  const playRaw = (appLinks?.play || "").trim();
+  const appStoreRaw = (appLinks?.appstore || "").trim();
+  const playUrl = validPlayUrl(playRaw) ? playRaw : "";
+  const appStoreUrl = validAppStoreUrl(appStoreRaw) ? appStoreRaw : "";
+  const hasStoreLinks = Boolean(playUrl || appStoreUrl);
+
+  // Kategoria za footer: zile zenye mali (live) tu, zenye nyingi kwanza
+  const allCategories = useActiveCategories();
+  const allListings = usePublicListings();
+  const categoryLinks = React.useMemo(() => {
+    const live = (allListings || []).filter((l) => l.status === "live");
+    return (allCategories || [])
+      .map((c) => ({ c, n: live.filter((l) => String(l.category) === String(c.key)).length }))
+      .filter((x) => x.n > 0)
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 4)
+      .map(({ c }) => ({
+        to: `/kategoria/${c.key}`,
+        label: c.label?.[lang] || c.label?.sw || String(c.key),
+      }));
+  }, [allCategories, allListings, lang]);
 
   // WhatsApp number — format digits only
   const whatsappNumber = "255743895038"; // +255 743 895 038
@@ -80,10 +140,8 @@ export default function Footer({ selectedLang: propLang }) {
       { to: "/jinsi-ya-kununua", label: t("Jinsi Inavyofanya Kazi", "How it works") },
     ]},
     { title: t("Kategoria", "Categories"), links: [
-      { to: "/kategoria/nyumba", label: t("Nyumba", "Houses") },
-      { to: "/kategoria/viwanja", label: t("Viwanja", "Land") },
-      { to: "/kategoria/magari", label: t("Magari", "Cars") },
-      { to: "/kategoria/biashara", label: t("Biashara", "Business") },
+      ...categoryLinks,
+      { to: "/kategoria", label: t("Kategoria zote", "All categories") },
     ]},
     { title: t("Msaada", "Support"), links: [
       { to: "/faragha", label: t("Sera ya Faragha", "Privacy Policy") },
@@ -93,14 +151,13 @@ export default function Footer({ selectedLang: propLang }) {
   ];
 
   return (
-    <footer className="relative mt-24 overflow-hidden bg-[#010F3A] text-white">
-      <div aria-hidden="true" className="pointer-events-none absolute -top-32 left-1/4 h-72 w-72 rounded-full opacity-30 blur-3xl" style={{ background: "radial-gradient(circle, #FEA406, transparent 70%)" }} />
-      <div aria-hidden="true" className="pointer-events-none absolute bottom-0 right-0 h-72 w-72 rounded-full opacity-25 blur-3xl" style={{ background: "radial-gradient(circle, #0062FD, transparent 70%)" }} />
+    <footer className="relative mt-24 overflow-hidden bg-night-deep text-white">
       <div className="container relative py-14 lg:py-20">
-        <div className="mb-14 rounded-3xl border border-white/[0.08] bg-white/[0.03] p-6 backdrop-blur-sm sm:p-8 lg:p-10">
+        {hasStoreLinks && (
+        <div className="mb-14 rounded-3xl border border-white/[0.08] bg-white/[0.03] p-6 sm:p-8 lg:p-10">
           <div className="grid items-center gap-6 lg:grid-cols-12">
             <div className="lg:col-span-7">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#FEA406]/30 bg-[#FEA406]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#FEA406]">
+              <span className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gold">
                 {t("Pakua App", "Download App")}
               </span>
               <h2 className="mt-4 text-[clamp(1.5rem,3vw,2rem)] font-bold leading-tight text-white">
@@ -112,7 +169,8 @@ export default function Footer({ selectedLang: propLang }) {
               </p>
             </div>
             <div className="flex flex-wrap gap-3 lg:col-span-5 lg:justify-end">
-              <a href={playUrl || undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!playUrl} onClick={(e) => { if (!playUrl) e.preventDefault(); }} className="group inline-flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.04] px-4 py-3 transition-colors hover:bg-white/[0.08]">
+              {playUrl && (
+              <a href={playUrl} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.04] px-4 py-3 transition-colors hover:bg-white/[0.08]">
                 <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0" aria-hidden="true">
                   <path d="M4.5 3.5c-.3.3-.5.7-.5 1.2v14.6c0 .5.2.9.5 1.2l.1.1L13 12.1v-.2L4.6 3.4l-.1.1z" fill="#00D2FF" />
                   <path d="M15.9 15L13 12.1v-.2l2.9-2.9 6.5 3.7c.8.5.8 1.3 0 1.8l-6.5 3.7z" fill="#FFCE00" />
@@ -124,7 +182,9 @@ export default function Footer({ selectedLang: propLang }) {
                   <span className="block text-sm font-semibold text-white">Google Play</span>
                 </span>
               </a>
-              <a href={appStoreUrl || undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!appStoreUrl} onClick={(e) => { if (!appStoreUrl) e.preventDefault(); }} className="group inline-flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.04] px-4 py-3 transition-colors hover:bg-white/[0.08]">
+            )}
+              {appStoreUrl && (
+              <a href={appStoreUrl} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.04] px-4 py-3 transition-colors hover:bg-white/[0.08]">
                 <svg viewBox="0 0 384 512" className="h-6 w-6 shrink-0 fill-white" aria-hidden="true">
                   <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.3c0 26.2 4.8 53.3 14.4 81.3 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.8zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
                 </svg>
@@ -133,15 +193,17 @@ export default function Footer({ selectedLang: propLang }) {
                   <span className="block text-sm font-semibold text-white">App Store</span>
                 </span>
               </a>
+            )}
             </div>
           </div>
         </div>
+        )}
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="space-y-5 lg:col-span-4">
             {/* Logo — tumia logo.webp halisi */}
             <Link to="/" onClick={registerLogoTap} className="inline-flex items-center gap-2.5">
               <img src="/logo.webp" alt="SokoMkononi" className="h-9 w-9 rounded-full object-cover" />
-              <span className="text-[16px] font-bold text-white">Soko<span className="text-[#FEA406]">Mkononi</span></span>
+              <span className="text-[16px] font-bold text-white">Soko<span className="text-gold">Mkononi</span></span>
             </Link>
             <p className="max-w-xs text-sm leading-relaxed text-white/55">
               {t("Jukwaa la kuaminika la kununua na kuuza mali nchini Tanzania.", "A trusted platform for buying and selling property in Tanzania.")}
@@ -157,6 +219,7 @@ export default function Footer({ selectedLang: propLang }) {
               </li>
               <li className="flex items-center gap-2.5 text-white/60"><MapPin size={15} className="shrink-0 text-white/35" />Dar es Salaam, Tanzania</li>
             </ul>
+            {SOCIAL.length > 0 && (
             <div className="flex items-center gap-2 pt-1">
               {SOCIAL.map((s) => { const Icon = s.icon; return (
                 <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label} className="grid h-9 w-9 place-items-center rounded-full border border-white/10 text-white/60 transition-all hover:border-white/30 hover:bg-white/[0.06] hover:text-white">
@@ -164,6 +227,7 @@ export default function Footer({ selectedLang: propLang }) {
                 </a>
               ); })}
             </div>
+            )}
           </div>
           {columns.map((col) => (
             <div key={col.title} className="lg:col-span-2">

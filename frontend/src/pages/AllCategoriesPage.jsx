@@ -18,7 +18,6 @@ import {
   useActiveCategories,
   getCategoryIcon,
 } from "../config/categoriesStore.js";
-import { COLORS } from "./dashboard/components/shared";
 import CategoryTile from "../components/CategoryTile.jsx";
 
 function t(lang, sw, en) {
@@ -32,12 +31,15 @@ export default function AllCategoriesPage() {
 
   // Hesabu mali ngapi (live) kwa kila category — live
   const categoriesWithCount = useMemo(() => {
-    return allCategories.map((cat) => ({
-      ...cat,
-      count: allListings.filter(
-        (l) => l.category === cat.key && l.status === "live"
-      ).length,
-    }));
+    return allCategories
+      .map((cat) => ({
+        ...cat,
+        count: allListings.filter(
+          (l) => l.category === cat.key && l.status === "live"
+        ).length,
+      }))
+      // Zenye mali nyingi kwanza; zisizo na mali zinaenda mwisho
+      .sort((a, b) => b.count - a.count);
   }, [allCategories, allListings]);
 
   return (
@@ -49,7 +51,7 @@ export default function AllCategoriesPage() {
       {/* ============================================================ */}
       <section className="dark-surface bg-night text-white py-12 sm:py-16 px-4 text-center">
         <div className="w-14 h-14 rounded-2xl bg-gold/20 flex items-center justify-center mx-auto mb-4">
-          <LayoutGrid size={28} color={COLORS.gold} />
+          <LayoutGrid size={28} className="text-gold" />
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold">
           {t(lang, "Kategoria Zote", "All Categories")}

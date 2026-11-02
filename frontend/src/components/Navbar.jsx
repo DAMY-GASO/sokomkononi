@@ -51,7 +51,7 @@ function NotificationBell() {
     >
       <Bell size={19} />
       {unreadCount > 0 && (
-        <span className="absolute right-1.5 top-1.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-[#C1502E] px-1 text-[10px] font-bold text-white">
+        <span className="absolute right-1.5 top-1.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-rust px-1 text-[10px] font-bold text-white">
           {unreadCount > 99 ? "99+" : unreadCount}
         </span>
       )}
@@ -238,7 +238,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
       <header
         ref={navRef}
         data-on-night
-        className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#011957] text-white"
+        className="sticky top-0 z-50 border-b border-white/[0.08] bg-night text-white"
       >
         <div className="container">
           <div className="flex h-16 items-center gap-3">
@@ -254,7 +254,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
             <Link
               to="/"
               onClick={handleLogoClick}
-              className="flex shrink-0 select-none items-center gap-2.5"
+              className="flex min-w-0 shrink select-none items-center gap-2.5"
             >
               <img
                 src="/logo.webp"
@@ -263,8 +263,8 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                 height={32}
                 className="h-8 w-8 rounded-full"
               />
-              <span className="truncate text-[16px] font-bold tracking-tight">
-                Soko<span className="text-[#FEA406]">Mkononi</span>
+              <span className="truncate text-[16px] font-bold tracking-tight max-[380px]:hidden">
+                Soko<span className="text-gold">Mkononi</span>
               </span>
             </Link>
 
@@ -286,7 +286,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                   <Chev open={openMenu === "cat"} />
                 </button>
                 {openMenu === "cat" && (
-                  <div className="absolute left-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-white/10 bg-[#042475] py-2 shadow-xl">
+                  <div className="absolute left-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-white/10 bg-night-soft py-2 shadow-xl">
                     <div className="max-h-80 overflow-y-auto">
                       {categories.slice(0, 10).map((cat) => {
                         const catKey = getCatKey(cat);
@@ -305,7 +305,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                     <div className="mt-1 border-t border-white/10 pt-1">
                       <Link
                         to="/kategoria"
-                        className="flex items-center justify-between px-4 py-2 text-sm font-semibold text-[#FEA406] hover:bg-white/[0.06]"
+                        className="flex items-center justify-between px-4 py-2 text-sm font-semibold text-gold hover:bg-white/[0.06]"
                       >
                         {lang === "sw" ? "Ona Zote" : "View All"}
                         <ChevronRight size={14} />
@@ -345,7 +345,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                       <Chev open={openMenu === "help"} />
                     </button>
                     {openMenu === "help" && (
-                      <div className="absolute left-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-white/10 bg-[#042475] py-2 shadow-xl">
+                      <div className="absolute left-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-white/10 bg-night-soft py-2 shadow-xl">
                         {helpItems.map((item) => (
                           <Link
                             key={item.to}
@@ -386,7 +386,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
     {currentLang.code}
   </button>
   {openMenu === "lang" && (
-    <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-[#042475] py-1 shadow-xl">
+    <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-night-soft py-1 shadow-xl">
       {languages.map((l) => (
         <button
           key={l.code}
@@ -399,7 +399,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
           )}
         >
           {l.native}
-          {lang === l.code && <span className="h-1.5 w-1.5 rounded-full bg-[#FEA406]" />}
+          {lang === l.code && <span className="h-1.5 w-1.5 rounded-full bg-gold" />}
         </button>
       ))}
     </div>
@@ -420,7 +420,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                     {user.avatarUrl ? (
                       <img src={user.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
                     ) : (
-                      <span className="grid h-8 w-8 place-items-center rounded-full bg-[#FEA406] text-[12px] font-bold text-[#011957]">
+                      <span className="grid h-8 w-8 place-items-center rounded-full bg-gold text-[12px] font-bold text-night keep-light">
                         {safeStr(user.name)?.charAt(0)?.toUpperCase() || "U"}
                       </span>
                     )}
@@ -430,7 +430,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                     <Chev open={openMenu === "user"} />
                   </button>
                   {openMenu === "user" && (
-                    <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-white/10 bg-[#042475] py-1 shadow-xl">
+                    <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-white/10 bg-night-soft py-1 shadow-xl">
                       <div className="border-b border-white/10 px-4 py-3">
                         <p className="truncate text-sm font-semibold text-white">
                           {safeStr(user.name) || "User"}
@@ -465,7 +465,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                       <div className="my-1 border-t border-white/10" />
                       <button
                         onClick={handleLogout}
-                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-[#FF8A65] transition-colors hover:bg-[#C1502E]/20"
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-[#FF8A65] transition-colors hover:bg-rust/20"
                       >
                         <LogOut size={15} />
                         {lang === "sw" ? "Toka" : "Logout"}
@@ -476,7 +476,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
               ) : (
                 <Link
                   to="/login"
-                  className="inline-flex h-10 items-center rounded-full bg-[#FEA406] px-4 text-sm font-semibold text-[#011957] transition-colors hover:bg-[#FD8706]"
+                  className="inline-flex h-10 items-center rounded-full bg-gold px-4 text-sm font-semibold text-night keep-light transition-colors hover:bg-flame"
                 >
                   {lang === "sw" ? "Ingia" : "Login"}
                 </Link>
@@ -498,7 +498,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
       <div
         data-on-night
         className={cx(
-          "fixed left-0 top-0 z-50 h-full w-72 max-w-[82%] bg-[#011957] transition-transform duration-300 ease-out lg:hidden",
+          "fixed left-0 top-0 z-50 h-full w-72 max-w-[82%] bg-night transition-transform duration-300 ease-out lg:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -547,7 +547,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                 })}
                 <Link
                   to="/kategoria"
-                  className="block rounded-lg px-3 py-2 text-sm font-semibold text-[#FEA406] hover:bg-white/[0.05]"
+                  className="block rounded-lg px-3 py-2 text-sm font-semibold text-gold hover:bg-white/[0.05]"
                 >
                   {lang === "sw" ? "Ona Zote" : "View All"}
                 </Link>
@@ -618,7 +618,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                   >
                     <span>{l.native}</span>
                     {lang === l.code && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#FEA406]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-gold" />
                     )}
                   </button>
                 ))}

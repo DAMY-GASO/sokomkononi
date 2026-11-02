@@ -70,7 +70,7 @@ export default function CategoryBento({ categories = [], listings = [] }) {
                 <p className="mt-1 truncate text-[11px] text-white/75 sm:text-xs">
                   {count} {t("mali", count === 1 ? "listing" : "listings")}
                 </p>
-                <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-[rgb(254,164,6)] transition-all group-hover:gap-2.5 sm:text-xs">
+                <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-gold transition-all group-hover:gap-2.5 sm:text-xs">
                   {t("Tazama", "Shop Now")} <ArrowRight size={12} />
                 </span>
               </div>

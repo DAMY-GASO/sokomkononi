@@ -185,8 +185,8 @@ html.dark .text-night:not(.keep-light):not(.keep-light *):not(.on-gold *):not(.b
 .btn-lg { height: 3.25rem; padding: 0 1.5rem; font-size: 1rem; border-radius: var(--radius-md); }
 
 /* Primary = gold ya logo + navy text (8.2:1) — sawa kwenye light na dark */
-.btn-primary, .cta-gradient { background: linear-gradient(135deg, #FEA406 0%, #FD8706 100%); color: rgb(var(--c-night)); box-shadow: 0 1px 2px rgb(1 25 87 / .12), 0 6px 16px -6px rgb(254 164 6 / .45); }
-.btn-primary:hover:not(:disabled), .cta-gradient:hover:not(:disabled) { filter: brightness(1.04); box-shadow: 0 2px 4px rgb(1 25 87 / .14), 0 10px 22px -6px rgb(254 164 6 / .55); }
+.btn-primary, .cta-gradient { background: rgb(var(--c-gold)); color: rgb(var(--c-night)); box-shadow: var(--shadow-xs); }
+.btn-primary:hover:not(:disabled), .cta-gradient:hover:not(:disabled) { background: rgb(var(--c-flame)); box-shadow: var(--shadow-sm); }
 .cta-gradient:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* Secondary = navy kwenye light, royal kwenye dark (navy ingepotea kwenye card ya navy) */
@@ -336,7 +336,7 @@ html.dark .bottom-nav { box-shadow: 0 -2px 14px rgba(0,0,0,0.4); }
 .nav-item span:last-child { font-size: 0.6875rem; font-weight: 500; line-height: 1.2; white-space: nowrap; }
 .nav-item.active, .nav-item.active svg { color: rgb(var(--c-gold-ink)); }
 .nav-item.active span:last-child { font-weight: 600; }
-.nav-item.sell-btn svg { width: 22px; height: 22px; padding: 9px; box-sizing: content-box; margin-top: -22px; background: linear-gradient(135deg, #FEA406 0%, #FD8706 100%); color: rgb(var(--c-night)); border-radius: 9999px; box-shadow: 0 6px 14px rgba(254,164,6,0.42); }
+.nav-item.sell-btn svg { width: 22px; height: 22px; padding: 9px; box-sizing: content-box; margin-top: -22px; background: rgb(var(--c-gold)); color: rgb(var(--c-night)); border-radius: 9999px; box-shadow: 0 6px 14px rgba(254,164,6,0.42); }
 .nav-item.sell-btn span:last-child { margin-top: 2px; color: rgb(var(--c-text)); font-weight: 600; }
 
 /* === Headings classes === */
@@ -432,13 +432,18 @@ html.dark svg[stroke="#6B7280"], html.dark svg[stroke="#9CA3AF"] {
 /* ============================================================
    LAYOUT / RESPONSIVE (hazihusiani na theme)
    ============================================================ */
-html, body { 
-  overflow-x: hidden; 
-  max-width: 100vw; 
-  overscroll-behavior-x: none; 
+html, body {
+  overflow-x: hidden;           /* fallback kwa browsers za zamani */
+  max-width: 100%;              /* si 100vw — 100vw inajumuisha scrollbar na kuleta scroll ya pembeni */
+  overscroll-behavior-x: none;
+}
+/* clip haitengenezi scroll container, kwa hiyo position: sticky inaendelea kufanya kazi */
+@supports (overflow-x: clip) {
+  html, body { overflow-x: clip; }
 }
 img, svg, video { max-width: 100%; height: auto; }
-h1, h2, h3, h4, h5, h6, p, span, a, button, label, td, th { overflow-wrap: anywhere; word-break: break-word; }
+/* break-word: inakata neno TU linapozidi nafasi. "anywhere" ilikata maneno katikati kwenye flex/vifungo/majedwali */
+h1, h2, h3, h4, h5, h6, p, span, a, button, label, td, th { overflow-wrap: break-word; }
 .grid > * { min-width: 0; }
 .flex > * { min-width: 0; }
 .page-clip { overflow-x: clip; }
@@ -460,13 +465,13 @@ h1, h2, h3, h4, h5, h6, p, span, a, button, label, td, th { overflow-wrap: anywh
   button, a[role="button"], [type="submit"], [type="button"] { min-height: 40px; }
   input, textarea, select { font-size: 16px !important; }
   .mobile-modal { align-items: flex-end !important; padding: 0 !important; }
-  .mobile-modal > * { border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; width: 100% !important; overflow-y: auto; }
+  .mobile-modal > * { border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; max-height: 92dvh !important; width: 100% !important; overflow-y: auto; }
   table:not(.force-table) { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
   [role="dialog"] { align-items: flex-end !important; padding: 0 !important; }
-  [role="dialog"] > * { max-width: 100% !important; width: 100% !important; border-radius: 20px 20px 0 0 !important; max-height: 92vh; }
+  [role="dialog"] > * { max-width: 100% !important; width: 100% !important; border-radius: 20px 20px 0 0 !important; max-height: 92vh; max-height: 92dvh; }
 }
 @supports (padding: env(safe-area-inset-bottom)) { .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 12px); } }
-[role="dialog"] > * { max-height: calc(100vh - 2rem); max-width: calc(100vw - 2rem); overflow-y: auto; }
+[role="dialog"] > * { max-height: calc(100vh - 2rem); max-height: calc(100dvh - 2rem); max-width: calc(100vw - 2rem); overflow-y: auto; }
 [role="menu"] { max-width: min(320px, calc(100vw - 2rem)); }
 
 /* Theme transition */
@@ -590,7 +595,8 @@ html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) .hover\:b
    ============================================================ */
 
 /* Light mode — navbar ya PUBLIC ina bg-[#011957] (navy), kwa hiyo icons ziwe nyeupe */
-html:not(.dark) header.bg-\[\#011957\] svg,
+html:not(.dark) header.bg-\[\#011957\] svg, kwa hiyo icons ziwe nyeupe */
+html:not(.dark) header.bg-night svg,
 html:not(.dark) header[style*="background: #011957"] svg,
 html:not(.dark) header[style*="background:#011957"] svg,
 html:not(.dark) header[style*="background: rgb(1, 25, 87)"] svg,
@@ -600,7 +606,8 @@ html:not(.dark) header[style*="background:rgb(1,25,87)"] svg {
 }
 
 /* Ruhusu rangi maalum (gold, rust, n.k.) kwenye icons za navbar */
-html:not(.dark) header.bg-\[\#011957\] svg[stroke="#FEA406"],
+html:not(.dark) header.bg-\[\#011957\] svg[stroke="#FEA406"], n.k.) kwenye icons za navbar */
+html:not(.dark) header.bg-night svg[stroke="#FEA406"],
 html:not(.dark) header[style*="background: #011957"] svg[stroke="#FEA406"],
 html:not(.dark) header[style*="background: #011957"] svg[stroke="#C1502E"],
 html:not(.dark) header[style*="background: #011957"] svg[stroke="#FF8A65"] {
@@ -609,7 +616,8 @@ html:not(.dark) header[style*="background: #011957"] svg[stroke="#FF8A65"] {
 }
 
 /* Dark mode — tayari iko sawa, lakini ongeza kwa usalama */
-html.dark header.bg-\[\#011957\] svg,
+html.dark header.bg-\[\#011957\] svg, lakini ongeza kwa usalama */
+html.dark header.bg-night svg,
 html.dark header[style*="background: #011957"] svg,
 html.dark header[style*="background: rgb(1, 25, 87)"] svg {
   color: rgba(255, 255, 255, 0.88) !important;
@@ -662,8 +670,18 @@ html.dark header[style*="background: rgb(1, 25, 87)"] svg {
    ============================================================ */
 
 html:not(.dark) header.bg-\[\#011957\] button[aria-label*="mode"] svg,
+
+/* ============================================================
+   THEME TOGGLE
+   - Navbar ya PUBLIC (navy daima) → icons nyeupe
+   - DashboardShell (navy daima pia) → icons nyeupe
+   ============================================================ */
+
+html:not(.dark) header.bg-night button[aria-label*="mode"] svg,
 html:not(.dark) header.bg-\[\#011957\] button[aria-label*="Light"] svg,
+html:not(.dark) header.bg-night button[aria-label*="Light"] svg,
 html:not(.dark) header.bg-\[\#011957\] button[aria-label*="Dark"] svg,
+html:not(.dark) header.bg-night button[aria-label*="Dark"] svg,
 html:not(.dark) header[style*="background: #011957"] button[aria-label*="mode"] svg,
 html:not(.dark) header[style*="background: #011957"] button[aria-label*="Light"] svg,
 html:not(.dark) header[style*="background: #011957"] button[aria-label*="Dark"] svg {
