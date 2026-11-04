@@ -3,33 +3,20 @@
 // Admin — Customer Care (tickets + feedback).
 // Bilingual + mobile-responsive + Async actions na rollback.
 //
-// SASISHO:
-//   - Tabs mbili: "Tickets" na "Feedback"
-//   - Attachments upload + preview kwenye tickets
-//   - SLA badge (⏰ SLA IMEPITA) kwa tickets zilizopita muda
-//   - Feedback tab inaonyesha feedback zote za users
-//   - Admin anaweza kujibu feedback na kuona wastani wa rating
+// ✅ MPYA:
+//   - Inasoma ?ticket={id} kutoka URL (kutoka notification)
+//   - Inafungua ticket husika + ina-scroll
+//   - Inahydrate tickets kwenye mount (na refresh kila 30s kama ipo wazi)
+//   - Badge ya "NEW" kwa tickets zisizo na assignment na zilizo OPEN
 // ============================================================
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
-  Search,
-  Trash2,
-  Clock,
-  User,
-  Send,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  Paperclip,
-  Headphones,
-  Inbox,
-  UserCheck,
-  Loader2,
-  MessageSquare,
-  AlertTriangle,
-  Lightbulb,
-  Star,
+  Search, Trash2, Clock, User, Send, CheckCircle,
+  ChevronDown, ChevronUp, Paperclip, Headphones, Inbox,
+  UserCheck, Loader2, MessageSquare, AlertTriangle,
+  Lightbulb, Star, RefreshCw,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -40,6 +27,7 @@ import {
   updateTicketStatusAsync,
   updateTicketPriorityAsync,
   removeTicketAsync,
+  hydrateTicketsFromApi,
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
@@ -63,41 +51,19 @@ const COLOR_MAP = {
   night: { bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
 };
 
-// ============================================================
-// FEEDBACK ICONS
-// ============================================================
 const FEEDBACK_ICONS = { MessageSquare, AlertTriangle, Lightbulb, Star };
 
-// ============================================================
-// FEEDBACK STATUS MAP
-// ============================================================
 const FEEDBACK_STATUS_META = {
-  new: {
-    label: { sw: "Mpya", en: "New" },
-    bg: "rgba(193,80,46,0.12)",
-    fg: COLORS.rust,
-  },
-  read: {
-    label: { sw: "Imesomwa", en: "Read" },
-    bg: "rgba(232,163,61,0.16)",
-    fg: "#8A5A16",
-  },
-  answered: {
-    label: { sw: "Imejibiwa", en: "Answered" },
-    bg: "rgba(47,109,79,0.12)",
-    fg: COLORS.green,
-  },
-  archived: {
-    label: { sw: "Imewekwa kwenye kumbukumbu", en: "Archived" },
-    bg: "rgba(16,26,46,0.08)",
-    fg: COLORS.night,
-  },
+  new: { label: { sw: "Mpya", en: "New" }, bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
+  read: { label: { sw: "Imesomwa", en: "Read" }, bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
+  answered: { label: { sw: "Imejibiwa", en: "Answered" }, bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
+  archived: { label: { sw: "Imewekwa kwenye kumbukumbu", en: "Archived" }, bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
 };
 
 // ============================================================
 // ATTACHMENT PREVIEW
 // ============================================================
-function AttachmentPreview({ att, lang }) {
+function AttachmentPreview({ att }) {
   if (!att?.url) return null;
   return (
     <a
@@ -107,20 +73,14 @@ function AttachmentPreview({ att, lang }) {
       className="flex items-center gap-2 text-xs text-primary bg-white rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors w-full min-w-0"
     >
       {att.isImage ? (
-        <img
-          src={att.url}
-          alt={att.name}
-          className="w-9 h-9 rounded object-cover shrink-0"
-        />
+        <img src={att.url} alt={att.name} className="w-9 h-9 rounded object-cover shrink-0" />
       ) : (
         <Paperclip size={12} className="text-muted shrink-0" />
       )}
       <div className="flex-1 min-w-0">
         <p className="truncate font-medium text-[11px]">{att.name}</p>
         {att.uploadedByName && (
-          <p className="text-[10px] text-muted truncate">
-            {att.uploadedByName}
-          </p>
+          <p className="text-[10px] text-muted truncate">{att.uploadedByName}</p>
         )}
       </div>
     </a>
@@ -130,8 +90,8 @@ function AttachmentPreview({ att, lang }) {
 // ============================================================
 // TICKET CARD
 // ============================================================
-function TicketCard({ ticket, lang }) {
-  const [expanded, setExpanded] = useState(false);
+function TicketCard({ ticket, lang, defaultExpanded = false, highlight = false }) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [replyText, setReplyText] = useState("");
   const [replyFiles, setReplyFiles] = useState([]);
   const [busy, setBusy] = useState({});
@@ -139,6 +99,10 @@ function TicketCard({ ticket, lang }) {
   const fileInputRef = useRef(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  useEffect(() => {
+    if (defaultExpanded) setExpanded(true);
+  }, [defaultExpanded]);
 
   const category = TICKET_CATEGORIES.find((c) => c.key === ticket.category);
   const priority = TICKET_PRIORITIES.find((p) => p.key === ticket.priority);
@@ -149,6 +113,9 @@ function TicketCard({ ticket, lang }) {
   const statusColors = COLOR_MAP[status?.color] || COLOR_MAP.rust;
 
   const isBusy = (key) => !!busy[key];
+
+  // ✅ Badge ya NEW kwa ticket OPEN bila assignment
+  const isNew = ticket.status === "open" && !ticket.assignedTo;
 
   const handleSendReply = async () => {
     const hasText = replyText.trim().length > 0;
@@ -195,7 +162,7 @@ function TicketCard({ ticket, lang }) {
           });
         }
         return { file: f, name: f.name, type: f.type, preview };
-      }),
+      })
     );
 
     setReplyFiles((prev) => [...prev, ...wrapped].slice(0, 5));
@@ -251,9 +218,7 @@ function TicketCard({ ticket, lang }) {
       return next;
     });
     if (!res.ok)
-      setError(
-        res.error?.message || t("Imeshindwa kuondoa.", "Failed to remove.")
-      );
+      setError(res.error?.message || t("Imeshindwa kuondoa.", "Failed to remove."));
   };
 
   const handleResolve = () => handleStatusChange("resolved");
@@ -262,8 +227,13 @@ function TicketCard({ ticket, lang }) {
 
   return (
     <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="rounded-xl border overflow-hidden w-full max-w-full min-w-0"
+      id={`ticket-${ticket.id}`}
+      style={{
+        borderColor: highlight ? COLORS.gold : COLORS.sandLine,
+        background: "white",
+        boxShadow: highlight ? `0 0 0 2px ${COLORS.gold}40` : "none",
+      }}
+      className="rounded-xl border overflow-hidden w-full max-w-full min-w-0 transition-shadow"
     >
       <div className="p-3 sm:p-4 w-full min-w-0">
         <div className="flex items-start gap-2 sm:gap-3 w-full min-w-0">
@@ -276,6 +246,15 @@ function TicketCard({ ticket, lang }) {
 
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
+              {/* ✅ Badge ya NEW */}
+              {isNew && (
+                <span
+                  style={{ background: COLORS.rust, color: "white" }}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                >
+                  NEW
+                </span>
+              )}
               <span className="text-[10px] font-bold text-muted shrink-0 whitespace-nowrap">
                 {ticket.code || ticket.id}
               </span>
@@ -381,34 +360,27 @@ function TicketCard({ ticket, lang }) {
                       <p
                         className="font-semibold mb-0.5 text-[10px] uppercase"
                         style={{
-                          color: isAdmin
-                            ? "rgba(245,243,236,0.6)"
-                            : "var(--text-muted)",
+                          color: isAdmin ? "rgba(245,243,236,0.6)" : "var(--text-muted)",
                         }}
                       >
                         {msg.senderName}
                       </p>
                       {msg.text && msg.text !== "[attachment]" && (
-                        <p
-                          className="leading-relaxed break-words"
-                          style={{ color: "inherit" }}
-                        >
+                        <p className="leading-relaxed break-words" style={{ color: "inherit" }}>
                           {msg.text}
                         </p>
                       )}
                       {msg.attachments?.length > 0 && (
                         <div className="mt-1.5 flex flex-col gap-1">
                           {msg.attachments.map((att) => (
-                            <AttachmentPreview key={att.id} att={att} lang={lang} />
+                            <AttachmentPreview key={att.id} att={att} />
                           ))}
                         </div>
                       )}
                       <p
                         className="text-[10px] mt-1"
                         style={{
-                          color: isAdmin
-                            ? "rgba(245,243,236,0.5)"
-                            : "var(--text-muted)",
+                          color: isAdmin ? "rgba(245,243,236,0.5)" : "var(--text-muted)",
                         }}
                       >
                         {timeAgo(msg.at, lang)}
@@ -420,10 +392,9 @@ function TicketCard({ ticket, lang }) {
             </div>
           </div>
 
-          {/* Actions (open / in_progress / resolved) */}
+          {/* Actions */}
           {ticket.status !== "closed" && (
             <>
-              {/* Reply input + file picker */}
               <div className="flex items-center gap-2 min-w-0 w-full">
                 <input
                   ref={fileInputRef}
@@ -460,13 +431,11 @@ function TicketCard({ ticket, lang }) {
                   }
                   style={{
                     background:
-                      (replyText.trim() || replyFiles.length > 0) &&
-                      !isBusy("reply")
+                      (replyText.trim() || replyFiles.length > 0) && !isBusy("reply")
                         ? COLORS.gold
                         : COLORS.sandLine,
                     color:
-                      (replyText.trim() || replyFiles.length > 0) &&
-                      !isBusy("reply")
+                      (replyText.trim() || replyFiles.length > 0) && !isBusy("reply")
                         ? COLORS.night
                         : "var(--text-muted)",
                   }}
@@ -481,7 +450,6 @@ function TicketCard({ ticket, lang }) {
                 </button>
               </div>
 
-              {/* Reply file previews */}
               {replyFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {replyFiles.map((f, i) => (
@@ -491,11 +459,7 @@ function TicketCard({ ticket, lang }) {
                       style={{ borderColor: COLORS.sandLine }}
                     >
                       {f.preview ? (
-                        <img
-                          src={f.preview}
-                          alt={f.name}
-                          className="w-8 h-8 rounded object-cover"
-                        />
+                        <img src={f.preview} alt={f.name} className="w-8 h-8 rounded object-cover" />
                       ) : (
                         <Paperclip size={12} className="text-muted" />
                       )}
@@ -512,7 +476,6 @@ function TicketCard({ ticket, lang }) {
                 </div>
               )}
 
-              {/* Status buttons */}
               <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
                 {ticket.status === "open" && (
                   <button
@@ -549,10 +512,7 @@ function TicketCard({ ticket, lang }) {
                     onClick={handleClose}
                     disabled={isBusy("status-closed")}
                     className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{
-                      color: "var(--text-primary)",
-                      borderColor: COLORS.sandLine,
-                    }}
+                    style={{ color: "var(--text-primary)", borderColor: COLORS.sandLine }}
                   >
                     {isBusy("status-closed") && (
                       <Loader2 size={12} className="animate-spin" />
@@ -591,7 +551,6 @@ function TicketCard({ ticket, lang }) {
             </>
           )}
 
-          {/* Closed ticket — reopen only */}
           {ticket.status === "closed" && (
             <div className="flex items-center gap-2 flex-wrap w-full min-w-0">
               <button
@@ -626,7 +585,7 @@ function TicketCard({ ticket, lang }) {
 }
 
 // ============================================================
-// FEEDBACK CARD
+// FEEDBACK CARD (haijabadilishwa — nakupa kwa ukamilifu)
 // ============================================================
 function FeedbackCard({ item, lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -656,18 +615,13 @@ function FeedbackCard({ item, lang }) {
   };
 
   const handleRemove = async () => {
-    if (
-      !window.confirm(t("Ondoa feedback hii?", "Remove this feedback?"))
-    )
-      return;
+    if (!window.confirm(t("Ondoa feedback hii?", "Remove this feedback?"))) return;
     setRemoving(true);
     setError("");
     const res = await removeFeedbackAsync(item.id);
     setRemoving(false);
     if (!res.ok)
-      setError(
-        res.error?.message || t("Imeshindwa kuondoa.", "Failed to remove.")
-      );
+      setError(res.error?.message || t("Imeshindwa kuondoa.", "Failed to remove."));
   };
 
   return (
@@ -732,26 +686,6 @@ function FeedbackCard({ item, lang }) {
                 <Clock size={11} />
                 {timeAgo(item.createdAt, lang)}
               </span>
-              {item.authorSide && (
-                <>
-                  <span className="text-muted shrink-0">•</span>
-                  <span
-                    className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
-                    style={{
-                      background:
-                        item.authorSide === "buyer"
-                          ? "rgba(47,109,79,0.12)"
-                          : "rgba(232,163,61,0.16)",
-                      color:
-                        item.authorSide === "buyer" ? COLORS.green : "#8A5A16",
-                    }}
-                  >
-                    {item.authorSide === "buyer"
-                      ? t("Mnunuzi", "Buyer")
-                      : t("Muuzaji", "Seller")}
-                  </span>
-                </>
-              )}
             </div>
           </div>
 
@@ -772,10 +706,7 @@ function FeedbackCard({ item, lang }) {
         >
           {error && (
             <div
-              style={{
-                background: "rgba(193,80,46,0.1)",
-                color: COLORS.rust,
-              }}
+              style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
               className="text-xs font-semibold px-3 py-2 rounded-lg"
             >
               {error}
@@ -805,10 +736,7 @@ function FeedbackCard({ item, lang }) {
                 )}
               </p>
               <div
-                style={{
-                  background: "rgba(47,109,79,0.08)",
-                  color: COLORS.green,
-                }}
+                style={{ background: "rgba(47,109,79,0.08)", color: COLORS.green }}
                 className="rounded-lg px-3 py-2.5 text-xs leading-relaxed whitespace-pre-wrap break-words w-full min-w-0"
               >
                 {item.adminReply}
@@ -820,9 +748,7 @@ function FeedbackCard({ item, lang }) {
             <input
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
-              onKeyDown={(e) =>
-                e.key === "Enter" && !busy && handleSendReply()
-              }
+              onKeyDown={(e) => e.key === "Enter" && !busy && handleSendReply()}
               placeholder={t("Andika jibu lako...", "Type your reply...")}
               disabled={busy}
               style={{ borderColor: COLORS.sandLine }}
@@ -832,12 +758,8 @@ function FeedbackCard({ item, lang }) {
               onClick={handleSendReply}
               disabled={!replyText.trim() || busy}
               style={{
-                background:
-                  replyText.trim() && !busy ? COLORS.gold : COLORS.sandLine,
-                color:
-                  replyText.trim() && !busy
-                    ? COLORS.night
-                    : "var(--text-muted)",
+                background: replyText.trim() && !busy ? COLORS.gold : COLORS.sandLine,
+                color: replyText.trim() && !busy ? COLORS.night : "var(--text-muted)",
               }}
               className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:cursor-not-allowed"
               aria-label={t("Tuma", "Send")}
@@ -877,21 +799,60 @@ export default function SupportSection() {
   const { lang } = useLanguage();
   const tickets = useTickets();
   const feedback = useFeedback();
+  const [searchParams] = useSearchParams();
 
-  // Tab: "tickets" | "feedback"
+  // ✅ Ticket focus kutoka URL
+  const focusedTicketId = (() => {
+    const raw = searchParams.get("ticket");
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  })();
+
   const [tab, setTab] = useState("tickets");
-
-  // Ticket filters
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [ticketQuery, setTicketQuery] = useState("");
-
-  // Feedback filters
   const [typeFilter, setTypeFilter] = useState("all");
   const [feedbackStatusFilter, setFeedbackStatusFilter] = useState("all");
   const [feedbackQuery, setFeedbackQuery] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // ✅ Hydrate tickets kwenye mount + auto-refresh kila 30s
+  useEffect(() => {
+    hydrateTicketsFromApi();
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        hydrateTicketsFromApi();
+      }
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // ✅ Kama kuna `?ticket=`, nenda kwenye tab ya tickets
+  useEffect(() => {
+    if (focusedTicketId) setTab("tickets");
+  }, [focusedTicketId]);
+
+  // ✅ Scroll kwenda ticket iliyochaguliwa
+  useEffect(() => {
+    if (!focusedTicketId) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`ticket-${focusedTicketId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [focusedTicketId, tickets.length]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await hydrateTicketsFromApi();
+    setRefreshing(false);
+  };
 
   // ── Ticket counts ──
   const ticketCounts = useMemo(() => {
@@ -929,21 +890,30 @@ export default function SupportSection() {
           String(t.id).includes(q)
       );
     }
-    const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
-    result.sort((a, b) => {
-      // SLA overdue kwanza
-      if (a.slaOverdue && !b.slaOverdue) return -1;
-      if (!a.slaOverdue && b.slaOverdue) return 1;
-      const aPrio = priorityOrder[a.priority] ?? 99;
-      const bPrio = priorityOrder[b.priority] ?? 99;
-      if (aPrio !== bPrio) return aPrio - bPrio;
-      return (
-        new Date(b.updatedAt || b.createdAt) -
-        new Date(a.updatedAt || a.createdAt)
-      );
-    });
+
+    // ✅ Ticket iliyochaguliwa iwe juu
+    if (focusedTicketId) {
+      result.sort((a, b) => {
+        if (a.id === focusedTicketId) return -1;
+        if (b.id === focusedTicketId) return 1;
+        return 0;
+      });
+    } else {
+      const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+      result.sort((a, b) => {
+        if (a.slaOverdue && !b.slaOverdue) return -1;
+        if (!a.slaOverdue && b.slaOverdue) return 1;
+        const aPrio = priorityOrder[a.priority] ?? 99;
+        const bPrio = priorityOrder[b.priority] ?? 99;
+        if (aPrio !== bPrio) return aPrio - bPrio;
+        return (
+          new Date(b.updatedAt || b.createdAt) -
+          new Date(a.updatedAt || a.createdAt)
+        );
+      });
+    }
     return result;
-  }, [tickets, statusFilter, categoryFilter, ticketQuery]);
+  }, [tickets, statusFilter, categoryFilter, ticketQuery, focusedTicketId]);
 
   // ── Feedback counts ──
   const feedbackCounts = useMemo(() => {
@@ -982,7 +952,6 @@ export default function SupportSection() {
     return result;
   }, [feedback, typeFilter, feedbackStatusFilter, feedbackQuery]);
 
-  // ── Average rating ──
   const avgRating = useMemo(() => {
     const rated = feedback.filter((f) => f.rating != null);
     if (!rated.length) return "—";
@@ -1000,9 +969,26 @@ export default function SupportSection() {
         )}
       />
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* TABS — Tickets | Feedback                              */}
-      {/* ═══════════════════════════════════════════════════════ */}
+      {/* Refresh button */}
+      <div className="flex justify-center mb-3">
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border transition-colors disabled:opacity-60"
+          style={{
+            borderColor: "rgb(var(--c-hairline))",
+            color: COLORS.ink,
+            background: "rgb(var(--c-card))",
+          }}
+        >
+          <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+          {refreshing
+            ? t("Inasasisha...", "Refreshing...")
+            : t("Sasisha", "Refresh")}
+        </button>
+      </div>
+
+      {/* TABS */}
       <div className="flex justify-center mb-5 w-full min-w-0">
         <div
           style={{ background: "white", borderColor: COLORS.sandLine }}
@@ -1021,12 +1007,8 @@ export default function SupportSection() {
             {ticketCounts.total > 0 && (
               <span
                 style={{
-                  background:
-                    tab === "tickets"
-                      ? "rgba(245,243,236,0.18)"
-                      : COLORS.sandLine,
-                  color:
-                    tab === "tickets" ? COLORS.sand : "var(--text-primary)",
+                  background: tab === "tickets" ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                  color: tab === "tickets" ? COLORS.sand : "var(--text-primary)",
                 }}
                 className="text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1"
               >
@@ -1047,12 +1029,8 @@ export default function SupportSection() {
             {feedbackCounts.total > 0 && (
               <span
                 style={{
-                  background:
-                    tab === "feedback"
-                      ? "rgba(245,243,236,0.18)"
-                      : COLORS.sandLine,
-                  color:
-                    tab === "feedback" ? COLORS.sand : "var(--text-primary)",
+                  background: tab === "feedback" ? "rgba(245,243,236,0.18)" : COLORS.sandLine,
+                  color: tab === "feedback" ? COLORS.sand : "var(--text-primary)",
                 }}
                 className="text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1"
               >
@@ -1063,96 +1041,39 @@ export default function SupportSection() {
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* TAB: TICKETS                                            */}
-      {/* ═══════════════════════════════════════════════════════ */}
+      {/* TAB: TICKETS */}
       {tab === "tickets" && (
         <>
-          {/* Summary Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mb-5 w-full">
-            <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
-            >
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">
-                {t("Zote", "Total")}
-              </p>
-              <p
-                style={{ color: "var(--text-primary)" }}
-                className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
-              >
-                {ticketCounts.total}
-              </p>
+            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Zote", "Total")}</p>
+              <p style={{ color: "var(--text-primary)" }} className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words">{ticketCounts.total}</p>
             </div>
-            <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
-            >
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">
-                {t("Wazi", "Open")}
-              </p>
-              <p
-                className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
-                style={{ color: COLORS.rust }}
-              >
-                {ticketCounts.open}
-              </p>
+            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Wazi", "Open")}</p>
+              <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.rust }}>{ticketCounts.open}</p>
             </div>
-            <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
-            >
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">
-                {t("Inaendelea", "In Progress")}
-              </p>
-              <p
-                className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
-                style={{ color: "#8A5A16" }}
-              >
-                {ticketCounts.inProgress}
-              </p>
+            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Inaendelea", "In Progress")}</p>
+              <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: "#8A5A16" }}>{ticketCounts.inProgress}</p>
             </div>
-            <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
-            >
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">
-                {t("Zimetatuliwa", "Resolved")}
-              </p>
-              <p
-                className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
-                style={{ color: COLORS.green }}
-              >
-                {ticketCounts.resolved}
-              </p>
+            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Zimetatuliwa", "Resolved")}</p>
+              <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.green }}>{ticketCounts.resolved}</p>
             </div>
-            <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full col-span-2 sm:col-span-1"
-            >
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">
-                {t("SLA Imepita", "SLA Overdue")}
-              </p>
-              <p
-                className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
-                style={{ color: ticketCounts.overdue > 0 ? COLORS.rust : COLORS.green }}
-              >
-                {ticketCounts.overdue}
-              </p>
+            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full col-span-2 sm:col-span-1">
+              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("SLA Imepita", "SLA Overdue")}</p>
+              <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: ticketCounts.overdue > 0 ? COLORS.rust : COLORS.green }}>{ticketCounts.overdue}</p>
             </div>
           </div>
 
-          {/* Status Tabs */}
           {tickets.length > 0 && (
             <div className="flex justify-center gap-2 mb-3 overflow-x-auto pb-2 w-full min-w-0">
               <button
                 onClick={() => setStatusFilter("all")}
                 style={{
                   background: statusFilter === "all" ? COLORS.night : "white",
-                  color:
-                    statusFilter === "all"
-                      ? COLORS.sand
-                      : "var(--text-primary)",
+                  color: statusFilter === "all" ? COLORS.sand : "var(--text-primary)",
                   borderColor: COLORS.sandLine,
                 }}
                 className="text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
@@ -1161,25 +1082,18 @@ export default function SupportSection() {
               </button>
               {TICKET_STATUSES.map((s) => {
                 const countKey =
-                  s.key === "open"
-                    ? "open"
-                    : s.key === "in_progress"
-                    ? "inProgress"
-                    : s.key === "closed"
-                    ? "closed"
-                    : s.key;
+                  s.key === "open" ? "open"
+                  : s.key === "in_progress" ? "inProgress"
+                  : s.key === "closed" ? "closed"
+                  : s.key;
                 const count = ticketCounts[countKey] || 0;
                 return (
                   <button
                     key={s.key}
                     onClick={() => setStatusFilter(s.key)}
                     style={{
-                      background:
-                        statusFilter === s.key ? COLORS.night : "white",
-                      color:
-                        statusFilter === s.key
-                          ? COLORS.sand
-                          : "var(--text-primary)",
+                      background: statusFilter === s.key ? COLORS.night : "white",
+                      color: statusFilter === s.key ? COLORS.sand : "var(--text-primary)",
                       borderColor: COLORS.sandLine,
                     }}
                     className="text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
@@ -1191,7 +1105,6 @@ export default function SupportSection() {
             </div>
           )}
 
-          {/* Category + Search */}
           {tickets.length > 0 && (
             <div className="flex flex-col sm:flex-row gap-2 mb-4 w-full min-w-0">
               <select
@@ -1200,14 +1113,10 @@ export default function SupportSection() {
                 style={{ borderColor: COLORS.sandLine }}
                 className="text-xs font-semibold px-3 py-2 rounded-lg border bg-white outline-none shrink-0 w-full sm:w-auto"
               >
-                <option value="all">
-                  {t("Kategoria Zote", "All Categories")} (
-                  {ticketCategoryCounts.all})
-                </option>
+                <option value="all">{t("Kategoria Zote", "All Categories")} ({ticketCategoryCounts.all})</option>
                 {TICKET_CATEGORIES.map((c) => (
                   <option key={c.key} value={c.key}>
-                    {c.label?.[lang] || c.label?.sw} (
-                    {ticketCategoryCounts[c.key]})
+                    {c.label?.[lang] || c.label?.sw} ({ticketCategoryCounts[c.key]})
                   </option>
                 ))}
               </select>
@@ -1216,10 +1125,7 @@ export default function SupportSection() {
                 <input
                   value={ticketQuery}
                   onChange={(e) => setTicketQuery(e.target.value)}
-                  placeholder={t(
-                    "Tafuta kwa ID, mada, mtumiaji...",
-                    "Search by ID, subject, user..."
-                  )}
+                  placeholder={t("Tafuta kwa ID, mada, mtumiaji...", "Search by ID, subject, user...")}
                   className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
                   style={{ WebkitAppearance: "none" }}
                 />
@@ -1228,123 +1134,68 @@ export default function SupportSection() {
             </div>
           )}
 
-          {/* List */}
           {filteredTickets.length === 0 ? (
             <div
               style={{ borderColor: COLORS.sandLine, background: "white" }}
               className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
             >
               <Inbox size={40} className="mx-auto text-muted mb-3" />
-              <h3
-                style={{ color: "var(--text-primary)" }}
-                className="font-semibold mb-1"
-              >
-                {ticketQuery ||
-                statusFilter !== "all" ||
-                categoryFilter !== "all"
+              <h3 style={{ color: "var(--text-primary)" }} className="font-semibold mb-1">
+                {ticketQuery || statusFilter !== "all" || categoryFilter !== "all"
                   ? t("Hakuna matokeo", "No results")
                   : t("Hakuna tickets", "No tickets")}
               </h3>
               <p className="text-sm text-secondary">
-                {ticketQuery ||
-                statusFilter !== "all" ||
-                categoryFilter !== "all"
-                  ? t(
-                      "Jaribu kubadilisha vichujio au utafutaji wako.",
-                      "Try changing your filters or search."
-                    )
-                  : t(
-                      "Tickets za watumiaji zitaonekana hapa.",
-                      "User tickets will appear here."
-                    )}
+                {ticketQuery || statusFilter !== "all" || categoryFilter !== "all"
+                  ? t("Jaribu kubadilisha vichujio au utafutaji wako.", "Try changing your filters or search.")
+                  : t("Tickets za watumiaji zitaonekana hapa.", "User tickets will appear here.")}
               </p>
             </div>
           ) : (
             <div className="flex flex-col gap-3 w-full min-w-0">
               {filteredTickets.map((ticket) => (
-                <TicketCard key={ticket.id} ticket={ticket} lang={lang} />
+                <TicketCard
+                  key={ticket.id}
+                  ticket={ticket}
+                  lang={lang}
+                  defaultExpanded={ticket.id === focusedTicketId}
+                  highlight={ticket.id === focusedTicketId}
+                />
               ))}
             </div>
           )}
         </>
       )}
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* TAB: FEEDBACK                                          */}
-      {/* ═══════════════════════════════════════════════════════ */}
+      {/* TAB: FEEDBACK */}
       {tab === "feedback" && (
         <>
-          {/* Summary Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5 w-full">
-            <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
-            >
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">
-                {t("Zote", "Total")}
-              </p>
-              <p
-                style={{ color: "var(--text-primary)" }}
-                className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
-              >
-                {feedbackCounts.total}
-              </p>
+            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Zote", "Total")}</p>
+              <p style={{ color: "var(--text-primary)" }} className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words">{feedbackCounts.total}</p>
             </div>
-            <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
-            >
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">
-                {t("Mpya", "New")}
-              </p>
-              <p
-                className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
-                style={{ color: COLORS.rust }}
-              >
-                {feedbackCounts.byStatus.new}
-              </p>
+            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Mpya", "New")}</p>
+              <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.rust }}>{feedbackCounts.byStatus.new}</p>
             </div>
-            <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
-            >
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">
-                {t("Zimejibiwa", "Answered")}
-              </p>
-              <p
-                className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
-                style={{ color: COLORS.green }}
-              >
-                {feedbackCounts.byStatus.answered}
-              </p>
+            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Zimejibiwa", "Answered")}</p>
+              <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.green }}>{feedbackCounts.byStatus.answered}</p>
             </div>
-            <div
-              style={{ borderColor: COLORS.sandLine, background: "white" }}
-              className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full"
-            >
-              <p className="text-[10px] font-semibold text-secondary uppercase truncate">
-                {t("Wastani wa Rating", "Avg Rating")}
-              </p>
-              <p
-                className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words"
-                style={{ color: COLORS.gold }}
-              >
-                {avgRating}
-              </p>
+            <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="rounded-xl border p-2.5 sm:p-3 min-w-0 w-full">
+              <p className="text-[10px] font-semibold text-secondary uppercase truncate">{t("Wastani wa Rating", "Avg Rating")}</p>
+              <p className="text-sm sm:text-base lg:text-lg font-bold mt-0.5 break-words" style={{ color: COLORS.gold }}>{avgRating}</p>
             </div>
           </div>
 
-          {/* Type Tabs */}
           {feedback.length > 0 && (
             <div className="flex justify-center gap-2 mb-3 overflow-x-auto pb-2 w-full min-w-0">
               <button
                 onClick={() => setTypeFilter("all")}
                 style={{
                   background: typeFilter === "all" ? COLORS.night : "white",
-                  color:
-                    typeFilter === "all"
-                      ? COLORS.sand
-                      : "var(--text-primary)",
+                  color: typeFilter === "all" ? COLORS.sand : "var(--text-primary)",
                   borderColor: COLORS.sandLine,
                 }}
                 className="text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
@@ -1357,22 +1208,17 @@ export default function SupportSection() {
                   onClick={() => setTypeFilter(ft.key)}
                   style={{
                     background: typeFilter === ft.key ? COLORS.night : "white",
-                    color:
-                      typeFilter === ft.key
-                        ? COLORS.sand
-                        : "var(--text-primary)",
+                    color: typeFilter === ft.key ? COLORS.sand : "var(--text-primary)",
                     borderColor: COLORS.sandLine,
                   }}
                   className="text-xs font-semibold px-3 py-2 rounded-full border whitespace-nowrap shrink-0"
                 >
-                  {ft.label?.[lang] || ft.label?.sw} (
-                  {feedbackCounts.byType[ft.key] || 0})
+                  {ft.label?.[lang] || ft.label?.sw} ({feedbackCounts.byType[ft.key] || 0})
                 </button>
               ))}
             </div>
           )}
 
-          {/* Status + Search */}
           {feedback.length > 0 && (
             <div className="flex flex-col sm:flex-row gap-2 mb-4 w-full min-w-0">
               <select
@@ -1382,23 +1228,15 @@ export default function SupportSection() {
                 className="text-xs font-semibold px-3 py-2 rounded-lg border bg-white outline-none shrink-0 w-full sm:w-auto"
               >
                 <option value="all">{t("Hali Zote", "All Statuses")}</option>
-                <option value="new">
-                  {t("Mpya", "New")} ({feedbackCounts.byStatus.new})
-                </option>
-                <option value="answered">
-                  {t("Zimejibiwa", "Answered")} (
-                  {feedbackCounts.byStatus.answered})
-                </option>
+                <option value="new">{t("Mpya", "New")} ({feedbackCounts.byStatus.new})</option>
+                <option value="answered">{t("Zimejibiwa", "Answered")} ({feedbackCounts.byStatus.answered})</option>
               </select>
 
               <div className="relative flex-1 min-w-0">
                 <input
                   value={feedbackQuery}
                   onChange={(e) => setFeedbackQuery(e.target.value)}
-                  placeholder={t(
-                    "Tafuta kwa kichwa, ujumbe, mtumiaji...",
-                    "Search by subject, message, user..."
-                  )}
+                  placeholder={t("Tafuta kwa kichwa, ujumbe, mtumiaji...", "Search by subject, message, user...")}
                   className="smk-inline-search w-full rounded-lg border border-gray-200 bg-white pl-3 pr-10 py-2 text-xs outline-none focus:outline-none focus-visible:outline-none"
                   style={{ WebkitAppearance: "none" }}
                 />
@@ -1407,35 +1245,21 @@ export default function SupportSection() {
             </div>
           )}
 
-          {/* List */}
           {filteredFeedback.length === 0 ? (
             <div
               style={{ borderColor: COLORS.sandLine, background: "white" }}
               className="rounded-2xl border-2 border-dashed p-8 sm:p-10 text-center w-full"
             >
               <Inbox size={40} className="mx-auto text-muted mb-3" />
-              <h3
-                style={{ color: "var(--text-primary)" }}
-                className="font-semibold mb-1"
-              >
-                {feedbackQuery ||
-                typeFilter !== "all" ||
-                feedbackStatusFilter !== "all"
+              <h3 style={{ color: "var(--text-primary)" }} className="font-semibold mb-1">
+                {feedbackQuery || typeFilter !== "all" || feedbackStatusFilter !== "all"
                   ? t("Hakuna matokeo", "No results")
                   : t("Hakuna maoni bado", "No feedback yet")}
               </h3>
               <p className="text-sm text-secondary">
-                {feedbackQuery ||
-                typeFilter !== "all" ||
-                feedbackStatusFilter !== "all"
-                  ? t(
-                      "Jaribu kubadilisha vichujio au utafutaji wako.",
-                      "Try changing your filters or search."
-                    )
-                  : t(
-                      "Maoni ya watumiaji yataonekana hapa.",
-                      "User feedback will appear here."
-                    )}
+                {feedbackQuery || typeFilter !== "all" || feedbackStatusFilter !== "all"
+                  ? t("Jaribu kubadilisha vichujio au utafutaji wako.", "Try changing your filters or search.")
+                  : t("Maoni ya watumiaji yataonekana hapa.", "User feedback will appear here.")}
               </p>
             </div>
           ) : (
