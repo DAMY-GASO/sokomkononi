@@ -810,9 +810,11 @@ export default function PropertyDetailPage() {
     }
   };
 
-  const handleReportSeller = async () => {
+    const handleReportSeller = async () => {
     if (!user) {
-      navigate("/login", { state: { from: `${location.pathname}${location.search}` } });
+      navigate("/login", {
+        state: { from: `${location.pathname}${location.search}` },
+      });
       return;
     }
     const ok = await confirm({
@@ -826,25 +828,57 @@ export default function PropertyDetailPage() {
       danger: true,
     });
     if (!ok) return;
+
     try {
-      await api.post("/tickets/", {
-        subject: t(lang, `Ripoti ya muuzaji: ${property.seller_name || ""}`,
-                       `Seller report: ${property.seller_name || ""}`),
+      const res = await api.post("/tickets/", {
+        subject: t(
+          lang,
+          `Ripoti ya muuzaji: ${property.seller_name || property.seller || "—"}`,
+          `Seller report: ${property.seller_name || property.seller || "—"}`
+        ),
         description: t(
           lang,
-          `Mtumiaji ameripoti muuzaji kwenye tangazo "${property.title}" (ID: ${property.id}).`,
-          `User reported the seller on listing "${property.title}" (ID: ${property.id}).`
+          `Mtumiaji ameripoti muuzaji kwenye tangazo "${property.title}" (ID: ${property.id}).\n` +
+            `Mahali: ${property.location || "—"}\n` +
+            `Bei: ${property.price || 0}\n` +
+            `Muuzaji: ${property.seller_name || "—"} (ID ${property.sellerId || "—"})`,
+          `User reported the seller on listing "${property.title}" (ID: ${property.id}).\n` +
+            `Location: ${property.location || "—"}\n` +
+            `Price: ${property.price || 0}\n` +
+            `Seller: ${property.seller_name || "—"} (ID ${property.sellerId || "—"})`
         ),
         category: "DISPUTE",
         priority: "HIGH",
       });
-      toast.success(t(lang, "Ripoti imetumwa.", "Report submitted."));
+
+      // ✅ Ujumbe wa mafanikio wenye link kwenda Safety & Support
+      const ticketId = res?.id ?? res?.ticket_id;
+      const ticketCode = res?.code ?? res?.ticket_code;
+
+      toast.success(
+        t(
+          lang,
+          `Ripoti imetumwa${ticketCode ? ` (${ticketCode})` : ""} — utaipata kwenye Usalama & Msaada.`,
+          `Report submitted${ticketCode ? ` (${ticketCode})` : ""} — you'll find it in Safety & Support.`
+        )
+      );
+
+      // ✅ Mpeleke mtumiaji kwenye Safety & Support ikiwa una ticket id
+      if (ticketId) {
+        setTimeout(() => {
+          navigate(`/dashboard/safety?ticket=${ticketId}`);
+        }, 900);
+      }
     } catch (err) {
-      toast.error(err?.message || t(lang, "Imeshindwa kutuma ripoti.", "Failed to submit report."));
+      toast.error(
+        err?.data?.detail ||
+          err?.message ||
+          t(lang, "Imeshindwa kutuma ripoti.", "Failed to submit report.")
+      );
     }
   };
 
-  const handleReport = async () => {
+    const handleReport = async () => {
     if (!user) {
       navigate("/login", {
         state: { from: `${location.pathname}${location.search}` },
@@ -863,28 +897,61 @@ export default function PropertyDetailPage() {
       danger: true,
     });
     if (!ok) return;
+
     setReporting(true);
     try {
-      await api.post("/tickets/", {
-        subject: t(lang, `Ripoti ya tangazo: ${property.title}`,
-                       `Listing report: ${property.title}`),
+      const res = await api.post("/tickets/", {
+        subject: t(
+          lang,
+          `Ripoti ya tangazo: ${property.title}`,
+          `Listing report: ${property.title}`
+        ),
         description: t(
           lang,
-          `Mtumiaji ameripoti tangazo "${property.title}" (ID: ${property.id}).`,
-          `User reported listing "${property.title}" (ID: ${property.id}).`
+          `Mtumiaji ameripoti tangazo "${property.title}" (ID: ${property.id}).\n` +
+            `Mahali: ${property.location || "—"}\n` +
+            `Bei: ${property.price || 0}\n` +
+            `Muuzaji: ${property.seller_name || "—"} (ID ${property.sellerId || "—"})\n\n` +
+            `Maelezo ya tangazo:\n${property.description || "—"}`,
+          `User reported listing "${property.title}" (ID: ${property.id}).\n` +
+            `Location: ${property.location || "—"}\n` +
+            `Price: ${property.price || 0}\n` +
+            `Seller: ${property.seller_name || "—"} (ID ${property.sellerId || "—"})\n\n` +
+            `Listing description:\n${property.description || "—"}`
         ),
         category: "LISTING",
         priority: "HIGH",
       });
-      toast.success(t(lang, "Ripoti imetumwa.", "Report submitted."));
+
+      // ✅ Ujumbe wa mafanikio wenye link kwenda Safety & Support
+      const ticketId = res?.id ?? res?.ticket_id;
+      const ticketCode = res?.code ?? res?.ticket_code;
+
+      toast.success(
+        t(
+          lang,
+          `Ripoti imetumwa${ticketCode ? ` (${ticketCode})` : ""} — utaipata kwenye Usalama & Msaada.`,
+          `Report submitted${ticketCode ? ` (${ticketCode})` : ""} — you'll find it in Safety & Support.`
+        )
+      );
+
+      // ✅ Mpeleke mtumiaji kwenye Safety & Support ikiwa una ticket id
+      if (ticketId) {
+        setTimeout(() => {
+          navigate(`/dashboard/safety?ticket=${ticketId}`);
+        }, 900);
+      }
     } catch (err) {
-      toast.error(err?.message ||
-        t(lang, "Imeshindwa kutuma ripoti.", "Failed to submit report."));
+      toast.error(
+        err?.data?.detail ||
+          err?.message ||
+          t(lang, "Imeshindwa kutuma ripoti.", "Failed to submit report.")
+      );
     } finally {
       setReporting(false);
     }
   };
-
+  
   const categoryLabel =
     CATEGORY_LABELS[property.category]?.[lang] ||
     CATEGORY_LABELS[property.category]?.sw ||

@@ -1,31 +1,16 @@
 // ============================================================
 // SafetySupportSection.jsx
 // Buyer & Seller — Safety & Support (report, help center, complaints).
-// Kila upande (buyer/seller) na content yake maalum:
-//   • Header + subtitle
-//   • Safety Tips
-//   • Report Form (options + placeholder)
-//   • Ripoti Zangu (title + subtitle)
-//   • FAQ
-//   • Contact (subtitle)
+// ✅ MPYA: Inasoma ?ticket={id} kutoka URL na inafungua ticket husika.
+// ✅ MPYA: Inahydrate tickets kwenye mount.
 // ============================================================
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
-  Shield,
-  Flag,
-  MessageSquare,
-  BookOpen,
-  Phone,
-  Mail,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  Send,
-  Clock,
-  Inbox,
-  MessageCircle, // ⬅️ IMEONGEZWA kwa ajili ya WhatsApp
+  Shield, Flag, MessageSquare, BookOpen, Phone, Mail,
+  CheckCircle, ChevronDown, ChevronUp, Loader2, Send,
+  Clock, Inbox, MessageCircle,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -40,7 +25,7 @@ import {
 } from "../../../config/ticketsStore.js";
 
 // ============================================================
-// FAQ — tofauti kwa buyer na seller
+// FAQ
 // ============================================================
 const BUYER_FAQ = [
   {
@@ -51,10 +36,7 @@ const BUYER_FAQ = [
     },
   },
   {
-    q: {
-      sw: "Ninawezaje kuripoti tangazo la udanganyifu?",
-      en: "How do I report a fraudulent listing?",
-    },
+    q: { sw: "Ninawezaje kuripoti tangazo la udanganyifu?", en: "How do I report a fraudulent listing?" },
     a: {
       sw: "Bofya 'Ripoti Tatizo' hapa chini, kisha chagua Tangazo na eleza tatizo. Timu yetu itachukua hatua ndani ya saa 24.",
       en: "Click 'Report an Issue' below, select Listing, and describe the issue. Our team will act within 24 hours.",
@@ -68,10 +50,7 @@ const BUYER_FAQ = [
     },
   },
   {
-    q: {
-      sw: "Nifanye nini nikikutana na muuzaji?",
-      en: "What should I do when meeting a seller?",
-    },
+    q: { sw: "Nifanye nini nikikutana na muuzaji?", en: "What should I do when meeting a seller?" },
     a: {
       sw: "Kutana sehemu za wazi, wakati wa mchana, na uende na mtu mwingine. Usilipe kabla ya kuona mali.",
       en: "Meet in public places, during daylight, and bring someone with you. Never pay before viewing the property.",
@@ -81,40 +60,28 @@ const BUYER_FAQ = [
 
 const SELLER_FAQ = [
   {
-    q: {
-      sw: "Ninawezaje kulinda tangazo langu dhidi ya wanunuzi wa uongo?",
-      en: "How do I protect my listing from fake buyers?",
-    },
+    q: { sw: "Ninawezaje kulinda tangazo langu dhidi ya wanunuzi wa uongo?", en: "How do I protect my listing from fake buyers?" },
     a: {
       sw: "Thibitisha akaunti yako, tumia Deal Room kwa mazungumzo yote, na usikubali malipo nje ya jukwaa. Wanunuzi wa uongo mara nyingi wanakataa kutumia Deal Room.",
       en: "Verify your account, use the Deal Room for all conversations, and never accept payments outside the platform. Fake buyers often refuse to use the Deal Room.",
     },
   },
   {
-    q: {
-      sw: "Nifanye nini mnunuzi akinipa malipo ya uongo?",
-      en: "What should I do if a buyer gives me a fake payment?",
-    },
+    q: { sw: "Nifanye nini mnunuzi akinipa malipo ya uongo?", en: "What should I do if a buyer gives me a fake payment?" },
     a: {
       sw: "Ripoti mara moja kupitia 'Ripoti Mnunuzi' hapa chini. Usikabidhi mali hadi malipo yathibitishwe. Hifadhi screenshot zote za mazungumzo.",
       en: "Report immediately via 'Report a Buyer' below. Do not hand over the property until payment is confirmed. Keep all screenshots of the conversation.",
     },
   },
   {
-    q: {
-      sw: "Ninawezaje kuepuka mashtaka ya udanganyifu?",
-      en: "How do I avoid fraud accusations?",
-    },
+    q: { sw: "Ninawezaje kuepuka mashtaka ya udanganyifu?", en: "How do I avoid fraud accusations?" },
     a: {
       sw: "Weka picha za kweli, eleza hali halisi ya mali, na usikubali malipo ya nje. Onyesha hati zote ikiwa mnunuzi anaomba.",
       en: "Use real photos, describe the property accurately, and never accept off-platform payments. Show all documents if the buyer asks.",
     },
   },
   {
-    q: {
-      sw: "Je, ni salama kukutana na mnunuzi peke yangu?",
-      en: "Is it safe to meet a buyer alone?",
-    },
+    q: { sw: "Je, ni salama kukutana na mnunuzi peke yangu?", en: "Is it safe to meet a buyer alone?" },
     a: {
       sw: "Hapana. Kutana sehemu za wazi, wakati wa mchana, na uende na mtu mwingine. Mwambie mtu unayemwamini unakoenda.",
       en: "No. Meet in public places, during daylight, and bring someone with you. Tell someone you trust where you are going.",
@@ -122,49 +89,22 @@ const SELLER_FAQ = [
   },
 ];
 
-// ============================================================
-// SAFETY TIPS — tofauti kwa buyer na seller
-// ============================================================
 const BUYER_TIPS = [
-  {
-    sw: "Thibitisha akaunti ya muuzaji kabla ya kuendelea.",
-    en: "Verify the seller's account before proceeding.",
-  },
-  {
-    sw: "Kutana sehemu za wazi, wakati wa mchana.",
-    en: "Meet in public places, during daylight.",
-  },
-  {
-    sw: "Usilipe kabla ya kuona mali na hati zake.",
-    en: "Never pay before viewing the property and its documents.",
-  },
-  {
-    sw: "Tumia Deal Room yetu — mazungumzo yote yanahifadhiwa.",
-    en: "Use our Deal Room — all conversations are recorded.",
-  },
+  { sw: "Thibitisha akaunti ya muuzaji kabla ya kuendelea.", en: "Verify the seller's account before proceeding." },
+  { sw: "Kutana sehemu za wazi, wakati wa mchana.", en: "Meet in public places, during daylight." },
+  { sw: "Usilipe kabla ya kuona mali na hati zake.", en: "Never pay before viewing the property and its documents." },
+  { sw: "Tumia Deal Room yetu — mazungumzo yote yanahifadhiwa.", en: "Use our Deal Room — all conversations are recorded." },
 ];
 
 const SELLER_TIPS = [
-  {
-    sw: "Thibitisha akaunti yako ili kupata wanunuzi wa kuaminika.",
-    en: "Verify your account to attract trusted buyers.",
-  },
-  {
-    sw: "Tumia Deal Room kwa mazungumzo yote — usihamie WhatsApp haraka.",
-    en: "Use the Deal Room for all conversations — don't move to WhatsApp too quickly.",
-  },
-  {
-    sw: "Usikabidhi mali hadi malipo yathibitishwe rasmi.",
-    en: "Never hand over the property until payment is officially confirmed.",
-  },
-  {
-    sw: "Ripoti mnunuzi yeyote anayekataa kutumia jukwaa au kutoa malipo ya nje.",
-    en: "Report any buyer who refuses to use the platform or offers off-platform payments.",
-  },
+  { sw: "Thibitisha akaunti yako ili kupata wanunuzi wa kuaminika.", en: "Verify your account to attract trusted buyers." },
+  { sw: "Tumia Deal Room kwa mazungumzo yote — usihamie WhatsApp haraka.", en: "Use the Deal Room for all conversations — don't move to WhatsApp too quickly." },
+  { sw: "Usikabidhi mali hadi malipo yathibitishwe rasmi.", en: "Never hand over the property until payment is officially confirmed." },
+  { sw: "Ripoti mnunuzi yeyote anayekataa kutumia jukwaa au kutoa malipo ya nje.", en: "Report any buyer who refuses to use the platform or offers off-platform payments." },
 ];
 
 // ============================================================
-// COLOR MAP — kwa status/category badges
+// COLOR MAP
 // ============================================================
 const COLOR_MAP = {
   gray: { bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
@@ -176,22 +116,25 @@ const COLOR_MAP = {
 };
 
 // ============================================================
-// TICKET CARD — kwa mtumiaji
+// TICKET CARD
 // ============================================================
-function MyTicketCard({ ticket, lang }) {
-  const [expanded, setExpanded] = useState(false);
+function MyTicketCard({ ticket, lang, defaultExpanded = false }) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
+  useEffect(() => {
+    if (defaultExpanded) setExpanded(true);
+  }, [defaultExpanded]);
+
   const category = TICKET_CATEGORIES.find((c) => c.key === ticket.category);
   const priority = TICKET_PRIORITIES.find((p) => p.key === ticket.priority);
   const status = TICKET_STATUSES.find((s) => s.key === ticket.status);
 
   const catColors = COLOR_MAP[category?.color] || COLOR_MAP.night;
-  const priColors = COLOR_MAP[priority?.color] || COLOR_MAP.gold;
   const statusColors = COLOR_MAP[status?.color] || COLOR_MAP.rust;
 
   const handleSendReply = async () => {
@@ -222,10 +165,10 @@ function MyTicketCard({ ticket, lang }) {
 
   return (
     <div
+      id={`ticket-${ticket.id}`}
       style={{ borderColor: COLORS.sandLine, background: "white" }}
       className="rounded-xl border overflow-hidden w-full"
     >
-      {/* Header */}
       <div className="p-3 sm:p-4 w-full">
         <div className="flex items-start gap-2 sm:gap-3 w-full">
           <div
@@ -286,7 +229,6 @@ function MyTicketCard({ ticket, lang }) {
         </div>
       </div>
 
-      {/* Expanded — thread + composer */}
       {expanded && (
         <div
           style={{ borderColor: COLORS.sandLine, background: COLORS.sand }}
@@ -294,17 +236,13 @@ function MyTicketCard({ ticket, lang }) {
         >
           {error && (
             <div
-              style={{
-                background: "rgba(193,80,46,0.1)",
-                color: COLORS.rust,
-              }}
+              style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
               className="text-xs font-semibold px-3 py-2 rounded-lg"
             >
               {error}
             </div>
           )}
 
-          {/* Thread */}
           <div>
             <p className="text-[10px] font-semibold text-secondary uppercase mb-2">
               {t("Mazungumzo", "Conversation")}
@@ -365,7 +303,6 @@ function MyTicketCard({ ticket, lang }) {
             </div>
           </div>
 
-          {/* Composer */}
           {ticket.status !== "closed" && (
             <div className="flex items-center gap-2">
               <input
@@ -423,10 +360,12 @@ function MyTicketCard({ ticket, lang }) {
 export default function SafetySupportSection({ side = "buyer" }) {
   const { lang } = useLanguage();
   const tickets = useTickets();
+  const [searchParams] = useSearchParams();
+
+  const ticketIdParam = searchParams.get("ticket");
+  const focusedTicketId = ticketIdParam ? Number(ticketIdParam) : null;
 
   const isSeller = side === "seller";
-
-  // Chagua content kulingana na side
   const FAQ_ITEMS = isSeller ? SELLER_FAQ : BUYER_FAQ;
   const SAFETY_TIPS = isSeller ? SELLER_TIPS : BUYER_TIPS;
 
@@ -441,24 +380,45 @@ export default function SafetySupportSection({ side = "buyer" }) {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ============================================================
-  // CONTENT ZA KILA UPANDE — buyer vs seller
-  // ============================================================
+  // ✅ Hydrate tickets kwenye mount
+  useEffect(() => {
+    hydrateTicketsFromApi();
+  }, []);
+
+  // ✅ Scroll kwenda kwenye ticket iliyochaguliwa
+  useEffect(() => {
+    if (!focusedTicketId) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`ticket-${focusedTicketId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [focusedTicketId, tickets.length]);
+
+  // Panga tickets — ile iliyochaguliwa iwe juu
+  const sortedTickets = useMemo(() => {
+    if (!focusedTicketId) return tickets;
+    return [...tickets].sort((a, b) => {
+      if (a.id === focusedTicketId) return -1;
+      if (b.id === focusedTicketId) return 1;
+      return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
+    });
+  }, [tickets, focusedTicketId]);
+
   const content = isSeller
     ? {
-        // Header
         headerTitle: t("Usalama & Msaada", "Safety & Support"),
         headerSubtitle: t(
           "Ripoti mnunuzi, soma vidokezo vya usalama wa muuzaji, au wasiliana nasi.",
           "Report a buyer, read seller safety tips, or contact us."
         ),
-        // Safety Tips
         tipsTitle: t("Vidokezo vya Usalama", "Safety Tips"),
         tipsSubtitle: t(
           "Fuata vidokezo hivi ili kulinda biashara yako.",
           "Follow these tips to protect your business."
         ),
-        // Report
         reportTitle: t("Ripoti Mnunuzi", "Report a Buyer"),
         reportSubtitle: t(
           "Mnunuzi anakukatisha tamaa, anakataa kutumia Deal Room, au ana tabia ya kutiliwa shaka?",
@@ -469,18 +429,15 @@ export default function SafetySupportSection({ side = "buyer" }) {
           "Eleza tatizo la mnunuzi kwa ufupi (lazima)...",
           "Describe the buyer's issue briefly (required)..."
         ),
-        // Ripoti Zangu
         myReportsTitle: t("Ripoti Zangu za Wanunuzi", "My Buyer Reports"),
         myReportsSubtitle: t(
           "Fuatilia majibu ya timu yetu kwa ripoti zako za wanunuzi.",
           "Track our team's replies to your buyer reports."
         ),
-        // Contact
         contactSubtitle: t(
           "Timu yetu ya wauzaji iko tayari kukusaidia.",
           "Our seller support team is ready to help."
         ),
-        // Report options
         reportTypeOptions: [
           { key: "buyer", label: t("Mnunuzi", "Buyer") },
           { key: "listing", label: t("Tangazo", "Listing") },
@@ -496,19 +453,16 @@ export default function SafetySupportSection({ side = "buyer" }) {
             : t("Ripoti ya tangazo", "Listing report"),
       }
     : {
-        // Header
         headerTitle: t("Usalama & Msaada", "Safety & Support"),
         headerSubtitle: t(
           "Ripoti tatizo, soma vidokezo vya usalama, au wasiliana nasi.",
           "Report an issue, read safety tips, or contact us."
         ),
-        // Safety Tips
         tipsTitle: t("Vidokezo vya Usalama", "Safety Tips"),
         tipsSubtitle: t(
           "Fuata vidokezo hivi ili kulinda pesa zako.",
           "Follow these tips to protect your money."
         ),
-        // Report
         reportTitle: t("Ripoti Muuzaji", "Report a Seller"),
         reportSubtitle: t(
           "Unaona tangazo la udanganyifu au mtumiaji mwenye tabia ya kutiliwa shaka?",
@@ -519,18 +473,15 @@ export default function SafetySupportSection({ side = "buyer" }) {
           "Eleza tatizo kwa ufupi (lazima)...",
           "Describe the issue briefly (required)..."
         ),
-        // Ripoti Zangu
         myReportsTitle: t("Ripoti Zangu", "My Reports"),
         myReportsSubtitle: t(
           "Fuatilia majibu ya timu yetu kwa ripoti zako.",
           "Track our team's replies to your reports."
         ),
-        // Contact
         contactSubtitle: t(
           "Timu yetu iko tayari kukusaidia.",
           "Our support team is ready to help."
         ),
-        // Report options
         reportTypeOptions: [
           { key: "listing", label: t("Tangazo", "Listing") },
           { key: "user", label: t("Mtumiaji", "User") },
@@ -545,9 +496,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
 
   const handleReportSubmit = async () => {
     if (!reportDetails.trim()) {
-      setReportError(
-        t("Tafadhali eleza tatizo.", "Please describe the issue.")
-      );
+      setReportError(t("Tafadhali eleza tatizo.", "Please describe the issue."));
       return;
     }
 
@@ -568,7 +517,6 @@ export default function SafetySupportSection({ side = "buyer" }) {
         priority: "HIGH",
       });
 
-      // Refresh tickets
       await hydrateTicketsFromApi();
 
       setReportSent(true);
@@ -632,10 +580,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
           <ul className="space-y-2 text-body-sm text-secondary max-w-md mx-auto">
             {SAFETY_TIPS.map((tip, i) => (
               <li key={i} className="flex items-start gap-2 text-left">
-                <CheckCircle
-                  size={14}
-                  className="text-green-600 shrink-0 mt-0.5"
-                />
+                <CheckCircle size={14} className="text-green-600 shrink-0 mt-0.5" />
                 <span>{lang === "sw" ? tip.sw : tip.en}</span>
               </li>
             ))}
@@ -664,10 +609,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
 
           {reportSent ? (
             <div
-              style={{
-                background: "rgba(47,109,79,0.1)",
-                color: COLORS.green,
-              }}
+              style={{ background: "rgba(47,109,79,0.1)", color: COLORS.green }}
               className="flex items-center justify-center gap-2 text-body-sm font-semibold rounded-lg px-3 py-2.5 max-w-md mx-auto text-center"
             >
               <CheckCircle size={14} />
@@ -691,17 +633,13 @@ export default function SafetySupportSection({ side = "buyer" }) {
             <div className="flex flex-col gap-3 max-w-md mx-auto">
               {reportError && (
                 <div
-                  style={{
-                    background: "rgba(193,80,46,0.1)",
-                    color: COLORS.rust,
-                  }}
+                  style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
                   className="text-xs font-semibold px-3 py-2 rounded-lg"
                 >
                   {reportError}
                 </div>
               )}
 
-              {/* Type — tofauti kwa buyer vs seller */}
               <div className="flex gap-2">
                 {content.reportTypeOptions.map((opt) => (
                   <button
@@ -709,13 +647,9 @@ export default function SafetySupportSection({ side = "buyer" }) {
                     onClick={() => setReportType(opt.key)}
                     style={{
                       background:
-                        reportType === opt.key
-                          ? COLORS.night
-                          : "transparent",
+                        reportType === opt.key ? COLORS.night : "transparent",
                       color:
-                        reportType === opt.key
-                          ? COLORS.sand
-                          : COLORS.night,
+                        reportType === opt.key ? COLORS.sand : COLORS.night,
                       borderColor: COLORS.sandLine,
                     }}
                     className="flex-1 text-btn font-semibold px-3 py-2 rounded-lg border"
@@ -725,7 +659,6 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 ))}
               </div>
 
-              {/* Subject */}
               <input
                 value={reportSubject}
                 onChange={(e) => setReportSubject(e.target.value)}
@@ -734,7 +667,6 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 className="border rounded-lg px-3 py-2 text-sm outline-none bg-white"
               />
 
-              {/* Details */}
               <textarea
                 value={reportDetails}
                 onChange={(e) => setReportDetails(e.target.value)}
@@ -773,9 +705,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
                   }}
                   className="flex-1 flex items-center justify-center gap-2 text-btn font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
                 >
-                  {sendingReport && (
-                    <Loader2 size={14} className="animate-spin" />
-                  )}
+                  {sendingReport && <Loader2 size={14} className="animate-spin" />}
                   {t("Tuma Ripoti", "Submit Report")}
                 </button>
               </div>
@@ -797,9 +727,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
                 <Inbox size={18} color={COLORS.night} />
               </div>
               <div>
-                <p className="text-primary h-card">
-                  {content.myReportsTitle}
-                </p>
+                <p className="text-primary h-card">{content.myReportsTitle}</p>
                 <p className="text-secondary text-body-sm mt-0.5 max-w-md mx-auto">
                   {content.myReportsSubtitle}
                 </p>
@@ -807,18 +735,19 @@ export default function SafetySupportSection({ side = "buyer" }) {
             </div>
 
             <div className="flex flex-col gap-3">
-              {tickets.map((ticket) => (
+              {sortedTickets.map((ticket) => (
                 <MyTicketCard
                   key={ticket.id}
                   ticket={ticket}
                   lang={lang}
+                  defaultExpanded={ticket.id === focusedTicketId}
                 />
               ))}
             </div>
           </div>
         )}
 
-        {/* FAQ — tofauti kwa buyer vs seller */}
+        {/* FAQ */}
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="rounded-2xl border p-4 sm:p-5 mb-4"
@@ -832,10 +761,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
             </div>
             <div>
               <p className="text-primary h-card">
-                {t(
-                  "Maswali Yanayoulizwa Sana",
-                  "Frequently Asked Questions"
-                )}
+                {t("Maswali Yanayoulizwa Sana", "Frequently Asked Questions")}
               </p>
             </div>
           </div>
@@ -857,15 +783,9 @@ export default function SafetySupportSection({ side = "buyer" }) {
                       {item.q?.[lang] || item.q?.sw}
                     </span>
                     {isOpen ? (
-                      <ChevronUp
-                        size={16}
-                        className="text-muted shrink-0"
-                      />
+                      <ChevronUp size={16} className="text-muted shrink-0" />
                     ) : (
-                      <ChevronDown
-                        size={16}
-                        className="text-muted shrink-0"
-                      />
+                      <ChevronDown size={16} className="text-muted shrink-0" />
                     )}
                   </button>
                   {isOpen && (
@@ -922,7 +842,6 @@ export default function SafetySupportSection({ side = "buyer" }) {
               >
                 +255 743 895 038
               </a>
-              {/* ⬅️ WHATSAPP BUTTON */}
               <a
                 href="https://wa.me/255743895038"
                 target="_blank"

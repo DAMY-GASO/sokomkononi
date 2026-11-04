@@ -9,9 +9,9 @@ import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import NewsletterStrip from "../components/NewsletterStrip.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import { contactApi } from "../api/contact.js";
+import { api } from "../api/client.js";
 import { faqs } from "../config/FaqsData.js";
-import { useContactInfo } from "../config/systemSettingsStore.js"; // <-- Ongeza hii
+import { useContactInfo } from "../config/systemSettingsStore.js";
 
 // ── WhatsApp Icon Halisi (SVG) ─────────────────────────────
 function WhatsAppIcon({ size = 16, className = "" }) {
@@ -32,7 +32,7 @@ function WhatsAppIcon({ size = 16, className = "" }) {
 export default function ContactPage() {
   const { lang } = useLanguage();
   const t = (sw, en) => (lang === "sw" ? sw : en);
-  const [contactInfo] = useContactInfo(); // <-- System settings
+  const [contactInfo] = useContactInfo();
 
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [busy, setBusy] = useState(false);
@@ -40,7 +40,6 @@ export default function ContactPage() {
   const [error, setError] = useState("");
   const [openFaq, setOpenFaq] = useState(null);
 
-  // Fallback kama system settings haipo
   const email = contactInfo?.email || "support@sokomkononi.co.tz";
   const phone = contactInfo?.phone || "+255 743 895 038";
   const whatsappNumber = contactInfo?.whatsapp || "255743895038";
@@ -67,10 +66,18 @@ export default function ContactPage() {
     setError("");
 
     try {
-      await contactApi.submit({
-        name: form.name.trim(),
-        email: form.email.trim(),
-        message: form.message.trim(),
+      // ✅ Tuma kama ticket moja kwa moja
+      await api.post("/tickets/", {
+        subject: t(
+          `Ujumbe kutoka ukurasa wa Mawasiliano — ${form.name.trim()}`,
+          `Message from Contact Page — ${form.name.trim()}`
+        ),
+        description:
+          `Jina / Name: ${form.name.trim()}\n` +
+          `Email: ${form.email.trim()}\n\n` +
+          `${form.message.trim()}`,
+        category: "OTHER",
+        priority: "MEDIUM",
       });
       setSent(true);
       setForm({ name: "", email: "", message: "" });
@@ -263,16 +270,24 @@ export default function ContactPage() {
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-secondary">
                   {t(
-                    "Asante kwa kuwasiliana nasi. Tutakujibu haraka iwezekanavyo.",
-                    "Thanks for reaching out. We'll get back to you as soon as possible."
+                    "Asante kwa kuwasiliana nasi. Tutakujibu haraka iwezekanavyo kupitia ukurasa wa Usalama & Msaada.",
+                    "Thanks for reaching out. We'll reply through Safety & Support as soon as possible."
                   )}
                 </p>
-                <button
-                  onClick={() => setSent(false)}
-                  className="mt-6 text-sm font-semibold text-primary hover:underline"
+                <Link
+                  to="/dashboard/safety"
+                  className="mt-4 inline-block text-sm font-semibold text-primary hover:underline"
                 >
-                  {t("Tuma ujumbe mwingine", "Send another message")}
-                </button>
+                  {t("Nenda kwenye Usalama & Msaada", "Go to Safety & Support")}
+                </Link>
+                <div className="mt-4">
+                  <button
+                    onClick={() => setSent(false)}
+                    className="text-xs font-semibold text-secondary hover:underline"
+                  >
+                    {t("Tuma ujumbe mwingine", "Send another message")}
+                  </button>
+                </div>
               </div>
             ) : (
               <>
@@ -282,8 +297,8 @@ export default function ContactPage() {
                   </h2>
                   <p className="mt-1 text-sm text-secondary">
                     {t(
-                      "Tutakujibu ndani ya saa 24 za kazi.",
-                      "We'll reply within 24 business hours."
+                      "Tutakujibu ndani ya saa 24 za kazi — majibu yataonekana kwenye ukurasa wa Usalama & Msaada.",
+                      "We'll reply within 24 business hours — your replies will appear in Safety & Support."
                     )}
                   </p>
                 </div>

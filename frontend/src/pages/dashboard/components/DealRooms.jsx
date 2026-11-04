@@ -1281,7 +1281,7 @@ function DealDetail({
     }
   };
 
-  const handleReportSubmit = async () => {
+    const handleReportSubmit = async () => {
     if (reportDetails.trim().length < 10) return;
     setReportBusy(true);
     try {
@@ -1297,18 +1297,20 @@ function DealDetail({
           dealRoomId = deal.id;
         }
       }
-      await dealsApi.report(dealRoomId, {
+      const res = await dealsApi.report(dealRoomId, {
         reported_user_id: reportedUserId,
         reason: reportReason,
         details: reportDetails.trim(),
       });
       setReportSuccess(true);
+      if (res?.ticket_code) {
+      }
       setTimeout(() => {
         setReportOpen(false);
         setReportSuccess(false);
         setReportDetails("");
         setReportReason("FRAUD");
-      }, 2500);
+      }, 3500);
     } catch (err) {
       alert(
         err?.message ||
@@ -2100,17 +2102,27 @@ function DealDetail({
             </h3>
 
             {reportSuccess ? (
-              <div
-                style={{
-                  color: COLORS.green,
-                  background: "rgba(47,109,79,0.1)",
-                }}
-                className="rounded-lg p-3 text-sm text-center mb-3"
-              >
-                {lang === "sw"
+               <div
+                  style={{
+                       color: COLORS.green,
+                        background: "rgba(47,109,79,0.1)",
+                 }}
+                className="rounded-lg p-3 text-sm text-center mb-3 space-y-2"
+               >
+           <p>
+           {lang === "sw"
                   ? "Ripoti yako imetumwa. Timu yetu itachukua hatua ndani ya saa 24."
                   : "Your report has been sent. Our team will act within 24 hours."}
-              </div>
+            </p>
+               <a
+                href="/dashboard/safety"
+                className="inline-block text-xs font-semibold underline"
+                >
+              {lang === "sw"
+               ? "Fuatilia kwenye Usalama & Msaada →"
+               : "Track in Safety & Support →"}
+               </a>
+          </div>
             ) : (
               <>
                 <label className="text-xs font-semibold text-secondary">

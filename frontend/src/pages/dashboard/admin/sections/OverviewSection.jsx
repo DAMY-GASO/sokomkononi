@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   Users, Home, ShoppingBag, Wallet,
   UserCheck, Store, ClipboardList, CheckCircle2,
@@ -28,6 +28,39 @@ const STREAM_META = {
   bundle:      { icon: Package,      color: "#DB2777", labelSw: "Bundle",        labelEn: "Bundle" },
 };
 
+// ─────────────────────────────────────────────────────────────
+// HELPER: "…" wakati wa hydrating (flash-free UX)
+// ─────────────────────────────────────────────────────────────
+const LOADING = "…";
+
+function useHydrationReady(deps) {
+  // Inageuka true mara ya kwanza deps zote zina data (si tupu)
+  const [ready, setReady] = useState(false);
+  const checkedRef = useRef(false);
+
+  useEffect(() => {
+    if (checkedRef.current) return;
+    // Kama deps zote zina data tayari kwenye mount, sema ready mara moja
+    if (deps.every((d) => Array.isArray(d) && d.length > 0)) {
+      checkedRef.current = true;
+      setReady(true);
+    }
+  }, [deps]);
+
+  // Safety net: baada ya 3s, sema ready hata kama data ni tupu (mtumiaji mpya)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!checkedRef.current) {
+        checkedRef.current = true;
+        setReady(true);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return ready;
+}
+
 export default function OverviewSection() {
   const { lang } = useLanguage();
   const users = useUsers();
@@ -37,12 +70,23 @@ export default function OverviewSection() {
   const revenue = usePlatformRevenue("all");
 
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingReady, setPendingReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     fetchPendingListingsAsync().then((res) => {
+      if (cancelled) return;
       if (res.ok) setPendingCount((res.listings || []).length);
+      setPendingReady(true);
     });
+    return () => { cancelled = true; };
   }, []);
+
+  // ✅ Tunaona "hydrated" flag kwa kila store
+  const usersReady = useHydrationReady([users]);
+  const listingsReady = useHydrationReady([listings]);
+  const dealsReady = useHydrationReady([deals]);
+  const transactionsReady = useHydrationReady([transactions]);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -70,7 +114,6 @@ export default function OverviewSection() {
 
   const totalListings = listings.length;
 
-  // Rasimu = mali ambazo muuzaji hajawasilisha (status pending_payment/DRAFT)
   const draftListings = useMemo(
     () => listings.filter((l) => l.status === "pending_payment").length,
     [listings]
@@ -94,22 +137,26 @@ export default function OverviewSection() {
     [deals]
   );
 
+  // ✅ Thamani inayoonyeshwa — inaonyesha "…" kama bado haijahydrate
+  const displayValue = (ready, value) =>
+    ready ? value.toLocaleString("en-US") : LOADING;
+
   const userStatsGrid = [
-    { id: "users",       label: t("Watumiaji Wote", "Total Users"),  value: userStats.totalUsers.toLocaleString("en-US"),   icon: Users,       color: COLORS.gold },
-    { id: "sellersOnly", label: t("Wauzaji Pekee", "Sellers Only"),  value: userStats.sellersOnly.toLocaleString("en-US"), icon: Store,      color: "#2563EB" },
-    { id: "buyersOnly",  label: t("Wanunuzi Pekee", "Buyers Only"),  value: userStats.buyersOnly.toLocaleString("en-US"),  icon: UserCheck,  color: COLORS.green },
-    { id: "bothRoles",   label: t("Wote Wawili", "Both Roles"),      value: userStats.bothRoles.toLocaleString("en-US"),   icon: User,       color: "#7C3AED" },
-    { id: "neitherRole", label: t("Wapya", "Neither"),               value: userStats.neitherRole.toLocaleString("en-US"), icon: UserPlus,   color: "#D97706" },
-    { id: "admins",      label: t("Admins", "Admins"),               value: userStats.totalAdmins.toLocaleString("en-US"), icon: ShieldCheck, color: "#DC2626" },
+    { id: "users",       label: t("Watumiaji Wote", "Total Users"),  value: displayValue(usersReady, userStats.totalUsers),   icon: Users,       color: COLORS.gold },
+    { id: "sellersOnly", label: t("Wauzaji Pekee", "Sellers Only"),  value: displayValue(usersReady, userStats.sellersOnly),  icon: Store,       color: "#2563EB" },
+    { id: "buyersOnly",  label: t("Wanunuzi Pekee", "Buyers Only"),  value: displayValue(usersReady, userStats.buyersOnly),   icon: UserCheck,   color: COLORS.green },
+    { id: "bothRoles",   label: t("Wote Wawili", "Both Roles"),      value: displayValue(usersReady, userStats.bothRoles),    icon: User,        color: "#7C3AED" },
+    { id: "neitherRole", label: t("Wapya", "Neither"),               value: displayValue(usersReady, userStats.neitherRole),  icon: UserPlus,    color: "#D97706" },
+    { id: "admins",      label: t("Admins", "Admins"),               value: displayValue(usersReady, userStats.totalAdmins),  icon: ShieldCheck, color: "#DC2626" },
   ];
 
   const activityStats = [
-    { id: "listings",        label: t("Mali Zote", "Total Listings"),             value: totalListings.toLocaleString("en-US"),   icon: Home,          color: COLORS.green },
-    { id: "draftListings",   label: t("Rasimu (Haijawasilishwa)", "Drafts (Not submitted)"), value: draftListings.toLocaleString("en-US"), icon: Tag, color: "#9CA3AF" },
-    { id: "pendingListings", label: t("Mali Zinazosubiri", "Pending Listings"),   value: pendingCount.toLocaleString("en-US"),    icon: ClipboardList, color: "#D97706" },
-    { id: "activeDeals",     label: t("Deals Hai", "Active Deals"),               value: activeDeals.length.toLocaleString("en-US"), icon: ShoppingBag, color: "#2563EB" },
-    { id: "completedDeals",  label: t("Deals Zilizokamilika", "Completed Deals"), value: completedDeals.toLocaleString("en-US"),  icon: CheckCircle2,  color: COLORS.green },
-    { id: "pendingPayments", label: t("Malipo Yanayosubiri", "Pending Payments"), value: pendingPayments.toLocaleString("en-US"), icon: CreditCard,    color: "#D97706" },
+    { id: "listings",        label: t("Mali Zote", "Total Listings"),             value: displayValue(listingsReady, totalListings),           icon: Home,          color: COLORS.green },
+    { id: "draftListings",   label: t("Rasimu (Haijawasilishwa)", "Drafts (Not submitted)"), value: displayValue(listingsReady, draftListings),  icon: Tag,           color: "#9CA3AF" },
+    { id: "pendingListings", label: t("Mali Zinazosubiri", "Pending Listings"),   value: pendingReady ? pendingCount.toLocaleString("en-US") : LOADING, icon: ClipboardList, color: "#D97706" },
+    { id: "activeDeals",     label: t("Deals Hai", "Active Deals"),               value: displayValue(dealsReady, activeDeals.length),         icon: ShoppingBag,   color: "#2563EB" },
+    { id: "completedDeals",  label: t("Deals Zilizokamilika", "Completed Deals"), value: displayValue(dealsReady, completedDeals),             icon: CheckCircle2,  color: COLORS.green },
+    { id: "pendingPayments", label: t("Malipo Yanayosubiri", "Pending Payments"), value: displayValue(transactionsReady, pendingPayments),     icon: CreditCard,    color: "#D97706" },
   ];
 
   const revenueStreamCards = useMemo(() => {
@@ -191,7 +238,7 @@ export default function OverviewSection() {
                 className="mt-1 text-[clamp(1.75rem,6vw,3rem)] font-bold leading-tight tabular-nums"
                 style={{ color: "#FFFFFF" }}
               >
-                {revenue.loading ? "…" : revenue.error ? "—" : formatTZS(revenue.total)}
+                {revenue.loading ? LOADING : revenue.error ? "—" : formatTZS(revenue.total)}
               </p>
             </div>
           </div>
@@ -206,8 +253,6 @@ export default function OverviewSection() {
           </div>
         )}
       </div>
-
-      {/* ✅ QUICK LINKS ZIMEONDOLEWA */}
     </>
   );
 }
