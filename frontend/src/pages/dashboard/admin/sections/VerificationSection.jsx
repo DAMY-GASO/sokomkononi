@@ -115,10 +115,7 @@ function DocumentPreview({ doc, verificationId, lang }) {
   const isPdf = doc.is_pdf;
 
   const fetchBlobUrl = async () => {
-    const token =
-      localStorage.getItem("sokomkononi_admin_access") ||
-      localStorage.getItem("sokomkononi_access") ||
-      "";
+    const token = "";
     const base = (import.meta.env.VITE_API_BASE_URL || "/api").replace(
       /\/+$/,
       ""

@@ -3,6 +3,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { waitingListApi } from "../api/waitingList.js";
+import { getAccessToken } from "../api/client.js";
 
 const KEY = "sokomkononi_waiting_list_v1";
 const EV = "sokomkononi:waiting-list-updated";
@@ -100,7 +101,7 @@ export function useWaitingList() {
   const [list, setList] = useState(() => read());
   useEffect(() => {
     let hasToken = false;
-    try { hasToken = Boolean(localStorage.getItem("sokomkononi_access")); } catch {}
+    try { hasToken = Boolean(getAccessToken()); } catch {}
     if (!hasToken) return undefined;
     hydrateWaitingListFromApi();
     const sync = () => setList(read());

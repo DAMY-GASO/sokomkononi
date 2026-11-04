@@ -141,6 +141,11 @@ export function clearTokens() {
   setTokens({ access: null, refresh: null });
   rememberPref = true; // default baada ya logout
 }
+
+// Kwa sehemu zinazohitaji token yoyote iliyopo (admin au user), bila kujali scope ya ukurasa.
+export function getAccessTokenAnyScope() {
+  return readToken(TOKEN_KEYS.admin.access) || readToken(TOKEN_KEYS.user.access) || null;
+}
 export function setUnauthorizedHandler(fn) { onUnauthorized = fn; }
 
 function extractFieldMessage(data) {

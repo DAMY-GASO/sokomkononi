@@ -8,7 +8,7 @@
 //   DELETE /saved/{saved_id}/          remove by saved record id
 // ============================================================
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
+import { api, getAccessToken } from "../api/client";
 
 const IDS_KEY = "sokomkononi_saved_v1";
 const SNAP_KEY = "sokomkononi_saved_snapshots_v1";
@@ -53,7 +53,7 @@ function dispatchToast(type, message) {
   } catch { /* noop */ }
 }
 function isAuthed() {
-  try { return Boolean(localStorage.getItem("sokomkononi_access")); }
+  try { return Boolean(getAccessToken()); }
   catch { return false; }
 }
 

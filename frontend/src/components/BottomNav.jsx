@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useDashboardSide } from "../config/dashboardSideStore.js";
+import { useNotifications } from "../config/notificationsStore.js"; // ✅ Hakikisha hii ipo
 
 const icons = {
   home: (
@@ -49,15 +50,51 @@ const icons = {
   ),
 };
 
+// ✅ Kurasa ambazo hazitakiwi kuwa na BottomNav (fomu, deal room, post)
+const HIDDEN_ROUTES = [
+  "/dashboard/post",
+  "/dashboard/listings/new",
+  "/dashboard/deals/", // Deal Rooms (mfano /dashboard/deals/123)
+];
+
 export default function BottomNav() {
   const location = useLocation();
   const { user } = useAuth();
   const { t, lang } = useLanguage();
   const side = useDashboardSide();
+  
+  // ✅ Pata notifications kutoka store
+  const notifications = useNotifications(); 
+
+  // ✅ 1. FICHA BOTTOM NAV KWENYE KURASA ZA FOMU
+  const shouldHide = useMemo(() => {
+    const path = location.pathname;
+    // Ficha ikiwa ni fomu ya kuweka tangazo au ukiwa ndani ya deal room mahususi
+    if (path.includes("/post") || path.includes("/new")) return true;
+    if (path.includes("/deals/") && path !== "/dashboard/deals" && path !== "/dashboard/buyer/deals") return true;
+    return false;
+  }, [location.pathname]);
+
+  // ✅ 2. HESABU IDADI YA NOTIFICATIONS ZA DEALS
+  const unreadDealCount = useMemo(() => {
+    if (!notifications || !Array.isArray(notifications)) return 0;
+    return notifications.filter((n) => {
+      // Notification ni ya deal kama:
+      // - Haijasomwa
+      // - Inahusiana na deal room (au "deal" kwenye related_object_type)
+      const isUnread = n.is_read === false || n.unread === true;
+      const isDeal = 
+        n.related_object_type?.toLowerCase().includes("deal") || 
+        n.type?.toLowerCase().includes("deal") ||
+        n.notification_type?.toLowerCase().includes("deal");
+      return isUnread && isDeal;
+    }).length;
+  }, [notifications]);
+
+  if (shouldHide) return null;
 
   const isActive = (path) => {
     if (!path) return false;
-    // Never treat /login as "active" for Deals/Saved tabs when logged out.
     if (path === "/login") return false;
     if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
@@ -75,7 +112,6 @@ export default function BottomNav() {
     ? (lang === "sw" ? "Tafuta" : "Search")
     : t("nav_sell");
 
-  // Deal Rooms ndiyo sehemu pekee ya mazungumzo (Messages page imeondolewa).
   const dealsTarget = isBuyerSide
     ? "/dashboard/buyer/deals"
     : "/dashboard/deals";
@@ -123,15 +159,22 @@ export default function BottomNav() {
         <span>{actionLabel}</span>
       </Link>
 
-      {/* Deals — wote (mazungumzo yote yako hapa) */}
+      {/* ✅ Deals — wote (na Badge ya idadi ya notifications) */}
       <Link
         to={dealsLink}
         state={!user ? { from: dealsTarget } : undefined}
         className={`nav-item ${isActive(dealsLink) ? "active" : ""}`}
         aria-current={isActive(dealsLink) ? "page" : undefined}
       >
-        <span className="relative">
+        <span className="relative inline-flex items-center justify-center">
           {icons.deals}
+          
+          {/* Badge ya Notifications */}
+          {unreadDealCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">
+              {unreadDealCount > 9 ? "9+" : unreadDealCount}
+            </span>
+          )}
         </span>
         <span>Deals</span>
       </Link>
