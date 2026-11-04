@@ -14,6 +14,7 @@ import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
 
 import { initializeCategories, hydrateCategoriesFromApi } from "./config/categoriesStore.js";
 import { hydrateListingsFromApi, sweepGhostListings } from "./config/listingsStore.js";
+import { hydrateReservationFromApi } from "./config/feePolicy.js";
 
 import AuthCallback from "./pages/Auth/AuthCallback.jsx"; 
 import { getTheme, applyTheme } from "./config/themeStore.js";
@@ -46,8 +47,6 @@ import BundlesPage from "./pages/BundlesPage.jsx";
 import DashboardShell from "./pages/dashboard/components/DashboardShell.jsx";
 import AdminDashboard from "./pages/dashboard/AdminDashboard.jsx";
 
-// ✅ Component mpya: inahakikisha kila ukurasa mpya unaanza juu,
-// lakini inaruhusu gestures za simu (back/forward) kufanya kazi.
 function ScrollToTop() {
   const { pathname } = useLocation();
 
@@ -72,15 +71,7 @@ function BrowseRoute() {
 
 function App() {
   useEffect(() => {
-    // ⬇️ Theme: apply mara moja kabla ya render (flash-free)
-    try {
-      applyTheme(getTheme());
-    } catch {
-      /* noop */
-    }
-
-    // ⬇️ Weka lugha kwenye window mara moja ili client.js iione
-    // kabla ya LanguageProvider kuwa tayari.
+  
     if (typeof window !== "undefined" && !window.__SMK_LANG__) {
       const saved = (() => {
         try {
@@ -99,6 +90,7 @@ function App() {
       await Promise.allSettled([
         hydrateCategoriesFromApi(),
         hydrateListingsFromApi(),
+        hydrateReservationFromApi(),
       ]);
     })();
   }, []);

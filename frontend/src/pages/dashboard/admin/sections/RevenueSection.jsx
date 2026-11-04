@@ -26,7 +26,6 @@ import {
   updateReservationTierAsync,
   removeReservationTierAsync,
   toggleReservationTierAsync,
-  hydrateReservationFromApi,
 } from "../../../../config/feePolicy.js";
 import {
   useListingFeeConfigs, updateListingFeeConfigAsync, addFeeConfigAsync,
@@ -194,7 +193,6 @@ export default function RevenueSection() {
     (async () => {
       try {
         await Promise.allSettled([
-          hydrateReservationFromApi(),
           hydrateListingFeeConfigsFromApi(),
           hydrateLeadingFeeFromApi(),
           hydrateLeadingPackagesFromApi(),
@@ -227,7 +225,7 @@ export default function RevenueSection() {
     setError("");
     try {
       const results = await Promise.allSettled([
-        hydrateReservationFromApi(),
+        hydrateReservationFromApi.forceRefresh(),
         hydrateListingFeeConfigsFromApi(),
         hydrateLeadingFeeFromApi(),
         hydrateLeadingPackagesFromApi(),

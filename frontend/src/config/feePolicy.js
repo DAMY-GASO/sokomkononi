@@ -9,6 +9,7 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { guarded } from "./hydrateGuard.js";
 
 const SETTINGS_KEY = "sokomkononi_reservation_settings_v1";
 const TIERS_KEY = "sokomkononi_reservation_tiers_v1";
@@ -19,7 +20,8 @@ const DEFAULT_SETTINGS = {
   updated_at: null,
 };
 
-const DEFAULT_TIERS = [
+// Fallback tu — inatumika kama API imeshindikana kabisa
+const FALLBACK_TIERS = [
   { id: "t-12", hours: 12, fee: 1000, is_active: true, order: 1 },
   { id: "t-24", hours: 24, fee: 2000, is_active: true, order: 2 },
   { id: "t-36", hours: 36, fee: 3000, is_active: true, order: 3 },
@@ -49,18 +51,6 @@ function writeSettings(cfg) {
   window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(cfg));
   window.dispatchEvent(new Event(EV));
 }
-
-// Bootstrap: if tiers are never seeded, write default tiers once
-(function bootstrapTiers() {
-  if (typeof window === "undefined") return;
-  try {
-    const raw = window.localStorage.getItem("sokomkononi_reservation_tiers_v1");
-    if (raw === null) {
-      window.localStorage.setItem("sokomkononi_reservation_tiers_v1",
-        JSON.stringify(DEFAULT_TIERS));
-    }
-  } catch { /* noop */ }
-})();
 
 function readTiers() {
   if (typeof window === "undefined") return [];
@@ -116,9 +106,9 @@ export function getReservationTiers() {
 }
 
 // ============================================================
-// HYDRATE
+// HYDRATE — deduped, fallback only on failure
 // ============================================================
-export async function hydrateReservationFromApi() {
+async function _hydrateReservationFromApi() {
   const result = { ok: true, settings: null, tiers: null };
 
   try {
@@ -141,6 +131,11 @@ export async function hydrateReservationFromApi() {
     result.tiers = norm;
   } catch (err) {
     console.warn("[feePolicy] tiers hydrate failed:", err?.message);
+    // ✅ Fallback TU baada ya API kushindikana na localStorage iko empty
+    if (readTiers().length === 0) {
+      console.info("[feePolicy] using fallback tiers (API unavailable)");
+      writeTiers(FALLBACK_TIERS);
+    }
     result.ok = false;
   }
 
@@ -148,8 +143,10 @@ export async function hydrateReservationFromApi() {
   return result;
 }
 
-// Backward-compat name (baadhi ya code inaita hii)
-export const hydrateReservationFeeFromApi = hydrateReservationFromApi;
+// ✅ guarded() — dedupes concurrent calls, TTL 1.5s
+export const hydrateReservationFromApi = guarded(_hydrateReservationFromApi, {
+  key: "feePolicy:hydrate",
+});
 
 // ============================================================
 // SETTINGS — toggle
@@ -220,7 +217,6 @@ export async function updateReservationTierAsync(id, patch) {
     writeTiers(after);
     return { ok: true, tier: updated };
   } catch (err) {
-    // Rollback
     const rollback = readTiers().map((t) =>
       String(t.id) === String(id) ? prev : t
     );
@@ -240,7 +236,6 @@ export async function removeReservationTierAsync(id) {
     await api.delete(`/reservation-tiers/${id}/`);
     return { ok: true };
   } catch (err) {
-    // Rollback
     writeTiers([...readTiers(), prev]);
     return { ok: false, error: err };
   }
@@ -278,12 +273,11 @@ export async function toggleReservationTierAsync(id) {
 }
 
 // ============================================================
-// HOOKS
+// HOOKS — no hydrate call (App.jsx handles bootstrap)
 // ============================================================
 export function useReservationSettings() {
   const [cfg, setCfg] = useState(() => readSettings());
   useEffect(() => {
-    hydrateReservationFromApi();
     const sync = () => setCfg(readSettings());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);
@@ -298,7 +292,6 @@ export function useReservationSettings() {
 export function useReservationTiers() {
   const [list, setList] = useState(() => readTiers());
   useEffect(() => {
-    hydrateReservationFromApi();
     const sync = () => setList(readTiers());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);
@@ -330,91 +323,9 @@ export function calcReservationFee(hours) {
   const match = tiers.find((t) => Number(t.hours) === h && t.is_active);
   if (match) return Number(match.fee) || 0;
 
-  // Fallback: kama haipo kwenye tiers, tumia tier ya karibu zaidi chini
+  // Fallback: tumia tier ya karibu zaidi chini ya hours
   const sorted = [...tiers]
     .filter((t) => t.is_active && t.hours <= h)
     .sort((a, b) => b.hours - a.hours);
   return sorted[0] ? Number(sorted[0].fee) || 0 : 0;
-}
-
-// ============================================================
-// BACKWARD COMPAT — files za zamani zinazoita hizi
-// ============================================================
-export function useReservationFeeConfig() {
-  const settings = useReservationSettings();
-  // Rudisha umbo la zamani ili code iliyopo isivunjike
-  const tiers = useReservationTiers();
-  const firstTier = tiers[0];
-  return {
-    is_enabled: settings.is_enabled,
-    flat_fee: firstTier ? firstTier.fee : 0,
-    days: firstTier ? Math.floor(firstTier.hours / 24) : 3,
-    updated_at: settings.updated_at,
-  };
-}
-
-export function getReservationFeeConfig() {
-  const settings = readSettings();
-  const tiers = readTiers();
-  const firstTier = tiers[0];
-  return {
-    is_enabled: settings.is_enabled,
-    flat_fee: firstTier ? firstTier.fee : 0,
-    days: firstTier ? Math.floor(firstTier.hours / 24) : 3,
-    updated_at: settings.updated_at,
-  };
-}
-
-export function getReservationRates() {
-  const tiers = readTiers();
-  return tiers.map((t) => ({
-    ...t,
-    label: formatTierLabel(t.hours),
-    sub: formatTierSub(t.hours),
-    fee: t.fee,
-  }));
-}
-
-export function getReservationRate(id) {
-  return readTiers().find((t) => String(t.id) === String(id)) || null;
-}
-
-export function useReservationRates() {
-  const tiers = useReservationTiers();
-  return tiers.map((t) => ({
-    ...t,
-    label: formatTierLabel(t.hours),
-    sub: formatTierSub(t.hours),
-    fee: t.fee,
-  }));
-}
-
-// ── Label helpers (SW + EN) ──────────────────────────────
-function formatTierLabel(hours) {
-  if (hours % 24 === 0) {
-    const d = hours / 24;
-    return {
-      sw: d === 1 ? "Siku 1" : `Siku ${d}`,
-      en: d === 1 ? "1 Day" : `${d} Days`,
-    };
-  }
-  return { sw: `Saa ${hours}`, en: `${hours} hrs` };
-}
-
-function formatTierSub(hours) {
-  if (hours % 24 === 0) {
-    const d = hours / 24;
-    return { sw: `${hours}h`, en: `${hours}h` };
-  }
-  return { sw: `${hours}h`, en: `${hours}h` };
-}
-
-// Legacy no-ops (baadhi ya files za zamani zinaziita)
-export async function updateReservationFeeAsync() {
-  console.warn("[feePolicy] updateReservationFeeAsync deprecated — use tiers API");
-  return { ok: false, error: new Error("Deprecated") };
-}
-export async function updateReservationDaysAsync() {
-  console.warn("[feePolicy] updateReservationDaysAsync deprecated — use tiers API");
-  return { ok: false, error: new Error("Deprecated") };
 }
