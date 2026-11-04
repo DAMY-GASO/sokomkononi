@@ -345,36 +345,44 @@ export default function ReportsSection() {
 
   const usersTotal = localUsers.length || 0;
 
-    // ✅ Users Growth Data (Cumulative)
+    // ✅ Users Growth Data (Cumulative & Rotating Window)
   const usersGrowthData = useMemo(() => {
     const growth = apiReports?.usersGrowth || [];
-    const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const dayColors = {
       Mon: "#2563EB", Tue: "#7C3AED", Wed: "#DB2777", Thu: "#EA580C", Fri: "#CA8A04", Sat: "#16A34A", Sun: "#DC2626",
     };
 
-    const dayMap = {};
-    daysOfWeek.forEach((day) => { dayMap[day] = 0; });
+    // 1. Tambua siku ya leo kwa saa za Tanzania (Africa/Dar_es_Salaam)
+    const now = new Date();
+    const tzDateStr = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Dar_es_Salaam",
+      weekday: "short",
+    }).format(now);
+    
+    // 2. Tengeneza rotation ya siku 7: kuanzia jana hadi leo
+    const allDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const todayIndex = allDays.indexOf(tzDateStr);
+    const rotatingDays = [];
+    for (let i = 1; i <= 7; i++) {
+      rotatingDays.push(allDays[(todayIndex + i) % 7]);
+    }
 
-    const recent = growth.slice(-7);
-    recent.forEach((d) => {
-      if (d.date) {
-        try {
-          // ✅ Parse as LOCAL date (epuka UTC shift)
-          const [year, month, day] = d.date.split("-").map(Number);
-          const dateObj = new Date(year, month - 1, day);
-          
-          if (!isNaN(dateObj.getTime())) {
-            const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
-            if (dayMap[dayName] !== undefined) {
-              dayMap[dayName] = d.cumulative || 0;
-            }
-          }
-        } catch (err) { /* Ignore */ }
-      }
+    // 3. Panga data kwenye map kulingana na siku
+    const dayMap = {};
+    growth.forEach((d) => {
+      if (!d.date) return;
+      try {
+        const [year, month, day] = d.date.split("-").map(Number);
+        const dateObj = new Date(year, month - 1, day);
+        if (!isNaN(dateObj.getTime())) {
+          const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
+          dayMap[dayName] = d.cumulative || 0;
+        }
+      } catch (err) { /* Ignore */ }
     });
 
-    return daysOfWeek.map((day) => ({
+    // 4. Rudisha data kwa mpangilio wa rotatingDays
+    return rotatingDays.map((day) => ({
       label: day,
       value: dayMap[day] || 0,
       display: (dayMap[day] || 0).toLocaleString("en-US"),
