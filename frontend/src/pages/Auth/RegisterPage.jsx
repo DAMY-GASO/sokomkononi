@@ -86,6 +86,13 @@ export default function RegisterPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const cooldownRef = useRef(null);
   const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaNonce, setCaptchaNonce] = useState(0);
+
+  // Token ya Turnstile inatumika mara moja tu: anzisha widget upya.
+  function resetCaptcha() {
+    setCaptchaToken("");
+    setCaptchaNonce((n) => n + 1);
+  }
 
   function postAuthPath() {
     return intent === "buy" ? "/dashboard/buyer" : "/dashboard/post";
@@ -160,6 +167,7 @@ export default function RegisterPage() {
 
     if (!res.ok) {
       setError(extractError(res.error, t("register_error_default")));
+      resetCaptcha();
       return;
     }
     setStep("otp");
@@ -256,7 +264,7 @@ export default function RegisterPage() {
                     </span>
                   </label>
 
-                  <Captcha onVerify={setCaptchaToken} onExpire={() => setCaptchaToken("")} />
+                  <Captcha key={captchaNonce} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken("")} />
 
                   {error && <p className="text-rust text-body-sm">{error}</p>}
 

@@ -7,7 +7,13 @@
 // ============================================================
 import { useEffect, useState } from "react";
 import { authApi, setUnauthorizedHandler } from "../api/index.js";
-import { clearTokens as clearJWT, setTokens, api as apiClient } from "../api/client.js";
+import {
+  clearTokens as clearJWT,
+  setTokens,
+  setRememberPref,
+  isSessionOnly,
+  api as apiClient,
+} from "../api/client.js";
 import { getSessionScope } from "./adminPath.js";
 import { resetMyListingsUserCache } from "./listingsStore.js";
 import { resetHydrateGuard } from "./hydrateGuard.js";
@@ -50,7 +56,9 @@ function attachStoredAvatar(user) {
 function readFromStorage() {
   if (typeof window === "undefined") return SEED_USER;
   try {
-    const raw = window.localStorage.getItem(storageKey());
+    const raw =
+      window.sessionStorage.getItem(storageKey()) ??
+      window.localStorage.getItem(storageKey());
     if (!raw) return SEED_USER;
     const parsed = JSON.parse(raw);
     return parsed ? attachStoredAvatar(parsed) : SEED_USER;
@@ -62,9 +70,15 @@ function readFromStorage() {
 function saveUser(user) {
   if (typeof window === "undefined") return;
   if (user === null) {
+    window.sessionStorage.removeItem(storageKey());
     window.localStorage.removeItem(storageKey());
   } else {
-    window.localStorage.setItem(storageKey(), JSON.stringify(user));
+    // Si "Nikumbuke": data ya mtumiaji isibaki kwenye kompyuta baada ya kufunga kivinjari.
+    const [keep, drop] = isSessionOnly()
+      ? [window.sessionStorage, window.localStorage]
+      : [window.localStorage, window.sessionStorage];
+    keep.setItem(storageKey(), JSON.stringify(user));
+    drop.removeItem(storageKey());
   }
   window.dispatchEvent(new Event(UPDATE_EVENT));
 }
@@ -267,13 +281,19 @@ export function hydrateCurrentUserFromApi() {
   return inflightHydrate;
 }
 
-export async function loginAsync({ identifier, password, captcha_token }) {
+export async function loginAsync({
+  identifier,
+  password,
+  captcha_token,
+  remember = true,
+}) {
   if (!identifier || !password) {
     return {
       ok: false,
       error: new Error("identifier na password zinahitajika"),
     };
   }
+  setRememberPref(remember);
   try {
     const data = await authApi.login({ identifier, password, captcha_token });
     if (data?.requires_2fa) {
@@ -301,10 +321,11 @@ export async function loginAsync({ identifier, password, captcha_token }) {
   }
 }
 
-export async function verify2faLoginAsync({ codeToken, code }) {
+export async function verify2faLoginAsync({ codeToken, code, remember = true }) {
   if (!codeToken || !code) {
     return { ok: false, error: new Error("code inahitajika") };
   }
+  setRememberPref(remember);
   try {
     const data = await apiClient.post("/auth/2fa/login/", {
       code_token: codeToken,
@@ -734,6 +755,7 @@ export async function socialLoginAsync({
       error: new Error("provider na idToken zinahitajika"),
     };
   }
+  setRememberPref(true);
   try {
     const data = await apiClient.post("/auth/social/", {
       provider,

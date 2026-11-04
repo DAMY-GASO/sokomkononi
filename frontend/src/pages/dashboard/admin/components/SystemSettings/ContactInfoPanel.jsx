@@ -1,6 +1,6 @@
 // src/pages/dashboard/components/SystemSettings/ContactInfoPanel.jsx
 import React, { useState, useEffect } from "react";
-import { Mail, Phone, MapPin, MessageCircle, Save, Check, Loader2 } from "lucide-react";
+import { Mail, Phone, MapPin, MessageCircle, Save, Check, Loader2, Facebook, Instagram, Twitter, Linkedin, Youtube } from "lucide-react";
 import { COLORS } from "../../shared/constants.js";
 import { useLanguage } from "../../../../../context/LanguageContext.jsx";
 import {
@@ -11,7 +11,7 @@ import {
 export default function ContactInfoPanel() {
   const { lang } = useLanguage();
   const [contact] = useContactInfo();
-  const [form, setForm] = useState(contact || { email: "", phone: "", whatsapp: "", address: "" });
+  const [form, setForm] = useState(contact || { email: "", phone: "", whatsapp: "", address: "", facebook: "", instagram: "", x: "", linkedin: "", youtube: "" });
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -54,7 +54,7 @@ export default function ContactInfoPanel() {
           <MessageCircle size={16} style={{ color: COLORS.ink }} />
         </div>
         <p className="text-sm font-semibold text-primary truncate">
-          {t("Mawasiliano", "Contact Info")}
+          {t("Mawasiliano & Mitandao", "Contact & Socials")}
         </p>
       </div>
 
@@ -67,6 +67,7 @@ export default function ContactInfoPanel() {
         </div>
       )}
 
+      {/* Email */}
       <label className="flex flex-col gap-1 min-w-0">
         <span className="text-xs font-medium text-secondary flex items-center gap-1">
           <Mail size={12} className="shrink-0" /> {t("Barua Pepe", "Email")}
@@ -81,6 +82,7 @@ export default function ContactInfoPanel() {
         />
       </label>
 
+      {/* Phone */}
       <label className="flex flex-col gap-1 min-w-0">
         <span className="text-xs font-medium text-secondary flex items-center gap-1">
           <Phone size={12} className="shrink-0" /> {t("Simu", "Phone")}
@@ -95,6 +97,7 @@ export default function ContactInfoPanel() {
         />
       </label>
 
+      {/* WhatsApp */}
       <label className="flex flex-col gap-1 min-w-0">
         <span className="text-xs font-medium text-secondary flex items-center gap-1">
           <MessageCircle size={12} className="shrink-0" /> WhatsApp
@@ -109,6 +112,7 @@ export default function ContactInfoPanel() {
         />
       </label>
 
+      {/* Address */}
       <label className="flex flex-col gap-1 min-w-0">
         <span className="text-xs font-medium text-secondary flex items-center gap-1">
           <MapPin size={12} className="shrink-0" /> {t("Anwani", "Address")}
@@ -122,7 +126,49 @@ export default function ContactInfoPanel() {
         />
       </label>
 
-      <div className="flex items-center gap-3 flex-wrap">
+      <hr className="border-hairline my-1" />
+
+      {/* Social Media */}
+      <p className="text-[11px] font-semibold text-secondary uppercase tracking-wide">
+        {t("Mitandao ya Kijamii (URL)", "Social Media (URLs)")}
+      </p>
+
+      <label className="flex flex-col gap-1 min-w-0">
+        <span className="text-xs font-medium text-secondary flex items-center gap-1">
+          <Facebook size={12} className="shrink-0" /> Facebook
+        </span>
+        <input value={form.facebook || ""} onChange={(e) => setField({ facebook: e.target.value })} placeholder="https://facebook.com/..." className="input min-w-0" disabled={saving} />
+      </label>
+
+      <label className="flex flex-col gap-1 min-w-0">
+        <span className="text-xs font-medium text-secondary flex items-center gap-1">
+          <Instagram size={12} className="shrink-0" /> Instagram
+        </span>
+        <input value={form.instagram || ""} onChange={(e) => setField({ instagram: e.target.value })} placeholder="https://instagram.com/..." className="input min-w-0" disabled={saving} />
+      </label>
+
+      <label className="flex flex-col gap-1 min-w-0">
+        <span className="text-xs font-medium text-secondary flex items-center gap-1">
+          <Twitter size={12} className="shrink-0" /> X (Twitter)
+        </span>
+        <input value={form.x || ""} onChange={(e) => setField({ x: e.target.value })} placeholder="https://x.com/..." className="input min-w-0" disabled={saving} />
+      </label>
+
+      <label className="flex flex-col gap-1 min-w-0">
+        <span className="text-xs font-medium text-secondary flex items-center gap-1">
+          <Linkedin size={12} className="shrink-0" /> LinkedIn
+        </span>
+        <input value={form.linkedin || ""} onChange={(e) => setField({ linkedin: e.target.value })} placeholder="https://linkedin.com/company/..." className="input min-w-0" disabled={saving} />
+      </label>
+
+      <label className="flex flex-col gap-1 min-w-0">
+        <span className="text-xs font-medium text-secondary flex items-center gap-1">
+          <Youtube size={12} className="shrink-0" /> YouTube
+        </span>
+        <input value={form.youtube || ""} onChange={(e) => setField({ youtube: e.target.value })} placeholder="https://youtube.com/@..." className="input min-w-0" disabled={saving} />
+      </label>
+
+      <div className="flex items-center gap-3 flex-wrap mt-2">
         <button
           onClick={handleSave}
           disabled={!dirty || saving}

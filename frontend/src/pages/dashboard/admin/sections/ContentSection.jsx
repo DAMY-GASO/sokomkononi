@@ -124,6 +124,7 @@ function SectionsEditor({
   disabled,
   sectionLabel = null,
   allowSubtitle = false,
+  allowImage = false, // ✅ MPYA: Kwa ajili ya Timu
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -133,6 +134,7 @@ function SectionsEditor({
       {
         id: `section-${Date.now()}`,
         icon: "FileText",
+        imageUrl: "", // ✅ MPYA
         title: { sw: "", en: "" },
         subtitle: { sw: "", en: "" },
         content: { sw: [""], en: [""] },
@@ -266,8 +268,36 @@ function SectionsEditor({
             />
           )}
 
+          {/* ✅ MPYA: Picha ya Mwanatimu */}
+          {allowImage && (
+            <div className="flex flex-col gap-1.5 w-full min-w-0 mt-1">
+              <label className="flex flex-col gap-1 w-full min-w-0">
+                <span className="text-[10px] font-semibold text-muted uppercase">
+                  {t("Picha ya Mwanatimu (URL)", "Member Image (URL)")}
+                </span>
+                <input
+                  type="url"
+                  value={section.imageUrl || ""}
+                  onChange={(e) => updateSection(index, { imageUrl: e.target.value })}
+                  placeholder="https://..."
+                  disabled={disabled}
+                  className="input w-full"
+                />
+              </label>
+              {section.imageUrl && (
+                <img
+                  src={section.imageUrl}
+                  alt="Preview"
+                  className="w-16 h-16 rounded-full object-cover border shadow-sm mt-1"
+                  style={{ borderColor: "rgb(var(--c-hairline))" }}
+                  onError={(e) => { e.target.style.display = "none"; }}
+                />
+              )}
+            </div>
+          )}
+
           {/* Content SW */}
-          <div className="flex flex-col gap-1.5 w-full min-w-0">
+          <div className="flex flex-col gap-1.5 w-full min-w-0 mt-1">
             <span className="text-[10px] font-semibold text-muted uppercase">
               {t("Maudhui (Kiswahili)", "Content (Swahili)")}
             </span>
@@ -773,6 +803,7 @@ function SinglePageEditor({ section, lang }) {
             disabled={saving}
             sectionLabel={t("Timu Yetu", "Our Team")}
             allowSubtitle
+            allowImage // ✅ MPYA: Ruhusu picha kwenye Timu
           />
         </>
       )}

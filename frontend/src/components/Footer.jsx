@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Facebook, Instagram, Twitter, Linkedin, Youtube, Mail, Phone, MapPin, ArrowUpRight } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext.jsx";
-import { useAppStoreLinks, useContactInfo } from "../config/systemSettingsStore.js"; // <-- Ongeza useContactInfo
+import { useAppStoreLinks, useContactInfo } from "../config/systemSettingsStore.js";
 import { useAttribution } from "../context/AttributionContext.jsx";
 import { useActiveCategories } from "../config/categoriesStore.js";
 import { usePublicListings } from "../config/listingsStore.js";
@@ -10,14 +10,7 @@ import { usePublicListings } from "../config/listingsStore.js";
 // ── WhatsApp Icon Halisi (SVG) ─────────────────────────────
 function WhatsAppIcon({ size = 14, className = "" }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
     </svg>
   );
@@ -27,46 +20,16 @@ function WhatsAppIcon({ size = 14, className = "" }) {
 function validPlayUrl(u) {
   try {
     const x = new URL(u);
-    return (
-      x.protocol === "https:" &&
-      x.hostname === "play.google.com" &&
-      x.pathname.startsWith("/store/apps/details") &&
-      !!x.searchParams.get("id")
-    );
-  } catch {
-    return false;
-  }
+    return x.protocol === "https:" && x.hostname === "play.google.com" && x.pathname.startsWith("/store/apps/details") && !!x.searchParams.get("id");
+  } catch { return false; }
 }
 function validAppStoreUrl(u) {
   try {
     const x = new URL(u);
     const m = x.pathname.match(/\/id(\d{6,})/);
-    return (
-      x.protocol === "https:" &&
-      (x.hostname === "apps.apple.com" || x.hostname === "itunes.apple.com") &&
-      !!m &&
-      Number(m[1]) > 0
-    );
-  } catch {
-    return false;
-  }
+    return x.protocol === "https:" && (x.hostname === "apps.apple.com" || x.hostname === "itunes.apple.com") && !!m && Number(m[1]) > 0;
+  } catch { return false; }
 }
-
-// ── Mitandao ya kijamii ───────────────────────────────────────
-const SOCIAL_URLS = {
-  facebook: "",
-  instagram: "",
-  x: "",
-  linkedin: "",
-  youtube: "",
-};
-const SOCIAL = [
-  { href: SOCIAL_URLS.facebook,  icon: Facebook,  label: "Facebook"  },
-  { href: SOCIAL_URLS.instagram, icon: Instagram, label: "Instagram" },
-  { href: SOCIAL_URLS.x,         icon: Twitter,   label: "X"         },
-  { href: SOCIAL_URLS.linkedin,  icon: Linkedin,  label: "LinkedIn"  },
-  { href: SOCIAL_URLS.youtube,   icon: Youtube,   label: "YouTube"   },
-].filter((x) => /^https:\/\//.test(x.href));
 
 // SVG logos — public/assets/payments/*.svg
 const PAYMENTS = [
@@ -82,31 +45,16 @@ const PAYMENTS = [
 
 function PayLogo({ payment }) {
   const [err, setErr] = React.useState(false);
-
   if (err || !payment.src) {
     return (
-      <span
-        title={payment.label}
-        className="flex h-8 w-14 items-center justify-center rounded-md px-1 text-[9px] font-bold tracking-wide whitespace-nowrap shadow-sm"
-        style={{ background: payment.fallbackBg, color: payment.fallbackFg }}
-      >
+      <span title={payment.label} className="flex h-8 w-14 items-center justify-center rounded-md px-1 text-[9px] font-bold tracking-wide whitespace-nowrap shadow-sm" style={{ background: payment.fallbackBg, color: payment.fallbackFg }}>
         {payment.label}
       </span>
     );
   }
-
   return (
-    <span
-      title={payment.label}
-      className="flex h-8 w-14 items-center justify-center rounded-md bg-white/95 p-1 shadow-sm ring-1 ring-white/10"
-    >
-      <img
-        src={payment.src}
-        alt={payment.label}
-        className="h-full w-full object-contain"
-        onError={() => setErr(true)}
-        loading="lazy"
-      />
+    <span title={payment.label} className="flex h-8 w-14 items-center justify-center rounded-md bg-white/95 p-1 shadow-sm ring-1 ring-white/10">
+      <img src={payment.src} alt={payment.label} className="h-full w-full object-contain" onError={() => setErr(true)} loading="lazy" />
     </span>
   );
 }
@@ -116,14 +64,22 @@ export default function Footer({ selectedLang: propLang }) {
   const lang = propLang ?? ctxLang;
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [appLinks] = useAppStoreLinks();
-  const [contactInfo] = useContactInfo(); // <-- System settings
+  const [contactInfo] = useContactInfo();
   const { registerTap: registerLogoTap } = useAttribution();
 
-  // Fallback kama system settings haipo
   const email = contactInfo?.email || "support@sokomkononi.co.tz";
   const phone = contactInfo?.phone || "+255743895038";
   const whatsappNumber = contactInfo?.whatsapp || "255743895038";
   const address = contactInfo?.address || "Dar es Salaam, Tanzania";
+
+  // ✅ Dynamic Social URLs kutoka Contact Info
+  const SOCIAL = [
+    { href: contactInfo?.facebook,  icon: Facebook,  label: "Facebook"  },
+    { href: contactInfo?.instagram, icon: Instagram, label: "Instagram" },
+    { href: contactInfo?.x,         icon: Twitter,   label: "X"         },
+    { href: contactInfo?.linkedin,  icon: Linkedin,  label: "LinkedIn"  },
+    { href: contactInfo?.youtube,   icon: Youtube,   label: "YouTube"   },
+  ].filter((x) => x.href && x.href.trim().startsWith("http"));
 
   const playRaw = (appLinks?.play || "").trim();
   const appStoreRaw = (appLinks?.appstore || "").trim();
@@ -151,6 +107,7 @@ export default function Footer({ selectedLang: propLang }) {
       { to: "/kuhusu", label: t("Kuhusu Sisi", "About Us") },
       { to: "/mawasiliano", label: t("Wasiliana Nasi", "Contact Us") },
       { to: "/jinsi-ya-kununua", label: t("Jinsi Inavyofanya Kazi", "How it works") },
+      { to: "/jinsi-ya-kuuza", label: t("Jinsi ya Kuuza", "How to Sell") }, // ✅ MPYA
     ]},
     { title: t("Kategoria", "Categories"), links: [
       ...categoryLinks,
@@ -160,6 +117,7 @@ export default function Footer({ selectedLang: propLang }) {
       { to: "/faragha", label: t("Sera ya Faragha", "Privacy Policy") },
       { to: "/sheria", label: t("Vigezo vya Matumizi", "Terms of Use") },
       { to: "/mawasiliano#faq", label: t("Maswali", "FAQ") },
+      { to: "/jinsi-ya-kuuza", label: t("Jinsi ya Kuuza", "How to Sell") }, // ✅ MPYA
     ]},
   ];
 
@@ -228,7 +186,6 @@ export default function Footer({ selectedLang: propLang }) {
               <li className="flex items-center gap-2.5 text-white/60">
                 <Phone size={15} className="shrink-0 text-white/35" />
                 <a href={`tel:${phone}`} className="hover:text-white">{phone}</a>
-                {/* ✅ WhatsApp Icon Halisi */}
                 <a
                   href={`https://wa.me/${whatsappNumber}`}
                   target="_blank"

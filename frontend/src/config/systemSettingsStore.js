@@ -6,7 +6,7 @@
 //   - Sub-admins zimeondolewa (tumia RBACSection).
 //   - Webhooks: events zimeongezwa (7 total).
 //   - Webhooks: active normalization (raw.active !== false).
-//   - ContactInfo: imeongezwa (email, phone, whatsapp, address) — API.
+//   - ContactInfo: imeongezwa (email, phone, whatsapp, address, socials) — API.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -177,17 +177,24 @@ export function useAppStoreLinks() {
 }
 
 // ============================================================
-// CONTACT INFO
+// CONTACT INFO (Iliyosasishwa na Socials)
 // ============================================================
+const DEFAULT_CONTACT = {
+  email: "support@sokomkononi.co.tz",
+  phone: "+255743895038",
+  whatsapp: "255743895038",
+  address: "Dar es Salaam, Tanzania",
+  facebook: "",
+  instagram: "",
+  x: "",
+  linkedin: "",
+  youtube: "",
+};
+
 const contactInfo = makeSlice(
   "sokomkononi_contact_info_v1",
   "sokomkononi:contact-info-updated",
-  {
-    email: "support@sokomkononi.co.tz",
-    phone: "+255743895038",
-    whatsapp: "255743895038",
-    address: "Dar es Salaam, Tanzania",
-  }
+  DEFAULT_CONTACT
 );
 
 export function getContactInfo() {
@@ -198,10 +205,16 @@ export async function hydrateContactInfoFromApi() {
   try {
     const d = await api.get("/system-settings/contact-info/");
     contactInfo.save({
-      email: d?.email || "support@sokomkononi.co.tz",
-      phone: d?.phone || "+255743895038",
-      whatsapp: d?.whatsapp || "255743895038",
-      address: d?.address || "Dar es Salaam, Tanzania",
+      email: d?.email || DEFAULT_CONTACT.email,
+      phone: d?.phone || DEFAULT_CONTACT.phone,
+      whatsapp: d?.whatsapp || DEFAULT_CONTACT.whatsapp,
+      address: d?.address || DEFAULT_CONTACT.address,
+      // ✅ Socials mpya
+      facebook: d?.facebook || "",
+      instagram: d?.instagram || "",
+      x: d?.x || "",
+      linkedin: d?.linkedin || "",
+      youtube: d?.youtube || "",
     });
     return { ok: true };
   } catch (err) {
@@ -215,6 +228,12 @@ export async function saveContactInfoAsync(info) {
     phone: info.phone || "",
     whatsapp: info.whatsapp || "",
     address: info.address || "",
+    // ✅ Socials mpya
+    facebook: info.facebook || "",
+    instagram: info.instagram || "",
+    x: info.x || "",
+    linkedin: info.linkedin || "",
+    youtube: info.youtube || "",
   };
   try {
     await api.post("/system-settings/contact-info/", payload);

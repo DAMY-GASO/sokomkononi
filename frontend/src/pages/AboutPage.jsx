@@ -93,16 +93,19 @@ const ABOUT_CONTENT = {
         name: "Misso Madirisha",
         role: "Mwanzilishi & CEO",
         bio: "Mtaalamu wa teknolojia na biashara mwenye uzoefu wa miaka 10.",
+        imageUrl: "",
       },
       {
         name: "Timu ya Uhandisi",
         role: "Wahandisi wa Programu",
         bio: "Timu ya wabunifu wanaojenga jukwaa letu kwa teknolojia ya kisasa.",
+        imageUrl: "",
       },
       {
         name: "Timu ya Huduma",
         role: "Wateja Wetu",
         bio: "Tunahakikisha kila mteja anapata msaada wa haraka na wa kutosha.",
+        imageUrl: "",
       },
     ],
   },
@@ -141,16 +144,19 @@ const ABOUT_CONTENT = {
         name: "Misso Madirisha",
         role: "Founder & CEO",
         bio: "Technology and business expert with 10+ years of experience.",
+        imageUrl: "",
       },
       {
         name: "Engineering Team",
         role: "Software Engineers",
         bio: "A creative team building our platform with modern technology.",
+        imageUrl: "",
       },
       {
         name: "Support Team",
         role: "Customer Support",
         bio: "We ensure every customer gets fast and adequate support.",
+        imageUrl: "",
       },
     ],
   },
@@ -179,8 +185,18 @@ function ValueCard({ value, lang }) {
 function TeamCard({ member, lang }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col items-center text-center gap-3">
-      <div className="w-16 h-16 rounded-full bg-[#2F6D4F]/10 flex items-center justify-center flex-shrink-0">
-        <Users size={26} color={COLORS.green} />
+      {/* ✅ Picha ya Mwanatimu au Icon */}
+      <div className="w-20 h-20 rounded-full bg-[#2F6D4F]/10 flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-white shadow-sm">
+        {member.imageUrl ? (
+          <img
+            src={member.imageUrl}
+            alt={member.name}
+            className="w-full h-full object-cover"
+            onError={(e) => { e.target.src = ""; e.target.style.display = "none"; e.target.parentElement.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${COLORS.green}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`; }}
+          />
+        ) : (
+          <Users size={28} color={COLORS.green} />
+        )}
       </div>
       <div>
         <h3 className="font-bold text-primary text-base">{member.name}</h3>
@@ -243,6 +259,7 @@ export default function AboutPage() {
                 name: m.name || m.title?.[lang] || m.title?.sw || "",
                 role: m.role || m.subtitle?.[lang] || m.subtitle?.sw || "",
                 bio: m.bio || m.content?.[lang] || m.content?.sw || "",
+                imageUrl: m.imageUrl || "", // ✅ MPYA: Chukua imageUrl
               }))
             : codeContent.team,
       }

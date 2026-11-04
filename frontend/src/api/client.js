@@ -80,18 +80,67 @@ function isPublicEndpoint(path, method) {
   return false;
 }
 
+// ============================================================
+// TOKENS + "Remember Me"
+// Remember = localStorage (inadumu). Si remember = sessionStorage
+// (inaisha kivinjari kikifungwa).
+// ============================================================
+let rememberPref = true;
+const ls = () => { try { return window.localStorage; } catch { return null; } };
+const ss = () => { try { return window.sessionStorage; } catch { return null; } };
+
+function hasTokens(store, k) {
+  return Boolean(
+    store && (store.getItem(k.refresh) !== null || store.getItem(k.access) !== null)
+  );
+}
+
+// Tokens zikishakuwepo ziache zilipo (refresh rotation isizihamishe).
+function tokenStore(k) {
+  if (hasTokens(ss(), k)) return ss();
+  if (hasTokens(ls(), k)) return ls();
+  return rememberPref ? ls() : ss();
+}
+
+// True kama session hii ni ya tab/kivinjari hiki tu (si "Nikumbuke").
+export function isSessionOnly() {
+  return hasTokens(ss(), keys()) || !rememberPref;
+}
+
+// Itwe KABLA ya login. Inafuta tokens za zamani ili zisibaki upande mwingine.
+export function setRememberPref(remember) {
+  rememberPref = remember !== false;
+  const k = keys();
+  [ls(), ss()].forEach((s) => {
+    s?.removeItem(k.access);
+    s?.removeItem(k.refresh);
+  });
+}
+
 export function setTokens({ access, refresh } = {}) {
   const k = keys();
-  if (access !== undefined) {
-    access ? localStorage.setItem(k.access, access) : localStorage.removeItem(k.access);
-  }
-  if (refresh !== undefined) {
-    refresh ? localStorage.setItem(k.refresh, refresh) : localStorage.removeItem(k.refresh);
-  }
+  const target = tokenStore(k);
+  const other = target === ss() ? ls() : ss();
+  const put = (name, val) => {
+    if (val) {
+      target?.setItem(name, val);
+      other?.removeItem(name);
+    } else {
+      ls()?.removeItem(name);
+      ss()?.removeItem(name);
+    }
+  };
+  if (access !== undefined) put(k.access, access);
+  if (refresh !== undefined) put(k.refresh, refresh);
 }
-export function getAccessToken() { return localStorage.getItem(keys().access); }
-export function getRefreshToken() { return localStorage.getItem(keys().refresh); }
-export function clearTokens() { setTokens({ access: null, refresh: null }); }
+
+const readToken = (name) => ss()?.getItem(name) ?? ls()?.getItem(name) ?? null;
+export function getAccessToken() { return readToken(keys().access); }
+export function getRefreshToken() { return readToken(keys().refresh); }
+export function clearTokens() {
+  setTokens({ access: null, refresh: null });
+  rememberPref = true; // default baada ya logout
+}
 export function setUnauthorizedHandler(fn) { onUnauthorized = fn; }
 
 function extractFieldMessage(data) {

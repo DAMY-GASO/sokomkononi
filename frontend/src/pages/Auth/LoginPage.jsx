@@ -50,6 +50,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaNonce, setCaptchaNonce] = useState(0);
+  const [remember, setRemember] = useState(true);
+
+  // Token ya Turnstile inatumika mara moja tu: anzisha widget upya.
+  function resetCaptcha() {
+    setCaptchaToken("");
+    setCaptchaNonce((n) => n + 1);
+  }
 
   // 2FA step
   const [codeToken, setCodeToken] = useState("");
@@ -82,6 +90,7 @@ export default function LoginPage() {
     setTwoFaCode("");
     setUseRecovery(false);
     setError("");
+    resetCaptcha(); // token ya hatua ya kwanza ilishatumika
   }
 
   async function handle2faSubmit(e) {
@@ -93,7 +102,7 @@ export default function LoginPage() {
     }
     setError("");
     setLoading(true);
-    const res = await verify2faLoginAsync({ codeToken, code });
+    const res = await verify2faLoginAsync({ codeToken, code, remember });
     setLoading(false);
     if (!res.ok) {
       setError(getErrorMessage(res.error, tx("Nambari si sahihi.", "Invalid code.")));
@@ -134,6 +143,7 @@ export default function LoginPage() {
       identifier: form.identifier.trim(),
       password: form.password,
       captcha_token: captchaToken || undefined,
+      remember,
     });
     setLoading(false);
 
@@ -145,6 +155,7 @@ export default function LoginPage() {
     }
     if (!res.ok) {
       setError(getErrorMessage(res.error, t("login_error_default")));
+      resetCaptcha();
       return;
     }
     finishLogin();
@@ -311,13 +322,22 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <div className="text-right">
+                  <div className="flex items-center justify-between">
+                    <label className="flex cursor-pointer items-center gap-2 text-body-sm text-secondary">
+                      <input
+                        type="checkbox"
+                        checked={remember}
+                        onChange={(e) => setRemember(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      {tx("Nikumbuke", "Remember me")}
+                    </label>
                     <Link to="/forgot-password" className="text-royal text-body-sm font-semibold hover:underline">
                       {t("login_forgot_password")}
                     </Link>
                   </div>
 
-                  <Captcha onVerify={setCaptchaToken} onExpire={() => setCaptchaToken("")} />
+                  <Captcha key={captchaNonce} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken("")} />
 
                   {error && <p className="text-rust text-body-sm">{error}</p>}
 
