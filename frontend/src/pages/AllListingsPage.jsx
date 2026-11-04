@@ -17,7 +17,7 @@ import {
   useActiveCategories,
   getCategoryIcon,
 } from "../config/categoriesStore.js";
-import { formatTZS, getCategory } from "../shared/constants.js"; // ✅ Ongeza hii kwa ajili ya List View
+import { formatTZS, getCategory } from "./dashboard/admin/shared/constants.js";
 
 const PAGE_SIZE = 12;
 
