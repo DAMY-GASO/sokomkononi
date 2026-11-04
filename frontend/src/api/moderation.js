@@ -5,7 +5,7 @@ import { api } from "./client";
 
 export const moderationApi = {
   // ── Queue ──────────────────────────────────────────────
-  pendingListings: () => api.get("/admin/listings/pending/"),
+  pendingListings: () => api.get("/admin/listings/pending/?page_size=100"),
 
   // ── Decisions (legacy) ─────────────────────────────────
   approve: (listingId) =>

@@ -51,11 +51,13 @@ export default function SellerOverview({ onNavigate }) {
 
     const totalListings = myListings.length;
     const activeListings = myListings.filter((l) => l.status === "live").length;
+    // Admin amekagua na ameomba ada (si rasimu ya pending_payment)
     const awaitingPayment = myListings.filter(
-      (l) => l.status === "pending_payment"
+      (l) => l.status === "approved_pending_payment"
     ).length;
-    const awaitingReview = myListings.filter(
-      (l) => l.status === "in_review"
+    // Zinasubiri admin: mpya, au zimelipwa zinasubiri idhini ya mwisho
+    const awaitingReview = myListings.filter((l) =>
+      ["pending_approval", "paid_pending_approval", "in_review"].includes(l.status)
     ).length;
     const pendingApproval = awaitingPayment + awaitingReview;
     const soldListings = myListings.filter((l) => l.status === "sold").length;
@@ -201,8 +203,8 @@ export default function SellerOverview({ onNavigate }) {
               </p>
               <p className="text-[11px] text-secondary mt-0.5">
                 {t(
-                  "Listing hazitaonekana kwa admin mpaka ada ilipwe.",
-                  "Listings are not shown to admin until the fee is paid."
+                  "Lipa ada ili tangazo lako lionekane hewani.",
+                  "Pay the fee to get your listing live."
                 )}
               </p>
             </div>

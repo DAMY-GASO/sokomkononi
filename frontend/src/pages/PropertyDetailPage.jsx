@@ -16,7 +16,7 @@ import {
   MapPin, Bed, Bath, Maximize, Calendar, Heart, Share2, Phone,
   MessageSquare, ChevronLeft, ChevronRight, CheckCircle, Shield,
   Eye, Flag, Star, Camera, Car, Settings, Trees, Home as HomeIcon,
-  Briefcase, Wrench, Clock3, BellRing, Ban, Pencil,
+  Briefcase, Wrench, Clock3, BellRing, Ban, Pencil, Loader2,
 } from "lucide-react";
 import {
   useListings,
@@ -64,6 +64,7 @@ function formatTZS(amount) {
   return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
 }
 function timeAgo(dateStr, lang) {
+  if (!dateStr) return "";
   const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
   if (days <= 0) return t(lang, "Leo", "Today");
   if (days === 1) return t(lang, "Jana", "Yesterday");
@@ -283,15 +284,17 @@ function AttributesTable({ property, lang }) {
   const rows = useMemo(() => {
     const out = [];
     const categoryKey = property.category;
-    const baseFields = CATEGORY_EXTRA[categoryKey] || [];
-    const cfg = getPostingConfig(categoryKey);
-    const attrs = property.attributes || {};
+    // 🛠️ FIX: Hakikisha CATEGORY_EXTRA na attrs ni objects halali
+    const baseFields = CATEGORY_EXTRA?.[categoryKey] || [];
+    const cfg = getPostingConfig(categoryKey) || {};
+    const attrs = property.attributes && typeof property.attributes === "object" ? property.attributes : {};
 
     const resolveValue = (f, raw) => {
       if (raw === undefined || raw === null) return null;
       const str = String(raw).trim();
       if (str === "") return null;
-      const opt = f.options?.find((op) => String(op.value) === str);
+      // 🛠️ FIX: Hakikisha f.options ni array
+      const opt = Array.isArray(f.options) ? f.options.find((op) => String(op.value) === str) : null;
       return opt ? (opt.label?.[lang] || opt.label?.sw || str) : str;
     };
 
@@ -371,9 +374,6 @@ function AttributesTable({ property, lang }) {
   );
 }
 
-// ============================================================
-// SELLER CARD (bila WhatsApp; ina profile picture)
-// ============================================================
 function SellerCard({
   property,
   status,
@@ -384,6 +384,7 @@ function SellerCard({
   lang,
   isOwner = false,
   editTo,
+  contactLoading = null,
 }) {
   const isReserved = status === "reserved";
   const isSold = status === "sold";
@@ -399,7 +400,6 @@ function SellerCard({
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5">
       <div className="flex items-center gap-4 mb-4">
-        {/* ✅ Profile picture ya muuzaji */}
         {sellerAvatar ? (
           <img
             src={sellerAvatar}
@@ -481,10 +481,14 @@ function SellerCard({
       ) : (
         <button
           onClick={onContact}
-          className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+          disabled={!!contactLoading}
+          className="w-full bg-gold hover:bg-flame text-night py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          <MessageSquare size={16} />
-          {t(lang, "Wasiliana na Muuzaji", "Contact Seller")}
+          {/* 🛠️ FIX: Onyesha spinner kama inapakia */}
+          {contactLoading === "deal" ? <Loader2 size={16} className="animate-spin" /> : <MessageSquare size={16} />}
+          {contactLoading === "deal" 
+            ? t(lang, "Inafungua...", "Opening...") 
+            : t(lang, "Wasiliana na Muuzaji", "Contact Seller")}
         </button>
       )}
 
@@ -557,18 +561,17 @@ export default function PropertyDetailPage() {
   const isOwner = Boolean(user && ownerId != null && String(ownerId) === String(user.id));
 
   const savedIds = useSavedIds();
-  const isSaved = property ? savedIds.some((id) => String(id) === String(property.id)) : false;
+  // 🛠️ FIX: Badilisha jina la parameter kutoka `id` kwenda `savedId` ili kuepuka kugongana na `id` ya useParams
+  const isSaved = property ? savedIds.some((savedId) => String(savedId) === String(property.id)) : false;
+  
   const [hydrated, setHydrated] = useState(false);
-  useEffect(() => {
-    fetchListingDetailAsync(id).finally(() => setHydrated(true));
-  }, [id]);
   const [contactLoading, setContactLoading] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
-
   const [fetchedImages, setFetchedImages] = useState([]);
 
+  // 🛠️ FIX: Unganisha API calls zote kwenye useEffect moja ili kuepuka double fetching
   useEffect(() => {
-    if (!property?.id) return;
+    if (!id) return;
     let cancelled = false;
 
     const extractUrls = (arr) => {
@@ -591,8 +594,10 @@ export default function PropertyDetailPage() {
 
     (async () => {
       try {
-        const detailRes = await fetchListingDetailAsync(property.id);
+        const detailRes = await fetchListingDetailAsync(id);
         if (cancelled) return;
+        
+        // Chukua picha kutoka kwenye detail response moja kwa moja
         if (detailRes?.ok && detailRes.listing) {
           const l = detailRes.listing;
           const urls = [
@@ -602,33 +607,30 @@ export default function PropertyDetailPage() {
           ].filter(Boolean);
           if (urls.length > 0) {
             setFetchedImages(urls);
-            return;
           }
+        } else {
+            // Kama detail haikutoa picha, jaribu fetchListingImagesAsync
+            try {
+                const imagesRes = await fetchListingImagesAsync(id);
+                if (!cancelled && imagesRes?.ok) {
+                  const urls = extractUrls(imagesRes.images);
+                  if (urls.length > 0) setFetchedImages(urls);
+                }
+            } catch (err) {
+                console.warn("[PropertyDetail] images fetch failed:", err);
+            }
         }
       } catch (err) {
         console.warn("[PropertyDetail] detail fetch failed:", err);
-      }
-
-      try {
-        const imagesRes = await fetchListingImagesAsync(property.id);
-        if (cancelled) return;
-        if (imagesRes?.ok) {
-          const urls = extractUrls(imagesRes.images);
-          if (urls.length > 0) {
-            setFetchedImages(urls);
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn("[PropertyDetail] images fetch failed:", err);
+      } finally {
+        if (!cancelled) setHydrated(true);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [property?.id]);
+  }, [id]);
 
   useEffect(() => {
     if (property?.id) trackViewed(property.id);
@@ -664,7 +666,6 @@ export default function PropertyDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, property]);
 
-  // ✅ Similar Listings: hadi 12, kipaumbele kwa Leading kisha views nyingi
   const similarListings = useMemo(() => {
     if (!property) return [];
     const candidates = allListings.filter(
@@ -809,7 +810,7 @@ export default function PropertyDetailPage() {
     }
   };
 
-  const handleReportSeller = async (property) => {
+  const handleReportSeller = async () => {
     if (!user) {
       navigate("/login", { state: { from: `${location.pathname}${location.search}` } });
       return;
@@ -1074,7 +1075,7 @@ export default function PropertyDetailPage() {
                         </a>
                       </>
                     ) : (
-                      <div className="w-full h-64 rounded-xl border border-dashed border-[color:rgb(var(--c-hairline))]
+                      <div className="w-full h-64 rounded-xl border border-dashed border-[color:rgb(var(--c-hairline))] 
                                       bg-[color:rgb(var(--c-page))] flex items-center justify-center">
                         <div className="text-center px-4">
                           <MapPin size={32} className="text-muted mx-auto" />
@@ -1102,10 +1103,11 @@ export default function PropertyDetailPage() {
               alreadyOnWaitlist={alreadyOnWaitlist}
               onJoinWaitlist={handleJoinWaitlist}
               onContact={handleContact}
-              onReportSeller={() => handleReportSeller(property)}
+              onReportSeller={() => handleReportSeller()}
               lang={lang}
               isOwner={isOwner}
               editTo={ownerEditPath(property.id)}
+              contactLoading={contactLoading}
             />
 
             <div className="bg-white rounded-2xl border border-gray-100 p-5">

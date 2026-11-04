@@ -1,13 +1,11 @@
 // ============================================================
-// MyListings.jsx
-// Seller — orodha ya mali zake (listings).
-// + Normalize status (UPPERCASE kutoka backend → lowercase frontend)
+// src/pages/dashboard/components/MyListings.jsx
 // ============================================================
 import React, { useState, useMemo, useEffect } from "react";
 import {
   PlusCircle, Edit3, Trash2, Pause, Play, CheckCircle2,
   Rocket, TrendingUp, Megaphone, Eye, MapPin, Tag, Search,
-  Loader2, AlertTriangle, Wallet, AlertCircle, Pencil, Send,
+  Loader2, AlertCircle, Pencil, Send, Wallet,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -21,7 +19,6 @@ import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { useToast } from "../../../components/Toast.jsx";
-import { api } from "../../../api/client.js";
 import { useConfirm } from "../../../components/ConfirmDialog.jsx";
 import { startUndo } from "../../../config/undoStore.js";
 import {
@@ -29,6 +26,8 @@ import {
   markSoldAsync,
   getMyListings,
   saveMyListings,
+  publishListingAsync,
+  fetchMyListingsFromApi,
 } from "../../../config/listingsStore.js";
 
 // ============================================================
@@ -75,9 +74,6 @@ function normalizeCategoryInCache() {
   }
 }
 
-// ============================================================
-// ✅ FUNCTION YA getPhotos (Ilikosekana, sasa imeongezwa)
-// ============================================================
 function getPhotos(listing) {
   if (!listing) return [];
   const arr =
@@ -98,34 +94,22 @@ function getPhotos(listing) {
   return [];
 }
 
-// ============================================================
-// Listing ya BURE (admin amezima fee) — haina cha kulipa
-// ============================================================
+// ✅ FIX: Bure ni 0 KWELI tu. `null` = haijulikani (SI bure).
 function isFreeListing(listing) {
   if (!listing) return false;
-  
-  // Kama cache yetu mpya imeweka paymentStatus kuwa FREE
-  if (listing.paymentStatus === "FREE" || listing.payment_status === "FREE") return true;
-  
-  const ps = String(listing.paymentStatus ?? listing.payment_status ?? "").toUpperCase();
+  const ps = String(
+    listing.paymentStatus ?? listing.payment_status ?? ""
+  ).toUpperCase();
   if (ps === "FREE") return true;
-  
   const raw = listing.feeAmount ?? listing.fee_amount;
-  if (raw !== null && raw !== undefined && raw !== "" && Number(raw) === 0) return true;
-  
-  // Kama ni pending_approval na hana feeAmount, inamaanisha ni free listing
-  if (normalizeStatus(listing.status) === "pending_approval" && !raw) return true;
-
-  return false;
+  if (raw === null || raw === undefined || raw === "") return false;
+  return Number(raw) === 0;
 }
 
-// ============================================================
-// isUnpaid — uses normalized status
-// ============================================================
 function isUnpaid(listing) {
   if (!listing) return false;
   if (isFreeListing(listing)) return false;
-  
+
   const s = normalizeStatus(listing.status);
 
   if (s === "pending_payment" || s === "approved_pending_payment") {
@@ -426,15 +410,10 @@ function ListingCard({
                 className="text-[11px] font-semibold leading-tight"
                 style={{ color: "#2563EB" }}
               >
-                {isFreeListing(listing)
-                  ? t(
-                      "Imewasilishwa — inasubiri admin akague (hakuna ada ya kulipa)",
-                      "Submitted — awaiting admin review (no fee to pay)"
-                    )
-                  : t(
-                      "Imewasilishwa — inasubiri admin akague",
-                      "Submitted — awaiting admin review"
-                    )}
+                {t(
+                  "Imewasilishwa — inasubiri admin akague",
+                  "Submitted — awaiting admin review"
+                )}
               </p>
             </div>
           )}
@@ -516,7 +495,7 @@ function ListingCard({
           </button>
         )}
 
-        {["draft", "pending_payment"].includes(status) && (
+        {["draft", "pending_payment", "needs_edit"].includes(status) && (
           <button
             type="button"
             onClick={() => onSubmitReview?.(listing.id)}
@@ -525,7 +504,9 @@ function ListingCard({
             style={{ background: COLORS.rust, color: "white" }}
           >
             <Send size={12} />
-            {t("Wasilisha kwa Admin", "Submit for Review")}
+            {status === "needs_edit"
+              ? t("Wasilisha Tena", "Resubmit")
+              : t("Wasilisha kwa Admin", "Submit for Review")}
           </button>
         )}
 
@@ -648,6 +629,8 @@ export default function MyListings({
 
   useEffect(() => {
     normalizeCategoryInCache();
+    // ✅ Sasisha status kutoka seva ili cache ya zamani isidumu
+    fetchMyListingsFromApi({ force: true });
   }, []);
 
   const goToPayment = (id) => {
@@ -764,6 +747,7 @@ export default function MyListings({
         `"${listing.title}" will be moved to the Recycle Bin. You can restore within 5 minutes.`
       ),
       confirmLabel: t("Futa", "Delete"),
+      cancelLabel: t("Ghairi", "Cancel"),
       danger: true,
     });
     if (!ok) return;
@@ -807,42 +791,30 @@ export default function MyListings({
     });
   };
 
+  // ✅ FIX: Chanzo kimoja (publishListingAsync). Hakuna saveMyListings ya mkono.
   const handleSubmitReview = async (id) => {
     if (busy[id]) return;
     setBusy((b) => ({ ...b, [id]: "submit" }));
-    try {
-      await api.post(`/listings/${id}/publish/`, {});
-      saveMyListings(
-        getMyListings().map((l) =>
-          String(l.id) === String(id)
-            ? { ...l, status: "PENDING_APPROVAL" }
-            : l
-        )
-      );
-      const submitted = listings.find((l) => String(l.id) === String(id));
+    const res = await publishListingAsync(id);
+    setBusy((b) => {
+      const n = { ...b };
+      delete n[id];
+      return n;
+    });
+    if (res.ok) {
       toast.success(
-        isFreeListing(submitted)
+        res.alreadySubmitted
           ? t(
-              "Tangazo limewasilishwa kwa admin. Likikubaliwa litakuwa hewani — hakuna ada.",
-              "Submitted for admin review. Once approved it goes live — no fee."
+              "Tangazo tayari liko kwa admin.",
+              "This listing is already with admin."
             )
           : t(
-              "Tangazo limewasilishwa kwa admin. Utaarifiwa kulipa baada ya kukaguliwa.",
-              "Submitted for admin review. You'll be asked to pay after it's reviewed."
+              "Tangazo limewasilishwa kwa admin.",
+              "Submitted for admin review."
             )
       );
-    } catch (err) {
-      toast.error(
-        err?.data?.detail ||
-          err?.message ||
-          t("Imeshindwa kuwasilisha.", "Failed to submit.")
-      );
-    } finally {
-      setBusy((b) => {
-        const n = { ...b };
-        delete n[id];
-        return n;
-      });
+    } else {
+      toast.error(t("Imeshindwa kuwasilisha.", "Failed to submit."));
     }
   };
 

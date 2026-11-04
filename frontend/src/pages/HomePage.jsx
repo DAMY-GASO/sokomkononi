@@ -15,8 +15,10 @@ import FeaturedSection from "../components/shop/FeaturedSection.jsx";
 import AdvertisedSection from "../components/shop/AdvertisedSection.jsx";
 import CategoryBento from "../components/shop/CategoryBento.jsx";
 import TestimonialsSection from "../components/shop/TestimonialsSection.jsx";
+
 import { usePublicListings } from "../config/listingsStore.js";
-import { usePopularCategories } from "../config/categoriesStore.js";
+// 🛠️ FIX 1: Tumia useActiveCategories badala ya Popular, ili kama admin hajaweka popular, categories zisionekane tupu
+import { useActiveCategories } from "../config/categoriesStore.js"; 
 import { useContent } from "../config/contentStore.js";
 import { useSavedIds, toggleSaved } from "../config/savedStore.js";
 import { useActiveBannerAds } from "../config/bannerAdsStore.js";
@@ -30,9 +32,8 @@ import {
 } from "../config/listingRanking.js";
 
 // ============================================================
-// HELPERS — vigezo vya kila sehemu ya homepage
+// HELPERS
 // ============================================================
-
 function listingCategoryKeys(l) {
   const c = l?.category ?? l?.categoryId ?? l?.category_id ?? l?.categorySlug;
   const out = [];
@@ -59,7 +60,7 @@ function categoryKeys(cat) {
   return out;
 }
 
-const DEDUPE_SECTIONS = true; // mali moja isionekane kwenye sehemu zaidi ya moja
+const DEDUPE_SECTIONS = true;
 
 function ViewAllCategories({ lang }) {
   return (
@@ -112,7 +113,10 @@ export default function HomePage() {
   const { lang } = useLanguage();
   const { user } = useAuth();
   const publicListings = usePublicListings();
-  const popularCategories = usePopularCategories();
+  
+  // 🛠️ FIX: Badilisha kuwa activeCategories
+  const activeCategories = useActiveCategories(); 
+  
   const content = useContent();
   const savedIds = useSavedIds();
   const activeBanners = useActiveBannerAds();
@@ -125,25 +129,31 @@ export default function HomePage() {
 
   const liveListings = useMemo(() => publicListings.filter((l) => l.status === "live"), [publicListings]);
 
-  // 1) FEATURED (Leading) - Mali 8
+  // 1) FEATURED (Leading)
   const featured = useMemo(
     () => rotateByTier(liveListings.filter(isLeadingListing), leadingTier, rotationSeed, 8),
     [liveListings, rotationSeed]
   );
 
-  // 2) ADVERTISED (kutoka banners) - Mali 8
+  // 2) ADVERTISED (kutoka banners)
   const advertised = useMemo(() => {
-    const used = new Set(featured.map((l) => l.id));
-    const bannerListingIds = activeBanners
-      .filter((b) => b.listingId)
-      .map((b) => String(b.listingId));
-    const pool = liveListings.filter(
-      (l) => bannerListingIds.includes(String(l.id)) && (!DEDUPE_SECTIONS || !used.has(l.id))
+    // 🛠️ FIX: Tumia String(l.id) ili kuunganisha vizuri na Set
+    const used = new Set(featured.map((l) => String(l.id)));
+    
+    // 🛠️ FIX: Tengeneza Set ya listing IDs zilizopo kwenye banners kwa ufanisi zaidi
+    const bannerListingIds = new Set(
+      activeBanners.filter((b) => b.listingId).map((b) => String(b.listingId))
     );
+
+    const pool = liveListings.filter(
+      (l) => bannerListingIds.has(String(l.id)) && (!DEDUPE_SECTIONS || !used.has(String(l.id)))
+    );
+    
     return pool
       .sort((a, b) => {
-        const aBanner = activeBanners.find((b) => String(b.listingId) === String(a.id));
-        const bBanner = activeBanners.find((b) => String(b.listingId) === String(b.id));
+        // 🛠️ FIX: Kosa la Typo hapa nilirekebisha. Nilikuwa nakagua String(b.id) badala ya listing id.
+        const aBanner = activeBanners.find((bn) => String(bn.listingId) === String(a.id));
+        const bBanner = activeBanners.find((bn) => String(bn.listingId) === String(b.id));
         const aExp = aBanner?.expiresAt ? new Date(aBanner.expiresAt).getTime() : 0;
         const bExp = bBanner?.expiresAt ? new Date(bBanner.expiresAt).getTime() : 0;
         return aExp - bExp;
@@ -151,37 +161,39 @@ export default function HomePage() {
       .slice(0, 8);
   }, [liveListings, featured, activeBanners]);
 
-  // 3) TRENDING (Boost) - Mali 8
+  // 3) TRENDING (Boost)
   const boosted = useMemo(() => {
+    // 🛠️ FIX: Tumia String IDs kwenye Set
     const used = new Set();
     if (DEDUPE_SECTIONS) {
-      featured.forEach((l) => used.add(l.id));
-      advertised.forEach((l) => used.add(l.id));
+      featured.forEach((l) => used.add(String(l.id)));
+      advertised.forEach((l) => used.add(String(l.id)));
     }
     const pool = liveListings.filter(
-      (l) => (l.isBoosted || l.boostedUntil || l.boostExpiresAt) && (!DEDUPE_SECTIONS || !used.has(l.id))
+      (l) => (l.isBoosted || l.boostedUntil || l.boostExpiresAt) && (!DEDUPE_SECTIONS || !used.has(String(l.id)))
     );
     return rotateByTier(pool, boostTier, rotationSeed + 1, 8);
   }, [liveListings, featured, advertised, rotationSeed]);
 
-  // 4) NEW ARRIVALS - Mali 8
+  // 4) NEW ARRIVALS
   const newArrivals = useMemo(() => {
+    // 🛠️ FIX: Tumia String IDs kwenye Set
     const used = new Set();
     if (DEDUPE_SECTIONS) {
-      featured.forEach((l) => used.add(l.id));
-      advertised.forEach((l) => used.add(l.id));
-      boosted.forEach((l) => used.add(l.id));
+      featured.forEach((l) => used.add(String(l.id)));
+      advertised.forEach((l) => used.add(String(l.id)));
+      boosted.forEach((l) => used.add(String(l.id)));
     }
     return liveListings
-      .filter((l) => !used.has(l.id))
+      .filter((l) => !used.has(String(l.id)))
       .sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0))
       .slice(0, 8);
   }, [liveListings, featured, advertised, boosted]);
 
-  // 5) Categories → zenye mali tu, zenye mali nyingi zinatangulia
+  // 5) Categories
   const categoriesWithListings = useMemo(() => {
     const counts = new Map();
-    (popularCategories || []).forEach((c, idx) => {
+    (activeCategories || []).forEach((c, idx) => {
       const keys = new Set(categoryKeys(c));
       let n = 0;
       liveListings.forEach((l) => {
@@ -192,13 +204,14 @@ export default function HomePage() {
     return Array.from(counts.entries())
       .sort((a, b) => b[1].n - a[1].n || a[1].idx - b[1].idx)
       .map(([c]) => c);
-  }, [popularCategories, liveListings]);
+  }, [activeCategories, liveListings]);
 
   const testimonials = content?.testimonials || [];
 
   return (
     <div className="page-clip min-h-screen bg-page">
-      <Navbar categories={popularCategories} />
+      {/* 🛠️ FIX: Navbar sasa inapokea activeCategories */}
+      <Navbar categories={activeCategories} />
       <main>
         <BannerHero />
         <HeroSection onBuyNow={handleBuyNow} onSellNow={handleSellNow} onSearch={handleSearch} />
@@ -222,7 +235,7 @@ export default function HomePage() {
           </>
         )}
 
-        {/* 3. ADVERTISED LISTINGS (kutoka banners, na Countdown) */}
+        {/* 3. ADVERTISED LISTINGS */}
         {advertised.length > 0 && (
           <AdvertisedSection
             badge={lang === "sw" ? "Matangazo" : "Advertised"}
@@ -239,7 +252,7 @@ export default function HomePage() {
         {/* 4. HOW IT WORKS */}
         <HowItWorks />
 
-        {/* 5. TRENDING — kadi za kawaida zenye lebo "Inavuma" / "Trending" */}
+        {/* 5. TRENDING */}
         {boosted.length > 0 && (
           <FeaturedSection
             badge={lang === "sw" ? "Inavuma" : "Trending"}

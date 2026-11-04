@@ -34,6 +34,7 @@ export const LISTING_STATUS_MAP = {
   reserved: "RESERVED",
   sold: "SOLD",
   expired: "ARCHIVED",
+  pending_approval: "PENDING_APPROVAL",
   in_review: "PENDING_APPROVAL",
   pending_payment: "DRAFT",
   rejected: "REJECTED",
@@ -49,6 +50,7 @@ const API_TO_FRONTEND_STATUS = {
   sold: "sold",
   expired: "expired",
   in_review: "in_review",
+  pending_approval: "pending_approval",
   pending_payment: "pending_payment",
   rejected: "rejected",
   needs_edit: "needs_edit",
@@ -57,7 +59,7 @@ const API_TO_FRONTEND_STATUS = {
   active: "live",
   archived: "paused",
   draft: "pending_payment",
-  pending_review: "in_review",
+  pending_review: "pending_approval",
   LIVE: "live",
   PAUSED: "paused",
   RESERVED: "reserved",
@@ -69,7 +71,7 @@ const API_TO_FRONTEND_STATUS = {
   AVAILABLE: "live",
   ARCHIVED: "paused",
   DRAFT: "pending_payment",
-  PENDING_APPROVAL: "in_review",
+  PENDING_APPROVAL: "pending_approval",
   REJECT: "rejected",
   NEEDS_EDIT: "needs_edit",
   APPROVED_PENDING_PAYMENT: "approved_pending_payment",
@@ -371,7 +373,8 @@ export function useMyListingsSync({ pollMs = 60000 } = {}) {
     const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
     document.addEventListener("visibilitychange", onVisible);
     const timer = setInterval(() => {
-      const hasPending = readKey(MINE_KEY).some((l) => l.status === "in_review");
+      const WAITING = ["in_review", "pending_approval", "paid_pending_approval"];
+      const hasPending = readKey(MINE_KEY).some((l) => WAITING.includes(l.status));
       if (hasPending) refresh();
     }, pollMs);
     return () => {
@@ -404,7 +407,7 @@ export function sweepGhostListings() {
   } catch { /* noop */ }
 }
 
-export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
+export function normalizeListingFromApi(raw, fallbackStatus = "pending_approval") {
   if (!raw) return null;
 
   // ─────────────────────────────────────────────────────────
@@ -606,12 +609,14 @@ export function normalizeListingFromApi(raw, fallbackStatus = "in_review") {
       raw.payment_label ||
       raw.paymentLabel ||
       (raw.payment_status === "PAID" ? "Imelipwa" : "Haijalipwa"),
-    feeAmount: Number(
-      raw.fee_amount ??
-      raw.feeAmount ??
-      raw.listing_fee?.amount ??
-      0
-    ),
+    // null = ada haijaundwa/haijulikani (SI bure). 0 = bure kweli.
+    feeAmount: (() => {
+      const rawFee =
+        raw.fee_amount ?? raw.feeAmount ?? raw.listing_fee?.amount ?? null;
+      if (rawFee == null || rawFee === "") return null;
+      const n = Number(rawFee);
+      return Number.isFinite(n) ? n : null;
+    })(),
     isPaid: Boolean(
       raw.is_paid ??
       raw.isPaid ??
@@ -726,9 +731,14 @@ async function _fetchMyListingsImpl({ refreshUser = false } = {}) {
 }
 
 let _inflight_myListings = null;
-export function fetchMyListingsFromApi(...args) {
-  if (_inflight_myListings) return _inflight_myListings;
-  _inflight_myListings = _fetchMyListingsImpl(...args).finally(() => {
+// opts.force: ikiwa fetch nyingine inaendelea, subiri imalize kisha rudia,
+// ili jibu la zamani (stale) lisiandike juu ya mabadiliko mapya (mf. publish).
+export function fetchMyListingsFromApi(opts = {}) {
+  if (_inflight_myListings) {
+    if (!opts || !opts.force) return _inflight_myListings;
+    return _inflight_myListings.then(() => fetchMyListingsFromApi(opts));
+  }
+  _inflight_myListings = _fetchMyListingsImpl(opts || {}).finally(() => {
     _inflight_myListings = null;
   });
   return _inflight_myListings;
@@ -764,7 +774,7 @@ export async function fetchPendingListingsAsync() {
   try {
     const data = await listingsApi.pending();
     const listings = extractList(data)
-      .map((r) => normalizeListingFromApi(r, "in_review"))
+      .map((r) => normalizeListingFromApi(r, "pending_approval"))
       .filter(Boolean);
     return { ok: true, listings };
   } catch (err) {
@@ -777,6 +787,8 @@ const API_STATUS_FOR_FILTER = {
   live: ["LIVE"],
   rejected: ["REJECTED"],
   in_review: ["PENDING_APPROVAL"],
+  pending_approval: ["PENDING_APPROVAL"],
+  paid_pending_approval: ["PAID_PENDING_APPROVAL"],
   pending_payment: ["PENDING_PAYMENT", "DRAFT"],
   paused: ["PAUSED", "ARCHIVED"],
   sold: ["SOLD"],
@@ -962,14 +974,10 @@ export async function restoreListingAsync(id) {
       console.warn(
         "[listingsStore] /restore/ haipo — tumia PATCH /listings/{id}/"
       );
-      try {
-        await listingsApi.update(id, { status: "AVAILABLE" });
-        restore(snap);
-        return { ok: true };
-      } catch (patchErr) {
-        restore(snap);
-        return { ok: false, error: patchErr };
-      }
+      // Serializer ya seva haina `status`, kwa hiyo PATCH ya status
+      // ingepuuzwa kimya. Usijifanye imefanikiwa.
+      restore(snap);
+      return { ok: false, error: err };
     }
     restore(snap);
     return { ok: false, error: err };
@@ -977,10 +985,62 @@ export async function restoreListingAsync(id) {
 }
 
 export async function pauseListingAsync(id) {
-  return updateListingAsync(id, { status: "paused", pausedAt: new Date().toISOString() });
+  const snap = snapshot();
+  updateListing(id, { status: "paused", pausedAt: new Date().toISOString() });
+  try {
+    await listingsApi.pause(id);
+    return { ok: true };
+  } catch (err) {
+    restore(snap);
+    console.warn("[listingsStore] pause failed:", err);
+    return { ok: false, error: err };
+  }
 }
 export async function unpauseListingAsync(id) {
-  return updateListingAsync(id, { status: "live", pausedAt: null });
+  const snap = snapshot();
+  updateListing(id, { status: "live", pausedAt: null });
+  try {
+    await listingsApi.unpause(id);
+    return { ok: true };
+  } catch (err) {
+    restore(snap);
+    console.warn("[listingsStore] unpause failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// PUBLISH — chanzo kimoja cha "Wasilisha kwa Admin".
+// Seva ni idempotent: tangazo lililowasilishwa tayari linarudisha
+// code "ALREADY_SUBMITTED" (200), si kosa.
+// ============================================================
+export async function publishListingAsync(id) {
+  if (String(id).startsWith("temp_")) {
+    return { ok: false, error: new Error("Listing bado haijasawazishwa.") };
+  }
+  const snap = snapshot();
+  updateListing(id, { status: "pending_approval", rejectionReason: "" });
+  try {
+    const data = await listingsApi.publish(id);
+    // `force` ili jibu la zamani lisirudishe status ya awali
+    fetchMyListingsFromApi({ force: true });
+    return { ok: true, alreadySubmitted: data?.code === "ALREADY_SUBMITTED" };
+  } catch (err) {
+    // Seva inaweza kuwa tayari imepita DRAFT: chukua ukweli wa seva.
+    try {
+      const fresh = await listingsApi.detail(id);
+      const n = normalizeListingFromApi(fresh);
+      if (n && ["pending_approval", "paid_pending_approval"].includes(n.status)) {
+        mutateBoth((list) =>
+          list.map((l) => (String(l.id) === String(id) ? n : l))
+        );
+        return { ok: true, alreadySubmitted: true, status: n.status };
+      }
+    } catch { /* noop */ }
+    restore(snap);
+    console.warn("[listingsStore] publish failed:", err);
+    return { ok: false, error: err };
+  }
 }
 
 // ============================================================
@@ -1024,7 +1084,7 @@ export async function payListingFeeAsync(id, payload) {
     };
   }
   const snap = snapshot();
-  updateListing(id, { status: "in_review", paidAt: new Date().toISOString() });
+  updateListing(id, { status: "paid_pending_approval", paidAt: new Date().toISOString() });
   try {
     const data = await listingsApi.payFee(id, payload);
     return { ok: true, data };
@@ -1373,6 +1433,36 @@ export async function bulkUploadListingImagesAsync(id, files = []) {
     return { ok: true, data: raw, count: raw?.count ?? files.length };
   } catch (err) {
     console.warn("[listingsStore] bulkUploadImages failed:", err);
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// SYNC IMAGES (edit mode): pakia mpya kwanza, kisha futa zilizoondolewa,
+// ili tangazo lisibaki bila picha kama upakiaji ukishindwa.
+// ============================================================
+export async function deleteImagesAndRefresh(id, removedImageIds = []) {
+  for (const imgId of removedImageIds) {
+    await listingsApi.deleteImage(id, imgId);
+  }
+}
+
+export async function syncListingImagesAsync(
+  id,
+  { newFiles = [], removedImageIds = [] } = {}
+) {
+  try {
+    if (newFiles.length) {
+      const r = await bulkUploadListingImagesAsync(id, newFiles);
+      if (!r.ok) return r;
+    }
+    if (removedImageIds.length) {
+      await deleteImagesAndRefresh(id, removedImageIds);
+    }
+    await fetchListingDetailAsync(id);
+    return { ok: true };
+  } catch (err) {
+    console.warn("[listingsStore] syncListingImages failed:", err);
     return { ok: false, error: err };
   }
 }

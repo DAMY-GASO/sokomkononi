@@ -45,6 +45,7 @@ import PendingPurchasePanel from "./PendingPurchasePanel";
 import {
   getPurchaseStatus,
   peekPurchaseStatus,
+  invalidatePurchaseStatus,
 } from "../../../api/purchaseStatus.js";
 
 // ============================================================
@@ -456,12 +457,52 @@ export default function BoostSasa({
   const canBoost =
     feeLoaded &&
     Boolean(selectedListing) &&
+    !isBoostActive(selectedListing) &&
     !existingBoost &&
     !loadingBoostStatus &&
     (feeFree
       ? true
       : (paymentMode === "flat" && Boolean(flatPackage)) ||
         (paymentMode === "bundle" && Boolean(selectedBundle)));
+
+  // Seva inakataa boost mpya kwa mali yenye boost active/inayosubiri malipo.
+  // Usionyeshe maandishi ya seva (Kiswahili tu, na yanachanganya active/pending):
+  // pata hali halisi kisha onyesha ujumbe mmoja sahihi kwa lugha ya app.
+  const isBoostConflict = (err) => {
+    const code = err?.data?.code;
+    if (code === "BOOST_ACTIVE" || code === "BOOST_PENDING") return true;
+    // seva ya zamani isiyo na `code`
+    const d = String(err?.data?.detail || err?.message || "");
+    return err?.status === 400 && /boost/i.test(d) && /active|pending|inayosubiri/i.test(d);
+  };
+
+  const handleBoostConflict = async (listingId) => {
+    const data = await getPurchaseStatus("boosting", listingId);
+    if (data?.has_pending && data.pending) {
+      setExistingBoost({ type: "pending", data: data.pending });
+      setError(
+        t(
+          "Mali hii ina boost inayosubiri malipo. Kamilisha au ifute hapo juu.",
+          "This listing has a boost awaiting payment. Complete or cancel it above."
+        )
+      );
+    } else if (data?.has_active && data.active) {
+      setExistingBoost({ type: "active", data: data.active });
+      setError(
+        t(
+          "Mali hii tayari ina boost inayofanya kazi.",
+          "This listing already has an active boost."
+        )
+      );
+    } else {
+      setError(
+        t(
+          "Mali hii tayari ina boost. Jaribu tena baadaye.",
+          "This listing already has a boost. Please try again later."
+        )
+      );
+    }
+  };
 
   const createBoostOnBackend = async () => {
     const packageId = flatPackage?.id ?? boostPackages[0]?.id ?? null;
@@ -522,6 +563,10 @@ export default function BoostSasa({
       setStage("paying");
     } catch (err) {
       console.error("[BoostSasa] create boost failed:", err);
+      if (isBoostConflict(err)) {
+        await handleBoostConflict(selectedListing.id);
+        return;
+      }
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -585,6 +630,10 @@ export default function BoostSasa({
       });
     } catch (err) {
       console.error("[BoostSasa] use credit failed:", err);
+      if (isBoostConflict(err)) {
+        await handleBoostConflict(selectedListing.id);
+        return;
+      }
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -752,6 +801,10 @@ export default function BoostSasa({
       });
     } catch (err) {
       console.error("[BoostSasa] handleFreeBoost error:", err);
+      if (isBoostConflict(err)) {
+        await handleBoostConflict(selectedListing.id);
+        return;
+      }
       setError(
         err?.data?.detail ||
           err?.message ||
@@ -766,6 +819,12 @@ export default function BoostSasa({
   };
 
   const resetAll = () => {
+    // Hali ya boost imebadilika (boost mpya imewashwa): futa cache na upakie upya,
+    // ili mali hiyo hiyo isionekane kuwa bado inaweza ku-boost.
+    invalidatePurchaseStatus("boosting");
+    setExistingBoost(null);
+    setLoadingBoostStatus(true);
+    setStatusTick((n) => n + 1);
     setDone(null);
     setStage("select");
     setPendingBoost(null);

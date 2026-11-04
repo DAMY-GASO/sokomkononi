@@ -32,6 +32,8 @@ export default function UndoToast() {
       if (shown.has(item.undoId)) return;
 
       const seconds = secondsRemaining(item.expiresAt);
+      // duration 0 ingeacha toast milele; muda ukiisha, usionyeshe
+      if (!(seconds > 0)) return;
       const message =
         item.message ||
         t(
@@ -53,7 +55,9 @@ export default function UndoToast() {
               });
             } else {
               toast.error(
-                res.error?.message || t("Imeshindikana", "Failed"),
+                res.error?.data?.detail ||
+                  res.error?.message ||
+                  t("Imeshindikana", "Failed"),
                 { duration: 3000 }
               );
             }

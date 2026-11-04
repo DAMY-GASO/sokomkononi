@@ -3,6 +3,7 @@ import { Clock, Check, X, Loader2 } from "lucide-react";
 import { COLORS, formatTZS } from "./shared";
 import { cancelPendingPurchase } from "../../../api/purchaseStatus.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { useConfirm } from "../../../components/ConfirmDialog.jsx";
 
 export default function PendingPurchasePanel({
   module,           // "boosting" | "banners" | "leading"
@@ -11,9 +12,17 @@ export default function PendingPurchasePanel({
   onCancelled,      // callback baada ya kufuta
 }) {
   const { lang } = useLanguage();
+  const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  // Tarehe isiyo halali isionyeshe "Invalid Date"
+  const startedAt = (() => {
+    if (!pending?.created_at) return null;
+    const d = new Date(pending.created_at);
+    return Number.isNaN(d.getTime()) ? null : d;
+  })();
 
   const labels = {
     boosting: t("Boost", "Boost"),
@@ -22,12 +31,17 @@ export default function PendingPurchasePanel({
   };
 
   const handleCancel = async () => {
-    if (!window.confirm(
-      t(
+    const ok = await confirm({
+      title: t("Futa ombi?", "Cancel request?"),
+      description: t(
         `Una uhakika unataka kufuta ${labels[module]} iliyosubiri malipo?`,
         `Are you sure you want to cancel the pending ${labels[module]}?`
-      )
-    )) return;
+      ),
+      confirmLabel: t("Futa ombi", "Cancel request"),
+      cancelLabel: t("Rudi", "Back"),
+      danger: true,
+    });
+    if (!ok) return;
 
     setBusy(true);
     setError("");
@@ -36,7 +50,8 @@ export default function PendingPurchasePanel({
       onCancelled?.();
     } catch (err) {
       setError(
-        err?.message ||
+        err?.data?.detail ||
+          err?.message ||
           t("Imeshindwa kufuta. Jaribu tena.", "Failed to cancel. Try again.")
       );
     } finally {
@@ -59,11 +74,13 @@ export default function PendingPurchasePanel({
         </span>
       </div>
       <p className="text-secondary text-sm mb-3">
-        {t(
-          `Ilianzishwa ${new Date(pending.created_at).toLocaleString("sw-TZ")}`,
-          `Started ${new Date(pending.created_at).toLocaleString("en-US")}`
-        )}
-        {pending.amount && ` · ${formatTZS(pending.amount)}`}
+        {startedAt &&
+          t(
+            `Ilianzishwa ${startedAt.toLocaleString("sw-TZ")}`,
+            `Started ${startedAt.toLocaleString("en-US")}`
+          )}
+        {Number(pending.amount) > 0 &&
+          `${startedAt ? " · " : ""}${formatTZS(pending.amount)}`}
       </p>
 
       {error && (

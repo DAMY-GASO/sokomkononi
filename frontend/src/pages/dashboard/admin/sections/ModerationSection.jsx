@@ -43,7 +43,17 @@ function isListingFree(listing) {
   if (ps === "FREE") return true;
   if (listing.is_free === true || listing.isFree === true) return true;
   const raw = listing.fee_amount ?? listing.feeAmount;
-  return raw === null || raw === undefined || raw === "" || Number(raw) === 0;
+  // null = ada haijaundwa/haijulikani (SI bure). Bure ni 0 kweli tu.
+  return raw != null && raw !== "" && Number(raw) === 0;
+}
+
+// Tabs zinazohitaji hatua ya admin — zinapata nukta nyekundu
+const URGENT_TABS = ["pending_approval", "paid_pending_approval"];
+
+// "in_review" (jina la zamani) = "pending_approval"
+function statusOf(l) {
+  const s = normalizeStatus(l?.status);
+  return s === "in_review" ? "pending_approval" : s;
 }
 
 // Statuses zote zinazopakiwa mara moja ili tabs ziwe na counts sahihi
@@ -65,7 +75,7 @@ export default function ModerationSection() {
   const queue = useModerationQueue({ hydrate: false });
   const [history, setHistory] = useState({});
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("in_review");
+  const [statusFilter, setStatusFilter] = useState("pending_approval");
   const [busy, setBusy] = useState({});
   const [error, setError] = useState("");
   const [rejectModal, setRejectModal] = useState(null);
@@ -102,7 +112,11 @@ export default function ModerationSection() {
     setLoading(true);
     setError("");
 
-    const wantPending = statusFilter === "in_review" || statusFilter === "zote";
+    // Queue ya admin (/admin/listings/pending/) ina PENDING_APPROVAL na PAID_PENDING_APPROVAL
+    const wantPending =
+      statusFilter === "pending_approval" ||
+      statusFilter === "paid_pending_approval" ||
+      statusFilter === "zote";
     const wantPendingApproval =
       statusFilter === "pending_approval" || statusFilter === "zote";
     const wantPaid =
@@ -190,70 +204,53 @@ export default function ModerationSection() {
     };
   }, []);
 
+  // Queue + history zimeunganishwa (queue ina data mpya zaidi). Status halisi
+  // inabaki — hatulazimishi PENDING_APPROVAL, ili tangazo lililolipwa lisionekane jipya.
+  const merged = useMemo(() => {
+    const map = new Map();
+    Object.values(history).forEach((l) => {
+      if (!l || l.id == null) return;
+      map.set(String(l.id), l);
+    });
+    queue.forEach((l) => {
+      if (!l || l.id == null) return;
+      const k = String(l.id);
+      map.set(k, { ...(map.get(k) || {}), ...l });
+    });
+    Object.entries(decided).forEach(([id, status]) => {
+      const cur = map.get(id) || history[id];
+      if (!cur) return;
+      map.set(id, { ...cur, status });
+    });
+    return Array.from(map.values()).filter(
+      (l) => statusOf(l) !== "deleted"
+    );
+  }, [queue, history, decided]);
+
   const filtered = useMemo(() => {
-    const pending = queue
-      .filter((l) => !decided[String(l.id)])
-      .map((l) => ({ ...l, status: "PENDING_APPROVAL" }));
-
-    const hist = Object.values(history)
-      .filter((l) => !decided[String(l.id)])
-      .filter((l) => normalizeStatus(l.status) !== "in_review");
-
-    const decidedEntries = Object.entries(decided)
-      .map(([id, status]) => {
-        const fromHist = history[id];
-        if (!fromHist) return null;
-        return { ...fromHist, status };
-      })
-      .filter(Boolean);
-
-    let list;
-    if (statusFilter === "in_review") {
-      list = pending;
-    } else if (statusFilter === "zote") {
-      const map = new Map();
-      hist.forEach((l) => map.set(String(l.id), l));
-      decidedEntries.forEach((l) => map.set(String(l.id), l));
-      pending.forEach((l) => {
-        const k = String(l.id);
-        if (!map.has(k)) map.set(k, l);
-      });
-      list = Array.from(map.values());
-    } else {
-      const base = hist.filter(
-        (l) => normalizeStatus(l.status) === statusFilter
-      );
-      const dec = decidedEntries.filter(
-        (l) => normalizeStatus(l.status) === statusFilter
-      );
-      list = [...base, ...dec];
-    }
+    const list =
+      statusFilter === "zote"
+        ? merged
+        : merged.filter((l) => statusOf(l) === statusFilter);
 
     return [...list].sort(
       (a, b) =>
         new Date(b.postedAt || b.created_at || 0).getTime() -
         new Date(a.postedAt || a.created_at || 0).getTime()
     );
-  }, [queue, history, decided, statusFilter]);
+  }, [merged, statusFilter]);
 
-  // ✅ Counts za kila tab (kutoka history + maamuzi ya admin)
+  // ✅ Counts za kila tab
   const statusCounts = useMemo(() => {
-    const c = { _all: 0 };
-    Object.entries(history).forEach(([id, l]) => {
-      const st = normalizeStatus(decided[id] ?? l.status);
-      if (st === "deleted") return;
+    const c = { _all: merged.length };
+    merged.forEach((l) => {
+      const st = statusOf(l);
       c[st] = (c[st] || 0) + 1;
-      c._all += 1;
     });
     return c;
-  }, [history, decided]);
+  }, [merged]);
 
   const baseFilters = [
-    {
-      key: "in_review",
-      label: { sw: "Zinasubiri", en: "Pending" },
-      count: queue.filter((l) => !decided[String(l.id)]).length,
-    },
     {
       key: "pending_approval",
       label: { sw: "Zinasubiri Admin", en: "Pending Review" },
@@ -516,20 +513,11 @@ export default function ModerationSection() {
       markDecided(listingId, "DELETED");
       removeFromHistory(listingId);
     } else {
+      // Onyesha kosa halisi la seva (si ujumbe wa kukisia)
       const detail = String(res.error?.data?.detail || res.error?.message || "");
-      if (/foreign key|conversations/i.test(detail)) {
-        setError(
-          t(
-            "Mali hii ina mazungumzo ya wanunuzi, kwa hiyo haiwezi kufutwa kabisa. Tumia Disapprove ili iondolewe kwenye soko.",
-            "This listing has buyer conversations, so it can't be permanently deleted. Use Disapprove to take it off the marketplace."
-          )
-        );
-      } else {
-        setError(
-          res.error?.message ||
-            t("Imeshindwa kufuta listing.", "Failed to delete listing.")
-        );
-      }
+      setError(
+        detail || t("Imeshindwa kufuta listing.", "Failed to delete listing.")
+      );
     }
   };
 
@@ -1088,6 +1076,9 @@ export default function ModerationSection() {
           >
             {f.label[lang]}
             {f.count > 0 ? ` (${f.count})` : ""}
+            {URGENT_TABS.includes(f.key) && f.count > 0 && statusFilter !== f.key && (
+              <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse align-middle" />
+            )}
           </button>
         ))}
       </div>

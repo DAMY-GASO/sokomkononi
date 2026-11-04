@@ -51,6 +51,11 @@ export const listingsApi = {
   // ⬇️ RESTORE — rejesha listing iliyofutwa (soft delete undo)
   restore: (id) => api.post(`/listings/${id}/restore/`, {}),
 
+  // ⬇️ PUBLISH / PAUSE / UNPAUSE — endpoints halisi za seva
+  publish: (id) => api.post(`/listings/${id}/publish/`, {}),
+  pause: (id) => api.post(`/listings/${id}/pause/`, {}),
+  unpause: (id) => api.post(`/listings/${id}/unpause/`, {}),
+
   // ⬇️ MARK AS SOLD — seller ana-mark listing kama imeuzwa
   markSold: (id) => api.post(`/listings/${id}/mark-sold/`, {}),
 

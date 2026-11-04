@@ -13,7 +13,12 @@ import {
   getLocalizedField,
   markAllNotificationsReadAsync,
   clearNotificationsAsync,
+  hydrateNotificationsFromApi,
 } from "../../config/notificationsStore.js";
+import {
+  useModerationQueue,
+  hydrateModerationQueueFromApi,
+} from "../../config/moderationStore.js";
 import { Menu, X, Bell, LogOut, User as UserIcon, Settings, Lock, Home as HomeIcon } from "lucide-react";
 
 // ⬇️ Secret admin path
@@ -249,12 +254,38 @@ export default function AdminDashboard() {
   const pendingVerificationsCount = usePendingVerificationsCount();
   const openTicketsCount = useOpenTicketsCount();
 
+  // Foleni ya moderation: badge + polling ili admin ajue bila kuingia kukisia
+  const moderationQueue = useModerationQueue({ hydrate: false });
+  const pendingModerationCount = moderationQueue.length;
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const tick = () => {
+      if (document.visibilityState !== "visible") return;
+      hydrateModerationQueueFromApi();
+      hydrateNotificationsFromApi();
+    };
+    tick();
+    const id = setInterval(tick, 60000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [isAdmin]);
+
   // ============================================================
   // ACTIVE SECTION — kutoka URL
   // ============================================================
   const activeSection = useMemo(() => {
-    const path = location.pathname;
-    return URL_TO_STATE[path] || "overview";
+    const path = location.pathname.replace(/\/+$/, "");
+    if (URL_TO_STATE[path]) return URL_TO_STATE[path];
+    // njia ndogo, mf. /moderation/123
+    if (path.startsWith(ADMIN_PATH + "/")) {
+      const seg = path.slice(ADMIN_PATH.length + 1).split("/")[0];
+      return URL_TO_STATE[`${ADMIN_PATH}/${seg}`] || "overview";
+    }
+    return "overview";
   }, [location.pathname]);
 
   // ============================================================
@@ -306,8 +337,14 @@ export default function AdminDashboard() {
 
   const openNotification = (n) => {
     markRead(n.id);
-    const target = n?.target && STATE_TO_URL[n.target] ? n.target : "overview";
-    navigate(STATE_TO_URL[target] || `${ADMIN_PATH}/overview`);
+    // action_url kutoka backend inafika kama `n.link`
+    const url = n?.link;
+    if (typeof url === "string" && url.startsWith(ADMIN_PATH)) {
+      navigate(url);
+    } else {
+      const target = n?.target && STATE_TO_URL[n.target] ? n.target : "overview";
+      navigate(STATE_TO_URL[target] || `${ADMIN_PATH}/overview`);
+    }
     setNotifOpen(false);
   };
 
@@ -428,6 +465,9 @@ export default function AdminDashboard() {
     if (key === "support" && openTicketsCount > 0) {
       return openTicketsCount;
     }
+    if (key === "moderation" && pendingModerationCount > 0) {
+      return pendingModerationCount;
+    }
     return null;
   };
 
@@ -446,10 +486,13 @@ export default function AdminDashboard() {
           <div className="flex shrink-0 items-center gap-3">
             <button
               onClick={() => setSidebarOpen((v) => !v)}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white transition-colors hover:bg-white/[0.08] md:hidden"
+              className="relative grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white transition-colors hover:bg-white/[0.08] md:hidden"
               aria-label={lang === "sw" ? "Fungua menyu" : "Open menu"}
             >
               <Menu size={22} />
+              {pendingModerationCount > 0 && (
+                <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500" />
+              )}
             </button>
             <a href="/" className="flex shrink-0 select-none items-center gap-2.5">
               <img

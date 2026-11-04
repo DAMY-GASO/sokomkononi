@@ -26,6 +26,7 @@ import {
   markSoldAsync,
   normalizeListingFromApi,
   saveMyListings,
+  fetchListingDetailAsync,
 } from "../../../config/listingsStore.js";
 import { useAnnouncements, hydrateAnnouncementsFromApi } from "../../../config/announcementsStore.js";
 import { useNotifications } from "../../../config/notificationsStore.js";
@@ -195,8 +196,6 @@ export default function DashboardShell() {
     fetchMyListingsFromApi();
   }, [user?.id, isAdminUser]);
 
-  // ✅ URL ndiyo chanzo kimoja cha ukweli (side / activeKey / editListingId).
-  // Hakuna state + effect tena, kwa hiyo hakuna render ya "ukurasa wa zamani".
   const { side, activeKey, editListingId, known } = useMemo(() => {
     const path = location.pathname.replace(/\/+$/, "") || "/";
     const edit = path.match(/^\/dashboard\/listings\/edit\/([^/]+)$/);
@@ -208,6 +207,7 @@ export default function DashboardShell() {
       ? { side: m.side, activeKey: m.key, editListingId: null, known: true }
       : { side: "seller", activeKey: "overview", editListingId: null, known: false };
   }, [location.pathname]);
+  
   const [tickerIndex, setTickerIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -222,6 +222,23 @@ export default function DashboardShell() {
   const [advertiseTarget, setAdvertiseTarget] = useState(null);
   const [langOpen, setLangOpen] = useState(false);
 
+  // Orodha (list) haina `images` zenye id; pakia detail kabla ya kufungua fomu ya edit
+  // ili picha ziweze kufutwa/kuongezwa. Fomu inasoma initialData mara moja tu.
+  const [editReadyId, setEditReadyId] = useState(null);
+  useEffect(() => {
+    if (!editListingId) {
+      setEditReadyId(null);
+      return undefined;
+    }
+    let cancelled = false;
+    fetchListingDetailAsync(editListingId).finally(() => {
+      if (!cancelled) setEditReadyId(String(editListingId));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [editListingId]);
+
   const nav = side === "seller" ? SELLER_NAV : BUYER_NAV;
 
   const languages = [
@@ -233,7 +250,6 @@ export default function DashboardShell() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ⬅️ MPYA: Zuia scroll ya body wakati mobile sidebar imefunguliwa
   useEffect(() => {
     if (sidebarOpen) {
       document.body.style.overflow = "hidden";
@@ -258,19 +274,13 @@ export default function DashboardShell() {
     return () => clearInterval(id);
   }, [announcements.length]);
 
-  useEffect(() => {
-    hydrateAnnouncementsFromApi();
-    const interval = setInterval(() => {
-      hydrateAnnouncementsFromApi();
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
+  // 🛠️ FIX: Tumia mousedown badala ya click ili kuzuia menu kufungwa kabla ya navigate
   useEffect(() => {
     if (!userMenuOpen) return;
     const handleClickOutside = () => setUserMenuOpen(false);
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
+    // Tumia 'mousedown' au 'pointerdown' ili kukamata kabla ya click event kufika kwenye document
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [userMenuOpen]);
 
   const accent = side === "seller" ? COLORS.gold : COLORS.green;
@@ -378,13 +388,19 @@ export default function DashboardShell() {
     [navigate]
   );
 
+  // 🛠️ FIX: Hakikisha listing ipo kabla ya ku-update na kurudisha kosa
   const markListingPaid = async (id, { alreadyPaid = false } = {}) => {
     const all = getMyListings();
     const listing = all.find((l) => String(l.id) === String(id));
-    updateListing(id, {
-      status: "in_review",
+    if (!listing) return { ok: false, error: new Error("Listing not found") };
+    
+    const res = await updateListing(id, {
+      status: "paid_pending_approval",
       paidAt: new Date().toISOString(),
     });
+    
+    if (!res.ok) return res;
+    
     if (!alreadyPaid && listing) {
       addTransaction({
         type: "listing_fee",
@@ -492,13 +508,24 @@ export default function DashboardShell() {
             </div>
           );
         }
+        if (editReadyId !== String(editListingId)) {
+          return (
+            <div className="p-6 text-center text-secondary text-sm">
+              {t("Inapakia tangazo...", "Loading listing...")}
+            </div>
+          );
+        }
         return (
           <PostPropertyForm
             mode="edit"
             initialData={listing}
             onSubmit={async (data) => {
               const res = await updateListing(editListingId, data);
-              if (res?.ok) handleNavClick("listings");
+              if (res?.ok) {
+                // Jibu la PATCH halina id/status; chukua hali halisi (mf. imerudi kwa admin)
+                await fetchListingDetailAsync(editListingId);
+                handleNavClick("listings");
+              }
               return res;
             }}
             onGoToListings={() => handleNavClick("listings")}
@@ -603,7 +630,6 @@ export default function DashboardShell() {
     );
   };
 
-  // ✅ Njia isiyojulikana chini ya /dashboard/* → NotFound
   if (!known) return <NotFoundPage />;
 
   if (isAdminUser) {
@@ -634,7 +660,6 @@ export default function DashboardShell() {
 
   return (
     <div data-surface="sand" className="bg-page w-full flex flex-col pb-16 md:pb-0 min-h-screen">
-      {/* HEADER — navy daima (kama AdminDashboard) */}
       <header
         style={{ background: "#011957" }}
         className="w-full flex items-center gap-3 px-3 sm:px-5 py-3 sticky top-0 z-30 text-white border-b border-white/[0.08]"
@@ -676,7 +701,6 @@ export default function DashboardShell() {
             </button>
           </div>
 
-          {/* THEME TOGGLE — kwenye navy daima */}
           <button
             onClick={toggleTheme}
             className="text-white/80 hover:text-white p-1.5 rounded-md hover:bg-white/[0.08] transition-colors"
@@ -813,7 +837,6 @@ export default function DashboardShell() {
         </div>
       </header>
 
-      {/* MOBILE SIDE TOGGLE — navy */}
       <div style={{ background: "#042475" }} className="md:hidden flex items-center justify-center gap-1 p-1 mx-3 mt-2 rounded-full">
         <button
           onClick={() => handleSideChange("seller")}

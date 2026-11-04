@@ -65,7 +65,7 @@ async function runHydrate() {
     const data = await moderationApi.pendingListings();
     const list = Array.isArray(data) ? data : data?.results || [];
     const normalized = list
-      .map((r) => normalizeListingFromApi(r, "in_review"))
+      .map((r) => normalizeListingFromApi(r, "pending_approval"))
       .filter(Boolean);
     write(KEY, EV, normalized);
     return { ok: true, count: normalized.length };
@@ -98,8 +98,9 @@ export async function approveListingFromQueueAsync(
   listingId,
   { adminName = "Admin" } = {}
 ) {
-  const target = findInQueue(listingId);
-  if (!target) return { ok: false, error: new Error("Listing not in queue") };
+  // Listing inaweza isiwe kwenye queue (mf. tab ya Zinasubiri Malipo/Uhariri) —
+  // bado ni halali kuikataa/kuidhinisha; seva ndiyo inayoamua.
+  const target = findInQueue(listingId) || { id: listingId };
   try {
     await moderationApi.approve(listingId);
   } catch (err) {
@@ -135,8 +136,9 @@ export async function rejectListingFromQueueAsync(
 ) {
   const cleanReason = (reason || "").trim();
   if (!cleanReason) return { ok: false, error: new Error("Reason required") };
-  const target = findInQueue(listingId);
-  if (!target) return { ok: false, error: new Error("Listing not in queue") };
+  // Listing inaweza isiwe kwenye queue (mf. tab ya Zinasubiri Malipo/Uhariri) —
+  // bado ni halali kuikataa/kuidhinisha; seva ndiyo inayoamua.
+  const target = findInQueue(listingId) || { id: listingId };
   try {
     await moderationApi.reject(listingId, cleanReason);
   } catch (err) {
