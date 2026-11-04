@@ -324,9 +324,21 @@ export default function ReportsSection() {
 
   // ── Users Breakdown ──
   const usersDonut = useMemo(() => {
+    // 1. Kama API ipo, itumie
+    if (apiReports?.usersBreakdown) {
+      const u = apiReports.usersBreakdown;
+      return [
+        { label: t("Wauzaji Pekee", "Sellers Only"), value: u.sellers, display: u.sellers.toLocaleString("en-US"), color: "#FEA406" },
+        { label: t("Wanunuzi Pekee", "Buyers Only"), value: u.buyers, display: u.buyers.toLocaleString("en-US"), color: "#2F6D4F" },
+        { label: t("Wote Wawili", "Both"), value: u.both, display: u.both.toLocaleString("en-US"), color: "#7C3AED" },
+        { label: t("Wapya", "Neither"), value: u.neither, display: u.neither.toLocaleString("en-US"), color: "#9CA3AF" },
+        { label: t("Admins", "Admins"), value: u.admins, display: u.admins.toLocaleString("en-US"), color: "#DC2626" },
+      ].filter((d) => d.value > 0);
+    }
+
+    // 2. Fallback (Local Users)
     let sellersOnly = 0, buyersOnly = 0, bothRoles = 0, neitherRole = 0, totalAdmins = 0;
-    const users = localUsers;
-    users.forEach((u) => {
+    localUsers.forEach((u) => {
       const role = u.role || "Neither";
       if (role === "Admin") totalAdmins++;
       else if (role === "Seller") sellersOnly++;
@@ -341,25 +353,23 @@ export default function ReportsSection() {
       { label: t("Wapya", "Neither"), value: neitherRole, display: neitherRole.toLocaleString("en-US"), color: "#9CA3AF" },
       { label: t("Admins", "Admins"), value: totalAdmins, display: totalAdmins.toLocaleString("en-US"), color: "#DC2626" },
     ].filter((d) => d.value > 0);
-  }, [localUsers, lang]);
+  }, [localUsers, apiReports, lang]);
 
-  const usersTotal = localUsers.length || 0;
+  const usersTotal = apiReports?.totalUsers ?? (localUsers.length || 0);
 
-    // ✅ Users Growth Data (Cumulative & Rotating Window)
+  // ✅ Users Growth Data (Cumulative & Rotating Window)
   const usersGrowthData = useMemo(() => {
     const growth = apiReports?.usersGrowth || [];
     const dayColors = {
       Mon: "#2563EB", Tue: "#7C3AED", Wed: "#DB2777", Thu: "#EA580C", Fri: "#CA8A04", Sat: "#16A34A", Sun: "#DC2626",
     };
 
-    // 1. Tambua siku ya leo kwa saa za Tanzania (Africa/Dar_es_Salaam)
     const now = new Date();
     const tzDateStr = new Intl.DateTimeFormat("en-US", {
       timeZone: "Africa/Dar_es_Salaam",
       weekday: "short",
     }).format(now);
     
-    // 2. Tengeneza rotation ya siku 7: kuanzia jana hadi leo
     const allDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const todayIndex = allDays.indexOf(tzDateStr);
     const rotatingDays = [];
@@ -367,7 +377,6 @@ export default function ReportsSection() {
       rotatingDays.push(allDays[(todayIndex + i) % 7]);
     }
 
-    // 3. Panga data kwenye map kulingana na siku
     const dayMap = {};
     growth.forEach((d) => {
       if (!d.date) return;
@@ -381,7 +390,6 @@ export default function ReportsSection() {
       } catch (err) { /* Ignore */ }
     });
 
-    // 4. Rudisha data kwa mpangilio wa rotatingDays
     return rotatingDays.map((day) => ({
       label: day,
       value: dayMap[day] || 0,
@@ -392,11 +400,6 @@ export default function ReportsSection() {
   
   // ── Listings Breakdown ──
   const listingsDonut = useMemo(() => {
-    const statuses = [
-      "live", "reserved", "sold", "pending_payment", "approved_pending_payment",
-      "pending_approval", "paid_pending_approval", "in_review", "needs_edit", "draft",
-      "rejected", "paused", "expired",
-    ];
     const labels = {
       live: t("Hai", "Live"), reserved: t("Imehifadhiwa", "Reserved"), sold: t("Imeuzwa", "Sold"),
       pending_payment: t("Rasimu (Haijawasilishwa)", "Drafts (Not submitted)"), approved_pending_payment: t("Inasubiri Malipo", "Awaiting Pay"),
@@ -405,6 +408,20 @@ export default function ReportsSection() {
       draft: t("Rasimu", "Draft"), rejected: t("Imekataliwa", "Rejected"),
       paused: t("Imesimamishwa", "Paused"), expired: t("Imeisha Muda", "Expired"),
     };
+
+    if (apiReports?.listingsBreakdown) {
+      return Object.entries(apiReports.listingsBreakdown)
+        .map(([key, count]) => ({
+          label: labels[key] || key,
+          value: count,
+          display: count.toLocaleString("en-US"),
+          color: LISTING_STATUS_COLORS[key] || "#9CA3AF",
+        }))
+        .filter((d) => d.value > 0);
+    }
+
+    // Fallback
+    const statuses = Object.keys(labels);
     return statuses
       .map((s) => {
         const count = listings.filter((l) => l.status === s).length;
@@ -414,18 +431,30 @@ export default function ReportsSection() {
         };
       })
       .filter((d) => d.value > 0);
-  }, [listings, lang]);
+  }, [listings, apiReports, lang]);
 
   // ── Deals Breakdown ──
   const dealsDonut = useMemo(() => {
-    const keys = Object.keys(DEAL_STATUS_COLORS);
     const labels = {
       negotiating: t("Inajadiliwa","Negotiating"), offer_sent: t("Ofa Imetumwa","Offer Sent"),
       accepted: t("Imekubaliwa","Accepted"), reserved: t("Imehifadhiwa","Reserved"),
       awaiting_final_payment: t("Malipo ya Mwisho","Final Payment"), payment_proof_submitted: t("Uthibitisho","Proof Sent"),
       completed: t("Imekamilika","Completed"), disputed: t("Mgogoro","Disputed"), cancelled: t("Imeghairiwa","Cancelled"),
     };
-    return keys
+
+    if (apiReports?.dealsBreakdown) {
+      return Object.entries(apiReports.dealsBreakdown)
+        .map(([key, count]) => ({
+          label: labels[key] || key,
+          value: count,
+          display: count.toLocaleString("en-US"),
+          color: DEAL_STATUS_COLORS[key] || "#9CA3AF",
+        }))
+        .filter((d) => d.value > 0);
+    }
+
+    // Fallback
+    return Object.keys(labels)
       .map((k) => {
         const count = deals.filter((d) => d.status === k).length;
         return {
@@ -434,7 +463,7 @@ export default function ReportsSection() {
         };
       })
       .filter((d) => d.value > 0);
-  }, [deals, lang]);
+  }, [deals, apiReports, lang]);
 
   // ── Revenue Donut ──
   const revenueDonut = useMemo(() => {
@@ -452,7 +481,7 @@ export default function ReportsSection() {
       .filter((d) => d.value > 0);
   }, [platformRevenue]);
 
-  // ✅ Revenue by Month - Tumia apiReports.revenueByMonth
+  // ✅ Revenue by Month
   const revenueByMonth = useMemo(() => {
     const apiMonths = apiReports?.revenueByMonth;
     if (Array.isArray(apiMonths) && apiMonths.length > 0) {
@@ -464,7 +493,7 @@ export default function ReportsSection() {
     return [];
   }, [apiReports]);
 
-  // ✅ Revenue by Day - Tumia apiReports.revenueByDay
+  // ✅ Revenue by Day
   const revenueByDay = useMemo(() => {
     const apiDays = apiReports?.revenueByDay;
     if (Array.isArray(apiDays) && apiDays.length > 0) {
@@ -545,8 +574,7 @@ export default function ReportsSection() {
     };
   }, [apiReports, listings, deals, locale]);
 
-  // ✅ Listings Growth (Cumulative) — inatoka kwenye `listings` zile zile
-  // zinazotumika Overview na Donut, hivyo jumla ya mwisho ni sawa kila mahali.
+  // ✅ Listings Growth (Cumulative)
   const listingsGrowthData = useMemo(() => {
     const monthsSw = ["Jan","Feb","Mac","Apr","Mei","Jun","Jul","Ago","Sep","Okt","Nov","Des"];
     const DAYS = 30;
@@ -563,7 +591,6 @@ export default function ReportsSection() {
     }
     const startMs = days[0].getTime();
 
-    // before = mali zilizokuwepo kabla ya dirisha (au zisizo na tarehe sahihi)
     let before = 0;
     const perDay = {};
     listings.forEach((l) => {
@@ -588,7 +615,7 @@ export default function ReportsSection() {
     });
   }, [listings]);
 
-     // ✅ Deals Status as Percentages (Jumla yake = 100%)
+  // ✅ Deals Status as Percentages
   const dealsStatusData = useMemo(() => {
     const keys = ["negotiating", "accepted", "reserved", "completed", "cancelled"];
     const labels = {
@@ -599,7 +626,6 @@ export default function ReportsSection() {
       cancelled: t("Imeghairiwa", "Cancelled"),
     };
 
-    // Hesabu jumla ya deals zilizopo kwenye makundi haya 5 pekee
     const totalInBuckets = keys.reduce(
       (sum, k) => sum + (reports.dealsByStatus?.[k] || 0),
       0
@@ -614,7 +640,6 @@ export default function ReportsSection() {
       }));
     }
 
-    // ✅ Largest Remainder Method — hakikisha jumla = 100%
     const raw = keys.map((k) => {
       const count = reports.dealsByStatus?.[k] || 0;
       const rawPct = (count / totalInBuckets) * 100;
@@ -627,11 +652,9 @@ export default function ReportsSection() {
       };
     });
 
-    // Jumla ya floors (msingi wa 100)
     const sumFloors = raw.reduce((s, p) => s + p.floor, 0);
     let toDistribute = 100 - sumFloors;
 
-    // Panga kwa remainder kushuka, toa +1 kwa wale wenye remainder kubwa
     const sortedByRemainder = [...raw].sort((a, b) => b.remainder - a.remainder);
     const adjustedPct = new Map();
     sortedByRemainder.forEach((p, idx) => {
@@ -829,7 +852,6 @@ export default function ReportsSection() {
             )}
           </ChartCard>
 
-          {/* ✅ Deals Status - VBarChart inayojumlisha 100% */}
           <ChartCard
             title={t("Mgawanyo wa Deals kwa Hali", "Deals by Status")}
             icon={Handshake}
@@ -838,7 +860,7 @@ export default function ReportsSection() {
             <VBarChart
               data={dealsStatusData}
               height={180}
-              maxValue={100} // ✅ Hii inafanya kiwango cha juu kiwe 100%
+              maxValue={100}
               valueFormat={(v) => `${v.toFixed(0)}%`}
             />
           </ChartCard>
