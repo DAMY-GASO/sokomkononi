@@ -17,6 +17,7 @@ import {
 import { COLORS, timeAgo } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import UserDrawer from "../shared/UserDrawer.jsx";
+import { downloadFile } from "../../../../api/client.js";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import {
   useVerifications,
@@ -115,26 +116,10 @@ function DocumentPreview({ doc, verificationId, lang }) {
   const isPdf = doc.is_pdf;
 
   const fetchBlobUrl = async () => {
-    const token = "";
-    const base = (import.meta.env.VITE_API_BASE_URL || "/api").replace(
-      /\/+$/,
-      ""
+    // downloadFile inaweka Authorization token na ina-refresh session.
+    const blob = await downloadFile(
+      `/verifications/${verificationId}/documents/${doc.id}/stream/`
     );
-    const url = `${base}/verifications/${verificationId}/documents/${doc.id}/stream/`;
-
-    const res = await fetch(url, {
-      method: "GET",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-
-    if (res.status === 404) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data?.detail || "file_missing");
-    }
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-    const blob = await res.blob();
     return URL.createObjectURL(blob);
   };
 
