@@ -5,11 +5,13 @@
 // - Anaona status ya maombi yake
 // + Hydrate kutoka API kwenye mount
 // ✅ MPYA: Ushawishi + mahitaji ya documents wazi kwa kila aina
+// ✅ MPYA: Kigezo cha Aina ya Utambulisho (NIDA/Pasipoti/Kadi ya Mpiga Kura)
+// ✅ MPYA: Business Licence + Kadi ya Mpiga Kura kwenye documents
 // ============================================================
 import React, { useState, useEffect } from "react";
 import {
   ShieldCheck, Loader2, Upload, FileText, Plus, X,
-  CheckCircle2, TrendingUp, Award, Clock,
+  CheckCircle2, Award, Clock,
   UserRound, Store, ShoppingBag, Info,
 } from "lucide-react";
 import { COLORS, timeAgo } from "./shared";
@@ -24,6 +26,30 @@ import {
 } from "../../../config/verificationsStore.js";
 
 // ============================================================
+// AINA ZA UTAMBULISHO (ID TYPES)
+// ============================================================
+const ID_TYPES = [
+  {
+    key: "nida",
+    labelSw: "Kadi ya NIDA",
+    labelEn: "NIDA Card",
+    icon: "🪪",
+  },
+  {
+    key: "passport",
+    labelSw: "Pasipoti",
+    labelEn: "Passport",
+    icon: "📘",
+  },
+  {
+    key: "voter",
+    labelSw: "Kadi ya Mpiga Kura",
+    labelEn: "Voter's Card",
+    icon: "🗳️",
+  },
+];
+
+// ============================================================
 // MAHITAJI YA DOCUMENTS KWA KILA AINA YA UTHIBITISHO
 // ============================================================
 const REQUIREMENTS_BY_TYPE = {
@@ -34,12 +60,14 @@ const REQUIREMENTS_BY_TYPE = {
     titleEn: "For Seller",
     documentsSw: [
       "Kadi ya NIDA au Pasipoti (picha ya mbele na nyuma)",
+      "Kadi ya Mpiga Kura (Voter's ID) — kama njia mbadala ya utambulisho",
       "Leseni ya biashara (Business Licence) — kama una biashara rasmi",
       "Hati miliki ya mali (Property Title) — kama wewe ni mmiliki",
       "Barua ya uthibitisho kutoka Serikali ya Mtaa/Kijiji",
     ],
     documentsEn: [
       "NIDA Card or Passport (front and back photos)",
+      "Voter's Registration Card — as an alternative ID",
       "Business Licence — if you run a registered business",
       "Property Title Deed — if you're the property owner",
       "Local Government/Street verification letter",
@@ -64,11 +92,15 @@ const REQUIREMENTS_BY_TYPE = {
     titleEn: "For Buyer",
     documentsSw: [
       "Kadi ya NIDA au Pasipoti (picha ya mbele na nyuma)",
+      "Kadi ya Mpiga Kura (Voter's ID) — kama njia mbadala ya utambulisho",
+      "Leseni ya biashara (Business Licence) — kama unafanya biashara rasmi",
       "Uthibitisho wa makazi — bili ya umeme/maji au barua ya mtaa",
       "Namba ya simu iliyosajiliwa kwa jina lako (kwa malipo)",
     ],
     documentsEn: [
       "NIDA Card or Passport (front and back photos)",
+      "Voter's Registration Card — as an alternative ID",
+      "Business Licence — if you run a registered business",
       "Proof of residence — utility bill or local letter",
       "Phone number registered under your name (for payments)",
     ],
@@ -104,7 +136,6 @@ function WhyGetVerifiedCard({ lang, type }) {
     >
       <div className="flex items-center gap-2 mb-3">
         <Award size={20} color={COLORS.gold} />
-        {/* ✅ Tumia !text-white kulazimisha rangi nyeupe */}
         <h3 className="text-sm sm:text-base font-bold !text-white">
           {t("Kwa Nini Uthibitishe Akaunti Yako?", "Why Get Verified?")}
         </h3>
@@ -117,7 +148,6 @@ function WhyGetVerifiedCard({ lang, type }) {
               color={COLORS.gold}
               className="shrink-0 mt-0.5"
             />
-            {/* ✅ Tumia !text-white hapa pia */}
             <span className="!text-white">{b}</span>
           </li>
         ))}
@@ -160,10 +190,7 @@ function RequirementsCard({ lang, type, compact = false }) {
         <div className="flex items-center gap-1.5 mb-2">
           <FileText size={13} color={req.color} />
           <p className="text-xs font-bold" style={{ color: req.color }}>
-            {t(
-              "Documents Zinazohitajika",
-              "Required Documents"
-            )}
+            {t("Documents Zinazohitajika", "Required Documents")}
           </p>
         </div>
         <ul className="space-y-1 ml-1">
@@ -172,10 +199,7 @@ function RequirementsCard({ lang, type, compact = false }) {
               key={i}
               className="flex items-start gap-1.5 text-[11px] sm:text-xs text-secondary"
             >
-              <span
-                className="font-bold shrink-0"
-                style={{ color: req.color }}
-              >
+              <span className="font-bold shrink-0" style={{ color: req.color }}>
                 {i + 1}.
               </span>
               <span>{d}</span>
@@ -256,6 +280,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     type: side === "seller" ? "seller" : "buyer",
+    idType: "nida", // ✅ MPYA
     subject: "",
     notes: "",
   });
@@ -271,7 +296,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.type || !form.subject.trim()) {
+    if (!form.type || !form.subject.trim() || !form.idType) {
       setError(t("Jaza sehemu zote.", "Fill all fields."));
       return;
     }
@@ -279,6 +304,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
     setError("");
     const res = await addVerificationAsync({
       type: form.type,
+      idType: form.idType, // ✅ MPYA
       subject: form.subject.trim(),
       notes: form.notes.trim(),
     });
@@ -286,6 +312,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
     if (res.ok) {
       setForm({
         type: side === "seller" ? "seller" : "buyer",
+        idType: "nida", // ✅ reset
         subject: "",
         notes: "",
       });
@@ -314,9 +341,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
         {/* Header */}
         <div className="text-center mb-6">
           <ShieldCheck size={36} color={COLORS.gold} className="mx-auto mb-2" />
-          <h1 className="h-title">
-            {t("Uthibitisho Wangu", "My Verifications")}
-          </h1>
+          <h1 className="h-title">{t("Uthibitisho Wangu", "My Verifications")}</h1>
           <p className="text-secondary text-sm mt-2 max-w-md mx-auto">
             {t(
               "Pata beji ya uthibitisho — ongeza uaminifu, fungua deals zaidi, na uonekane juu ya wengine.",
@@ -360,18 +385,16 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
             style={{ background: "white", borderColor: COLORS.sandLine }}
             className="rounded-2xl border p-4 mb-4 flex flex-col gap-3"
           >
-            {/* Aina */}
+            {/* Aina ya Uthibitisho */}
             <label className="flex flex-col gap-1">
               <span className="text-xs font-semibold text-secondary">
                 {t("Aina ya Uthibitisho", "Verification Type")}
               </span>
               <div className="grid grid-cols-2 gap-2">
                 {VERIFICATION_CREATE_TYPES.map((v) => {
-                  const Icon =
-                    v.key === "seller" ? Store : ShoppingBag;
+                  const Icon = v.key === "seller" ? Store : ShoppingBag;
                   const active = form.type === v.key;
-                  const color =
-                    v.key === "seller" ? COLORS.green : "#2563EB";
+                  const color = v.key === "seller" ? COLORS.green : "#2563EB";
                   return (
                     <button
                       type="button"
@@ -390,6 +413,42 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                   );
                 })}
               </div>
+            </label>
+
+            {/* ✅ Aina ya Utambulisho (ID Type) */}
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-semibold text-secondary">
+                {t("Aina ya Utambulisho Utakaotumia", "ID Type You Will Use")}
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {ID_TYPES.map((id) => {
+                  const active = form.idType === id.key;
+                  return (
+                    <button
+                      type="button"
+                      key={id.key}
+                      onClick={() => setForm({ ...form, idType: id.key })}
+                      style={{
+                        background: active ? `${COLORS.gold}18` : "white",
+                        borderColor: active ? COLORS.gold : COLORS.sandLine,
+                        color: active ? "#8A5A16" : COLORS.night,
+                      }}
+                      className="flex flex-col items-center justify-center gap-1 text-[11px] font-semibold px-2 py-2 rounded-lg border"
+                    >
+                      <span className="text-base leading-none">{id.icon}</span>
+                      <span className="text-center leading-tight">
+                        {lang === "sw" ? id.labelSw : id.labelEn}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-muted mt-1">
+                {t(
+                  "Chagua aina ya kitambulisho utakachopakia. Kadi ya Mpiga Kura inakubalika kama njia mbadala.",
+                  "Choose the ID you will upload. Voter's Card is accepted as an alternative."
+                )}
+              </p>
             </label>
 
             {/* ✅ Mahitaji maalum kwa aina iliyochaguliwa */}
@@ -474,6 +533,7 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
           ) : (
             requests.map((r) => {
               const req = REQUIREMENTS_BY_TYPE[r.type] || REQUIREMENTS_BY_TYPE.buyer;
+              const idTypeObj = ID_TYPES.find((id) => id.key === r.idType);
               return (
                 <div
                   key={r.id}
@@ -482,9 +542,8 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                 >
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#FEA406]/20 text-[#8A5A16]">
-                      {VERIFICATION_TYPES.find((v) => v.key === r.type)?.label?.[
-                        lang
-                      ] || r.type}
+                      {VERIFICATION_TYPES.find((v) => v.key === r.type)?.label?.[lang] ||
+                        r.type}
                     </span>
                     <span
                       className="text-xs font-bold px-2 py-0.5 rounded-full capitalize"
@@ -512,9 +571,19 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                   </div>
                   <p className="text-sm font-semibold mb-1">{r.subject}</p>
                   <p className="text-xs text-muted mb-2">
-                    {t("Iliwasilishwa", "Submitted")}{" "}
-                    {timeAgo(r.submittedAt, lang)}
+                    {t("Iliwasilishwa", "Submitted")} {timeAgo(r.submittedAt, lang)}
                   </p>
+
+                  {/* ✅ Onyesha Aina ya Utambulisho */}
+                  {idTypeObj && (
+                    <p className="text-[11px] text-muted mb-2">
+                      {t("Utambulisho:", "ID:")}{" "}
+                      <span className="font-semibold text-secondary">
+                        {idTypeObj.icon}{" "}
+                        {lang === "sw" ? idTypeObj.labelSw : idTypeObj.labelEn}
+                      </span>
+                    </p>
+                  )}
 
                   {r.documentsRequestMessage && (
                     <div
@@ -569,19 +638,27 @@ export default function MyVerificationsPanel({ side = "buyer" }) {
                         }}
                         className="rounded-lg border p-2.5 mb-2"
                       >
-                        <p className="text-[11px] font-semibold mb-1" style={{ color: req.color }}>
+                        <p
+                          className="text-[11px] font-semibold mb-1"
+                          style={{ color: req.color }}
+                        >
                           {t(
                             "Documents zinazohitajika kwa aina hii:",
                             "Documents required for this type:"
                           )}
                         </p>
                         <ul className="space-y-0.5">
-                          {(lang === "sw" ? req.documentsSw : req.documentsEn).map((d, i) => (
-                            <li key={i} className="text-[10px] sm:text-[11px] text-secondary flex items-start gap-1">
-                              <span style={{ color: req.color }}>•</span>
-                              <span>{d}</span>
-                            </li>
-                          ))}
+                          {(lang === "sw" ? req.documentsSw : req.documentsEn).map(
+                            (d, i) => (
+                              <li
+                                key={i}
+                                className="text-[10px] sm:text-[11px] text-secondary flex items-start gap-1"
+                              >
+                                <span style={{ color: req.color }}>•</span>
+                                <span>{d}</span>
+                              </li>
+                            )
+                          )}
                         </ul>
                       </div>
 
