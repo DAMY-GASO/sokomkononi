@@ -453,6 +453,75 @@ function settle(results, ids) {
   return { ok: failed.length === 0, succeeded, failed };
 }
 
+// Endesha kazi kwa vikundi vidogo (5 kwa wakati) ili seva isilemewe
+// wakati admin anachagua mali nyingi.
+async function runPool(ids, worker, size = 5) {
+  const results = new Array(ids.length);
+  let next = 0;
+  async function lane() {
+    while (next < ids.length) {
+      const i = next++;
+      try {
+        results[i] = { status: "fulfilled", value: await worker(ids[i]) };
+      } catch (reason) {
+        results[i] = { status: "rejected", reason };
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(size, ids.length) }, lane));
+  return results;
+}
+
+// PENDING_APPROVAL → LIVE (ada bure) au APPROVED_PENDING_PAYMENT (ada ipo).
+// Seva inaamua kwa kila mali; mali isiyo na kanuni ya ada inashindwa pekee yake.
+export async function bulkRequestPaymentAsync(ids, reason = "", opts = {}) {
+  // freeIds = mali ambazo admin anaziidhinisha BURE (approve endpoint);
+  // nyingine zinaenda Request Payment.
+  const { freeIds = [], ...rest } = opts;
+  const free = new Set(freeIds.map(String));
+  const results = await runPool(ids, (id) =>
+    free.has(String(id))
+      ? approveListingFromQueueAsync(id, rest)
+      : requestPaymentListingAsync(id, reason, rest)
+  );
+  const out = settle(results, ids);
+  out.listings = results
+    .map((r) => (r.status === "fulfilled" && r.value.ok ? r.value.listing : null))
+    .filter(Boolean);
+  return out;
+}
+
+export async function bulkRequestEditAsync(ids, reason, opts = {}) {
+  if ((reason || "").trim().length < 5) {
+    return {
+      ok: false,
+      error: new Error("Reason required (5+ chars)"),
+      succeeded: [],
+      failed: [],
+      listings: [],
+    };
+  }
+  const results = await runPool(ids, (id) =>
+    requestEditListingAsync(id, reason, opts)
+  );
+  const out = settle(results, ids);
+  out.listings = results
+    .map((r) => (r.status === "fulfilled" && r.value.ok ? r.value.listing : null))
+    .filter(Boolean);
+  return out;
+}
+
+export async function bulkFinalizeAsync(ids, opts = {}) {
+  const results = await runPool(ids, (id) =>
+    finalizeApprovalListingAsync(id, opts)
+  );
+  const out = settle(results, ids);
+  out.listings = results
+    .map((r) => (r.status === "fulfilled" && r.value.ok ? r.value.listing : null))
+    .filter(Boolean);
+  return out;
+}
+
 export async function bulkApproveAsync(ids, opts) {
   const results = await Promise.allSettled(
     ids.map((id) => approveListingFromQueueAsync(id, opts))
@@ -467,24 +536,33 @@ export async function bulkRejectAsync(ids, reason, opts) {
       error: new Error("Reason required"),
       succeeded: [],
       failed: [],
+      listings: [],
     };
   }
-  const results = await Promise.allSettled(
-    ids.map((id) => rejectListingFromQueueAsync(id, reason, opts))
+  const results = await runPool(ids, (id) =>
+    rejectListingFromQueueAsync(id, reason, opts)
   );
-  return settle(results, ids);
+  const out = settle(results, ids);
+  out.listings = results
+    .map((r) => (r.status === "fulfilled" && r.value.ok ? r.value.listing : null))
+    .filter(Boolean);
+  return out;
 }
 
 export async function bulkDisapproveAsync(ids, reason, opts) {
-  const results = await Promise.allSettled(
-    ids.map((id) => disapproveListingAsync(id, reason, opts))
+  const results = await runPool(ids, (id) =>
+    disapproveListingAsync(id, reason, opts)
   );
-  return settle(results, ids);
+  const out = settle(results, ids);
+  out.listings = results
+    .map((r) => (r.status === "fulfilled" && r.value.ok ? r.value.listing : null))
+    .filter(Boolean);
+  return out;
 }
 
 export async function bulkDeleteAsync(ids, reason, opts) {
-  const results = await Promise.allSettled(
-    ids.map((id) => deleteListingFromModerationAsync(id, reason, opts))
+  const results = await runPool(ids, (id) =>
+    deleteListingFromModerationAsync(id, reason, opts)
   );
   return settle(results, ids);
 }

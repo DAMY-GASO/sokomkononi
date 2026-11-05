@@ -6,6 +6,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   CheckCircle, XCircle, MoreVertical, Loader2, Trash2, RotateCcw,
   Image, Pencil, Wallet, CheckCheck, ShoppingBag, Clock, ChevronLeft,
+  Square, CheckSquare, X,
 } from "lucide-react";
 import { COLORS } from "../shared/constants.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
@@ -22,6 +23,12 @@ import {
   disapproveListingAsync,
   deleteListingFromModerationAsync,
   releaseReservationAsync,
+  bulkRequestPaymentAsync,
+  bulkRequestEditAsync,
+  bulkFinalizeAsync,
+  bulkRejectAsync,
+  bulkDisapproveAsync,
+  bulkDeleteAsync,
 } from "../../../../config/moderationStore.js";
 import { fetchListingsByStatusAsync } from "../../../../config/listingsStore.js";
 import AdminListingImageManager from "../components/AdminListingImageManager.jsx";
@@ -45,6 +52,15 @@ function isListingFree(listing) {
   const raw = listing.fee_amount ?? listing.feeAmount;
   // null = ada haijaundwa/haijulikani (SI bure). Bure ni 0 kweli tu.
   return raw != null && raw !== "" && Number(raw) === 0;
+}
+
+// Ada haijawekwa kabisa (fee_amount = null) na hakuna payment_status ya kulipwa.
+// Mfumo ukiwa na ada BURE, mali hizi zinatakiwa kuidhinishwa moja kwa moja
+// (hakuna "Request Pay").
+function isFeeUnset(listing) {
+  if (!listing) return false;
+  const raw = listing.fee_amount ?? listing.feeAmount;
+  return raw == null || raw === "";
 }
 
 // Tabs zinazohitaji hatua ya admin — zinapata nukta nyekundu
@@ -87,12 +103,60 @@ export default function ModerationSection() {
   const [imageListing, setImageListing] = useState(null);
   const [decided, setDecided] = useState({});
   const [showScrollLeft, setShowScrollLeft] = useState(false);
+  // ── Bulk moderation ──
+  const [selected, setSelected] = useState({}); // { [id]: true }
+  const [bulkModal, setBulkModal] = useState(null); // { type, reason }
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const filtersRef = useRef(null);
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const formatTZS = (amount) =>
     "TZS " + Math.round(amount || 0).toLocaleString("en-US");
+
+  // ── Tafsiri ya errors za API (backend hurudisha Kiswahili/JSON) ──
+  const ERROR_CODES = {
+    FEE_NOT_CONFIGURED: [
+      "Kundi hili halina kanuni ya ada. Nenda Revenue > Listing Fee uweke ada yake, kisha jaribu tena.",
+      "This category has no fee rule. Go to Revenue > Listing Fee, add one, then try again.",
+    ],
+    PAYMENT_REQUIRED: [
+      "Mali hii ina ada. Tumia 'Omba Malipo' kwanza, kisha 'Idhinisha Mwisho' baada ya muuzaji kulipa.",
+      "This listing has a fee. Use 'Request Pay' first, then 'Finalize' after the seller pays.",
+    ],
+    listing_fee_not_configured: [
+      "Ada ya kuchapisha haijasanidiwa kwa kundi hili bado.",
+      "The listing fee has not been configured for this category yet.",
+    ],
+  };
+  const apiErr = (res, fallback) => {
+    const err = res?.error;
+    const tryParse = (v) => {
+      if (typeof v !== "string") return null;
+      try {
+        const p = JSON.parse(v);
+        return p && typeof p === "object" ? p : null;
+      } catch {
+        return null;
+      }
+    };
+    // Backend hurudisha {detail:{detail,code}}; client inaweza kuibadilisha kuwa string
+    const candidates = [
+      err?.data,
+      err?.data?.detail,
+      tryParse(err?.message),
+      tryParse(err?.data?.detail),
+    ].filter((c) => c && typeof c === "object");
+    const withCode = candidates.find((c) => c.code);
+    const code = withCode?.code;
+    if (code && ERROR_CODES[code]) return t(...ERROR_CODES[code]);
+    // Backend detail ni Kiswahili; usionyeshe kwenye UI ya Kiingereza
+    if (lang === "sw") {
+      const d = withCode?.detail ?? candidates[0]?.detail;
+      return (typeof d === "string" && d) || err?.message || fallback;
+    }
+    return fallback;
+  };
 
   // ✅ FIX: Ongeza ufuatiliaji wa scroll ili kitufe cha "Rudi Kushoto" kionekane
   useEffect(() => {
@@ -106,6 +170,10 @@ export default function ModerationSection() {
     el.addEventListener("scroll", handleScroll);
     return () => el.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    setSelected({});
+  }, [statusFilter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -253,7 +321,7 @@ export default function ModerationSection() {
   const baseFilters = [
     {
       key: "pending_approval",
-      label: { sw: "Zinasubiri Admin", en: "Pending Review" },
+      label: { sw: "Zinasubiri Idhini", en: "Pending Approval" },
     },
     {
       key: "paid_pending_approval",
@@ -323,10 +391,7 @@ export default function ModerationSection() {
         approvedAt: new Date().toISOString(),
       });
     } else {
-      setError(
-        res.error?.message ||
-          t("Imeshindwa kuidhinisha mali.", "Failed to approve listing.")
-      );
+      setError(apiErr(res, t("Imeshindwa kuidhinisha mali.", "Failed to approve listing.")));
     }
   };
 
@@ -361,10 +426,7 @@ export default function ModerationSection() {
         rejectedAt: new Date().toISOString(),
       });
     } else {
-      setError(
-        res.error?.message ||
-          t("Imeshindwa kukataa listing.", "Failed to reject listing.")
-      );
+      setError(apiErr(res, t("Imeshindwa kukataa listing.", "Failed to reject listing.")));
     }
   };
 
@@ -399,7 +461,7 @@ export default function ModerationSection() {
         rejectionReason: reason,
       });
     } else {
-      setError(res.error?.message || t("Imeshindwa.", "Failed."));
+      setError(apiErr(res, t("Imeshindwa.", "Failed.")));
     }
   };
 
@@ -415,7 +477,11 @@ export default function ModerationSection() {
     setBusy((b) => ({ ...b, [listingId]: "request_payment" }));
     setError("");
     const snapshot = queue.find((q) => String(q.id) === String(listingId));
-    const res = await requestPaymentListingAsync(listingId, reason, { isFree });
+    // Bure → endpoint ya approve (inaruhusu hata kundi lisilo na kanuni ya ada);
+    // lenye ada → Request Payment.
+    const res = isFree
+      ? await approveListingFromQueueAsync(listingId)
+      : await requestPaymentListingAsync(listingId, reason, { isFree });
     clearBusy(listingId);
     setRequestPaymentModal(null);
     if (res.ok) {
@@ -430,7 +496,7 @@ export default function ModerationSection() {
         status: finalStatus,
       });
     } else {
-      setError(res.error?.message || t("Imeshindwa.", "Failed."));
+      setError(apiErr(res, t("Imeshindwa.", "Failed.")));
     }
   };
 
@@ -453,7 +519,7 @@ export default function ModerationSection() {
         approvedAt: new Date().toISOString(),
       });
     } else {
-      setError(res.error?.message || t("Imeshindwa.", "Failed."));
+      setError(apiErr(res, t("Imeshindwa.", "Failed.")));
     }
   };
 
@@ -487,10 +553,7 @@ export default function ModerationSection() {
         };
       });
     } else {
-      setError(
-        res.error?.message ||
-          t("Imeshindwa kudissapprove listing.", "Failed to disapprove listing.")
-      );
+      setError(apiErr(res, t("Imeshindwa kudissapprove listing.", "Failed to disapprove listing.")));
     }
   };
 
@@ -514,9 +577,8 @@ export default function ModerationSection() {
       removeFromHistory(listingId);
     } else {
       // Onyesha kosa halisi la seva (si ujumbe wa kukisia)
-      const detail = String(res.error?.data?.detail || res.error?.message || "");
       setError(
-        detail || t("Imeshindwa kufuta listing.", "Failed to delete listing.")
+        apiErr(res, t("Imeshindwa kufuta listing.", "Failed to delete listing."))
       );
     }
   };
@@ -543,10 +605,146 @@ export default function ModerationSection() {
       }));
     } else {
       setError(
-        res.error?.data?.detail ||
-          res.error?.message ||
-          t("Imeshindwa kurudisha mali hewani.", "Failed to put the listing back live.")
+        apiErr(res, t("Imeshindwa kurudisha mali hewani.", "Failed to put the listing back live."))
       );
+    }
+  };
+
+  // ============================================================
+  // BULK MODERATION
+  // ============================================================
+  // Status ambazo kila kitendo kinaruhusiwa (lazima mali ZOTE zilizochaguliwa ziwe humo)
+  const BULK_ALLOWED = {
+    pay: ["pending_approval"],
+    edit: ["pending_approval", "paid_pending_approval"],
+    reject: [
+      "pending_approval",
+      "paid_pending_approval",
+      "approved_pending_payment",
+      "needs_edit",
+    ],
+    finalize: ["paid_pending_approval"],
+    disapprove: ["live"],
+    delete: ["live", "rejected", "expired", "pending_payment", "draft"],
+  };
+
+  const selectedIds = Object.keys(selected).filter((id) => selected[id]);
+  const selectedListings = filtered.filter((l) => selected[String(l.id)]);
+  const allSelected =
+    filtered.length > 0 && selectedListings.length === filtered.length;
+
+  const toggleOne = (id) =>
+    setSelected((p) => ({ ...p, [String(id)]: !p[String(id)] }));
+  const toggleAll = () =>
+    setSelected(
+      allSelected
+        ? {}
+        : Object.fromEntries(filtered.map((l) => [String(l.id), true]))
+    );
+
+  const bulkCan = (type) =>
+    selectedListings.length > 0 &&
+    selectedListings.every((l) => BULK_ALLOWED[type].includes(statusOf(l)));
+
+  const bulkFreeCount = selectedListings.filter(
+    (l) => isListingFree(l) || isFeeUnset(l)
+  ).length;
+  const bulkPayLabel =
+    bulkFreeCount === selectedListings.length
+      ? t("Idhinisha (Bure)", "Approve (Free)")
+      : bulkFreeCount === 0
+      ? t("Omba Malipo", "Request Pay")
+      : t("Idhinisha / Omba Malipo", "Approve / Request Pay");
+
+  const openBulkModal = (type) => {
+    setError("");
+    setBulkModal({ type, reason: "" });
+  };
+
+  const submitBulk = async () => {
+    if (!bulkModal || bulkBusy) return;
+    const { type } = bulkModal;
+    const reason = (bulkModal.reason || "").trim();
+    const ids = selectedListings.map((l) => l.id);
+    if (!ids.length) return;
+
+    if (type === "edit" && reason.length < 5) {
+      setError(t("Sababu inahitajika (herufi 5+).", "Reason required (5+ chars)."));
+      return;
+    }
+    if ((type === "reject" || type === "disapprove") && !reason) {
+      setError(t("Sababu inahitajika.", "Reason is required."));
+      return;
+    }
+
+    setBulkBusy(true);
+    setError("");
+    const snapshots = Object.fromEntries(
+      selectedListings.map((l) => [String(l.id), l])
+    );
+    let res;
+    try {
+      if (type === "pay")
+        res = await bulkRequestPaymentAsync(ids, reason, {
+          freeIds: selectedListings
+            .filter((l) => isListingFree(l) || isFeeUnset(l))
+            .map((l) => l.id),
+        });
+      else if (type === "edit") res = await bulkRequestEditAsync(ids, reason);
+      else if (type === "finalize") res = await bulkFinalizeAsync(ids);
+      else if (type === "reject") res = await bulkRejectAsync(ids, reason);
+      else if (type === "disapprove") res = await bulkDisapproveAsync(ids, reason);
+      else if (type === "delete") res = await bulkDeleteAsync(ids, reason);
+    } finally {
+      setBulkBusy(false);
+      setBulkModal(null);
+    }
+    if (!res) return;
+
+    // Sasisha UI kwa zilizofanikiwa
+    const doneStatus = {
+      edit: "NEEDS_EDIT",
+      finalize: "LIVE",
+      reject: "REJECTED",
+      disapprove: "REJECTED",
+    };
+    (res.succeeded || []).forEach((id) => {
+      if (type === "delete") {
+        markDecided(id, "DELETED");
+        removeFromHistory(id);
+        return;
+      }
+      const fromApi = (res.listings || []).find((x) => String(x.id) === String(id));
+      const st = String(fromApi?.status || doneStatus[type] || "").toUpperCase();
+      if (!st) return;
+      markDecided(id, st);
+      addToHistory({
+        ...(snapshots[String(id)] || {}),
+        ...(fromApi || {}),
+        id,
+        status: st,
+        ...(type === "edit" || type === "reject" || type === "disapprove"
+          ? { rejectionReason: reason }
+          : {}),
+      });
+    });
+
+    // Waliofeli hubaki wamechaguliwa ili admin aone na kujaribu tena
+    const failedIds = (res.failed || []).map((f) => String(f.listingId));
+    setSelected(Object.fromEntries(failedIds.map((id) => [id, true])));
+
+    const okCount = (res.succeeded || []).length;
+    if (failedIds.length) {
+      const first = res.failed[0];
+      const why = apiErr({ error: first.error }, t("Imeshindwa.", "Failed."));
+      setError(
+        t(
+          `Zimefanikiwa ${okCount}, zimeshindwa ${failedIds.length}. Sababu ya kwanza: `,
+          `${okCount} succeeded, ${failedIds.length} failed. First reason: `
+        ) + why
+      );
+    } else if (res.error) {
+      setError(apiErr({ error: res.error }, t("Imeshindwa.", "Failed.")));
     }
   };
 
@@ -572,7 +770,7 @@ export default function ModerationSection() {
     const isBusy = !!busy[listing.id];
     const currentAction = busy[listing.id];
 
-    const isFree = isListingFree(listing);
+    const isFree = isListingFree(listing) || isFeeUnset(listing);
     const PayIcon = isFree ? CheckCheck : Wallet;
     const payLabel = isFree
       ? t("Idhinisha (Bure)", "Approve (Free)")
@@ -1098,6 +1296,107 @@ export default function ModerationSection() {
         </button>
       )}
 
+      {/* ── BULK BAR ─────────────────────────────────────── */}
+      {selectedIds.length > 0 && (
+        <div className="sticky top-2 z-30 mb-3 rounded-xl border border-gray-200 bg-white p-3 shadow-md">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-primary mr-1">
+              {t(`Umechagua ${selectedListings.length}`, `${selectedListings.length} selected`)}
+            </span>
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="text-xs font-semibold text-secondary underline"
+            >
+              {allSelected ? t("Ondoa zote", "Clear all") : t("Chagua zote", "Select all")}
+            </button>
+            <div className="flex flex-wrap items-center gap-2 ml-auto">
+              {bulkCan("pay") && (
+                <button
+                  onClick={() => openBulkModal("pay")}
+                  disabled={bulkBusy}
+                  style={{ color: COLORS.green }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50"
+                >
+                  {bulkFreeCount === selectedListings.length ? <CheckCheck size={13} /> : <Wallet size={13} />}
+                  {bulkPayLabel}
+                </button>
+              )}
+              {bulkCan("finalize") && (
+                <button
+                  onClick={() => openBulkModal("finalize")}
+                  disabled={bulkBusy}
+                  style={{ color: COLORS.green }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-green-50 disabled:opacity-50"
+                >
+                  <CheckCheck size={13} />
+                  {t("Idhinisha Mwisho", "Finalize")}
+                </button>
+              )}
+              {bulkCan("edit") && (
+                <button
+                  onClick={() => openBulkModal("edit")}
+                  disabled={bulkBusy}
+                  style={{ color: "#B45309" }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-amber-50 disabled:opacity-50"
+                >
+                  <Pencil size={13} />
+                  {t("Omba Uhariri", "Request Edit")}
+                </button>
+              )}
+              {bulkCan("reject") && (
+                <button
+                  onClick={() => openBulkModal("reject")}
+                  disabled={bulkBusy}
+                  style={{ color: COLORS.rust }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <XCircle size={13} />
+                  {t("Kataa", "Reject")}
+                </button>
+              )}
+              {bulkCan("disapprove") && (
+                <button
+                  onClick={() => openBulkModal("disapprove")}
+                  disabled={bulkBusy}
+                  style={{ color: COLORS.rust }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <RotateCcw size={13} />
+                  Disapprove
+                </button>
+              )}
+              {bulkCan("delete") && (
+                <button
+                  onClick={() => openBulkModal("delete")}
+                  disabled={bulkBusy}
+                  style={{ color: "#DC2626" }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <Trash2 size={13} />
+                  {t("Futa", "Delete")}
+                </button>
+              )}
+              <button
+                onClick={() => setSelected({})}
+                aria-label={t("Ghairi uchaguzi", "Clear selection")}
+                className="p-1.5 rounded-lg border border-gray-200 text-secondary"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          </div>
+          {!["pay", "finalize", "edit", "reject", "disapprove", "delete"].some(bulkCan) && (
+            <p className="text-xs text-secondary mt-2">
+              {t(
+                "Mali ulizochagua ziko kwenye hali tofauti — hakuna kitendo kinachofaa zote. Chagua kutoka tab moja.",
+                "The selected listings are in different states, so no single action fits all. Select from one tab."
+              )}
+            </p>
+          )}
+        </div>
+      )}
+
       {loading && (
         <div className="flex items-center justify-center py-8 text-muted text-sm gap-2">
           <Loader2 size={16} className="animate-spin" />
@@ -1112,6 +1411,16 @@ export default function ModerationSection() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="pl-4 pr-1 py-2.5 w-8">
+                      <button
+                        type="button"
+                        onClick={toggleAll}
+                        aria-label={t("Chagua zote", "Select all")}
+                        className="text-secondary"
+                      >
+                        {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                      </button>
+                    </th>
                     <th className="px-5 py-2.5 text-left text-xs font-medium text-secondary uppercase">
                       {t("Mali", "Listing")}
                     </th>
@@ -1138,6 +1447,15 @@ export default function ModerationSection() {
                       key={l.id}
                       className="hover:bg-gray-50/50 transition-colors"
                     >
+                      <td className="pl-4 pr-1 py-3 w-8">
+                        <input
+                          type="checkbox"
+                          checked={!!selected[String(l.id)]}
+                          onChange={() => toggleOne(l.id)}
+                          aria-label={t("Chagua", "Select")}
+                          className="h-4 w-4 accent-[#0A1F5C]"
+                        />
+                      </td>
                       <td className="px-5 py-3 text-sm font-medium text-primary">
                         {l.title}
                         {normalizeStatus(l.status) === "rejected" && l.rejectionReason && (
@@ -1182,7 +1500,7 @@ export default function ModerationSection() {
                   {filtered.length === 0 && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-5 py-8 text-center text-sm text-muted"
                       >
                         {emptyText}
@@ -1201,6 +1519,13 @@ export default function ModerationSection() {
                 className="bg-white rounded-xl border border-gray-100 p-4"
               >
                 <div className="flex items-start justify-between gap-3 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={!!selected[String(l.id)]}
+                    onChange={() => toggleOne(l.id)}
+                    aria-label={t("Chagua", "Select")}
+                    className="mt-1 h-4 w-4 shrink-0 accent-[#0A1F5C]"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-primary line-clamp-2">
                       {l.title}
@@ -1254,6 +1579,88 @@ export default function ModerationSection() {
           </div>
         </>
       )}
+
+      {/* ── BULK MODAL ───────────────────────────────────── */}
+      {bulkModal && (() => {
+        const type = bulkModal.type;
+        const n = selectedListings.length;
+        const needsReason = ["edit", "reject", "disapprove", "delete"].includes(type);
+        const reasonRequired = type !== "delete";
+        const titles = {
+          pay: bulkPayLabel,
+          finalize: t("Idhinisha Mwisho", "Finalize"),
+          edit: t("Omba Uhariri", "Request Edit"),
+          reject: t("Kataa", "Reject"),
+          disapprove: "Disapprove",
+          delete: t("Futa Kabisa", "Delete Permanently"),
+        };
+        const bodies = {
+          pay:
+            bulkFreeCount === n
+              ? t("Mali zitaenda LIVE moja kwa moja (hakuna ada).", "Listings will go LIVE right away (no fee).")
+              : t(
+                  "Zenye ada zitaenda 'Zinasubiri Malipo'; zisizo na ada zitaenda LIVE.",
+                  "Listings with a fee go to 'Awaiting Pay'; free ones go LIVE."
+                ),
+          finalize: t("Mali zilizolipwa zitaenda LIVE.", "Paid listings will go LIVE."),
+          edit: t("Sababu moja itatumwa kwa kila muuzaji.", "The same reason is sent to each seller."),
+          reject: t("Sababu moja itatumwa kwa kila muuzaji.", "The same reason is sent to each seller."),
+          disapprove: t("Zitarudishwa kwenye Zimekataliwa.", "They will move back to Rejected."),
+          delete: t("Hatua hii haiwezi kurudishwa.", "This cannot be undone."),
+        };
+        const invalid =
+          reasonRequired &&
+          needsReason &&
+          (type === "edit"
+            ? bulkModal.reason.trim().length < 5
+            : !bulkModal.reason.trim());
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-2xl max-w-md w-full p-5">
+              <h3 className="text-base font-semibold text-primary mb-1">
+                {titles[type]} · {n}
+              </h3>
+              <p className="text-xs text-secondary mb-3">{bodies[type]}</p>
+              {needsReason && (
+                <textarea
+                  value={bulkModal.reason}
+                  onChange={(e) => setBulkModal((p) => ({ ...p, reason: e.target.value }))}
+                  rows={3}
+                  autoFocus
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none resize-none mb-3"
+                  placeholder={
+                    reasonRequired
+                      ? t("Sababu (inahitajika)", "Reason (required)")
+                      : t("Sababu (hiari)", "Reason (optional)")
+                  }
+                />
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setBulkModal(null)}
+                  disabled={bulkBusy}
+                  className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-semibold text-secondary"
+                >
+                  {t("Ghairi", "Cancel")}
+                </button>
+                <button
+                  onClick={submitBulk}
+                  disabled={bulkBusy || invalid}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                  style={{
+                    background: ["reject", "disapprove", "delete"].includes(type)
+                      ? COLORS.rust
+                      : COLORS.green,
+                  }}
+                >
+                  {bulkBusy && <Loader2 size={14} className="animate-spin" />}
+                  {titles[type]}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── REJECT MODAL ─────────────────────────────────── */}
       {rejectModal && (
