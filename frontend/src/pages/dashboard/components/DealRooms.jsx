@@ -1049,6 +1049,15 @@ function DealListItem({ deal, active, onSelect, lang }) {
         >
           {status?.label || deal.status || "—"}
         </span>
+        {deal.adminLocked && (
+          <span
+            className="inline-block ml-1 text-body-sm font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: "rgba(232,163,61,0.2)", color: "#8A5A16" }}
+          >
+            <Lock size={10} className="inline mr-0.5" />
+            {lang === "sw" ? "Imesimamishwa" : "Locked"}
+          </span>
+        )}
       </div>
     </button>
   );
@@ -1157,6 +1166,12 @@ function DealDetail({
 
   const isBuyer = side === "buyer";
   const isSeller = side === "seller";
+
+  // ── MPYA: hali ya lock/cancel ──
+  const isLocked = !!deal.adminLocked;
+  const isCancelledByAdmin = !!deal.cancelledByAdmin;
+  const canInteract = !isLocked && deal.status !== "cancelled";
+
   const lastOffer = [...(deal.messages || [])]
     .reverse()
     .find(
@@ -1168,7 +1183,10 @@ function DealDetail({
     );
   const iMadeLastOffer = lastOffer?.sender === "me";
   const canRespond =
-    deal.currentOffer > 0 && !!lastOffer && !iMadeLastOffer;
+    canInteract &&
+    deal.currentOffer > 0 &&
+    !!lastOffer &&
+    !iMadeLastOffer;
 
   const waitingText = iMadeLastOffer
     ? lang === "sw"
@@ -1212,14 +1230,12 @@ function DealDetail({
   const reservationPaid = reservationPaidStatuses.includes(deal.status);
 
   const canReserve =
+    canInteract &&
     isBuyer &&
     ["negotiating", "offer_sent", "accepted"].includes(deal.status) &&
     !deal.pendingPayment &&
     !deal.reservationPaidAt;
 
-  // Buyer anaweza kureserve kama deal iko negotiating/offer_sent/accepted
-  // lakini hajalipia bado. Baada ya kulipia, banner inabadilika kuwa
-  // "Property Reserved" (deal.status = "reserved").
   const showReservedBanner = isBuyer && reservationPaid;
 
   const handleSend = () => {
@@ -1281,7 +1297,7 @@ function DealDetail({
     }
   };
 
-    const handleReportSubmit = async () => {
+  const handleReportSubmit = async () => {
     if (reportDetails.trim().length < 10) return;
     setReportBusy(true);
     try {
@@ -1425,7 +1441,7 @@ function DealDetail({
                     : "Buyer's Profile"}
               </button>
 
-              {isBuyer && deal.status === "reserved" && (
+              {isBuyer && deal.status === "reserved" && !isLocked && (
                 <button
                   role="menuitem"
                   onClick={() => {
@@ -1480,7 +1496,47 @@ function DealDetail({
         </span>
       </div>
 
-      {/* 🛠️ RESERVE BANNER — wazi kwa buyer, muda wote canReserve */}
+      {/* ── MPYA: Lock banner (juu kabisa, inaonekana kwa pande zote) ── */}
+      {isLocked && (
+        <div
+          className="border-b px-3 sm:px-4 py-3 flex items-start gap-3"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(232,163,61,0.18) 0%, rgba(232,163,61,0.08) 100%)",
+            borderColor: "rgba(232,163,61,0.4)",
+          }}
+        >
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: "#8A5A16" }}
+          >
+            <Lock size={16} color="white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold" style={{ color: "#8A5A16" }}>
+              {lang === "sw"
+                ? "Room Imesimamishwa na Msimamizi"
+                : "Room Suspended by Admin"}
+            </p>
+            <p className="text-xs text-secondary mt-0.5 leading-relaxed">
+              {deal.lockedReason
+                ? lang === "sw"
+                  ? `Sababu: ${deal.lockedReason}`
+                  : `Reason: ${deal.lockedReason}`
+                : lang === "sw"
+                  ? "Ujumbe na ofa hazipokelewi hadi ukaguzi ukamilike."
+                  : "Messages and offers are paused until review is complete."}
+            </p>
+            {deal.lockedByName && (
+              <p className="text-[11px] text-muted mt-0.5">
+                {lang === "sw" ? "Na" : "By"}: {deal.lockedByName}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 🛠️ RESERVE BANNER — wazi kwa buyer, canReserve */}
       {isBuyer && canReserve && !reserveModalOpen && (
         <div
           className="border-b px-3 sm:px-4 py-3 flex items-center gap-3"
@@ -1522,7 +1578,7 @@ function DealDetail({
         </div>
       )}
 
-      {/* 🛠️ PROPERTY RESERVED BANNER — inaonekana baada ya malipo */}
+      {/* 🛠️ PROPERTY RESERVED BANNER */}
       {showReservedBanner && deal.status === "reserved" && (
         <div
           className="border-b px-3 sm:px-4 py-3 flex items-center gap-3"
@@ -1572,7 +1628,10 @@ function DealDetail({
       >
         {deal.messages.map((m) => {
           const text = getMessageText(m, lang);
-          return m.sender === "admin" ? (
+          // ── MPYA: admin bubble — chunguza `kind` pia ──
+          const isAdminMessage =
+            m.sender === "admin" || m.kind === "ADMIN";
+          return isAdminMessage ? (
             <div key={m.id} className="flex justify-center my-1">
               <div
                 style={{
@@ -1645,7 +1704,8 @@ function DealDetail({
       </div>
 
       {/* Negotiation actions */}
-      {(deal.status === "negotiating" || deal.status === "offer_sent") && (
+      {(deal.status === "negotiating" || deal.status === "offer_sent") &&
+        !isLocked && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-t flex-wrap"
@@ -1710,7 +1770,7 @@ function DealDetail({
       )}
 
       {/* Offer input */}
-      {(isBuyer || isSeller) && offerOpen && (
+      {(isBuyer || isSeller) && offerOpen && !isLocked && (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
           className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-t"
@@ -1744,7 +1804,7 @@ function DealDetail({
         </div>
       )}
 
-      {deal.status === "accepted" && isSeller && (
+      {deal.status === "accepted" && isSeller && !isLocked && (
         <div
           style={{
             borderColor: COLORS.sandLine,
@@ -1767,7 +1827,7 @@ function DealDetail({
         </div>
       )}
 
-      {deal.status === "reserved" && side === "seller" && (
+      {deal.status === "reserved" && side === "seller" && !isLocked && (
         <div
           style={{
             borderColor: COLORS.sandLine,
@@ -1802,7 +1862,7 @@ function DealDetail({
         </div>
       )}
 
-      {deal.status === "reserved" && side === "buyer" && (
+      {deal.status === "reserved" && side === "buyer" && !isLocked && (
         <div
           style={{
             borderColor: COLORS.sandLine,
@@ -1851,7 +1911,7 @@ function DealDetail({
         </div>
       )}
 
-      {deal.status === "awaiting_final_payment" && side === "buyer" && (
+      {deal.status === "awaiting_final_payment" && side === "buyer" && !isLocked && (
         <PaymentProofPanel
           deal={deal}
           lang={lang}
@@ -1859,7 +1919,7 @@ function DealDetail({
         />
       )}
 
-      {deal.status === "awaiting_final_payment" && side === "seller" && (
+      {deal.status === "awaiting_final_payment" && side === "seller" && !isLocked && (
         <div
           style={{
             borderColor: COLORS.sandLine,
@@ -1883,7 +1943,7 @@ function DealDetail({
         </div>
       )}
 
-      {deal.status === "payment_proof_submitted" && side === "seller" && (
+      {deal.status === "payment_proof_submitted" && side === "seller" && !isLocked && (
         <PaymentProofReview
           deal={deal}
           lang={lang}
@@ -1892,7 +1952,7 @@ function DealDetail({
         />
       )}
 
-      {deal.status === "payment_proof_submitted" && side === "buyer" && (
+      {deal.status === "payment_proof_submitted" && side === "buyer" && !isLocked && (
         <div
           style={{
             borderColor: COLORS.sandLine,
@@ -1994,30 +2054,57 @@ function DealDetail({
               </p>
             )}
           </div>
-          {onReopen &&
-            deal.canReopen !== false &&
-            deal.can_reopen !== false && (
-              <button
-                type="button"
-                onClick={handleReopenClick}
-                disabled={reopening}
-                className="btn btn-primary btn-sm inline-flex items-center gap-2 disabled:opacity-60"
-              >
-                {reopening ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <RotateCcw size={14} />
+
+          {/* ── MPYA: admin alighairi — onyesha support, ficha "Fufua" ── */}
+          {isCancelledByAdmin ? (
+            <div
+              style={{
+                background: "rgba(193,80,46,0.08)",
+                color: COLORS.rust,
+                borderColor: "rgba(193,80,46,0.35)",
+              }}
+              className="max-w-md w-full rounded-lg border px-3 py-2.5 text-xs text-center"
+            >
+              <p className="font-semibold mb-1">
+                {lang === "sw"
+                  ? "Imeghairiwa na Msimamizi"
+                  : "Cancelled by Administrator"}
+              </p>
+              <p>
+                {lang === "sw"
+                  ? "Deal hii ilighairiwa na msimamizi na haiwezi kufufuliwa. Wasiliana na support@sokomkononi.co.tz ukihitaji msaada."
+                  : "This deal was cancelled by an administrator and cannot be reopened. Contact support@sokomkononi.co.tz if you need help."}
+              </p>
+            </div>
+          ) : (
+            <>
+              {onReopen &&
+                deal.canReopen !== false &&
+                deal.can_reopen !== false && (
+                  <button
+                    type="button"
+                    onClick={handleReopenClick}
+                    disabled={reopening}
+                    className="btn btn-primary btn-sm inline-flex items-center gap-2 disabled:opacity-60"
+                  >
+                    {reopening ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <RotateCcw size={14} />
+                    )}
+                    {lang === "sw" ? "Fufua mazungumzo" : "Reopen conversation"}
+                  </button>
                 )}
-                {lang === "sw" ? "Fufua mazungumzo" : "Reopen conversation"}
-              </button>
-            )}
-          {(deal.canReopen === false || deal.can_reopen === false) && (
-            <p className="text-muted text-xs max-w-md">
-              {lang === "sw"
-                ? "Deal hii haiwezi kufufuliwa moja kwa moja. Wasiliana na support@sokomkononi.co.tz ukihitaji msaada."
-                : "This deal can't be reopened directly. Contact support@sokomkononi.co.tz if you need help."}
-            </p>
+              {(deal.canReopen === false || deal.can_reopen === false) && (
+                <p className="text-muted text-xs max-w-md">
+                  {lang === "sw"
+                    ? "Deal hii haiwezi kufufuliwa moja kwa moja. Wasiliana na support@sokomkononi.co.tz ukihitaji msaada."
+                    : "This deal can't be reopened directly. Contact support@sokomkononi.co.tz if you need help."}
+                </p>
+              )}
+            </>
           )}
+
           {reopenInfo && (
             <div className="w-full max-w-md">
               <ErrorCallout info={reopenInfo} />
@@ -2039,37 +2126,57 @@ function DealDetail({
         </div>
       )}
 
-      {/* Composer */}
-      {deal.status !== "declined" && deal.status !== "cancelled" && (
-        <div
-          style={{ borderColor: COLORS.sandLine, background: "white" }}
-          className="flex items-center gap-2 p-3 border-t"
-        >
-          <input
-            style={{
-              background: COLORS.sand,
-              borderColor: COLORS.sandLine,
-              color: COLORS.night,
-            }}
-            className="flex-1 rounded-full border px-4 py-2.5 text-sm outline-none"
-            placeholder={
-              lang === "sw" ? "Andika ujumbe..." : "Type a message..."
-            }
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              if (chatError) setChatError("");
-            }}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          />
-          <button
-            onClick={handleSend}
-            style={{ background: COLORS.gold, color: COLORS.night }}
-            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            aria-label="Send"
+      {/* Composer — kuzimwa kama locked au cancelled */}
+      {deal.status !== "declined" &&
+        deal.status !== "cancelled" &&
+        !isLocked && (
+          <div
+            style={{ borderColor: COLORS.sandLine, background: "white" }}
+            className="flex items-center gap-2 p-3 border-t"
           >
-            <Send size={16} />
-          </button>
+            <input
+              style={{
+                background: COLORS.sand,
+                borderColor: COLORS.sandLine,
+                color: COLORS.night,
+              }}
+              className="flex-1 rounded-full border px-4 py-2.5 text-sm outline-none"
+              placeholder={
+                lang === "sw" ? "Andika ujumbe..." : "Type a message..."
+              }
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (chatError) setChatError("");
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            />
+            <button
+              onClick={handleSend}
+              style={{ background: COLORS.gold, color: COLORS.night }}
+              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              aria-label="Send"
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        )}
+
+      {/* ── MPYA: badala ya composer kama locked ── */}
+      {isLocked && deal.status !== "cancelled" && (
+        <div
+          style={{
+            borderColor: "rgba(232,163,61,0.4)",
+            background: "rgba(232,163,61,0.08)",
+          }}
+          className="border-t px-3 sm:px-4 py-3 flex items-center justify-center gap-2 text-xs font-medium"
+        >
+          <Lock size={13} color="#8A5A16" />
+          <span style={{ color: "#8A5A16" }}>
+            {lang === "sw"
+              ? "Ujumbe umezimwa — room imesimamishwa na msimamizi."
+              : "Messaging is disabled — room is suspended by admin."}
+          </span>
         </div>
       )}
 
@@ -2253,7 +2360,7 @@ function DealDetail({
 }
 
 // ============================================================
-// DEAL ROOMS — main
+// DEAL ROOMS — main (haijabadilishwa kwa kiasi kikubwa)
 // ============================================================
 export default function DealRooms({
   side = "seller",
@@ -2390,11 +2497,22 @@ export default function DealRooms({
     const deal = deals.find((d) => String(d.id) === String(id));
     if (!deal) return;
 
+    if (deal.adminLocked) {
+      alert(
+        lang === "sw"
+          ? "Room imesimamishwa na msimamizi — huwezi kutuma ujumbe."
+          : "Room is suspended by admin — you cannot send messages."
+      );
+      return;
+    }
+
     const tempId = `m_${Date.now()}`;
     const optimisticMsg = {
       id: tempId,
       sender: "me",
       text,
+      kind: "USER",
+      isHidden: false,
       at: new Date().toISOString(),
     };
     updateDeal(id, (prev) => ({
@@ -2432,6 +2550,15 @@ export default function DealRooms({
   };
 
   const handleSendOffer = async (id, amount) => {
+    const deal = deals.find((d) => d.id === id);
+    if (deal?.adminLocked) {
+      alert(
+        lang === "sw"
+          ? "Room imesimamishwa — huwezi kutuma ofa."
+          : "Room is suspended — you cannot send offers."
+      );
+      return;
+    }
     const res = await sendOfferAsync(id, amount, "", null, user?.id);
     if (!res.ok) {
       alert(
@@ -2446,6 +2573,15 @@ export default function DealRooms({
   const handleRespond = async (id, newStatus) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
+
+    if (deal.adminLocked) {
+      alert(
+        lang === "sw"
+          ? "Room imesimamishwa — huwezi kukubali/kukataa ofa."
+          : "Room is suspended — you cannot accept/decline offers."
+      );
+      return;
+    }
 
     const lastOffer = [...(deal.messages || [])]
       .reverse()
@@ -2512,6 +2648,18 @@ export default function DealRooms({
   const handleReopen = async (id) => {
     const deal = deals.find((d) => String(d.id) === String(id));
     if (!deal) return { ok: false };
+
+    if (deal.cancelledByAdmin) {
+      return {
+        ok: false,
+        error: new Error(
+          lang === "sw"
+            ? "Deal hii ilighairiwa na msimamizi — haiwezi kufufuliwa."
+            : "This deal was cancelled by admin — cannot be reopened."
+        ),
+      };
+    }
+
     const roomId = deal.dealRoomId || deal.id;
     try {
       await reopenDealRoom(roomId);
@@ -2562,6 +2710,8 @@ export default function DealRooms({
         {
           id: `m_${Date.now()}`,
           sender: "me",
+          kind: "USER",
+          isHidden: false,
           text: note,
           at: new Date().toISOString(),
         },
@@ -2579,6 +2729,15 @@ export default function DealRooms({
   const handleReserveConfirm = async (id, { hours, fee, method, phone, cardNumber }) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return { ok: false, error: new Error("Deal haipo") };
+
+    if (deal.adminLocked) {
+      alert(
+        lang === "sw"
+          ? "Room imesimamishwa — huwezi kureserve kwa sasa."
+          : "Room is suspended — cannot reserve right now."
+      );
+      return { ok: false };
+    }
 
     if (detailError[id] === "not_found") {
       alert(
@@ -2712,6 +2871,8 @@ export default function DealRooms({
           {
             id: `m_${Date.now()}`,
             sender: "me",
+            kind: "USER",
+            isHidden: false,
             text:
               lang === "sw"
                 ? `Malipo ya Reservation yameanzishwa (${method}). Kumbukumbu: ${payRes.reference}. Tafadhali kamilisha malipo.`
@@ -2773,6 +2934,16 @@ export default function DealRooms({
   const handleInspectionResolve = async (id, outcome, note) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
+
+    if (deal.adminLocked) {
+      alert(
+        lang === "sw"
+          ? "Room imesimamishwa — huwezi kuchukua hatua."
+          : "Room is suspended — you cannot take action."
+      );
+      return;
+    }
+
     let txId = transactionIds[id] || deal.transactionId;
 
     if (!txId) {
@@ -2867,6 +3038,8 @@ export default function DealRooms({
       {
         id: `m_${Date.now()}`,
         sender: "me",
+        kind: "USER",
+        isHidden: false,
         text: fullNote,
         at: new Date().toISOString(),
       },
@@ -2901,6 +3074,14 @@ export default function DealRooms({
   const handleProofSubmit = async (id, proof) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
+    if (deal.adminLocked) {
+      alert(
+        lang === "sw"
+          ? "Room imesimamishwa — huwezi kupakia uthibitisho."
+          : "Room is suspended — cannot upload proof."
+      );
+      return;
+    }
     const txId = transactionIds[id] || deal.transactionId;
     if (!txId) {
       alert(
@@ -2952,6 +3133,8 @@ export default function DealRooms({
         {
           id: `m_${Date.now()}`,
           sender: "me",
+          kind: "USER",
+          isHidden: false,
           text: note,
           at: new Date().toISOString(),
         },
@@ -2962,6 +3145,14 @@ export default function DealRooms({
   const handleProofConfirm = async (id) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
+    if (deal.adminLocked) {
+      alert(
+        lang === "sw"
+          ? "Room imesimamishwa — huwezi kuthibitisha malipo."
+          : "Room is suspended — cannot confirm payment."
+      );
+      return;
+    }
     const txId = transactionIds[id] || deal.transactionId;
     if (!txId) {
       alert(
@@ -2997,6 +3188,8 @@ export default function DealRooms({
         {
           id: `m_${Date.now()}`,
           sender: "me",
+          kind: "USER",
+          isHidden: false,
           text: note,
           at: new Date().toISOString(),
         },
@@ -3012,6 +3205,14 @@ export default function DealRooms({
   const handleProofReject = async (id, reason) => {
     const deal = deals.find((d) => d.id === id);
     if (!deal) return;
+    if (deal.adminLocked) {
+      alert(
+        lang === "sw"
+          ? "Room imesimamishwa — huwezi kutuma."
+          : "Room is suspended — cannot send."
+      );
+      return;
+    }
     const txId = transactionIds[id] || deal.transactionId;
     if (!txId) {
       alert(
@@ -3048,6 +3249,8 @@ export default function DealRooms({
         {
           id: `m_${Date.now()}`,
           sender: "me",
+          kind: "USER",
+          isHidden: false,
           text: note,
           at: new Date().toISOString(),
         },
@@ -3138,7 +3341,6 @@ export default function DealRooms({
         </div>
       </div>
 
-      {/* 🛠️ SUCCESS MODAL — inaonekana baada ya malipo ya reservation */}
       <ReservationSuccessModal
         open={successModalOpen}
         onClose={() => setSuccessModalOpen(false)}
