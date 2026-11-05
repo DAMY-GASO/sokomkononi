@@ -2,7 +2,7 @@
 // DealRoomViewer.jsx
 // ============================================================
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Shield,
   User,
@@ -19,10 +19,25 @@ import {
   Flag,
   AlertTriangle,
   MessageSquare,
+  Lock,
+  Unlock,
+  Ban,
+  Send,
+  X,
+  CheckCircle2,
+  Gavel,
+  Timer,
+  ShieldAlert,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../../shared/constants.js";
 import MessageBubble from "../../shared/MessageBubble.jsx";
 import { getDealTranscript } from "../../../../../config/dealsStore.js";
+import {
+  adminSendMessageAsync,
+  adminLockDealAsync,
+  adminUnlockDealAsync,
+  adminCancelDealAsync,
+} from "../../../../../config/dealsStore.js";
 import { exportTranscript } from "../../../../../utils/exportDealTranscript.js";
 
 // ============================================================
@@ -55,14 +70,15 @@ function DownloadBar({ dealId, deal, lang }) {
     setDownloading(format);
 
     try {
-      // Chukua deal kutoka store au prop
       const source = getDealTranscript(dealId, null, lang)?.deal || deal;
       if (!source) {
         throw new Error(t("Deal haipatikani.", "Deal not found."));
       }
 
-      // ✅ Function ya kutambua mtumaji (buyer/seller/admin) kwa majina
       const getSenderLabel = (m) => {
+        if (m.kind === "ADMIN" || m.sender === "admin") {
+          return t("Admin", "Admin");
+        }
         if (m.senderId != null) {
           if (String(m.senderId) === String(source.buyerId)) {
             return source.buyerName || t("Mnunuzi", "Buyer");
@@ -71,13 +87,11 @@ function DownloadBar({ dealId, deal, lang }) {
             return source.sellerName || t("Muuzaji", "Seller");
           }
         }
-        // Kama senderId haipo, tumia m.sender (kama ilivyo)
         if (m.sender === "buyer") return source.buyerName || t("Mnunuzi", "Buyer");
         if (m.sender === "seller") return source.sellerName || t("Muuzaji", "Seller");
         return t("Admin", "Admin");
       };
 
-      // ✅ Tengeneza transcript na majina ya wazungumzaji
       const transcript = {
         deal: source,
         meta: {
@@ -121,7 +135,7 @@ function DownloadBar({ dealId, deal, lang }) {
         },
         messages: (source.messages || []).map((m) => ({
           ...m,
-          sender: getSenderLabel(m), // ✅ Tumia jina halisi
+          sender: getSenderLabel(m),
         })),
       };
 
@@ -178,6 +192,500 @@ function DownloadBar({ dealId, deal, lang }) {
           {error}
         </p>
       )}
+    </div>
+  );
+}
+
+// ============================================================
+// MODAL — sababu ya lock/unlock/cancel
+// ============================================================
+function ReasonModal({
+  open,
+  title,
+  description,
+  confirmLabel,
+  confirmColor = COLORS.rust,
+  requireReason = true,
+  placeholder,
+  busy = false,
+  error = "",
+  lang = "sw",
+  onClose,
+  onConfirm,
+}) {
+  const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    if (!open) setReason("");
+  }, [open]);
+
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  if (!open) return null;
+
+  const canSubmit = !busy && (!requireReason || reason.trim().length > 0);
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60">
+      <div
+        style={{ background: "white", borderColor: COLORS.sandLine }}
+        className="rounded-2xl border w-full max-w-md p-5 shadow-2xl"
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <h3 className="text-primary text-base font-bold">{title}</h3>
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="text-muted hover:text-secondary p-1 disabled:opacity-50"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        {description && (
+          <p className="text-xs text-secondary mb-3">{description}</p>
+        )}
+        {requireReason && (
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            placeholder={placeholder || t("Eleza sababu...", "Explain the reason...")}
+            style={{
+              background: COLORS.sand,
+              borderColor: COLORS.sandLine,
+              color: COLORS.night,
+            }}
+            className="w-full rounded-lg border px-3 py-2 text-sm outline-none resize-none mb-3"
+          />
+        )}
+        {error && (
+          <p className="text-xs mb-2" style={{ color: COLORS.rust }}>
+            {error}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            style={{ borderColor: COLORS.sandLine }}
+            className="flex-1 border text-sm font-semibold px-3 py-2 rounded-lg disabled:opacity-50"
+          >
+            {t("Ghairi", "Cancel")}
+          </button>
+          <button
+            onClick={() => onConfirm(reason.trim())}
+            disabled={!canSubmit}
+            style={{
+              background: canSubmit ? confirmColor : COLORS.sandLine,
+              color: "white",
+            }}
+            className="flex-1 text-sm font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {busy ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <Loader2 size={13} className="animate-spin" />
+                {t("Inatuma...", "Sending...")}
+              </span>
+            ) : (
+              confirmLabel
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// ADMIN ACTIONS PANEL
+// ============================================================
+function AdminActionsPanel({ deal, lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  const dealId = deal?.dealRoomId || deal?.id;
+  const isLocked = !!deal?.adminLocked;
+  const isCancelled = deal?.status === "cancelled";
+  const isCancelledByAdmin = !!deal?.cancelledByAdmin;
+  const txnId = deal?.transactionId;
+
+  // ── Message state ──
+  const [message, setMessage] = useState("");
+  const [sendingMsg, setSendingMsg] = useState(false);
+  const [msgError, setMsgError] = useState("");
+
+  // ── Action modals ──
+  const [lockOpen, setLockOpen] = useState(false);
+  const [unlockOpen, setUnlockOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
+
+  const handleSendMessage = async () => {
+    const text = message.trim();
+    if (!text) return;
+    setSendingMsg(true);
+    setMsgError("");
+    const res = await adminSendMessageAsync(dealId, text);
+    if (res.ok) {
+      setMessage("");
+    } else {
+      setMsgError(
+        res.error?.message ||
+          t("Imeshindwa kutuma ujumbe.", "Failed to send message.")
+      );
+    }
+    setSendingMsg(false);
+  };
+
+  const handleLock = async (reason) => {
+    setActionBusy(true);
+    setActionError("");
+    const res = await adminLockDealAsync(dealId, reason);
+    setActionBusy(false);
+    if (res.ok) {
+      setLockOpen(false);
+    } else {
+      setActionError(
+        res.error?.message ||
+          t("Imeshindwa kusimamisha room.", "Failed to lock room.")
+      );
+    }
+  };
+
+  const handleUnlock = async (reason) => {
+    setActionBusy(true);
+    setActionError("");
+    const res = await adminUnlockDealAsync(dealId, reason);
+    setActionBusy(false);
+    if (res.ok) {
+      setUnlockOpen(false);
+    } else {
+      setActionError(
+        res.error?.message ||
+          t("Imeshindwa kufungua room.", "Failed to unlock room.")
+      );
+    }
+  };
+
+  const handleCancel = async (reason) => {
+    setActionBusy(true);
+    setActionError("");
+    const res = await adminCancelDealAsync(dealId, reason);
+    setActionBusy(false);
+    if (res.ok) {
+      setCancelOpen(false);
+    } else {
+      setActionError(
+        res.error?.message ||
+          t("Imeshindwa kughairi deal.", "Failed to cancel deal.")
+      );
+    }
+  };
+
+  // Viungo vya backend zilizopo (resolve-dispute, expire-*, n.k.)
+  const showResolveDispute =
+    txnId && (deal.status === "disputed" || deal.buyerDecision === "REQUEST_NEGOTIATION");
+  const showExpireReservation =
+    txnId && deal.status === "reserved" && deal.reservationExpiresAt;
+  const showExpireInspection =
+    txnId && deal.inspectionStatus === "IN_PROGRESS";
+
+  const baseAdminUrl = "/smk-control-9x7k";
+
+  return (
+    <div
+      style={{
+        borderColor: "rgba(47,109,79,0.3)",
+        background: "rgba(47,109,79,0.04)",
+      }}
+      className="border rounded-lg p-3 flex flex-col gap-3"
+    >
+      <div className="flex items-center gap-1.5">
+        <Shield size={13} color={COLORS.green} />
+        <p
+          className="text-[11px] font-bold uppercase"
+          style={{ color: COLORS.green }}
+        >
+          {t("Vitendo vya Msimamizi", "Admin Actions")}
+        </p>
+      </div>
+
+      {/* ── Hali ya sasa ── */}
+      {isLocked && (
+        <div
+          style={{
+            borderColor: "rgba(232,163,61,0.5)",
+            background: "rgba(232,163,61,0.12)",
+          }}
+          className="rounded-lg border px-3 py-2 text-[11px] flex items-start gap-2"
+        >
+          <Lock size={12} color="#8A5A16" className="shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="font-semibold" style={{ color: "#8A5A16" }}>
+              {t("Room imesimamishwa", "Room is locked")}
+            </p>
+            {deal.lockedReason && (
+              <p className="text-[10px] mt-0.5" style={{ color: "#8A5A16" }}>
+                {t("Sababu", "Reason")}: {deal.lockedReason}
+              </p>
+            )}
+            {deal.lockedByName && (
+              <p className="text-[10px] mt-0.5 text-muted">
+                {t("Na", "By")}: {deal.lockedByName}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isCancelledByAdmin && (
+        <div
+          style={{
+            borderColor: "rgba(193,80,46,0.4)",
+            background: "rgba(193,80,46,0.08)",
+          }}
+          className="rounded-lg border px-3 py-2 text-[11px] flex items-start gap-2"
+        >
+          <Ban size={12} color={COLORS.rust} className="shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="font-semibold" style={{ color: COLORS.rust }}>
+              {t("Imeghairiwa na admin", "Cancelled by admin")}
+            </p>
+            <p className="text-[10px] mt-0.5" style={{ color: COLORS.rust }}>
+              {t(
+                "Haiwezi kufufuliwa na watumiaji — inahitaji support.",
+                "Cannot be reopened by users — requires support."
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Ujumbe wa admin ── */}
+      {!isCancelled && (
+        <div>
+          <label className="text-[11px] font-semibold text-secondary block mb-1.5">
+            {t("Tuma ujumbe kama Msimamizi", "Send message as Admin")}
+          </label>
+          <textarea
+            value={message}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              if (msgError) setMsgError("");
+            }}
+            rows={2}
+            maxLength={2000}
+            placeholder={t(
+              "Ujumbe utaonekana kwa pande zote mbili...",
+              "Message will be visible to both parties..."
+            )}
+            style={{
+              background: "white",
+              borderColor: COLORS.sandLine,
+              color: COLORS.night,
+            }}
+            className="w-full rounded-lg border px-3 py-2 text-xs outline-none resize-none"
+          />
+          {msgError && (
+            <p className="text-[10px] mt-1" style={{ color: COLORS.rust }}>
+              {msgError}
+            </p>
+          )}
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={handleSendMessage}
+              disabled={sendingMsg || !message.trim()}
+              style={{
+                background: message.trim() ? COLORS.green : COLORS.sandLine,
+                color: message.trim() ? "white" : "rgba(16,26,46,0.4)",
+              }}
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg disabled:cursor-not-allowed"
+            >
+              {sendingMsg ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Send size={12} />
+              )}
+              {t("Tuma", "Send")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Lock / Unlock ── */}
+      {!isCancelled && (
+        <div className="flex flex-col gap-2">
+          {!isLocked ? (
+            <button
+              onClick={() => {
+                setActionError("");
+                setLockOpen(true);
+              }}
+              style={{
+                borderColor: "rgba(232,163,61,0.4)",
+                color: "#8A5A16",
+                background: "white",
+              }}
+              className="inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-lg border hover:bg-amber-50 transition-colors"
+            >
+              <Lock size={12} />
+              {t("Simamisha Room (Lock)", "Suspend Room (Lock)")}
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setActionError("");
+                setUnlockOpen(true);
+              }}
+              style={{
+                borderColor: "rgba(47,109,79,0.4)",
+                color: COLORS.green,
+                background: "white",
+              }}
+              className="inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-lg border hover:bg-green-50 transition-colors"
+            >
+              <Unlock size={12} />
+              {t("Fungua Room (Unlock)", "Reopen Room (Unlock)")}
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              setActionError("");
+              setCancelOpen(true);
+            }}
+            style={{
+              borderColor: "rgba(193,80,46,0.4)",
+              color: COLORS.rust,
+              background: "white",
+            }}
+            className="inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-lg border hover:bg-red-50 transition-colors"
+          >
+            <Ban size={12} />
+            {t("Ghairi Deal (Cancel)", "Cancel Deal")}
+          </button>
+        </div>
+      )}
+
+      {/* ── Viungo vya backend zilizopo ── */}
+      {(showResolveDispute || showExpireReservation || showExpireInspection) && (
+        <div>
+          <p className="text-[10px] font-semibold text-secondary uppercase mb-1.5">
+            {t("Vitendo vingine", "Other actions")}
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {showResolveDispute && (
+              <a
+                href={`${baseAdminUrl}/disputes?txn=${txnId}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  borderColor: "rgba(193,80,46,0.4)",
+                  color: COLORS.rust,
+                  background: "white",
+                }}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border hover:bg-red-50 transition-colors"
+              >
+                <Gavel size={11} />
+                {t("Tatua Mgogoro (Resolve Dispute)", "Resolve Dispute")}
+              </a>
+            )}
+            {showExpireReservation && (
+              <a
+                href={`${baseAdminUrl}/transactions?txn=${txnId}&action=expire-reservation`}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  borderColor: COLORS.sandLine,
+                  color: COLORS.night,
+                  background: "white",
+                }}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border hover:bg-gray-50 transition-colors"
+              >
+                <Timer size={11} />
+                {t("Maliza Reservation", "Expire Reservation")}
+              </a>
+            )}
+            {showExpireInspection && (
+              <a
+                href={`${baseAdminUrl}/transactions?txn=${txnId}&action=expire-inspection`}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  borderColor: COLORS.sandLine,
+                  color: COLORS.night,
+                  background: "white",
+                }}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border hover:bg-gray-50 transition-colors"
+              >
+                <Clock size={11} />
+                {t("Maliza Ukaguzi", "Expire Inspection")}
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Modals ── */}
+      <ReasonModal
+        open={lockOpen}
+        title={t("Simamisha Room", "Suspend Room")}
+        description={t(
+          "Ujumbe na ofa zote zinasimama hadi ufunge. Pande zote zitaarifiwa.",
+          "All messages and offers will pause until you unlock. Both parties will be notified."
+        )}
+        confirmLabel={t("Simamisha", "Lock")}
+        confirmColor={COLORS.rust}
+        requireReason
+        lang={lang}
+        busy={actionBusy}
+        error={actionError}
+        placeholder={t(
+          "Kwa nini unasimamisha? (mf. tunachunguza malalamiko)",
+          "Why are you locking? (e.g. investigating a complaint)"
+        )}
+        onClose={() => setLockOpen(false)}
+        onConfirm={handleLock}
+      />
+      <ReasonModal
+        open={unlockOpen}
+        title={t("Fungua Room", "Reopen Room")}
+        description={t(
+          "Room itarudi kuwa hai. Pande zote zitaarifiwa.",
+          "The room will become active again. Both parties will be notified."
+        )}
+        confirmLabel={t("Fungua", "Unlock")}
+        confirmColor={COLORS.green}
+        requireReason={false}
+        lang={lang}
+        busy={actionBusy}
+        error={actionError}
+        placeholder={t(
+          "Maelezo ya hiari...",
+          "Optional note..."
+        )}
+        onClose={() => setUnlockOpen(false)}
+        onConfirm={handleUnlock}
+      />
+      <ReasonModal
+        open={cancelOpen}
+        title={t("Ghairi Deal", "Cancel Deal")}
+        description={t(
+          "Deal itaghairiwa kabisa na haiwezi kufufuliwa na watumiaji. Pande zote zitaarifiwa.",
+          "The deal will be cancelled permanently and cannot be reopened by users. Both parties will be notified."
+        )}
+        confirmLabel={t("Ghairi Deal", "Cancel Deal")}
+        confirmColor={COLORS.rust}
+        requireReason
+        lang={lang}
+        busy={actionBusy}
+        error={actionError}
+        placeholder={t(
+          "Sababu ya kughairi (itaonekana kwa watumiaji)...",
+          "Reason for cancelling (will be shown to users)..."
+        )}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={handleCancel}
+      />
     </div>
   );
 }
@@ -250,6 +758,9 @@ export default function DealRoomViewer({
         </button>
       </div>
 
+      {/* ── MPYA: Admin Actions Panel ── */}
+      <AdminActionsPanel deal={deal} lang={lang} />
+
       {/* Reports */}
       {hasReports && (
         <div
@@ -298,7 +809,7 @@ export default function DealRoomViewer({
         </div>
       )}
 
-      {/* Parties — ✅ Ongeza majina ya Buyer na Seller */}
+      {/* Parties */}
       <div
         style={{ borderColor: COLORS.sandLine, background: "white" }}
         className="border rounded-lg px-3 py-2.5 flex flex-col gap-1.5"
@@ -369,7 +880,7 @@ export default function DealRoomViewer({
             label={t("Reservation Inaisha", "Reservation Expires")}
             value={new Date(deal.reservationExpiresAt).toLocaleString(
               lang === "sw" ? "sw-TZ" : "en-US",
-              { timeZone: "Africa/Dar_es_Salaam" } // ✅ Timezone fix
+              { timeZone: "Africa/Dar_es_Salaam" }
             )}
             color={COLORS.rust}
           />
@@ -460,8 +971,8 @@ export default function DealRoomViewer({
       {/* Footer */}
       <p className="text-[10px] text-muted text-center">
         {t(
-          "Hii ni admin view — read-only. Admin hawezi kutuma ujumbe kama mnunuzi/muuzaji, lakini anaweza kupakua transcript.",
-          "This is admin view — read-only. Admin cannot send messages as buyer/seller, but can download the transcript."
+          "Admin view — unaweza kutuma ujumbe kama msimamizi, kusimamisha room, au kughairi.",
+          "Admin view — you can send messages as admin, lock the room, or cancel.."
         )}
       </p>
     </div>
