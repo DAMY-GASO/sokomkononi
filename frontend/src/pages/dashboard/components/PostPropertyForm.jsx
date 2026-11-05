@@ -17,7 +17,7 @@ import {
   getMyListings,
   publishListingAsync,
   syncListingImagesAsync,
-} from "../../../config/listingsStore.js"; // ✅ Imeongezwa saveMyListings & getMyListings
+} from "../../../config/listingsStore.js";
 import {
   getListingFeeConfig,
   hydrateListingFeeConfigsFromApi,
@@ -128,17 +128,69 @@ function cleanPriceInput(v) {
   return String(v).replace(/[^0-9]/g, "");
 }
 
-// Ujumbe halisi wa kosa la seva (detail, au makosa ya kila field).
+// ✅ FIX: errMsg imara zaidi — inashughulikia format zote za backend
 function errMsg(e) {
   if (!e) return null;
-  if (e?.data?.detail) return String(e.data.detail);
-  if (e?.data && typeof e.data === "object") {
-    const parts = Object.entries(e.data).map(
-      ([k, v]) => `${k}: ${[].concat(v).join(" ")}`
-    );
-    if (parts.length) return parts.join(" · ");
+
+  // 1. Kama ni string tayari
+  if (typeof e === "string") return e;
+
+  // 2. Kama ni object yenye `data` (kutoka api client yako)
+  if (e?.data) {
+    // Kama data ni string
+    if (typeof e.data === "string") return e.data;
+    
+    // Kama data ina `detail`
+    if (e.data.detail) {
+      return typeof e.data.detail === "string"
+        ? e.data.detail
+        : JSON.stringify(e.data.detail);
+    }
+
+    // Kama data ina `error` (mfano wa backend yako ya PERMISSION_DENIED)
+    if (e.data.error) {
+      if (typeof e.data.error === "string") return e.data.error;
+      if (e.data.error.message) return String(e.data.error.message);
+      if (e.data.error.detail) return String(e.data.error.detail);
+    }
+
+    // Kama data ina `message`
+    if (e.data.message) {
+      return typeof e.data.message === "string"
+        ? e.data.message
+        : JSON.stringify(e.data.message);
+    }
+
+    // Kama data ina makosa ya kila field (validation errors)
+    if (typeof e.data === "object") {
+      const parts = Object.entries(e.data).map(([k, v]) => {
+        const val = Array.isArray(v) ? v.join(" ") : String(v);
+        return `${k}: ${val}`;
+      });
+      if (parts.length) return parts.join(" · ");
+    }
   }
-  return e?.message || null;
+
+  // 3. Kama ni object yenye `error` (bila `data`)
+  if (e?.error) {
+    if (typeof e.error === "string") return e.error;
+    if (e.error.message) return String(e.error.message);
+  }
+
+  // 4. Kama ni object yenye `detail` au `message`
+  if (e?.detail) {
+    return typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail);
+  }
+  if (e?.message) {
+    return typeof e.message === "string" ? e.message : JSON.stringify(e.message);
+  }
+
+  // 5. Fallback — onyesha JSON kama string
+  try {
+    return JSON.stringify(e);
+  } catch {
+    return "Hitilafu isiyojulikana.";
+  }
 }
 
 // Toa "summary" (mistari ya Eneo/Location na fields) iliyoongezwa kwenye
@@ -206,12 +258,11 @@ export default function PostPropertyForm({
     isEdit && initialData ? (initialData.address_text || "") : ""
   );
   const [geoSearching, setGeoSearching] = useState(false);
-  const skipForwardRef = useRef(null);   // maandishi ya eneo yaliyotoka kwenye ramani
-  const initialLocRef = useRef(null);    // eneo la awali la tangazo (edit mode)
+  const skipForwardRef = useRef(null);
+  const initialLocRef = useRef(null);
 
   const [photos, setPhotos] = useState(() => {
     if (!isEdit || !initialData) return [];
-    // `images` (kutoka detail) zina id; `photos` ni URL tu.
     const imgs =
       Array.isArray(initialData.images) && initialData.images.length
         ? initialData.images
@@ -251,7 +302,6 @@ export default function PostPropertyForm({
     if (isEdit && initialData) {
       return {
         title: initialData.title || "",
-        // "120000.00" kutoka seva isigeuke 12000000
         price: initialData.price ? String(Math.round(Number(initialData.price)) || "") : "",
         location: initialData.location || "",
         description: stripSummary(initialData.description || ""),
@@ -277,7 +327,6 @@ export default function PostPropertyForm({
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // Categories zikichelewa kupakiwa, category isipotee wakati wa edit.
   useEffect(() => {
     if (!isEdit || categoryKey || !categories.length) return;
     const f = categories.find(
@@ -309,7 +358,6 @@ export default function PostPropertyForm({
   const locationString = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa].filter(Boolean).join(", ");
   if (initialLocRef.current === null) initialLocRef.current = isEdit ? locationString : "";
 
-  /* Ramani → fomu: jaza Mkoa/Wilaya/Eneo kutoka eneo lililochaguliwa */
   const handleMapAddress = (addr, parts) => {
     setAddressText(addr);
     if (!parts) return;
@@ -327,11 +375,10 @@ export default function PostPropertyForm({
     });
   };
 
-  /* Fomu → ramani: mtumiaji akiandika eneo, pin ihamie huko (debounce 1s) */
   useEffect(() => {
-    if (isEdit && locationString === initialLocRef.current) return; // usihamishe pin ya tangazo lililopo
+    if (isEdit && locationString === initialLocRef.current) return;
     if (!loc.mkoa || !loc.eneo.trim()) return;
-    if (locationString === skipForwardRef.current) return;          // maandishi yametoka kwenye ramani
+    if (locationString === skipForwardRef.current) return;
 
     const ctrl = new AbortController();
     const timer = setTimeout(async () => {
@@ -366,7 +413,6 @@ export default function PostPropertyForm({
       ctrl.abort();
       setGeoSearching(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationString]);
 
   const creditInfo = checkCredit(user?.id, "listing");
@@ -423,7 +469,6 @@ export default function PostPropertyForm({
     return () => clearTimeout(timer);
   }, [effectiveTitle, base.price, loc.mkoa, loc.wilaya, loc.eneo, categoryKey, isEdit]);
 
-  // ✅ Mobile Navigation
   const historyDepthRef = useRef(0);
   const ignorePopRef = useRef(0);
 
@@ -490,7 +535,6 @@ export default function PostPropertyForm({
   const removePhoto = (i) => {
     const x = photos[i];
     if (!x) return;
-    // Picha ya zamani isiyo na id haiwezi kufutwa kwenye seva.
     if (x.existing && x.id == null) return;
     if (x.existing && x.id != null) setRemovedIds((r) => [...r, x.id]);
     setPhotos((p) => p.filter((_, idx) => idx !== i));
@@ -548,7 +592,7 @@ export default function PostPropertyForm({
     return lines.join("\n");
   };
 
-    const reset = () => {
+  const reset = () => {
     setStage("form");
     setWarnings([]);
     setCreatedListing(null);
@@ -573,7 +617,6 @@ export default function PostPropertyForm({
     setPendingBundlePurchase(null);
   };
 
-  // Taarifa maalum za category (nyumba, magari...) — hutumika create (POST) na edit (PATCH)
   const buildDetailBody = () => {
     const detailBody = {};
         const FUEL_MAP = { Petrol: "PETROL", Diesel: "DIESEL", Hybrid: "HYBRID", "Umeme (EV)": "ELECTRIC" };
@@ -621,7 +664,6 @@ export default function PostPropertyForm({
     setError("");
 
     if (isEdit) {
-      // 1) Picha kwanza (parent anaweza kuondoka baada ya onSubmit)
       const newFiles = photos.filter((p) => p.file && !p.existing).map((p) => p.file);
       if (newFiles.length || removedIds.length) {
         const imgRes = await syncListingImagesAsync(initialData.id, {
@@ -658,7 +700,6 @@ export default function PostPropertyForm({
         if (!res?.ok) {
           setError(errMsg(res?.error) || t("Imeshindwa kuhifadhi.", "Failed to save."));
         } else {
-          // Taarifa maalum za category (best-effort): PATCH, na POST kama bado hazipo
           const ep = CATEGORY_DETAIL_ENDPOINT[categoryKey];
           if (ep) {
             const body = buildDetailBody();
@@ -774,8 +815,6 @@ export default function PostPropertyForm({
         setFeeAmount(0);
 
         if (publishOk || listingFeeDisabled) {
-          // Store imeshasasisha cache. Usiweke paymentStatus "FREE":
-          // seva ndiyo inaamua kama kuna ada.
           setStage("done");
           onSubmit?.({ ...created, status: "pending_approval" });
           return;
@@ -862,14 +901,14 @@ export default function PostPropertyForm({
       setStage("done");
       onSubmit?.({ ...createdListing, status: "pending_approval" });
     } catch (err) {
-      setError(err?.data?.detail || err?.message || t("Imeshindwa kuwasilisha.", "Failed to submit."));
+      setError(errMsg(err) || t("Imeshindwa kuwasilisha.", "Failed to submit."));
     } finally {
       setSubmitting(false);
     }
   };
 
-    const handleFeeInitiate = async ({ methodKey, phone } = {}) => {
-    if (!createdListing) return { ok: false, error: new Error("no listing") };
+  const handleFeeInitiate = async ({ methodKey, phone } = {}) => {
+    if (!createdListing) return { ok: false, error: t("Tangazo halipo.", "Listing not found.") };
     try {
       const res = await api.post(`/listings/${createdListing.id}/fee/pay/`, {
         payment_method: methodKey || "",
@@ -888,7 +927,7 @@ export default function PostPropertyForm({
         environment: payload.environment || "live",
       };
     } catch (err) {
-      return { ok: false, error: err };
+      return { ok: false, error: errMsg(err) || t("Imeshindwa kuanzisha malipo.", "Failed to initiate payment.") };
     }
   };
 
@@ -906,7 +945,7 @@ export default function PostPropertyForm({
       onPaid?.(createdListing.id, { alreadyPaid: true });
       setStage("done");
     } catch (err) {
-      setError(err?.data?.detail || err?.message || t("Imeshindwa kutumia credit.", "Failed to use credit."));
+      setError(errMsg(err) || t("Imeshindwa kutumia credit.", "Failed to use credit."));
     }
   };
 
@@ -919,7 +958,7 @@ export default function PostPropertyForm({
       onPaid?.(createdListing.id, { alreadyPaid: true });
       setStage("done");
     } catch (err) {
-      setError(err?.data?.detail || err?.message || t("Imeshindwa kuwasilisha.", "Failed to submit."));
+      setError(errMsg(err) || t("Imeshindwa kuwasilisha.", "Failed to submit."));
     } finally {
       setSubmitting(false);
     }
@@ -936,18 +975,14 @@ export default function PostPropertyForm({
       setPendingBundlePurchase({ id: purchaseId, bundle: selectedBundle });
       setStage("paying");
     } catch (err) {
-      setError(
-        err?.data?.detail ||
-          err?.message ||
-          t("Imeshindwa kununua kifurushi. Jaribu tena.", "Could not purchase bundle. Try again.")
-      );
+      setError(errMsg(err) || t("Imeshindwa kununua kifurushi. Jaribu tena.", "Could not purchase bundle. Try again."));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleBundlePaymentInitiate = async ({ methodKey, phone } = {}) => {
-    if (!pendingBundlePurchase) return { ok: false, error: new Error("no bundle") };
+    if (!pendingBundlePurchase) return { ok: false, error: t("Kifurushi hakipo.", "Bundle not found.") };
     try {
       const paid = await api.post(`/bundles/purchases/${pendingBundlePurchase.id}/pay/`, {
         payment_method: methodKey || "",
@@ -962,7 +997,7 @@ export default function PostPropertyForm({
         environment: fimipay.environment || "live",
       };
     } catch (err) {
-      return { ok: false, error: err };
+      return { ok: false, error: errMsg(err) || t("Imeshindwa kuanzisha malipo ya kifurushi.", "Failed to initiate bundle payment.") };
     }
   };
 
@@ -1015,7 +1050,7 @@ export default function PostPropertyForm({
 
               {error && (
                 <div
-                  className="rounded-lg px-3 py-2 mb-3 text-xs text-left"
+                  className="rounded-lg px-3 py-2 mb-3 text-xs text-left break-words"
                   style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
                 >
                   <AlertTriangle size={12} className="inline mr-1" />
@@ -1025,7 +1060,7 @@ export default function PostPropertyForm({
 
               {warnings.length > 0 && (
                 <div
-                  className="rounded-lg px-3 py-2 mb-3 text-xs text-left"
+                  className="rounded-lg px-3 py-2 mb-3 text-xs text-left break-words"
                   style={{ background: "rgba(232,163,61,0.15)", color: "#8A5A16" }}
                 >
                   {warnings.map((w, i) => (
@@ -1209,50 +1244,49 @@ export default function PostPropertyForm({
     );
   }
 
-    if (!isEdit && stage === "done") {
-  return (
-    <div className="w-full flex items-center justify-center p-6 bg-page min-h-screen">
-      <div className="max-w-md w-full text-center bg-card rounded-2xl border border-hairline p-8">
-        <div
-          className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-          style={{ background: COLORS.green }}
-        >
-          <Check color={COLORS.sand} size={26} />
+  if (!isEdit && stage === "done") {
+    return (
+      <div className="w-full flex items-center justify-center p-6 bg-page min-h-screen">
+        <div className="max-w-md w-full text-center bg-card rounded-2xl border border-hairline p-8">
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{ background: COLORS.green }}
+          >
+            <Check color={COLORS.sand} size={26} />
+          </div>
+          <h2 className="h-title mb-2">
+            {t("Listing imewasilishwa!", "Listing Submitted!")}
+          </h2>
+
+          <p className="text-secondary text-sm mb-6">
+            {isFreeCategory || listingFeeDisabled
+              ? t(
+                  "Admin atakagua tangazo lako. Likikubaliwa litakuwa hewani moja kwa moja.",
+                  "An admin will review your listing. Once approved it goes live right away."
+                )
+              : t(
+                  "Admin atakagua tangazo lako. Likikubaliwa, utaarifiwa kulipa ada ya kuchapisha kwenye 'Mali Zangu'.",
+                  "An admin will review your listing. If approved, you'll be notified to pay the listing fee in 'My Listings'."
+                )}
+          </p>
+
+          <button
+            onClick={onGoToListings}
+            style={{ background: COLORS.gold, color: COLORS.night }}
+            className="w-full py-3 rounded-xl font-semibold text-sm"
+          >
+            {t("Nenda kwenye Mali Zangu", "Go to My Listings")}
+          </button>
+          <button
+            onClick={reset}
+            className="w-full py-2 mt-2 text-body-sm font-medium text-primary"
+          >
+            {t("Weka Mali Nyingine", "Post Another Property")}
+          </button>
         </div>
-        <h2 className="h-title mb-2">
-          {t("Listing imewasilishwa!", "Listing Submitted!")}
-        </h2>
-
-        {/* 🛠️ FIX: Ujumbe unategemea kama kuna ada au ni bure */}
-        <p className="text-secondary text-sm mb-6">
-          {isFreeCategory || listingFeeDisabled
-            ? t(
-                "Admin atakagua tangazo lako. Likikubaliwa litakuwa hewani moja kwa moja.",
-                "An admin will review your listing. Once approved it goes live right away."
-              )
-            : t(
-                "Admin atakagua tangazo lako. Likikubaliwa, utaarifiwa kulipa ada ya kuchapisha kwenye 'Mali Zangu'.",
-                "An admin will review your listing. If approved, you'll be notified to pay the listing fee in 'My Listings'."
-              )}
-        </p>
-
-        <button
-          onClick={onGoToListings}
-          style={{ background: COLORS.gold, color: COLORS.night }}
-          className="w-full py-3 rounded-xl font-semibold text-sm"
-        >
-          {t("Nenda kwenye Mali Zangu", "Go to My Listings")}
-        </button>
-        <button
-          onClick={reset}
-          className="w-full py-2 mt-2 text-body-sm font-medium text-primary"
-        >
-          {t("Weka Mali Nyingine", "Post Another Property")}
-        </button>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   return (
     <div className="bg-page min-h-screen w-full p-4 sm:p-6">

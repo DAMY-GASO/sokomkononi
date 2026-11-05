@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MapPin, Camera, Clock } from "lucide-react"; // ✅ Ongeza Clock
+import { Heart, MapPin, Camera, Clock } from "lucide-react";
 import ListingImage from "./ListingImage.jsx";
 import { isBoostActive } from "../utils/listings.js";
 import { Badge, cx } from "./ui";
@@ -24,6 +24,32 @@ function safeStr(v) {
 
 export function formatTZS(amount) {
   return "TZS " + Math.round(amount || 0).toLocaleString("en-US");
+}
+
+// ✅ Helper: Pata URL ya picha ya tangazo (inashughulikia formats zote)
+function getListingPhoto(l) {
+  if (!l) return null;
+
+  // 1. `photos` (array ya strings au objects)
+  if (Array.isArray(l.photos) && l.photos.length > 0) {
+    const first = l.photos[0];
+    if (typeof first === "string") return first;
+    if (typeof first === "object") {
+      return first.card || first.thumb || first.image_url || first.url || null;
+    }
+  }
+
+  // 2. `images` (array ya objects)
+  if (Array.isArray(l.images) && l.images.length > 0) {
+    const first = l.images[0];
+    if (typeof first === "string") return first;
+    if (typeof first === "object") {
+      return first.card || first.thumb || first.image_url || first.url || null;
+    }
+  }
+
+  // 3. `cover_image` / `imageUrl` / `image`
+  return l.cover_image || l.imageUrl || l.image_url || l.image || null;
 }
 
 const STATUS = {
@@ -89,9 +115,14 @@ export default function ListingCard({
     return null;
   })();
 
-  const photos = Array.isArray(listing.photos) ? listing.photos : [];
-  const photo = photos[0] || listing.imageUrl || categoryImageUrl || null;
-  const extra = photos.length > 1 ? photos.length - 1 : 0;
+  // ✅ Tumia helper ya picha
+  const photo = getListingPhoto(listing) || categoryImageUrl || null;
+  const extraPhotosCount = (() => {
+    const photos = Array.isArray(listing?.photos) ? listing.photos : [];
+    const images = Array.isArray(listing?.images) ? listing.images : [];
+    return Math.max(photos.length, images.length) - 1;
+  })();
+  const extra = extraPhotosCount > 0 ? extraPhotosCount : 0;
   const chip = STATUS[listing.status];
   const featured = isBoostActive(listing);
   const sold = listing.status === "sold";
@@ -161,7 +192,6 @@ export default function ListingCard({
                 {chip[lang] || chip.sw}
               </Badge>
             )}
-            {/* ✅ MPYA: Countdown */}
             {listing.status === "reserved" && listing.time_left_seconds > 0 && (
               <ReservationCountdown
                 expiresInSeconds={listing.time_left_seconds}
@@ -205,7 +235,6 @@ export default function ListingCard({
               {chip[lang] || chip.sw}
             </Badge>
           )}
-          {/* ✅ MPYA: Countdown */}
           {listing.status === "reserved" && listing.time_left_seconds > 0 && (
             <ReservationCountdown
               expiresInSeconds={listing.time_left_seconds}
