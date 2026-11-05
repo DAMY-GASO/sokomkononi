@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search, Bell, Menu, X, PlusCircle, ListChecks, Rocket, MessagesSquare,
@@ -211,6 +211,9 @@ export default function DashboardShell() {
   const [tickerIndex, setTickerIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+  const avatarButtonRef = useRef(null);
+  
   const listings = useMyListings();
   const { unreadCount: unreadNotifCount } = useNotifications("user");
   const announcements = useAnnouncements();
@@ -222,8 +225,6 @@ export default function DashboardShell() {
   const [advertiseTarget, setAdvertiseTarget] = useState(null);
   const [langOpen, setLangOpen] = useState(false);
 
-  // Orodha (list) haina `images` zenye id; pakia detail kabla ya kufungua fomu ya edit
-  // ili picha ziweze kufutwa/kuongezwa. Fomu inasoma initialData mara moja tu.
   const [editReadyId, setEditReadyId] = useState(null);
   useEffect(() => {
     if (!editListingId) {
@@ -261,7 +262,6 @@ export default function DashboardShell() {
     };
   }, [sidebarOpen]);
 
-
   useEffect(() => {
     setDashboardSide(side);
   }, [side]);
@@ -274,11 +274,18 @@ export default function DashboardShell() {
     return () => clearInterval(id);
   }, [announcements.length]);
 
-  // 🛠️ FIX: Tumia mousedown badala ya click ili kuzuia menu kufungwa kabla ya navigate
+  // ✅ FIX: Tumia ref kuhakikisha hatufungi menu pale tunabonyeza menyu yenyewe au kitufe cha avatar
   useEffect(() => {
     if (!userMenuOpen) return;
-    const handleClickOutside = () => setUserMenuOpen(false);
-    // Tumia 'mousedown' au 'pointerdown' ili kukamata kabla ya click event kufika kwenye document
+    const handleClickOutside = (event) => {
+      if (
+        userMenuRef.current?.contains(event.target) ||
+        avatarButtonRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      setUserMenuOpen(false);
+    };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [userMenuOpen]);
@@ -388,7 +395,6 @@ export default function DashboardShell() {
     [navigate]
   );
 
-  // 🛠️ FIX: Hakikisha listing ipo kabla ya ku-update na kurudisha kosa
   const markListingPaid = async (id, { alreadyPaid = false } = {}) => {
     const all = getMyListings();
     const listing = all.find((l) => String(l.id) === String(id));
@@ -522,7 +528,6 @@ export default function DashboardShell() {
             onSubmit={async (data) => {
               const res = await updateListing(editListingId, data);
               if (res?.ok) {
-                // Jibu la PATCH halina id/status; chukua hali halisi (mf. imerudi kwa admin)
                 await fetchListingDetailAsync(editListingId);
                 handleNavClick("listings");
               }
@@ -765,6 +770,7 @@ export default function DashboardShell() {
 
           <div className="relative">
             <button
+              ref={avatarButtonRef}
               onClick={(e) => {
                 e.stopPropagation();
                 setUserMenuOpen((v) => !v);
@@ -778,6 +784,7 @@ export default function DashboardShell() {
 
             {userMenuOpen && (
               <div
+                ref={userMenuRef}
                 data-keep-light
                 style={{ background: "#042475", borderColor: "rgba(245,243,236,0.1)" }}
                 className="absolute right-0 mt-2 w-64 border rounded-lg shadow-xl py-1 z-50"
@@ -792,15 +799,14 @@ export default function DashboardShell() {
                   </p>
                 </div>
 
+                {/* ✅ Viungo: Wasifu, Alika Marafiki, Shiriki, Toka (bila Dashibodi, Uza, Nunua) */}
                 {[
-                  { to: "/dashboard",              label: t("Dashibodi", "Dashboard"),           Icon: LayoutGrid },
-                  { to: "/dashboard/post",         label: t("Uza Sasa", "Sell Now"),             Icon: Plus },
-                  { to: "/dashboard/buyer",        label: t("Nunua Sasa", "Buy Now"),            Icon: Package },
                   { to: "/wasifu",                 label: t("Wasifu", "Profile"),                Icon: UserIcon },
                   { to: "/alika-marafiki",         label: t("Alika Marafiki", "Invite Friends"), Icon: Users },
                 ].map(({ to, label, Icon }) => (
                   <button
                     key={to}
+                    onMouseDown={(e) => e.stopPropagation()}
                     onClick={() => {
                       setUserMenuOpen(false);
                       navigate(to);
@@ -814,6 +820,7 @@ export default function DashboardShell() {
                 ))}
 
                 <button
+                  onMouseDown={(e) => e.stopPropagation()}
                   onClick={handleShare}
                   style={{ color: "#F5F3EC" }}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-white/5 transition-colors text-left"
@@ -825,6 +832,7 @@ export default function DashboardShell() {
                 <div className="my-1 border-t" style={{ borderColor: "rgba(245,243,236,0.1)" }} />
 
                 <button
+                  onMouseDown={(e) => e.stopPropagation()}
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#FF8A65] hover:bg-[#C1502E]/10 transition-colors text-left"
                 >
