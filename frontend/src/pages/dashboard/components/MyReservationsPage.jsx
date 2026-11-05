@@ -1,1563 +1,528 @@
 // ============================================================
-// DealRooms.jsx — Vyumba vya Majadiliano
-// - API-backed kwa transactions
-// - CHAGUO A: buyer + seller wote wanaweza kutuma offers na kukubali
-// - Role-based filter (buyer/seller)
-// - Handle ?listing=X&action=reserve kutoka waiting list
-// - ✅ AUTO-CONSUME CREDIT kwenye handleReserveConfirm
-// - ✅ RESERVATION NI HIARI: hakuna prompts za kulazimisha malipo
-// - ✅ FINALIZE TU: buyer anaweza kukamilisha deal baada ya kureserve
-// - ✅ REJECT PROOF: seller anaweza kukataa uthibitisho wa malipo
-// - 🛠️ FIX: Kitufe cha "Reserve Sasa" kiko wazi (sio kwenye menu)
+// MyReservationsPage.jsx — Mali alizolipia Reservation (buyer)
+// Inaonyesha reservations pekee (sio Deal Rooms).
 // ============================================================
-
-import React, { useState, useRef, useEffect } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import React, { useMemo, useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
-  ArrowLeft, ArrowRight, Send, Check, X, HandCoins, MapPin,
-  ChevronDown, Clock3, CreditCard, ShieldCheck, CheckCircle2,
-  AlertTriangle, Ban, Upload, FileImage, ThumbsDown, PartyPopper,
-  Paperclip, Loader2, Phone, Mail, Lock, Flag, MessageSquare,
-  Download, MoreVertical, UserRound, LogOut, RotateCcw,
+  CalendarCheck, Clock3, MapPin, ArrowRight, Inbox, CheckCircle2,
+  AlertTriangle, Plus, XCircle, Loader2, ExternalLink, RefreshCw,
 } from "lucide-react";
-import { COLORS, getCategory, formatTZS, timeAgo } from "./shared";
-import {
-  useActiveReservationTiers,
-  useReservationSettings,
-  calcReservationFee,
-} from "../../../config/feePolicy.js";
-import {
-  useDeals,
-  updateDeal as updateDealInStore,
-  sendOfferAsync,
-  acceptOfferAsync,
-  cancelDealAsync,
-  getDeals,
-  getDealTranscript,
-  fetchDealDetailAsync,
-} from "../../../config/dealsStore.js";
+import { COLORS, getCategory, formatTZS, timeAgo } from "./shared.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
-import { checkCredit } from "../../../config/userCreditsStore.js";
 import { api } from "../../../api/client.js";
-import { dealsApi } from "../../../api/deals.js";
-import { transactionsApi } from "../../../api/transactions.js";
-import ContactDrawer from "../../../components/ContactDrawer.jsx";
-import ErrorCallout from "../../../components/ErrorCallout.jsx";
-import { explainApiError } from "../../../api/apiErrors.js";
-import { reopenDealRoom } from "../../../api/dealReopen.js";
 
-import {
-  createTransactionAsync,
-  createReservationAsync,
-  payReservationAsync,
-  pollReservationStatusAsync,
-  startInspectionAsync,
-  submitDecisionAsync,
-  uploadFinalPaymentAsync,
-  confirmPaymentAsync,
-  cancelTransactionAsync,
-  TX_STATUS,
-} from "../../../config/transactionsStore.js";
+// ============================================================
+// RAMANI YA STATUS
+// ============================================================
+const RESERVATION_STATUS = {
+  pending_payment: {
+    label: { sw: "Inasubiri Malipo", en: "Awaiting Payment" },
+    color: "#D97706", bg: "rgba(217,119,6,0.12)",
+  },
+  active: {
+    label: { sw: "Inatumika", en: "Active" },
+    color: COLORS.green, bg: "rgba(47,109,79,0.12)",
+  },
+  reserved: {
+    label: { sw: "Kipindi cha Ukaguzi", en: "Inspection Period" },
+    color: COLORS.night, bg: "rgba(16,26,46,0.08)",
+  },
+  awaiting_final_payment: {
+    label: { sw: "Tayari kwa Malipo ya Mwisho", en: "Ready for Final Payment" },
+    color: "#2563EB", bg: "rgba(37,99,235,0.12)",
+  },
+  payment_proof_submitted: {
+    label: { sw: "Uthibitisho Umetumwa", en: "Proof Submitted" },
+    color: "#8A5A16", bg: "rgba(232,163,61,0.16)",
+  },
+  completed: {
+    label: { sw: "Imekamilika", en: "Completed" },
+    color: COLORS.green, bg: "rgba(47,109,79,0.16)",
+  },
+  expired: {
+    label: { sw: "Imeisha Muda", en: "Expired" },
+    color: COLORS.rust, bg: "rgba(193,80,46,0.12)",
+  },
+  cancelled: {
+    label: { sw: "Imeghairiwa", en: "Cancelled" },
+    color: COLORS.night, bg: "rgba(16,26,46,0.08)",
+  },
+  disputed: {
+    label: { sw: "Mgogoro — Chini ya Ukaguzi", en: "Dispute — Under Review" },
+    color: COLORS.rust, bg: "rgba(193,80,46,0.16)",
+  },
+};
+
+const ACTIVE_STATUSES = [
+  "pending_payment",
+  "active",
+  "reserved",
+  "awaiting_final_payment",
+  "payment_proof_submitted",
+];
 
 // ============================================================
 // HELPERS
 // ============================================================
-function getMessageText(m, lang) {
-  if (!m.text) return "";
-  if (typeof m.text === "string") return m.text;
-  return m.text?.[lang] || m.text?.sw || "";
-}
-
-function formatMoneyInput(value) {
-  if (!value) return "";
-  const digits = String(value).replace(/[^0-9]/g, "");
-  if (!digits) return "";
-  return Number(digits).toLocaleString("en-US");
-}
-
-function cleanMoneyInput(value) {
-  return String(value).replace(/[^0-9]/g, "");
-}
-
-function cleanPhoneInput(value) {
-  return String(value || "").replace(/[^\d+]/g, "").slice(0, 15);
-}
-
-function cleanCardInput(value) {
-  const digits = String(value || "").replace(/\D/g, "").slice(0, 19);
-  return digits.replace(/(.{4})/g, "$1 ").trim();
-}
-
-function isMobileMoneyMethod(m) {
-  return (
-    m === "M-Pesa" ||
-    m === "Mixx by Yas" ||
-    m === "Airtel Money" ||
-    m === "HaloPesa"
-  );
-}
-
-function isBankMethod(m) {
-  const s = String(m || "").toLowerCase();
-  return (
-    s.includes("benki") ||
-    s.includes("bank") ||
-    s.includes("card") ||
-    s.includes("kadi")
-  );
-}
-
-async function callApiOrFallback(apiCall) {
+function formatDate(dateStr, lang) {
+  if (!dateStr) return "—";
   try {
-    const res = await apiCall();
-    return { ...res, offline: false };
-  } catch (err) {
-    const status = err?.status;
-    if (status === 404 || status === 501) {
-      console.error(
-        "[DealRooms] Backend endpoint haipo (404/501). Hakuna local fallback.",
-        err
-      );
-      return { ok: false, error: err, offline: true };
-    }
-    return { ok: false, error: err, offline: false };
+    return new Date(dateStr).toLocaleString(lang === "sw" ? "sw-TZ" : "en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return dateStr;
   }
 }
 
-const FALLBACK_DEAL_STATUS = (lang, key) => ({
-  label: key
-    ? String(key).replace(/_/g, " ")
-    : lang === "sw"
-      ? "Inaendelea"
-      : "In Progress",
-  bg: "rgba(47,109,79,0.12)",
-  fg: COLORS.green,
-});
+function useCountdown(expiresAt, lang) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
 
-const getDealStatus = (lang) => ({
-  open: { label: lang === "sw" ? "Wazi" : "Open", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
-  pending: { label: lang === "sw" ? "Inasubiri" : "Pending", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
-  negotiating: { label: lang === "sw" ? "Inaendelea" : "Negotiating", bg: "rgba(47,109,79,0.12)", fg: COLORS.green },
-  offer_sent: { label: lang === "sw" ? "Ofa Imetumwa" : "Offer Sent", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
-  accepted: { label: lang === "sw" ? "Imekubaliwa" : "Accepted", bg: "rgba(47,109,79,0.16)", fg: COLORS.green },
-  declined: { label: lang === "sw" ? "Imekataliwa" : "Declined", bg: "rgba(193,80,46,0.12)", fg: COLORS.rust },
-  reserved: { label: lang === "sw" ? "Kipindi cha Ukaguzi" : "Inspection Period", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
-  awaiting_final_payment: { label: lang === "sw" ? "Tayari kwa Malipo ya Mwisho" : "Ready for Final Payment", bg: "rgba(37,99,235,0.12)", fg: "#2563EB" },
-  payment_proof_submitted: { label: lang === "sw" ? "Uthibitisho Umetumwa" : "Proof Submitted", bg: "rgba(232,163,61,0.16)", fg: "#8A5A16" },
-  completed: { label: lang === "sw" ? "Imekamilika" : "Completed", bg: "rgba(47,109,79,0.18)", fg: COLORS.green },
-  disputed: { label: lang === "sw" ? "Mgogoro — Chini ya Ukaguzi" : "Dispute — Under Review", bg: "rgba(193,80,46,0.16)", fg: COLORS.rust },
-  cancelled: { label: lang === "sw" ? "Imeghairiwa" : "Cancelled", bg: "rgba(16,26,46,0.08)", fg: COLORS.night },
-});
+  if (!expiresAt) return null;
+  const ms = new Date(expiresAt).getTime() - now;
+  if (Number.isNaN(ms)) return null;
+  if (ms <= 0) return { text: lang === "sw" ? "Muda umeisha" : "Expired", expired: true };
 
-const PAYMENT_METHODS = [
-  "M-Pesa",
-  "Mixx by Yas",
-  "Airtel Money",
-  "HaloPesa",
-  "Benki (CRDB)",
-];
+  const hrs = Math.floor(ms / 3600000);
+  const mins = Math.floor((ms % 3600000) / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
+  const d = Math.floor(hrs / 24);
 
-const REVIVABLE_STATUSES = ["cancelled", "declined"];
+  const text =
+    d >= 1
+      ? lang === "sw"
+        ? `Siku ${d}, saa ${hrs % 24}, dakika ${mins}`
+        : `${d}d ${hrs % 24}h ${mins}m`
+      : lang === "sw"
+        ? `Saa ${hrs}, dakika ${mins}, sekunde ${secs}`
+        : `${hrs}h ${mins}m ${secs}s`;
 
-function formatHours(hours, lang) {
-  if (hours % 24 === 0) {
-    const days = hours / 24;
-    return lang === "sw"
-      ? `Saa ${hours} (Siku ${days})`
-      : `${hours} hrs (${days} days)`;
-  }
-  return lang === "sw" ? `Saa ${hours}` : `${hours} hrs`;
+  return { text, expired: false, hrs, mins, secs, d };
 }
 
 // ============================================================
-// PAYMENT PROOF PANEL
+// RESERVATION CARD
 // ============================================================
-function PaymentProofPanel({ deal, onSubmit, lang }) {
-  const [preview, setPreview] = useState(null);
-  const [fileName, setFileName] = useState("");
-  const [reference, setReference] = useState("");
-  const [method, setMethod] = useState(PAYMENT_METHODS[0]);
-  const [submitting, setSubmitting] = useState(false);
-  const [file, setFile] = useState(null);
-  const fileInputRef = useRef(null);
-
-  const handleFileChange = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setFileName(f.name);
-    setFile(f);
-    const reader = new FileReader();
-    reader.onload = () => setPreview(reader.result);
-    reader.readAsDataURL(f);
-  };
-
-  const canSubmit = !!file && reference.trim().length > 0 && !submitting;
-
-  const handleSubmit = async () => {
-    if (!canSubmit) return;
-    setSubmitting(true);
-    try {
-      await onSubmit({
-        file,
-        fileName,
-        dataUrl: preview,
-        reference: reference.trim(),
-        method,
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div
-      style={{ borderColor: COLORS.sandLine, background: "white" }}
-      className="border-t px-3 sm:px-4 py-3 flex flex-col gap-3"
-    >
-      <div className="flex flex-col items-center text-center gap-2">
-        <Upload size={14} color={COLORS.night} />
-        <p className="text-primary text-body-sm font-semibold">
-          {lang === "sw"
-            ? `Pakia Uthibitisho wa Malipo ya Mwisho — ${formatTZS(deal.currentOffer)}`
-            : `Upload Final Payment Proof — ${formatTZS(deal.currentOffer)}`}
-        </p>
-        <p className="text-secondary text-body-sm max-w-md mx-auto">
-          {lang === "sw"
-            ? `Lipa ${formatTZS(deal.currentOffer)} moja kwa moja kwa muuzaji (M-Pesa/Benki/n.k), kisha pakia risiti au screenshot ya malipo hapa.`
-            : `Pay ${formatTZS(deal.currentOffer)} directly to the seller (M-Pesa/Bank/etc.), then upload the receipt or payment screenshot here.`}
-        </p>
-      </div>
-
-      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-
-      {preview ? (
-        <div style={{ borderColor: COLORS.sandLine, background: COLORS.sand }} className="rounded-xl border p-2.5 flex items-center gap-3">
-          <img src={preview} alt="Receipt" className="w-14 h-14 rounded-lg object-cover shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-primary text-body-sm font-medium truncate">{fileName}</p>
-            <button onClick={() => fileInputRef.current?.click()} style={{ color: COLORS.green }} className="text-body-sm font-semibold">
-              {lang === "sw" ? "Badilisha picha" : "Change image"}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button onClick={() => fileInputRef.current?.click()} style={{ borderColor: COLORS.sandLine, color: "rgba(16,26,46,0.55)" }} className="rounded-xl border-2 border-dashed py-5 flex flex-col items-center gap-1.5">
-          <FileImage size={22} color="rgba(16,26,46,0.35)" />
-          <span className="text-body-sm font-medium">
-            {lang === "sw" ? "Bofya kupakia risiti/screenshot" : "Click to upload receipt/screenshot"}
-          </span>
-        </button>
-      )}
-
-      <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder={lang === "sw" ? "Namba ya muamala / Reference (mf. QGH7X92K1)" : "Transaction number / Reference (e.g. QGH7X92K1)"} style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }} className="w-full rounded-lg border px-3 py-2 text-sm outline-none text-center" />
-
-      <div className="grid grid-cols-2 gap-2">
-        {PAYMENT_METHODS.map((m) => (
-          <button key={m} onClick={() => setMethod(m)} style={{ borderColor: method === m ? COLORS.green : COLORS.sandLine, background: method === m ? "rgba(47,109,79,0.08)" : "white", color: COLORS.night }} className="rounded-lg border px-2.5 py-2 text-body-sm font-medium text-center">
-            {m}
-          </button>
-        ))}
-      </div>
-
-      <button onClick={handleSubmit} disabled={!canSubmit} style={{ background: canSubmit ? COLORS.green : COLORS.sandLine, color: canSubmit ? "white" : "rgba(16,26,46,0.4)" }} className="text-body-sm font-semibold px-3 py-2.5 rounded-lg disabled:cursor-not-allowed">
-        {submitting ? (lang === "sw" ? "Inatuma..." : "Submitting...") : (lang === "sw" ? "Tuma Uthibitisho wa Malipo" : "Submit Payment Proof")}
-      </button>
-    </div>
-  );
-}
-
-// ============================================================
-// PAYMENT PROOF REVIEW
-// ============================================================
-function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
-  const [rejecting, setRejecting] = useState(false);
-  const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
-  const proof = deal.paymentProof;
-
-  const handleConfirm = async () => {
-    setBusy(true);
-    try { await onConfirm(); } finally { setBusy(false); }
-  };
-
-  const handleReject = async () => {
-    setBusy(true);
-    try { await onReject(reason.trim()); setRejecting(false); setReason(""); } finally { setBusy(false); }
-  };
-
-  return (
-    <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="border-t px-3 sm:px-4 py-3 flex flex-col gap-3">
-      <div className="flex flex-col items-center text-center gap-2">
-        <Paperclip size={14} color={COLORS.night} />
-        <p className="text-primary text-body-sm font-semibold">
-          {lang === "sw" ? "Uthibitisho wa Malipo kutoka kwa Mnunuzi" : "Payment Proof from Buyer"}
-        </p>
-      </div>
-
-      {proof && (
-        <div style={{ borderColor: COLORS.sandLine, background: COLORS.sand }} className="rounded-xl border p-3 flex items-center gap-3">
-          {proof.dataUrl && <img src={proof.dataUrl} alt="Payment receipt" className="w-16 h-16 rounded-lg object-cover shrink-0" />}
-          <div className="min-w-0 text-body-sm">
-            <p className="text-primary font-semibold">{formatTZS(deal.currentOffer)} · {proof.method}</p>
-            <p className="text-secondary mt-0.5">Ref: <span className="font-mono">{proof.reference}</span></p>
-            <p className="text-muted mt-0.5">{lang === "sw" ? "Zimetumwa" : "Submitted"} {timeAgo(proof.submittedAt, lang)}</p>
-          </div>
-        </div>
-      )}
-
-      {!rejecting ? (
-        <div className="flex items-center gap-2">
-          <button onClick={() => setRejecting(true)} disabled={busy} style={{ borderColor: "rgba(193,80,46,0.35)", color: COLORS.rust }} className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border disabled:opacity-50">
-            <ThumbsDown size={13} /> {lang === "sw" ? "Bado Sijapokea" : "Not Received Yet"}
-          </button>
-          <button onClick={handleConfirm} disabled={busy} style={{ background: COLORS.green, color: "white" }} className="flex-1 flex items-center justify-center gap-1.5 text-body-sm font-semibold px-3 py-2.5 rounded-lg disabled:opacity-70">
-            <Check size={14} /> {busy ? (lang === "sw" ? "Inathibitisha..." : "Confirming...") : (lang === "sw" ? "Nimepokea Malipo — Kamilisha" : "Payment Received — Complete")}
-          </button>
-        </div>
-      ) : (
-        <>
-          <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder={lang === "sw" ? "Kwa nini bado hujapokea? (hiari)" : "Why haven't you received it? (optional)"} rows={2} style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }} className="w-full rounded-lg border px-3 py-2 text-sm outline-none resize-none text-center" />
-          <div className="flex items-center gap-2">
-            <button onClick={() => setRejecting(false)} disabled={busy} style={{ borderColor: COLORS.sandLine, color: COLORS.night }} className="text-body-sm font-semibold px-3 py-2 rounded-lg border disabled:opacity-50">
-              {lang === "sw" ? "Ghairi" : "Cancel"}
-            </button>
-            <button onClick={handleReject} disabled={busy} style={{ background: COLORS.rust, color: "white" }} className="flex-1 text-body-sm font-semibold px-3 py-2 rounded-lg disabled:opacity-60">
-              {lang === "sw" ? "Tuma — Muulize Mnunuzi Apakie Tena" : "Send — Ask Buyer to Re-upload"}
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ============================================================
-// RESERVATION PANEL — dropdown (sio grid)
-// ============================================================
-function ReservationPanel({ deal, onCancel, onConfirm, lang, user }) {
-  const [step, setStep] = useState("choose");
-  const [selectedHours, setSelectedHours] = useState(null);
-  const [method, setMethod] = useState(PAYMENT_METHODS[0]);
-  const [paying, setPaying] = useState(false);
-  const [paymentMode, setPaymentMode] = useState("flat");
+function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
+  const navigate = useNavigate();
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [busy, setBusy] = useState(null);
   const [error, setError] = useState("");
 
-  const [phone, setPhone] = useState(user?.phone || "");
-  const [cardNumber, setCardNumber] = useState("");
+  const status = RESERVATION_STATUS[reservation.status] || RESERVATION_STATUS.pending_payment;
+  const isActive = ACTIVE_STATUSES.includes(reservation.status);
+  const cd = isActive ? useCountdown(reservation.expires_at, lang) : null;
 
-  const settings = useReservationSettings();
-  const tiers = useActiveReservationTiers();
-  const isFeeDisabled = settings?.is_enabled === false;
+  // Pata taarifa za tangazo
+  const listingTitle =
+    reservation.listing_title ||
+    reservation.transaction?.listing_title ||
+    reservation.listing?.title ||
+    t("Mali", "Property");
+  const listingLocation =
+    reservation.listing_location ||
+    reservation.transaction?.listing_location ||
+    reservation.listing?.location ||
+    "";
+  const listingId =
+    reservation.listing_id || reservation.transaction?.listing_id || reservation.listing?.id;
+  const categoryKey =
+    reservation.listing_category || reservation.transaction?.listing_category || null;
 
-  useEffect(() => {
-    if (selectedHours == null && tiers.length > 0) setSelectedHours(tiers[0].hours);
-  }, [tiers, selectedHours]);
+  const category = categoryKey ? getCategory(categoryKey) : null;
+  const CategoryIcon = getCategoryIcon(category?.iconKey || "Home");
 
-  const selectedTier = tiers.find((t) => t.hours === selectedHours);
-  const hours = selectedTier?.hours ?? 0;
-  const fee = isFeeDisabled ? 0 : calcReservationFee(hours);
-  const validSelection = !!selectedTier;
+  // ---------- HANDLERS ----------
+  const handleOpenDeal = () => {
+    if (reservation.deal_room_id) {
+      navigate(`/dashboard/buyer/deals?deal=${reservation.deal_room_id}`);
+    } else {
+      onOpenDeal?.(reservation);
+    }
+  };
 
-  const creditInfo = checkCredit(user?.id, "reservation");
-  const hasCredit = creditInfo.hasCredit && !isFeeDisabled;
-  const reservationCreditRemaining = creditInfo.remaining || 0;
+  const handleViewListing = () => {
+    if (listingId) navigate(`/mali/${listingId}`);
+  };
 
-  const handlePay = async () => {
-    if (!validSelection) return;
-
-    if (isFeeDisabled && paymentMode !== "credit") {
-      setPaying(true);
-      try { await onConfirm({ hours, fee: 0, method: "free" }); } finally { setPaying(false); }
+  const handleExtend = async () => {
+    setError("");
+    if (!reservation.id) {
+      setError(t("Reservation haipatikani.", "Reservation not found."));
       return;
     }
-
-    if (paymentMode === "credit") {
-      setPaying(true); setError("");
-      try { await onConfirm({ hours, fee: 0, method: "credits" }); } finally { setPaying(false); }
+    const input = prompt(
+      t("Ongeza saa ngapi? (mf. 24, 48, 72)", "Add how many hours? (e.g. 24, 48, 72)"),
+      "24"
+    );
+    if (!input) return;
+    const hours = parseInt(input, 10);
+    if (!hours || hours < 1) {
+      setError(t("Muda si sahihi.", "Invalid duration."));
       return;
     }
-
-    if (isMobileMoneyMethod(method)) {
-      const cleanPhone = String(phone || "").replace(/\D/g, "");
-      if (cleanPhone.length < 9) {
-        setError(lang === "sw" ? "Tafadhali ingiza namba ya simu sahihi (mfano 0712345678)." : "Please enter a valid phone number (e.g. 0712345678).");
-        return;
-      }
-    }
-
-    if (isBankMethod(method)) {
-      const cleanCard = String(cardNumber || "").replace(/\D/g, "");
-      if (cleanCard.length < 12) {
-        setError(lang === "sw" ? "Tafadhali ingiza namba ya kadi sahihi (tarakimu 12+)." : "Please enter a valid card number (12+ digits).");
-        return;
-      }
-    }
-
-    setPaying(true); setError("");
+    setBusy("extend");
     try {
-      await onConfirm({
-        hours, fee, method,
-        phone: isMobileMoneyMethod(method) ? phone.trim() : undefined,
-        cardNumber: isBankMethod(method) ? cardNumber.trim() : undefined,
-      });
-    } finally { setPaying(false); }
-  };
-
-  return (
-    <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="border-t px-3 sm:px-4 py-3 flex flex-col gap-3">
-      {step === "choose" && (
-        <>
-          <div className="flex flex-col items-center text-center gap-2">
-            <Clock3 size={14} color={COLORS.night} />
-            <p className="text-primary text-body-sm font-semibold">
-              {lang === "sw" ? "Chagua muda wa Reservation" : "Choose Reservation Duration"}
-            </p>
-          </div>
-
-          {isFeeDisabled && (
-            <p className="text-xs text-center rounded-lg px-3 py-2" style={{ background: "rgba(47,109,79,0.10)", color: COLORS.green }}>
-              {lang === "sw" ? "Reservation ni BURE kwa sasa. Weka reservation moja kwa moja." : "Reservation is FREE right now. Place your reservation directly."}
-            </p>
-          )}
-
-          {!isFeeDisabled && (
-            <p className="text-secondary text-body-sm text-center">
-              {lang === "sw" ? "Ukilipa Reservation Fee, mali hii itashikiliwa kwa jina lako kwa muda uliochagua na itaonekana kwenye My Reservations." : "Once you pay the Reservation Fee, this item is held for you for the chosen time and appears in My Reservations."}
-            </p>
-          )}
-
-          {tiers.length === 0 ? (
-            <p className="text-body-sm text-muted text-center py-3">
-              {lang === "sw" ? "Hakuna tiers zilizo hai kwa sasa. Wasiliana na Admin." : "No active tiers available. Contact Admin."}
-            </p>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-secondary">
-                {lang === "sw" ? "Muda wa Reservation" : "Reservation Duration"}
-              </label>
-              <select value={selectedHours ?? ""} onChange={(e) => setSelectedHours(Number(e.target.value))} style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }} className="w-full rounded-lg border px-3 py-2.5 text-sm outline-none font-medium">
-                {tiers.map((tier) => {
-                  const days = tier.hours % 24 === 0 ? tier.hours / 24 : null;
-                  const label = days
-                    ? (lang === "sw" ? `Siku ${days} (${tier.hours}h)` : `${days} ${days === 1 ? "Day" : "Days"} (${tier.hours}h)`)
-                    : (lang === "sw" ? `Saa ${tier.hours}` : `${tier.hours} hrs`);
-                  const feeLabel = isFeeDisabled ? (lang === "sw" ? "BURE" : "FREE") : formatTZS(tier.fee);
-                  return (<option key={tier.id} value={tier.hours}>{label} — {feeLabel}</option>);
-                })}
-              </select>
-            </div>
-          )}
-
-          {selectedTier && (
-            <p className="text-secondary text-body-sm text-center">
-              {formatHours(hours, lang)} · {lang === "sw" ? "Reservation Fee:" : "Reservation Fee:"}{" "}
-              <span style={{ color: COLORS.green }} className="font-semibold">
-                {isFeeDisabled ? (lang === "sw" ? "BURE" : "FREE") : formatTZS(fee)}
-              </span>
-            </p>
-          )}
-
-          {hasCredit && (
-            <div className="flex justify-center gap-2">
-              <button onClick={() => setPaymentMode("flat")} className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border transition-colors" style={{ background: paymentMode === "flat" ? COLORS.night : "white", color: paymentMode === "flat" ? COLORS.sand : COLORS.night, borderColor: paymentMode === "flat" ? COLORS.night : COLORS.sandLine }}>
-                {lang === "sw" ? "Lipa Fedha" : "Pay Cash"}
-              </button>
-              <button onClick={() => setPaymentMode("credit")} className="flex-1 text-xs font-semibold px-3 py-2 rounded-full border transition-colors" style={{ background: paymentMode === "credit" ? COLORS.green : "white", color: paymentMode === "credit" ? "white" : COLORS.night, borderColor: paymentMode === "credit" ? COLORS.green : COLORS.sandLine }}>
-                {lang === "sw" ? `Tumia Credit (${reservationCreditRemaining})` : `Use Credit (${reservationCreditRemaining})`}
-              </button>
-            </div>
-          )}
-
-          {error && (<p style={{ color: COLORS.rust }} className="text-body-sm text-center">{error}</p>)}
-
-          <div className="flex items-center gap-2 pt-1">
-            <button onClick={onCancel} style={{ borderColor: COLORS.sandLine, color: COLORS.night }} className="text-body-sm font-semibold px-3 py-2 rounded-lg border">
-              {lang === "sw" ? "Ghairi" : "Cancel"}
-            </button>
-            <button
-              onClick={() => {
-                if (isFeeDisabled && paymentMode !== "credit") handlePay();
-                else setStep("pay");
-              }}
-              disabled={!validSelection}
-              style={{ background: validSelection ? COLORS.green : COLORS.sandLine, color: validSelection ? "white" : "rgba(16,26,46,0.4)" }}
-              className="flex-1 text-body-sm font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
-            >
-              {isFeeDisabled && paymentMode !== "credit"
-                ? (lang === "sw" ? "Weka Reservation — BURE" : "Place Reservation — FREE")
-                : (lang === "sw"
-                    ? `Endelea — ${paymentMode === "credit" ? "Tumia Credit" : `Lipa ${formatTZS(fee)}`}`
-                    : `Continue — ${paymentMode === "credit" ? "Use Credit" : `Pay ${formatTZS(fee)}`}`)}
-            </button>
-          </div>
-        </>
-      )}
-
-      {step === "pay" && (
-        <>
-          <div className="flex flex-col items-center text-center gap-2">
-            <CreditCard size={14} color={COLORS.night} />
-            <p className="text-primary text-body-sm font-semibold">
-              {paymentMode === "credit" ? (lang === "sw" ? "Tumia Credit" : "Use Credit") : (lang === "sw" ? "Lipa Reservation Fee" : "Pay Reservation Fee")}
-            </p>
-          </div>
-
-          <div style={{ background: COLORS.sand, borderColor: COLORS.sandLine }} className="rounded-xl border p-3 flex flex-col items-center text-center gap-1">
-            <p className="text-secondary text-body-sm">{deal.listingTitle} · {formatHours(hours, lang)}</p>
-            <p className="text-primary text-base font-bold">
-              {paymentMode === "credit" ? (lang === "sw" ? "1 Reservation Credit" : "1 Reservation Credit") : formatTZS(fee)}
-            </p>
-            <ShieldCheck size={20} color={COLORS.green} />
-          </div>
-
-          {paymentMode === "flat" && (
-            <>
-              <p className="text-secondary text-body-sm text-center">{lang === "sw" ? "Chagua njia ya malipo" : "Choose payment method"}</p>
-              <div className="grid grid-cols-2 gap-2">
-                {PAYMENT_METHODS.map((m) => (
-                  <button key={m} onClick={() => setMethod(m)} style={{ borderColor: method === m ? COLORS.green : COLORS.sandLine, background: method === m ? "rgba(47,109,79,0.08)" : "white", color: COLORS.night }} className="rounded-lg border px-2.5 py-2 text-body-sm font-medium text-center">
-                    {m}
-                  </button>
-                ))}
-              </div>
-
-              {isMobileMoneyMethod(method) && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-secondary text-center">{lang === "sw" ? `Namba ya Simu ya ${method}` : `${method} Phone Number`}</label>
-                  <input type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(cleanPhoneInput(e.target.value))} placeholder={lang === "sw" ? "mfano 0712345678" : "e.g. 0712345678"} style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }} className="w-full rounded-lg border px-3 py-2 text-sm outline-none text-center font-mono" />
-                  <p className="text-muted text-[11px] text-center">{lang === "sw" ? "Utapokea ombi la malipo kwenye simu yako." : "You'll receive a payment prompt on your phone."}</p>
-                </div>
-              )}
-
-              {isBankMethod(method) && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-secondary text-center">{lang === "sw" ? "Namba ya Kadi / Akaunti" : "Card / Account Number"}</label>
-                  <input type="text" inputMode="numeric" value={cardNumber} onChange={(e) => setCardNumber(cleanCardInput(e.target.value))} placeholder={lang === "sw" ? "4000 1234 5678 9010" : "4000 1234 5678 9010"} style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }} className="w-full rounded-lg border px-3 py-2 text-sm outline-none text-center font-mono" />
-                  <p className="text-muted text-[11px] text-center">{lang === "sw" ? "Utahamishwa kwenye ukurasa salama wa benki kulipia." : "You'll be redirected to a secure bank page to pay."}</p>
-                </div>
-              )}
-            </>
-          )}
-
-          {error && (<p style={{ color: COLORS.rust }} className="text-body-sm text-center">{error}</p>)}
-
-          <div className="flex items-center gap-2 pt-1">
-            <button onClick={() => setStep("choose")} disabled={paying} style={{ borderColor: COLORS.sandLine, color: COLORS.night }} className="text-body-sm font-semibold px-3 py-2 rounded-lg border">
-              {lang === "sw" ? "Rudi Nyuma" : "Back"}
-            </button>
-            <button onClick={handlePay} disabled={paying} style={{ background: COLORS.green, color: "white" }} className="flex-1 flex items-center justify-center gap-2 text-body-sm font-semibold px-3 py-2 rounded-lg disabled:opacity-70">
-              {paying ? (<><Loader2 size={14} className="animate-spin" />{lang === "sw" ? "Inathibitisha..." : "Processing..."}</>) : paymentMode === "credit" ? (lang === "sw" ? "Tumia Credit" : "Use Credit") : (lang === "sw" ? `Thibitisha Malipo — ${formatTZS(fee)}` : `Confirm Payment — ${formatTZS(fee)}`)}
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ============================================================
-// DEAL LIST ITEM
-// ============================================================
-function DealListItem({ deal, active, onSelect, lang }) {
-  const category = getCategory(deal.category);
-  const Icon = getCategoryIcon(category?.iconKey);
-  const status = getDealStatus(lang)[deal.status] || FALLBACK_DEAL_STATUS(lang, deal.status);
-  const lastMessage = deal.messages[deal.messages.length - 1];
-
-  return (
-    <button onClick={() => onSelect(deal.id)} style={{ background: active ? "white" : "transparent", borderColor: COLORS.sandLine }} className="w-full flex items-start gap-3 p-3 rounded-xl border text-left">
-      <div style={{ background: COLORS.night }} className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-        {Icon && <Icon size={16} color={COLORS.gold} />}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-primary text-sm font-semibold truncate">{deal.counterpartyName}</p>
-          <span className="text-muted text-body-sm shrink-0">{lastMessage ? timeAgo(lastMessage.at, lang) : ""}</span>
-        </div>
-        <p className="text-secondary text-body-sm truncate mb-1.5">{deal.listingTitle}</p>
-        <span style={{ background: status?.bg || "#F5F3EC", color: status?.fg || "#101A2E" }} className="inline-block text-body-sm font-semibold px-2 py-0.5 rounded-full">
-          {status?.label || deal.status || "—"}
-        </span>
-      </div>
-    </button>
-  );
-}
-
-// ============================================================
-// OFFER BUBBLE
-// ============================================================
-function OfferBubble({ amount, mine, lang }) {
-  return (
-    <div style={{ background: mine ? COLORS.gold : "white", borderColor: COLORS.sandLine }} className="border rounded-2xl px-4 py-3 max-w-[75%] flex items-center gap-2">
-      <HandCoins size={16} color={mine ? COLORS.night : COLORS.rust} />
-      <div>
-        <p style={{ color: mine ? COLORS.night : "rgba(16,26,46,0.55)" }} className="text-body-sm">{lang === "sw" ? "Ofa" : "Offer"}</p>
-        <p style={{ color: mine ? COLORS.night : COLORS.rust }} className="text-sm font-bold">{formatTZS(amount)}</p>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// DEAL DETAIL
-// ============================================================
-function DealDetail({
-  deal, side, onBack, onSendMessage, onSendOffer, onRespond, onReopen,
-  onReserveConfirm, onInspectionResolve, onProofSubmit, onProofConfirm,
-  onProofReject, lang, user,
-}) {
-  const [text, setText] = useState("");
-  const [offerOpen, setOfferOpen] = useState(false);
-  const [offerAmount, setOfferAmount] = useState("");
-  const [reserveOpen, setReserveOpen] = useState(false);
-  const [chatError, setChatError] = useState("");
-  const [reportOpen, setReportOpen] = useState(false);
-  const [reportReason, setReportReason] = useState("FRAUD");
-  const [reportDetails, setReportDetails] = useState("");
-  const [reportBusy, setReportBusy] = useState(false);
-  const [reportSuccess, setReportSuccess] = useState(false);
-  const [contactDrawerOpen, setContactDrawerOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [reopening, setReopening] = useState(false);
-  const [reopenInfo, setReopenInfo] = useState(null);
-  const menuRef = useRef(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onDown = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
-    const onKey = (e) => e.key === "Escape" && setMenuOpen(false);
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("touchstart", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("touchstart", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [menuOpen]);
-
-  const category = getCategory(deal.category);
-  const CategoryIcon = getCategoryIcon(category?.iconKey);
-  const status = getDealStatus(lang)[deal.status] || FALLBACK_DEAL_STATUS(lang, deal.status);
-  const counterpartyLabel = side === "seller" ? (lang === "sw" ? "Mnunuzi" : "Buyer") : (lang === "sw" ? "Muuzaji" : "Seller");
-
-  const isBuyer = side === "buyer";
-  const isSeller = side === "seller";
-  const lastOffer = [...(deal.messages || [])].reverse().find((m) => m.offerAmount && !["declined", "rejected", "cancelled"].includes(String(m.status || "").toLowerCase()));
-  const iMadeLastOffer = lastOffer?.sender === "me";
-  const canRespond = deal.currentOffer > 0 && !!lastOffer && !iMadeLastOffer;
-
-  const waitingText = iMadeLastOffer
-    ? (lang === "sw" ? `Ofa yako ya ${formatTZS(deal.currentOffer)} imetumwa — unasubiri upande wa pili ukubali au ukatae.` : `Your offer of ${formatTZS(deal.currentOffer)} was sent — waiting for the other party to accept or decline.`)
-    : deal.currentOffer > 0
-      ? (lang === "sw" ? `Ofa ya ${formatTZS(deal.currentOffer)} imepokelewa — unaweza kukubali au kukataa.` : `Offer of ${formatTZS(deal.currentOffer)} received — you can accept or decline.`)
-      : (lang === "sw" ? "Hakuna ofa bado — toa ofa yako ya kwanza." : "No offer yet — make your first offer.");
-
-  const sellerPhone = deal.sellerPhone ?? deal.seller_phone ?? deal.counterpartyPhone ?? null;
-  const sellerEmail = deal.sellerEmail ?? deal.seller_email ?? deal.counterpartyEmail ?? null;
-  const buyerPhone = deal.buyerPhone ?? null;
-  const buyerEmail = deal.buyerEmail ?? null;
-
-  const reservationPaidStatuses = ["reserved", "awaiting_final_payment", "payment_proof_submitted", "completed"];
-  const reservationPaid = reservationPaidStatuses.includes(deal.status);
-
-  // 🛠️ FIX: Reserve button inaonekana wazi kwa buyer
-  const canReserve = isBuyer && ["negotiating", "offer_sent", "accepted"].includes(deal.status) && !deal.pendingPayment && !deal.reservationPaidAt;
-
-  useEffect(() => { setReserveOpen(false); }, [deal.id]);
-
-  const handleSend = () => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    setChatError("");
-    onSendMessage(deal.id, trimmed);
-    setText("");
-  };
-
-  const handleExit = () => {
-    setMenuOpen(false);
-    const params = new URLSearchParams(window.location.search);
-    const enteredViaLink = params.has("deal") || params.has("listing");
-    const isMobileView = typeof window.matchMedia === "function" && window.matchMedia("(max-width: 767px)").matches;
-    const idx = window.history.state?.idx;
-    const hasHistory = typeof idx === "number" ? idx > 0 : window.history.length > 1;
-
-    if (isMobileView && !enteredViaLink) onBack();
-    else if (hasHistory) navigate(-1);
-    else onBack();
-  };
-
-  const handleReopenClick = async () => {
-    if (!onReopen || reopening) return;
-    setReopening(true);
-    setReopenInfo(null);
-    const res = await onReopen(deal.id);
-    if (!res?.ok) {
-      setReopenInfo(explainApiError(res?.error, { lang, action: "reopen_deal", fallback: lang === "sw" ? "Imeshindwa kufufua mazungumzo." : "Could not reopen the conversation." }));
-    }
-    setReopening(false);
-  };
-
-  const handleOffer = () => {
-    const value = parseInt(cleanMoneyInput(offerAmount), 10);
-    if (!value) return;
-    onSendOffer(deal.id, value);
-    setOfferAmount("");
-    setOfferOpen(false);
-  };
-
-  const handleReportSubmit = async () => {
-    if (reportDetails.trim().length < 10) return;
-    setReportBusy(true);
-    try {
-      const reportedUserId = side === "buyer" ? deal.sellerId : deal.buyerId;
-      let dealRoomId = deal.dealRoomId;
-      if (!dealRoomId) {
-        try { const detailRes = await dealsApi.detail(deal.id); dealRoomId = detailRes?.id ?? detailRes?.deal_room_id ?? deal.id; }
-        catch { dealRoomId = deal.id; }
-      }
-      await dealsApi.report(dealRoomId, { reported_user_id: reportedUserId, reason: reportReason, details: reportDetails.trim() });
-      setReportSuccess(true);
-      setTimeout(() => { setReportOpen(false); setReportSuccess(false); setReportDetails(""); setReportReason("FRAUD"); }, 2500);
+      // Tuma ombi la kuongeza muda
+      await api.post(`/transactions/reservations/${reservation.id}/extend/`, { hours });
+      alert(t(`Muda umeongezwa kwa saa ${hours}.`, `Extended by ${hours} hours.`));
+      onRefresh?.();
     } catch (err) {
-      alert(err?.message || (lang === "sw" ? "Imeshindwa kutuma ripoti. Jaribu tena." : "Failed to send report. Try again."));
-    } finally { setReportBusy(false); }
+      setError(err?.data?.detail || err?.message || t("Imeshindwa kuongeza muda.", "Failed to extend."));
+    } finally {
+      setBusy(null);
+    }
   };
 
+  const handleCancel = async () => {
+    setError("");
+    if (!reservation.id) return;
+    const confirmed = confirm(
+      t(
+        "Una uhakika unataka kuondoa reservation hii? Reservation Fee HAITAREJESHWA.",
+        "Are you sure you want to remove this reservation? The Reservation Fee is NON-REFUNDABLE."
+      )
+    );
+    if (!confirmed) return;
+    setBusy("cancel");
+    try {
+      await api.post(`/transactions/reservations/${reservation.id}/cancel/`, {});
+      alert(t("Reservation imeondolewa.", "Reservation removed."));
+      onRefresh?.();
+    } catch (err) {
+      setError(err?.data?.detail || err?.message || t("Imeshindwa kuondoa.", "Failed to remove."));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // ---------- RENDER ----------
   return (
-    <div className="flex flex-col h-full relative">
+    <div style={{ background: "white", borderColor: COLORS.sandLine }} className="rounded-2xl border p-4">
       {/* Header */}
-      <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="flex items-center gap-3 border-b p-3 sm:p-4">
-        <button onClick={onBack} className="md:hidden shrink-0" aria-label="Back"><ArrowLeft size={18} color={COLORS.night} /></button>
-        <div style={{ background: COLORS.night }} className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0">
-          {CategoryIcon && <CategoryIcon size={15} color={COLORS.gold} />}
+      <div className="flex items-start gap-3">
+        <div style={{ background: COLORS.night }} className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0">
+          <CategoryIcon size={18} color={COLORS.gold} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-primary text-sm font-semibold truncate">{deal.counterpartyName} <span className="text-muted font-normal">· {counterpartyLabel}</span></p>
-          {deal.listingId ? (
-            <Link to={`/mali/${deal.listingId}`} className="text-secondary text-body-sm truncate flex items-center gap-1 hover:text-[#FEA406] transition-colors"><MapPin size={10} /> {deal.listingTitle}</Link>
-          ) : (
-            <p className="text-secondary text-body-sm truncate flex items-center gap-1"><MapPin size={10} /> {deal.listingTitle}</p>
-          )}
-        </div>
-        <span style={{ background: status?.bg || "#F5F3EC", color: status?.fg || "#101A2E" }} className="text-body-sm font-semibold px-2.5 py-1 rounded-full shrink-0">{status?.label || deal.status || "—"}</span>
-
-        <button onClick={() => setReportOpen(true)} style={{ color: COLORS.rust }} className="shrink-0 p-1.5 rounded-full hover:bg-red-50 transition-colors" title={side === "buyer" ? (lang === "sw" ? "Ripoti Muuzaji" : "Report Seller") : (lang === "sw" ? "Ripoti Mnunuzi" : "Report Buyer")}>
-          <Flag size={15} />
-        </button>
-
-        <div className="relative shrink-0" ref={menuRef}>
-          <button onClick={() => setMenuOpen((v) => !v)} style={{ color: COLORS.night }} className="p-1.5 rounded-full hover:bg-black/5 transition-colors" aria-label={lang === "sw" ? "Menyu" : "Menu"} aria-haspopup="menu" aria-expanded={menuOpen}>
-            <MoreVertical size={18} />
-          </button>
-
-          {menuOpen && (
-            <div role="menu" style={{ background: "white", borderColor: COLORS.sandLine, boxShadow: "0 12px 32px rgba(16,26,46,0.18)" }} className="absolute right-0 top-full mt-1 z-50 w-56 rounded-xl border py-1.5">
-              <button role="menuitem" onClick={() => { setMenuOpen(false); setContactDrawerOpen(true); }} className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-black/5" style={{ color: COLORS.night }}>
-                <UserRound size={15} />
-                {isBuyer ? (lang === "sw" ? "Profile ya Muuzaji" : "Seller's Profile") : (lang === "sw" ? "Profile ya Mnunuzi" : "Buyer's Profile")}
-              </button>
-
-              {isBuyer && deal.status === "reserved" && (
-                <button role="menuitem" onClick={() => { setMenuOpen(false); onInspectionResolve(deal.id, "READY_FINAL_PAYMENT", ""); }} className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-black/5" style={{ color: COLORS.green }}>
-                  <CheckCircle2 size={15} />
-                  {lang === "sw" ? "Nimeridhika — Kamilisha Deal" : "I'm satisfied — Finalize Deal"}
-                </button>
-              )}
-
-              <div style={{ borderColor: COLORS.sandLine }} className="my-1 border-t" />
-
-              <button role="menuitem" onClick={handleExit} className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-black/5" style={{ color: COLORS.rust }}>
-                <LogOut size={15} />
-                {lang === "sw" ? "Toka kwenye Deal Room" : "Exit this deal room"}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Price strip */}
-      <div style={{ background: COLORS.sandLine }} className="flex items-center justify-between px-4 py-2 text-body-sm">
-        <span className="text-secondary">{lang === "sw" ? "Bei Iliyowekwa" : "Asking Price"}: {formatTZS(deal.askingPrice)}</span>
-        <span style={{ color: COLORS.rust }} className="font-semibold">{lang === "sw" ? "Ofa ya Sasa" : "Current Offer"}: {formatTZS(deal.currentOffer)}</span>
-      </div>
-
-      {/* 🛠️ FIX: Wazi "Reserve" banner for buyer */}
-      {isBuyer && canReserve && !reserveOpen && (
-        <div style={{ background: "rgba(47,109,79,0.10)", borderColor: "rgba(47,109,79,0.25)" }} className="border-b px-3 sm:px-4 py-3 flex items-center gap-3">
-          <div style={{ background: COLORS.green }} className="w-9 h-9 rounded-full flex items-center justify-center shrink-0">
-            <CreditCard size={16} color="white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-body-sm font-semibold" style={{ color: COLORS.green }}>
-              {lang === "sw" ? "Hifadhi mali hii kwa ajili yako" : "Reserve this property for yourself"}
+          <Link
+            to={listingId ? `/mali/${listingId}` : "#"}
+            className="text-primary text-sm font-semibold hover:text-[#FEA406] transition-colors line-clamp-2"
+          >
+            {listingTitle}
+          </Link>
+          {listingLocation && (
+            <p className="text-secondary text-xs flex items-center gap-1 mt-0.5">
+              <MapPin size={11} />
+              <span className="truncate">{listingLocation}</span>
             </p>
-            <p className="text-xs text-secondary mt-0.5">
-              {lang === "sw" ? "Lipia Reservation Fee ili mali isiondolewe na wengine." : "Pay the Reservation Fee so no one else can take it."}
+          )}
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <span
+              style={{ background: status.bg, color: status.color }}
+              className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            >
+              {status.label[lang]}
+            </span>
+            {cd && (
+              <span
+                style={{ color: cd.expired ? COLORS.rust : "#8A5A16" }}
+                className="text-xs font-semibold flex items-center gap-1 tabular-nums"
+              >
+                <Clock3 size={11} /> {cd.text}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Details */}
+      <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t" style={{ borderColor: COLORS.sandLine }}>
+        <div>
+          <p className="text-[11px] font-semibold text-secondary uppercase">
+            {t("Muda wa Reservation", "Reservation Duration")}
+          </p>
+          <p className="text-sm font-semibold text-primary">
+            {reservation.duration_hours ? `${reservation.duration_hours} ${t("saa", "hrs")}` : "—"}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold text-secondary uppercase">
+            {t("Ada ya Reservation", "Reservation Fee")}
+          </p>
+          <p className="text-sm font-semibold text-primary">
+            {reservation.deposit_amount && Number(reservation.deposit_amount) > 0
+              ? formatTZS(Number(reservation.deposit_amount))
+              : t("Bure", "Free")}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold text-secondary uppercase">
+            {t("Inaisha", "Expires")}
+          </p>
+          <p className="text-xs font-medium text-primary">
+            {reservation.expires_at ? formatDate(reservation.expires_at, lang) : "—"}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold text-secondary uppercase">
+            {t("Iliwekwa", "Placed")}
+          </p>
+          <p className="text-xs font-medium text-primary">
+            {reservation.created_at ? timeAgo(reservation.created_at, lang) : "—"}
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <div
+          style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
+          className="mt-3 text-xs font-semibold px-3 py-2 rounded-lg"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* CTA */}
+      <button
+        onClick={handleOpenDeal}
+        style={{ background: COLORS.gold, color: COLORS.night }}
+        className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg"
+      >
+        {t("Fungua Deal Room", "Open Deal Room")} <ArrowRight size={13} />
+      </button>
+
+      {/* Actions */}
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        <button
+          onClick={handleViewListing}
+          disabled={!listingId}
+          style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
+          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          <ExternalLink size={12} />
+          <span className="hidden sm:inline">{t("Angalia", "View")}</span>
+        </button>
+        <button
+          onClick={handleExtend}
+          disabled={!isActive || busy === "extend"}
+          style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
+          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          {busy === "extend" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+          <span className="hidden sm:inline">{t("Ongeza Muda", "Extend")}</span>
+        </button>
+        <button
+          onClick={handleCancel}
+          disabled={!isActive || busy === "cancel"}
+          style={{ borderColor: "rgba(193,80,46,0.35)", color: COLORS.rust }}
+          className="text-xs font-semibold px-2 py-2 rounded-lg border bg-white flex items-center justify-center gap-1 hover:bg-red-50 transition-colors disabled:opacity-50"
+        >
+          {busy === "cancel" ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+          <span className="hidden sm:inline">{t("Ondoa", "Remove")}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MAIN PAGE
+// ============================================================
+export default function MyReservationsPage() {
+  const { lang } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchReservations = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      // Jaribu endpoints kadhaa
+      let data = null;
+      const endpoints = [
+        "/transactions/reservations/",
+        "/reservations/",
+        "/transactions/?status=reserved",
+      ];
+      let lastError = null;
+      for (const ep of endpoints) {
+        try {
+          data = await api.get(`${ep}${ep.includes("?") ? "&" : "?"}page_size=100`);
+          break;
+        } catch (err) {
+          lastError = err;
+          if (err?.status !== 404) throw err;
+        }
+      }
+      if (data === null && lastError) throw lastError;
+
+      const list = Array.isArray(data) ? data : data?.results || data?.data || [];
+      setReservations(list);
+    } catch (err) {
+      setError(err?.data?.detail || err?.message || t("Imeshindwa kupakia reservations.", "Failed to load reservations."));
+      setReservations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReservations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const now = new Date();
+  const active = useMemo(
+    () =>
+      reservations.filter(
+        (r) =>
+          ACTIVE_STATUSES.includes(r.status) &&
+          (!r.expires_at || new Date(r.expires_at) > now)
+      ),
+    [reservations, now]
+  );
+  const past = useMemo(
+    () =>
+      reservations.filter(
+        (r) => !ACTIVE_STATUSES.includes(r.status) || (r.expires_at && new Date(r.expires_at) <= now)
+      ),
+    [reservations, now]
+  );
+
+  return (
+    <div style={{ background: COLORS.sand, minHeight: "100%" }} className="w-full p-4 sm:p-6">
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="h-title flex items-center gap-2">
+              <CalendarCheck size={22} color={COLORS.gold} />
+              {t("Mali Nilizoshikilia", "My Reservations")}
+            </h1>
+            <p className="text-sm text-secondary mt-2 max-w-xl">
+              {t(
+                "Mali ulizolipia ada ya kushikilia. Muda wa ukaguzi na hatua zinazofuata zinaonekana hapa.",
+                "Properties you've paid a Reservation Fee for. Inspection time and next steps show here."
+              )}
             </p>
           </div>
           <button
-            onClick={() => setReserveOpen(true)}
-            style={{ background: COLORS.green, color: "white" }}
-            className="shrink-0 text-body-sm font-semibold px-3 py-2 rounded-lg"
+            onClick={fetchReservations}
+            disabled={loading}
+            style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
+            className="text-xs font-semibold px-3 py-2 rounded-lg border flex items-center gap-1.5 disabled:opacity-50 bg-white"
           >
-            {lang === "sw" ? "Reserve Sasa" : "Reserve Now"}
+            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+            {t("Sasisha", "Refresh")}
           </button>
         </div>
-      )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-2.5" style={{ background: COLORS.sand }}>
-        {deal.messages.map((m) => {
-          const text = getMessageText(m, lang);
-          return m.sender === "admin" ? (
-            <div key={m.id} className="flex justify-center my-1">
-              <div style={{ background: "rgba(16,26,46,0.06)", color: COLORS.night, borderColor: COLORS.sandLine }} className="border rounded-xl px-3.5 py-2 max-w-[90%] text-body-sm text-center font-medium">
-                <span style={{ color: COLORS.rust }} className="font-bold">{lang === "sw" ? "SokoMkononi Admin" : "SokoMkononi Admin"}: </span>{text}
-              </div>
+        {/* Error */}
+        {error && (
+          <div
+            style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust }}
+            className="rounded-xl px-3 py-2 mb-4 text-sm flex items-center gap-2"
+          >
+            <AlertTriangle size={14} />
+            {error}
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && reservations.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Loader2 size={28} className="animate-spin" color={COLORS.gold} />
+            <p className="text-sm text-secondary">
+              {t("Inapakia reservations...", "Loading reservations...")}
+            </p>
+          </div>
+        )}
+
+        {/* Active */}
+        {!loading && active.length > 0 && (
+          <section className="mb-6">
+            <h2 className="text-sm font-semibold text-primary mb-3 flex items-center gap-2">
+              <CheckCircle2 size={14} color={COLORS.green} />
+              {t("Zinazoendelea", "Active")} ({active.length})
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {active.map((r) => (
+                <ReservationCard
+                  key={r.id}
+                  reservation={r}
+                  lang={lang}
+                  onOpenDeal={(deal) => navigate(`/dashboard/buyer/deals?deal=${deal.id}`)}
+                  onRefresh={fetchReservations}
+                />
+              ))}
             </div>
-          ) : (
-            <div key={m.id} className={`flex ${m.sender === "me" ? "justify-end" : "justify-start"}`}>
-              {m.offerAmount ? (
-                <OfferBubble amount={m.offerAmount} mine={m.sender === "me"} lang={lang} />
-              ) : (
-                <div style={{ background: m.sender === "me" ? COLORS.night : "white", color: m.sender === "me" ? COLORS.sand : COLORS.night, borderColor: COLORS.sandLine }} className="border rounded-2xl px-4 py-2.5 max-w-[75%] text-sm">{text}</div>
+          </section>
+        )}
+
+        {/* History */}
+        {!loading && past.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold text-primary mb-3 flex items-center gap-2">
+              <Clock3 size={14} color={COLORS.night} />
+              {t("Historia", "History")} ({past.length})
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {past.map((r) => (
+                <ReservationCard
+                  key={r.id}
+                  reservation={r}
+                  lang={lang}
+                  onOpenDeal={(deal) => navigate(`/dashboard/buyer/deals?deal=${deal.id}`)}
+                  onRefresh={fetchReservations}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Empty */}
+        {!loading && reservations.length === 0 && !error && (
+          <div
+            style={{ borderColor: COLORS.sandLine, background: "white" }}
+            className="rounded-2xl border-2 border-dashed p-10 text-center"
+          >
+            <Inbox size={44} className="mx-auto mb-3" color="rgba(16,26,46,0.25)" />
+            <p className="text-sm font-semibold text-primary mb-1">
+              {t("Hakuna reservations bado.", "No reservations yet.")}
+            </p>
+            <p className="text-xs text-muted max-w-sm mx-auto mb-4">
+              {t(
+                "Ukiingia kwenye Deal Room na ukalipia Reservation Fee, mali itaonekana hapa.",
+                "Once you enter a Deal Room and pay the Reservation Fee, the property will appear here."
               )}
-            </div>
-          );
-        })}
-
-        {deal.status === "accepted" && isBuyer && !deal.reservationPaidAt && !deal.transactionId && (
-          <div className="flex justify-center my-1">
-            <div style={{ background: "rgba(47,109,79,0.08)", color: COLORS.green, borderColor: COLORS.sandLine }} className="border rounded-xl px-3.5 py-2 max-w-[90%] text-body-sm text-center font-medium">
-              {lang === "sw" ? `Mmekubaliana bei ya ${formatTZS(deal.currentOffer)}. Endelea kuwasiliana na muuzaji hapa.` : `You've agreed at ${formatTZS(deal.currentOffer)}. Continue chatting with the seller here.`}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Negotiation actions */}
-      {(deal.status === "negotiating" || deal.status === "offer_sent") && (
-        <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-t flex-wrap">
-          {canRespond ? (
-            <>
-              <button onClick={() => onRespond(deal.id, "accepted")} style={{ background: COLORS.green, color: "white" }} className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg">
-                <Check size={13} /> {lang === "sw" ? `Kubali Ofa ya ${formatTZS(deal.currentOffer)}` : `Accept Offer of ${formatTZS(deal.currentOffer)}`}
-              </button>
-              <button onClick={() => onRespond(deal.id, "declined")} style={{ borderColor: "rgba(193,80,46,0.35)", color: COLORS.rust }} className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border">
-                <X size={13} /> {lang === "sw" ? "Kataa" : "Decline"}
-              </button>
-            </>
-          ) : (
-            <span style={{ color: "var(--text-muted)" }} className="text-body-sm italic flex-1">{waitingText}</span>
-          )}
-          {(isBuyer || isSeller) && (
-            <button onClick={() => setOfferOpen((v) => !v)} style={{ borderColor: COLORS.sandLine, color: COLORS.night }} className="flex items-center gap-1.5 text-body-sm font-semibold px-3 py-2 rounded-lg border ml-auto">
-              <HandCoins size={13} /> {deal.currentOffer > 0 ? (lang === "sw" ? "Toa Ofa Nyingine" : "Make Another Offer") : (lang === "sw" ? "Toa Ofa" : "Make an Offer")}
-              <ChevronDown size={12} style={{ transform: offerOpen ? "rotate(180deg)" : "none" }} />
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Offer input */}
-      {(isBuyer || isSeller) && offerOpen && (
-        <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-t">
-          <input style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }} className="flex-1 rounded-lg border px-3 py-2 text-sm outline-none text-center" placeholder={lang === "sw" ? "Kiasi cha ofa (TZS)" : "Offer amount (TZS)"} type="text" inputMode="numeric" value={formatMoneyInput(offerAmount)} onChange={(e) => setOfferAmount(cleanMoneyInput(e.target.value))} />
-          <button onClick={handleOffer} style={{ background: COLORS.gold, color: COLORS.night }} className="text-body-sm font-semibold px-3 py-2 rounded-lg shrink-0">
-            {lang === "sw" ? "Tuma Ofa" : "Send Offer"}
-          </button>
-        </div>
-      )}
-
-      {deal.status === "accepted" && isSeller && (
-        <div style={{ borderColor: COLORS.sandLine, background: "rgba(232,163,61,0.10)" }} className="flex flex-col items-center text-center gap-1 px-3 sm:px-4 py-3 border-t">
-          <span style={{ color: "#8A5A16" }} className="text-body-sm font-medium max-w-md">
-            {lang === "sw" ? `Mmekubaliana kwenye ${formatTZS(deal.currentOffer)}. Tafadhali subiri majibu ya mnunuzi.` : `You agreed at ${formatTZS(deal.currentOffer)}. Please wait for the buyer's response.`}
-          </span>
-        </div>
-      )}
-
-      {/* Reservation panel */}
-      {reserveOpen && canReserve && (
-        <ReservationPanel
-          deal={deal}
-          lang={lang}
-          user={user}
-          onCancel={() => setReserveOpen(false)}
-          onConfirm={(details) => { setReserveOpen(false); onReserveConfirm(deal.id, details); }}
-        />
-      )}
-
-      {deal.status === "reserved" && side === "seller" && (
-        <div style={{ borderColor: COLORS.sandLine, background: "rgba(16,26,46,0.04)" }} className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t text-body-sm">
-          <span className="text-primary max-w-md">
-            {lang === "sw" ? `Reservation Fee ${formatTZS(deal.reservationFee)} imelipwa · ${deal.reservationMethod} · Mnunuzi yuko kwenye Inspection Period.` : `Reservation Fee ${formatTZS(deal.reservationFee)} paid · ${deal.reservationMethod} · Buyer is in Inspection Period.`}
-          </span>
-          {deal.reservationExpiresAt && (
-            <span style={{ color: COLORS.rust }} className="font-semibold">
-              {lang === "sw" ? "Inaisha" : "Ends"}: {new Date(deal.reservationExpiresAt).toLocaleString(lang === "sw" ? "sw-TZ" : "en-US")}
-            </span>
-          )}
-        </div>
-      )}
-
-      {deal.status === "reserved" && side === "buyer" && (
-        <div style={{ borderColor: COLORS.sandLine, background: "rgba(47,109,79,0.08)" }} className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t">
-          <ShieldCheck size={16} color={COLORS.green} />
-          <span style={{ color: COLORS.green }} className="text-body-sm font-medium max-w-md">
-            {lang === "sw" ? `Mali imeshikiliwa kwa ajili yako${deal.reservationExpiresAt ? ` hadi ${new Date(deal.reservationExpiresAt).toLocaleString("sw-TZ")}` : ""}. Ukisharidhika, unaweza kuendelea na malipo ya mwisho.` : `This item is held for you${deal.reservationExpiresAt ? ` until ${new Date(deal.reservationExpiresAt).toLocaleString("en-US")}` : ""}. When satisfied, you can proceed to final payment.`}
-          </span>
-          <button onClick={() => onInspectionResolve(deal.id, "READY_FOR_FINAL_PAYMENT", "")} style={{ borderColor: COLORS.green, color: COLORS.green, background: "transparent" }} className="text-body-sm font-semibold px-3 py-1.5 rounded-lg border">
-            {lang === "sw" ? "Nimeridhika — Endelea" : "I'm satisfied — Continue"}
-          </button>
-        </div>
-      )}
-
-      {deal.status === "awaiting_final_payment" && side === "buyer" && (
-        <PaymentProofPanel deal={deal} lang={lang} onSubmit={(proof) => onProofSubmit(deal.id, proof)} />
-      )}
-
-      {deal.status === "awaiting_final_payment" && side === "seller" && (
-        <div style={{ borderColor: COLORS.sandLine, background: "rgba(37,99,235,0.08)" }} className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t">
-          <CheckCircle2 size={16} color="#2563EB" />
-          <span style={{ color: "#1E3A8A" }} className="text-body-sm font-medium max-w-md">
-            {lang === "sw" ? `Ukaguzi umepita. Mnunuzi anaandaa malipo ya mwisho ya ${formatTZS(deal.currentOffer)} na atapakia uthibitisho hapa.` : `Inspection passed. Buyer is preparing the final payment of ${formatTZS(deal.currentOffer)} and will upload proof here.`}
-          </span>
-        </div>
-      )}
-
-      {deal.status === "payment_proof_submitted" && side === "seller" && (
-        <PaymentProofReview deal={deal} lang={lang} onConfirm={() => onProofConfirm(deal.id)} onReject={(reason) => onProofReject(deal.id, reason)} />
-      )}
-
-      {deal.status === "payment_proof_submitted" && side === "buyer" && (
-        <div style={{ borderColor: COLORS.sandLine, background: "rgba(232,163,61,0.1)" }} className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t">
-          <FileImage size={16} color="#8A5A16" />
-          <span style={{ color: "#8A5A16" }} className="text-body-sm font-medium max-w-md">
-            {lang === "sw" ? `Uthibitisho wako wa malipo umetumwa. Unasubiri muuzaji athibitishe "Nimepokea Malipo".` : `Your payment proof has been submitted. Waiting for the seller to confirm "Payment Received".`}
-          </span>
-        </div>
-      )}
-
-      {deal.status === "completed" && (
-        <div style={{ borderColor: COLORS.sandLine, background: "rgba(47,109,79,0.1)" }} className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t">
-          <PartyPopper size={16} color={COLORS.green} />
-          <span style={{ color: COLORS.green }} className="text-body-sm font-medium max-w-md">
-            {lang === "sw" ? "Muamala umekamilika! Malipo yamethibitishwa — angalia My Transactions kwa risiti." : "Transaction completed! Payment confirmed — check My Transactions for the receipt."}
-          </span>
-          {isSeller && deal.listingId && (
-            <Link to={`/mali/${deal.listingId}`} style={{ background: COLORS.green, color: "white" }} className="mt-1 flex items-center gap-1.5 text-body-sm font-semibold px-4 py-2 rounded-lg">
-              {lang === "sw" ? "Nenda kwenye Tangazo" : "Go to Listing"} <ArrowRight size={13} />
+            </p>
+            <Link
+              to="/dashboard/buyer/deals"
+              style={{ background: COLORS.gold, color: COLORS.night }}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg"
+            >
+              {t("Nenda kwenye Deal Rooms", "Go to Deal Rooms")}
+              <ArrowRight size={14} />
             </Link>
-          )}
-        </div>
-      )}
-
-      {deal.status === "disputed" && (
-        <div style={{ borderColor: COLORS.sandLine, background: "rgba(193,80,46,0.08)" }} className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t">
-          <AlertTriangle size={16} color={COLORS.rust} />
-          <span style={{ color: COLORS.rust }} className="text-body-sm font-medium max-w-md">
-            {lang === "sw" ? `Mgogoro umeripotiwa. Timu ya SokoMkononi itaingilia kati kusaidia kutatua.` : `A dispute has been reported. SokoMkononi team will step in to help resolve it.`}
-          </span>
-        </div>
-      )}
-
-      {REVIVABLE_STATUSES.includes(deal.status) && (
-        <div style={{ borderColor: COLORS.sandLine, background: "rgba(16,26,46,0.04)" }} className="flex flex-col items-center text-center gap-3 px-3 sm:px-4 py-4 border-t">
-          <Ban size={16} color={COLORS.night} />
-          <div className="max-w-md space-y-1">
-            <p className="text-primary text-body-sm font-medium">
-              {deal.status === "cancelled" ? (lang === "sw" ? "Deal hii imeghairiwa." : "This deal has been cancelled.") : (lang === "sw" ? "Deal hii imefungwa." : "This deal is closed.")}
-            </p>
-            <p className="text-secondary text-body-sm">
-              {lang === "sw" ? "Mazungumzo yenu yote yamehifadhiwa. Mmoja wenu akifufua, mnaendelea kujadiliana kutoka mlipoishia." : "Your whole conversation is saved. If either of you reopens it, you continue from where you left off."}
-            </p>
-            {deal.status === "cancelled" && (
-              <p className="text-muted text-xs">
-                {lang === "sw" ? "Reservation Fee iliyolipwa haitarejeshwa. Ukihitaji kureserve tena, utaanza mchakato huo upya." : "Any Reservation Fee already paid is non-refundable. If you need to reserve again, that step starts over."}
-              </p>
-            )}
           </div>
-          {onReopen && deal.canReopen !== false && deal.can_reopen !== false && (
-            <button type="button" onClick={handleReopenClick} disabled={reopening} className="btn btn-primary btn-sm inline-flex items-center gap-2 disabled:opacity-60">
-              {reopening ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
-              {lang === "sw" ? "Fufua mazungumzo" : "Reopen conversation"}
-            </button>
-          )}
-          {(deal.canReopen === false || deal.can_reopen === false) && (
-            <p className="text-muted text-xs max-w-md">
-              {lang === "sw" ? "Deal hii haiwezi kufufuliwa moja kwa moja. Wasiliana na support@sokomkononi.co.tz ukihitaji msaada." : "This deal can't be reopened directly. Contact support@sokomkononi.co.tz if you need help."}
-            </p>
-          )}
-          {reopenInfo && (<div className="w-full max-w-md"><ErrorCallout info={reopenInfo} /></div>)}
-        </div>
-      )}
-
-      {chatError && (
-        <div style={{ background: "rgba(193,80,46,0.1)", color: COLORS.rust, borderColor: COLORS.sandLine }} className="border-t px-3 sm:px-4 py-2 text-body-sm font-medium text-center">{chatError}</div>
-      )}
-
-      {/* Composer */}
-      {deal.status !== "declined" && deal.status !== "cancelled" && (
-        <div style={{ borderColor: COLORS.sandLine, background: "white" }} className="flex items-center gap-2 p-3 border-t">
-          <input style={{ background: COLORS.sand, borderColor: COLORS.sandLine, color: COLORS.night }} className="flex-1 rounded-full border px-4 py-2.5 text-sm outline-none" placeholder={lang === "sw" ? "Andika ujumbe..." : "Type a message..."} value={text} onChange={(e) => { setText(e.target.value); if (chatError) setChatError(""); }} onKeyDown={(e) => e.key === "Enter" && handleSend()} />
-          <button onClick={handleSend} style={{ background: COLORS.gold, color: COLORS.night }} className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" aria-label="Send"><Send size={16} /></button>
-        </div>
-      )}
-
-      {/* Report Modal */}
-      {reportOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div style={{ background: "white", borderColor: COLORS.sandLine }} className="rounded-2xl border w-full max-w-md p-5">
-            <h3 className="text-primary text-base font-bold mb-3 flex items-center gap-2">
-              <Flag size={16} color={COLORS.rust} />
-              {side === "buyer" ? (lang === "sw" ? "Ripoti Muuzaji" : "Report this Seller") : (lang === "sw" ? "Ripoti Mnunuzi" : "Report this Buyer")}
-            </h3>
-
-            {reportSuccess ? (
-              <div style={{ color: COLORS.green, background: "rgba(47,109,79,0.1)" }} className="rounded-lg p-3 text-sm text-center mb-3">
-                {lang === "sw" ? "Ripoti yako imetumwa. Timu yetu itachukua hatua ndani ya saa 24." : "Your report has been sent. Our team will act within 24 hours."}
-              </div>
-            ) : (
-              <>
-                <label className="text-xs font-semibold text-secondary">{lang === "sw" ? "Sababu" : "Reason"}</label>
-                <select value={reportReason} onChange={(e) => setReportReason(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm mb-3 mt-1" style={{ borderColor: COLORS.sandLine }}>
-                  <option value="FRAUD">{lang === "sw" ? "Utapeli / Uongo" : "Fraud / Dishonesty"}</option>
-                  <option value="HARASSMENT">{lang === "sw" ? "Unyanyasaji / Vitisho" : "Harassment / Threats"}</option>
-                  <option value="NO_SHOW">{lang === "sw" ? "Hakufika kwenye Ukaguzi" : "No-show at inspection"}</option>
-                  <option value="FAKE_DOCS">{lang === "sw" ? "Hati za Uongo" : "Fake documents"}</option>
-                  <option value="OFF_PLATFORM">{lang === "sw" ? "Kutaka Malipo Nje ya Jukwaa" : "Off-platform payment request"}</option>
-                  <option value="OTHER">{lang === "sw" ? "Nyingine" : "Other"}</option>
-                </select>
-
-                <label className="text-xs font-semibold text-secondary">{lang === "sw" ? "Maelezo" : "Details"}</label>
-                <textarea value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} rows={4} placeholder={lang === "sw" ? "Eleza kwa ufupi tatizo (angalau herufi 10)..." : "Describe the issue briefly (at least 10 chars)..."} className="w-full border rounded-lg px-3 py-2 text-sm mb-3 mt-1 resize-none" style={{ borderColor: COLORS.sandLine }} />
-
-                {reportDetails.trim().length > 0 && reportDetails.trim().length < 10 && (
-                  <p className="text-xs mb-2" style={{ color: COLORS.rust }}>
-                    {lang === "sw" ? "Tafadhali toa maelezo ya kutosha (angalau herufi 10)." : "Please provide enough details (at least 10 chars)."}
-                  </p>
-                )}
-
-                <div className="flex gap-2">
-                  <button onClick={() => { setReportOpen(false); setReportDetails(""); setReportReason("FRAUD"); }} disabled={reportBusy} style={{ borderColor: COLORS.sandLine }} className="flex-1 border text-sm font-semibold px-3 py-2 rounded-lg disabled:opacity-50">
-                    {lang === "sw" ? "Ghairi" : "Cancel"}
-                  </button>
-                  <button onClick={handleReportSubmit} disabled={reportDetails.trim().length < 10 || reportBusy} style={{ background: reportDetails.trim().length >= 10 ? COLORS.rust : COLORS.sandLine, color: "white" }} className="flex-1 text-sm font-semibold px-3 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                    {reportBusy ? (lang === "sw" ? "Inatuma..." : "Sending...") : (lang === "sw" ? "Tuma Ripoti" : "Send Report")}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      <ContactDrawer open={contactDrawerOpen} onClose={() => setContactDrawerOpen(false)} lang={lang} dealId={deal.dealRoomId || deal.id} currentUserId={user?.id} contact={{ name: deal.counterpartyName, phone: isBuyer ? sellerPhone : buyerPhone, email: isBuyer ? sellerEmail : buyerEmail, role: isBuyer ? "seller" : "buyer", userId: isBuyer ? deal.sellerId : deal.buyerId }} />
-    </div>
-  );
-}
-
-// ============================================================
-// DEAL ROOMS — main
-// ============================================================
-export default function DealRooms({
-  side = "seller",
-  initialDealId = null,
-  onReservationPaid,
-  onFinalPaymentConfirmed,
-}) {
-  const { user } = useAuth();
-  const deals = useDeals(user?.id, side);
-  const { lang } = useLanguage();
-  const [searchParams] = useSearchParams();
-  const [selectedId, setSelectedId] = useState(initialDealId);
-  const [mobileShowDetail, setMobileShowDetail] = useState(Boolean(initialDealId));
-  const [transactionIds, setTransactionIds] = useState({});
-  const [offlineMode, setOfflineMode] = useState(false);
-
-  const listingIdParam = searchParams.get("listing");
-  const actionParam = searchParams.get("action");
-
-  useEffect(() => {
-    if (initialDealId) { setSelectedId(initialDealId); setMobileShowDetail(true); }
-  }, [initialDealId]);
-
-  useEffect(() => {
-    if (actionParam !== "reserve" || !listingIdParam) return;
-    const targetDeal = deals.find((d) => String(d.listingId) === String(listingIdParam));
-    if (targetDeal) { setSelectedId(targetDeal.id); setMobileShowDetail(true); }
-  }, [deals, actionParam, listingIdParam]);
-
-  const selectedDeal = deals.find((d) => d.id === selectedId) || deals[0];
-  const updateDeal = (id, patchOrUpdater) => { updateDealInStore(id, patchOrUpdater); };
-
-  const handleSelect = (id) => { setSelectedId(id); setMobileShowDetail(true); };
-
-  const [detailFetchedAt, setDetailFetchedAt] = useState({});
-  const [detailError, setDetailError] = useState({});
-
-  useEffect(() => {
-    if (!selectedDeal?.id) return;
-    const lastFetch = detailFetchedAt[selectedDeal.id];
-    if (lastFetch && Date.now() - lastFetch < 5000) return;
-    if (detailError[selectedDeal.id] === "not_found") return;
-
-    setDetailFetchedAt((prev) => ({ ...prev, [selectedDeal.id]: Date.now() }));
-
-    fetchDealDetailAsync(selectedDeal.dealRoomId || selectedDeal.id)
-      .then((res) => {
-        if (res?.ok && res.deal) updateDealInStore(selectedDeal.id, res.deal);
-        else if (res?.error) {
-          const status = res.error?.status;
-          if (status === 404) {
-            setDetailError((prev) => ({ ...prev, [selectedDeal.id]: "not_found" }));
-            console.info(`[DealRooms] Deal #${selectedDeal.id} haipo kwenye backend — skip fetch`);
-          }
-        }
-      })
-      .catch((err) => { console.info(`[DealRooms] detail fetch for deal #${selectedDeal.id} failed:`, err?.message || err); });
-  }, [selectedDeal?.id]);
-
-  const ensureTransactionId = async (deal) => {
-    let txId = transactionIds[deal.id] || deal.transactionId;
-    if (txId) return txId;
-
-    const res = await callApiOrFallback(() => createTransactionAsync(deal.dealRoomId || deal.id));
-
-    if (res.offline) {
-      setOfflineMode(true);
-      console.error("[DealRooms] Backend haipo — hakuna fallback");
-      return null;
-    }
-
-    if (!res.ok) {
-      const errMsg = String(res.error?.message || res.error?.data?.detail || "");
-      const isAlreadyCreated = errMsg.toLowerCase().includes("tayari imeundwa") || errMsg.toLowerCase().includes("already") || res.error?.status === 400;
-
-      if (isAlreadyCreated) {
-        console.info("[DealRooms] Transaction tayari imeundwa — fetching detail...");
-        try {
-          const detailRes = await dealsApi.detail(deal.dealRoomId || deal.id);
-          const existingTxId = detailRes?.transaction_id ?? detailRes?.transaction?.id;
-          if (existingTxId) {
-            setTransactionIds((prev) => ({ ...prev, [deal.id]: existingTxId }));
-            updateDeal(deal.id, { transactionId: existingTxId });
-            return existingTxId;
-          }
-        } catch (fetchErr) {
-          const fetchStatus = fetchErr?.status;
-          if (fetchStatus === 404) {
-            setDetailError((prev) => ({ ...prev, [deal.id]: "not_found" }));
-            console.info(`[DealRooms] Deal #${deal.id} haipo kwenye backend — cannot recover transaction`);
-            alert(lang === "sw" ? "Deal hii haipo kwenye mfumo. Tafadhali refresh ukurasa." : "This deal no longer exists. Please refresh the page.");
-          } else {
-            console.warn("[DealRooms] fetch detail failed after 400:", fetchErr?.message || fetchErr);
-          }
-        }
-      }
-
-      console.warn("[DealRooms] createTransaction failed:", res.error?.message);
-      return null;
-    }
-
-    txId = res.transaction?.id;
-    if (txId) setTransactionIds((prev) => ({ ...prev, [deal.id]: txId }));
-    return txId;
-  };
-
-  const handleSendMessage = async (id, text) => {
-    const deal = deals.find((d) => String(d.id) === String(id));
-    if (!deal) return;
-
-    const tempId = `m_${Date.now()}`;
-    const optimisticMsg = { id: tempId, sender: "me", text, at: new Date().toISOString() };
-    updateDeal(id, (prev) => ({ ...prev, messages: [...(prev.messages || []), optimisticMsg] }));
-
-    try {
-      const res = await dealsApi.sendDealMessage(deal.dealRoomId || deal.id, { text });
-      updateDeal(id, (prev) => ({
-        ...prev,
-        messages: (prev.messages || []).map((m) => (m.id === tempId ? { ...m, id: res?.id ?? m.id, at: res?.created_at || m.at } : m)),
-      }));
-    } catch (err) {
-      console.error("[DealRooms] sendDealMessage failed:", err);
-      updateDeal(id, (prev) => ({ ...prev, messages: (prev.messages || []).filter((m) => m.id !== tempId) }));
-      alert(err?.message || (lang === "sw" ? "Imeshindwa kutuma ujumbe." : "Failed to send message."));
-    }
-  };
-
-  const handleSendOffer = async (id, amount) => {
-    const res = await sendOfferAsync(id, amount, "", null, user?.id);
-    if (!res.ok) {
-      console.warn("[DealRooms] sendOffer failed:", res.error);
-      alert(res.error?.message || (lang === "sw" ? "Imeshindwa kutuma ofa. Jaribu tena." : "Failed to send offer. Try again."));
-    }
-  };
-
-  const handleRespond = async (id, newStatus) => {
-    const deal = deals.find((d) => d.id === id);
-    if (!deal) return;
-
-    const lastOffer = [...(deal.messages || [])].reverse().find((m) => m.offerAmount && !["declined", "rejected", "cancelled"].includes(String(m.status || "").toLowerCase()));
-    if (!lastOffer) return;
-    if (lastOffer.sender === "me") return;
-
-    if (newStatus === "accepted") {
-      const res = await acceptOfferAsync(id, lastOffer.id, user?.id);
-      if (!res.ok) {
-        console.warn("[DealRooms] acceptOffer failed:", res.error);
-        alert(res.error?.message || (lang === "sw" ? "Imeshindwa kukubali ofa. Jaribu tena." : "Failed to accept offer. Try again."));
-      }
-      return;
-    }
-
-    if (newStatus === "declined") {
-      const roomId = deal.dealRoomId || deal.id;
-      updateDeal(id, (prev) => ({
-        ...prev,
-        currentOffer: 0,
-        messages: (prev.messages || []).map((m) => (String(m.id) === String(lastOffer.id) ? { ...m, status: "declined" } : m)),
-      }));
-      try {
-        try { await dealsApi.declineOffer(roomId, lastOffer.id); }
-        catch (declineErr) { if (declineErr?.status !== 404 && declineErr?.status !== 501) throw declineErr; }
-        await dealsApi.sendDealMessage(roomId, {
-          text: lang === "sw"
-            ? `Ofa ya ${formatTZS(lastOffer.offerAmount)} ilikataliwa. Tafadhali toa ofa nyingine.`
-            : `The offer of ${formatTZS(lastOffer.offerAmount)} was declined. Please make another offer.`,
-        });
-      } catch (msgErr) { console.warn("[DealRooms] decline message failed:", msgErr); }
-      return;
-    }
-  };
-
-  const handleReopen = async (id) => {
-    const deal = deals.find((d) => String(d.id) === String(id));
-    if (!deal) return { ok: false };
-    const roomId = deal.dealRoomId || deal.id;
-    try {
-      await reopenDealRoom(roomId);
-      const detail = await fetchDealDetailAsync(roomId);
-      if (detail?.ok && detail.deal) updateDealInStore(id, detail.deal);
-      else updateDealInStore(id, (prev) => ({ ...prev, status: "negotiating", currentOffer: 0 }));
-      return { ok: true };
-    } catch (err) {
-      console.warn("[DealRooms] reopen failed:", err);
-      return { ok: false, error: err };
-    }
-  };
-
-  const finalizeLocalReservation = (id, deal, { hours, fee, method, expiresAt }) => {
-    const nowExpiresAt = expiresAt || new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-    const note = method === "free"
-      ? (lang === "sw" ? `Reservation imewekwa BURE — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.` : `Reservation placed for FREE — duration: ${formatHours(hours, lang)}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`)
-      : method === "credits"
-        ? (lang === "sw" ? `Reservation Deposit imelipwa kwa CREDITS — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.` : `Reservation Deposit paid with CREDITS — duration: ${formatHours(hours, lang)}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`)
-        : (lang === "sw" ? `Reservation Deposit ya ${formatTZS(fee)} imelipwa (${method}) — muda: ${formatHours(hours, lang)}. Inaisha ${new Date(nowExpiresAt).toLocaleString("sw-TZ")}.` : `Reservation Deposit of ${formatTZS(fee)} paid (${method}) — duration: ${formatHours(hours, lang)}. Ends ${new Date(nowExpiresAt).toLocaleString("en-US")}.`);
-
-    updateDeal(id, {
-      status: "reserved",
-      transactionId: deal.transactionId || transactionIds[id] || null,
-      reservationHours: hours,
-      reservationFee: fee,
-      reservationMethod: method,
-      reservationExpiresAt: nowExpiresAt,
-      reservationPaidAt: new Date().toISOString(),
-      pendingPayment: null,
-      messages: [...deal.messages, { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() }],
-    });
-
-    onReservationPaid?.(deal, { hours, fee, method, expiresAt: nowExpiresAt });
-  };
-
-  const handleReserveConfirm = async (id, { hours, fee, method, phone, cardNumber }) => {
-    const deal = deals.find((d) => d.id === id);
-    if (!deal) return;
-
-    if (detailError[id] === "not_found") {
-      alert(lang === "sw" ? "Deal hii haipo kwenye mfumo. Tafadhali refresh ukurasa." : "This deal no longer exists. Please refresh the page.");
-      return;
-    }
-
-    let txId = deal.transactionId;
-    if (!txId) txId = await ensureTransactionId(deal);
-    else console.info(`[DealRooms] Deal #${id} already has transaction #${txId}, skipping create`);
-
-    if (!txId) {
-      alert(lang === "sw" ? "Imeshindwa kuunda transaction. Jaribu tena." : "Failed to create transaction. Please try again.");
-      return;
-    }
-
-    if (method === "credits") {
-      try {
-        const payRes = await callApiOrFallback(() => payReservationAsync(txId, { paymentReference: "credits" }));
-        if (!payRes.offline && !payRes.ok) {
-          alert(payRes.error?.message || (lang === "sw" ? "Imeshindwa kutumia credit." : "Failed to use credit."));
-          return;
-        }
-        const expiresAt = payRes.transaction?.reservationExpiresAt || new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-        return finalizeLocalReservation(id, deal, { hours, fee: 0, method: "credits", expiresAt });
-      } catch (err) {
-        alert(err?.message || (lang === "sw" ? "Imeshindwa kutumia credit." : "Failed to use credit."));
-        return;
-      }
-    }
-
-    const reserveRes = await callApiOrFallback(() => createReservationAsync(txId, hours));
-    if (reserveRes.offline) {
-      alert(lang === "sw" ? "Backend haipatikani. Jaribu tena baadaye." : "Backend unavailable. Try again later.");
-      return;
-    }
-    if (!reserveRes.ok) {
-      alert(reserveRes.error?.message || (lang === "sw" ? "Imeshindwa kuweka reservation." : "Failed to create reservation."));
-      return;
-    }
-
-    const activatedStatus = reserveRes.transaction?.status;
-    if (activatedStatus === TX_STATUS.RESERVED_PAID) {
-      const expiresAt = reserveRes.transaction.reservationExpiresAt || new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-      return finalizeLocalReservation(id, deal, { hours, fee: 0, method: "free", expiresAt });
-    }
-
-    const isMobile = isMobileMoneyMethod(method);
-    const isBank = isBankMethod(method);
-    const paymentMethodKey = isBank ? "card" : isMobile ? "mobile" : "";
-
-    const payRes = await callApiOrFallback(() => payReservationAsync(txId, {
-      paymentReference: null,
-      paymentMethod: paymentMethodKey,
-      phone: isMobile ? phone || "" : "",
-    }));
-
-    if (!payRes.offline && !payRes.ok) {
-      alert(payRes.error?.message || (lang === "sw" ? "Imeshindwa kulipa reservation." : "Failed to pay reservation."));
-      return;
-    }
-
-    if (payRes.pending) {
-      updateDeal(id, {
-        status: "accepted",
-        pendingPayment: { orderId: payRes.orderId, reference: payRes.reference, checkoutUrl: payRes.checkoutUrl, amount: fee, method },
-        messages: [...deal.messages, {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          text: lang === "sw"
-            ? `Malipo ya Reservation yameanzishwa (${method}). Kumbukumbu: ${payRes.reference}. Tafadhali kamilisha malipo ili reservation iwashwe.`
-            : `Reservation payment initiated (${method}). Reference: ${payRes.reference}. Please complete payment to activate the reservation.`,
-          at: new Date().toISOString(),
-        }],
-      });
-
-      if (payRes.checkoutUrl) {
-        try { window.open(payRes.checkoutUrl, "_blank", "noopener,noreferrer"); } catch { /* noop */ }
-      }
-
-      alert(lang === "sw"
-        ? `Malipo yameanzishwa.\n\nKumbukumbu: ${payRes.reference}\nKiasi: ${formatTZS(fee)}\n\nTafadhali kamilisha malipo. Reservation itawashwa mara moja baada ya malipo kuthibitishwa.`
-        : `Payment initiated.\n\nReference: ${payRes.reference}\nAmount: ${formatTZS(fee)}\n\nPlease complete the payment. The reservation will activate as soon as payment is confirmed.`);
-
-      const pollRes = await pollReservationStatusAsync(txId, { attempts: 15, intervalMs: 4000 });
-
-      if (pollRes.ok) {
-        const expiresAt = pollRes.transaction.reservationExpiresAt || null;
-        finalizeLocalReservation(id, deal, { hours, fee, method, expiresAt });
-      } else {
-        alert(lang === "sw" ? "Malipo bado hayajathibitishwa. Tafadhali angalia 'My Transactions' baadaye." : "Payment is not yet confirmed. Please check 'My Transactions' shortly.");
-      }
-      return;
-    }
-
-    const expiresAt = payRes.transaction?.reservationExpiresAt || new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-    finalizeLocalReservation(id, deal, { hours, fee, method, expiresAt });
-  };
-
-  const handleInspectionResolve = async (id, outcome, note) => {
-    const deal = deals.find((d) => d.id === id);
-    if (!deal) return;
-    let txId = transactionIds[id] || deal.transactionId;
-
-    if (!txId) {
-      try {
-        const detailRes = await dealsApi.detail(deal.dealRoomId || deal.id);
-        txId = detailRes?.transaction_id ?? detailRes?.transaction?.id;
-        if (txId) { setTransactionIds((prev) => ({ ...prev, [id]: txId })); updateDeal(id, { transactionId: txId }); }
-      } catch (fetchErr) { console.warn("[DealRooms] fetch detail failed:", fetchErr); }
-    }
-
-    if (!txId) {
-      alert(lang === "sw" ? "Transaction haipatikani kwa deal hii." : "Transaction not found for this deal.");
-      return;
-    }
-
-    let apiRes;
-    if (outcome === "READY_FOR_FINAL_PAYMENT") {
-      apiRes = await callApiOrFallback(() => submitDecisionAsync(txId, { buyerDecision: "ACCEPT", buyerDecisionNote: note || "" }));
-    } else if (outcome === "REQUEST_NEGOTIATION") {
-      apiRes = await callApiOrFallback(() => submitDecisionAsync(txId, { buyerDecision: "REQUEST_NEGOTIATION", buyerDecisionNote: note || "" }));
-    } else if (outcome === "NOT_AS_DESCRIBED") {
-      apiRes = await callApiOrFallback(() => submitDecisionAsync(txId, { buyerDecision: "REJECT", buyerDecisionNote: note || "" }));
-    } else if (outcome === "CANCEL") {
-      apiRes = await callApiOrFallback(() => cancelTransactionAsync(txId, note || ""));
-    }
-
-    if (apiRes && !apiRes.offline && !apiRes.ok) {
-      alert(apiRes.error?.message || (lang === "sw" ? "Imeshindwa kusasisha." : "Failed to update."));
-      return;
-    }
-
-    const baseNote = {
-      READY_FOR_FINAL_PAYMENT: lang === "sw" ? "Mnunuzi ameridhika na ukaguzi — tayari kwa malipo ya mwisho." : "Buyer is satisfied with the inspection — ready for final payment.",
-      REQUEST_NEGOTIATION: lang === "sw" ? "Mnunuzi ameomba negotiation nyingine baada ya ukaguzi." : "Buyer requested another negotiation after inspection.",
-      NOT_AS_DESCRIBED: lang === "sw" ? "Mnunuzi ameripoti: bidhaa/mali sio kama ilivyoelezwa." : "Buyer reported: the property is not as described.",
-      CANCEL: lang === "sw" ? "Mnunuzi ameghairi deal baada ya ukaguzi." : "Buyer cancelled the deal after inspection.",
-    }[outcome] || "";
-
-    const fullNote = note ? `${baseNote} ${lang === "sw" ? "Sababu" : "Reason"}: ${note}` : baseNote;
-    const newMessages = [...deal.messages, { id: `m_${Date.now()}`, sender: "me", text: fullNote, at: new Date().toISOString() }];
-
-    if (outcome === "READY_FOR_FINAL_PAYMENT") updateDeal(id, { status: "awaiting_final_payment", messages: newMessages });
-    else if (outcome === "REQUEST_NEGOTIATION") updateDeal(id, { status: "disputed", disputeNote: note, messages: newMessages });
-    else if (outcome === "NOT_AS_DESCRIBED") updateDeal(id, { status: "disputed", disputeNote: note, messages: newMessages });
-    else if (outcome === "CANCEL") updateDeal(id, { status: "cancelled", cancelNote: note, messages: newMessages });
-  };
-
-  const handleProofSubmit = async (id, proof) => {
-    const deal = deals.find((d) => d.id === id);
-    if (!deal) return;
-    const txId = transactionIds[id] || deal.transactionId;
-
-    if (!txId) {
-      alert(lang === "sw" ? "Transaction haipatikani kwa deal hii." : "Transaction not found for this deal.");
-      return;
-    }
-
-    try {
-      const apiRes = await uploadFinalPaymentAsync(txId, { finalPaymentProof: proof.file, finalPaymentReference: proof.reference });
-      if (apiRes && apiRes.ok === false) {
-        alert(apiRes.error?.message || (lang === "sw" ? "Imeshindwa kupakia uthibitisho." : "Failed to upload proof."));
-        return;
-      }
-    } catch (err) {
-      alert(err?.message || (lang === "sw" ? "Imeshindwa kupakia uthibitisho." : "Failed to upload proof."));
-      return;
-    }
-
-    const note = lang === "sw"
-      ? `Uthibitisho wa malipo umetumwa (${proof.method}, Ref: ${proof.reference}).`
-      : `Payment proof submitted (${proof.method}, Ref: ${proof.reference}).`;
-
-    updateDeal(id, {
-      status: "payment_proof_submitted",
-      paymentProof: { method: proof.method, reference: proof.reference, submittedAt: new Date().toISOString() },
-      messages: [...deal.messages, { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() }],
-    });
-  };
-
-  const handleProofConfirm = async (id) => {
-    const deal = deals.find((d) => d.id === id);
-    if (!deal) return;
-    const txId = transactionIds[id] || deal.transactionId;
-
-    if (!txId) {
-      alert(lang === "sw" ? "Transaction haipatikani kwa deal hii." : "Transaction not found for this deal.");
-      return;
-    }
-
-    const apiRes = await callApiOrFallback(() => confirmPaymentAsync(txId, ""));
-    if (!apiRes.offline && !apiRes.ok) {
-      alert(apiRes.error?.message || (lang === "sw" ? "Imeshindwa kuthibitisha malipo." : "Failed to confirm payment."));
-      return;
-    }
-
-    const note = lang === "sw"
-      ? "Muuzaji amethibitisha: Nimepokea Malipo. Muamala umekamilika."
-      : "Seller confirmed: Payment received. Transaction completed.";
-
-    updateDeal(id, {
-      status: "completed",
-      messages: [...deal.messages, { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() }],
-    });
-
-    onFinalPaymentConfirmed?.(deal, side, { method: deal.paymentProof?.method, reference: deal.paymentProof?.reference });
-  };
-
-  const handleProofReject = async (id, reason) => {
-    const deal = deals.find((d) => d.id === id);
-    if (!deal) return;
-    const txId = transactionIds[id] || deal.transactionId;
-
-    if (!txId) {
-      alert(lang === "sw" ? "Transaction haipatikani kwa deal hii." : "Transaction not found for this deal.");
-      return;
-    }
-
-    try { await transactionsApi.rejectPaymentProof(txId, reason || ""); }
-    catch (err) {
-      alert(err?.message || (lang === "sw" ? "Imeshindwa kutuma." : "Failed to send."));
-      return;
-    }
-
-    const note = reason
-      ? (lang === "sw" ? `Muuzaji bado hajapokea malipo. Sababu: ${reason}. Tafadhali pakia uthibitisho tena.` : `Seller has not received payment yet. Reason: ${reason}. Please re-upload proof.`)
-      : (lang === "sw" ? "Muuzaji bado hajapokea malipo. Tafadhali pakia uthibitisho tena." : "Seller has not received payment yet. Please re-upload proof.");
-
-    updateDeal(id, {
-      status: "awaiting_final_payment",
-      paymentProof: null,
-      messages: [...deal.messages, { id: `m_${Date.now()}`, sender: "me", text: note, at: new Date().toISOString() }],
-    });
-  };
-
-  return (
-    <div style={{ background: COLORS.sand, minHeight: "600px" }} className="w-full">
-      <div className="p-4 sm:p-6 pb-0 text-center">
-        <h1 className="h-title">{lang === "sw" ? "Vyumba vya Majadiliano" : "Deal Rooms"}</h1>
-        <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
-          {side === "seller"
-            ? (lang === "sw" ? "Negotiate moja kwa moja na wanunuzi wenye nia ya mali yako." : "Negotiate directly with buyers interested in your property.")
-            : (lang === "sw" ? "Negotiate moja kwa moja na wauzaji wa mali unazovutiwa nazo." : "Negotiate directly with sellers of properties you're interested in.")}
-        </p>
-        {offlineMode && (
-          <p style={{ color: COLORS.rust }} className="text-body-sm mt-2 max-w-xl mx-auto">
-            {lang === "sw" ? "⚠️ Backend haipatikani. Baadhi ya vitendo havitafanya kazi." : "⚠️ Backend unavailable. Some actions will fail."}
-          </p>
         )}
-      </div>
-
-      <div className="flex" style={{ height: "560px" }}>
-        <div style={{ borderColor: COLORS.sandLine }} className={`${mobileShowDetail ? "hidden" : "flex"} md:flex flex-col w-full md:w-80 shrink-0 border-r px-3 sm:px-4 pb-4 gap-2 overflow-y-auto`}>
-          {deals.map((d) => (<DealListItem key={d.id} deal={d} active={d.id === selectedId} onSelect={handleSelect} lang={lang} />))}
-        </div>
-
-        <div className={`${mobileShowDetail ? "flex" : "hidden"} md:flex flex-1 min-w-0 flex-col`}>
-          {selectedDeal ? (
-            <DealDetail
-              deal={selectedDeal}
-              side={side}
-              lang={lang}
-              user={user}
-              onBack={() => setMobileShowDetail(false)}
-              onSendMessage={handleSendMessage}
-              onSendOffer={handleSendOffer}
-              onRespond={handleRespond}
-              onReopen={handleReopen}
-              onReserveConfirm={handleReserveConfirm}
-              onInspectionResolve={handleInspectionResolve}
-              onProofSubmit={handleProofSubmit}
-              onProofConfirm={handleProofConfirm}
-              onProofReject={handleProofReject}
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-muted text-sm">{lang === "sw" ? "Chagua deal room kuanza mazungumzo." : "Select a deal room to start chatting."}</p>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
