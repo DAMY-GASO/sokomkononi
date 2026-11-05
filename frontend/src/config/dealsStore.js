@@ -110,7 +110,6 @@ function resolveAskingPrice(raw, listing, listingId) {
 
 function resolveCurrentOffer(raw, offers) {
   const all = Array.isArray(offers) ? offers : raw?.offers || [];
-  // Ofa zilizokataliwa hazihesabiwi kama "ofa ya sasa"
   const arr = all.filter((o) => {
     const s = String(o?.status || "").toUpperCase();
     return s !== "DECLINED" && s !== "REJECTED";
@@ -194,6 +193,43 @@ function _nameOf(...objs) {
 }
 
 // ============================================================
+// NORMALIZE MESSAGE — kutambua admin, user, na is_hidden
+// ============================================================
+function normalizeMessage(raw, currentUserId, roomBuyerId, roomSellerId) {
+  const senderId = raw.sender_id ?? raw.senderId ?? raw.sender ?? null;
+
+  // Ujumbe wa admin una `kind === "ADMIN"` au sender hana id ya buyer/seller
+  const rawKind = String(raw.kind || "").toUpperCase();
+  const isAdminKind = rawKind === "ADMIN";
+
+  let sender = "them";
+  if (isAdminKind) {
+    sender = "admin";
+  } else if (sameId(senderId, currentUserId)) {
+    sender = "me";
+  } else {
+    // Katika muktadha wa admin viewer, currentUserId = null.
+    // Tunaangalia kama sender ni buyer au seller wa room.
+    if (sameId(senderId, roomBuyerId)) sender = "buyer";
+    else if (sameId(senderId, roomSellerId)) sender = "seller";
+    else sender = "them";
+  }
+
+  return {
+    id: raw.id,
+    sender,
+    senderId,
+    senderName: raw.sender_name || raw.senderName || "",
+    text: raw.text || "",
+    kind: isAdminKind ? "ADMIN" : "USER",
+    isHidden: !!raw.is_hidden || !!raw.isHidden,
+    offerAmount: null,
+    at: raw.created_at || raw.at || null,
+    status: raw.status || null,
+  };
+}
+
+// ============================================================
 // NORMALIZE — API → frontend shape
 // ============================================================
 function normalizeDealFromApi(raw, currentUserId) {
@@ -261,6 +297,24 @@ function normalizeDealFromApi(raw, currentUserId) {
     (Array.isArray(listingCached?.photos) && listingCached.photos) ||
     [];
 
+  // ── MPYA: admin moderation fields ──
+  const adminLocked =
+    raw.admin_locked === true ||
+    raw.adminLocked === true;
+  const lockedReason =
+    raw.locked_reason || raw.lockedReason || "";
+  const lockedAt =
+    raw.locked_at || raw.lockedAt || null;
+  const lockedByName =
+    raw.locked_by_name || raw.lockedByName ||
+    (raw.locked_by && typeof raw.locked_by === "object"
+      ? raw.locked_by.name || ""
+      : "") ||
+    "";
+  const cancelledByAdmin =
+    raw.cancelled_by_admin === true ||
+    raw.cancelledByAdmin === true;
+
   return {
     id: raw.id,
     dealRoomId: dealRoom.id ?? raw.deal_room ?? null,
@@ -309,8 +363,7 @@ function normalizeDealFromApi(raw, currentUserId) {
     buyerDecision: raw.buyer_decision || null,
     buyerDecisionNote: raw.buyer_decision_note || "",
 
-    // ── Contact visibility (MPYA) ──────────────────────────
-    // True kama reservation imelipwa — mawasiliano yanafunguliwa
+    // ── Contact visibility ─────────────────────────────────
     canSeeContact: !!raw.can_see_contact,
 
     // ── Payment proof ──────────────────────────────────────
@@ -331,13 +384,24 @@ function normalizeDealFromApi(raw, currentUserId) {
       : null,
     finalPaymentReference: raw.final_payment_reference || "",
 
-    // ── Cancel note (bila dispute) ─────────────────────────
+    // ── Cancel note ────────────────────────────────────────
     cancelNote: raw.cancellation_reason || raw.cancel_note || "",
 
     // ── Money ──────────────────────────────────────────────
     commission:
       raw.commission != null ? Number(raw.commission) : null,
     currency: raw.currency || "TZS",
+
+    // ── MPYA: admin moderation ────────────────────────────
+    adminLocked,
+    lockedReason,
+    lockedAt,
+    lockedByName,
+    cancelledByAdmin,
+    // CamelCase aliases kwa vipengele vipya tu vinavyotumika frontend
+    admin_locked: adminLocked,
+    locked_reason: lockedReason,
+    cancelled_by_admin: cancelledByAdmin,
 
     // ── Timestamps ─────────────────────────────────────────
     createdAt: raw.created_at || raw.createdAt || null,
@@ -350,22 +414,17 @@ function normalizeDealFromApi(raw, currentUserId) {
     _rawStatus: statusRaw,
 
     messages: [
-      ...(raw.messages || []).map((m) => ({
-        id: m.id,
-        sender: sameId(m.sender_id ?? m.sender, currentUserId) ? "me" : "them",
-        senderName: m.sender_name || "",
-        senderId: m.sender_id ?? m.sender ?? null,
-        text: m.text || "",
-        offerAmount: null,
-        at: m.created_at,
-        status: m.status || null,
-      })),
+      ...(raw.messages || []).map((m) =>
+        normalizeMessage(m, currentUserId, buyerId, sellerId)
+      ),
       ...(raw.offers || []).map((o) => ({
         id: o.id,
         sender: sameId(o.offered_by, currentUserId) ? "me" : "them",
-        senderName: o.offered_by_name || "",
         senderId: o.offered_by ?? null,
+        senderName: o.offered_by_name || "",
         text: o.message || "",
+        kind: "USER",
+        isHidden: false,
         offerAmount: Number(o.amount) || null,
         at: o.created_at,
         status: o.status,
@@ -375,7 +434,7 @@ function normalizeDealFromApi(raw, currentUserId) {
 }
 
 // ============================================================
-// HYDRATE FROM API — with pagination support
+// HYDRATE FROM API
 // ============================================================
 let _dealsUserId = null;
 
@@ -587,6 +646,15 @@ export async function sendOfferAsync(
   const deal = previous.find((d) => sameId(d.id, dealId));
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
 
+  if (deal.adminLocked) {
+    return {
+      ok: false,
+      error: new Error(
+        "Deal Room imesimamishwa na admin — haiwezi kupokea offers."
+      ),
+    };
+  }
+
   if (currentUserId != null) {
     const isBuyer =
       deal.buyerId != null && sameId(deal.buyerId, currentUserId);
@@ -610,6 +678,8 @@ export async function sendOfferAsync(
         id: tempMsgId,
         sender: "me",
         text: message,
+        kind: "USER",
+        isHidden: false,
         offerAmount: amount,
         at: new Date().toISOString(),
         status: "pending",
@@ -631,6 +701,8 @@ export async function sendOfferAsync(
         id: raw.id,
         sender: "me",
         text: raw.message || message,
+        kind: "USER",
+        isHidden: false,
         offerAmount: Number(raw.amount) || amount,
         at: raw.created_at || new Date().toISOString(),
         status: raw.status || "pending",
@@ -663,6 +735,15 @@ export async function acceptOfferAsync(dealId, offerId, currentUserId = null) {
   const previous = getDeals();
   const deal = previous.find((d) => sameId(d.id, dealId));
   if (!deal) return { ok: false, error: new Error("Deal haipo") };
+
+  if (deal.adminLocked) {
+    return {
+      ok: false,
+      error: new Error(
+        "Deal Room imesimamishwa na admin — haiwezi kukubali offer."
+      ),
+    };
+  }
 
   if (currentUserId != null) {
     const isBuyer =
@@ -730,9 +811,104 @@ export async function cancelDealAsync(dealId, reason = "") {
 }
 
 // ============================================================
-// TRANSCRIPT — kwa download (MPYA)
-// Inarudisha data tayari kwa export (TXT / PDF / CSV).
-// Inatumika na buyer, seller, na admin.
+// MPYA — ADMIN ACTIONS
+// ============================================================
+export async function adminSendMessageAsync(dealId, text) {
+  if (!text || !String(text).trim()) {
+    return { ok: false, error: new Error("Ujumbe hauwezi kuwa tupu.") };
+  }
+  try {
+    const raw = await dealsApi.admin.adminMessage(dealId, {
+      text: String(text).trim(),
+    });
+    const msg = {
+      id: raw?.id,
+      sender: "admin",
+      senderId: raw?.sender_id ?? null,
+      senderName: raw?.sender_name || "Admin",
+      text: raw?.text || text,
+      kind: "ADMIN",
+      isHidden: false,
+      at: raw?.created_at || new Date().toISOString(),
+    };
+    updateDeal(dealId, (prev) => ({
+      ...prev,
+      messages: [...(prev.messages || []), msg],
+    }));
+    return { ok: true, message: msg };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export async function adminLockDealAsync(dealId, reason) {
+  if (!reason || !String(reason).trim()) {
+    return { ok: false, error: new Error("Sababu ni lazima.") };
+  }
+  try {
+    const raw = await dealsApi.admin.lock(dealId, {
+      reason: String(reason).trim(),
+    });
+    const patch = {
+      adminLocked: raw?.admin_locked === true || raw?.adminLocked === true,
+      admin_locked: raw?.admin_locked === true,
+      lockedReason: raw?.locked_reason || raw?.lockedReason || "",
+      locked_reason: raw?.locked_reason || "",
+      lockedAt: raw?.locked_at || raw?.lockedAt || new Date().toISOString(),
+      lockedByName:
+        raw?.locked_by_name || raw?.lockedByName || "Admin",
+    };
+    updateDeal(dealId, patch);
+    return { ok: true, deal: patch };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export async function adminUnlockDealAsync(dealId, reason = "") {
+  try {
+    const raw = await dealsApi.admin.unlock(dealId, {
+      reason: String(reason || "").trim(),
+    });
+    const patch = {
+      adminLocked: false,
+      admin_locked: false,
+      lockedReason: "",
+      locked_reason: "",
+      lockedAt: null,
+      lockedByName: "",
+    };
+    updateDeal(dealId, patch);
+    return { ok: true, deal: patch };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+export async function adminCancelDealAsync(dealId, reason) {
+  if (!reason || !String(reason).trim()) {
+    return { ok: false, error: new Error("Sababu ni lazima.") };
+  }
+  try {
+    const raw = await dealsApi.admin.cancel(dealId, {
+      reason: String(reason).trim(),
+    });
+    const patch = {
+      status: "cancelled",
+      cancelledByAdmin:
+        raw?.cancelled_by_admin === true || raw?.cancelledByAdmin === true,
+      cancelled_by_admin:
+        raw?.cancelled_by_admin === true,
+    };
+    updateDeal(dealId, patch);
+    return { ok: true, deal: patch };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
+// ============================================================
+// TRANSCRIPT — kwa download
 // ============================================================
 export function getDealTranscript(dealId, currentUserId = null, lang = "sw") {
   const deal = getDeal(dealId);

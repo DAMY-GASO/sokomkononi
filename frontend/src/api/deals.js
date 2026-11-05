@@ -43,7 +43,7 @@ export const dealsApi = {
   paymentProof: (dealRoomId) =>
     api.get(`/deals/${dealRoomId}/payment-proof/`),
 
-  // ── Report buyer/seller (MPYA) ───────────────────────────
+  // ── Report buyer/seller ──────────────────────────────────
   report: (dealRoomId, { reported_user_id, reason, details }) =>
     api.post(`/deals/${dealRoomId}/report/`, {
       reported_user_id,
@@ -51,9 +51,22 @@ export const dealsApi = {
       details,
     }),
 
-  // ── ADMIN — list all deals (paginated) ───────────────────
+  // ── ADMIN ────────────────────────────────────────────────
   admin: {
     list: (params = {}) => api.get(`/admin/deals/${toQuery(params)}`),
     detail: (id) => api.get(`/admin/deals/${id}/`),
+
+    // ── MPYA: vitendo vya msimamizi ──
+    adminMessage: (id, { text }) =>
+      api.post(`/admin/deals/${id}/admin-message/`, { text }),
+
+    lock: (id, { reason }) =>
+      api.post(`/admin/deals/${id}/lock/`, { reason }),
+
+    unlock: (id, { reason = "" } = {}) =>
+      api.post(`/admin/deals/${id}/unlock/`, { reason }),
+
+    cancel: (id, { reason }) =>
+      api.post(`/admin/deals/${id}/cancel/`, { reason }),
   },
 };
