@@ -175,7 +175,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
     setBusy("extend");
     try {
       // Tuma ombi la kuongeza muda
-      await api.post(`/transactions/reservations/${reservation.id}/extend/`, { hours });
+      await api.post(`/transactions/${reservation.transaction_id}/extend-reservation/`, { additional_hours: hours });
       alert(t(`Muda umeongezwa kwa saa ${hours}.`, `Extended by ${hours} hours.`));
       onRefresh?.();
     } catch (err) {
@@ -197,7 +197,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
     if (!confirmed) return;
     setBusy("cancel");
     try {
-      await api.post(`/transactions/reservations/${reservation.id}/cancel/`, {});
+      await api.post(`/transactions/${reservation.transaction_id}/remove-reservation/`, {});
       alert(t("Reservation imeondolewa.", "Reservation removed."));
       onRefresh?.();
     } catch (err) {
@@ -358,8 +358,6 @@ export default function MyReservationsPage() {
       let data = null;
       const endpoints = [
         "/transactions/reservations/",
-        "/reservations/",
-        "/transactions/?status=reserved",
       ];
       let lastError = null;
       for (const ep of endpoints) {
