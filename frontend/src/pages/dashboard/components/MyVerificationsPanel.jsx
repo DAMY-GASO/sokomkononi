@@ -100,12 +100,12 @@ function WhyGetVerifiedCard({ lang, type }) {
       className="rounded-2xl p-4 sm:p-5 mb-4"
       style={{
         background: "linear-gradient(135deg, #011957 0%, #1a2842 100%)",
-        color: "white",
       }}
     >
       <div className="flex items-center gap-2 mb-3">
         <Award size={20} color={COLORS.gold} />
-        <h3 className="text-sm sm:text-base font-bold">
+        {/* ✅ Tumia !text-white kulazimisha rangi nyeupe */}
+        <h3 className="text-sm sm:text-base font-bold !text-white">
           {t("Kwa Nini Uthibitishe Akaunti Yako?", "Why Get Verified?")}
         </h3>
       </div>
@@ -117,7 +117,8 @@ function WhyGetVerifiedCard({ lang, type }) {
               color={COLORS.gold}
               className="shrink-0 mt-0.5"
             />
-            <span style={{ color: "rgba(255,255,255,0.9)" }}>{b}</span>
+            {/* ✅ Tumia !text-white hapa pia */}
+            <span className="!text-white">{b}</span>
           </li>
         ))}
       </ul>
@@ -126,7 +127,7 @@ function WhyGetVerifiedCard({ lang, type }) {
         style={{ background: "rgba(232,163,61,0.15)" }}
       >
         <Info size={13} color={COLORS.gold} className="shrink-0" />
-        <p className="text-[11px] sm:text-xs" style={{ color: "rgba(255,255,255,0.85)" }}>
+        <p className="text-[11px] sm:text-xs !text-white">
           {t(
             "Uthibitisho ni BURE. Utachukua siku 1-3 za kazi kukamilika.",
             "Verification is FREE. It takes 1-3 business days to complete."
