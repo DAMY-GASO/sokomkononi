@@ -22,12 +22,37 @@ export default defineConfig(({ mode }) => {
       outDir: "dist",
       sourcemap: false,
       target: "es2020",
-      chunkSizeWarningLimit: 1200,
+      cssCodeSplit: true, // ✅ Inagawanya CSS kwenye chunks ndogo badala ya file moja kubwa
+      chunkSizeWarningLimit: 800, // ✅ Ongeza uwezo wa kugawanya chunks vizuri
       rollupOptions: {
         output: {
-          manualChunks: {
-            react: ["react", "react-dom", "react-router-dom"],
-            icons: ["lucide-react"],
+          // ✅ TUNATUMIA FUNCTION BADALA YA OBJECT KWA MANUALCHUNKS
+          // Hii inaruhusu Rollup ku-group modules zote zinazohusiana (hata za dynamic import)
+          manualChunks(id) {
+            // 1. Group React, Router na state management zote pamoja
+            if (id.includes("node_modules")) {
+              if (id.includes("react") || id.includes("scheduler")) {
+                return "vendor-react";
+              }
+              if (id.includes("lucide-react")) {
+                return "vendor-icons";
+              }
+              if (id.includes("recharts") || id.includes("chart")) {
+                return "vendor-charts";
+              }
+              // Libraries zingine zote za nje
+              return "vendor-other";
+            }
+
+            // 2. Gawanya Stores (Data logic) kutoka kwenye UI
+            if (id.includes("/src/config/")) {
+              return "app-stores";
+            }
+
+            // 3. Gawanya API clients (Mtandao) kutoka kwenye UI
+            if (id.includes("/src/api/")) {
+              return "app-api";
+            }
           },
         },
       },

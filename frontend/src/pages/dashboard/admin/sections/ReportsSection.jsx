@@ -4,7 +4,6 @@ import {
   MapPin, Tag, Download, FileText, FileSpreadsheet, File, Loader2, Calendar, UserPlus
 } from "lucide-react";
 import { COLORS, formatTZS, getCategory } from "../shared/constants.js";
-import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
 import { useReports } from "../../../../config/reportsStore.js";
@@ -13,6 +12,7 @@ import {
   useListings,
   useHydratePublicListings,
 } from "../../../../config/listingsStore.js";
+import { getAccessToken } from "../../../../api/client.js";
 import { useDeals } from "../../../../config/dealsStore.js";
 import { usePlatformRevenue, localDayKey } from "../shared/revenue.js";
 import {
@@ -87,7 +87,6 @@ async function downloadReport(format, { period, from, to }) {
     params.set("period", period);
   }
   const path = `/finance/reports/export/?${params.toString()}`;
-  const { getAccessToken } = await import("../../../../api/client.js");
   const token = getAccessToken?.();
   const res = await fetch(`${base}${path}`, {
     headers: {

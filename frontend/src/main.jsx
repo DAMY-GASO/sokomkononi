@@ -6,14 +6,10 @@ import { applyTheme, getTheme } from "./config/themeStore.js";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
 
-// SokoMkononi uses Bearer tokens, not cookies. Any leftover `sessionid`
-// or `csrftoken` cookie (from an admin session or a previous backend
-// config) would trigger Django's CSRF check on every API call. Clear them
-// on every boot so a stale cookie can never break the app.
+// Safisha cookies
 function purgeStaleCsrfCookies() {
   try {
     const host = window.location.hostname;
-    // Delete on common path/domain combos the browser might have.
     const paths = ["/", "/api", "/admin", "/django-admin"];
     const domains = ["", "." + host, host];
     const names = ["sessionid", "csrftoken"];
@@ -29,20 +25,17 @@ function purgeStaleCsrfCookies() {
 }
 purgeStaleCsrfCookies();
 
-// Apply the persisted theme before first render.
+// Apply theme
 applyTheme(getTheme());
 
+// ✅ Register undo handlers ndani ya App au use static import hapa
+// Badala ya dynamic import, tunatumia static import kwa sababu ni ndogo
+import { registerRestoreHandlers } from "./config/undoStore.js";
+import { restoreListingAsync } from "./config/listingsStore.js";
 
-// ── Register undo restore handlers (survive page reload) ──
-import("./config/undoStore.js").then(
-  ({ registerRestoreHandlers }) => {
-    import("./config/listingsStore.js").then(({ restoreListingAsync }) => {
-      registerRestoreHandlers({
-        listing: (id) => restoreListingAsync(id),
-      });
-    });
-  }
-);
+registerRestoreHandlers({
+  listing: (id) => restoreListingAsync(id),
+});
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <ErrorBoundary>

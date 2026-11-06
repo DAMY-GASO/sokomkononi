@@ -594,8 +594,9 @@ html:not(.dark) [data-surface="sand"] .bg-white:not([data-keep-light]) .hover\:b
    NAVBAR ICONS — lazima zionekane kwenye navy background
    ============================================================ */
 
-/* Light mode — navbar ya PUBLIC ina bg-[#011957] (navy), kwa hiyo icons ziwe nyeupe */
-html:not(.dark) header.bg-\[\#011957\] svg, kwa hiyo icons ziwe nyeupe */
+/* Light mode — navbar ya PUBLIC ina bg-[#011957] (navy),
+   kwa hiyo icons ziwe nyeupe */
+html:not(.dark) header.bg-\[\#011957\] svg,
 html:not(.dark) header.bg-night svg,
 html:not(.dark) header[style*="background: #011957"] svg,
 html:not(.dark) header[style*="background:#011957"] svg,
@@ -606,7 +607,7 @@ html:not(.dark) header[style*="background:rgb(1,25,87)"] svg {
 }
 
 /* Ruhusu rangi maalum (gold, rust, n.k.) kwenye icons za navbar */
-html:not(.dark) header.bg-\[\#011957\] svg[stroke="#FEA406"], n.k.) kwenye icons za navbar */
+html:not(.dark) header.bg-\[\#011957\] svg[stroke="#FEA406"],
 html:not(.dark) header.bg-night svg[stroke="#FEA406"],
 html:not(.dark) header[style*="background: #011957"] svg[stroke="#FEA406"],
 html:not(.dark) header[style*="background: #011957"] svg[stroke="#C1502E"],
@@ -616,14 +617,13 @@ html:not(.dark) header[style*="background: #011957"] svg[stroke="#FF8A65"] {
 }
 
 /* Dark mode — tayari iko sawa, lakini ongeza kwa usalama */
-html.dark header.bg-\[\#011957\] svg, lakini ongeza kwa usalama */
+html.dark header.bg-\[\#011957\] svg,
 html.dark header.bg-night svg,
 html.dark header[style*="background: #011957"] svg,
 html.dark header[style*="background: rgb(1, 25, 87)"] svg {
   color: rgba(255, 255, 255, 0.88) !important;
   stroke: currentColor !important;
 }
-
 /* ============================================================
    DASHBOARD SHELL HEADER — navy daima (kama Admin)
    Icons zote ziwe nyeupe kwenye navy
