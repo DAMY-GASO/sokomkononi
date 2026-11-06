@@ -5,10 +5,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Send, Check, X, HandCoins, MapPin,
-  ChevronDown, Clock3, CreditCard, ShieldCheck, CheckCircle2,
+  ChevronDown, CreditCard, ShieldCheck, CheckCircle2,
   AlertTriangle, Ban, Upload, FileImage, ThumbsDown, PartyPopper,
-  Paperclip, Loader2, Phone, Mail, Lock, Flag, MessageSquare,
-  Download, MoreVertical, UserRound, LogOut, RotateCcw,
+  Paperclip, Loader2, Lock, Flag, MoreVertical, UserRound, LogOut,
+  RotateCcw,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS, timeAgo } from "./shared";
 import {
@@ -21,16 +21,12 @@ import {
   updateDeal as updateDealInStore,
   sendOfferAsync,
   acceptOfferAsync,
-  cancelDealAsync,
-  getDeals,
-  getDealTranscript,
   fetchDealDetailAsync,
 } from "../../../config/dealsStore.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";
-import { api } from "../../../api/client.js";
 import { dealsApi } from "../../../api/deals.js";
 import { transactionsApi } from "../../../api/transactions.js";
 import ContactDrawer from "../../../components/ContactDrawer.jsx";
@@ -43,7 +39,6 @@ import {
   createReservationAsync,
   payReservationAsync,
   pollReservationStatusAsync,
-  startInspectionAsync,
   submitDecisionAsync,
   uploadFinalPaymentAsync,
   confirmPaymentAsync,
@@ -661,7 +656,7 @@ function ReservationModal({ open, onClose, deal, lang, user, onConfirm }) {
                 {t("Hifadhi Mali Hii", "Reserve This Property")}
               </h3>
               <p className="text-[11px] text-secondary">
-                {t("Reservation Fee", "Reservation Fee")}
+                Reservation Fee
               </p>
             </div>
           </div>
@@ -990,7 +985,7 @@ function ReservationSuccessModal({ open, onClose, onContinueDeal, onGoToReservat
             className="w-full py-3 rounded-xl font-semibold text-sm border transition-colors hover:bg-gray-50"
             style={{
               borderColor: COLORS.sandLine,
-              color: COLORS.primary,
+              color: COLORS.night,
               background: "white",
             }}
           >
@@ -1049,7 +1044,7 @@ function DealListItem({ deal, active, onSelect, lang }) {
         >
           {status?.label || deal.status || "—"}
         </span>
-        {deal.adminLocked && (
+        {deal.adminLocked && deal.status !== "cancelled" && (
           <span
             className="inline-block ml-1 text-body-sm font-semibold px-2 py-0.5 rounded-full"
             style={{ background: "rgba(232,163,61,0.2)", color: "#8A5A16" }}
@@ -1168,7 +1163,8 @@ function DealDetail({
   const isSeller = side === "seller";
 
   // ── MPYA: hali ya lock/cancel ──
-  const isLocked = !!deal.adminLocked;
+  // Deal iliyoghairiwa haionyeshwi kama "imesimamishwa" (flag inaweza kubaki)
+  const isLocked = !!deal.adminLocked && deal.status !== "cancelled";
   const isCancelledByAdmin = !!deal.cancelledByAdmin;
   const canInteract = !isLocked && deal.status !== "cancelled";
 
@@ -1313,14 +1309,12 @@ function DealDetail({
           dealRoomId = deal.id;
         }
       }
-      const res = await dealsApi.report(dealRoomId, {
+      await dealsApi.report(dealRoomId, {
         reported_user_id: reportedUserId,
         reason: reportReason,
         details: reportDetails.trim(),
       });
       setReportSuccess(true);
-      if (res?.ticket_code) {
-      }
       setTimeout(() => {
         setReportOpen(false);
         setReportSuccess(false);
@@ -1642,7 +1636,7 @@ function DealDetail({
                 className="border rounded-xl px-3.5 py-2 max-w-[90%] text-body-sm text-center font-medium"
               >
                 <span style={{ color: COLORS.rust }} className="font-bold">
-                  {lang === "sw" ? "SokoMkononi Admin" : "SokoMkononi Admin"}:{" "}
+                  SokoMkononi Admin:{" "}
                 </span>
                 {text}
               </div>
@@ -2041,11 +2035,13 @@ function DealDetail({
                   ? "Deal hii imefungwa."
                   : "This deal is closed."}
             </p>
-            <p className="text-secondary text-body-sm">
-              {lang === "sw"
-                ? "Mazungumzo yenu yote yamehifadhiwa. Mmoja wenu akifufua, mnaendelea kujadiliana kutoka mlipoishia."
-                : "Your whole conversation is saved. If either of you reopens it, you continue from where you left off."}
-            </p>
+            {!isCancelledByAdmin && (
+              <p className="text-secondary text-body-sm">
+                {lang === "sw"
+                  ? "Mazungumzo yenu yote yamehifadhiwa. Mmoja wenu akifufua, mnaendelea kujadiliana kutoka mlipoishia."
+                  : "Your whole conversation is saved. If either of you reopens it, you continue from where you left off."}
+              </p>
+            )}
             {deal.status === "cancelled" && (
               <p className="text-muted text-xs">
                 {lang === "sw"
@@ -2079,6 +2075,7 @@ function DealDetail({
           ) : (
             <>
               {onReopen &&
+                !isLocked &&
                 deal.canReopen !== false &&
                 deal.can_reopen !== false && (
                   <button
@@ -2412,6 +2409,9 @@ export default function DealRooms({
 
   const [detailFetchedAt, setDetailFetchedAt] = useState({});
   const [detailError, setDetailError] = useState({});
+  // Idadi ya ujumbe unaotumwa sasa hivi — polling inasubiri ili isifute
+  // ujumbe wa muda (optimistic) kabla seva haijajibu.
+  const sendingRef = useRef(0);
 
   useEffect(() => {
     if (!selectedDeal?.id) return;
@@ -2442,6 +2442,39 @@ export default function DealRooms({
         /* noop */
       });
   }, [selectedDeal?.id]);
+
+  // ── Polling nyepesi: admin akisimamisha/akighairi/akituma ujumbe,
+  //    mtumiaji aone ndani ya sekunde chache bila kurefresh ──
+  useEffect(() => {
+    const id = selectedDeal?.id;
+    if (!id) return;
+    const roomId = selectedDeal.dealRoomId || id;
+
+    const timer = setInterval(() => {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden"
+      ) {
+        return;
+      }
+      if (sendingRef.current > 0) return;
+      fetchDealDetailAsync(roomId)
+        .then((res) => {
+          if (res?.error?.status === 404) {
+            clearInterval(timer);
+            return;
+          }
+          if (res?.ok && res.deal && sendingRef.current === 0) {
+            updateDealInStore(id, res.deal);
+          }
+        })
+        .catch(() => {
+          /* noop */
+        });
+    }, 15000);
+
+    return () => clearInterval(timer);
+  }, [selectedDeal?.id, selectedDeal?.dealRoomId]);
 
   const ensureTransactionId = async (deal) => {
     let txId = transactionIds[deal.id] || deal.transactionId;
@@ -2520,19 +2553,47 @@ export default function DealRooms({
       messages: [...(prev.messages || []), optimisticMsg],
     }));
 
+    sendingRef.current += 1;
     try {
       const res = await dealsApi.sendDealMessage(
         deal.dealRoomId || deal.id,
         { text }
       );
-      updateDeal(id, (prev) => ({
-        ...prev,
-        messages: (prev.messages || []).map((m) =>
-          m.id === tempId
-            ? { ...m, id: res?.id ?? m.id, at: res?.created_at || m.at }
-            : m
-        ),
-      }));
+      updateDeal(id, (prev) => {
+        const list = prev.messages || [];
+        const serverId = res?.id;
+        const serverAt = res?.created_at;
+        // Kawaida: badilisha ujumbe wa muda na wa seva
+        if (list.some((m) => m.id === tempId)) {
+          return {
+            ...prev,
+            messages: list.map((m) =>
+              m.id === tempId
+                ? { ...m, id: serverId ?? m.id, at: serverAt || m.at }
+                : m
+            ),
+          };
+        }
+        // Polling ilishaleta ujumbe huu — usiurudie
+        if (
+          serverId != null &&
+          list.some((m) => String(m.id) === String(serverId))
+        ) {
+          return prev;
+        }
+        // Polling ilifuta ujumbe wa muda — urudishe wa seva
+        return {
+          ...prev,
+          messages: [
+            ...list,
+            {
+              ...optimisticMsg,
+              id: serverId ?? tempId,
+              at: serverAt || optimisticMsg.at,
+            },
+          ],
+        };
+      });
     } catch (err) {
       updateDeal(id, (prev) => ({
         ...prev,
@@ -2540,12 +2601,23 @@ export default function DealRooms({
           (m) => m.id !== tempId
         ),
       }));
+      // Admin amesimamisha room wakati mtumiaji yuko ndani — sasisha UI sasa
+      if (err?.data?.code === "DEAL_LOCKED" || err?.code === "DEAL_LOCKED") {
+        fetchDealDetailAsync(deal.dealRoomId || deal.id)
+          .then((r) => {
+            if (r?.ok && r.deal) updateDealInStore(id, r.deal);
+          })
+          .catch(() => {});
+      }
       alert(
-        err?.message ||
+        err?.data?.detail ||
+          err?.message ||
           (lang === "sw"
             ? "Imeshindwa kutuma ujumbe."
             : "Failed to send message.")
       );
+    } finally {
+      sendingRef.current = Math.max(0, sendingRef.current - 1);
     }
   };
 
@@ -2656,6 +2728,17 @@ export default function DealRooms({
           lang === "sw"
             ? "Deal hii ilighairiwa na msimamizi — haiwezi kufufuliwa."
             : "This deal was cancelled by admin — cannot be reopened."
+        ),
+      };
+    }
+
+    if (deal.adminLocked) {
+      return {
+        ok: false,
+        error: new Error(
+          lang === "sw"
+            ? "Room imesimamishwa na msimamizi — haiwezi kufufuliwa kwa sasa."
+            : "Room is suspended by admin — cannot be reopened right now."
         ),
       };
     }
@@ -3299,7 +3382,7 @@ export default function DealRooms({
             <DealListItem
               key={d.id}
               deal={d}
-              active={d.id === selectedId}
+              active={d.id === selectedDeal?.id}
               onSelect={handleSelect}
               lang={lang}
             />

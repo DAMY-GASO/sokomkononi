@@ -2,7 +2,7 @@
 // DealRoomViewer.jsx
 // ============================================================
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Shield,
   User,
@@ -18,27 +18,66 @@ import {
   Download,
   Flag,
   AlertTriangle,
-  MessageSquare,
   Lock,
   Unlock,
   Ban,
   Send,
   X,
-  CheckCircle2,
   Gavel,
   Timer,
-  ShieldAlert,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../../shared/constants.js";
 import MessageBubble from "../../shared/MessageBubble.jsx";
-import { getDealTranscript } from "../../../../../config/dealsStore.js";
 import {
+  getDealTranscript,
   adminSendMessageAsync,
   adminLockDealAsync,
   adminUnlockDealAsync,
   adminCancelDealAsync,
 } from "../../../../../config/dealsStore.js";
 import { exportTranscript } from "../../../../../utils/exportDealTranscript.js";
+
+// ============================================================
+// HELPERS
+// ============================================================
+/** Soma ujumbe wa kosa kutoka DRF (detail / non_field_errors / field errors). */
+function apiErrorText(err, fallback) {
+  const d = err?.data;
+  const first = (v) => (Array.isArray(v) ? v[0] : v);
+  const candidate =
+    first(d?.detail) ||
+    first(d?.non_field_errors) ||
+    first(d?.text) ||
+    first(d?.reason) ||
+    err?.message;
+  return typeof candidate === "string" && candidate ? candidate : fallback;
+}
+
+const _msgTime = (m) => {
+  const v = m?.at || m?.created_at;
+  const n = v ? new Date(v).getTime() : NaN;
+  return Number.isNaN(n) ? null : n;
+};
+
+/**
+ * Unganisha messages za `roomData` (zilizopakiwa mwanzo) na za `deal`
+ * (store — zinasasishwa admin akituma ujumbe/akighairi) kwa `id`,
+ * ili ujumbe mpya uonekane bila kusubiri refetch.
+ */
+function mergeMessages(primary, secondary) {
+  const seen = new Set();
+  const out = [];
+  [...primary, ...secondary].forEach((m, i) => {
+    const key = m?.id != null ? `id:${m.id}` : `idx:${i}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(m);
+  });
+  if (out.every((m) => _msgTime(m) != null)) {
+    return [...out].sort((a, b) => _msgTime(a) - _msgTime(b));
+  }
+  return out;
+}
 
 // ============================================================
 // INFO ROW
@@ -58,7 +97,7 @@ function InfoRow({ icon: Icon, label, value, color = COLORS.night }) {
 // ============================================================
 // DOWNLOAD BAR
 // ============================================================
-function DownloadBar({ dealId, deal, lang }) {
+function DownloadBar({ dealId, deal, messages, lang }) {
   const [downloading, setDownloading] = useState(null);
   const [error, setError] = useState("");
 
@@ -77,7 +116,7 @@ function DownloadBar({ dealId, deal, lang }) {
 
       const getSenderLabel = (m) => {
         if (m.kind === "ADMIN" || m.sender === "admin") {
-          return t("Admin", "Admin");
+          return "Admin";
         }
         if (m.senderId != null) {
           if (String(m.senderId) === String(source.buyerId)) {
@@ -89,7 +128,8 @@ function DownloadBar({ dealId, deal, lang }) {
         }
         if (m.sender === "buyer") return source.buyerName || t("Mnunuzi", "Buyer");
         if (m.sender === "seller") return source.sellerName || t("Muuzaji", "Seller");
-        return t("Admin", "Admin");
+        // Usiite ujumbe usiojulikana "Admin" — transcript ni rekodi rasmi.
+        return m.senderName || t("Mfumo", "System");
       };
 
       const transcript = {
@@ -130,10 +170,10 @@ function DownloadBar({ dealId, deal, lang }) {
             date: t("Tarehe", "Date"),
             you: t("Wewe", "You"),
             other: t("Mwingine", "Other"),
-            admin: t("Admin", "Admin"),
+            admin: "Admin",
           },
         },
-        messages: (source.messages || []).map((m) => ({
+        messages: (messages || source.messages || []).map((m) => ({
           ...m,
           sender: getSenderLabel(m),
         })),
@@ -161,7 +201,7 @@ function DownloadBar({ dealId, deal, lang }) {
           </p>
         </div>
         <p className="text-[10px] text-muted">
-          {t("Admin view", "Admin view")}
+          Admin view
         </p>
       </div>
 
@@ -302,9 +342,16 @@ function AdminActionsPanel({ deal, lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
   const dealId = deal?.dealRoomId || deal?.id;
-  const isLocked = !!deal?.adminLocked;
-  const isCancelled = deal?.status === "cancelled";
+  const statusKey = String(deal?.status || "").toLowerCase();
+  const isCancelled = statusKey === "cancelled";
+  // Deal iliyokamilika/kukataliwa/kughairiwa haihitaji lock wala cancel
+  const isFinal = ["completed", "declined", "cancelled"].includes(statusKey);
+  // Room iliyoghairiwa haionyeshwi kama "imesimamishwa" hata kama flag imebaki
+  const isLocked = !!deal?.adminLocked && !isCancelled;
   const isCancelledByAdmin = !!deal?.cancelledByAdmin;
+  const canLock = !isLocked && !isFinal;
+  const canUnlock = isLocked && !isCancelled;
+  const canCancel = !isFinal;
   const txnId = deal?.transactionId;
 
   // ── Message state ──
@@ -321,63 +368,90 @@ function AdminActionsPanel({ deal, lang }) {
 
   const handleSendMessage = async () => {
     const text = message.trim();
-    if (!text) return;
+    if (!text || sendingMsg) return; // zuia double-submit (duplicates)
     setSendingMsg(true);
     setMsgError("");
-    const res = await adminSendMessageAsync(dealId, text);
-    if (res.ok) {
-      setMessage("");
-    } else {
+    try {
+      const res = await adminSendMessageAsync(dealId, text);
+      if (res.ok) {
+        setMessage("");
+      } else {
+        setMsgError(
+          apiErrorText(
+            res.error,
+            t("Imeshindwa kutuma ujumbe.", "Failed to send message.")
+          )
+        );
+      }
+    } catch (err) {
       setMsgError(
-        res.error?.message ||
+        apiErrorText(
+          err,
           t("Imeshindwa kutuma ujumbe.", "Failed to send message.")
+        )
       );
+    } finally {
+      setSendingMsg(false);
     }
-    setSendingMsg(false);
   };
 
   const handleLock = async (reason) => {
+    if (actionBusy) return;
     setActionBusy(true);
     setActionError("");
-    const res = await adminLockDealAsync(dealId, reason);
-    setActionBusy(false);
-    if (res.ok) {
-      setLockOpen(false);
-    } else {
-      setActionError(
-        res.error?.message ||
-          t("Imeshindwa kusimamisha room.", "Failed to lock room.")
-      );
+    try {
+      const res = await adminLockDealAsync(dealId, reason);
+      if (res.ok) {
+        setLockOpen(false);
+      } else {
+        setActionError(
+          apiErrorText(res.error, t("Imeshindwa kusimamisha room.", "Failed to lock room."))
+        );
+      }
+    } catch (err) {
+      setActionError(apiErrorText(err, t("Imeshindwa kusimamisha room.", "Failed to lock room.")));
+    } finally {
+      setActionBusy(false);
     }
   };
 
   const handleUnlock = async (reason) => {
+    if (actionBusy) return;
     setActionBusy(true);
     setActionError("");
-    const res = await adminUnlockDealAsync(dealId, reason);
-    setActionBusy(false);
-    if (res.ok) {
-      setUnlockOpen(false);
-    } else {
-      setActionError(
-        res.error?.message ||
-          t("Imeshindwa kufungua room.", "Failed to unlock room.")
-      );
+    try {
+      const res = await adminUnlockDealAsync(dealId, reason);
+      if (res.ok) {
+        setUnlockOpen(false);
+      } else {
+        setActionError(
+          apiErrorText(res.error, t("Imeshindwa kufungua room.", "Failed to unlock room."))
+        );
+      }
+    } catch (err) {
+      setActionError(apiErrorText(err, t("Imeshindwa kufungua room.", "Failed to unlock room.")));
+    } finally {
+      setActionBusy(false);
     }
   };
 
   const handleCancel = async (reason) => {
+    if (actionBusy) return;
     setActionBusy(true);
     setActionError("");
-    const res = await adminCancelDealAsync(dealId, reason);
-    setActionBusy(false);
-    if (res.ok) {
-      setCancelOpen(false);
-    } else {
-      setActionError(
-        res.error?.message ||
-          t("Imeshindwa kughairi deal.", "Failed to cancel deal.")
-      );
+    try {
+      const res = await adminCancelDealAsync(dealId, reason);
+      if (res.ok) {
+        setCancelOpen(false);
+      } else {
+        setActionError(
+          apiErrorText(res.error, t("Imeshindwa kughairi deal.", "Failed to cancel deal."))
+        );
+      }
+    } catch (err) {
+      setActionError(apiErrorText(err, t("Imeshindwa kughairi deal.", "Failed to cancel deal.")));
+    } finally {
+      setActionBusy(false);
     }
   };
 
@@ -511,10 +585,10 @@ function AdminActionsPanel({ deal, lang }) {
         </div>
       )}
 
-      {/* ── Lock / Unlock ── */}
-      {!isCancelled && (
+      {/* ── Lock / Unlock / Cancel ── */}
+      {(canLock || canUnlock || canCancel) && (
         <div className="flex flex-col gap-2">
-          {!isLocked ? (
+          {canLock && (
             <button
               onClick={() => {
                 setActionError("");
@@ -530,7 +604,9 @@ function AdminActionsPanel({ deal, lang }) {
               <Lock size={12} />
               {t("Simamisha Room (Lock)", "Suspend Room (Lock)")}
             </button>
-          ) : (
+          )}
+
+          {canUnlock && (
             <button
               onClick={() => {
                 setActionError("");
@@ -548,21 +624,23 @@ function AdminActionsPanel({ deal, lang }) {
             </button>
           )}
 
-          <button
-            onClick={() => {
-              setActionError("");
-              setCancelOpen(true);
-            }}
-            style={{
-              borderColor: "rgba(193,80,46,0.4)",
-              color: COLORS.rust,
-              background: "white",
-            }}
-            className="inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-lg border hover:bg-red-50 transition-colors"
-          >
-            <Ban size={12} />
-            {t("Ghairi Deal (Cancel)", "Cancel Deal")}
-          </button>
+          {canCancel && (
+            <button
+              onClick={() => {
+                setActionError("");
+                setCancelOpen(true);
+              }}
+              style={{
+                borderColor: "rgba(193,80,46,0.4)",
+                color: COLORS.rust,
+                background: "white",
+              }}
+              className="inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-lg border hover:bg-red-50 transition-colors"
+            >
+              <Ban size={12} />
+              {t("Ghairi Deal (Cancel)", "Cancel Deal")}
+            </button>
+          )}
         </div>
       )}
 
@@ -630,8 +708,8 @@ function AdminActionsPanel({ deal, lang }) {
         open={lockOpen}
         title={t("Simamisha Room", "Suspend Room")}
         description={t(
-          "Ujumbe na ofa zote zinasimama hadi ufunge. Pande zote zitaarifiwa.",
-          "All messages and offers will pause until you unlock. Both parties will be notified."
+          "Ujumbe na ofa zote zinasimama hadi utakapofungua. Sababu itaonekana kwa mnunuzi na muuzaji, na pande zote zitaarifiwa.",
+          "All messages and offers will pause until you unlock. The reason will be visible to both buyer and seller, and both will be notified."
         )}
         confirmLabel={t("Simamisha", "Lock")}
         confirmColor={COLORS.rust}
@@ -703,10 +781,12 @@ export default function DealRoomViewer({
   const t = (sw, en) => (lang === "sw" ? sw : en);
   if (!deal) return null;
 
-  const messages =
-    (Array.isArray(roomData?.messages) && roomData.messages.length > 0
-      ? roomData.messages
-      : deal.messages) || [];
+  // roomData inaweza kuwa ya zamani (stale) baada ya admin kutuma ujumbe /
+  // kughairi — kwa hiyo tunaunganisha na messages za store kwa `id`.
+  const messages = mergeMessages(
+    Array.isArray(roomData?.messages) ? roomData.messages : [],
+    Array.isArray(deal.messages) ? deal.messages : []
+  );
   const messageCount = messages.length;
   const paymentProof = roomData?.paymentProof ?? deal.paymentProof ?? null;
 
@@ -783,7 +863,7 @@ export default function DealRoomViewer({
           <div className="flex flex-col gap-1.5">
             {reports.map((r) => (
               <div
-                key={r.id}
+                key={r.id ?? r.code}
                 className="text-[11px] text-secondary flex items-start gap-2"
               >
                 <AlertTriangle
@@ -793,14 +873,15 @@ export default function DealRoomViewer({
                 />
                 <div className="min-w-0">
                   <p className="font-semibold text-primary">
-                    {r.reporter_role === "buyer"
+                    {(r.reporter_role ?? r.reporterRole) === "buyer"
                       ? t("Mnunuzi", "Buyer")
                       : t("Muuzaji", "Seller")}
                     {" → "}
-                    {r.reported_user_name || "—"}
+                    {r.reported_user_name || r.reportedUserName || "—"}
                   </p>
                   <p className="text-muted">
-                    {r.report_reason} · {r.code}
+                    {r.report_reason ?? r.reportReason} ·{" "}
+                    {r.code ?? r.ticketCode}
                   </p>
                 </div>
               </div>
@@ -888,7 +969,7 @@ export default function DealRoomViewer({
       </div>
 
       {/* Download */}
-      <DownloadBar dealId={deal.id} deal={deal} lang={lang} />
+      <DownloadBar dealId={deal.id} deal={deal} messages={messages} lang={lang} />
 
       {/* Payment Proof */}
       {paymentProof && (
@@ -972,7 +1053,7 @@ export default function DealRoomViewer({
       <p className="text-[10px] text-muted text-center">
         {t(
           "Admin view — unaweza kutuma ujumbe kama msimamizi, kusimamisha room, au kughairi.",
-          "Admin view — you can send messages as admin, lock the room, or cancel.."
+          "Admin view — you can send messages as admin, lock the room, or cancel."
         )}
       </p>
     </div>

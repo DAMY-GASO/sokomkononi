@@ -831,10 +831,14 @@ export async function adminSendMessageAsync(dealId, text) {
       isHidden: false,
       at: raw?.created_at || new Date().toISOString(),
     };
-    updateDeal(dealId, (prev) => ({
-      ...prev,
-      messages: [...(prev.messages || []), msg],
-    }));
+    updateDeal(dealId, (prev) => {
+      const list = prev.messages || [];
+      // Epuka duplicate kama ujumbe huu tayari umeshaingia (mf. kupitia refetch)
+      if (msg.id != null && list.some((m) => sameId(m.id, msg.id))) {
+        return prev;
+      }
+      return { ...prev, messages: [...list, msg] };
+    });
     return { ok: true, message: msg };
   } catch (err) {
     return { ok: false, error: err };
@@ -901,6 +905,8 @@ export async function adminCancelDealAsync(dealId, reason) {
         raw?.cancelled_by_admin === true,
     };
     updateDeal(dealId, patch);
+    // Best-effort: leta ujumbe wa mfumo uliowekwa na backend wakati wa cancel
+    await fetchAdminDealDetailAsync(dealId);
     return { ok: true, deal: patch };
   } catch (err) {
     return { ok: false, error: err };
