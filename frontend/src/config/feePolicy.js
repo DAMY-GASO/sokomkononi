@@ -6,6 +6,9 @@
 //   GET/POST   /api/reservation-tiers/
 //   PATCH/DEL  /api/reservation-tiers/{id}/
 //   POST       /api/reservation-tiers/{id}/toggle/
+//
+// ✅ FIX #2: DEFAULT_SETTINGS.is_enabled = null (haijulikani) + loaded flag.
+//            Toggle haionyeshwi ON hadi hydrate ikamilike.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -15,8 +18,10 @@ const SETTINGS_KEY = "sokomkononi_reservation_settings_v1";
 const TIERS_KEY = "sokomkononi_reservation_tiers_v1";
 const EV = "sokomkononi:reservation-updated";
 
+// ✅ FIX #2: is_enabled = null (haijulikani) — si true
 const DEFAULT_SETTINGS = {
-  is_enabled: true,
+  is_enabled: null,
+  loaded: false,
   updated_at: null,
 };
 
@@ -77,7 +82,12 @@ function writeTiers(list) {
 function normSettings(raw) {
   if (!raw) return null;
   return {
-    is_enabled: raw.is_enabled !== false,
+    // ✅ FIX #2: is_enabled inaweza kuwa null kama backend haikurudisha
+    is_enabled:
+      raw.is_enabled === undefined || raw.is_enabled === null
+        ? null
+        : raw.is_enabled !== false,
+    loaded: true, // ✅ FIX #2: hydrate imefanikiwa
     updated_at: raw.updated_at || null,
   };
 }
@@ -117,9 +127,24 @@ async function _hydrateReservationFromApi() {
     if (norm) {
       writeSettings(norm);
       result.settings = norm;
+    } else {
+      // Backend imerudisha payload isiyo sahihi — weka loaded: true
+      // lakini is_enabled: null (haijulikani)
+      writeSettings({
+        ...DEFAULT_SETTINGS,
+        loaded: true,
+      });
+      result.ok = false;
     }
   } catch (err) {
     console.warn("[feePolicy] settings hydrate failed:", err?.message);
+    // ✅ FIX #2: usibadilishe is_enabled kuwa true — ibaki null,
+    //    lakini weka loaded: true ili UI ionyeshe "imeshindwa"
+    //    (si "inapakia" milele)
+    writeSettings({
+      ...readSettings(),
+      loaded: true,
+    });
     result.ok = false;
   }
 
@@ -144,34 +169,60 @@ async function _hydrateReservationFromApi() {
 }
 
 // ✅ guarded() — dedupes concurrent calls, TTL 1.5s
+//    (fix #1 real: race protection kwa forceRefresh)
 export const hydrateReservationFromApi = guarded(_hydrateReservationFromApi, {
   key: "feePolicy:hydrate",
 });
 
 // ============================================================
 // SETTINGS — toggle
+// ✅ FIX #2: haifanyi chochote kama loaded === false
+// ✅ FIX #5: inahydrate baada ya toggle kufanikiwa
 // ============================================================
 export async function toggleReservationFeeAsync() {
   const cur = readSettings();
+
+  // ✅ FIX #2: usiruhusu toggle kabla hydrate
+  if (!cur.loaded || cur.is_enabled === null) {
+    return {
+      ok: false,
+      error: new Error("Settings bado hazijapakiwa. Subiri au refresh."),
+    };
+  }
+
   const newState = !cur.is_enabled;
-  writeSettings({ ...cur, is_enabled: newState });
+  // Optimistic — lakini tunaweka `loaded: true` ili UI ionyeshe mara moja
+  writeSettings({ ...cur, is_enabled: newState, loaded: true });
 
   try {
     const raw = await api.post("/reservation-settings/toggle/", {});
     const updated = {
       ...cur,
-      is_enabled: raw?.is_enabled ?? newState,
+      is_enabled:
+        raw?.is_enabled === undefined || raw?.is_enabled === null
+          ? newState
+          : raw.is_enabled !== false,
+      loaded: true,
     };
     writeSettings(updated);
+
+    // ✅ FIX #5: hydrate baada ya toggle — backend ndiyo source of truth
+    try {
+      await hydrateReservationFromApi.forceRefresh();
+    } catch (e) {
+      console.warn("[feePolicy] post-toggle hydrate failed:", e?.message);
+    }
+
     return { ok: true, is_enabled: updated.is_enabled };
   } catch (err) {
+    // Rollback
     writeSettings(cur);
     return { ok: false, error: err };
   }
 }
 
 // ============================================================
-// TIERS — CRUD
+// TIERS — CRUD (hakuna mabadiliko ya #2, lakini tunaongeza kinga)
 // ============================================================
 export async function addReservationTierAsync({ hours, fee, is_active = true, order }) {
   const h = Number(hours);
@@ -313,10 +364,12 @@ export function useActiveReservationTiers() {
 
 // ============================================================
 // CALC — fee kwa tier fulani (hours) au 0 kama disabled
+// ✅ FIX #2: is_enabled === null → 0 (haijulikani = usitoze)
 // ============================================================
 export function calcReservationFee(hours) {
   const settings = readSettings();
-  if (!settings.is_enabled) return 0;
+  // ✅ FIX #2: null (haijulikani) au false → 0
+  if (settings.is_enabled !== true) return 0;
 
   const tiers = readTiers();
   const h = Number(hours);

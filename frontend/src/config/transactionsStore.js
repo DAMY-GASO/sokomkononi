@@ -448,12 +448,37 @@ export async function createTransactionAsync(dealRoomId) {
   }
 }
 
+// Backend inarudisha RESERVATION (si transaction). Kwa hiyo hatuipitishi kwenye
+// normalizeTransactionRow — ingechukua id ya reservation kama id ya transaction
+// (inaweza kufuta transaction nyingine kwenye storage) na kusoma hali kama
+// "active" badala ya "reserved_paid".
+// Fee ikiwa 0 (imezimwa), backend inaiwasha papo hapo: payment_status=PAID.
 export async function createReservationAsync(id, durationHours = 48) {
-  return _mutate({
-    id,
-    patch: { status: TX_STATUS.RESERVED, reservationHours: durationHours },
-    apiCall: () => _txApi.createReservation(id, durationHours),
-  });
+  const current = _findTx(id);
+  if (!current) {
+    return { ok: false, error: new Error("Transaction not found") };
+  }
+  try {
+    const raw = await _txApi.createReservation(id, durationHours);
+    const isPaid =
+      String(raw?.payment_status || "").toUpperCase() === "PAID" ||
+      String(raw?.status || "").toUpperCase() === "ACTIVE";
+    const updated = {
+      ...current,
+      status: isPaid ? TX_STATUS.RESERVED_PAID : TX_STATUS.PENDING,
+      reservationHours: raw?.duration_hours ?? durationHours,
+      reservationExpiresAt:
+        raw?.expires_at || current.reservationExpiresAt || null,
+      ...(isPaid
+        ? { reservationPaidAt: raw?.paid_at || new Date().toISOString() }
+        : {}),
+      updatedAt: new Date().toISOString(),
+    };
+    _upsertTx(updated);
+    return { ok: true, transaction: updated };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
 export async function payReservationAsync(id, opts = {}) {
@@ -505,7 +530,9 @@ export async function pollReservationStatusAsync(id, { attempts = 15, intervalMs
       const tx = normalizeTransactionRow(raw) || normalizeMyTransaction(raw);
       if (!tx) continue;
       _upsertTx(tx);
-      if ([TX_STATUS.RESERVED_PAID, TX_STATUS.INSPECTING, TX_STATUS.DECIDED_ACCEPT, TX_STATUS.AWAITING_CONFIRMATION, TX_STATUS.COMPLETED].includes(tx.status)) {
+      // "reserved" na "inspection" ni majina ya backend baada ya malipo
+      // kuthibitishwa (Transaction.Status.RESERVED / INSPECTION).
+      if ([TX_STATUS.RESERVED_PAID, TX_STATUS.RESERVED, "inspection", TX_STATUS.INSPECTING, TX_STATUS.DECIDED_ACCEPT, TX_STATUS.AWAITING_CONFIRMATION, TX_STATUS.COMPLETED].includes(tx.status)) {
         return { ok: true, transaction: tx };
       }
       if ([TX_STATUS.CANCELLED, TX_STATUS.EXPIRED].includes(tx.status)) {

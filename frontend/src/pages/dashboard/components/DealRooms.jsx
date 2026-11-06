@@ -1227,6 +1227,7 @@ function DealDetail({
   const [offerOpen, setOfferOpen] = useState(false);
   const [offerAmount, setOfferAmount] = useState("");
   const [reserveModalOpen, setReserveModalOpen] = useState(false);
+  const [freeReserving, setFreeReserving] = useState(false);
   const [chatError, setChatError] = useState("");
 
   const [reportOpen, setReportOpen] = useState(false);
@@ -1384,6 +1385,16 @@ function DealDetail({
   ];
   const reservationPaid = reservationPaidStatuses.includes(deal.status);
 
+  // Fee ikizimwa, reservation inabaki kama hatua ya BURE (bila malipo,
+  // bila kuchagua tier) ili mtiririko wa deal usikwame.
+  // (`!== false` ili settings zikichelewa kupakia zisibadilishe bango.)
+  const reservationSettings = useReservationSettings();
+  const reservationTiers = useActiveReservationTiers();
+  const reservationEnabled = reservationSettings?.is_enabled !== false;
+  // Muda wa reservation ya bure: tier ya kwanza ikiwepo, vinginevyo masaa 48
+  // (sawa na DEFAULT_RESERVATION_HOURS ya backend — hakuna tier hai).
+  const FREE_RESERVATION_FALLBACK_HOURS = 48;
+
   const canReserve =
     canInteract &&
     isBuyer &&
@@ -1449,6 +1460,24 @@ function DealDetail({
     const result = await onReserveConfirm(deal.id, details);
     if (result?.ok) {
       onShowSuccess?.();
+    }
+  };
+
+  // Reservation ya BURE (fee imezimwa) — bila modal, bila malipo
+  const handleFreeReserve = async () => {
+    if (freeReserving) return;
+    setFreeReserving(true);
+    try {
+      await handleReserveSuccess({
+        hours:
+          reservationTiers?.[0]?.hours ?? FREE_RESERVATION_FALLBACK_HOURS,
+        fee: 0,
+        method: "free",
+        phone: null,
+        cardNumber: null,
+      });
+    } finally {
+      setFreeReserving(false);
     }
   };
 
@@ -1715,18 +1744,39 @@ function DealDetail({
                 : "Reserve This Property"}
             </p>
             <p className="text-xs text-secondary mt-0.5">
-              {lang === "sw"
-                ? "Lipia Reservation Fee ili muuzaji asiiuze kwa mtu mwingine."
-                : "Pay the Reservation Fee so the seller can't sell to someone else."}
+              {reservationEnabled
+                ? lang === "sw"
+                  ? "Lipia Reservation Fee ili muuzaji asiiuze kwa mtu mwingine."
+                  : "Pay the Reservation Fee so the seller can't sell to someone else."
+                : lang === "sw"
+                  ? "Reservation ni BURE kwa sasa — hifadhi mali ili muuzaji asiiuze kwa mtu mwingine."
+                  : "Reservation is FREE right now — hold the property so the seller can't sell to someone else."}
             </p>
           </div>
           <button
-            onClick={() => setReserveModalOpen(true)}
+            onClick={
+              reservationEnabled
+                ? () => setReserveModalOpen(true)
+                : handleFreeReserve
+            }
+            disabled={freeReserving}
             style={{ background: COLORS.green, color: "white" }}
-            className="shrink-0 text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 hover:opacity-90 transition-opacity"
+            className="shrink-0 text-xs font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 hover:opacity-90 transition-opacity disabled:opacity-60"
           >
-            <CreditCard size={13} />
-            {lang === "sw" ? "Reserve Sasa" : "Reserve Now"}
+            {freeReserving ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : reservationEnabled ? (
+              <CreditCard size={13} />
+            ) : (
+              <ShieldCheck size={13} />
+            )}
+            {reservationEnabled
+              ? lang === "sw"
+                ? "Reserve Sasa"
+                : "Reserve Now"
+              : lang === "sw"
+                ? "Hifadhi Bure"
+                : "Reserve Free"}
           </button>
         </div>
       )}
@@ -2626,6 +2676,55 @@ export default function DealRooms({
 
     return () => clearInterval(timer);
   }, [selectedDeal?.id, selectedDeal?.dealRoomId]);
+
+  // ── Alama ya "imesomwa": inatumwa tu room inapokuwa wazi na inaonekana
+  //    (si orodha tu kwenye simu, si tab iliyofichwa) ──
+  const markedReadRef = useRef({});
+  const selectedRoomId = selectedDeal?.dealRoomId || selectedDeal?.id;
+  const latestUnreadIncomingId = (() => {
+    const list = selectedDeal?.messages || [];
+    for (let i = list.length - 1; i >= 0; i--) {
+      const m = list[i];
+      if (
+        m.sender !== "me" &&
+        m.sender !== "admin" &&
+        m.kind !== "ADMIN" &&
+        !m.offerAmount &&
+        !m.isRead &&
+        !m.readAt &&
+        !String(m.id).startsWith("m_")
+      ) {
+        return m.id;
+      }
+    }
+    return null;
+  })();
+
+  useEffect(() => {
+    if (!selectedRoomId || latestUnreadIncomingId == null) return;
+    if (typeof dealsApi.markRead !== "function") return;
+
+    const send = () => {
+      const isMobileView =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(max-width: 767px)").matches;
+      const detailVisible = !isMobileView || mobileShowDetail;
+      if (!detailVisible) return;
+      if (document.visibilityState === "hidden") return;
+      if (markedReadRef.current[selectedRoomId] === latestUnreadIncomingId) {
+        return;
+      }
+      markedReadRef.current[selectedRoomId] = latestUnreadIncomingId;
+      dealsApi.markRead(selectedRoomId).catch(() => {
+        // Ikishindwa, ruhusu jaribio lingine kwenye polling inayofuata
+        delete markedReadRef.current[selectedRoomId];
+      });
+    };
+
+    send();
+    document.addEventListener("visibilitychange", send);
+    return () => document.removeEventListener("visibilitychange", send);
+  }, [selectedRoomId, latestUnreadIncomingId, mobileShowDetail]);
 
   const ensureTransactionId = async (deal) => {
     let txId = transactionIds[deal.id] || deal.transactionId;

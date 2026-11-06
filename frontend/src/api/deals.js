@@ -36,6 +36,9 @@ export const dealsApi = {
   sendDealMessage: (dealRoomId, { text }) =>
     api.post(`/deals/${dealRoomId}/messages/`, { text }),
 
+  markRead: (dealRoomId) =>
+    api.post(`/deals/${dealRoomId}/mark-read/`),
+
   // ── Offers list ──────────────────────────────────────────
   offers: (dealRoomId) => api.get(`/deals/${dealRoomId}/offers/`),
 

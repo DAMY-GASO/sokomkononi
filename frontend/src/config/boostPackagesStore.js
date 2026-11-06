@@ -1,12 +1,12 @@
 // ============================================================
 // boostPackagesStore.js — API-only via /api/boosting/packages/
-// No seeds. Update requires a real backend id.
-// + addBoostPackageAsync — ongeza package mpya
-// + updateBoostPackageAsync — generic updater
+//
+// ✅ FIX #7: hydrate inatumia guarded() — dedupe, TTL, forceRefresh.
 // ============================================================
 import { useEffect, useState } from "react";
 import { boostingApi } from "../api/boosting.js";
 import { boostPackagesApi } from "../api/boostPackages.js";
+import { guarded } from "./hydrateGuard.js";
 
 const KEY = "sokomkononi_boost_packages_v1";
 const EV = "sokomkononi:boost-packages-updated";
@@ -62,26 +62,24 @@ export function getBoostPackage(key) {
   return read().find((p) => p.key === key);
 }
 
-let _boostPkgsHydratePromise = null;
-export async function hydrateBoostPackagesFromApi() {
-  if (_boostPkgsHydratePromise) return _boostPkgsHydratePromise;
-  _boostPkgsHydratePromise = (async () => {
-    try {
-      const data = await boostingApi.packages({ page_size: 200 });
-      const list = Array.isArray(data) ? data : data?.results || [];
-      const normalized = list.map(norm).filter(Boolean);
-      write(normalized);
-      return { ok: true, count: normalized.length };
-    } catch (err) {
-      return { ok: false, error: err };
-    }
-  })().finally(() => { _boostPkgsHydratePromise = null; });
-  return _boostPkgsHydratePromise;
+// ✅ FIX #7: guarded()
+async function _hydrateBoostPackagesFromApi() {
+  try {
+    const data = await boostingApi.packages({ page_size: 200 });
+    const list = Array.isArray(data) ? data : data?.results || [];
+    const normalized = list.map(norm).filter(Boolean);
+    write(normalized);
+    return { ok: true, count: normalized.length };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
 }
 
-// ============================================================
-// ADD — ongeza boost package mpya
-// ============================================================
+export const hydrateBoostPackagesFromApi = guarded(
+  _hydrateBoostPackagesFromApi,
+  { key: "boostPackagesStore:hydrate" }
+);
+
 export async function addBoostPackageAsync({ name, hours, price, ordering }) {
   const cleanName = (name || "").trim();
   if (!cleanName) {
@@ -110,9 +108,6 @@ export async function addBoostPackageAsync({ name, hours, price, ordering }) {
   }
 }
 
-// ============================================================
-// UPDATE — generic updater kwa fields zozote
-// ============================================================
 export async function updateBoostPackageAsync(id, patch) {
   try {
     const body = {};
@@ -132,9 +127,6 @@ export async function updateBoostPackageAsync(id, patch) {
   }
 }
 
-// ============================================================
-// UPDATE PRICE — update price pekee
-// ============================================================
 export async function updateBoostPackagePriceAsync(key, price) {
   const num = Number(price);
   if (!Number.isFinite(num) || num < 0) {
@@ -160,9 +152,6 @@ export async function updateBoostPackagePriceAsync(key, price) {
   }
 }
 
-// ============================================================
-// RENAME — badilisha jina la boost package
-// ============================================================
 export async function renameBoostPackageAsync(key, name) {
   const clean = (name || "").trim();
   if (!clean) return { ok: false, error: new Error("Name required") };
@@ -173,7 +162,6 @@ export async function renameBoostPackageAsync(key, name) {
     return { ok: false, error: new Error("Package has no backend id") };
   }
 
-  // Optimistic
   write(read().map((p) => (p.key === key ? { ...p, name: clean } : p)));
 
   try {
@@ -184,15 +172,11 @@ export async function renameBoostPackageAsync(key, name) {
     }
     return { ok: true, package: updated || { ...target, name: clean } };
   } catch (err) {
-    // Rollback
     write(read().map((p) => (p.key === key ? target : p)));
     return { ok: false, error: err };
   }
 }
 
-// ============================================================
-// TOGGLE ACTIVE
-// ============================================================
 export async function toggleBoostPackageActiveAsync(key) {
   const target = getBoostPackage(key);
   if (!target) {
@@ -217,9 +201,6 @@ export async function toggleBoostPackageActiveAsync(key) {
   }
 }
 
-// ============================================================
-// REMOVE — futa boost package
-// ============================================================
 export async function removeBoostPackageAsync(key) {
   const target = getBoostPackage(key);
   if (!target) {
@@ -232,13 +213,11 @@ export async function removeBoostPackageAsync(key) {
     };
   }
   const previous = read();
-  // Optimistic
   write(previous.filter((p) => p.key !== key));
   try {
     await boostPackagesApi.remove(target.id);
     return { ok: true };
   } catch (err) {
-    // Rollback
     write(previous);
     return { ok: false, error: err };
   }

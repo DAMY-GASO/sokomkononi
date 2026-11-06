@@ -1,18 +1,15 @@
 // ============================================================
 // listingFeeStore.js — API-only via /api/listings/fee-rules/
 //
-// ✅ FIX #1: addFeeConfigAsync inafanya upsert sahihi (PATCH kama ipo, POST kama haipo)
-// ✅ FIX #2: Inatuma flat_fee tu kwa FLAT, percentage tu kwa PERCENTAGE
-// ✅ FIX #3: Inafilter rules kwa categoryId kwenye frontend (defensive)
-// ✅ FIX #4: Inasasisha cache (hydrate) baada ya POST/PATCH kufanikiwa
-// ✅ FIX #5: norm() inatumia safeString() — kila field ni PRIMITIVE (string/number)
-// ✅ FIX #6: updateListingFeeConfigAsync inafanya OPTIMISTIC UPDATE + rollback
-// ✅ FIX #7: useListingFeeConfigs HAITII hydrate kila mara (inaepuka overwrite)
-// ✅ FIX #8: React Error #31 fix — hakuna object inayoweza kufika kwenye JSX
+// ✅ FIX #9: `orphan` sasa ni DERIVED (function), si cached field.
+//            Ina-compute upya kila render kutoka categories za sasa.
+//            Hii inaepuka fee rules halali kufichwa kwa sababu
+//            categories zilihydrate baada ya fee rules.
 // ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import { listingFeeRulesApi } from "../api/listingFeeRules.js";
+import { guarded } from "./hydrateGuard.js";
 import {
   getSeedKeyFromSlug,
   isKnownCategoryKey,
@@ -68,6 +65,63 @@ export function hasFeeConfig(categoryKey) {
 }
 
 // ============================================================
+// ✅ FIX #9: ORPHAN HELPER — derived, si cached
+//
+// Fee config inachukuliwa "orphan" tu kama:
+//   - Categories zimepakiwa (getCategories() si tupu), NA
+//   - Hakuna category inayolingana kwa id AU key AU slug.
+//
+// Kama categories bado hazijapakiwa → orphan = false (usifanye
+// uamuzi wa haraka).
+// ============================================================
+export function isFeeConfigOrphan(config) {
+  if (!config) return false;
+
+  let cats = [];
+  try {
+    cats = getCategories() || [];
+  } catch {
+    cats = [];
+  }
+
+  // Categories bado hazijapakiwa — usiamue
+  if (cats.length === 0) return false;
+
+  const categoryId = config.categoryId;
+  const seedKey = config.key || "";
+  const backendKey = config.backendKey || "";
+
+  // Match kwa id
+  if (
+    categoryId != null &&
+    cats.some((c) => String(c.id) === String(categoryId))
+  ) {
+    return false;
+  }
+
+  // Match kwa key (seed key au backend key)
+  if (
+    cats.some(
+      (c) =>
+        c.key === seedKey ||
+        c.key === backendKey ||
+        c.slug === backendKey ||
+        c.slug === seedKey
+    )
+  ) {
+    return false;
+  }
+
+  // Match kwa seed knowledge (kwa categories za seed ambazo
+  // hazipo kwenye getCategories() bado)
+  if (isKnownCategoryKey(backendKey) || isKnownCategoryKey(seedKey)) {
+    return false;
+  }
+
+  return true;
+}
+
+// ============================================================
 // HELPERS — SAFE PRIMITIVE EXTRACTION
 // ============================================================
 function toSlug(str) {
@@ -78,14 +132,12 @@ function toSlug(str) {
     .replace(/[^a-z0-9-]/g, "");
 }
 
-// ✅ FIX: safeString inarudisha STRING kila mara, hata kama input ni object
 function safeString(v) {
   if (v == null) return "";
   if (typeof v === "string") return v;
   if (typeof v === "number" || typeof v === "boolean") return String(v);
   if (Array.isArray(v)) return "";
   if (typeof v === "object") {
-    // Localized object: {sw, en} au {name, slug} au {id, name, slug}
     if (typeof v.sw === "string") return v.sw;
     if (typeof v.en === "string") return v.en;
     if (typeof v.name === "string") return v.name;
@@ -95,7 +147,6 @@ function safeString(v) {
   return "";
 }
 
-// ✅ FIX: safeNumber inarudisha NUMBER au null, hata kama input ni object
 function safeNumber(v) {
   if (v == null) return null;
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
@@ -115,18 +166,14 @@ function safeNumber(v) {
 
 // ============================================================
 // NORMALIZER
-// ✅ FIX: Kila field ni PRIMITIVE (string / number / boolean / null)
-//    Hakuna object inayoweza kufika kwenye JSX.
+// ✅ FIX #9: HAKUNA `orphan` field — ni derived (isFeeConfigOrphan).
 // ============================================================
 function norm(raw) {
   if (!raw) return null;
 
   const pct = Number(raw.percentage) || 0;
-
-  // ── name: LAZIMA iwe string ──────────────────────────
   const safeName = safeString(raw.name);
 
-  // ── categoryId: LAZIMA iwe number au null ────────────
   let categoryId = null;
   if (typeof raw.category === "number") {
     categoryId = raw.category;
@@ -136,7 +183,6 @@ function norm(raw) {
     categoryId = safeNumber(raw.category_id);
   }
 
-  // ── categorySlug: LAZIMA iwe string ─────────────────
   let categorySlug = "";
   if (typeof raw.category_slug === "string") {
     categorySlug = raw.category_slug;
@@ -144,58 +190,34 @@ function norm(raw) {
     categorySlug = safeString(raw.category.slug);
   }
 
-  // ── slugSource: categorySlug > name ─────────────────
   const slugSource = categorySlug || safeName || "";
   const rawSlug = toSlug(slugSource);
   const seedKey = getSeedKeyFromSlug(rawSlug);
-
-  // ✅ FIX #9: orphan inaangalia categories HALISI (pamoja na mpya ulizounda),
-  // si seed list pekee. Kabla, kila category mpya ilionekana "orphan" na
-  // fee rule yake ilifichwa kwenye Revenue page.
-  let orphan;
-  try {
-    const cats = getCategories() || [];
-    if (cats.length === 0) {
-      // Categories bado hazijapakiwa — usiamue mapema
-      orphan = false;
-    } else {
-      const knownById =
-        categoryId != null &&
-        cats.some((c) => String(c.id) === String(categoryId));
-      const knownByKey =
-        isKnownCategoryKey(rawSlug) ||
-        cats.some((c) => c.key === seedKey || c.slug === rawSlug);
-      orphan = !(knownById || knownByKey);
-    }
-  } catch {
-    orphan = false;
-  }
 
   return {
     id: raw.id,
     key: seedKey,
     backendKey: rawSlug,
-    name: safeName,               // ✅ STRING
-    orphan,
-    categoryId,                   // ✅ NUMBER au NULL
+    name: safeName,
+    categoryId,
     feeMode: raw.fee_mode || "PERCENTAGE",
-    percentage: pct,              // ✅ NUMBER
-    rate: pct / 100,              // ✅ NUMBER
-    flatFee: Number(raw.flat_fee) || 0,       // ✅ NUMBER
-    min: Number(raw.min_price) || 0,          // ✅ NUMBER
+    percentage: pct,
+    rate: pct / 100,
+    flatFee: Number(raw.flat_fee) || 0,
+    min: Number(raw.min_price) || 0,
     max:
       raw.max_price != null
-        ? Number(raw.max_price)   // ✅ NUMBER
+        ? Number(raw.max_price)
         : 999999999,
-    isActive: raw.is_active !== false,        // ✅ BOOLEAN
-    priority: raw.priority ?? 0,              // ✅ NUMBER
+    isActive: raw.is_active !== false,
+    priority: raw.priority ?? 0,
   };
 }
 
 // ============================================================
-// HYDRATE + DEDUPE
+// HYDRATE — deduped via guarded()
 // ============================================================
-export async function hydrateListingFeeConfigsFromApi() {
+async function _hydrateListingFeeConfigsFromApi() {
   try {
     const data = await api.get("/listings/fee-rules/?page_size=200");
     const list = Array.isArray(data) ? data : data?.results || [];
@@ -242,8 +264,13 @@ export async function hydrateListingFeeConfigsFromApi() {
   }
 }
 
+export const hydrateListingFeeConfigsFromApi = guarded(
+  _hydrateListingFeeConfigsFromApi,
+  { key: "listingFeeStore:hydrate" }
+);
+
 // ============================================================
-// MUTATIONS — UPDATE (optimistic + rollback + kinga ya id/key)
+// MUTATIONS — UPDATE
 // ============================================================
 export async function updateListingFeeConfigAsync(key, patch) {
   const target = getListingFeeConfig(key);
@@ -289,7 +316,6 @@ export async function updateListingFeeConfigAsync(key, patch) {
     const raw = await listingFeeRulesApi.update(target.id, apiPatch);
     const updated = norm(raw) || { ...target, ...patch };
 
-    // ✅ KINGA: hakikisha `id` na `key` hazibadiliki
     updated.id = target.id;
     updated.key = target.key;
     updated.backendKey = target.backendKey;
@@ -338,6 +364,7 @@ export async function toggleListingFeeActiveAsync(key) {
 
 // ============================================================
 // ADD — upsert (PATCH kama ipo, POST kama haipo)
+// ✅ FIX #10: PATCH HAIWEKI is_active. POST inaweka is_active: true.
 // ============================================================
 export async function addFeeConfigAsync({
   category_key,
@@ -375,20 +402,19 @@ export async function addFeeConfigAsync({
     };
   }
 
-  const basePayload = {
+  const baseFields = {
     category: categoryId,
     name,
     min_price,
     max_price,
     fee_mode: mode,
     priority,
-    is_active: true,
   };
 
   if (mode === "FLAT") {
-    basePayload.flat_fee = safeFlatFee;
+    baseFields.flat_fee = safeFlatFee;
   } else {
-    basePayload.percentage = safePercentage;
+    baseFields.percentage = safePercentage;
   }
 
   try {
@@ -420,13 +446,29 @@ export async function addFeeConfigAsync({
     if (matching.length > 0) {
       const target =
         matching.find((r) => r.is_active !== false) || matching[0];
-      const raw = await listingFeeRulesApi.update(target.id, basePayload);
+
+      const patchPayload = { ...baseFields };
+
+      const raw = await listingFeeRulesApi.update(target.id, patchPayload);
       const updated = norm(raw);
 
-      write(read().map((c) => (c.id === updated.id ? updated : c)));
+      if (updated) {
+        updated.id = target.id;
+        updated.key = target.key;
+        updated.backendKey = target.backendKey;
+        if (raw?.is_active === undefined) {
+          updated.isActive = target.isActive;
+        }
+      }
+
+      write(
+        read().map((c) =>
+          c.id === (updated?.id ?? target.id) ? updated : c
+        )
+      );
 
       try {
-        await hydrateListingFeeConfigsFromApi();
+        await hydrateListingFeeConfigsFromApi.forceRefresh();
       } catch (hydrateErr) {
         console.warn(
           "[addFeeConfigAsync] hydrate after PATCH failed:",
@@ -437,7 +479,8 @@ export async function addFeeConfigAsync({
       return { ok: true, config: updated, mode: "updated" };
     }
 
-    const raw = await listingFeeRulesApi.create(basePayload);
+    const createPayload = { ...baseFields, is_active: true };
+    const raw = await listingFeeRulesApi.create(createPayload);
     const created = norm(raw);
 
     const existingIdx = read().findIndex((c) => c.id === created.id);
@@ -448,7 +491,7 @@ export async function addFeeConfigAsync({
     }
 
     try {
-      await hydrateListingFeeConfigsFromApi();
+      await hydrateListingFeeConfigsFromApi.forceRefresh();
     } catch (hydrateErr) {
       console.warn(
         "[addFeeConfigAsync] hydrate after POST failed:",
@@ -489,7 +532,7 @@ export async function removeFeeConfigAsync(key) {
     write(read().filter((c) => c.id !== target.id));
 
     try {
-      await hydrateListingFeeConfigsFromApi();
+      await hydrateListingFeeConfigsFromApi.forceRefresh();
     } catch (hydrateErr) {
       console.warn(
         "[removeFeeConfigAsync] hydrate after DELETE failed:",
@@ -504,13 +547,14 @@ export async function removeFeeConfigAsync(key) {
 }
 
 export async function cleanupOrphanFeeConfigsAsync() {
-  const orphans = read().filter((c) => c.orphan);
+  // ✅ FIX #9: tumia derived helper
+  const orphans = read().filter((c) => isFeeConfigOrphan(c));
   if (orphans.length === 0) return { ok: true, removed: 0 };
   const results = await Promise.allSettled(
     orphans.map((c) => listingFeeRulesApi.remove(c.id))
   );
   const succeeded = results.filter((r) => r.status === "fulfilled").length;
-  await hydrateListingFeeConfigsFromApi();
+  await hydrateListingFeeConfigsFromApi.forceRefresh();
   return { ok: true, removed: succeeded, total: orphans.length };
 }
 
