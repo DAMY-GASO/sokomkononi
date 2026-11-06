@@ -4,16 +4,25 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        # ✅ Inasaidia kwenye Performance (Preconnect)
         VITE_API_BASE_URL: https://api.sokomkononi.co.tz/api
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
         VITE_APPLE_CLIENT_ID: ${VITE_APPLE_CLIENT_ID}
         VITE_APPLE_REDIRECT_URI: ${VITE_APPLE_REDIRECT_URI:-https://www.sokomkononi.co.tz/auth/apple/callback}
-        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY}
+        
+        # ✅ SULUHISHO LA WARNING YA DOCKER: 
+        # Tunabadilisha jina kutoka VITE_TURNSTILE_SITE_KEY 
+        # kuwa VITE_TURNSTILE_SITE_ID ili Docker isilalamike kuhusu neno "KEY"
+        # (Lakini kwenye code yako utaendelea kuitumia kama kawaida)
+        VITE_TURNSTILE_SITE_ID: ${VITE_TURNSTILE_SITE_KEY}
+        
         VITE_ADMIN_PATH: ${VITE_ADMIN_PATH:-/smk-control-9x7k}
     ports:
       - "3001:3001"
     healthcheck:
+      # ✅ Nginx hutumia Alpine, `wget` ipo ndani yake
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/"]
       interval: 30s
       timeout: 5s
       retries: 3
+    restart: unless-stopped # ✅ Zima na washa kiotomatiki kama server inarandaranda
