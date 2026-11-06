@@ -3,8 +3,13 @@
 // Flat fees: listing, reservation (tiers), success.
 // Packages: boost, leading, advertisement.
 //
-// ✅ FIX: Hydrate MARA MOJA tu kwenye mount (si kwenye hook).
-// ✅ FIX: safeStr() — hakuna object inayofika kwenye JSX (React Error #31).
+// ✅ FIX #1: Hydrate MARA MOJA tu kwenye mount (si kwenye hook).
+// ✅ FIX #2: ToggleSwitch inaonyesha "INAPAKIA..." hadi loaded === true.
+// ✅ FIX #8: safeStr() — hakuna object inayofika kwenye JSX (React Error #31).
+// ✅ FIX #9: orphan ni derived (isFeeConfigOrphan) — fee rules halali
+//            hazifichwi kwa sababu categories zilihydrate baada ya fee rules.
+// ✅ FIX #10: addFeeConfigAsync HAIWEKI is_active kwenye PATCH (upsert).
+// ✅ Refresh button inatumia forceRefresh() kwa stores zote.
 // ============================================================
 import React, { useState, useRef, useEffect } from "react";
 import {
@@ -26,12 +31,14 @@ import {
   updateReservationTierAsync,
   removeReservationTierAsync,
   toggleReservationTierAsync,
+  hydrateReservationFromApi,
 } from "../../../../config/feePolicy.js";
 import {
   useListingFeeConfigs, updateListingFeeConfigAsync, addFeeConfigAsync,
-  hasFeeConfig, hydrateListingFeeConfigsFromApi, removeFeeConfigAsync,
+  hydrateListingFeeConfigsFromApi, removeFeeConfigAsync,
   updateListingFeeFlatAsync,
   updateListingFeeModeAsync, toggleListingFeeActiveAsync,
+  isFeeConfigOrphan,   // ✅ FIX #9
 } from "../../../../config/listingFeeStore.js";
 import {
   useLeadingFeeConfig,
@@ -129,35 +136,60 @@ function EditHint({ lang, accentColor = COLORS.gold }) {
   );
 }
 
-function ToggleSwitch({ enabled, onToggle, disabled, lang, compact = false }) {
+// ✅ FIX #2: ToggleSwitch inaonyesha "INAPAKIA..." hadi loaded === true
+function ToggleSwitch({
+  enabled,
+  onToggle,
+  disabled,
+  lang,
+  compact = false,
+  loaded = true,
+}) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const w = compact ? "w-9" : "w-11";
   const h = compact ? "h-5" : "h-6";
   const knob = compact ? "h-3.5 w-3.5" : "h-4 w-4";
   const travel = compact ? "translateX(18px)" : "translateX(24px)";
   const rest = compact ? "translateX(3px)" : "translateX(4px)";
+
+  // ✅ FIX #2: hali ya "haijulikani" — toggle disabled, grey
+  const isUnknown = !loaded || enabled === null || enabled === undefined;
+  const isOn = enabled === true;
+  const isDisabled = disabled || isUnknown;
+
   return (
     <div className="flex items-center gap-2 shrink-0">
       {!compact && (
         <span
           className="text-[10px] font-bold uppercase tracking-wide"
-          style={{ color: enabled ? COLORS.successText : COLORS.dangerText }}
+          style={{
+            color: isUnknown
+              ? COLORS.muted ?? "#9CA3AF"
+              : isOn
+              ? COLORS.successText
+              : COLORS.dangerText,
+          }}
         >
-          {enabled ? t("IMEWASHWA", "ON") : t("IMEZIMWA", "OFF")}
+          {isUnknown
+            ? t("INAPAKIA...", "LOADING...")
+            : isOn
+            ? t("IMEWASHWA", "ON")
+            : t("IMEZIMWA", "OFF")}
         </span>
       )}
       <button
         type="button"
         role="switch"
-        aria-checked={enabled}
+        aria-checked={isOn}
+        aria-busy={isUnknown}
         onClick={onToggle}
-        disabled={disabled}
+        disabled={isDisabled}
         className={`relative inline-flex items-center ${h} ${w} rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0`}
-        style={{ background: enabled ? COLORS.green : "#D1D5DB" }}
+        style={{ background: isOn ? COLORS.green : "#D1D5DB" }}
       >
         <span
           className={`inline-block ${knob} rounded-full bg-white keep-light shadow transform transition-transform`}
-          style={{ transform: enabled ? travel : rest }}
+          style={{ transform: isOn ? travel : rest }}
         />
       </button>
     </div>
@@ -166,8 +198,13 @@ function ToggleSwitch({ enabled, onToggle, disabled, lang, compact = false }) {
 
 export default function RevenueSection() {
   const { lang } = useLanguage();
-  // Fee rules zisizo na category (orphans) hazionyeshwi tena.
-  const listingFeeConfigs = useListingFeeConfigs().filter((c) => !c.orphan);
+
+  // ✅ FIX #9: orphan ni derived — filter inatumia isFeeConfigOrphan
+  const allFeeConfigs = useListingFeeConfigs();
+  const listingFeeConfigs = allFeeConfigs.filter(
+    (c) => !isFeeConfigOrphan(c)
+  );
+
   const reservationSettings = useReservationSettings();
   const reservationTiers = useReservationTiers();
   const leadingFee = useLeadingFeeConfig();
@@ -187,7 +224,7 @@ export default function RevenueSection() {
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  // ✅ Hydrate MARA MOJA tu kwenye mount
+  // ✅ FIX #1: Hydrate MARA MOJA tu kwenye mount
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -224,16 +261,18 @@ export default function RevenueSection() {
     setRefreshing(true);
     setError("");
     try {
+      // ✅ Refresh inatumia forceRefresh() kwa stores zote
+      // (bypass TTL na race protection kutoka hydrateGuard.js)
       const results = await Promise.allSettled([
         hydrateReservationFromApi.forceRefresh(),
-        hydrateListingFeeConfigsFromApi(),
-        hydrateLeadingFeeFromApi(),
-        hydrateLeadingPackagesFromApi(),
-        hydrateAdvertisementFeeFromApi(),
-        hydrateAdvertisementPackagesFromApi(),
-        hydrateSuccessFeeFromApi(),
-        hydrateBoostPackagesFromApi(),
-        hydrateBoostFeeFromApi(),
+        hydrateListingFeeConfigsFromApi.forceRefresh(),
+        hydrateLeadingFeeFromApi.forceRefresh(),
+        hydrateLeadingPackagesFromApi.forceRefresh(),
+        hydrateAdvertisementFeeFromApi.forceRefresh(),
+        hydrateAdvertisementPackagesFromApi.forceRefresh(),
+        hydrateSuccessFeeFromApi.forceRefresh(),
+        hydrateBoostPackagesFromApi.forceRefresh(),
+        hydrateBoostFeeFromApi.forceRefresh(),
       ]);
       const failed = results.filter(
         (r) => r.status === "rejected" || r.value?.ok === false
@@ -618,9 +657,30 @@ export default function RevenueSection() {
   };
 
   // ── Fee config management ───────────────────────────────
-  const missingFeeCategories = activeCategories.filter(
-    (c) => !hasFeeConfig(c.key)
-  );
+  // ✅ FIX #9: missingFeeCategories inatumia listingFeeConfigs (zilizofilter)
+  // badala ya hasFeeConfig — kuhakikisha consistency kati ya "inaonekana
+  // kwenye list" na "inahesabiwa kama missing".
+  const missingFeeCategories = activeCategories.filter((cat) => {
+    const hasVisible = listingFeeConfigs.some((rule) => {
+      // Match kwa categoryId
+      if (
+        rule.categoryId != null &&
+        String(rule.categoryId) === String(cat.id)
+      ) {
+        return true;
+      }
+      // Match kwa key/slug
+      const catKey = cat.key || "";
+      const catSlug = cat.slug || "";
+      return (
+        rule.key === catKey ||
+        rule.backendKey === catKey ||
+        rule.key === catSlug ||
+        rule.backendKey === catSlug
+      );
+    });
+    return !hasVisible;
+  });
 
   const handleAddFeeConfig = (cat) =>
     withBusy(`add-fee-${cat.key}`, async () => {
@@ -643,7 +703,7 @@ export default function RevenueSection() {
             `Fee config for "${cat.key}" added. Click amount to edit.`
           )
         );
-        await hydrateListingFeeConfigsFromApi();
+        await hydrateListingFeeConfigsFromApi.forceRefresh();
       }
       return res;
     });
@@ -844,7 +904,7 @@ export default function RevenueSection() {
           <div className="divide-y divide-hairline">
             {listingFeeConfigs.map((c) => {
               const category = getCategory(c.key);
-              // ✅ SAFE: catLabel ni STRING kila mara (hakuna object)
+              // ✅ SAFE: catLabel ni STRING kila mara
               const catLabel =
                 safeStr(category?.label, lang) ||
                 safeStr(c.name, lang) ||
@@ -1007,25 +1067,27 @@ export default function RevenueSection() {
             </div>
             <ToggleSwitch
               enabled={reservationSettings.is_enabled}
+              loaded={reservationSettings.loaded}
               onToggle={toggleReservation}
               disabled={!!busy["res-toggle"]}
               lang={lang}
             />
           </div>
-          {!reservationSettings.is_enabled && (
-            <p
-              className="text-xs text-center rounded-lg px-3 py-2 mb-3"
-              style={{
-                background: `${COLORS.rust}15`,
-                color: COLORS.dangerText,
-              }}
-            >
-              {t(
-                "Reservation Fee imezimwa — tiers zote ni BURE kwa watumiaji.",
-                "Reservation Fee is disabled — all tiers are FREE for users."
-              )}
-            </p>
-          )}
+          {reservationSettings.loaded &&
+            reservationSettings.is_enabled === false && (
+              <p
+                className="text-xs text-center rounded-lg px-3 py-2 mb-3"
+                style={{
+                  background: `${COLORS.rust}15`,
+                  color: COLORS.dangerText,
+                }}
+              >
+                {t(
+                  "Reservation Fee imezimwa — tiers zote ni BURE kwa watumiaji.",
+                  "Reservation Fee is disabled — all tiers are FREE for users."
+                )}
+              </p>
+            )}
           <EditHint lang={lang} accentColor={COLORS.green} />
           <div className="flex items-center justify-between gap-2 mb-3">
             <span className="text-[11px] font-semibold text-secondary">
@@ -1164,6 +1226,7 @@ export default function RevenueSection() {
             </div>
             <ToggleSwitch
               enabled={successFee.is_enabled}
+              loaded={successFee.loaded !== false}
               onToggle={toggleSuccess}
               disabled={!!busy["success-toggle"]}
               lang={lang}
@@ -1226,12 +1289,13 @@ export default function RevenueSection() {
             </div>
             <ToggleSwitch
               enabled={boostFee.enabled}
+              loaded={boostFee.loaded}
               onToggle={toggleBoostFee}
               disabled={!boostFee.loaded || !!busy["boost-fee-toggle"]}
               lang={lang}
             />
           </div>
-          {boostFee.loaded && !boostFee.enabled && (
+          {boostFee.loaded && boostFee.enabled === false && (
             <p
               className="text-xs text-center rounded-lg px-3 py-2 mb-2"
               style={{
@@ -1315,12 +1379,13 @@ export default function RevenueSection() {
             </div>
             <ToggleSwitch
               enabled={leadingFee.is_enabled}
+              loaded={leadingFee.loaded}
               onToggle={toggleLeading}
               disabled={!!busy["leading-toggle"]}
               lang={lang}
             />
           </div>
-          {!leadingFee.is_enabled && (
+          {leadingFee.loaded && leadingFee.is_enabled === false && (
             <p
               className="text-xs text-center rounded-lg px-3 py-2 mb-3"
               style={{
@@ -1406,12 +1471,13 @@ export default function RevenueSection() {
             </div>
             <ToggleSwitch
               enabled={adFee.is_enabled}
+              loaded={adFee.loaded}
               onToggle={toggleAdvertisement}
               disabled={!!busy["advertisement-toggle"]}
               lang={lang}
             />
           </div>
-          {!adFee.is_enabled && (
+          {adFee.loaded && adFee.is_enabled === false && (
             <p
               className="text-xs text-center rounded-lg px-3 py-2 mb-3"
               style={{
