@@ -8,7 +8,7 @@ import {
   ChevronDown, CreditCard, ShieldCheck, CheckCircle2,
   AlertTriangle, Ban, Upload, FileImage, ThumbsDown, PartyPopper,
   Paperclip, Loader2, Lock, Flag, MoreVertical, UserRound, LogOut,
-  RotateCcw,
+  RotateCcw, Clock, CheckCheck, AlertCircle,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS, timeAgo } from "./shared";
 import {
@@ -53,6 +53,119 @@ function getMessageText(m, lang) {
   if (!m.text) return "";
   if (typeof m.text === "string") return m.text;
   return m.text?.[lang] || m.text?.sw || "";
+}
+
+// Saa ya kutumwa (mf. 14:05) — kwa saa za kifaa cha mtumiaji
+function formatMsgTime(at) {
+  if (!at) return "";
+  const d = new Date(at);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function isSameDay(a, b) {
+  if (!a || !b) return false;
+  const da = new Date(a);
+  const db = new Date(b);
+  if (Number.isNaN(da.getTime()) || Number.isNaN(db.getTime())) return false;
+  return da.toDateString() === db.toDateString();
+}
+
+function formatDayLabel(at, lang) {
+  const d = new Date(at);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === now.toDateString())
+    return lang === "sw" ? "Leo" : "Today";
+  if (d.toDateString() === yesterday.toDateString())
+    return lang === "sw" ? "Jana" : "Yesterday";
+  return d.toLocaleDateString(lang === "sw" ? "sw-TZ" : "en-GB", {
+    day: "numeric",
+    month: "short",
+    year: d.getFullYear() === now.getFullYear() ? undefined : "numeric",
+  });
+}
+
+// Inaunganisha data ya seva na ujumbe wa ndani ambao bado haujafika
+// (unatumwa / umeshindwa) ili polling isiufute.
+function mergeServerDeal(prev, serverDeal) {
+  if (!serverDeal) return prev;
+  if (!Array.isArray(serverDeal.messages)) return { ...prev, ...serverDeal };
+  const serverMsgs = serverDeal.messages;
+  const pendingLocal = (prev?.messages || []).filter(
+    (m) =>
+      (m.sendStatus === "failed" || m.sendStatus === "sending") &&
+      !serverMsgs.some((s) => String(s.id) === String(m.id))
+  );
+  return { ...prev, ...serverDeal, messages: [...serverMsgs, ...pendingLocal] };
+}
+
+// Muda + alama ya hali chini ya kila ujumbe
+function MessageMeta({ m, mine, lang, onRetry }) {
+  const time = formatMsgTime(m.at);
+  const sendStatus = m.sendStatus || "sent";
+  const isRead = !!(m.readAt || m.read_at || m.isRead || m.read || m.seenAt);
+  const isDelivered = !!(m.deliveredAt || m.delivered_at);
+
+  if (mine && sendStatus === "failed") {
+    return (
+      <div
+        className="flex items-center gap-1.5 mt-0.5 text-[11px] font-medium"
+        style={{ color: COLORS.rust }}
+      >
+        <AlertCircle size={12} />
+        <span>{lang === "sw" ? "Haikutumwa" : "Not sent"}</span>
+        <button
+          type="button"
+          onClick={() => onRetry?.(m.id)}
+          className="underline font-semibold inline-flex items-center gap-0.5"
+        >
+          <RotateCcw size={10} />
+          {lang === "sw" ? "Jaribu tena" : "Retry"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex items-center gap-1 mt-0.5 text-[11px]"
+      style={{ color: "rgba(16,26,46,0.5)" }}
+    >
+      {time && <span>{time}</span>}
+      {mine && sendStatus === "sending" && (
+        <>
+          <Clock size={11} />
+          <span>{lang === "sw" ? "Inatuma..." : "Sending..."}</span>
+        </>
+      )}
+      {mine && sendStatus !== "sending" && (
+        isRead ? (
+          <CheckCheck
+            size={13}
+            color={COLORS.green}
+            aria-label={lang === "sw" ? "Imesomwa" : "Read"}
+          />
+        ) : isDelivered ? (
+          <CheckCheck
+            size={13}
+            aria-label={lang === "sw" ? "Imefika" : "Delivered"}
+          />
+        ) : (
+          <Check
+            size={13}
+            aria-label={lang === "sw" ? "Imetumwa" : "Sent"}
+          />
+        )
+      )}
+    </div>
+  );
 }
 
 function formatMoneyInput(value) {
@@ -1068,7 +1181,7 @@ function OfferBubble({ amount, mine, lang }) {
         background: mine ? COLORS.gold : "white",
         borderColor: COLORS.sandLine,
       }}
-      className="border rounded-2xl px-4 py-3 max-w-[75%] flex items-center gap-2"
+      className="border rounded-2xl px-4 py-3 max-w-full flex items-center gap-2"
     >
       <HandCoins size={16} color={mine ? COLORS.night : COLORS.rust} />
       <div>
@@ -1097,6 +1210,7 @@ function DealDetail({
   side,
   onBack,
   onSendMessage,
+  onRetryMessage,
   onSendOffer,
   onRespond,
   onReopen,
@@ -1178,6 +1292,51 @@ function DealDetail({
         )
     );
   const iMadeLastOffer = lastOffer?.sender === "me";
+
+  // ── Notice ya "mmekubaliana" — inakaa ndani ya timeline, chini ya ofa
+  //    iliyokubaliwa, ili ujumbe mpya ufuate chini yake (si juu yake) ──
+  const showAcceptedNotice =
+    deal.status === "accepted" &&
+    !isLocked &&
+    (isSeller ||
+      (isBuyer && !deal.reservationPaidAt && !deal.transactionId));
+  const acceptedAnchorId = lastOffer?.id ?? null;
+  const acceptedAnchorExists =
+    acceptedAnchorId != null &&
+    (deal.messages || []).some(
+      (m) => String(m.id) === String(acceptedAnchorId)
+    );
+
+  const acceptedNotice = showAcceptedNotice ? (
+    <div key="accepted-notice" className="flex justify-center my-1">
+      <div
+        style={{
+          background: isSeller
+            ? "rgba(232,163,61,0.14)"
+            : "rgba(47,109,79,0.08)",
+          color: isSeller ? "#8A5A16" : COLORS.green,
+          borderColor: COLORS.sandLine,
+        }}
+        className="border rounded-xl px-3.5 py-2 max-w-[90%] text-body-sm text-center font-medium"
+      >
+        {isSeller
+          ? lang === "sw"
+            ? `Mmekubaliana kwenye ${formatTZS(
+                deal.currentOffer
+              )}. Mnunuzi ataendelea na hatua inayofuata.`
+            : `You agreed at ${formatTZS(
+                deal.currentOffer
+              )}. The buyer will proceed with the next step.`
+          : lang === "sw"
+            ? `Mmekubaliana bei ya ${formatTZS(
+                deal.currentOffer
+              )}. Endelea kuwasiliana na muuzaji hapa.`
+            : `You've agreed at ${formatTZS(
+                deal.currentOffer
+              )}. Continue chatting with the seller here.`}
+      </div>
+    </div>
+  ) : null;
   const canRespond =
     canInteract &&
     deal.currentOffer > 0 &&
@@ -1620,12 +1779,16 @@ function DealDetail({
         className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-2.5"
         style={{ background: COLORS.sand }}
       >
-        {deal.messages.map((m) => {
+        {deal.messages.map((m, idx) => {
           const text = getMessageText(m, lang);
+          const prevMsg = idx > 0 ? deal.messages[idx - 1] : null;
+          const showDaySeparator =
+            !!m.at && (!prevMsg || !isSameDay(prevMsg.at, m.at));
+          const mine = m.sender === "me";
           // ── MPYA: admin bubble — chunguza `kind` pia ──
           const isAdminMessage =
             m.sender === "admin" || m.kind === "ADMIN";
-          return isAdminMessage ? (
+          const bubble = isAdminMessage ? (
             <div key={m.id} className="flex justify-center my-1">
               <div
                 style={{
@@ -1644,57 +1807,66 @@ function DealDetail({
           ) : (
             <div
               key={m.id}
-              className={`flex ${
-                m.sender === "me" ? "justify-end" : "justify-start"
-              }`}
+              className={`flex ${mine ? "justify-end" : "justify-start"}`}
             >
-              {m.offerAmount ? (
-                <OfferBubble
-                  amount={m.offerAmount}
-                  mine={m.sender === "me"}
+              <div
+                className={`flex flex-col max-w-[75%] ${
+                  mine ? "items-end" : "items-start"
+                }`}
+              >
+                {m.offerAmount ? (
+                  <OfferBubble
+                    amount={m.offerAmount}
+                    mine={mine}
+                    lang={lang}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      background: mine ? COLORS.night : "white",
+                      color: mine ? COLORS.sand : COLORS.night,
+                      borderColor: COLORS.sandLine,
+                      opacity: m.sendStatus === "sending" ? 0.7 : 1,
+                    }}
+                    className="border rounded-2xl px-4 py-2.5 text-sm break-words"
+                  >
+                    {text}
+                  </div>
+                )}
+                <MessageMeta
+                  m={m}
+                  mine={mine}
                   lang={lang}
+                  onRetry={(msgId) => onRetryMessage?.(deal.id, msgId)}
                 />
-              ) : (
-                <div
-                  style={{
-                    background:
-                      m.sender === "me" ? COLORS.night : "white",
-                    color:
-                      m.sender === "me" ? COLORS.sand : COLORS.night,
-                    borderColor: COLORS.sandLine,
-                  }}
-                  className="border rounded-2xl px-4 py-2.5 max-w-[75%] text-sm"
-                >
-                  {text}
+              </div>
+            </div>
+          );
+          return (
+            <React.Fragment key={m.id}>
+              {showDaySeparator && (
+                <div className="flex justify-center my-1">
+                  <span
+                    style={{
+                      background: "rgba(16,26,46,0.06)",
+                      color: "rgba(16,26,46,0.55)",
+                    }}
+                    className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                  >
+                    {formatDayLabel(m.at, lang)}
+                  </span>
                 </div>
               )}
-            </div>
+              {bubble}
+              {acceptedAnchorExists &&
+                String(m.id) === String(acceptedAnchorId) &&
+                acceptedNotice}
+            </React.Fragment>
           );
         })}
 
-        {deal.status === "accepted" &&
-          isBuyer &&
-          !deal.reservationPaidAt &&
-          !deal.transactionId && (
-            <div className="flex justify-center my-1">
-              <div
-                style={{
-                  background: "rgba(47,109,79,0.08)",
-                  color: COLORS.green,
-                  borderColor: COLORS.sandLine,
-                }}
-                className="border rounded-xl px-3.5 py-2 max-w-[90%] text-body-sm text-center font-medium"
-              >
-                {lang === "sw"
-                  ? `Mmekubaliana bei ya ${formatTZS(
-                      deal.currentOffer
-                    )}. Endelea kuwasiliana na muuzaji hapa.`
-                  : `You've agreed at ${formatTZS(
-                      deal.currentOffer
-                    )}. Continue chatting with the seller here.`}
-              </div>
-            </div>
-          )}
+        {/* Fallback: ofa iliyokubaliwa haipo kwenye orodha — weka mwishoni */}
+        {!acceptedAnchorExists && acceptedNotice}
       </div>
 
       {/* Negotiation actions */}
@@ -1795,29 +1967,6 @@ function DealDetail({
           >
             {lang === "sw" ? "Tuma Ofa" : "Send Offer"}
           </button>
-        </div>
-      )}
-
-      {deal.status === "accepted" && isSeller && !isLocked && (
-        <div
-          style={{
-            borderColor: COLORS.sandLine,
-            background: "rgba(232,163,61,0.10)",
-          }}
-          className="flex flex-col items-center text-center gap-1 px-3 sm:px-4 py-3 border-t"
-        >
-          <span
-            style={{ color: "#8A5A16" }}
-            className="text-body-sm font-medium max-w-md"
-          >
-            {lang === "sw"
-              ? `Mmekubaliana kwenye ${formatTZS(
-                  deal.currentOffer
-                )}. Tafadhali subiri majibu ya mnunuzi.`
-              : `You agreed at ${formatTZS(
-                  deal.currentOffer
-                )}. Please wait for the buyer's response.`}
-          </span>
         </div>
       )}
 
@@ -2427,7 +2576,9 @@ export default function DealRooms({
     fetchDealDetailAsync(selectedDeal.dealRoomId || selectedDeal.id)
       .then((res) => {
         if (res?.ok && res.deal) {
-          updateDealInStore(selectedDeal.id, res.deal);
+          updateDealInStore(selectedDeal.id, (prev) =>
+            mergeServerDeal(prev, res.deal)
+          );
         } else if (res?.error) {
           const status = res.error?.status;
           if (status === 404) {
@@ -2465,7 +2616,7 @@ export default function DealRooms({
             return;
           }
           if (res?.ok && res.deal && sendingRef.current === 0) {
-            updateDealInStore(id, res.deal);
+            updateDealInStore(id, (prev) => mergeServerDeal(prev, res.deal));
           }
         })
         .catch(() => {
@@ -2546,6 +2697,7 @@ export default function DealRooms({
       text,
       kind: "USER",
       isHidden: false,
+      sendStatus: "sending",
       at: new Date().toISOString(),
     };
     updateDeal(id, (prev) => ({
@@ -2553,6 +2705,11 @@ export default function DealRooms({
       messages: [...(prev.messages || []), optimisticMsg],
     }));
 
+    await deliverMessage(deal, id, tempId, text, optimisticMsg);
+  };
+
+  // Hutuma ujumbe kwa seva na kusasisha hali yake (sending → sent / failed).
+  const deliverMessage = async (deal, id, tempId, text, optimisticMsg) => {
     sendingRef.current += 1;
     try {
       const res = await dealsApi.sendDealMessage(
@@ -2569,7 +2726,12 @@ export default function DealRooms({
             ...prev,
             messages: list.map((m) =>
               m.id === tempId
-                ? { ...m, id: serverId ?? m.id, at: serverAt || m.at }
+                ? {
+                    ...m,
+                    id: serverId ?? m.id,
+                    at: serverAt || m.at,
+                    sendStatus: "sent",
+                  }
                 : m
             ),
           };
@@ -2590,35 +2752,65 @@ export default function DealRooms({
               ...optimisticMsg,
               id: serverId ?? tempId,
               at: serverAt || optimisticMsg.at,
+              sendStatus: "sent",
             },
           ],
         };
       });
     } catch (err) {
+      // Usiufute — uonyeshwe "Haikutumwa" na kitufe cha Jaribu tena
       updateDeal(id, (prev) => ({
         ...prev,
-        messages: (prev.messages || []).filter(
-          (m) => m.id !== tempId
+        messages: (prev.messages || []).map((m) =>
+          m.id === tempId ? { ...m, sendStatus: "failed" } : m
         ),
       }));
       // Admin amesimamisha room wakati mtumiaji yuko ndani — sasisha UI sasa
       if (err?.data?.code === "DEAL_LOCKED" || err?.code === "DEAL_LOCKED") {
         fetchDealDetailAsync(deal.dealRoomId || deal.id)
           .then((r) => {
-            if (r?.ok && r.deal) updateDealInStore(id, r.deal);
+            if (r?.ok && r.deal)
+              updateDealInStore(id, (prev) => mergeServerDeal(prev, r.deal));
           })
           .catch(() => {});
+        alert(
+          err?.data?.detail ||
+            err?.message ||
+            (lang === "sw"
+              ? "Room imesimamishwa na msimamizi."
+              : "Room is suspended by admin.")
+        );
       }
-      alert(
-        err?.data?.detail ||
-          err?.message ||
-          (lang === "sw"
-            ? "Imeshindwa kutuma ujumbe."
-            : "Failed to send message.")
-      );
     } finally {
       sendingRef.current = Math.max(0, sendingRef.current - 1);
     }
+  };
+
+  const handleRetryMessage = async (id, msgId) => {
+    const deal = deals.find((d) => String(d.id) === String(id));
+    if (!deal) return;
+    const failed = (deal.messages || []).find(
+      (m) => String(m.id) === String(msgId) && m.sendStatus === "failed"
+    );
+    if (!failed) return;
+
+    if (deal.adminLocked) {
+      alert(
+        lang === "sw"
+          ? "Room imesimamishwa na msimamizi — huwezi kutuma ujumbe."
+          : "Room is suspended by admin — you cannot send messages."
+      );
+      return;
+    }
+
+    const retried = { ...failed, sendStatus: "sending" };
+    updateDeal(id, (prev) => ({
+      ...prev,
+      messages: (prev.messages || []).map((m) =>
+        m.id === failed.id ? retried : m
+      ),
+    }));
+    await deliverMessage(deal, id, failed.id, failed.text, retried);
   };
 
   const handleSendOffer = async (id, amount) => {
@@ -3402,6 +3594,7 @@ export default function DealRooms({
               user={user}
               onBack={() => setMobileShowDetail(false)}
               onSendMessage={handleSendMessage}
+              onRetryMessage={handleRetryMessage}
               onSendOffer={handleSendOffer}
               onRespond={handleRespond}
               onReopen={handleReopen}

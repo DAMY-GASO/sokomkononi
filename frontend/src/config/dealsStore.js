@@ -55,6 +55,19 @@ const API_TO_FRONTEND_DEAL_STATUS = {
   EXPIRED: "cancelled",
 };
 
+// Ujumbe ambao bado haujafika kwa seva (unatumwa / umeshindwa) usifutwe
+// na refresh ya seva — la sivyo "Haikutumwa" ingepotea yenyewe.
+function mergeMessages(serverMsgs = [], existingMsgs = []) {
+  const isPending = (m) =>
+    m.sendStatus === "failed" || m.sendStatus === "sending";
+  const pending = existingMsgs.filter(
+    (m) => isPending(m) && !serverMsgs.some((s) => sameId(s.id, m.id))
+  );
+  const confirmed = existingMsgs.filter((m) => !pending.includes(m));
+  const base = serverMsgs.length >= confirmed.length ? serverMsgs : confirmed;
+  return [...base, ...pending];
+}
+
 // ============================================================
 // SYNC READS
 // ============================================================
@@ -226,6 +239,10 @@ function normalizeMessage(raw, currentUserId, roomBuyerId, roomSellerId) {
     offerAmount: null,
     at: raw.created_at || raw.at || null,
     status: raw.status || null,
+    // ── Hali ya ujumbe (✓ / ✓✓) — inategemea backend kutuma sehemu hizi ──
+    readAt: raw.read_at || raw.readAt || raw.seen_at || raw.seenAt || null,
+    isRead: raw.is_read === true || raw.isRead === true || raw.read === true,
+    deliveredAt: raw.delivered_at || raw.deliveredAt || null,
   };
 }
 
@@ -559,10 +576,7 @@ export async function fetchDealDetailAsync(dealId) {
           location:   deal.location   || existing.location   || "",
           askingPrice: deal.askingPrice || existing.askingPrice || 0,
           currentOffer: deal.currentOffer || existing.currentOffer || 0,
-          messages:
-            (deal.messages?.length || 0) >= (existing.messages?.length || 0)
-              ? deal.messages
-              : existing.messages,
+          messages: mergeMessages(deal.messages, existing.messages),
         }
       : deal;
     saveDeals(
@@ -683,6 +697,7 @@ export async function sendOfferAsync(
         offerAmount: amount,
         at: new Date().toISOString(),
         status: "pending",
+        sendStatus: "sending",
       },
     ],
   };
