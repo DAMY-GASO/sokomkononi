@@ -1,14 +1,16 @@
 // ============================================================
 // Captcha.jsx — Cloudflare Turnstile (env-gated, degrades to no-op)
-// Set VITE_TURNSTILE_SITE_KEY in .env to enable.
+// Set VITE_TURNSTILE_SITE_ID in .env to enable.
 //
 // FIXED:
 //   - callbacks stored in refs so parent re-renders don't remount widget
 //   - theme follows document.documentElement.dark
+//   - ✅ FIX: SITE_KEY sasa inasoma VITE_TURNSTILE_SITE_ID (kulingana na docker-compose)
 // ============================================================
 import React, { useEffect, useRef } from "react";
 
-const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
+// ✅ Badilisha jina hapa ili lilandane na docker-compose.yml
+const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_ID || "";
 
 export const isCaptchaEnabled = Boolean(SITE_KEY);
 
