@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: "dist",
       sourcemap: false,
-      target: "es2020",
+      target: "es2020", // ✅ Inasaidia sana kwa Mobile Performance
       cssCodeSplit: true, // ✅ Inagawanya CSS kwenye chunks ndogo badala ya file moja kubwa
       chunkSizeWarningLimit: 800, // ✅ Ongeza uwezo wa kugawanya chunks vizuri
       rollupOptions: {
@@ -44,14 +44,11 @@ export default defineConfig(({ mode }) => {
               return "vendor-other";
             }
 
-            // 2. Gawanya Stores (Data logic) kutoka kwenye UI
-            if (id.includes("/src/config/")) {
-              return "app-stores";
-            }
-
-            // 3. Gawanya API clients (Mtandao) kutoka kwenye UI
-            if (id.includes("/src/api/")) {
-              return "app-api";
+            // 2. ✅ FIX: Weka API na Stores PAMOJA (app-core) ili kuepuka "Circular chunk"
+            // Kwa sababu client.js (API) inategemea adminPath.js (Store),
+            // na listingsStore.js (Store) inategemea listings.js (API).
+            if (id.includes("/src/config/") || id.includes("/src/api/")) {
+              return "app-core";
             }
           },
         },

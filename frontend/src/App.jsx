@@ -129,6 +129,7 @@ function App() {
                   <Route path="/sheria" element={<TermsPage />} />
                   <Route path="/faragha" element={<PrivacyPage />} />
                   <Route path="/jinsi-ya-kununua" element={<JinsiYaKununuaNaKuuza />} />
+                  <Route path="/jinsi-ya-kuuza" element={<JinsiYaKununuaNaKuuza />} /> 
 
                   {/* AUTH */}
                   <Route path="/login" element={<LoginPage />} />
