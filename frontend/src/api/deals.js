@@ -33,8 +33,9 @@ export const dealsApi = {
   // ── Messages ─────────────────────────────────────────────
   messages: (dealRoomId, params = {}) =>
     api.get(`/deals/${dealRoomId}/messages/${toQuery(params)}`),
-  sendDealMessage: (dealRoomId, { text }) =>
-    api.post(`/deals/${dealRoomId}/messages/`, { text }),
+  // payload: { text } au FormData (text + attachment) kwa picha.
+  sendDealMessage: (dealRoomId, payload) =>
+    api.post(`/deals/${dealRoomId}/messages/`, payload),
 
   markRead: (dealRoomId) =>
     api.post(`/deals/${dealRoomId}/mark-read/`),

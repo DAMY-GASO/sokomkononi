@@ -5,7 +5,7 @@
 // + Kila notification inaweza kubofywa → inafungua mahali sahihi
 // ============================================================
 import React, { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Bell, Check, CheckCheck, Trash2, Rocket, MessageSquare,
   HandCoins, Shield, Clock, Info, Eye, TrendingUp, Megaphone,
@@ -51,6 +51,7 @@ const NOTIFICATION_TYPES = {
 // ============================================================
 function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const config = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.system;
   const Icon = config.icon;
 
@@ -72,6 +73,21 @@ function NotificationItem({ notif, onMarkRead, onRemove, lang, side }) {
 
   const handleOpen = () => {
     if (!notif.read) onMarkRead(notif.id);
+    const [tPath, tQuery] = String(target).split("?");
+    if (!tQuery && tPath.replace(/\/+$/, "") === location.pathname.replace(/\/+$/, "")) {
+      // Hakuna ukurasa maalum — usionekane kama imeharibika
+      window.dispatchEvent(
+        new CustomEvent("sokomkononi:toast", {
+          detail: {
+            type: "info",
+            message: lang === "sw"
+              ? "Taarifa hii haina ukurasa maalum."
+              : "This notification has no specific page.",
+          },
+        })
+      );
+      return;
+    }
     navigate(target);
   };
 

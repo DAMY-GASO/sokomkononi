@@ -234,6 +234,7 @@ function normalizeMessage(raw, currentUserId, roomBuyerId, roomSellerId) {
     senderId,
     senderName: raw.sender_name || raw.senderName || "",
     text: raw.text || "",
+    imageUrl: raw.attachment_url || raw.attachmentUrl || null,
     kind: isAdminKind ? "ADMIN" : "USER",
     isHidden: !!raw.is_hidden || !!raw.isHidden,
     offerAmount: null,
@@ -335,7 +336,8 @@ function normalizeDealFromApi(raw, currentUserId) {
   return {
     id: raw.id,
     dealRoomId: dealRoom.id ?? raw.deal_room ?? null,
-    transactionId: transaction.id ?? raw.transaction ?? null,
+    transactionId:
+      transaction.id ?? raw.transaction_id ?? _asId(raw.transaction) ?? null,
     listingId,
     ...meta,
     listingPrice,

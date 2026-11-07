@@ -31,6 +31,7 @@ import {
 import { useAnnouncements, hydrateAnnouncementsFromApi } from "../../../config/announcementsStore.js";
 import { useNotifications } from "../../../config/notificationsStore.js";
 import { setDashboardSide } from "../../../config/dashboardSideStore.js";
+import { URL_TO_STATE } from "../../../config/dashboardRoutes.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
 import { useNewLeadsCount } from "../../../config/leadsStore.js";
 import { useSearchesCount } from "../../../config/searchesStore.js";
@@ -94,43 +95,6 @@ const BUYER_NAV = [
   { key: "safety", label: { sw: "Usalama & Msaada", en: "Safety & Support" }, icon: Shield },
   { key: "feedback", label: { sw: "Maoni Yangu", en: "My Feedback" }, icon: MessageSquarePlus },
 ];
-
-const URL_TO_STATE = {
-  "/dashboard": { side: "seller", key: "overview" },
-  "/dashboard/seller": { side: "seller", key: "overview" },
-  "/dashboard/overview": { side: "seller", key: "overview" },
-  "/dashboard/post": { side: "seller", key: "post" },
-  "/dashboard/listings": { side: "seller", key: "listings" },
-  "/dashboard/leads": { side: "seller", key: "leads" },
-  "/dashboard/boost": { side: "seller", key: "boost" },
-  "/dashboard/leading": { side: "seller", key: "leading" },
-  "/dashboard/advertise": { side: "seller", key: "advertise" },
-  "/dashboard/deals": { side: "seller", key: "deals" },
-  "/dashboard/notifications": { side: "seller", key: "notifications" },
-  "/dashboard/transactions": { side: "seller", key: "transactions" },
-  "/dashboard/bundles": { side: "seller", key: "bundles" },
-  "/dashboard/verification": { side: "seller", key: "verification" },
-  "/dashboard/safety": { side: "seller", key: "safety" },
-  "/dashboard/feedback": { side: "seller", key: "feedback" },
-  "/dashboard/activity": { side: "seller", key: "activity" },
-  "/dashboard/pay-listing": { side: "seller", key: "pay_listing" },
-
-  "/dashboard/buyer": { side: "buyer", key: "overview" },
-  "/dashboard/buyer/overview": { side: "buyer", key: "overview" },
-  "/dashboard/buyer/browse": { side: "buyer", key: "browse" },
-  "/dashboard/buyer/saved": { side: "buyer", key: "saved" },
-  "/dashboard/buyer/searches": { side: "buyer", key: "searches" },
-  "/dashboard/buyer/notifications": { side: "buyer", key: "notifications" },
-  "/dashboard/buyer/deals": { side: "buyer", key: "deals" },
-  "/dashboard/buyer/reservations": { side: "buyer", key: "reservations" },
-  "/dashboard/buyer/waiting": { side: "buyer", key: "waiting" },
-  "/dashboard/buyer/transactions": { side: "buyer", key: "transactions" },
-  "/dashboard/buyer/bundles": { side: "buyer", key: "bundles" },
-  "/dashboard/buyer/verification": { side: "buyer", key: "verification" },
-  "/dashboard/buyer/feedback": { side: "buyer", key: "feedback" },
-  "/dashboard/buyer/safety": { side: "buyer", key: "safety" },
-  "/dashboard/buyer/activity": { side: "buyer", key: "activity" },
-};
 
 const STATE_TO_URL = {
   seller: {
@@ -572,6 +536,7 @@ export default function DashboardShell() {
     if (activeKey === "deals") {
       return (
         <DealRooms
+          key={`${side}:${location.search}`}
           side={side}
           initialDealId={new URLSearchParams(location.search).get("deal")}
           onReservationPaid={handleReservationPaid}

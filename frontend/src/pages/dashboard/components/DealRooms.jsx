@@ -330,7 +330,6 @@ function PaymentProofPanel({ deal, onSubmit, lang }) {
   const [preview, setPreview] = useState(null);
   const [fileName, setFileName] = useState("");
   const [reference, setReference] = useState("");
-  const [method, setMethod] = useState(PAYMENT_METHODS[0]);
   const [submitting, setSubmitting] = useState(false);
   const [file, setFile] = useState(null);
   const fileInputRef = useRef(null);
@@ -356,7 +355,6 @@ function PaymentProofPanel({ deal, onSubmit, lang }) {
         fileName,
         dataUrl: preview,
         reference: reference.trim(),
-        method,
       });
     } finally {
       setSubmitting(false);
@@ -383,10 +381,10 @@ function PaymentProofPanel({ deal, onSubmit, lang }) {
           {lang === "sw"
             ? `Lipa ${formatTZS(
                 deal.currentOffer
-              )} moja kwa moja kwa muuzaji (M-Pesa/Benki/n.k), kisha pakia risiti au screenshot ya malipo hapa.`
+              )} moja kwa moja kwa muuzaji , kisha pakia risiti au screenshot ya malipo hapa.`
             : `Pay ${formatTZS(
                 deal.currentOffer
-              )} directly to the seller (M-Pesa/Bank/etc.), then upload the receipt or payment screenshot here.`}
+              )} directly to the seller , then upload the receipt or payment screenshot here.`}
         </p>
       </div>
 
@@ -455,23 +453,6 @@ function PaymentProofPanel({ deal, onSubmit, lang }) {
         className="w-full rounded-lg border px-3 py-2 text-sm outline-none text-center"
       />
 
-      <div className="grid grid-cols-2 gap-2">
-        {PAYMENT_METHODS.map((m) => (
-          <button
-            key={m}
-            onClick={() => setMethod(m)}
-            style={{
-              borderColor: method === m ? COLORS.green : COLORS.sandLine,
-              background: method === m ? "rgba(47,109,79,0.08)" : "white",
-              color: COLORS.night,
-            }}
-            className="rounded-lg border px-2.5 py-2 text-body-sm font-medium text-center"
-          >
-            {m}
-          </button>
-        ))}
-      </div>
-
       <button
         onClick={handleSubmit}
         disabled={!canSubmit}
@@ -500,7 +481,44 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  const proof = deal.paymentProof;
+  const [remote, setRemote] = useState(null);
+  const [loadingProof, setLoadingProof] = useState(false);
+  const [proofError, setProofError] = useState(false);
+  const [lightbox, setLightbox] = useState(false);
+  const stored = deal.paymentProof;
+  const roomId = deal.dealRoomId || deal.id;
+
+  // Picha ya uthibitisho haiji kwenye orodha ya deal — ipakie kutoka
+  // endpoint ya payment-proof ya seva.
+  useEffect(() => {
+    let alive = true;
+    if (typeof dealsApi.paymentProof !== "function") return undefined;
+    setLoadingProof(true);
+    setProofError(false);
+    dealsApi
+      .paymentProof(roomId)
+      .then((res) => {
+        if (alive) setRemote(res || null);
+      })
+      .catch(() => {
+        if (alive) setProofError(true);
+      })
+      .finally(() => {
+        if (alive) setLoadingProof(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [roomId, stored?.submittedAt]);
+
+  const proof =
+    stored || remote
+      ? {
+          reference: stored?.reference || remote?.reference || "",
+          submittedAt: stored?.submittedAt || remote?.uploaded_at || null,
+          imageUrl: remote?.url || stored?.dataUrl || null,
+        }
+      : null;
 
   const handleConfirm = async () => {
     setBusy(true);
@@ -536,6 +554,19 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
         </p>
       </div>
 
+      {loadingProof && !proof?.imageUrl && (
+        <p className="text-muted text-body-sm text-center">
+          {lang === "sw" ? "Inapakia picha..." : "Loading image..."}
+        </p>
+      )}
+      {proofError && !proof?.imageUrl && (
+        <p style={{ color: COLORS.rust }} className="text-body-sm text-center">
+          {lang === "sw"
+            ? "Imeshindwa kupakia picha ya uthibitisho. Jaribu tena baadaye."
+            : "Could not load the proof image. Try again later."}
+        </p>
+      )}
+
       {proof && (
         <div
           style={{
@@ -544,25 +575,60 @@ function PaymentProofReview({ deal, onConfirm, onReject, lang }) {
           }}
           className="rounded-xl border p-3 flex items-center gap-3"
         >
-          {proof.dataUrl && (
-            <img
-              src={proof.dataUrl}
-              alt="Payment receipt"
-              className="w-16 h-16 rounded-lg object-cover shrink-0"
-            />
+          {proof.imageUrl && (
+            <button
+              type="button"
+              onClick={() => setLightbox(true)}
+              className="shrink-0"
+              aria-label={lang === "sw" ? "Fungua picha" : "Open image"}
+            >
+              <img
+                src={proof.imageUrl}
+                alt="Payment receipt"
+                className="w-16 h-16 rounded-lg object-cover"
+              />
+            </button>
           )}
           <div className="min-w-0 text-body-sm">
             <p className="text-primary font-semibold">
-              {formatTZS(deal.currentOffer)} · {proof.method}
+              {formatTZS(deal.currentOffer)}
             </p>
-            <p className="text-secondary mt-0.5">
-              Ref: <span className="font-mono">{proof.reference}</span>
-            </p>
-            <p className="text-muted mt-0.5">
-              {lang === "sw" ? "Zimetumwa" : "Submitted"}{" "}
-              {timeAgo(proof.submittedAt, lang)}
-            </p>
+            {proof.reference && (
+              <p className="text-secondary mt-0.5">
+                Ref: <span className="font-mono">{proof.reference}</span>
+              </p>
+            )}
+            {proof.submittedAt && (
+              <p className="text-muted mt-0.5">
+                {lang === "sw" ? "Zimetumwa" : "Submitted"}{" "}
+                {timeAgo(proof.submittedAt, lang)}
+              </p>
+            )}
+            {proof.imageUrl && (
+              <a
+                href={proof.imageUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: COLORS.green }}
+                className="font-semibold"
+              >
+                {lang === "sw" ? "Fungua picha kubwa" : "Open full image"}
+              </a>
+            )}
           </div>
+        </div>
+      )}
+
+      {lightbox && proof?.imageUrl && (
+        <div
+          onClick={() => setLightbox(false)}
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
+        >
+          <img
+            src={proof.imageUrl}
+            alt="Payment receipt"
+            className="max-w-full max-h-full rounded-lg"
+          />
         </div>
       )}
 
@@ -1229,6 +1295,39 @@ function DealDetail({
   const [reserveModalOpen, setReserveModalOpen] = useState(false);
   const [freeReserving, setFreeReserving] = useState(false);
   const [chatError, setChatError] = useState("");
+  const [attachFile, setAttachFile] = useState(null);
+  const [attachPreview, setAttachPreview] = useState(null);
+  const attachInputRef = useRef(null);
+
+  const clearAttachment = () => {
+    if (attachPreview) URL.revokeObjectURL(attachPreview);
+    setAttachFile(null);
+    setAttachPreview(null);
+    if (attachInputRef.current) attachInputRef.current.value = "";
+  };
+
+  const handleAttachChange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      setChatError(
+        lang === "sw" ? "Chagua picha pekee." : "Please choose an image."
+      );
+      return;
+    }
+    if (f.size > 8 * 1024 * 1024) {
+      setChatError(
+        lang === "sw"
+          ? "Picha ni kubwa mno (kiwango ni MB 8)."
+          : "Image is too large (max 8 MB)."
+      );
+      return;
+    }
+    setChatError("");
+    if (attachPreview) URL.revokeObjectURL(attachPreview);
+    setAttachFile(f);
+    setAttachPreview(URL.createObjectURL(f));
+  };
 
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("FRAUD");
@@ -1406,10 +1505,11 @@ function DealDetail({
 
   const handleSend = () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed && !attachFile) return;
     setChatError("");
-    onSendMessage(deal.id, trimmed);
+    onSendMessage(deal.id, trimmed, attachFile);
     setText("");
+    clearAttachment();
   };
 
   const handleExit = () => {
@@ -1880,6 +1980,22 @@ function DealDetail({
                     }}
                     className="border rounded-2xl px-4 py-2.5 text-sm break-words"
                   >
+                    {m.imageUrl && (
+                      <a
+                        href={m.imageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block"
+                      >
+                        <img
+                          src={m.imageUrl}
+                          alt=""
+                          className={`rounded-lg max-w-full max-h-64 object-cover ${
+                            text ? "mb-2" : ""
+                          }`}
+                        />
+                      </a>
+                    )}
                     {text}
                   </div>
                 )}
@@ -2328,8 +2444,45 @@ function DealDetail({
         !isLocked && (
           <div
             style={{ borderColor: COLORS.sandLine, background: "white" }}
-            className="flex items-center gap-2 p-3 border-t"
+            className="flex flex-col gap-2 p-3 border-t"
           >
+            {attachPreview && (
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <img
+                    src={attachPreview}
+                    alt=""
+                    className="w-16 h-16 rounded-lg object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={clearAttachment}
+                    style={{ background: COLORS.night, color: "white" }}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                    aria-label={lang === "sw" ? "Ondoa picha" : "Remove image"}
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+            <input
+              ref={attachInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAttachChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => attachInputRef.current?.click()}
+              style={{ color: COLORS.night, borderColor: COLORS.sandLine }}
+              className="w-10 h-10 rounded-full border flex items-center justify-center shrink-0"
+              aria-label={lang === "sw" ? "Ambatanisha picha" : "Attach image"}
+            >
+              <Paperclip size={16} />
+            </button>
             <input
               style={{
                 background: COLORS.sand,
@@ -2355,6 +2508,7 @@ function DealDetail({
             >
               <Send size={16} />
             </button>
+            </div>
           </div>
         )}
 
@@ -2597,7 +2751,7 @@ export default function DealRooms({
   }, [deals, actionParam, listingIdParam]);
 
   const selectedDeal =
-    deals.find((d) => d.id === selectedId) || deals[0];
+    deals.find((d) => String(d.id) === String(selectedId)) || deals[0];
   const updateDeal = (id, patchOrUpdater) => {
     updateDealInStore(id, patchOrUpdater);
   };
@@ -2726,6 +2880,40 @@ export default function DealRooms({
     return () => document.removeEventListener("visibilitychange", send);
   }, [selectedRoomId, latestUnreadIncomingId, mobileShowDetail]);
 
+  // Tafuta transaction id bila kuunda mpya. Seller mara nyingi hana
+  // `transactionId` kwenye deal iliyohifadhiwa, kwa hiyo tunaiuliza seva.
+  const resolveTxId = async (deal) => {
+    let txId = transactionIds[deal.id] || deal.transactionId;
+    if (txId) return txId;
+    const roomId = deal.dealRoomId || deal.id;
+    const remember = (v) => {
+      if (!v) return null;
+      setTransactionIds((prev) => ({ ...prev, [deal.id]: v }));
+      updateDeal(deal.id, { transactionId: v });
+      return v;
+    };
+    try {
+      const d = await dealsApi.detail(roomId);
+      const t = d?.transaction_id ?? d?.transaction?.id ?? (
+        typeof d?.transaction === "number" || typeof d?.transaction === "string"
+          ? d.transaction
+          : null
+      );
+      if (remember(t)) return t;
+    } catch {
+      /* noop */
+    }
+    try {
+      if (typeof dealsApi.paymentProof === "function") {
+        const pp = await dealsApi.paymentProof(roomId);
+        if (remember(pp?.id)) return pp.id;
+      }
+    } catch {
+      /* noop */
+    }
+    return null;
+  };
+
   const ensureTransactionId = async (deal) => {
     let txId = transactionIds[deal.id] || deal.transactionId;
     if (txId) return txId;
@@ -2776,7 +2964,7 @@ export default function DealRooms({
     return txId;
   };
 
-  const handleSendMessage = async (id, text) => {
+  const handleSendMessage = async (id, text, file = null) => {
     const deal = deals.find((d) => String(d.id) === String(id));
     if (!deal) return;
 
@@ -2794,6 +2982,8 @@ export default function DealRooms({
       id: tempId,
       sender: "me",
       text,
+      imageUrl: file ? URL.createObjectURL(file) : null,
+      attachmentFile: file || null,
       kind: "USER",
       isHidden: false,
       sendStatus: "sending",
@@ -2811,9 +3001,15 @@ export default function DealRooms({
   const deliverMessage = async (deal, id, tempId, text, optimisticMsg) => {
     sendingRef.current += 1;
     try {
+      let payload = { text };
+      if (optimisticMsg?.attachmentFile) {
+        payload = new FormData();
+        payload.append("text", text || "");
+        payload.append("attachment", optimisticMsg.attachmentFile);
+      }
       const res = await dealsApi.sendDealMessage(
         deal.dealRoomId || deal.id,
-        { text }
+        payload
       );
       updateDeal(id, (prev) => {
         const list = prev.messages || [];
@@ -2829,6 +3025,8 @@ export default function DealRooms({
                     ...m,
                     id: serverId ?? m.id,
                     at: serverAt || m.at,
+                    imageUrl: res?.attachment_url || m.imageUrl || null,
+                    attachmentFile: null,
                     sendStatus: "sent",
                   }
                 : m
@@ -3456,12 +3654,12 @@ export default function DealRooms({
       );
       return;
     }
-    const txId = transactionIds[id] || deal.transactionId;
+    const txId = await resolveTxId(deal);
     if (!txId) {
       alert(
         lang === "sw"
-          ? "Transaction haipatikani."
-          : "Transaction not found."
+          ? "Muamala haujapatikana. Fungua upya ukurasa kisha jaribu tena."
+          : "Transaction not found. Reload the page and try again."
       );
       return;
     }
@@ -3492,14 +3690,14 @@ export default function DealRooms({
 
     const note =
       lang === "sw"
-        ? `Uthibitisho wa malipo umetumwa (${proof.method}, Ref: ${proof.reference}).`
-        : `Payment proof submitted (${proof.method}, Ref: ${proof.reference}).`;
+        ? `Uthibitisho wa malipo umetumwa (Ref: ${proof.reference}).`
+        : `Payment proof submitted (Ref: ${proof.reference}).`;
 
     updateDeal(id, {
       status: "payment_proof_submitted",
       paymentProof: {
-        method: proof.method,
         reference: proof.reference,
+        dataUrl: proof.dataUrl || null,
         submittedAt: new Date().toISOString(),
       },
       messages: [
@@ -3527,12 +3725,12 @@ export default function DealRooms({
       );
       return;
     }
-    const txId = transactionIds[id] || deal.transactionId;
+    const txId = await resolveTxId(deal);
     if (!txId) {
       alert(
         lang === "sw"
-          ? "Transaction haipatikani."
-          : "Transaction not found."
+          ? "Muamala haujapatikana. Fungua upya ukurasa kisha jaribu tena."
+          : "Transaction not found. Reload the page and try again."
       );
       return;
     }
@@ -3571,7 +3769,7 @@ export default function DealRooms({
     });
 
     onFinalPaymentConfirmed?.(deal, side, {
-      method: deal.paymentProof?.method,
+      method: "",
       reference: deal.paymentProof?.reference,
     });
   };
@@ -3587,12 +3785,12 @@ export default function DealRooms({
       );
       return;
     }
-    const txId = transactionIds[id] || deal.transactionId;
+    const txId = await resolveTxId(deal);
     if (!txId) {
       alert(
         lang === "sw"
-          ? "Transaction haipatikani."
-          : "Transaction not found."
+          ? "Muamala haujapatikana. Fungua upya ukurasa kisha jaribu tena."
+          : "Transaction not found. Reload the page and try again."
       );
       return;
     }

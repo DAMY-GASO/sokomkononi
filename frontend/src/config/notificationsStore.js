@@ -16,6 +16,7 @@
 import { useEffect, useState } from "react";
 import { notificationsApi } from "../api/notifications.js";
 import { ADMIN_PATH } from "./adminPath.js";
+import { URL_TO_STATE } from "./dashboardRoutes.js";
 
 const KEY = "sokomkononi_notifications_v1";
 const DELETED_KEY = "sokomkononi_notifications_deleted_v1";
@@ -210,6 +211,7 @@ function norm(raw) {
     read: !!raw.is_read,
     readAt: raw.read_at,
     link: raw.action_url,
+    side: raw.side || null,
     target: TYPE_TO_TARGET[raw.notification_type] || null,
     meta: {
       related_object_type: raw.related_object_type,
@@ -409,13 +411,30 @@ export function getLocalizedField(field, lang = "sw") {
 // ============================================================
 // RESOLVE NOTIFICATION SIDE — "buyer" | "seller" | "both"
 // ============================================================
+// Daraja la muda hadi backend ipitishe `side` kila mahali.
+// Thibitisha kila type dhidi ya mahali inapotengenezwa (nani anapokea).
+const SELLER_ONLY_TYPES = new Set([
+  "NEW_OFFER",
+  "RESERVATION_CREATED",
+  "PAYMENT_PROOF_UPLOADED",
+  "BUYER_DECISION",
+]);
+const BUYER_ONLY_TYPES = new Set(["WAITING_LIST_JOINED"]);
+
 export function resolveNotificationSide(notif) {
   if (!notif) return "both";
+
+  // Backend ikisema wazi buyer/seller, hiyo ndiyo ya mwisho.
+  // ("both" ni default ya zamani, kwa hiyo inaendelea na heuristics.)
+  if (notif.side === "buyer" || notif.side === "seller") return notif.side;
 
   const rawType = String(notif.rawType || notif.type || "").toUpperCase();
   const type = rawType.replace(/\./g, "_");
   const meta = notif.meta || {};
   const relatedType = String(meta.related_object_type || "").toLowerCase();
+
+  if (SELLER_ONLY_TYPES.has(type)) return "seller";
+  if (BUYER_ONLY_TYPES.has(type)) return "buyer";
 
   // ── SELLER-ONLY ──────────────────────────────────────────
   if (
@@ -481,7 +500,45 @@ export function resolveNotificationSide(notif) {
 // ============================================================
 // RESOLVE NOTIFICATION ROUTE
 // ============================================================
+function isFrontendPath(url) {
+  if (typeof url !== "string" || !url) return false;
+  if (!url.startsWith("/") || url.startsWith("//")) return false;
+  if (url.startsWith("/api/")) return false;
+  // Link za admin hazifunguki kwa user (zinaenda NotFound)
+  if (url.startsWith("/dashboard/admin") || url.startsWith(ADMIN_PATH)) return false;
+  return true;
+}
+
+// Backend huandika /dashboard/...; kwa buyer zigeuze kuwa /dashboard/buyer/...
+function adaptLinkToSide(url, side) {
+  if (
+    side === "buyer" &&
+    url.startsWith("/dashboard/") &&
+    !url.startsWith("/dashboard/buyer")
+  ) {
+    return url.replace("/dashboard/", "/dashboard/buyer/");
+  }
+  return url;
+}
+
+function knownRoute(path) {
+  const base = String(path).split("?")[0].split("#")[0].replace(/\/+$/, "") || "/";
+  return (
+    !!URL_TO_STATE[base] ||
+    /^\/dashboard\/listings\/edit\/[^/]+$/.test(base) ||
+    /^\/mali\/[^/]+$/.test(base)
+  );
+}
+
+// Njia ikiwa haipo kwenye router, rudi kwenye ukurasa wa taarifa (si NotFound)
 export function resolveNotificationRoute(notif, side = "seller") {
+  const route = resolveRouteRaw(notif, side);
+  if (side === "admin" || notif?.audience === "admin") return route;
+  if (knownRoute(route)) return route;
+  return side === "buyer" ? "/dashboard/buyer/notifications" : "/dashboard/notifications";
+}
+
+function resolveRouteRaw(notif, side) {
   if (!notif) return "/dashboard/notifications";
 
   // ── ADMIN — tumia `link` (action_url) moja kwa moja ──
@@ -498,10 +555,24 @@ export function resolveNotificationRoute(notif, side = "seller") {
   const relatedId = meta.related_object_id;
   const relatedType = String(meta.related_object_type || "").toLowerCase();
 
+  // Notification za zamani zina id ya transaction/reservation, si ya deal room —
+  // usiipitishe kama ?deal= (ingefungua deal isiyo sahihi).
+  const idIsNotDeal =
+    /transaction|reservation|inspection/.test(relatedType);
   const withQuery = (base, key) =>
-    relatedId != null && relatedId !== ""
+    relatedId != null && relatedId !== "" && !(key === "deal" && idIsNotDeal)
       ? `${base}?${key}=${encodeURIComponent(relatedId)}`
       : base;
+
+  // ── Link ya backend (action_url) ina kipaumbele, ikiwa ni ya frontend ──
+  if (isFrontendPath(notif.link)) {
+    const adapted = adaptLinkToSide(notif.link, side);
+    if (knownRoute(adapted)) return adapted;
+  }
+
+  // ── Support / feedback: tegemea related_object_type, si type tu ──
+  if (relatedType === "ticket") return withQuery(`${prefix}/safety`, "ticket");
+  if (relatedType === "feedback") return withQuery(`${prefix}/feedback`, "id");
 
   switch (type) {
     // ── Listing-specific (buyer view) ──
@@ -676,7 +747,7 @@ export function notificationCtaKey(notif) {
   switch (type) {
     case "PRICE_DROP":
     case "SEARCH_ALERT":
-      return relatedId != null ? `/mali/${relatedId}` : "view";
+      return "view";
 
     case "MESSAGE_RECEIVED":
     case "MESSAGE":

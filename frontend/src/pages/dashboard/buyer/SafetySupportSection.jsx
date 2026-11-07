@@ -401,8 +401,8 @@ export default function SafetySupportSection({ side = "buyer" }) {
   const sortedTickets = useMemo(() => {
     if (!focusedTicketId) return tickets;
     return [...tickets].sort((a, b) => {
-      if (a.id === focusedTicketId) return -1;
-      if (b.id === focusedTicketId) return 1;
+      if (String(a.id) === String(focusedTicketId)) return -1;
+      if (String(b.id) === String(focusedTicketId)) return 1;
       return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
     });
   }, [tickets, focusedTicketId]);
@@ -740,7 +740,7 @@ export default function SafetySupportSection({ side = "buyer" }) {
                   key={ticket.id}
                   ticket={ticket}
                   lang={lang}
-                  defaultExpanded={ticket.id === focusedTicketId}
+                  defaultExpanded={focusedTicketId != null && String(ticket.id) === String(focusedTicketId)}
                 />
               ))}
             </div>

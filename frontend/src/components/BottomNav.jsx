@@ -3,7 +3,10 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useDashboardSide } from "../config/dashboardSideStore.js";
-import { useNotifications } from "../config/notificationsStore.js"; // ✅ Hakikisha hii ipo
+import {
+  useNotifications,
+  resolveNotificationSide,
+} from "../config/notificationsStore.js";
 
 const icons = {
   home: (
@@ -64,7 +67,8 @@ export default function BottomNav() {
   const side = useDashboardSide();
   
   // ✅ Pata notifications kutoka store
-  const notifications = useNotifications(); 
+  // useNotifications inarudisha OBJECT { notifications, unreadCount, ... }, si array
+  const { notifications } = useNotifications("user", Boolean(user));
 
   // ✅ 1. FICHA BOTTOM NAV KWENYE KURASA ZA FOMU
   const shouldHide = useMemo(() => {
@@ -77,19 +81,17 @@ export default function BottomNav() {
 
   // ✅ 2. HESABU IDADI YA NOTIFICATIONS ZA DEALS
   const unreadDealCount = useMemo(() => {
-    if (!notifications || !Array.isArray(notifications)) return 0;
+    if (!Array.isArray(notifications)) return 0;
     return notifications.filter((n) => {
-      // Notification ni ya deal kama:
-      // - Haijasomwa
-      // - Inahusiana na deal room (au "deal" kwenye related_object_type)
-      const isUnread = n.is_read === false || n.unread === true;
-      const isDeal = 
-        n.related_object_type?.toLowerCase().includes("deal") || 
-        n.type?.toLowerCase().includes("deal") ||
-        n.notification_type?.toLowerCase().includes("deal");
-      return isUnread && isDeal;
+      if (n.read) return false;
+      // Hesabu za upande uliopo tu (buyer/seller), kama NotificationsPage
+      const nSide = resolveNotificationSide(n);
+      if (nSide !== "both" && nSide !== side) return false;
+      const rawType = String(n.rawType || "").toUpperCase();
+      const relType = String(n.meta?.related_object_type || "").toLowerCase();
+      return n.type === "deal" || rawType.includes("DEAL") || relType.includes("deal");
     }).length;
-  }, [notifications]);
+  }, [notifications, side]);
 
   if (shouldHide) return null;
 
