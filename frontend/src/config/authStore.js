@@ -4,6 +4,7 @@
 // FIX: updateProfileAsync reads raw.profile (backend returns {message, profile})
 // FIX: normalizeUserFromApi inasoma current_role
 // FIX: auto-refresh kwenye event ya verifications
+// FIX: adminLoginAsync inatuma captcha_token kwa backend
 // ============================================================
 import { useEffect, useState } from "react";
 import { authApi, setUnauthorizedHandler } from "../api/index.js";
@@ -355,7 +356,10 @@ export async function verify2faLoginAsync({ codeToken, code, remember = true }) 
   }
 }
 
-export async function adminLoginAsync({ identifier, password }) {
+// ============================================================
+// ADMIN LOGIN — ✅ FIX: inapokea na kutuma captcha_token
+// ============================================================
+export async function adminLoginAsync({ identifier, password, captcha_token }) {
   if (!identifier || !password) {
     return {
       ok: false,
@@ -363,7 +367,8 @@ export async function adminLoginAsync({ identifier, password }) {
     };
   }
   try {
-    await authApi.login({ identifier, password });
+    // ✅ Tuma captcha_token kwa backend (mfano: Cloudflare Turnstile token)
+    await authApi.login({ identifier, password, captcha_token });
     const me = await authApi.me();
     if (!computeIsAdmin(me)) {
       await authApi.logout().catch(() => {});

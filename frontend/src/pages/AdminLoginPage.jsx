@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { adminLoginAsync, useAuth } from "../config/authStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { ADMIN_PATH } from "../config/adminPath.js";
+import Captcha, { isCaptchaEnabled } from "../components/Captcha.jsx";
 
 const icons = {
   mail: (
@@ -67,7 +68,6 @@ export default function AdminLoginPage() {
   const { isAdmin, isLoading } = useAuth();
 
   // Admin ambaye tayari ameingia (session ya admin) haoni tena fomu ya login.
-  // Session hii ni tofauti na ya watumiaji, kwa hiyo haiathiri tab za user.
   useEffect(() => {
     if (!isLoading && isAdmin) navigate(`${ADMIN_PATH}/overview`, { replace: true });
   }, [isAdmin, isLoading, navigate]);
@@ -77,11 +77,31 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // ✅ Captcha state
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaNonce, setCaptchaNonce] = useState(0);
+
+  // ✅ Reset captcha (token inatumika mara moja tu)
+  function resetCaptcha() {
+    setCaptchaToken("");
+    setCaptchaNonce((n) => n + 1);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
 
     if (!form.email.trim() || !form.password) {
       setError(t("admin_login_error_required"));
+      return;
+    }
+
+    // ✅ Zuia kama captcha haijakamilika
+    if (isCaptchaEnabled && !captchaToken) {
+      setError(
+        lang === "sw"
+          ? "Tafadhali kamilisha uthibitisho wa Captcha."
+          : "Please complete the Captcha verification."
+      );
       return;
     }
 
@@ -91,17 +111,18 @@ export default function AdminLoginPage() {
     const res = await adminLoginAsync({
       identifier: form.email,
       password: form.password,
+      captcha_token: captchaToken || undefined, // ✅ Tuma token kwa backend
     });
     setLoading(false);
 
     if (!res.ok) {
-      // ✅ FIX #26: Ondoa redundant `|| "Barua pepe..."` — `t()` inarudisha string kila wakati
       setError(
         getErrorMessage(
           res.error,
           t("admin_login_error_default")
         )
       );
+      resetCaptcha(); // ✅ Token ya kwanza imetumika, reset
       return;
     }
 
@@ -109,7 +130,6 @@ export default function AdminLoginPage() {
     navigate(`${ADMIN_PATH}/overview`);
   }
 
-  // ✅ FIX #26: Ondoa `|| "..."` kwenye headings
   const leftHeading = t("admin_panel_heading");
   const leftSubtext = t("admin_panel_subtext");
 
@@ -118,7 +138,7 @@ export default function AdminLoginPage() {
     t("admin_feature2"),
     t("admin_feature3"),
     t("admin_feature4"),
-  ].filter(Boolean); // Safety: filter out empty/undefined
+  ].filter(Boolean);
 
   const formHeading = t("admin_login_heading");
   const formSubtext = t("admin_login_subtext");
@@ -227,12 +247,19 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
+              {/* ✅ CAPTCHA */}
+              <Captcha
+                key={captchaNonce}
+                onVerify={setCaptchaToken}
+                onExpire={() => setCaptchaToken("")}
+              />
+
               {error && <p className="text-rust text-body-sm">{error}</p>}
 
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn disabled:cursor-not-allowed"
+                disabled={loading || (isCaptchaEnabled && !captchaToken)}
+                className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading
                   ? t("admin_login_submitting")

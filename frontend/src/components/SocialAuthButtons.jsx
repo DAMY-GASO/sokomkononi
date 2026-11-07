@@ -105,7 +105,10 @@ export default function SocialAuthButtons({ lang = "sw", onSuccess, showTerms = 
     <div className="mb-6">
       <div className={`space-y-3 transition-opacity ${busy ? "opacity-60 pointer-events-none" : ""}`}>
         {isGoogleEnabled && (
-          <div ref={googleRef} className="flex w-full min-h-[40px] justify-center" />
+          // ✅ FIX: Container hii inalazimisha Google iframe/div kujaa upana kamili
+          <div className="w-full flex justify-center [&>div]:!w-full [&>iframe]:!w-full [&_.g_id_signin]:!w-full [&_.g_id_signin>div]:!w-full">
+            <div ref={googleRef} className="w-full" />
+          </div>
         )}
         {isAppleEnabled && (
           <button

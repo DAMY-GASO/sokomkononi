@@ -226,8 +226,11 @@ export async function renderGoogleButton(el, { onCredential, onError, locale = "
     googleInitialized = true;
   }
 
-  const width = Math.min(400, Math.max(200, Math.round(el.offsetWidth || 320)));
+  // ✅ FIX: Google button ijae upana kamili kama Apple button
   el.innerHTML = "";
+  const containerWidth = el.offsetWidth || 320;
+  const width = Math.min(400, Math.max(200, containerWidth));
+
   window.google.accounts.id.renderButton(el, {
     type: "standard",
     theme: "outline",
@@ -235,9 +238,30 @@ export async function renderGoogleButton(el, { onCredential, onError, locale = "
     text: "continue_with",
     shape: "rectangular",
     logo_alignment: "left",
-    width,
+    width, // ✅ inatumia upana kamili wa container
     locale,
   });
+
+  // ✅ FIX: Baada ya render, lazima tu-apply CSS ili iframe/ijae 100%
+  // Google anaweka iframe yenye width fixed, tunalazimisha iwe 100%
+  setTimeout(() => {
+    const iframe = el.querySelector("iframe");
+    if (iframe) {
+      iframe.style.width = "100%";
+      iframe.style.maxWidth = "100%";
+    }
+    const div = el.querySelector("div[role='button']");
+    if (div) {
+      div.style.width = "100%";
+      div.style.maxWidth = "100%";
+    }
+    // Pia shirikisha container kuwa full width
+    const innerDiv = el.querySelector("div");
+    if (innerDiv) {
+      innerDiv.style.width = "100%";
+      innerDiv.style.maxWidth = "100%";
+    }
+  }, 100);
 }
 
 // ── Apple: popup flow ──────────────────────────────────────
