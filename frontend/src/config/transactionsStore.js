@@ -423,12 +423,15 @@ function _upsertTx(tx) {
 async function _mutate({ id, patch, apiCall }) {
   const previous = readFromStorage();
   const current = _findTx(id);
-  if (!current) return { ok: false, error: new Error("Transaction not found") };
-  _upsertTx({ ...current, ...patch, updatedAt: new Date().toISOString() });
+  // Optimistic update tu kama muamala upo kwenye cache; si sharti.
+  // (Awali: "Transaction not found" ilirudi bila kuita seva.)
+  if (current) {
+    _upsertTx({ ...current, ...patch, updatedAt: new Date().toISOString() });
+  }
   try {
     const raw = await apiCall();
     const normalized = normalizeTransactionRow(raw) || normalizeMyTransaction(raw);
-    if (normalized) _upsertTx(normalized);
+    if (normalized && normalized.id != null) _upsertTx(normalized);
     return { ok: true, transaction: normalized || current };
   } catch (err) {
     saveTransactions(previous);

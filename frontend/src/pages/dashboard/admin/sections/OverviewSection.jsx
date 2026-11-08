@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Users, Home, ShoppingBag, Wallet,
   UserCheck, Store, ClipboardList, CheckCircle2,
@@ -9,13 +9,7 @@ import { COLORS, formatTZS } from "../shared/constants.js";
 import StatCard from "../shared/StatCard.jsx";
 import SectionHeader from "../shared/SectionHeader.jsx";
 import { useLanguage } from "../../../../context/LanguageContext.jsx";
-import { useUsers } from "../../../../config/usersStore.js";
-import {
-  useListings,
-  fetchPendingListingsAsync,
-} from "../../../../config/listingsStore.js";
-import { useDeals } from "../../../../config/dealsStore.js";
-import { useTransactions } from "../../../../config/transactionsStore.js";
+import { financeApi } from "../../../../api/finance.js";
 import { usePlatformRevenue } from "../shared/revenue.js";
 
 const STREAM_META = {
@@ -33,130 +27,56 @@ const STREAM_META = {
 // ─────────────────────────────────────────────────────────────
 const LOADING = "…";
 
-function useHydrationReady(deps) {
-  // Inageuka true mara ya kwanza deps zote zina data (si tupu)
-  const [ready, setReady] = useState(false);
-  const checkedRef = useRef(false);
+// Overview inasoma namba zote kutoka endpoint moja ya seva (hakuna cache ya
+// localStorage), kwa hiyo admin haoni tena namba za zamani zikibadilika.
+function useOverviewStats() {
+  const [state, setState] = useState({ loading: true, error: null, data: null });
 
-  useEffect(() => {
-    if (checkedRef.current) return;
-    // Kama deps zote zina data tayari kwenye mount, sema ready mara moja
-    if (deps.every((d) => Array.isArray(d) && d.length > 0)) {
-      checkedRef.current = true;
-      setReady(true);
-    }
-  }, [deps]);
-
-  // Safety net: baada ya 3s, sema ready hata kama data ni tupu (mtumiaji mpya)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!checkedRef.current) {
-        checkedRef.current = true;
-        setReady(true);
-      }
-    }, 3000);
-    return () => clearTimeout(timer);
+  const load = useCallback(() => {
+    let cancelled = false;
+    setState((s) => ({ ...s, loading: true, error: null }));
+    financeApi
+      .overviewStats()
+      .then((data) => !cancelled && setState({ loading: false, error: null, data }))
+      .catch((error) => !cancelled && setState({ loading: false, error, data: null }));
+    return () => { cancelled = true; };
   }, []);
 
-  return ready;
+  useEffect(() => load(), [load]);
+  return { ...state, retry: load };
 }
 
 export default function OverviewSection() {
   const { lang } = useLanguage();
-  const users = useUsers();
-  const listings = useListings();
-  const deals = useDeals();
-  const transactions = useTransactions();
   const revenue = usePlatformRevenue("all");
-
-  const [pendingCount, setPendingCount] = useState(0);
-  const [pendingReady, setPendingReady] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchPendingListingsAsync().then((res) => {
-      if (cancelled) return;
-      if (res.ok) setPendingCount((res.listings || []).length);
-      setPendingReady(true);
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  // ✅ Tunaona "hydrated" flag kwa kila store
-  const usersReady = useHydrationReady([users]);
-  const listingsReady = useHydrationReady([listings]);
-  const dealsReady = useHydrationReady([deals]);
-  const transactionsReady = useHydrationReady([transactions]);
+  const { loading, error, data, retry } = useOverviewStats();
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  const userStats = useMemo(() => {
-    let sellersOnly = 0, buyersOnly = 0, bothRoles = 0, neitherRole = 0, totalAdmins = 0;
-    users.forEach((u) => {
-      const role = u.role || "Neither";
-      if (role === "Admin") totalAdmins++;
-      else if (role === "Seller") sellersOnly++;
-      else if (role === "Buyer") buyersOnly++;
-      else if (role === "Both") bothRoles++;
-      else neitherRole++;
-    });
-    return {
-      totalUsers: sellersOnly + buyersOnly + bothRoles + neitherRole + totalAdmins,
-      totalSellers: sellersOnly + bothRoles,
-      totalBuyers: buyersOnly + bothRoles,
-      sellersOnly,
-      buyersOnly,
-      bothRoles,
-      neitherRole,
-      totalAdmins,
-    };
-  }, [users]);
+  // loading => skeleton, error => "—", vinginevyo namba halisi
+  const num = (v) =>
+    loading ? LOADING : error || v == null ? "—" : Number(v).toLocaleString("en-US");
 
-  const totalListings = listings.length;
-
-  const draftListings = useMemo(
-    () => listings.filter((l) => l.status === "pending_payment").length,
-    [listings]
-  );
-
-  const pendingPayments = useMemo(
-    () => transactions.filter((tr) => tr.status === "pending").length,
-    [transactions]
-  );
-
-  const activeDeals = useMemo(
-    () => deals.filter((d) =>
-      ["negotiating","offer_sent","accepted","reserved",
-       "awaiting_final_payment","payment_proof_submitted","disputed"].includes(d.status)
-    ),
-    [deals]
-  );
-
-  const completedDeals = useMemo(
-    () => deals.filter((d) => d.status === "completed").length,
-    [deals]
-  );
-
-  // ✅ Thamani inayoonyeshwa — inaonyesha "…" kama bado haijahydrate
-  const displayValue = (ready, value) =>
-    ready ? value.toLocaleString("en-US") : LOADING;
+  const u = data?.users;
+  const l = data?.listings;
+  const d = data?.deals;
 
   const userStatsGrid = [
-    { id: "users",       label: t("Watumiaji Wote", "Total Users"),  value: displayValue(usersReady, userStats.totalUsers),   icon: Users,       color: COLORS.gold },
-    { id: "sellersOnly", label: t("Wauzaji Pekee", "Sellers Only"),  value: displayValue(usersReady, userStats.sellersOnly),  icon: Store,       color: "#2563EB" },
-    { id: "buyersOnly",  label: t("Wanunuzi Pekee", "Buyers Only"),  value: displayValue(usersReady, userStats.buyersOnly),   icon: UserCheck,   color: COLORS.green },
-    { id: "bothRoles",   label: t("Wote Wawili", "Both Roles"),      value: displayValue(usersReady, userStats.bothRoles),    icon: User,        color: "#7C3AED" },
-    { id: "neitherRole", label: t("Wapya", "Neither"),               value: displayValue(usersReady, userStats.neitherRole),  icon: UserPlus,    color: "#D97706" },
-    { id: "admins",      label: t("Admins", "Admins"),               value: displayValue(usersReady, userStats.totalAdmins),  icon: ShieldCheck, color: "#DC2626" },
+    { id: "users",       label: t("Watumiaji Wote", "Total Users"),  value: num(u?.totalUsers),   icon: Users,       color: COLORS.gold },
+    { id: "sellersOnly", label: t("Wauzaji Pekee", "Sellers Only"),  value: num(u?.sellersOnly),  icon: Store,       color: "#2563EB" },
+    { id: "buyersOnly",  label: t("Wanunuzi Pekee", "Buyers Only"),  value: num(u?.buyersOnly),   icon: UserCheck,   color: COLORS.green },
+    { id: "bothRoles",   label: t("Wote Wawili", "Both Roles"),      value: num(u?.bothRoles),    icon: User,        color: "#7C3AED" },
+    { id: "neitherRole", label: t("Wapya", "Neither"),               value: num(u?.neitherRole),  icon: UserPlus,    color: "#D97706" },
+    { id: "admins",      label: t("Admins", "Admins"),               value: num(u?.totalAdmins),  icon: ShieldCheck, color: "#DC2626" },
   ];
 
   const activityStats = [
-    { id: "listings",        label: t("Mali Zote", "Total Listings"),             value: displayValue(listingsReady, totalListings),           icon: Home,          color: COLORS.green },
-    { id: "draftListings",   label: t("Rasimu (Haijawasilishwa)", "Drafts (Not submitted)"), value: displayValue(listingsReady, draftListings),  icon: Tag,           color: "#9CA3AF" },
-    { id: "pendingListings", label: t("Mali Zinazosubiri", "Pending Listings"),   value: pendingReady ? pendingCount.toLocaleString("en-US") : LOADING, icon: ClipboardList, color: "#D97706" },
-    { id: "activeDeals",     label: t("Deals Hai", "Active Deals"),               value: displayValue(dealsReady, activeDeals.length),         icon: ShoppingBag,   color: "#2563EB" },
-    { id: "completedDeals",  label: t("Deals Zilizokamilika", "Completed Deals"), value: displayValue(dealsReady, completedDeals),             icon: CheckCircle2,  color: COLORS.green },
-    { id: "pendingPayments", label: t("Malipo Yanayosubiri", "Pending Payments"), value: displayValue(transactionsReady, pendingPayments),     icon: CreditCard,    color: "#D97706" },
+    { id: "listings",        label: t("Mali Zote", "Total Listings"),             value: num(l?.total),           icon: Home,          color: COLORS.green },
+    { id: "draftListings",   label: t("Rasimu (Haijawasilishwa)", "Drafts (Not submitted)"), value: num(l?.drafts), icon: Tag,           color: "#9CA3AF" },
+    { id: "pendingListings", label: t("Mali Zinazosubiri", "Pending Listings"),   value: num(l?.pending),         icon: ClipboardList, color: "#D97706" },
+    { id: "activeDeals",     label: t("Deals Hai", "Active Deals"),               value: num(d?.active),          icon: ShoppingBag,   color: "#2563EB" },
+    { id: "completedDeals",  label: t("Deals Zilizokamilika", "Completed Deals"), value: num(d?.completed),       icon: CheckCircle2,  color: COLORS.green },
+    { id: "pendingPayments", label: t("Malipo Yanayosubiri", "Pending Payments"), value: num(data?.pendingPayments), icon: CreditCard, color: "#D97706" },
   ];
 
   const revenueStreamCards = useMemo(() => {
@@ -185,6 +105,15 @@ export default function OverviewSection() {
           "Quick system overview — plain numbers only, deep analytics in Reports."
         )}
       />
+
+      {error && !loading && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[color:rgb(var(--c-hairline))] bg-card px-3.5 py-2.5 text-sm text-secondary">
+          <span>{t("Imeshindwa kupakia takwimu.", "Failed to load stats.")}</span>
+          <button onClick={retry} className="font-semibold text-primary underline">
+            {t("Jaribu tena", "Retry")}
+          </button>
+        </div>
+      )}
 
       {/* USERS */}
       <div className="mb-4">
@@ -238,7 +167,9 @@ export default function OverviewSection() {
                 className="mt-1 text-[clamp(1.75rem,6vw,3rem)] font-bold leading-tight tabular-nums"
                 style={{ color: "#FFFFFF" }}
               >
-                {revenue.loading ? LOADING : revenue.error ? "—" : formatTZS(revenue.total)}
+                {revenue.loading ? (
+                  <span className="block h-10 w-48 animate-pulse rounded bg-white/20" />
+                ) : revenue.error ? "—" : formatTZS(revenue.total)}
               </p>
             </div>
           </div>

@@ -8,6 +8,7 @@ function toQuery(params = {}) {
 
 export const financeApi = {
   dashboard: (period = "all") => api.get(`/finance/dashboard/${toQuery({ period })}`),
+  overviewStats: () => api.get("/finance/overview-stats/"),
   revenue: ({ period = "all", source = "all" } = {}) =>
     api.get(`/finance/revenue/${toQuery({ period, source })}`),
   myTransactions: () => api.get("/finance/my-transactions/"),

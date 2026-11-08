@@ -35,7 +35,9 @@ export const dealsApi = {
     api.get(`/deals/${dealRoomId}/messages/${toQuery(params)}`),
   // payload: { text } au FormData (text + attachment) kwa picha.
   sendDealMessage: (dealRoomId, payload) =>
-    api.post(`/deals/${dealRoomId}/messages/`, payload),
+    payload instanceof FormData
+      ? api.upload(`/deals/${dealRoomId}/messages/`, payload)
+      : api.post(`/deals/${dealRoomId}/messages/`, payload),
 
   markRead: (dealRoomId) =>
     api.post(`/deals/${dealRoomId}/mark-read/`),

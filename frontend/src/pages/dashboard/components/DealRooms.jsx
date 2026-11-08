@@ -49,7 +49,64 @@ import {
 // ============================================================
 // HELPERS
 // ============================================================
+const fmtDT = (v, lang) =>
+  v ? new Date(v).toLocaleString(lang === "sw" ? "sw-TZ" : "en-US") : "";
+
+// Ujumbe wa mfumo (kind === "SYSTEM"): maandishi yanatafsiriwa kwa `systemCode`
+function getSystemText(m, lang) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const d = m.systemData || {};
+  switch (m.systemCode) {
+    case "RESERVATION_PAID":
+      return t(
+        `Reservation imelipwa. Mali imehifadhiwa${d.expires_at ? ` hadi ${fmtDT(d.expires_at, lang)}` : ""}. Mnunuzi yuko kwenye kipindi cha ukaguzi.`,
+        `Reservation paid. The property is held${d.expires_at ? ` until ${fmtDT(d.expires_at, lang)}` : ""}. The buyer is in the inspection period.`
+      );
+    case "INSPECTION_PASSED":
+      return t(
+        `Ukaguzi umepita. Mnunuzi anaandaa malipo ya mwisho ya ${formatTZS(Number(d.amount) || 0)} na atapakia uthibitisho hapa.`,
+        `Inspection passed. The buyer is preparing the final payment of ${formatTZS(Number(d.amount) || 0)} and will upload proof here.`
+      );
+    case "INSPECTION_CANCELLED":
+      return t(
+        `Mnunuzi ameghairi deal baada ya ukaguzi${d.note ? `. Sababu: ${d.note}` : ""}.`,
+        `The buyer cancelled the deal after inspection${d.note ? `. Reason: ${d.note}` : ""}.`
+      );
+    case "PROOF_SUBMITTED":
+      return t(
+        `Uthibitisho wa malipo umetumwa${d.reference ? ` (Ref: ${d.reference})` : ""}. Tunasubiri muuzaji athibitishe "Nimepokea Malipo".`,
+        `Payment proof submitted${d.reference ? ` (Ref: ${d.reference})` : ""}. Waiting for the seller to confirm "Payment Received".`
+      );
+    case "PROOF_REJECTED":
+      return t(
+        `Muuzaji bado hajapokea malipo${d.reason ? `. Sababu: ${d.reason}` : ""}. Tafadhali pakia uthibitisho tena.`,
+        `The seller has not received payment yet${d.reason ? `. Reason: ${d.reason}` : ""}. Please re-upload proof.`
+      );
+    case "COMPLETED":
+      return t(
+        "Muamala umekamilika! Malipo yamethibitishwa. Angalia My Transactions kwa risiti.",
+        "Transaction completed! Payment confirmed. Check My Transactions for the receipt."
+      );
+    case "DISPUTED": {
+      const base =
+        d.decision === "REQUEST_NEGOTIATION"
+          ? t("Mnunuzi ameomba kujadiliana tena baada ya ukaguzi.", "The buyer asked to renegotiate after inspection.")
+          : d.decision === "NOT_AS_DESCRIBED"
+            ? t("Mnunuzi ameripoti kuwa mali si kama ilivyoelezwa.", "The buyer reported the property is not as described.")
+            : t("Mgogoro umeripotiwa.", "A dispute has been reported.");
+      const tail = t(
+        " Timu ya SokoMkononi itaingilia kati kusaidia kutatua.",
+        " The SokoMkononi team will step in to help resolve it."
+      );
+      return `${base}${d.note ? ` ${t("Sababu", "Reason")}: ${d.note}.` : ""}${tail}`;
+    }
+    default:
+      return typeof m.text === "string" ? m.text : m.text?.[lang] || m.text?.sw || "";
+  }
+}
+
 function getMessageText(m, lang) {
+  if (m.kind === "SYSTEM") return getSystemText(m, lang);
   if (!m.text) return "";
   if (typeof m.text === "string") return m.text;
   return m.text?.[lang] || m.text?.sw || "";
@@ -1194,7 +1251,7 @@ function DealListItem({ deal, active, onSelect, lang }) {
         background: active ? "white" : "transparent",
         borderColor: COLORS.sandLine,
       }}
-      className="w-full flex items-start gap-3 p-3 rounded-xl border text-left"
+      className="w-full shrink-0 flex items-start gap-3 p-3 rounded-xl border text-left"
     >
       <div
         style={{ background: COLORS.night }}
@@ -1938,16 +1995,17 @@ function DealDetail({
           // ── MPYA: admin bubble — chunguza `kind` pia ──
           const isAdminMessage =
             m.sender === "admin" || m.kind === "ADMIN";
-          const bubble = isAdminMessage ? (
+          const isSystemMessage =
+            m.sender === "system" || m.kind === "SYSTEM";
+          const bubble = isSystemMessage ? (
             <div key={m.id} className="flex justify-center my-1">
-              <div
-                style={{
-                  background: "rgba(16,26,46,0.06)",
-                  color: COLORS.night,
-                  borderColor: COLORS.sandLine,
-                }}
-                className="border rounded-xl px-3.5 py-2 max-w-[90%] text-body-sm text-center font-medium"
-              >
+              <div className="border border-[color:rgb(var(--c-hairline))] bg-card text-primary rounded-xl px-3.5 py-2 max-w-[90%] text-body-sm text-center font-medium">
+                {text}
+              </div>
+            </div>
+          ) : isAdminMessage ? (
+            <div key={m.id} className="flex justify-center my-1">
+              <div className="border border-[color:rgb(var(--c-hairline))] bg-card text-primary rounded-xl px-3.5 py-2 max-w-[90%] text-body-sm text-center font-medium">
                 <span style={{ color: COLORS.rust }} className="font-bold">
                   SokoMkononi Admin:{" "}
                 </span>
@@ -2136,77 +2194,14 @@ function DealDetail({
         </div>
       )}
 
-      {deal.status === "reserved" && side === "seller" && !isLocked && (
-        <div
-          style={{
-            borderColor: COLORS.sandLine,
-            background: "rgba(16,26,46,0.04)",
-          }}
-          className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t text-body-sm"
-        >
-          <span className="text-primary max-w-md">
-            {lang === "sw"
-              ? `Reservation Fee ${formatTZS(
-                  deal.reservationFee
-                )} imelipwa · ${
-                  deal.reservationMethod
-                } · Mnunuzi yuko kwenye Inspection Period.`
-              : `Reservation Fee ${formatTZS(
-                  deal.reservationFee
-                )} paid · ${
-                  deal.reservationMethod
-                } · Buyer is in Inspection Period.`}
-          </span>
-          {deal.reservationExpiresAt && (
-            <span
-              style={{ color: COLORS.rust }}
-              className="font-semibold"
-            >
-              {lang === "sw" ? "Inaisha" : "Ends"}:{" "}
-              {new Date(deal.reservationExpiresAt).toLocaleString(
-                lang === "sw" ? "sw-TZ" : "en-US"
-              )}
-            </span>
-          )}
-        </div>
-      )}
-
       {deal.status === "reserved" && side === "buyer" && !isLocked && (
         <div
-          style={{
-            borderColor: COLORS.sandLine,
-            background: "rgba(47,109,79,0.08)",
-          }}
-          className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t"
+          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          className="flex justify-center px-3 sm:px-4 py-2.5 border-t"
         >
-          <ShieldCheck size={16} color={COLORS.green} />
-          <span
-            style={{ color: COLORS.green }}
-            className="text-body-sm font-medium max-w-md"
-          >
-            {lang === "sw"
-              ? `Mali imeshikiliwa kwa ajili yako${
-                  deal.reservationExpiresAt
-                    ? ` hadi ${new Date(
-                        deal.reservationExpiresAt
-                      ).toLocaleString("sw-TZ")}`
-                    : ""
-                }. Ukisharidhika, unaweza kuendelea na malipo ya mwisho.`
-              : `This item is held for you${
-                  deal.reservationExpiresAt
-                    ? ` until ${new Date(
-                        deal.reservationExpiresAt
-                      ).toLocaleString("en-US")}`
-                    : ""
-                }. When satisfied, you can proceed to final payment.`}
-          </span>
           <button
             onClick={() =>
-              onInspectionResolve(
-                deal.id,
-                "READY_FOR_FINAL_PAYMENT",
-                ""
-              )
+              onInspectionResolve(deal.id, "READY_FOR_FINAL_PAYMENT", "")
             }
             style={{
               borderColor: COLORS.green,
@@ -2228,30 +2223,6 @@ function DealDetail({
         />
       )}
 
-      {deal.status === "awaiting_final_payment" && side === "seller" && !isLocked && (
-        <div
-          style={{
-            borderColor: COLORS.sandLine,
-            background: "rgba(37,99,235,0.08)",
-          }}
-          className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t"
-        >
-          <CheckCircle2 size={16} color="#2563EB" />
-          <span
-            style={{ color: "#1E3A8A" }}
-            className="text-body-sm font-medium max-w-md"
-          >
-            {lang === "sw"
-              ? `Ukaguzi umepita. Mnunuzi anaandaa malipo ya mwisho ya ${formatTZS(
-                  deal.currentOffer
-                )} na atapakia uthibitisho hapa.`
-              : `Inspection passed. Buyer is preparing the final payment of ${formatTZS(
-                  deal.currentOffer
-                )} and will upload proof here.`}
-          </span>
-        </div>
-      )}
-
       {deal.status === "payment_proof_submitted" && side === "seller" && !isLocked && (
         <PaymentProofReview
           deal={deal}
@@ -2261,73 +2232,19 @@ function DealDetail({
         />
       )}
 
-      {deal.status === "payment_proof_submitted" && side === "buyer" && !isLocked && (
+      {deal.status === "completed" && isSeller && deal.listingId && (
         <div
-          style={{
-            borderColor: COLORS.sandLine,
-            background: "rgba(232,163,61,0.1)",
-          }}
-          className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t"
+          style={{ borderColor: COLORS.sandLine, background: "white" }}
+          className="flex justify-center px-3 sm:px-4 py-2.5 border-t"
         >
-          <FileImage size={16} color="#8A5A16" />
-          <span
-            style={{ color: "#8A5A16" }}
-            className="text-body-sm font-medium max-w-md"
+          <Link
+            to={`/mali/${deal.listingId}`}
+            style={{ background: COLORS.green, color: "white" }}
+            className="flex items-center gap-1.5 text-body-sm font-semibold px-4 py-2 rounded-lg"
           >
-            {lang === "sw"
-              ? `Uthibitisho wako wa malipo umetumwa. Unasubiri muuzaji athibitishe "Nimepokea Malipo".`
-              : `Your payment proof has been submitted. Waiting for the seller to confirm "Payment Received".`}
-          </span>
-        </div>
-      )}
-
-      {deal.status === "completed" && (
-        <div
-          style={{
-            borderColor: COLORS.sandLine,
-            background: "rgba(47,109,79,0.1)",
-          }}
-          className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t"
-        >
-          <PartyPopper size={16} color={COLORS.green} />
-          <span
-            style={{ color: COLORS.green }}
-            className="text-body-sm font-medium max-w-md"
-          >
-            {lang === "sw"
-              ? "Muamala umekamilika! Malipo yamethibitishwa — angalia My Transactions kwa risiti."
-              : "Transaction completed! Payment confirmed — check My Transactions for the receipt."}
-          </span>
-          {isSeller && deal.listingId && (
-            <Link
-              to={`/mali/${deal.listingId}`}
-              style={{ background: COLORS.green, color: "white" }}
-              className="mt-1 flex items-center gap-1.5 text-body-sm font-semibold px-4 py-2 rounded-lg"
-            >
-              {lang === "sw" ? "Nenda kwenye Tangazo" : "Go to Listing"}{" "}
-              <ArrowRight size={13} />
-            </Link>
-          )}
-        </div>
-      )}
-
-      {deal.status === "disputed" && (
-        <div
-          style={{
-            borderColor: COLORS.sandLine,
-            background: "rgba(193,80,46,0.08)",
-          }}
-          className="flex flex-col items-center text-center gap-2 px-3 sm:px-4 py-3 border-t"
-        >
-          <AlertTriangle size={16} color={COLORS.rust} />
-          <span
-            style={{ color: COLORS.rust }}
-            className="text-body-sm font-medium max-w-md"
-          >
-            {lang === "sw"
-              ? `Mgogoro umeripotiwa. Timu ya SokoMkononi itaingilia kati kusaidia kutatua.`
-              : `A dispute has been reported. SokoMkononi team will step in to help resolve it.`}
-          </span>
+            {lang === "sw" ? "Nenda kwenye Tangazo" : "Go to Listing"}{" "}
+            <ArrowRight size={13} />
+          </Link>
         </div>
       )}
 
@@ -2842,7 +2759,9 @@ export default function DealRooms({
       if (
         m.sender !== "me" &&
         m.sender !== "admin" &&
+        m.sender !== "system" &&
         m.kind !== "ADMIN" &&
+        m.kind !== "SYSTEM" &&
         !m.offerAmount &&
         !m.isRead &&
         !m.readAt &&
@@ -3091,6 +3010,21 @@ export default function DealRooms({
     );
     if (!failed) return;
 
+    // Faili la picha halihifadhiwi kwenye localStorage: baada ya refresh
+    // lingetumwa ujumbe bila picha huku likionekana limefanikiwa.
+    if (failed.imageUrl && !(failed.attachmentFile instanceof File)) {
+      updateDeal(id, (prev) => ({
+        ...prev,
+        messages: (prev.messages || []).filter((m) => m.id !== failed.id),
+      }));
+      alert(
+        lang === "sw"
+          ? "Picha haipo tena kwenye kifaa. Tafadhali ichague upya kisha utume."
+          : "The image is no longer available. Please select it again and resend."
+      );
+      return;
+    }
+
     if (deal.adminLocked) {
       alert(
         lang === "sw"
@@ -3251,6 +3185,20 @@ export default function DealRooms({
     }
   };
 
+  // Vuta ujumbe wa mfumo (SYSTEM) kutoka seva baada ya hatua kubadilika
+  const refreshDeal = async (id) => {
+    const d = deals.find((x) => String(x.id) === String(id));
+    if (!d) return;
+    try {
+      const res = await fetchDealDetailAsync(d.dealRoomId || d.id);
+      if (res?.ok && res.deal) {
+        updateDealInStore(id, (prev) => mergeServerDeal(prev, res.deal));
+      }
+    } catch {
+      /* noop */
+    }
+  };
+
   const finalizeLocalReservation = (id, deal, { hours, fee, method, expiresAt }) => {
     const nowExpiresAt =
       expiresAt ||
@@ -3277,18 +3225,9 @@ export default function DealRooms({
       reservationExpiresAt: nowExpiresAt,
       reservationPaidAt: new Date().toISOString(),
       pendingPayment: null,
-      messages: [
-        ...deal.messages,
-        {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          kind: "USER",
-          isHidden: false,
-          text: note,
-          at: new Date().toISOString(),
-        },
-      ],
     });
+
+    refreshDeal(id);
 
     onReservationPaid?.(deal, {
       hours,
@@ -3605,42 +3544,48 @@ export default function DealRooms({
       ? `${baseNote} ${lang === "sw" ? "Sababu" : "Reason"}: ${note}`
       : baseNote;
 
-    const newMessages = [
-      ...deal.messages,
-      {
-        id: `m_${Date.now()}`,
-        sender: "me",
-        kind: "USER",
-        isHidden: false,
-        text: fullNote,
-        at: new Date().toISOString(),
-      },
-    ];
+    // Mtandaoni: seva inaunda ujumbe wa SYSTEM. Ujumbe wa ndani ni wa offline tu.
+    const localMessages = apiRes?.offline
+      ? {
+          messages: [
+            ...deal.messages,
+            {
+              id: `m_${Date.now()}`,
+              sender: "me",
+              kind: "USER",
+              isHidden: false,
+              text: fullNote,
+              at: new Date().toISOString(),
+            },
+          ],
+        }
+      : {};
 
     if (outcome === "READY_FOR_FINAL_PAYMENT") {
       updateDeal(id, {
         status: "awaiting_final_payment",
-        messages: newMessages,
+        ...localMessages,
       });
     } else if (outcome === "REQUEST_NEGOTIATION") {
       updateDeal(id, {
         status: "disputed",
         disputeNote: note,
-        messages: newMessages,
+        ...localMessages,
       });
     } else if (outcome === "NOT_AS_DESCRIBED") {
       updateDeal(id, {
         status: "disputed",
         disputeNote: note,
-        messages: newMessages,
+        ...localMessages,
       });
     } else if (outcome === "CANCEL") {
       updateDeal(id, {
         status: "cancelled",
         cancelNote: note,
-        messages: newMessages,
+        ...localMessages,
       });
     }
+    await refreshDeal(id);
   };
 
   const handleProofSubmit = async (id, proof) => {
@@ -3688,11 +3633,6 @@ export default function DealRooms({
       return;
     }
 
-    const note =
-      lang === "sw"
-        ? `Uthibitisho wa malipo umetumwa (Ref: ${proof.reference}).`
-        : `Payment proof submitted (Ref: ${proof.reference}).`;
-
     updateDeal(id, {
       status: "payment_proof_submitted",
       paymentProof: {
@@ -3700,18 +3640,8 @@ export default function DealRooms({
         dataUrl: proof.dataUrl || null,
         submittedAt: new Date().toISOString(),
       },
-      messages: [
-        ...deal.messages,
-        {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          kind: "USER",
-          isHidden: false,
-          text: note,
-          at: new Date().toISOString(),
-        },
-      ],
     });
+    await refreshDeal(id);
   };
 
   const handleProofConfirm = async (id) => {
@@ -3748,25 +3678,8 @@ export default function DealRooms({
       return;
     }
 
-    const note =
-      lang === "sw"
-        ? "Muuzaji amethibitisha: Nimepokea Malipo. Muamala umekamilika."
-        : "Seller confirmed: Payment received. Transaction completed.";
-
-    updateDeal(id, {
-      status: "completed",
-      messages: [
-        ...deal.messages,
-        {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          kind: "USER",
-          isHidden: false,
-          text: note,
-          at: new Date().toISOString(),
-        },
-      ],
-    });
+    updateDeal(id, { status: "completed" });
+    await refreshDeal(id);
 
     onFinalPaymentConfirmed?.(deal, side, {
       method: "",
@@ -3805,29 +3718,11 @@ export default function DealRooms({
       return;
     }
 
-    const note = reason
-      ? lang === "sw"
-        ? `Muuzaji bado hajapokea malipo. Sababu: ${reason}. Tafadhali pakia uthibitisho tena.`
-        : `Seller has not received payment yet. Reason: ${reason}. Please re-upload proof.`
-      : lang === "sw"
-        ? "Muuzaji bado hajapokea malipo. Tafadhali pakia uthibitisho tena."
-        : "Seller has not received payment yet. Please re-upload proof.";
-
     updateDeal(id, {
       status: "awaiting_final_payment",
       paymentProof: null,
-      messages: [
-        ...deal.messages,
-        {
-          id: `m_${Date.now()}`,
-          sender: "me",
-          kind: "USER",
-          isHidden: false,
-          text: note,
-          at: new Date().toISOString(),
-        },
-      ],
     });
+    await refreshDeal(id);
   };
 
   return (
@@ -3860,7 +3755,7 @@ export default function DealRooms({
         )}
       </div>
 
-      <div className="flex" style={{ height: "560px" }}>
+      <div className="flex" style={{ height: "clamp(480px, calc(100dvh - 200px), 760px)" }}>
         <div
           style={{ borderColor: COLORS.sandLine }}
           className={`${

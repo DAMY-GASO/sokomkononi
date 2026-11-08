@@ -63,9 +63,9 @@ function mergeMessages(serverMsgs = [], existingMsgs = []) {
   const pending = existingMsgs.filter(
     (m) => isPending(m) && !serverMsgs.some((s) => sameId(s.id, m.id))
   );
-  const confirmed = existingMsgs.filter((m) => !pending.includes(m));
-  const base = serverMsgs.length >= confirmed.length ? serverMsgs : confirmed;
-  return [...base, ...pending];
+  // Seva ndiyo chanzo cha ukweli: ujumbe wa ndani usio na sendStatus
+  // (mf. bandia `m_...`) haufai kushinda wa seva.
+  return [...serverMsgs, ...pending];
 }
 
 // ============================================================
@@ -214,10 +214,13 @@ function normalizeMessage(raw, currentUserId, roomBuyerId, roomSellerId) {
   // Ujumbe wa admin una `kind === "ADMIN"` au sender hana id ya buyer/seller
   const rawKind = String(raw.kind || "").toUpperCase();
   const isAdminKind = rawKind === "ADMIN";
+  const isSystemKind = rawKind === "SYSTEM";
 
   let sender = "them";
   if (isAdminKind) {
     sender = "admin";
+  } else if (isSystemKind) {
+    sender = "system";
   } else if (sameId(senderId, currentUserId)) {
     sender = "me";
   } else {
@@ -235,7 +238,9 @@ function normalizeMessage(raw, currentUserId, roomBuyerId, roomSellerId) {
     senderName: raw.sender_name || raw.senderName || "",
     text: raw.text || "",
     imageUrl: raw.attachment_url || raw.attachmentUrl || null,
-    kind: isAdminKind ? "ADMIN" : "USER",
+    kind: isAdminKind ? "ADMIN" : isSystemKind ? "SYSTEM" : "USER",
+    systemCode: raw.system_code || raw.systemCode || null,
+    systemData: raw.system_data || raw.systemData || {},
     isHidden: !!raw.is_hidden || !!raw.isHidden,
     offerAmount: null,
     at: raw.created_at || raw.at || null,

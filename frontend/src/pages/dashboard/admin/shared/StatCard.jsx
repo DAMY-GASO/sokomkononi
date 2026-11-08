@@ -14,7 +14,11 @@ export default function StatCard({ label, value, change, icon: Icon, color }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] sm:text-[12px] font-medium leading-tight text-secondary line-clamp-2">{label}</p>
-          <p className="mt-1 break-words text-lg font-bold leading-tight text-primary tabular-nums sm:text-2xl">{value}</p>
+          {value === "…" ? (
+            <span className="mt-2 block h-6 w-14 animate-pulse rounded bg-black/10 dark:bg-white/10 sm:h-7" />
+          ) : (
+            <p className="mt-1 break-words text-lg font-bold leading-tight text-primary tabular-nums sm:text-2xl">{value}</p>
+          )}
           {change && <p className={`mt-1 truncate text-[10px] font-medium sm:text-xs ${changeColor(change)}`}>{change}</p>}
         </div>
         {Icon && (
