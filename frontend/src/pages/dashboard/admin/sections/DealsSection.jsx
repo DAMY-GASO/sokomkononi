@@ -27,6 +27,7 @@ import {
   hydrateDealsFromApi,
   fetchDealDetailAsync,
   fetchAdminDealsAsync,
+  fetchAdminDealDetailAsync,
 } from "../../../../config/dealsStore.js";
 import {
   fetchDealRoomDetailAsync,

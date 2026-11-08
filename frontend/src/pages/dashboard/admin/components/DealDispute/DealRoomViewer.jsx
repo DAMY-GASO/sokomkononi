@@ -115,6 +115,9 @@ function DownloadBar({ dealId, deal, messages, lang }) {
       }
 
       const getSenderLabel = (m) => {
+        if (m.kind === "SYSTEM" || m.sender === "system") {
+          return t("Mfumo", "System");
+        }
         if (m.kind === "ADMIN" || m.sender === "admin") {
           return "Admin";
         }
