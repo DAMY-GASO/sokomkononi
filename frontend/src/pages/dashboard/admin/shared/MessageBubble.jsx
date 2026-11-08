@@ -8,8 +8,37 @@ function textOf(message, lang) {
   return message.text?.[lang] || message.text?.sw || "";
 }
 
+// Ujumbe wa mfumo una maandishi ya akiba ya lugha mbili: "Kiswahili / English"
+function systemTextOf(message, lang) {
+  const raw = textOf(message, lang);
+  const parts = raw.split(" / ");
+  if (parts.length === 2) return lang === "sw" ? parts[0] : parts[1];
+  return raw;
+}
+
 export default function MessageBubble({ message, deal, lang = "sw" }) {
-  const who = resolveSender(message.sender, deal);
+  if (message.kind === "SYSTEM" || message.sender === "system") {
+    return (
+      <div className="flex justify-center my-0.5">
+        <div className="max-w-[90%] rounded-xl border border-[color:rgb(var(--c-hairline))] bg-card px-2.5 py-1.5 text-center text-[11px] font-medium text-primary">
+          {systemTextOf(message, lang)}
+        </div>
+      </div>
+    );
+  }
+
+  // Ujumbe ghafi wa seva hauna `sender` ya maandishi: tumia kind na senderId
+  const sid = message.senderId ?? message.sender_id;
+  const sameId = (a, b) => a != null && b != null && String(a) === String(b);
+  const who =
+    message.kind === "ADMIN" || message.sender === "admin"
+      ? "admin"
+      : sameId(sid, deal?.sellerId)
+        ? "seller"
+        : sameId(sid, deal?.buyerId)
+          ? "buyer"
+          : resolveSender(message.sender, deal);
+  const imageUrl = message.imageUrl || message.attachment_url || message.attachmentUrl || null;
   const isAdmin = who === "admin";
   const isSeller = who === "seller";
   const isOffer = Boolean(message.offerAmount);
@@ -32,7 +61,17 @@ export default function MessageBubble({ message, deal, lang = "sw" }) {
           {isOffer && <span className="text-[9px] font-bold uppercase text-danger">• {lang === "sw" ? "Ofa" : "Offer"}</span>}
           {when && <span className="ml-auto text-[9px] text-muted">{when}</span>}
         </div>
-        <p className="break-words text-xs leading-snug text-primary">{body}</p>
+        {imageUrl && (
+          <a href={imageUrl} target="_blank" rel="noreferrer" className="mb-1 block">
+            <img
+              src={imageUrl}
+              alt=""
+              loading="lazy"
+              className="max-h-48 w-auto max-w-full rounded-lg border border-[color:rgb(var(--c-hairline))] object-cover"
+            />
+          </a>
+        )}
+        {body && <p className="break-words text-xs leading-snug text-primary">{body}</p>}
       </div>
     </div>
   );

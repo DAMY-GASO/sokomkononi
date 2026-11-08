@@ -67,10 +67,24 @@ const _msgTime = (m) => {
 function mergeMessages(primary, secondary) {
   const seen = new Set();
   const out = [];
-  [...primary, ...secondary].forEach((m, i) => {
-    const key = m?.id != null ? `id:${m.id}` : `idx:${i}`;
+  [...primary, ...secondary].forEach((raw, i) => {
+    const key = raw?.id != null ? `id:${raw.id}` : `idx:${i}`;
     if (seen.has(key)) return;
     seen.add(key);
+    // roomData ni raw ya seva (snake_case): sawazisha na umbo la frontend
+    // ili picha na ujumbe wa mfumo vionekane kwa admin.
+    const m = raw
+      ? {
+          ...raw,
+          imageUrl:
+            raw.imageUrl || raw.attachment_url || raw.attachmentUrl || null,
+          systemCode: raw.systemCode || raw.system_code || null,
+          systemData: raw.systemData || raw.system_data || {},
+          senderName: raw.senderName || raw.sender_name || "",
+          senderId: raw.senderId ?? raw.sender_id ?? null,
+          at: raw.at || raw.created_at || null,
+        }
+      : raw;
     out.push(m);
   });
   if (out.every((m) => _msgTime(m) != null)) {
