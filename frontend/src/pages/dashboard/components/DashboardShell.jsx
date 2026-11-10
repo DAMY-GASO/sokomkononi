@@ -47,6 +47,7 @@ import DealRooms from "./DealRooms.jsx";
 import MyReservationsPage from "./MyReservationsPage.jsx";
 import BrowseProperties from "./BrowseProperties.jsx";
 import BottomNav from "../../../components/BottomNav.jsx";
+import PageLoader from "../../../components/PageLoader.jsx";
 import SellerOverview from "../seller/SellerOverview.jsx";
 import BuyerOverview from "../buyer/BuyerOverview.jsx";
 import RecentActivityPage from "./RecentActivityPage.jsx";
@@ -133,6 +134,12 @@ const STATE_TO_URL = {
   },
 };
 
+// Loader inaonyeshwa mara ya kwanza dashboard inapofunguka (baada ya login)
+// hadi data ya msingi ipakie. MIN: epuka mweko wa haraka. MAX: usikwame
+// milele endapo backend imechelewa au imeshindwa.
+const BOOT_LOADER_MIN_MS = 600;
+const BOOT_LOADER_MAX_MS = 8000;
+
 function getAnnouncementMessage(a, lang) {
   if (!a) return "";
   if (lang === "en" && a.messageEn) return a.messageEn;
@@ -155,10 +162,47 @@ export default function DashboardShell() {
     user?.isSuperuser === true ||
     user?.is_superuser === true;
 
+  // ── Boot loader: onyesha PageLoader hadi data ya msingi ipakie ──
+  const [bootReady, setBootReady] = useState(false);
+
   useEffect(() => {
-    if (!user?.id || isAdminUser) return;
-    fetchMyListingsFromApi();
+    if (isAdminUser) {
+      setBootReady(true);
+      return undefined;
+    }
+    if (!user?.id) return undefined;
+
+    let cancelled = false;
+    let minTimer = null;
+    const startedAt = Date.now();
+
+    // Ongeza hapa kazi nyingine za msingi za kusubiri (zikishindwa,
+    // allSettled haizuii dashboard kufunguka).
+    const bootTasks = [
+      () => fetchMyListingsFromApi(),
+    ];
+
+    Promise.allSettled(
+      bootTasks.map((task) => Promise.resolve().then(task))
+    ).then(() => {
+      if (cancelled) return;
+      const wait = Math.max(0, BOOT_LOADER_MIN_MS - (Date.now() - startedAt));
+      minTimer = setTimeout(() => {
+        if (!cancelled) setBootReady(true);
+      }, wait);
+    });
+
+    return () => {
+      cancelled = true;
+      if (minTimer) clearTimeout(minTimer);
+    };
   }, [user?.id, isAdminUser]);
+
+  // Safety net: loader isikwame zaidi ya MAX hata kama request imening'inia.
+  useEffect(() => {
+    const id = setTimeout(() => setBootReady(true), BOOT_LOADER_MAX_MS);
+    return () => clearTimeout(id);
+  }, []);
 
   const { side, activeKey, editListingId, known } = useMemo(() => {
     const path = location.pathname.replace(/\/+$/, "") || "/";
@@ -601,6 +645,8 @@ export default function DashboardShell() {
   };
 
   if (!known) return <NotFoundPage />;
+
+  if (!bootReady && !isAdminUser) return <PageLoader />;
 
   if (isAdminUser) {
     return (
