@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation, useSearchParams } from "react-router-do
 import { loginAsync, verify2faLoginAsync, socialLoginAsync } from "../../config/authStore.js";
 import { consumeGoogleRedirect } from "../../config/socialAuth.js";
 import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
+import PageLoader from "../../components/PageLoader.jsx";
 import Captcha, { isCaptchaEnabled } from "../../components/Captcha.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
@@ -52,6 +53,9 @@ export default function LoginPage() {
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaNonce, setCaptchaNonce] = useState(0);
   const [remember, setRemember] = useState(true);
+  // Google redirect (Safari/iPhone): onyesha loader badala ya fomu ya login
+  // inayoonekana kwa sekunde chache wakati token inathibitishwa.
+  const [googleRedirectBusy, setGoogleRedirectBusy] = useState(false);
 
   // Token ya Turnstile inatumika mara moja tu: anzisha widget upya.
   function resetCaptcha() {
@@ -74,9 +78,11 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
+    setGoogleRedirectBusy(true);
     socialLoginAsync({ provider: "google", idToken: g.idToken }).then((res) => {
       setLoading(false);
       if (!res.ok) {
+        setGoogleRedirectBusy(false);
         setError(getErrorMessage(res.error, tx("Imeshindwa kuingia na Google. Jaribu tena.", "Google sign-in failed. Please try again.")));
         return;
       }
@@ -160,6 +166,8 @@ export default function LoginPage() {
     }
     finishLogin();
   }
+
+  if (googleRedirectBusy) return <PageLoader />;
 
   const trustPoints = [t("login_trust1"), t("login_trust2"), t("login_trust3")].filter(Boolean);
 

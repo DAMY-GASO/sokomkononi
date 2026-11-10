@@ -168,9 +168,9 @@ function renderGoogleRedirectButton(el, locale) {
   btn.type = "button";
   btn.setAttribute("aria-label", label);
   btn.style.cssText = [
-    "width:100%", "height:44px", "display:flex", "align-items:center",
+    "width:100%", "height:40px", "display:flex", "align-items:center",
     "justify-content:center", "gap:10px", "background:#fff", "color:#3c4043",
-    "border:1px solid #dadce0", "border-radius:4px", "cursor:pointer",
+    "border:1px solid #dadce0", "border-radius:8px", "cursor:pointer",
     "font:500 14px system-ui,-apple-system,Segoe UI,sans-serif",
   ].join(";");
   btn.innerHTML =
@@ -189,7 +189,10 @@ function renderGoogleRedirectButton(el, locale) {
 let googleInitialized = false;
 let googleCredentialHandler = null;
 
-export async function renderGoogleButton(el, { onCredential, onError, locale = "en" } = {}) {
+export async function renderGoogleButton(
+  el,
+  { onCredential, onError, locale = "en", width: requestedWidth } = {},
+) {
   if (!isGoogleEnabled || !el) return;
 
   // iPhone/iPad: popup ya GIS haifanyi kazi (ITP) → tumia redirect
@@ -226,10 +229,13 @@ export async function renderGoogleButton(el, { onCredential, onError, locale = "
     googleInitialized = true;
   }
 
-  // ✅ FIX: Google button ijae upana kamili kama Apple button
+  // Upana mmoja thabiti: unapimwa na mwito (SocialAuthButtons) na kupitishwa
+  // hapa. GIS inachora button kwa upana huo; HATUILAZIMISHI kunyooka baadaye
+  // (hiyo ndiyo ilisababisha button kubadilika ukubwa). Kontena likibadilika
+  // upana, SocialAuthButtons inaichora upya kwa upana mpya.
   el.innerHTML = "";
-  const containerWidth = el.offsetWidth || 320;
-  const width = Math.min(400, Math.max(200, containerWidth));
+  const measured = requestedWidth || el.offsetWidth || el.parentElement?.offsetWidth || 320;
+  const width = Math.min(400, Math.max(200, Math.round(measured)));
 
   window.google.accounts.id.renderButton(el, {
     type: "standard",
@@ -238,30 +244,9 @@ export async function renderGoogleButton(el, { onCredential, onError, locale = "
     text: "continue_with",
     shape: "rectangular",
     logo_alignment: "left",
-    width, // ✅ inatumia upana kamili wa container
+    width,
     locale,
   });
-
-  // ✅ FIX: Baada ya render, lazima tu-apply CSS ili iframe/ijae 100%
-  // Google anaweka iframe yenye width fixed, tunalazimisha iwe 100%
-  setTimeout(() => {
-    const iframe = el.querySelector("iframe");
-    if (iframe) {
-      iframe.style.width = "100%";
-      iframe.style.maxWidth = "100%";
-    }
-    const div = el.querySelector("div[role='button']");
-    if (div) {
-      div.style.width = "100%";
-      div.style.maxWidth = "100%";
-    }
-    // Pia shirikisha container kuwa full width
-    const innerDiv = el.querySelector("div");
-    if (innerDiv) {
-      innerDiv.style.width = "100%";
-      innerDiv.style.maxWidth = "100%";
-    }
-  }, 100);
 }
 
 // ── Apple: popup flow ──────────────────────────────────────

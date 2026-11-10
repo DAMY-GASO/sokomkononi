@@ -838,27 +838,3 @@ body.modal-open {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
-
-/* ============================================
-   Google Identity Services — full width fix
-   ============================================ */
-#credential_picker_container,
-#credential_picker_container iframe {
-  max-width: 100% !important;
-}
-
-/* Google button container */
-.g_id_signin,
-.g_id_signin > div,
-.g_id_signin > div > div,
-.g_id_signin iframe {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-/* Zuia Google iframe isiwe na width fixed */
-div[role="button"][aria-labelledby*="g_id"],
-iframe[src*="accounts.google.com"] {
-  width: 100% !important;
-  max-width: 100% !important;
-}

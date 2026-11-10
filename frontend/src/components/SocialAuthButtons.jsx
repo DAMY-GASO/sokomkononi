@@ -27,10 +27,12 @@ const AppleLogo = () => (
 export default function SocialAuthButtons({ lang = "sw", onSuccess, showTerms = false }) {
   const tx = (sw, en) => (lang === "sw" ? sw : en);
   const googleRef = useRef(null);
+  const googleWrapRef = useRef(null);
   const handlerRef = useRef(null);
   const busyRef = useRef(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [googleReady, setGoogleReady] = useState(false);
 
   async function finish(provider, identity) {
     if (busyRef.current) return;
@@ -74,14 +76,63 @@ export default function SocialAuthButtons({ lang = "sw", onSuccess, showTerms = 
     await finish("apple", identity);
   }
 
+  // Google button: chora kwa upana wa kontena. Cleanup inazuia button mbili
+  // (StrictMode / kubadilisha lugha). ResizeObserver inachora upya KWA UPANA
+  // MPYA tu kontena likibadilika (mf. kuzungusha simu), bila kunyoosha iframe.
   useEffect(() => {
-    if (!isGoogleEnabled || !googleRef.current) return;
+    if (!isGoogleEnabled || !googleRef.current) return undefined;
     const el = googleRef.current;
-    renderGoogleButton(el, {
-      locale: lang === "sw" ? "sw" : "en",
-      onCredential: (idToken) => handlerRef.current("google", { idToken }),
-      onError: (err) => setError(err?.message || tx("Google imeshindwa.", "Google sign-in failed.")),
-    }).catch((err) => setError(err?.message || ""));
+    const wrap = googleWrapRef.current;
+    let cancelled = false;
+    let timer = null;
+    let lastWidth = 0;
+
+    const measure = () =>
+      Math.min(400, Math.max(200, Math.round(wrap?.offsetWidth || 320)));
+
+    const draw = (initial) => {
+      const width = measure();
+      lastWidth = width;
+      if (initial) setGoogleReady(false);
+      Promise.resolve(
+        renderGoogleButton(el, {
+          width,
+          locale: lang === "sw" ? "sw" : "en",
+          onCredential: (idToken) => {
+            if (!cancelled) handlerRef.current("google", { idToken });
+          },
+          onError: (err) => {
+            if (!cancelled) setError(err?.message || tx("Google imeshindwa.", "Google sign-in failed."));
+          },
+        })
+      )
+        .then(() => {
+          if (!cancelled) setGoogleReady(true);
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err?.message || "");
+        });
+    };
+
+    draw(true);
+
+    let ro = null;
+    if (typeof ResizeObserver !== "undefined" && wrap) {
+      ro = new ResizeObserver(() => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          if (!cancelled && measure() !== lastWidth) draw(false);
+        }, 200);
+      });
+      ro.observe(wrap);
+    }
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      if (ro) ro.disconnect();
+      el.innerHTML = "";
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
 
@@ -105,9 +156,19 @@ export default function SocialAuthButtons({ lang = "sw", onSuccess, showTerms = 
     <div className="mb-6">
       <div className={`space-y-3 transition-opacity ${busy ? "opacity-60 pointer-events-none" : ""}`}>
         {isGoogleEnabled && (
-          // ✅ FIX: Container hii inalazimisha Google iframe/div kujaa upana kamili
-          <div className="w-full flex justify-center [&>div]:!w-full [&>iframe]:!w-full [&_.g_id_signin]:!w-full [&_.g_id_signin>div]:!w-full">
-            <div ref={googleRef} className="w-full" />
+          // Nafasi ya urefu imehifadhiwa (h-10) ili fomu isiruke Google
+          // button inapopakia; skeleton inaonekana hadi button iwe tayari.
+          <div ref={googleWrapRef} className="relative w-full h-10 flex justify-center">
+            {!googleReady && (
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 rounded-lg bg-gray-100 animate-pulse"
+              />
+            )}
+            <div
+              ref={googleRef}
+              className={`w-full h-10 flex justify-center transition-opacity duration-200 ${googleReady ? "opacity-100" : "opacity-0"}`}
+            />
           </div>
         )}
         {isAppleEnabled && (
