@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  ImagePlus, X, ChevronLeft, Check, Loader2, AlertTriangle,
-  Wallet, Package, Receipt, Send,
+  ImagePlus, X, ChevronLeft, ChevronRight, Check, Loader2, AlertTriangle,
+  Wallet, Package, Receipt, Send, Clock,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { COLORS, formatTZS, calculateListingFee } from "./shared";
@@ -37,12 +37,13 @@ import {
 
 const SUBMIT_FOR_REVIEW_FIRST = true;
 
-function Field({ label, children }) {
+// `as="div"` kwa sehemu zenye vitufe ndani (mf. picha) — <label> ingebofya kitufe cha kwanza
+function Field({ label, children, as: Tag = "label" }) {
   return (
-    <label className="flex flex-col gap-1.5 text-center">
+    <Tag className="flex flex-col gap-1.5 text-center">
       <span className="text-primary text-sm font-medium">{label}</span>
       {children}
-    </label>
+    </Tag>
   );
 }
 
@@ -203,6 +204,56 @@ function stripSummary(d = "") {
   return parts.join("\n\n").trim();
 }
 
+// ───────────── Draft auto-save (rasimu) ─────────────
+// Maandishi tu yanahifadhiwa (picha ni File objects — haziwezi kuwekwa localStorage).
+const DRAFT_VERSION = 1;
+const DRAFT_INTERVAL_MS = 2 * 60 * 1000; // kila dakika 2
+const DRAFT_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000; // siku 14
+
+const draftKeyFor = (uid) => `ppf_draft_v${DRAFT_VERSION}_${uid || "guest"}`;
+
+function readDraft(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!d || d.v !== DRAFT_VERSION || !d.savedAt) return null;
+    if (Date.now() - d.savedAt > DRAFT_MAX_AGE_MS) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return d;
+  } catch {
+    return null;
+  }
+}
+function writeDraft(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ ...data, v: DRAFT_VERSION, savedAt: Date.now() }));
+    return true;
+  } catch {
+    return false; // storage imejaa au imezuiliwa
+  }
+}
+function removeDraft(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+function draftHasContent(s) {
+  if (!s || !s.categoryKey) return false;
+  const hasExtra = Object.values(s.extra || {}).some((v) => String(v ?? "").trim() !== "");
+  return Boolean(
+    String(s.base?.title || "").trim() ||
+      String(s.base?.price || "").trim() ||
+      String(s.base?.description || "").trim() ||
+      String(s.loc?.eneo || "").trim() ||
+      hasExtra
+  );
+}
+
 const CATEGORY_DETAIL_ENDPOINT = {
   nyumba: "property-details",
   viwanja: "land-details",
@@ -293,6 +344,11 @@ export default function PostPropertyForm({
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [isFreeCategory, setIsFreeCategory] = useState(false);
   const [feeConfigLoaded, setFeeConfigLoaded] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null); // null = hakuna upload; 0-100
+  const [dragIdx, setDragIdx] = useState(null);
+  const [overIdx, setOverIdx] = useState(null);
+  const [pendingDraft, setPendingDraft] = useState(null);
+  const [draftSavedAt, setDraftSavedAt] = useState(null);
 
   const [paymentMode, setPaymentMode] = useState("flat");
   const [bundleId, setBundleId] = useState(null);
@@ -469,6 +525,78 @@ export default function PostPropertyForm({
     return () => clearTimeout(timer);
   }, [effectiveTitle, base.price, loc.mkoa, loc.wilaya, loc.eneo, categoryKey, isEdit]);
 
+  // ───────────── Draft auto-save ─────────────
+  const draftStorageKey = draftKeyFor(user?.id);
+  const draftStateRef = useRef(null);
+  const draftDisabledRef = useRef(false); // true baada ya listing kuundwa
+  const pendingDraftRef = useRef(null);
+  draftStateRef.current = { categoryKey, categoryMode, loc, lat, lng, addressText, base, extra, stage };
+  pendingDraftRef.current = pendingDraft;
+
+  const saveDraftNow = () => {
+    if (isEdit || draftDisabledRef.current || pendingDraftRef.current) return;
+    const s = draftStateRef.current;
+    if (!s || s.stage !== "form" || !draftHasContent(s)) return;
+    const { stage: _stage, ...data } = s;
+    if (writeDraft(draftStorageKey, data)) setDraftSavedAt(Date.now());
+  };
+  const saveDraftRef = useRef(saveDraftNow);
+  saveDraftRef.current = saveDraftNow;
+
+  // Mount: angalia kama kuna rasimu iliyohifadhiwa
+  useEffect(() => {
+    if (isEdit) return;
+    const d = readDraft(draftStorageKey);
+    setPendingDraft(d && draftHasContent(d) ? d : null);
+  }, [draftStorageKey, isEdit]);
+
+  // Hifadhi kila dakika 2, mtumiaji akiondoka kwenye tab, na component ikiondolewa
+  useEffect(() => {
+    if (isEdit) return;
+    const run = () => saveDraftRef.current();
+    const timer = setInterval(run, DRAFT_INTERVAL_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") run();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", run);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", run);
+      run();
+    };
+  }, [isEdit]);
+
+  const restoreDraft = () => {
+    const d = pendingDraft;
+    if (!d) return;
+    const restoredLoc = {
+      mkoa: d.loc?.mkoa || "",
+      wilaya: d.loc?.wilaya || "",
+      eneo: d.loc?.eneo || "",
+    };
+    // Zuia geocoding ya kiotomatiki isiandike juu ya lat/lng zilizohifadhiwa
+    skipForwardRef.current = [restoredLoc.eneo.trim(), restoredLoc.wilaya.trim(), restoredLoc.mkoa]
+      .filter(Boolean)
+      .join(", ");
+    setCategoryKey(d.categoryKey || null);
+    setCategoryMode(d.categoryMode || null);
+    setLoc(restoredLoc);
+    setLat(d.lat != null ? Number(d.lat) : null);
+    setLng(d.lng != null ? Number(d.lng) : null);
+    setAddressText(d.addressText || "");
+    setBase((b) => ({ ...b, ...(d.base || {}), contact_pref: b.contact_pref }));
+    setExtra(d.extra || {});
+    setPendingDraft(null);
+    setDraftSavedAt(d.savedAt || null);
+  };
+  const discardDraft = () => {
+    removeDraft(draftStorageKey);
+    setPendingDraft(null);
+    setDraftSavedAt(null);
+  };
+
   const historyDepthRef = useRef(0);
   const ignorePopRef = useRef(0);
 
@@ -541,6 +669,33 @@ export default function PostPropertyForm({
   };
   const setExtraField = (k, v) => setExtra((e) => ({ ...e, [k]: v }));
 
+  // Kupanga upya picha — kwenye create tu (backend ya edit haina order param)
+  const canReorder = !isEdit && photos.length > 1;
+  const movePhoto = (from, to) => {
+    if (from === to || from < 0 || to < 0 || from >= photos.length || to >= photos.length) return;
+    setPhotos((p) => {
+      const next = [...p];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  };
+  const endDrag = () => {
+    setDragIdx(null);
+    setOverIdx(null);
+  };
+
+  // Progress ya upload: inakubali namba (0-100) au { loaded, total }
+  const handleUploadProgress = (p) => {
+    const pct =
+      typeof p === "number" ? p : p?.total ? (Number(p.loaded) / Number(p.total)) * 100 : null;
+    if (pct == null || Number.isNaN(pct)) return;
+    setUploadProgress(Math.max(0, Math.min(100, Math.round(pct))));
+  };
+  useEffect(() => {
+    if (!submitting) setUploadProgress(null);
+  }, [submitting]);
+
   const requiredFilled = visibleFields.every(
     (f) => !f.required || String(extra[f.key] ?? "").trim() !== ""
   );
@@ -593,6 +748,9 @@ export default function PostPropertyForm({
   };
 
   const reset = () => {
+    draftDisabledRef.current = false;
+    setDraftSavedAt(null);
+    setUploadProgress(null);
     setStage("form");
     setWarnings([]);
     setCreatedListing(null);
@@ -662,6 +820,7 @@ export default function PostPropertyForm({
     if (!canSubmit) return;
     setSubmitting(true);
     setError("");
+    setUploadProgress(photos.some((p) => p.file && !p.existing) ? 0 : null);
 
     if (isEdit) {
       const newFiles = photos.filter((p) => p.file && !p.existing).map((p) => p.file);
@@ -669,6 +828,7 @@ export default function PostPropertyForm({
         const imgRes = await syncListingImagesAsync(initialData.id, {
           newFiles,
           removedImageIds: removedIds,
+          onProgress: handleUploadProgress,
         });
         if (!imgRes.ok) {
           setError(errMsg(imgRes.error) || t("Picha hazikuhifadhiwa.", "Images were not saved."));
@@ -781,11 +941,17 @@ export default function PostPropertyForm({
           },
         },
         images: photos.filter((p) => p.file && !p.existing),
+        onProgress: handleUploadProgress,
       });
 
       if (!createRes.ok) {
         throw createRes.error;
       }
+
+      // Listing imeundwa — rasimu haihitajiki tena
+      draftDisabledRef.current = true;
+      removeDraft(draftStorageKey);
+      setDraftSavedAt(null);
 
       const created = createRes.raw;
       const listingId = createRes.listing.id;
@@ -1301,6 +1467,58 @@ export default function PostPropertyForm({
         />
       )}
       <div className="max-w-2xl mx-auto">
+        {!isEdit && pendingDraft && (
+          <div
+            className="mx-auto mb-4 max-w-xl rounded-2xl border px-4 py-3 flex flex-col gap-3 text-sm"
+            style={{
+              background: "rgba(232,163,61,0.10)",
+              borderColor: "rgba(232,163,61,0.4)",
+              color: "#8A5A16",
+            }}
+          >
+            <div className="flex items-start gap-2.5">
+              <Clock size={16} className="shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="font-semibold">
+                  {t("Una rasimu iliyohifadhiwa", "You have a saved draft")}
+                </p>
+                <p className="text-xs leading-relaxed mt-0.5">
+                  {pendingDraft.base?.title?.trim()
+                    ? `"${pendingDraft.base.title.trim()}" · `
+                    : ""}
+                  {t("Ilihifadhiwa", "Saved")}{" "}
+                  {new Date(pendingDraft.savedAt).toLocaleString(lang === "sw" ? "sw-TZ" : "en-GB", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                  {". "}
+                  {t(
+                    "Picha hazihifadhiwi kwenye rasimu — utaziongeza tena.",
+                    "Photos are not kept in drafts — you'll need to add them again."
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={restoreDraft}
+                style={{ background: COLORS.gold, color: COLORS.night }}
+                className="flex-1 py-2 rounded-xl font-semibold text-xs"
+              >
+                {t("Endelea na Rasimu", "Continue Draft")}
+              </button>
+              <button
+                type="button"
+                onClick={discardDraft}
+                className="flex-1 py-2 rounded-xl font-semibold text-xs border border-hairline text-primary"
+              >
+                {t("Anza Upya", "Start Fresh")}
+              </button>
+            </div>
+          </div>
+        )}
+
         {category && !isEdit && (
           <div className="flex justify-center mb-3">
             <button
@@ -1459,6 +1677,7 @@ export default function PostPropertyForm({
             className="mx-auto flex max-w-xl flex-col gap-5 rounded-3xl border-[1.5px] border-gold/60 bg-card p-4 shadow-[0_12px_32px_-18px_rgba(1,25,87,0.3)] sm:p-6"
           >
             <Field
+              as="div"
               label={
                 photosOptional
                   ? t("Picha (hiari, mpaka 8) — zitakatwa kuwa mraba", "Photos (optional, up to 8) — cropped to square")
@@ -1467,8 +1686,48 @@ export default function PostPropertyForm({
             >
               <div className="flex flex-wrap justify-center gap-2">
                 {photos.map((p, i) => (
-                  <div key={i} className="relative w-20 h-20 aspect-square rounded-xl overflow-hidden">
-                    <img src={p.url} alt="" className="w-full h-full object-cover" />
+                  <div
+                    key={p.url}
+                    draggable={canReorder}
+                    onDragStart={(e) => {
+                      if (!canReorder) return;
+                      setDragIdx(i);
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", String(i));
+                    }}
+                    onDragOver={(e) => {
+                      if (!canReorder || dragIdx === null) return;
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      if (overIdx !== i) setOverIdx(i);
+                    }}
+                    onDrop={(e) => {
+                      if (!canReorder || dragIdx === null) return;
+                      e.preventDefault();
+                      movePhoto(dragIdx, i);
+                      endDrag();
+                    }}
+                    onDragEnd={endDrag}
+                    className={`relative w-20 h-20 aspect-square rounded-xl overflow-hidden ${
+                      canReorder ? "cursor-grab active:cursor-grabbing" : ""
+                    }`}
+                    style={{
+                      opacity: dragIdx === i ? 0.4 : 1,
+                      outline:
+                        overIdx === i && dragIdx !== null && dragIdx !== i
+                          ? `2px solid ${COLORS.gold}`
+                          : "none",
+                    }}
+                  >
+                    <img src={p.url} alt="" draggable={false} className="w-full h-full object-cover" />
+                    {!isEdit && i === 0 && (
+                      <span
+                        style={{ background: COLORS.night, color: COLORS.sand }}
+                        className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold leading-none"
+                      >
+                        {t("Kuu", "Cover")}
+                      </span>
+                    )}
                     {!(p.existing && p.id == null) && (
                     <button
                       type="button"
@@ -1478,6 +1737,28 @@ export default function PostPropertyForm({
                     >
                       <X size={12} color="white" />
                     </button>
+                    )}
+                    {canReorder && (
+                      <div className="absolute bottom-0 inset-x-0 flex justify-between px-1 pb-1">
+                        <button
+                          type="button"
+                          disabled={i === 0}
+                          onClick={() => movePhoto(i, i - 1)}
+                          aria-label={t("Sogeza kushoto", "Move left")}
+                          className="w-5 h-5 rounded-full bg-black/55 flex items-center justify-center disabled:opacity-0"
+                        >
+                          <ChevronLeft size={12} color="white" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={i === photos.length - 1}
+                          onClick={() => movePhoto(i, i + 1)}
+                          aria-label={t("Sogeza kulia", "Move right")}
+                          className="w-5 h-5 rounded-full bg-black/55 flex items-center justify-center disabled:opacity-0"
+                        >
+                          <ChevronRight size={12} color="white" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -1489,6 +1770,14 @@ export default function PostPropertyForm({
                   </label>
                 )}
               </div>
+              {canReorder && (
+                <span className="text-[11px] text-secondary">
+                  {t(
+                    "Buruta au tumia mishale kupanga — picha ya kwanza ndiyo ya Kuu.",
+                    "Drag or use the arrows to reorder — the first photo is the cover."
+                  )}
+                </span>
+              )}
             </Field>
 
             <Field label={`${titleLabel[lang] || titleLabel.sw} *`}>
@@ -1664,6 +1953,28 @@ export default function PostPropertyForm({
               </div>
             )}
 
+            {submitting && uploadProgress !== null && (
+              <div className="flex flex-col gap-1.5" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={uploadProgress}>
+                <div className="flex justify-between text-[11px] text-secondary">
+                  <span>
+                    {uploadProgress >= 100
+                      ? t("Inachakata picha...", "Processing photos...")
+                      : t("Inapakia picha...", "Uploading photos...")}
+                  </span>
+                  {uploadProgress > 0 && <span className="font-semibold">{uploadProgress}%</span>}
+                </div>
+                <div className="h-2 rounded-full bg-ink/10 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${uploadProgress > 0 ? "transition-all duration-200" : "w-1/3 animate-pulse"}`}
+                    style={{
+                      background: COLORS.gold,
+                      ...(uploadProgress > 0 ? { width: `${uploadProgress}%` } : {}),
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={!canSubmit || submitting}
@@ -1682,6 +1993,16 @@ export default function PostPropertyForm({
                 t("Wasilisha", "Submit")
               )}
             </button>
+
+            {!isEdit && draftSavedAt && !submitting && (
+              <p className="text-center text-[11px] text-secondary -mt-2">
+                {t("Rasimu imehifadhiwa", "Draft saved")}{" "}
+                {new Date(draftSavedAt).toLocaleTimeString(lang === "sw" ? "sw-TZ" : "en-GB", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            )}
 
             {isEdit && (
               <button
