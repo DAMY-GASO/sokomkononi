@@ -44,6 +44,10 @@ export const transactionsApi = {
   rejectPaymentProof: (id, reason = "") =>
     api.post(`/transactions/${id}/reject-payment-proof/`, { reason }),
 
+  // Mnunuzi au muuzaji anaomba admin aingilie kati kuhusu malipo.
+  appeal: (id, reason = "") =>
+    api.post(`/transactions/${id}/appeal/`, { reason }),
+
   cancel: (id, cancellation_reason) =>
     api.post(`/transactions/${id}/cancel/`, { cancellation_reason }),
 

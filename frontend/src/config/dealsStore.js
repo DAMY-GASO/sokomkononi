@@ -384,6 +384,25 @@ function normalizeDealFromApi(raw, currentUserId) {
     inspectionStartedAt: raw.inspection_started_at || null,
     inspectionExpiresAt: raw.inspection_expires_at || null,
     inspectionStatus: raw.inspection_status || null,
+    // ── Hali ya malipo ya nje ya mfumo (zamu ya nani, muda, majaribio) ──
+    paymentState: raw.payment_state
+      ? {
+          awaiting: raw.payment_state.awaiting || "none",
+          awaitingMe:
+            (raw.payment_state.awaiting === "buyer" && isBuyer) ||
+            (raw.payment_state.awaiting === "seller" && !isBuyer),
+          stage: raw.payment_state.stage || "",
+          finalPaymentDueAt: raw.payment_state.final_payment_due_at || null,
+          sellerResponseDueAt: raw.payment_state.seller_response_due_at || null,
+          proofAttempts: raw.payment_state.proof_attempts ?? 0,
+          proofAttemptsLeft: raw.payment_state.proof_attempts_left ?? 3,
+          disputeReason: raw.payment_state.dispute_reason || "",
+          disputeNote: raw.payment_state.dispute_note || "",
+          disputeOpenedBy: raw.payment_state.dispute_opened_by || "",
+          buyerDecision: raw.payment_state.buyer_decision || "",
+          buyerDecisionNote: raw.payment_state.buyer_decision_note || "",
+        }
+      : null,
     buyerDecision: raw.buyer_decision || null,
     buyerDecisionNote: raw.buyer_decision_note || "",
 
@@ -1044,4 +1063,4 @@ export function useDeal(id) {
   const deals = useDeals();
   if (!id) return null;
   return deals.find((d) => sameId(d.id, id)) || null;
-}
+}

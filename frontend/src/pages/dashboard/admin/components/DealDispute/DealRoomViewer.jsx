@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../../shared/constants.js";
 import MessageBubble from "../../shared/MessageBubble.jsx";
+import AppealReasonCard from "./AppealReasonCard.jsx";
 import {
   getDealTranscript,
   adminSendMessageAsync,
@@ -474,7 +475,10 @@ function AdminActionsPanel({ deal, lang }) {
 
   // Viungo vya backend zilizopo (resolve-dispute, expire-*, n.k.)
   const showResolveDispute =
-    txnId && (deal.status === "disputed" || deal.buyerDecision === "REQUEST_NEGOTIATION");
+    txnId &&
+    (deal.status === "disputed" ||
+      deal.buyerDecision === "REQUEST_NEGOTIATION" ||
+      deal.paymentState?.awaiting === "admin");
   const showExpireReservation =
     txnId && deal.status === "reserved" && deal.reservationExpiresAt;
   const showExpireInspection =
@@ -857,6 +861,9 @@ export default function DealRoomViewer({
 
       {/* ── MPYA: Admin Actions Panel ── */}
       <AdminActionsPanel deal={deal} lang={lang} />
+
+      {/* Sababu ya rufaa/mgogoro */}
+      <AppealReasonCard deal={deal} lang={lang} />
 
       {/* Reports */}
       {hasReports && (
