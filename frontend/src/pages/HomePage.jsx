@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowRight, Search, MessageSquare, KeyRound } from "lucide-react";
+import { ArrowRight, Search, MessageSquare, KeyRound, Flame } from "lucide-react";
 
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useAuth } from "../config/authStore.js";
@@ -16,7 +16,7 @@ import AdvertisedSection from "../components/shop/AdvertisedSection.jsx";
 import CategoryBento from "../components/shop/CategoryBento.jsx";
 import TestimonialsSection from "../components/shop/TestimonialsSection.jsx";
 
-import { usePublicListings } from "../config/listingsStore.js";
+import { usePublicListings, mergeListingsFromApi } from "../config/listingsStore.js";
 // 🛠️ FIX 1: Tumia useActiveCategories badala ya Popular, ili kama admin hajaweka popular, categories zisionekane tupu
 import { useActiveCategories } from "../config/categoriesStore.js"; 
 import { useContent } from "../config/contentStore.js";
@@ -61,6 +61,11 @@ function categoryKeys(cat) {
 }
 
 const DEDUPE_SECTIONS = true;
+
+// "Load More" ya New Arrivals
+const NEW_STEP = 8;
+const NEW_API_PAGE_SIZE = 24;
+const NEW_MAX_PAGES_PER_CLICK = 5;
 
 function ViewAllCategories({ lang }) {
   return (
@@ -121,6 +126,16 @@ export default function HomePage() {
   const savedIds = useSavedIds();
   const activeBanners = useActiveBannerAds();
   const [rotationSeed] = useState(() => Math.floor(Date.now() / ROTATION_WINDOW_MS));
+  const [newLimit, setNewLimit] = useState(NEW_STEP);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [apiPage, setApiPage] = useState(1);
+  const [apiExhausted, setApiExhausted] = useState(false);
+
+  // Trending: hakikisha mali zilizoboostiwa (backend: ?is_boosted=true) zipo
+  // hata kama ziko nje ya mali 200 za kwanza za hydrate.
+  useEffect(() => {
+    mergeListingsFromApi({ is_boosted: true, page_size: 24, ordering: "-created_at" });
+  }, []);
 
   const handleBuyNow = () => { if (user) navigate("/dashboard/buyer"); else navigate("/register?intent=buy"); };
   const handleSellNow = () => { if (user) navigate("/dashboard/post"); else navigate("/register?intent=sell"); };
@@ -175,8 +190,8 @@ export default function HomePage() {
     return rotateByTier(pool, boostTier, rotationSeed + 1, 8);
   }, [liveListings, featured, advertised, rotationSeed]);
 
-  // 4) NEW ARRIVALS
-  const newArrivals = useMemo(() => {
+  // 4) NEW ARRIVALS (pool nzima, kisha tunakata kwa newLimit)
+  const newArrivalsPool = useMemo(() => {
     // 🛠️ FIX: Tumia String IDs kwenye Set
     const used = new Set();
     if (DEDUPE_SECTIONS) {
@@ -186,9 +201,45 @@ export default function HomePage() {
     }
     return liveListings
       .filter((l) => !used.has(String(l.id)))
-      .sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0))
-      .slice(0, 8);
+      .sort((a, b) => new Date(b.postedAt || 0) - new Date(a.postedAt || 0));
   }, [liveListings, featured, advertised, boosted]);
+
+  const newArrivals = useMemo(
+    () => newArrivalsPool.slice(0, newLimit),
+    [newArrivalsPool, newLimit]
+  );
+  const hasMoreNew = newArrivalsPool.length > newLimit || !apiExhausted;
+
+  const handleLoadMoreNew = async () => {
+    if (loadingMore) return;
+    // 1) Bado tuna mali kwenye store → onyesha zaidi bila network
+    if (newArrivalsPool.length > newLimit) {
+      setNewLimit((n) => n + NEW_STEP);
+      return;
+    }
+    // 2) Vinginevyo vuta ukurasa unaofuata kutoka API
+    setLoadingMore(true);
+    let page = apiPage;
+    let exhausted = apiExhausted;
+    let added = 0;
+    let tries = 0;
+    while (!exhausted && added === 0 && tries < NEW_MAX_PAGES_PER_CLICK) {
+      tries += 1;
+      const res = await mergeListingsFromApi({
+        page: page + 1,
+        page_size: NEW_API_PAGE_SIZE,
+        ordering: "-created_at",
+      });
+      if (!res.ok) break; // kosa: usisogeze ukurasa, mtumiaji anaweza kujaribu tena
+      page += 1;
+      added += res.added;
+      exhausted = !res.hasNext;
+    }
+    setApiPage(page);
+    setApiExhausted(exhausted);
+    setNewLimit((n) => n + NEW_STEP);
+    setLoadingMore(false);
+  };
 
   // 5) Categories
   const categoriesWithListings = useMemo(() => {
@@ -259,6 +310,10 @@ export default function HomePage() {
             title={lang === "sw" ? "Mali Zinazovuma" : "Trending Listings"}
             subtitle={lang === "sw" ? "Mali zinazopata umaarufu sasa hivi." : "Listings gaining popularity right now."}
             listings={boosted} viewAllTo="/mali-zote" savedIds={savedIds} onToggleSave={handleToggleSave}
+            cardBadge={{
+              icon: <Flame size={10} />,
+              label: lang === "sw" ? "Inavuma" : "Trending",
+            }}
           />
         )}
 
@@ -271,6 +326,10 @@ export default function HomePage() {
           listings={newArrivals} viewAllTo="/mali-zote"
           viewAllLabel={lang === "sw" ? "Ona Zote" : "See All"}
           savedIds={savedIds} onToggleSave={handleToggleSave}
+          onLoadMore={handleLoadMoreNew}
+          loadingMore={loadingMore}
+          hasMore={hasMoreNew}
+          loadMoreLabel={lang === "sw" ? "Ona Zaidi" : "Load More"}
         />
 
         {/* 7. TESTIMONIALS & NEWSLETTER */}

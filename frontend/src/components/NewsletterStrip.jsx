@@ -24,17 +24,17 @@ export default function NewsletterStrip({ variant = "compact" }) {
     e.preventDefault();
     if (busy || done) return;
     const trimmed = email.trim();
-    if (!trimmed.includes("@")) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       setError(t("Barua pepe si sahihi.", "Invalid email."));
       return;
     }
     setBusy(true);
     setError("");
     try {
-      await api.post("/contact/", {
-        name: "Newsletter subscriber",
+      await api.post("/newsletter/subscribe/", {
         email: trimmed,
-        message: "Newsletter subscription (SokoMkononi footer form).",
+        lang,
+        source: "homepage",
       });
       try { window.localStorage.setItem(STORAGE_KEY, "1"); } catch {}
       setDone(true);

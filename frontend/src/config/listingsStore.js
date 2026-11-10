@@ -634,16 +634,64 @@ function extractList(data) {
   return Array.isArray(data) ? data : data?.results || [];
 }
 
+// Mali zilizounganishwa (merge) nje ya hydrate ya 200 (Load More, boosted,
+// search alerts). Zinahifadhiwa hapa ili hydrate ikichelewa isizifute;
+// zinaisha baada ya dakika 10 ili zisikae zimepitwa na wakati.
+const EXTRAS_TTL_MS = 10 * 60 * 1000;
+const _extras = new Map(); // id -> { listing, at }
+
 export async function hydrateListingsFromApi() {
   try {
     const data = await listingsApi.list({ page_size: 200 });
     const normalized = extractList(data).map((r) => normalizeListingFromApi(r)).filter(Boolean);
-    savePublicListings(normalized);
+    const freshIds = new Set(normalized.map((l) => String(l.id)));
+    const now = Date.now();
+    const extras = [];
+    for (const [id, e] of _extras) {
+      if (now - e.at > EXTRAS_TTL_MS) _extras.delete(id);
+      else if (!freshIds.has(id)) extras.push(e.listing);
+    }
+    savePublicListings(extras.length ? [...normalized, ...extras] : normalized);
     return { source: normalized.length ? "api" : "empty", count: normalized.length };
   } catch (err) {
     console.warn("[listingsStore] hydrate failed:", err);
     return { source: "error", count: getPublicListings().length };
   }
+}
+
+// Unganisha (merge by id) listings kutoka API kwenye orodha ya umma BILA
+// kuibadilisha yote. Inatumika na "Load More" ya homepage na search alerts.
+export async function mergeListingsFromApi(params = {}) {
+  try {
+    const data = await listingsApi.list(params);
+    const incoming = extractList(data)
+      .map((r) => normalizeListingFromApi(r))
+      .filter(Boolean);
+    const byId = new Map(getPublicListings().map((l) => [String(l.id), l]));
+    let added = 0;
+    for (const l of incoming) {
+      const k = String(l.id);
+      if (!byId.has(k)) added += 1;
+      const merged = { ...(byId.get(k) || {}), ...l };
+      byId.set(k, merged);
+      _extras.set(k, { listing: merged, at: Date.now() });
+    }
+    if (incoming.length) savePublicListings(Array.from(byId.values()));
+    return {
+      ok: true,
+      added,
+      count: incoming.length,
+      hasNext: Boolean(data && !Array.isArray(data) && data.next),
+    };
+  } catch (err) {
+    console.warn("[listingsStore] merge failed:", err);
+    return { ok: false, added: 0, count: 0, hasNext: false, error: err };
+  }
+}
+
+// Matangazo mapya zaidi tu (30) — nyepesi kuliko hydrate ya 200.
+export function refreshLatestListingsFromApi() {
+  return mergeListingsFromApi({ page: 1, page_size: 30, ordering: "-created_at" });
 }
 
 let _myListingsUserId = null;

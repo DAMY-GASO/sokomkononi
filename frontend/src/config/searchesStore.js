@@ -158,34 +158,77 @@ function match(search, listing) {
   return true;
 }
 
-export async function detectSearchAlertsAsync() {
+const LOCK_KEY = "sokomkononi_search_alerts_lock_v1";
+const MIN_GAP_MS = 4 * 60 * 1000; // tabs nyingi zisitume arifa mara mbili
+
+function acquireLock() {
+  if (typeof window === "undefined") return true;
+  try {
+    const now = Date.now();
+    const last = Number(window.localStorage.getItem(LOCK_KEY) || 0);
+    if (now - last < MIN_GAP_MS) return false;
+    window.localStorage.setItem(LOCK_KEY, String(now));
+    return true;
+  } catch { return true; }
+}
+
+// Tangazo lazima liwe jipya baada ya utafutaji kuhifadhiwa.
+function isNewSince(search, listing) {
+  if (!search.createdAt || !listing.postedAt) return true;
+  const created = new Date(search.createdAt).getTime();
+  const posted = new Date(listing.postedAt).getTime();
+  if (Number.isNaN(created) || Number.isNaN(posted)) return true;
+  return posted >= created;
+}
+
+export async function detectSearchAlertsAsync({ force = false } = {}) {
   const searches = getSearches();
   if (searches.length === 0) return { ok: true, alerts: [] };
+  if (!force && !acquireLock()) return { ok: true, alerts: [], skipped: true };
 
   const listings = getPublicListings();
   const seen = readSeen();
   const alerts = [];
 
+  // Ondoa rekodi za utafutaji uliofutwa
+  const activeIds = new Set(searches.map((s) => String(s.id)));
+  for (const k of Object.keys(seen)) if (!activeIds.has(k)) delete seen[k];
+
   for (const search of searches) {
-    const seenForSearch = new Set(seen[search.id] || []);
+    const key = String(search.id);
+    const firstRun = !Array.isArray(seen[key]);
+    const seenForSearch = new Set(seen[key] || []);
     const matches = listings.filter(
       (l) => match(search, l) && !seenForSearch.has(String(l.id))
     );
-    // Cap per-run so we don't spam the user
-    const take = matches.slice(0, 5);
-    for (const l of take) {
+
+    if (firstRun) {
+      // Mara ya kwanza: weka alama ya yaliyopo, usitume mafuriko ya arifa.
+      matches.forEach((l) => seenForSearch.add(String(l.id)));
+      seen[key] = Array.from(seenForSearch);
+      continue;
+    }
+
+    const fresh = matches.filter((l) => isNewSince(search, l));
+    // Zilizo za zamani (kabla ya utafutaji) zinawekwa seen bila arifa
+    matches
+      .filter((l) => !fresh.includes(l))
+      .forEach((l) => seenForSearch.add(String(l.id)));
+
+    // Kikomo kwa kila mzunguko ili tusimwagie mtumiaji arifa
+    for (const l of fresh.slice(0, 5)) {
       alerts.push({ search, listing: l });
       seenForSearch.add(String(l.id));
     }
-    seen[search.id] = Array.from(seenForSearch);
+    seen[key] = Array.from(seenForSearch);
   }
 
   writeSeen(seen);
   if (alerts.length === 0) return { ok: true, alerts: [] };
 
-  for (const a of alerts) {
-    try {
-      await notificationsApi.create({
+  await Promise.allSettled(
+    alerts.map((a) =>
+      notificationsApi.create({
         notification_type: "SEARCH_ALERT",
         audience: "user",
         title: "Tangazo jipya linafanana na utafutaji wako",
@@ -193,12 +236,10 @@ export async function detectSearchAlertsAsync() {
         related_object_type: "listing",
         related_object_id: a.listing.id,
         action_url: `/mali/${a.listing.id}`,
-        priority: "normal",
-      });
-    } catch (e) {
-      console.warn("[searchesStore] alert notify failed:", e);
-    }
-  }
+        priority: "NORMAL",
+      }).catch((e) => console.warn("[searchesStore] alert notify failed:", e))
+    )
+  );
 
   return { ok: true, alerts };
 }
