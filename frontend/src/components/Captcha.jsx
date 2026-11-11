@@ -2,17 +2,39 @@
 // Captcha.jsx — Cloudflare Turnstile (env-gated, degrades to no-op)
 // Set VITE_TURNSTILE_SITE_ID in .env to enable.
 //
-// FIXED:
-//   - callbacks stored in refs so parent re-renders don't remount widget
-//   - theme follows document.documentElement.dark
-//   - ✅ FIX: SITE_KEY sasa inasoma VITE_TURNSTILE_SITE_ID (kulingana na docker-compose)
+// - Script inapakiwa MARA MOJA (shared promise) hata kama kuna Captcha nyingi
+//   au StrictMode inamount mara mbili.
+// - `render=explicit` — hakuna auto-render inayogongana na render ya React.
+// - Cleanup inaondoa widget; haiita render kama component imeondolewa
+//   (huzuia kosa la "postMessage target origin mismatch").
 // ============================================================
 import React, { useEffect, useRef } from "react";
 
-// ✅ Badilisha jina hapa ili lilandane na docker-compose.yml
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_ID || "";
-
 export const isCaptchaEnabled = Boolean(SITE_KEY);
+
+const SCRIPT_SRC =
+  "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+let scriptPromise = null;
+
+function loadTurnstile() {
+  if (typeof window === "undefined") return Promise.reject(new Error("no window"));
+  if (window.turnstile) return Promise.resolve(window.turnstile);
+  if (scriptPromise) return scriptPromise;
+  scriptPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = SCRIPT_SRC;
+    s.async = true;
+    s.defer = true;
+    s.onload = () => resolve(window.turnstile);
+    s.onerror = () => {
+      scriptPromise = null; // ruhusu jaribio jingine
+      reject(new Error("Turnstile script failed to load"));
+    };
+    document.head.appendChild(s);
+  });
+  return scriptPromise;
+}
 
 export default function Captcha({ onVerify, onExpire }) {
   const ref = useRef(null);
@@ -28,41 +50,33 @@ export default function Captcha({ onVerify, onExpire }) {
   useEffect(() => {
     if (!isCaptchaEnabled || !ref.current) return undefined;
     let cancelled = false;
+    const node = ref.current;
 
-    function mount() {
-      if (cancelled || !window.turnstile || !ref.current) return;
-      if (widgetIdRef.current) {
-        try { window.turnstile.remove(widgetIdRef.current); } catch {}
-      }
-      const theme = document.documentElement.classList.contains("dark") ? "dark" : "light";
-      widgetIdRef.current = window.turnstile.render(ref.current, {
-        sitekey: SITE_KEY,
-        theme,
-        callback: (token) => onVerifyRef.current?.(token),
-        "expired-callback": () => onExpireRef.current?.(),
-        "error-callback": () => onExpireRef.current?.(),
-      });
-    }
-
-    if (window.turnstile) {
-      mount();
-    } else {
-      const s = document.createElement("script");
-      s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
-      s.async = true;
-      s.defer = true;
-      s.onload = mount;
-      document.head.appendChild(s);
-    }
+    loadTurnstile()
+      .then((ts) => {
+        if (cancelled || !ts || !node.isConnected) return;
+        const theme = document.documentElement.classList.contains("dark")
+          ? "dark"
+          : "light";
+        widgetIdRef.current = ts.render(node, {
+          sitekey: SITE_KEY,
+          theme,
+          callback: (token) => onVerifyRef.current?.(token),
+          "expired-callback": () => onExpireRef.current?.(),
+          "error-callback": () => onExpireRef.current?.(),
+        });
+      })
+      .catch(() => onExpireRef.current?.());
 
     return () => {
       cancelled = true;
-      if (widgetIdRef.current && window.turnstile) {
-        try { window.turnstile.remove(widgetIdRef.current); } catch {}
-        widgetIdRef.current = null;
+      const id = widgetIdRef.current;
+      widgetIdRef.current = null;
+      if (id != null && window.turnstile) {
+        try { window.turnstile.remove(id); } catch { /* noop */ }
       }
     };
-  }, []);   // empty deps — mount once
+  }, []);
 
   if (!isCaptchaEnabled) return null;
   return <div ref={ref} className="flex justify-center my-3" />;

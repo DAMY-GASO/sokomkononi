@@ -483,6 +483,10 @@ let _dealsUserId = null;
 
 async function _hydrateDealsImpl(currentUserId, role = "") {
   _dealsUserId = currentUserId ?? _dealsUserId;
+  // Mgeni (hajaingia): usiite /api/deals/ — ingerudisha 401 kila ukurasa.
+  if (_dealsUserId == null) {
+    return { source: "skipped", count: getDeals().length };
+  }
   try {
     const params = { page_size: 200 };
     if (role) params.role = role;
@@ -499,6 +503,11 @@ async function _hydrateDealsImpl(currentUserId, role = "") {
       total: data?.count || normalized.length,
     };
   } catch (err) {
+    const status = err?.response?.status ?? err?.status;
+    if (status === 401 || status === 403) {
+      // Session imeisha / hana ruhusa — si hitilafu ya kuonyesha; route guard hushughulikia.
+      return { source: "unauthorized", count: getDeals().length };
+    }
     console.warn("[dealsStore] hydrate failed:", err);
     return { source: "error", count: getDeals().length };
   }
@@ -1063,4 +1072,4 @@ export function useDeal(id) {
   const deals = useDeals();
   if (!id) return null;
   return deals.find((d) => sameId(d.id, id)) || null;
-}
+}
