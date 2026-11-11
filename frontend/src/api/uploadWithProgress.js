@@ -1,11 +1,48 @@
 // ============================================================
 // uploadWithProgress.js
+// Upload faili + fields kwa XHR — upload progress HALISI,
+// AbortController, na timeout.
+//
+// ✅ FIX: Hakuna import ya getAuthToken (haipo kwenye authStore.js).
+//    Tunatumia njia kadhaa za kupata token:
+//      1. window.__SMK_TOKEN__ (kama ipo)
+//      2. localStorage keys kadhaa
+//      3. Cookies (withCredentials: true)
 // ============================================================
-
-import { getAuthToken } from "../config/authStore.js";
 
 const BASE_URL = import.meta?.env?.VITE_API_URL || "";
 const DEFAULT_TIMEOUT_MS = 60_000;
+
+// ✅ Orodha ya localStorage keys zinazoweza kuwa na token
+const TOKEN_KEYS = [
+  "sokomkononi_token",
+  "sokomkononi_access_token",
+  "auth_token",
+  "access_token",
+  "token",
+  "jwt",
+];
+
+function readTokenFromStorage() {
+  if (typeof window === "undefined") return null;
+  try {
+    // Angalia window global kwanza (kama api/client.js inaweka hapa)
+    if (window.__SMK_TOKEN__) return window.__SMK_TOKEN__;
+    if (window.__AUTH_TOKEN__) return window.__AUTH_TOKEN__;
+
+    for (const k of TOKEN_KEYS) {
+      const v = window.localStorage.getItem(k);
+      if (v) return v;
+    }
+    for (const k of TOKEN_KEYS) {
+      const v = window.sessionStorage.getItem(k);
+      if (v) return v;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
 
 export function uploadWithProgress({
   url,
@@ -27,7 +64,6 @@ export function uploadWithProgress({
       resolve(result);
     };
 
-    // Aborted kabla ya kuanza?
     if (signal?.aborted) {
       finish({ ok: false, error: new DOMException("Aborted", "AbortError") });
       return;
@@ -38,13 +74,17 @@ export function uploadWithProgress({
     xhr.timeout = timeoutMs;
     xhr.withCredentials = withCredentials;
 
-    // Auth
+    // ✅ FIX: Token kutoka localStorage (bila import ya getAuthToken)
     try {
-      const token = getAuthToken?.();
-      if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-    } catch { /* ignore */ }
+      const token = readTokenFromStorage();
+      if (token) {
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      }
+    } catch {
+      /* ignore */
+    }
 
-    // ✅ Upload progress HALISI
+    // Progress
     if (typeof onProgress === "function") {
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
@@ -54,30 +94,25 @@ export function uploadWithProgress({
       };
     }
 
-    // Abort listener
+    // Abort
     const onAbort = () => {
       try { xhr.abort(); } catch { /* ignore */ }
       finish({ ok: false, error: new DOMException("Aborted", "AbortError") });
     };
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
 
-    // Response handling
+    // Response
     xhr.onload = () => {
       if (signal) signal.removeEventListener("abort", onAbort);
       const { status, responseText } = xhr;
       let data = null;
-      try {
-        data = responseText ? JSON.parse(responseText) : null;
-      } catch {
-        data = responseText;
-      }
+      try { data = responseText ? JSON.parse(responseText) : null; } catch { data = responseText; }
 
       if (status >= 200 && status < 300) {
         finish({ ok: true, status, data });
       } else {
         const err = new Error(
-          (data && (data.detail || data.message || data.error)) ||
-          `HTTP ${status}`
+          (data && (data.detail || data.message || data.error)) || `HTTP ${status}`
         );
         err.status = status;
         err.data = data;
@@ -102,7 +137,7 @@ export function uploadWithProgress({
       finish({ ok: false, error: new DOMException("Aborted", "AbortError") });
     };
 
-    // Tengeneza FormData
+    // FormData
     const form = new FormData();
     Object.entries(fields || {}).forEach(([k, v]) => {
       if (v === undefined || v === null) return;
