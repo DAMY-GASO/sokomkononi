@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Megaphone, X } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useSentAnnouncements } from "../config/announcementsStore.js";
@@ -19,7 +20,14 @@ export default function AnnouncementBar() {
 
   const current = useMemo(() => {
     if (!Array.isArray(announcements) || announcements.length === 0) return null;
-    const sorted = [...announcements].sort((a, b) => {
+    const now = Date.now();
+    // Ficha zilizokwisha muda (ikiwa backend inatuma expiresAt)
+    const live = announcements.filter((a) => {
+      const exp = a?.expiresAt ? new Date(a.expiresAt).getTime() : null;
+      return !exp || Number.isNaN(exp) || exp > now;
+    });
+    if (live.length === 0) return null;
+    const sorted = [...live].sort((a, b) => {
       const at = new Date(a.createdAt || 0).getTime();
       const bt = new Date(b.createdAt || 0).getTime();
       return bt - at;
@@ -34,6 +42,11 @@ export default function AnnouncementBar() {
   const message = (lang === "en" && current.messageEn) ? current.messageEn : current.message;
   const text    = message || title || "";
   if (!text) return null;
+
+  // Link ya hiari: ya ndani (/...) au https tu
+  const rawLink = current.linkUrl || current.link || current.url || "";
+  const link = typeof rawLink === "string" && (rawLink.startsWith("/") || rawLink.startsWith("https://")) ? rawLink : "";
+  const isInternal = link.startsWith("/");
 
   const handleDismiss = () => {
     setDismissed(current.id);
@@ -50,7 +63,18 @@ export default function AnnouncementBar() {
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex items-center justify-center gap-2 sm:gap-3">
         <Megaphone size={13} className="shrink-0 text-[#FEA406]" />
-        <span className="truncate text-center">{text}</span>
+        <span className="line-clamp-2 text-center sm:line-clamp-1">{text}</span>
+        {link && (
+          isInternal ? (
+            <Link to={link} className="shrink-0 font-semibold text-[#FEA406] underline-offset-2 hover:underline">
+              {lang === "sw" ? "Soma zaidi" : "Learn more"}
+            </Link>
+          ) : (
+            <a href={link} target="_blank" rel="noopener noreferrer" className="shrink-0 font-semibold text-[#FEA406] underline-offset-2 hover:underline">
+              {lang === "sw" ? "Soma zaidi" : "Learn more"}
+            </a>
+          )
+        )}
         <button
           type="button"
           onClick={handleDismiss}

@@ -107,7 +107,8 @@ export default function Footer({ selectedLang: propLang }) {
       { to: "/kuhusu", label: t("Kuhusu Sisi", "About Us") },
       { to: "/mawasiliano", label: t("Wasiliana Nasi", "Contact Us") },
       { to: "/jinsi-ya-kununua", label: t("Jinsi Inavyofanya Kazi", "How it works") },
-      { to: "/jinsi-ya-kuuza", label: t("Jinsi ya Kuuza", "How to Sell") }, // ✅ MPYA
+      { to: "/jinsi-ya-kuuza", label: t("Jinsi ya Kuuza", "How to Sell") },
+      { to: "/mali-zote", label: t("Mali Zote", "All Listings") },
     ]},
     { title: t("Kategoria", "Categories"), links: [
       ...categoryLinks,
@@ -117,7 +118,6 @@ export default function Footer({ selectedLang: propLang }) {
       { to: "/faragha", label: t("Sera ya Faragha", "Privacy Policy") },
       { to: "/sheria", label: t("Vigezo vya Matumizi", "Terms of Use") },
       { to: "/mawasiliano#faq", label: t("Maswali", "FAQ") },
-      { to: "/jinsi-ya-kuuza", label: t("Jinsi ya Kuuza", "How to Sell") }, // ✅ MPYA
     ]},
   ];
 

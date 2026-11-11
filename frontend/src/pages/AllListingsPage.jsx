@@ -20,6 +20,7 @@ import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { usePublicListings } from "../config/listingsStore.js";
+import { useActiveBannerAds } from "../config/bannerAdsStore.js";
 import ListingCard from "../components/ListingCard.jsx";
 import { rankListings, currentRotationSeed } from "../config/listingRanking.js";
 import {
@@ -64,6 +65,10 @@ export default function AllListingsPage() {
   const locationFilter = searchParams.get("eneo") || "";
   const verifiedOnly = searchParams.get("verified") === "1";
   const featuredOnly = searchParams.get("featured") === "1";
+  // aina: "tangazo" (sponsored/banner) au "inavuma" (boosted)
+  const ainaParam = searchParams.get("aina");
+  const aina = ainaParam === "tangazo" || ainaParam === "inavuma" ? ainaParam : "";
+  const activeBanners = useActiveBannerAds();
 
   const updateParams = (patch) => {
     const next = new URLSearchParams(searchParams);
@@ -83,6 +88,7 @@ export default function AllListingsPage() {
       eneo: "",
       verified: false,
       featured: false,
+      aina: "",
     });
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -111,7 +117,7 @@ export default function AllListingsPage() {
   // Filter ikibadilika → rudi ukurasa wa kwanza wa "Load More"
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [sortBy, categoryFilter, minPrice, maxPrice, locationFilter, verifiedOnly, featuredOnly]);
+  }, [sortBy, categoryFilter, minPrice, maxPrice, locationFilter, verifiedOnly, featuredOnly, aina]);
 
   const liveListings = useMemo(
     () =>
@@ -122,6 +128,14 @@ export default function AllListingsPage() {
         rotationSeed
       ),
     [allListings, rotationSeed]
+  );
+
+  const bannerIds = useMemo(
+    () =>
+      new Set(
+        (activeBanners || []).filter((b) => b.listingId).map((b) => String(b.listingId))
+      ),
+    [activeBanners]
   );
 
   const filteredListings = useMemo(() => {
@@ -136,9 +150,11 @@ export default function AllListingsPage() {
       if (loc && !locationText(l).includes(loc)) return false;
       if (verifiedOnly && !l.verified) return false;
       if (featuredOnly && !isBoostActive(l)) return false;
+      if (aina === "tangazo" && !bannerIds.has(String(l.id))) return false;
+      if (aina === "inavuma" && !(isBoostActive(l) || l.isBoosted)) return false;
       return true;
     });
-  }, [liveListings, categoryFilter, minPrice, maxPrice, locationFilter, verifiedOnly, featuredOnly]);
+  }, [liveListings, categoryFilter, minPrice, maxPrice, locationFilter, verifiedOnly, featuredOnly, aina, bannerIds]);
 
   const sortedListings = useMemo(() => {
     const arr = [...filteredListings];
@@ -169,7 +185,8 @@ export default function AllListingsPage() {
     (maxPrice !== "" ? 1 : 0) +
     (locationFilter.trim() ? 1 : 0) +
     (verifiedOnly ? 1 : 0) +
-    (featuredOnly ? 1 : 0);
+    (featuredOnly ? 1 : 0) +
+    (aina ? 1 : 0);
 
   const inputCls =
     "w-full rounded-lg border border-[color:rgb(var(--c-hairline))] bg-card px-3 py-2 text-sm text-primary outline-none focus:border-[color:rgb(var(--c-gold))]";
@@ -424,6 +441,13 @@ export default function AllListingsPage() {
               <Chip
                 label={t("Zilizothibitishwa", "Verified")}
                 onRemove={() => updateParams({ verified: false })}
+                removeLabel={t("Ondoa", "Remove")}
+              />
+            )}
+            {aina && (
+              <Chip
+                label={aina === "tangazo" ? t("Matangazo ya Washirika", "Sponsored") : t("Zinazovuma", "Trending")}
+                onRemove={() => updateParams({ aina: "" })}
                 removeLabel={t("Ondoa", "Remove")}
               />
             )}

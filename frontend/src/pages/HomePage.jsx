@@ -274,7 +274,7 @@ export default function HomePage() {
             badge={lang === "sw" ? "Zinazopendekezwa" : "Featured"}
             title={lang === "sw" ? "Mali Zinazopendekezwa" : "Featured Listings"}
             subtitle={lang === "sw" ? "Mali zenye kipaumbele cha utafutaji kutoka kwa wauzaji wetu." : "Priority listings from our sellers."}
-            listings={featured} viewAllTo="/mali-zote" savedIds={savedIds} onToggleSave={handleToggleSave}
+            listings={featured} viewAllTo="/mali-zote?featured=1" savedIds={savedIds} onToggleSave={handleToggleSave}
           />
         )}
 
@@ -309,7 +309,7 @@ export default function HomePage() {
             badge={lang === "sw" ? "Inavuma" : "Trending"}
             title={lang === "sw" ? "Mali Zinazovuma" : "Trending Listings"}
             subtitle={lang === "sw" ? "Mali zinazopata umaarufu sasa hivi." : "Listings gaining popularity right now."}
-            listings={boosted} viewAllTo="/mali-zote" savedIds={savedIds} onToggleSave={handleToggleSave}
+            listings={boosted} viewAllTo="/mali-zote?aina=inavuma" savedIds={savedIds} onToggleSave={handleToggleSave}
             cardBadge={{
               icon: <Flame size={10} />,
               label: lang === "sw" ? "Inavuma" : "Trending",

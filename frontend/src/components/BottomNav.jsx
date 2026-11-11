@@ -53,12 +53,15 @@ const icons = {
   ),
 };
 
-// ✅ Kurasa ambazo hazitakiwi kuwa na BottomNav (fomu, deal room, post)
-const HIDDEN_ROUTES = [
+// ✅ Kurasa ambazo hazitakiwi kuwa na BottomNav (fomu, deal room, post).
+// Tunalinganisha mwanzo wa path tu — `includes("/new")` ilificha menyu hata
+// kwenye URL za kawaida kama /kategoria/new-homes.
+const HIDDEN_PREFIXES = [
   "/dashboard/post",
   "/dashboard/listings/new",
-  "/dashboard/deals/", // Deal Rooms (mfano /dashboard/deals/123)
+  "/dashboard/listings/edit",
 ];
+const DEAL_LIST_PATHS = ["/dashboard/deals", "/dashboard/buyer/deals"];
 
 export default function BottomNav() {
   const location = useLocation();
@@ -72,10 +75,12 @@ export default function BottomNav() {
 
   // ✅ 1. FICHA BOTTOM NAV KWENYE KURASA ZA FOMU
   const shouldHide = useMemo(() => {
-    const path = location.pathname;
-    // Ficha ikiwa ni fomu ya kuweka tangazo au ukiwa ndani ya deal room mahususi
-    if (path.includes("/post") || path.includes("/new")) return true;
-    if (path.includes("/deals/") && path !== "/dashboard/deals" && path !== "/dashboard/buyer/deals") return true;
+    const path = location.pathname.replace(/\/+$/, "") || "/";
+    if (HIDDEN_PREFIXES.some((p) => path === p || path.startsWith(p + "/"))) return true;
+    // Deal Room mahususi: /dashboard/deals/:id au /dashboard/buyer/deals/:id
+    if (
+      DEAL_LIST_PATHS.some((p) => path.startsWith(p + "/"))
+    ) return true;
     return false;
   }, [location.pathname]);
 

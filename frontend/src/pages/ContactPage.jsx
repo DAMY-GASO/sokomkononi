@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useRef, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Mail, Phone, MapPin, Send, CheckCircle2, Loader2, AlertTriangle,
   MessageSquare, Clock, ChevronDown, HelpCircle,
@@ -53,6 +53,17 @@ export default function ContactPage() {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [contactInfo] = useContactInfo();
   const { user } = useAuth();
+  const { hash } = useLocation();
+
+  // React Router haiscroll hash yenyewe — /mawasiliano#faq iruke kwenye FAQ.
+  useEffect(() => {
+    if (!hash) return undefined;
+    const id = decodeURIComponent(hash.slice(1));
+    const timer = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [hash]);
   const isGuest = !user;
 
   const [form, setForm] = useState({ name: "", email: "", message: "" });

@@ -61,7 +61,9 @@ function read() {
 }
 function write(c) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify(c));
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(c));
+  } catch { /* private mode / quota — tuendelee bila cache */ }
   window.dispatchEvent(new Event(EV));
 }
 
@@ -193,7 +195,24 @@ export function getHelp() { return read().help || EMPTY.help; }
 // ============================================================
 // HYDRATE
 // ============================================================
-export async function hydrateContentFromApi() {
+const HYDRATE_TTL_MS = 30_000;
+let _contentInflight = null;
+let _contentLastOk = 0;
+
+// Dedupe: useContent() inatumika na components nyingi — omba /content/ mara moja
+// kwa kila dirisha la sekunde 30 (force=true kuruka cache, mf. baada ya admin kuhariri).
+export function hydrateContentFromApi({ force = false } = {}) {
+  if (_contentInflight) return _contentInflight;
+  if (!force && Date.now() - _contentLastOk < HYDRATE_TTL_MS) {
+    return Promise.resolve({ ok: true, cached: true });
+  }
+  _contentInflight = _hydrateContentImpl()
+    .then((r) => { if (r.ok) _contentLastOk = Date.now(); return r; })
+    .finally(() => { _contentInflight = null; });
+  return _contentInflight;
+}
+
+async function _hydrateContentImpl() {
   try {
     const data = await api.get("/content/");
     if (!data || Object.keys(data).length === 0) {

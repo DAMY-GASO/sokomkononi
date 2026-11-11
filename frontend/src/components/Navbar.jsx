@@ -323,9 +323,9 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                   <NavLink to="/kuhusu" className={navLinkCls}>
                     {lang === "sw" ? "Kuhusu" : "About"}
                   </NavLink>
-                  {/* ✅ Matangazo → /mali-zote */}
+                  {/* Listings → /mali-zote */}
                   <NavLink to="/mali-zote" className={navLinkCls}>
-                    {lang === "sw" ? "Matangazo" : "Ads"}
+                    {lang === "sw" ? "Mali Zote" : "Listings"}
                   </NavLink>
 
                   <div className="relative">
@@ -544,12 +544,12 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                 </Link>
               </div>
             )}
-            {/* ✅ Matangazo → /mali-zote (mobile) */}
+            {/* Listings → /mali-zote (mobile) */}
             <Link
               to="/mali-zote"
               className="flex items-center rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
             >
-              {lang === "sw" ? "Matangazo" : "Ads"}
+              {lang === "sw" ? "Mali Zote" : "Listings"}
             </Link>
             <Link
               to="/kuhusu"
