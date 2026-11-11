@@ -1,35 +1,34 @@
 // ============================================================
-// MySearchesSection.jsx
-// Buyer — saved searches (alerts) zake.
-// Bilingual + mobile-responsive + KILA KITU CENTERED.
+// MySearchesSection.jsx — B.7 FINAL
+//
+// Marekebisho:
+//  ✅ Edit search (PATCH /searches/{id}/) — imeunganishwa
+//  ✅ Onyesha `matchCount` kutoka backend (si client-side)
+//  ✅ Tumia camelCase fields kutoka searchesStore.norm():
+//     name, query, category, region, minPrice, maxPrice,
+//     verifiedOnly, matchCount, lastChecked, createdAt
+//  ✅ Ondoa `detectSearchAlertsAsync()` kwenye mount
+//     (backend Celery `searches.send_search_alerts` inafanya kila dakika 5)
+//  ✅ Form moja inatumika kwa create na edit
+//  ✅ Loading state kwenye save/update
+//  ✅ Timestamp ya `lastChecked`
 // ============================================================
 
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Search,
-  Bell,
-  Trash2,
-  Plus,
-  X,
-  MapPin,
-  CheckCircle,
-  Filter,
+  Search, Bell, Trash2, Plus, X, MapPin, CheckCircle, Filter,
+  Pencil, Loader2,
 } from "lucide-react";
 import { COLORS, formatTZS, timeAgo } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import {
   useSearches,
-  addSearch,
-  removeSearch,
-  countMatches,
-  detectSearchAlertsAsync,
+  addSearchAsync,
+  updateSearchAsync,
+  removeSearchAsync,
 } from "../../../config/searchesStore.js";
-import { usePublicListings } from "../../../config/listingsStore.js";
-import {
-  useActiveCategories,
-  getCategoryIcon,
-} from "../../../config/categoriesStore.js";
+import { useActiveCategories } from "../../../config/categoriesStore.js";
 
 const REGIONS = [
   "Arusha", "Dar es Salaam", "Dodoma", "Geita", "Iringa", "Kagera", "Katavi",
@@ -40,75 +39,294 @@ const REGIONS = [
   "Mjini Magharibi",
 ];
 
+function formatPriceInput(v) {
+  if (!v) return "";
+  const d = String(v).replace(/[^0-9]/g, "");
+  if (!d) return "";
+  return Number(d).toLocaleString("en-US");
+}
+function cleanPriceInput(v) {
+  return String(v).replace(/[^0-9]/g, "");
+}
+
+// ── Form ya ku-unda au ku-edit search ──
+function SearchForm({ initial, categories, lang, onSubmit, onCancel, busy }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  const [form, setForm] = useState(() => ({
+    name: initial?.name || "",
+    query: initial?.query || "",
+    category: initial?.category || null,
+    minPrice: initial?.minPrice != null ? String(initial.minPrice) : "",
+    maxPrice: initial?.maxPrice != null ? String(initial.maxPrice) : "",
+    region: initial?.region || null,
+    verifiedOnly: !!initial?.verifiedOnly,
+  }));
+  const [error, setError] = useState("");
+
+  const canSave = form.name.trim().length > 0 && !busy;
+
+  const handleSubmit = async () => {
+    if (!canSave) return;
+    setError("");
+    try {
+      await onSubmit({
+        name: form.name.trim(),
+        query: form.query.trim(),
+        category: form.category,
+        minPrice: form.minPrice ? Number(cleanPriceInput(form.minPrice)) : null,
+        maxPrice: form.maxPrice ? Number(cleanPriceInput(form.maxPrice)) : null,
+        region: form.region,
+        verifiedOnly: form.verifiedOnly,
+      });
+    } catch (err) {
+      setError(
+        err?.message ||
+          t(
+            "Imeshindwa kuhifadhi utafutaji. Jaribu tena.",
+            "Failed to save search. Try again."
+          )
+      );
+    }
+  };
+
+  return (
+    <div
+      style={{ borderColor: COLORS.sandLine, background: "white" }}
+      className="rounded-2xl border p-4 mb-4 flex flex-col gap-3 max-w-md mx-auto"
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-primary h-card">
+          {initial
+            ? t("Hariri Utafutaji", "Edit Search")
+            : t("Utafutaji Mpya", "New Search")}
+        </p>
+        <button
+          onClick={onCancel}
+          disabled={busy}
+          className="text-muted hover:text-secondary disabled:opacity-50"
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      {/* Name */}
+      <label className="flex flex-col gap-1.5 text-center">
+        <span className="text-body-sm font-semibold text-secondary">
+          {t("Jina la Utafutaji", "Search Name")} *
+        </span>
+        <input
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder={t(
+            "mfano: Toyota Harrier Dar",
+            "e.g. Toyota Harrier Dar"
+          )}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+        />
+      </label>
+
+      {/* Query */}
+      <label className="flex flex-col gap-1.5 text-center">
+        <span className="text-body-sm font-semibold text-secondary">
+          {t("Neno la Utafutaji (hiari)", "Search Query (optional)")}
+        </span>
+        <input
+          value={form.query}
+          onChange={(e) => setForm({ ...form, query: e.target.value })}
+          placeholder={t("mfano: Harrier", "e.g. Harrier")}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+        />
+      </label>
+
+      {/* Category */}
+      <label className="flex flex-col gap-1.5 text-center">
+        <span className="text-body-sm font-semibold text-secondary">
+          {t("Kategoria (hiari)", "Category (optional)")}
+        </span>
+        <select
+          value={form.category || ""}
+          onChange={(e) =>
+            setForm({ ...form, category: e.target.value || null })
+          }
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+        >
+          <option value="">{t("Zote", "All")}</option>
+          {categories.map((cat) => (
+            <option key={cat.key} value={cat.key}>
+              {cat.label?.[lang] || cat.label?.sw}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {/* Region */}
+      <label className="flex flex-col gap-1.5 text-center">
+        <span className="text-body-sm font-semibold text-secondary">
+          {t("Mkoa (hiari)", "Region (optional)")}
+        </span>
+        <select
+          value={form.region || ""}
+          onChange={(e) =>
+            setForm({ ...form, region: e.target.value || null })
+          }
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+        >
+          <option value="">{t("Zote", "All")}</option>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {/* Price */}
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1.5 text-center">
+          <span className="text-body-sm font-semibold text-secondary">
+            {t("Bei ya Chini (TZS)", "Min Price (TZS)")}
+          </span>
+          <input
+            value={formatPriceInput(form.minPrice)}
+            onChange={(e) =>
+              setForm({ ...form, minPrice: cleanPriceInput(e.target.value) })
+            }
+            placeholder="0"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+          />
+        </label>
+        <label className="flex flex-col gap-1.5 text-center">
+          <span className="text-body-sm font-semibold text-secondary">
+            {t("Bei ya Juu (TZS)", "Max Price (TZS)")}
+          </span>
+          <input
+            value={formatPriceInput(form.maxPrice)}
+            onChange={(e) =>
+              setForm({ ...form, maxPrice: cleanPriceInput(e.target.value) })
+            }
+            placeholder="100,000,000"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
+          />
+        </label>
+      </div>
+
+      {/* Verified only */}
+      <label className="flex items-center justify-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={form.verifiedOnly}
+          onChange={(e) =>
+            setForm({ ...form, verifiedOnly: e.target.checked })
+          }
+          className="w-4 h-4 rounded text-gold-ink focus:ring-gold"
+        />
+        <span className="text-body-sm text-secondary">
+          {t("Zilizothibitishwa tu", "Verified only")}
+        </span>
+      </label>
+
+      {error && (
+        <div
+          style={{ background: "rgba(193,80,46,0.1)", color: "#C1502E" }}
+          className="text-xs font-semibold px-3 py-2 rounded-lg"
+        >
+          {error}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 pt-2">
+        <button
+          onClick={onCancel}
+          disabled={busy}
+          className="text-btn font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary hover:bg-gray-50 disabled:opacity-50"
+        >
+          {t("Ghairi", "Cancel")}
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={!canSave}
+          style={{
+            background: canSave ? COLORS.gold : COLORS.sandLine,
+            color: canSave ? COLORS.night : "rgba(1,25,87,0.4)",
+          }}
+          className="flex-1 flex items-center justify-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg disabled:cursor-not-allowed"
+        >
+          {busy ? (
+            <>
+              <Loader2 size={12} className="animate-spin" />
+              {t("Inahifadhi...", "Saving...")}
+            </>
+          ) : initial ? (
+            t("Hifadhi Mabadiliko", "Save Changes")
+          ) : (
+            t("Hifadhi Utafutaji", "Save Search")
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function MySearchesSection() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
   const searches = useSearches();
-  const listings = usePublicListings();
   const categories = useActiveCategories();
-
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    query: "",
-    category: null,
-    minPrice: "",
-    maxPrice: "",
-    region: null,
-    verifiedOnly: false,
-  });
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  React.useEffect(() => {
-    detectSearchAlertsAsync().catch(() => {});
-  }, []);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [busy, setBusy] = useState(false);
 
-  
-  const searchesWithCounts = useMemo(
-    () =>
-      searches.map((s) => ({
-        ...s,
-        matchCount: countMatches(s, listings),
-      })),
-    [searches, listings]
+  const editingSearch = useMemo(
+    () => (editingId ? searches.find((s) => s.id === editingId) : null),
+    [searches, editingId]
   );
 
-  const canSave = form.name.trim().length > 0;
-
-  const [saveError, setSaveError] = useState("");
-
-  const handleSave = async () => {
-    if (!canSave) return;
-    setSaveError("");
-    const res = await addSearch({
-      name: form.name.trim(),
-      query: form.query.trim(),
-      category: form.category,
-      minPrice: form.minPrice ? Number(form.minPrice.replace(/\D/g, "")) : null,
-      maxPrice: form.maxPrice ? Number(form.maxPrice.replace(/\D/g, "")) : null,
-      region: form.region,
-      verifiedOnly: form.verifiedOnly,
-    });
-    if (!res || res.ok === false) {
-      setSaveError(
-        res?.error?.message ||
-          (lang === "sw"
-            ? "Imeshindwa kuhifadhi utafutaji. Jaribu tena."
-            : "Failed to save search. Try again.")
-      );
-      return; 
+  const handleCreate = async (payload) => {
+    setBusy(true);
+    try {
+      const res = await addSearchAsync(payload);
+      if (!res?.ok) {
+        throw new Error(
+          res?.error?.message ||
+            t("Imeshindwa kuhifadhi.", "Failed to save.")
+        );
+      }
+      setShowForm(false);
+    } finally {
+      setBusy(false);
     }
-    setForm({
-      name: "",
-      query: "",
-      category: null,
-      minPrice: "",
-      maxPrice: "",
-      region: null,
-      verifiedOnly: false,
-    });
-    setShowForm(false);
+  };
+
+  const handleUpdate = async (payload) => {
+    if (!editingSearch) return;
+    setBusy(true);
+    try {
+      const res = await updateSearchAsync(editingSearch.id, payload);
+      if (!res?.ok) {
+        throw new Error(
+          res?.error?.message ||
+            t("Imeshindwa kuhifadhi.", "Failed to save.")
+        );
+      }
+      setEditingId(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemove = async (id) => {
+    if (
+      !window.confirm(
+        t("Ondoa utafutaji huu?", "Remove this search?")
+      )
+    ) {
+      return;
+    }
+    await removeSearchAsync(id);
   };
 
   const runSearch = (search) => {
@@ -128,9 +346,7 @@ export default function MySearchesSection() {
       className="w-full p-4 sm:p-6"
     >
       <div className="max-w-3xl mx-auto">
-        {/* ============================================================ */}
-        {/* HEADER — CENTERED */}
-        {/* ============================================================ */}
+        {/* Header */}
         <div className="flex flex-col items-center text-center gap-3 mb-6">
           <div>
             <h1 className="h-title">
@@ -143,196 +359,43 @@ export default function MySearchesSection() {
               )}
             </p>
           </div>
-          <button
-            onClick={() => setShowForm((v) => !v)}
-            style={{ background: COLORS.gold, color: COLORS.night }}
-            className="flex items-center gap-1.5 text-btn font-semibold rounded-lg px-4 py-2.5"
-          >
-            <Plus size={13} />
-            {t("Utafutaji Mpya", "New Search")}
-          </button>
+          {!showForm && !editingId && (
+            <button
+              onClick={() => setShowForm(true)}
+              style={{ background: COLORS.gold, color: COLORS.night }}
+              className="flex items-center gap-1.5 text-btn font-semibold rounded-lg px-4 py-2.5"
+            >
+              <Plus size={13} />
+              {t("Utafutaji Mpya", "New Search")}
+            </button>
+          )}
         </div>
 
-        {/* ============================================================ */}
-        {/* FORM — CENTERED */}
-        {/* ============================================================ */}
-        {showForm && (
-          <div
-            style={{ borderColor: COLORS.sandLine, background: "white" }}
-            className="rounded-2xl border p-4 mb-4 flex flex-col gap-3 max-w-md mx-auto"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-primary h-card">
-                {t("Utafutaji Mpya", "New Search")}
-              </p>
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-muted hover:text-secondary"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* Name */}
-            <label className="flex flex-col gap-1.5 text-center">
-              <span className="text-body-sm font-semibold text-secondary">
-                {t("Jina la Utafutaji", "Search Name")}
-              </span>
-              <input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder={t(
-                  "mfano: Toyota Harrier Dar",
-                  "e.g. Toyota Harrier Dar"
-                )}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
-              />
-            </label>
-
-            {/* Query */}
-            <label className="flex flex-col gap-1.5 text-center">
-              <span className="text-body-sm font-semibold text-secondary">
-                {t("Neno la Utafutaji (hiari)", "Search Query (optional)")}
-              </span>
-              <input
-                value={form.query}
-                onChange={(e) => setForm({ ...form, query: e.target.value })}
-                placeholder={t("mfano: Harrier", "e.g. Harrier")}
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
-              />
-            </label>
-
-            {/* Category */}
-            <label className="flex flex-col gap-1.5 text-center">
-              <span className="text-body-sm font-semibold text-secondary">
-                {t("Kategoria (hiari)", "Category (optional)")}
-              </span>
-              <select
-                value={form.category || ""}
-                onChange={(e) =>
-                  setForm({ ...form, category: e.target.value || null })
-                }
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
-              >
-                <option value="">{t("Zote", "All")}</option>
-                {categories.map((cat) => (
-                  <option key={cat.key} value={cat.key}>
-                    {cat.label?.[lang] || cat.label?.sw}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {/* Region */}
-            <label className="flex flex-col gap-1.5 text-center">
-              <span className="text-body-sm font-semibold text-secondary">
-                {t("Mkoa (hiari)", "Region (optional)")}
-              </span>
-              <select
-                value={form.region || ""}
-                onChange={(e) =>
-                  setForm({ ...form, region: e.target.value || null })
-                }
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
-              >
-                <option value="">{t("Zote", "All")}</option>
-                {REGIONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {/* Price */}
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1.5 text-center">
-                <span className="text-body-sm font-semibold text-secondary">
-                  {t("Bei ya Chini (TZS)", "Min Price (TZS)")}
-                </span>
-                <input
-                  value={form.minPrice}
-                  onChange={(e) =>
-                    setForm({ ...form, minPrice: e.target.value })
-                  }
-                  placeholder="0"
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-center">
-                <span className="text-body-sm font-semibold text-secondary">
-                  {t("Bei ya Juu (TZS)", "Max Price (TZS)")}
-                </span>
-                <input
-                  value={form.maxPrice}
-                  onChange={(e) =>
-                    setForm({ ...form, maxPrice: e.target.value })
-                  }
-                  placeholder="100,000,000"
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-royal text-center"
-                />
-              </label>
-            </div>
-
-            {/* Verified only */}
-            <label className="flex items-center justify-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.verifiedOnly}
-                onChange={(e) =>
-                  setForm({ ...form, verifiedOnly: e.target.checked })
-                }
-                className="w-4 h-4 rounded text-gold-ink focus:ring-gold"
-              />
-              <span className="text-body-sm text-secondary">
-                {t("Zilizothibitishwa tu", "Verified only")}
-              </span>
-            </label>
-
-            {saveError && (
-              <div
-                style={{ background: "rgba(193,80,46,0.1)", color: "#C1502E" }}
-                className="text-xs font-semibold px-3 py-2 rounded-lg"
-              >
-                {saveError}
-              </div>
-            )}
-
-            {saveError && (
-              <div
-                style={{ background: "rgba(193,80,46,0.1)", color: "#C1502E" }}
-                className="text-xs font-semibold px-3 py-2 rounded-lg"
-              >
-                {saveError}
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-btn font-semibold px-3 py-2 rounded-lg border border-gray-200 text-secondary hover:bg-gray-50"
-              >
-                {t("Ghairi", "Cancel")}
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={!canSave}
-                style={{
-                  background: canSave ? COLORS.gold : COLORS.sandLine,
-                  color: canSave ? COLORS.night : "rgba(1,25,87,0.4)",
-                }}
-                className="flex-1 text-btn font-semibold px-3 py-2 rounded-lg"
-              >
-                {t("Hifadhi Utafutaji", "Save Search")}
-              </button>
-            </div>
-          </div>
+        {/* Create form */}
+        {showForm && !editingId && (
+          <SearchForm
+            categories={categories}
+            lang={lang}
+            onSubmit={handleCreate}
+            onCancel={() => setShowForm(false)}
+            busy={busy}
+          />
         )}
 
-        {/* ============================================================ */}
-        {/* EMPTY STATE — CENTERED */}
-        {/* ============================================================ */}
-        {searchesWithCounts.length === 0 ? (
+        {/* Edit form */}
+        {editingId && editingSearch && (
+          <SearchForm
+            initial={editingSearch}
+            categories={categories}
+            lang={lang}
+            onSubmit={handleUpdate}
+            onCancel={() => setEditingId(null)}
+            busy={busy}
+          />
+        )}
+
+        {/* Empty */}
+        {searches.length === 0 && !showForm && !editingId && (
           <div
             style={{ borderColor: COLORS.sandLine }}
             className="rounded-2xl border-2 border-dashed p-10 text-center bg-white"
@@ -348,103 +411,128 @@ export default function MySearchesSection() {
               )}
             </p>
           </div>
-        ) : (
-          /* ============================================================ */
-          /* LIST — kadi za search zimeachwa kushoto kwa urahisi */
-          /* ============================================================ */
+        )}
+
+        {/* List */}
+        {searches.length > 0 && !editingId && (
           <div className="flex flex-col gap-3">
-            {searchesWithCounts.map((s) => (
-              <div
-                key={s.id}
-                style={{ borderColor: COLORS.sandLine, background: "white" }}
-                className="rounded-xl border p-4"
-              >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-primary text-body-sm font-semibold truncate">
-                      {s.name}
-                    </p>
-                    <p className="text-body-sm text-secondary mt-0.5 flex items-center gap-1 flex-wrap">
-                      {s.query && (
-                        <span className="flex items-center gap-1">
-                          <Search size={10} /> {s.query}
-                        </span>
-                      )}
-                      {s.category && (
-                        <span className="flex items-center gap-1">
-                          <Filter size={10} />{" "}
-                          {categories.find((c) => c.key === s.category)
-                            ?.label?.[lang] ||
-                            categories.find((c) => c.key === s.category)?.label
-                              ?.sw ||
-                            s.category}
-                        </span>
-                      )}
-                      {s.region && (
-                        <span className="flex items-center gap-1">
-                          <MapPin size={10} /> {s.region}
-                        </span>
-                      )}
-                      {s.verifiedOnly && (
-                        <span className="flex items-center gap-1">
-                          <CheckCircle size={10} />{" "}
-                          {t("Imethibitishwa", "Verified")}
-                        </span>
-                      )}
-                    </p>
-                    {(s.minPrice != null || s.maxPrice != null) && (
-                      <p className="text-body-sm text-muted mt-0.5">
-                        {s.minPrice != null && formatTZS(s.minPrice)}
-                        {s.minPrice != null && s.maxPrice != null && " - "}
-                        {s.maxPrice != null && formatTZS(s.maxPrice)}
+            {searches.map((s) => {
+              const cat = categories.find(
+                (c) => c.key === s.category || c.slug === s.category
+              );
+              const matchCount =
+                typeof s.matchCount === "number" ? s.matchCount : 0;
+              return (
+                <div
+                  key={s.id}
+                  style={{
+                    borderColor: COLORS.sandLine,
+                    background: "white",
+                  }}
+                  className="rounded-xl border p-4"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-primary text-body-sm font-semibold truncate">
+                        {s.name}
                       </p>
-                    )}
+                      <p className="text-body-sm text-secondary mt-0.5 flex items-center gap-1 flex-wrap">
+                        {s.query && (
+                          <span className="flex items-center gap-1">
+                            <Search size={10} /> {s.query}
+                          </span>
+                        )}
+                        {s.category && (
+                          <span className="flex items-center gap-1">
+                            <Filter size={10} />{" "}
+                            {cat?.label?.[lang] ||
+                              cat?.label?.sw ||
+                              s.category}
+                          </span>
+                        )}
+                        {s.region && (
+                          <span className="flex items-center gap-1">
+                            <MapPin size={10} /> {s.region}
+                          </span>
+                        )}
+                        {s.verifiedOnly && (
+                          <span className="flex items-center gap-1">
+                            <CheckCircle size={10} />{" "}
+                            {t("Imethibitishwa", "Verified")}
+                          </span>
+                        )}
+                      </p>
+                      {(s.minPrice != null || s.maxPrice != null) && (
+                        <p className="text-body-sm text-muted mt-0.5">
+                          {s.minPrice != null && formatTZS(s.minPrice)}
+                          {s.minPrice != null && s.maxPrice != null && " - "}
+                          {s.maxPrice != null && formatTZS(s.maxPrice)}
+                        </p>
+                      )}
+                    </div>
+
+                    <span
+                      style={{
+                        background:
+                          matchCount > 0
+                            ? "rgba(47,109,79,0.12)"
+                            : "rgba(1,25,87,0.08)",
+                        color:
+                          matchCount > 0 ? COLORS.green : COLORS.night,
+                      }}
+                      className="text-body-sm font-bold px-2.5 py-1 rounded-full shrink-0"
+                    >
+                      {matchCount} {t("zinalingana", "matches")}
+                    </span>
                   </div>
 
-                  <span
-                    style={{
-                      background:
-                        s.matchCount > 0
-                          ? "rgba(47,109,79,0.12)"
-                          : "rgba(1,25,87,0.08)",
-                      color: s.matchCount > 0 ? COLORS.green : COLORS.night,
-                    }}
-                    className="text-body-sm font-bold px-2.5 py-1 rounded-full shrink-0"
-                  >
-                    {s.matchCount} {t("zinalingana", "matches")}
-                  </span>
-                </div>
+                  <p className="text-body-sm text-muted mb-3">
+                    {t("Ilianzishwa", "Created")}{" "}
+                    {timeAgo(s.createdAt, lang)}
+                    {s.lastChecked && (
+                      <>
+                        {" · "}
+                        {t("Ilipokaguliwa", "Last checked")}{" "}
+                        {timeAgo(s.lastChecked, lang)}
+                      </>
+                    )}
+                  </p>
 
-                <p className="text-body-sm text-muted mb-3">
-                  {t("Ilianzishwa", "Created")} {timeAgo(s.createdAt, lang)}
-                </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => runSearch(s)}
+                      style={{ background: COLORS.gold, color: COLORS.night }}
+                      className="flex items-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg"
+                    >
+                      <Search size={12} />
+                      {t("Tafuta Sasa", "Search Now")}
+                    </button>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => runSearch(s)}
-                    style={{ background: COLORS.gold, color: COLORS.night }}
-                    className="flex items-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg"
-                  >
-                    <Search size={12} />
-                    {t("Tafuta Sasa", "Search Now")}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          t("Ondoa utafutaji huu?", "Remove this search?")
-                        )
-                      ) {
-                        removeSearch(s.id);
-                      }
-                    }}
-                    className="ml-auto flex items-center gap-1 text-btn font-semibold px-2 py-2 rounded-lg text-muted hover:text-rust transition-colors"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+                    <button
+                      onClick={() => {
+                        setEditingId(s.id);
+                        setShowForm(false);
+                      }}
+                      style={{
+                        borderColor: COLORS.sandLine,
+                        color: COLORS.night,
+                      }}
+                      className="flex items-center gap-1.5 text-btn font-semibold px-3 py-2 rounded-lg border"
+                    >
+                      <Pencil size={12} />
+                      {t("Hariri", "Edit")}
+                    </button>
+
+                    <button
+                      onClick={() => handleRemove(s.id)}
+                      className="ml-auto flex items-center gap-1 text-btn font-semibold px-2 py-2 rounded-lg text-muted hover:text-rust transition-colors"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,8 +1,5 @@
 // ============================================================
-// SafetySupportSection.jsx
-// Buyer & Seller — Safety & Support (report, help center, complaints).
-// ✅ MPYA: Inasoma ?ticket={id} kutoka URL na inafungua ticket husika.
-// ✅ MPYA: Inahydrate tickets kwenye mount.
+// SafetySupportSection.jsx — B.9 FINAL
 // ============================================================
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -10,7 +7,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   Shield, Flag, MessageSquare, BookOpen, Phone, Mail,
   CheckCircle, ChevronDown, ChevronUp, Loader2, Send,
-  Clock, Inbox, MessageCircle,
+  Clock, Inbox, MessageCircle, RotateCcw,
 } from "lucide-react";
 import { COLORS, timeAgo } from "../components/shared";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -19,10 +16,12 @@ import {
   useTickets,
   addTicketMessageAsync,
   hydrateTicketsFromApi,
+  updateTicketStatusAsync,
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
 } from "../../../config/ticketsStore.js";
+import SlaCountdown from "../components/SlaCountdown.jsx";
 
 // ============================================================
 // FAQ
@@ -118,10 +117,11 @@ const COLOR_MAP = {
 // ============================================================
 // TICKET CARD
 // ============================================================
-function MyTicketCard({ ticket, lang, defaultExpanded = false }) {
+function MyTicketCard({ ticket, lang, defaultExpanded = false, onRefresh }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+  const [reopening, setReopening] = useState(false);
   const [error, setError] = useState("");
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -140,7 +140,12 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false }) {
   const handleSendReply = async () => {
     if (!replyText.trim() || sending) return;
     if (ticket.status === "closed") {
-      setError(t("Ticket imefungwa. Hauwezi kutuma ujumbe.", "Ticket is closed. You cannot send messages."));
+      setError(
+        t(
+          "Ticket imefungwa. Fungua tena kwanza.",
+          "Ticket is closed. Reopen first."
+        )
+      );
       return;
     }
 
@@ -162,6 +167,33 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false }) {
       );
     }
   };
+
+  // ✅ Reopen
+  const handleReopen = async () => {
+    if (reopening) return;
+    setReopening(true);
+    setError("");
+    try {
+      const res = await updateTicketStatusAsync(ticket.id, "open");
+      if (!res?.ok) {
+        throw new Error(
+          res?.error?.message ||
+            t("Imeshindwa kufungua ticket.", "Failed to reopen ticket.")
+        );
+      }
+      await hydrateTicketsFromApi();
+      onRefresh?.();
+    } catch (err) {
+      setError(
+        err?.message ||
+          t("Imeshindwa kufungua ticket.", "Failed to reopen ticket.")
+      );
+    } finally {
+      setReopening(false);
+    }
+  };
+
+  const isClosed = ticket.status === "closed";
 
   return (
     <div
@@ -217,6 +249,13 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false }) {
                   </span>
                 </>
               )}
+              {/* ✅ SLA Countdown */}
+              <SlaCountdown
+                deadline={ticket.slaDeadline}
+                status={ticket.status}
+                overdue={ticket.slaOverdue}
+                lang={lang}
+              />
             </div>
           </div>
 
@@ -274,18 +313,14 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false }) {
                       <p
                         className="font-semibold mb-0.5 text-[10px] uppercase"
                         style={{
-                          color: isAdmin
-                            ? COLORS.rust
-                            : "rgba(245,243,236,0.6)",
+                          color: isAdmin ? COLORS.rust : "rgba(245,243,236,0.6)",
                         }}
                       >
                         {isAdmin
                           ? t("SokoMkononi Support", "SokoMkononi Support")
                           : t("Wewe", "You")}
                       </p>
-                      <p className="leading-relaxed break-words">
-                        {msg.text}
-                      </p>
+                      <p className="leading-relaxed break-words">{msg.text}</p>
                       <p
                         className="text-[10px] mt-1"
                         style={{
@@ -303,7 +338,8 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false }) {
             </div>
           </div>
 
-          {ticket.status !== "closed" && (
+          {/* Reply (kama haijafungwa) */}
+          {!isClosed && (
             <div className="flex items-center gap-2">
               <input
                 value={replyText}
@@ -321,9 +357,7 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false }) {
                 disabled={!replyText.trim() || sending}
                 style={{
                   background:
-                    replyText.trim() && !sending
-                      ? COLORS.gold
-                      : COLORS.sandLine,
+                    replyText.trim() && !sending ? COLORS.gold : COLORS.sandLine,
                   color:
                     replyText.trim() && !sending
                       ? COLORS.night
@@ -340,13 +374,33 @@ function MyTicketCard({ ticket, lang, defaultExpanded = false }) {
             </div>
           )}
 
-          {ticket.status === "closed" && (
-            <p className="text-[11px] text-muted text-center">
-              {t(
-                "Ticket hii imefungwa. Ikiwa unahitaji msaada zaidi, wasiliana nasi kwa barua pepe.",
-                "This ticket is closed. If you need more help, contact us by email."
-              )}
-            </p>
+          {/* Reopen (kama imefungwa) */}
+          {isClosed && (
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-[11px] text-muted text-center">
+                {t(
+                  "Ticket hii imefungwa. Kama unahitaji msaada zaidi, fungua tena.",
+                  "This ticket is closed. If you need more help, reopen it."
+                )}
+              </p>
+              <button
+                onClick={handleReopen}
+                disabled={reopening}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg border disabled:opacity-50"
+                style={{
+                  borderColor: COLORS.rust,
+                  color: COLORS.rust,
+                  background: "white",
+                }}
+              >
+                {reopening ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <RotateCcw size={12} />
+                )}
+                {t("Fungua Tena", "Reopen Ticket")}
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -740,7 +794,11 @@ export default function SafetySupportSection({ side = "buyer" }) {
                   key={ticket.id}
                   ticket={ticket}
                   lang={lang}
-                  defaultExpanded={focusedTicketId != null && String(ticket.id) === String(focusedTicketId)}
+                  onRefresh={hydrateTicketsFromApi}
+                  defaultExpanded={
+                    focusedTicketId != null &&
+                    String(ticket.id) === String(focusedTicketId)
+                  }
                 />
               ))}
             </div>

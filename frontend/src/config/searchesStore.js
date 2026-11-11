@@ -69,6 +69,37 @@ export async function addSearchAsync(search) {
 
 export function addSearch(search) { return addSearchAsync(search); }
 
+// ============================================================
+// ✅ MPYA — Sasisha search iliyopo (PATCH /searches/{id}/)
+// Backend inaruhusu PATCH (http_method_names ina "patch").
+// ============================================================
+export async function updateSearchAsync(id, patch) {
+  if (id == null) return { ok: false, error: new Error("No search id") };
+
+  try {
+    // Rekebisha `category` (frontend camelCase) → `category_slug` (backend).
+    // Tumia `!== undefined` kwa kila field ili kuheshimu "null" (kuondoa value).
+    const body = {};
+    if (patch.name !== undefined) body.name = patch.name;
+    if (patch.query !== undefined) body.query = patch.query;
+    if (patch.category !== undefined) body.category_slug = patch.category || "";
+    if (patch.region !== undefined) body.region = patch.region || "";
+    if (patch.minPrice !== undefined) body.min_price = patch.minPrice;
+    if (patch.maxPrice !== undefined) body.max_price = patch.maxPrice;
+    if (patch.verifiedOnly !== undefined) body.verified_only = patch.verifiedOnly;
+
+    const raw = await api.patch(`/searches/${id}/`, body);
+    const updated = norm(raw);
+    if (!updated) {
+      return { ok: false, error: new Error("Invalid response") };
+    }
+    write(read().map((s) => (s.id === id ? updated : s)));
+    return { ok: true, search: updated };
+  } catch (err) {
+    return { ok: false, error: err };
+  }
+}
+
 export async function removeSearchAsync(id) {
   try {
     await api.delete(`/searches/${id}/`);

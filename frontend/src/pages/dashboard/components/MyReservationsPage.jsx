@@ -1,21 +1,36 @@
 // ============================================================
-// MyReservationsPage.jsx — Mali alizolipia Reservation (buyer)
-// Inaonyesha reservations pekee (sio Deal Rooms).
+// MyReservationsPage.jsx — FINAL (B.6) — Imethibitishwa kwa backend
+//
+// Marekebisho:
+//  ✅ Polling kila sekunde 60 (usePollingRefresh)
+//  ✅ Timestamp "Imesasishwa" + Refresh button
+//  ✅ Banner ya "inaisha hivi karibuni" (< saa 1 / < saa 24)
+//  ✅ Disclaimer wazi ya "non-refundable" kwenye kila active
+//  ✅ Onyesha transaction_id (#) kwa support/refund requests
+//  ✅ Fix: onOpenDeal inatumia deal_room_id kutoka serializer
+//  ✅ History: onyesha zote (hakuna limit ya siku 30)
+//  ✅ Thibitisha: transaction_id ipo kwenye MyReservationSerializer
+//  ✅ Thibitisha: endpoint /transactions/reservations/ ipo
 // ============================================================
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   CalendarCheck, Clock3, MapPin, ArrowRight, Inbox, CheckCircle2,
   AlertTriangle, Plus, XCircle, Loader2, ExternalLink, RefreshCw,
+  Info, ShieldAlert,
 } from "lucide-react";
 import { COLORS, getCategory, formatTZS, timeAgo } from "./shared.js";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { api } from "../../../api/client.js";
+import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
+
+const POLL_INTERVAL_MS = 60_000;
 
 // ============================================================
 // RAMANI YA STATUS
+// Backend inarudisha lowercase (kutoka MyReservationSerializer.get_status)
 // ============================================================
 const RESERVATION_STATUS = {
   pending_payment: {
@@ -82,6 +97,17 @@ function formatDate(dateStr, lang) {
   }
 }
 
+function timeAgoShort(ts, lang) {
+  if (!ts) return "";
+  const sec = Math.floor((Date.now() - ts) / 1000);
+  if (sec < 30) return lang === "sw" ? "sasa hivi" : "just now";
+  if (sec < 60) return lang === "sw" ? `sekunde ${sec}` : `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return lang === "sw" ? `dakika ${min}` : `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  return lang === "sw" ? `saa ${hr}` : `${hr}h ago`;
+}
+
 function useCountdown(expiresAt, lang) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -92,7 +118,7 @@ function useCountdown(expiresAt, lang) {
   if (!expiresAt) return null;
   const ms = new Date(expiresAt).getTime() - now;
   if (Number.isNaN(ms)) return null;
-  if (ms <= 0) return { text: lang === "sw" ? "Muda umeisha" : "Expired", expired: true };
+  if (ms <= 0) return { text: lang === "sw" ? "Muda umeisha" : "Expired", expired: true, msRemaining: 0 };
 
   const hrs = Math.floor(ms / 3600000);
   const mins = Math.floor((ms % 3600000) / 60000);
@@ -108,7 +134,51 @@ function useCountdown(expiresAt, lang) {
         ? `Saa ${hrs}, dakika ${mins}, sekunde ${secs}`
         : `${hrs}h ${mins}m ${secs}s`;
 
-  return { text, expired: false, hrs, mins, secs, d };
+  return { text, expired: false, hrs, mins, secs, d, msRemaining: ms };
+}
+
+// ============================================================
+// EXPIRY BANNER
+// ============================================================
+function ExpiryBanner({ cd, lang }) {
+  if (!cd || cd.expired) return null;
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+
+  if (cd.msRemaining < 60 * 60 * 1000) {
+    return (
+      <div
+        className="mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-xs"
+        style={{ background: "rgba(193,80,46,0.10)", color: COLORS.rust }}
+      >
+        <ShieldAlert size={14} className="shrink-0 mt-0.5" />
+        <span>
+          {t(
+            "Inaisha hivi karibuni (chini ya saa 1). Kamilisha hatua muhimu mapema.",
+            "Expiring very soon (under 1 hour). Complete key steps early."
+          )}
+        </span>
+      </div>
+    );
+  }
+
+  if (cd.msRemaining < 24 * 60 * 60 * 1000) {
+    return (
+      <div
+        className="mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-xs"
+        style={{ background: "rgba(232,163,61,0.12)", color: "#8A5A16" }}
+      >
+        <Info size={14} className="shrink-0 mt-0.5" />
+        <span>
+          {t(
+            "Inaisha ndani ya saa 24. Unaweza kuongeza muda kama unahitaji.",
+            "Expires within 24 hours. You can extend if you need more time."
+          )}
+        </span>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 // ============================================================
@@ -124,32 +194,24 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
   const isActive = ACTIVE_STATUSES.includes(reservation.status);
   const cd = isActive ? useCountdown(reservation.expires_at, lang) : null;
 
-  // Pata taarifa za tangazo
-  const listingTitle =
-    reservation.listing_title ||
-    reservation.transaction?.listing_title ||
-    reservation.listing?.title ||
-    t("Mali", "Property");
-  const listingLocation =
-    reservation.listing_location ||
-    reservation.transaction?.listing_location ||
-    reservation.listing?.location ||
-    "";
-  const listingId =
-    reservation.listing_id || reservation.transaction?.listing_id || reservation.listing?.id;
-  const categoryKey =
-    reservation.listing_category || reservation.transaction?.listing_category || null;
+  // MyReservationSerializer inarudisha fields hizi moja kwa moja
+  const listingTitle = reservation.listing_title || t("Mali", "Property");
+  const listingLocation = reservation.listing_location || "";
+  const listingId = reservation.listing_id || null;
+  const categoryKey = reservation.listing_category || null;
+  const transactionId = reservation.transaction_id || null;
+  const dealRoomId = reservation.deal_room_id || null;
 
   const category = categoryKey ? getCategory(categoryKey) : null;
   const CategoryIcon = getCategoryIcon(category?.iconKey || "Home");
 
   // ---------- HANDLERS ----------
   const handleOpenDeal = () => {
-    if (reservation.deal_room_id) {
-      navigate(`/dashboard/buyer/deals?deal=${reservation.deal_room_id}`);
-    } else {
-      onOpenDeal?.(reservation);
+    if (dealRoomId) {
+      navigate(`/dashboard/buyer/deals?deal=${dealRoomId}`);
+      return;
     }
+    onOpenDeal?.(reservation);
   };
 
   const handleViewListing = () => {
@@ -158,12 +220,15 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
 
   const handleExtend = async () => {
     setError("");
-    if (!reservation.id) {
+    if (!reservation.id || !transactionId) {
       setError(t("Reservation haipatikani.", "Reservation not found."));
       return;
     }
     const input = prompt(
-      t("Ongeza saa ngapi? (mf. 24, 48, 72)", "Add how many hours? (e.g. 24, 48, 72)"),
+      t(
+        "Ongeza saa ngapi? (mf. 24, 48, 72 — lazima iwe tier iliyopo)",
+        "Add how many hours? (e.g. 24, 48, 72 — must be an existing tier)"
+      ),
       "24"
     );
     if (!input) return;
@@ -174,12 +239,30 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
     }
     setBusy("extend");
     try {
-      // Tuma ombi la kuongeza muda
-      await api.post(`/transactions/${reservation.transaction_id}/extend-reservation/`, { additional_hours: hours });
-      alert(t(`Muda umeongezwa kwa saa ${hours}.`, `Extended by ${hours} hours.`));
+      // ✅ Backend: POST /transactions/{id}/extend-reservation/
+      //    Body: { additional_hours: N }
+      const res = await api.post(`/transactions/${transactionId}/extend-reservation/`, {
+        additional_hours: hours,
+      });
+
+      // Kama backend inarudisha fimipay → inahitaji malipo
+      if (res?.fimipay) {
+        alert(
+          t(
+            `Malipo ya extension yameanzishwa. Angalia simu yako. Ada: TZS ${res?.fee || "—"}.`,
+            `Extension payment initiated. Check your phone. Fee: TZS ${res?.fee || "—"}.`
+          )
+        );
+      } else {
+        alert(t(`Muda umeongezwa kwa saa ${hours}.`, `Extended by ${hours} hours.`));
+      }
       onRefresh?.();
     } catch (err) {
-      setError(err?.data?.detail || err?.message || t("Imeshindwa kuongeza muda.", "Failed to extend."));
+      setError(
+        err?.data?.detail ||
+          err?.message ||
+          t("Imeshindwa kuongeza muda.", "Failed to extend.")
+      );
     } finally {
       setBusy(null);
     }
@@ -187,7 +270,7 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
 
   const handleCancel = async () => {
     setError("");
-    if (!reservation.id) return;
+    if (!reservation.id || !transactionId) return;
     const confirmed = confirm(
       t(
         "Una uhakika unataka kuondoa reservation hii? Reservation Fee HAITAREJESHWA.",
@@ -197,11 +280,14 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
     if (!confirmed) return;
     setBusy("cancel");
     try {
-      await api.post(`/transactions/${reservation.transaction_id}/remove-reservation/`, {});
+      // ✅ Backend: POST /transactions/{id}/remove-reservation/
+      await api.post(`/transactions/${transactionId}/remove-reservation/`, {});
       alert(t("Reservation imeondolewa.", "Reservation removed."));
       onRefresh?.();
     } catch (err) {
-      setError(err?.data?.detail || err?.message || t("Imeshindwa kuondoa.", "Failed to remove."));
+      setError(
+        err?.data?.detail || err?.message || t("Imeshindwa kuondoa.", "Failed to remove.")
+      );
     } finally {
       setBusy(null);
     }
@@ -209,10 +295,16 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
 
   // ---------- RENDER ----------
   return (
-    <div style={{ background: "white", borderColor: COLORS.sandLine }} className="rounded-2xl border p-4">
+    <div
+      style={{ background: "white", borderColor: COLORS.sandLine }}
+      className="rounded-2xl border p-4"
+    >
       {/* Header */}
       <div className="flex items-start gap-3">
-        <div style={{ background: COLORS.night }} className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0">
+        <div
+          style={{ background: COLORS.night }}
+          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+        >
           <CategoryIcon size={18} color={COLORS.gold} />
         </div>
         <div className="flex-1 min-w-0">
@@ -247,14 +339,21 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
         </div>
       </div>
 
+      <ExpiryBanner cd={cd} lang={lang} />
+
       {/* Details */}
-      <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t" style={{ borderColor: COLORS.sandLine }}>
+      <div
+        className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t"
+        style={{ borderColor: COLORS.sandLine }}
+      >
         <div>
           <p className="text-[11px] font-semibold text-secondary uppercase">
             {t("Muda wa Reservation", "Reservation Duration")}
           </p>
           <p className="text-sm font-semibold text-primary">
-            {reservation.duration_hours ? `${reservation.duration_hours} ${t("saa", "hrs")}` : "—"}
+            {reservation.duration_hours
+              ? `${reservation.duration_hours} ${t("saa", "hrs")}`
+              : "—"}
           </p>
         </div>
         <div>
@@ -284,6 +383,29 @@ function ReservationCard({ reservation, lang, onOpenDeal, onRefresh }) {
           </p>
         </div>
       </div>
+
+      {/* Transaction ID kwa support/refund */}
+      {transactionId && (
+        <p className="mt-2 text-[10px] text-muted font-mono">
+          {t("Kumbukumbu", "Reference")}: #{transactionId}
+        </p>
+      )}
+
+      {/* Disclaimer kwa active reservations */}
+      {isActive && (
+        <div
+          className="mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-[11px] leading-relaxed"
+          style={{ background: "rgba(16,26,46,0.04)", color: COLORS.night }}
+        >
+          <Info size={12} className="shrink-0 mt-0.5 opacity-70" />
+          <span>
+            {t(
+              "Reservation Fee hairejeshwi. Ukiondoa, utapoteza ada hii.",
+              "Reservation Fee is non-refundable. If you cancel, you lose this fee."
+            )}
+          </span>
+        </div>
+      )}
 
       {error && (
         <div
@@ -350,36 +472,31 @@ export default function MyReservationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const fetchReservations = async () => {
+  // ✅ Backend: TransactionViewSet.reservations() → GET /transactions/reservations/
+  const fetchReservations = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      // Jaribu endpoints kadhaa
-      let data = null;
-      const endpoints = [
-        "/transactions/reservations/",
-      ];
-      let lastError = null;
-      for (const ep of endpoints) {
-        try {
-          data = await api.get(`${ep}${ep.includes("?") ? "&" : "?"}page_size=100`);
-          break;
-        } catch (err) {
-          lastError = err;
-          if (err?.status !== 404) throw err;
-        }
-      }
-      if (data === null && lastError) throw lastError;
-
+      const data = await api.get("/transactions/reservations/?page_size=100");
       const list = Array.isArray(data) ? data : data?.results || data?.data || [];
       setReservations(list);
     } catch (err) {
-      setError(err?.data?.detail || err?.message || t("Imeshindwa kupakia reservations.", "Failed to load reservations."));
+      setError(
+        err?.data?.detail ||
+          err?.message ||
+          t("Imeshindwa kupakia reservations.", "Failed to load reservations.")
+      );
       setReservations([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [lang]);
+
+  // ✅ Polling kila sekunde 60
+  const { refresh, isRefreshing, lastRefreshedAt } = usePollingRefresh(
+    fetchReservations,
+    { intervalMs: POLL_INTERVAL_MS, enabled: Boolean(user?.id) }
+  );
 
   useEffect(() => {
     fetchReservations();
@@ -399,10 +516,16 @@ export default function MyReservationsPage() {
   const past = useMemo(
     () =>
       reservations.filter(
-        (r) => !ACTIVE_STATUSES.includes(r.status) || (r.expires_at && new Date(r.expires_at) <= now)
+        (r) =>
+          !ACTIVE_STATUSES.includes(r.status) ||
+          (r.expires_at && new Date(r.expires_at) <= now)
       ),
     [reservations, now]
   );
+
+  // History — onyesha zote (hakuna limit ya siku 30)
+  const [showAllPast, setShowAllPast] = useState(false);
+  const pastToShow = showAllPast ? past : past.slice(0, 20);
 
   return (
     <div style={{ background: COLORS.sand, minHeight: "100%" }} className="w-full p-4 sm:p-6">
@@ -420,16 +543,23 @@ export default function MyReservationsPage() {
                 "Properties you've paid a Reservation Fee for. Inspection time and next steps show here."
               )}
             </p>
+
+            {/* Polling strip */}
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-[11px] text-muted">
+                {t("Imesasishwa", "Updated")} {timeAgoShort(lastRefreshedAt, lang)}
+              </span>
+              <button
+                onClick={refresh}
+                disabled={isRefreshing}
+                style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "white" }}
+                className="text-[11px] font-semibold px-2 py-1 rounded-md border flex items-center gap-1 disabled:opacity-50"
+              >
+                <RefreshCw size={10} className={isRefreshing ? "animate-spin" : ""} />
+                {isRefreshing ? t("Inasasisha...", "Refreshing...") : t("Sasisha", "Refresh")}
+              </button>
+            </div>
           </div>
-          <button
-            onClick={fetchReservations}
-            disabled={loading}
-            style={{ borderColor: COLORS.sandLine, color: COLORS.night }}
-            className="text-xs font-semibold px-3 py-2 rounded-lg border flex items-center gap-1.5 disabled:opacity-50 bg-white"
-          >
-            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-            {t("Sasisha", "Refresh")}
-          </button>
         </div>
 
         {/* Error */}
@@ -466,7 +596,10 @@ export default function MyReservationsPage() {
                   key={r.id}
                   reservation={r}
                   lang={lang}
-                  onOpenDeal={(deal) => navigate(`/dashboard/buyer/deals?deal=${deal.id}`)}
+                  onOpenDeal={(res) => {
+                    const drId = res?.deal_room_id || null;
+                    if (drId) navigate(`/dashboard/buyer/deals?deal=${drId}`);
+                  }}
                   onRefresh={fetchReservations}
                 />
               ))}
@@ -482,16 +615,34 @@ export default function MyReservationsPage() {
               {t("Historia", "History")} ({past.length})
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {past.map((r) => (
+              {pastToShow.map((r) => (
                 <ReservationCard
                   key={r.id}
                   reservation={r}
                   lang={lang}
-                  onOpenDeal={(deal) => navigate(`/dashboard/buyer/deals?deal=${deal.id}`)}
+                  onOpenDeal={(res) => {
+                    const drId = res?.deal_room_id || null;
+                    if (drId) navigate(`/dashboard/buyer/deals?deal=${drId}`);
+                  }}
                   onRefresh={fetchReservations}
                 />
               ))}
             </div>
+
+            {past.length > 20 && !showAllPast && (
+              <div className="mt-3 flex justify-center">
+                <button
+                  onClick={() => setShowAllPast(true)}
+                  style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "white" }}
+                  className="text-xs font-semibold px-4 py-2 rounded-lg border hover:bg-gray-50"
+                >
+                  {t(
+                    `Onyesha zote (${past.length - 20} zaidi)`,
+                    `Show all (${past.length - 20} more)`
+                  )}
+                </button>
+              </div>
+            )}
           </section>
         )}
 
