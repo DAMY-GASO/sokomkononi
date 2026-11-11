@@ -1,11 +1,12 @@
 // ============================================================
 // src/pages/dashboard/components/MyListings.jsx
-// B.4 — FINAL
+// B.4 — FINAL v2
 //
-// Mabadiliko kutoka awali:
+// Marekebisho:
+//  ✅ Bulk delete undo — item MOJA kwa kundi (si per-item)
+//  ✅ Single delete undo — inathibitisha { ok: false }
 //  ✅ Polling kila sekunde 60 (listings zinabaki fresh)
 //  ✅ Timestamp "Imesasishwa" + kitufe cha Refresh
-//  ✅ Bulk delete (soft delete + undo per-item)
 //  ✅ Analytics modal kwa kila listing
 //  ✅ Fix: duplicate inatumia category (backend inahitaji fix pia)
 // ============================================================
@@ -148,12 +149,11 @@ function timeAgoShort(ts, lang) {
 }
 
 // ── Bulk actions eligibility ──────────────────────────────
-// (Zinalingana na `views.py` status constraints)
 const BULK_ELIGIBLE = {
   pause: (s) => s === "live",
   resume: (s) => s === "paused",
   submit: (s) => ["draft", "pending_payment", "needs_edit", "rejected"].includes(s),
-  delete: (s) => s !== "sold", // sold listings zinaweza kuhifadhiwa kwa kumbukumbu
+  delete: (s) => s !== "sold",
 };
 
 // ============================================================
@@ -524,7 +524,6 @@ function ListingCard({
       </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-sandline pt-2.5">
-        {/* Pay Now (approved_pending_payment) */}
         {status === "approved_pending_payment" && !isFreeListing(listing) && (
           <button
             type="button"
@@ -538,7 +537,6 @@ function ListingCard({
           </button>
         )}
 
-        {/* Edit (needs_edit) */}
         {status === "needs_edit" && (
           <button
             type="button"
@@ -552,7 +550,6 @@ function ListingCard({
           </button>
         )}
 
-        {/* Submit for review (draft/pending_payment/needs_edit/rejected) */}
         {["draft", "pending_payment", "needs_edit", "rejected"].includes(status) && (
           <button
             type="button"
@@ -570,7 +567,6 @@ function ListingCard({
           </button>
         )}
 
-        {/* Pay Now (isUnpaid general) */}
         {isUnpaid(listing) && status !== "approved_pending_payment" && (
           <button
             type="button"
@@ -584,7 +580,6 @@ function ListingCard({
           </button>
         )}
 
-        {/* Standard actions */}
         <ActionBtn
           icon={Edit3}
           label={t("Hariri", "Edit")}
@@ -717,8 +712,6 @@ export default function MyListings({
 
   useEffect(() => {
     normalizeCategoryInCache();
-    // Fetch ya awali hufanywa na pollFetcher baada ya 1.5s.
-    // Lakini tunataka data mara moja pia:
     fetchMyListingsFromApi({ force: true });
   }, []);
 
@@ -901,21 +894,43 @@ export default function MyListings({
       else failed += 1;
     }
 
-    // ✅ Undo ya bulk delete
+    // ✅ FIX: Undo ya bulk delete — item MOJA kwa kundi
     if (kind === "delete" && succeededItems.length > 0) {
-      succeededItems.forEach((l) => {
-        startUndo({
-          type: "listing",
-          id: l.id,
-          title: l.title,
-          message: t(
-            `"${l.title}" imefutwa. Unaweza kuirejesha.`,
-            `"${l.title}" deleted. You can undo.`
-          ),
-          onRestore: async () => {
-            await restoreListingAsync(l.id);
-          },
-        });
+      const ids = succeededItems.map((l) => l.id);
+      const titles = succeededItems.map((l) => l.title).filter(Boolean);
+      const message =
+        titles.length === 1
+          ? t(
+              `"${titles[0]}" imefutwa. Unaweza kuirejesha.`,
+              `"${titles[0]}" deleted. You can undo.`
+            )
+          : t(
+              `Matangazo ${titles.length} yamefutwa. Unaweza kuyarejesha.`,
+              `${titles.length} listings deleted. You can undo.`
+            );
+
+      startUndo({
+        type: "listing",
+        ids,
+        title: titles.length === 1 ? titles[0] : `${titles.length}`,
+        message,
+        onRestore: async () => {
+          const errors = [];
+          for (const l of succeededItems) {
+            try {
+              const res = await restoreListingAsync(l.id);
+              if (res && res.ok === false) {
+                errors.push({ id: l.id, error: res.error });
+              }
+            } catch (err) {
+              errors.push({ id: l.id, error: err });
+            }
+          }
+          if (errors.length > 0) {
+            throw errors[0].error || new Error("Restore failed");
+          }
+          return { ok: true };
+        },
       });
     }
 
@@ -1037,6 +1052,7 @@ export default function MyListings({
       return;
     }
 
+    // ✅ FIX: Single delete undo — thibitisha { ok } ili tusiseme "success" ikiwa imeshindwa
     startUndo({
       type: "listing",
       id,
@@ -1046,7 +1062,11 @@ export default function MyListings({
         `"${listing.title}" deleted. You can undo.`
       ),
       onRestore: async () => {
-        await restoreListingAsync(id);
+        const r = await restoreListingAsync(id);
+        if (r && r.ok === false) {
+          throw r.error || new Error("Restore failed");
+        }
+        return { ok: true };
       },
     });
 

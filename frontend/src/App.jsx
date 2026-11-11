@@ -1,3 +1,12 @@
+// ============================================================
+// App.jsx
+//
+// Marekebisho:
+//  ✅ MPYA: `registerRestoreHandlers` inasajiliwa kabla ya Router
+//     ili undo ya listings ifanye kazi HATA baada ya refresh
+//     (memory callbacks zinapotea, lakini handler inabaki).
+//  ✅ Kila kitu kingine kimebaki kama kilivyo.
+// ============================================================
 import React, { useEffect, Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
@@ -16,8 +25,13 @@ import { initializeCategories, hydrateCategoriesFromApi } from "./config/categor
 import { hydrateListingsFromApi, sweepGhostListings } from "./config/listingsStore.js";
 import { hydrateReservationFromApi } from "./config/feePolicy.js";
 
+// ✅ MPYA: Sajili ya restore handlers kwa undo
+// Hii inaruhusu undo ya listings kufanya kazi HATA baada ya refresh
+// (memory callbacks zinapotea, lakini handler hii inabaki kwenye code).
+import { registerRestoreHandlers } from "./config/undoStore.js";
+import { restoreListingAsync } from "./config/listingsStore.js";
+
 // ── LAZY LOADED COMPONENTS ──
-// Kurasa hizi zitapakuliwa tu pale mtumiaji anapoingia kwenye URL husika
 const HomePage = lazy(() => import("./pages/HomePage.jsx"));
 const AboutPage = lazy(() => import("./pages/AboutPage.jsx"));
 const ContactPage = lazy(() => import("./pages/ContactPage.jsx"));
@@ -39,7 +53,6 @@ const CategoryPage = lazy(() => import("./pages/CategoryPage.jsx"));
 const AllListingsPage = lazy(() => import("./pages/AllListingsPage.jsx"));
 const BrowseProperties = lazy(() => import("./pages/dashboard/components/BrowseProperties.jsx"));
 
-// Components za Layout (Lazy pia ikiwa hazihitajiki mwanzo)
 const Navbar = lazy(() => import("./components/Navbar.jsx"));
 const Footer = lazy(() => import("./components/Footer.jsx"));
 const BottomNav = lazy(() => import("./components/BottomNav.jsx"));
@@ -49,10 +62,9 @@ const BundlesPage = lazy(() => import("./pages/BundlesPage.jsx"));
 const DashboardShell = lazy(() => import("./pages/dashboard/components/DashboardShell.jsx"));
 const AdminDashboard = lazy(() => import("./pages/dashboard/AdminDashboard.jsx"));
 
-// PaymentReturnRoute inaweza kuwa ndogo, lakini tunaweka lazy pia
 const PaymentReturnRoute = lazy(() => import("./components/PaymentReturnRoute.jsx"));
 
-// ── LOADER COMPONENT (Inaonekana wakati kurasa zinapakia) ──
+// ── LOADER COMPONENT ──
 function PageLoader() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-sand">
@@ -64,10 +76,38 @@ function PageLoader() {
   );
 }
 
-// ✅ FIX: ScrollToTop IMECONDOLWA kabisa.
-// ScrollToHash (hapa chini) tayari inashughulikia "hakuna hash" kwa
-// window.scrollTo({ top: 0, behavior: "auto" }). Kuwa na wawili
-// kulisababisha mgongano (jump / smooth-repeat).
+registerRestoreHandlers({
+  listing: async (itemOrIds) => {
+    const ids = Array.isArray(itemOrIds)
+      ? itemOrIds
+      : itemOrIds != null
+        ? [itemOrIds]
+        : [];
+    if (ids.length === 0) {
+      return { ok: false, error: new Error("No listing id") };
+    }
+    const errors = [];
+    for (const id of ids) {
+      try {
+        const res = await restoreListingAsync(id);
+        if (res && res.ok === false) {
+          errors.push({ id, error: res.error });
+        }
+      } catch (err) {
+        errors.push({ id, error: err });
+      }
+    }
+    if (errors.length > 0) {
+      return {
+        ok: false,
+        error:
+          errors[0].error ||
+          new Error(`${errors.length} listing(s) failed to restore`),
+      };
+    }
+    return { ok: true };
+  },
+});
 
 function BrowseRoute() {
   const { lang } = useLanguage();
@@ -113,10 +153,7 @@ function App() {
           <UndoToast />
           <ConfirmProvider>
             <Router>
-              {/* ✅ FIX: ScrollToTop imeondolewa. ScrollToHash pekee inatosha. */}
               <ScrollToHash />
-              
-              {/* ✅ SUSPENSE: Inashughulikia loading state ya kurasa zote zilizo lazy */}
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   {/* PUBLIC */}
@@ -126,7 +163,6 @@ function App() {
                   <Route path="/sheria" element={<TermsPage />} />
                   <Route path="/faragha" element={<PrivacyPage />} />
                   <Route path="/jinsi-ya-kununua" element={<JinsiYaKununuaNaKuuza />} />
-                  {/* ✅ FIX: /jinsi-ya-kuuza sasa ni redirect (deep-link friendly, SEO-safe) */}
                   <Route
                     path="/jinsi-ya-kuuza"
                     element={<Navigate to="/jinsi-ya-kununua#kuuza" replace />}

@@ -1,10 +1,15 @@
 // ============================================================
 // undoStore.js — Undo window kwa items zilizofutwa
 //
-// Inashughulikia:
-// - "Rejesha" baada ya kufuta (dakika 5)
-// - Timer ya auto-expire
-// - Storage ya pending actions
+// Marekebisho:
+//  ✅ Support ya bulk undo: `onRestore` inaweza kurejesha items nyingi
+//     kwa pamoja (mfano, listings zote kwa `ids` array).
+//  ✅ `restoreUndo` inathibitisha `{ ok }` ya `onRestore` — kama
+//     `onRestore` inarudisha `{ ok: false }`, tunarudisha `{ ok: false }`
+//     (badala ya "success" ya uongo).
+//  ✅ Fallback handlers kupitia `registerRestoreHandlers` — inaruhusu
+//     undo baada ya refresh (memory callbacks zinapotea).
+//  ✅ Export ya `getPendingCallbacks()` kwa debugging.
 // ============================================================
 import { useEffect, useState } from "react";
 
@@ -39,19 +44,24 @@ export function getUndoItems() {
 }
 
 /**
- * Anzisha undo window kwa item iliyofutwa.
+ * Anzisha undo window kwa item(s) iliyofutwa.
+ *
  * @param {object} item
  * @param {string} item.type - "listing" | "message" | "deal" | n.k.
- * @param {number|string} item.id
- * @param {string} item.title
- * @param {Function} item.onRestore - async function inayorejesha
- * @param {Function} item.onExpire - async function inayofuta kabisa (hiari)
- * @param {string} item.message - ujumbe wa toast
- * @returns {string} id ya undo item
+ * @param {number|string} item.id - item moja
+ * @param {number[]|string[]} [item.ids] - items nyingi (bulk delete)
+ * @param {string} item.title - jina moja au "Matangazo 5"
+ * @param {Function} item.onRestore - async function inayorejesha. Inaweza
+ *   kurudisha `{ ok: true }`, `{ ok: false, error }`, au `undefined`
+ *   (ambayo inachukuliwa kama success).
+ * @param {Function} [item.onExpire] - async function inayofuta kabisa (hiari)
+ * @param {string} [item.message] - ujumbe wa toast
+ * @returns {string} undoId
  */
 export function startUndo({
   type,
   id,
+  ids,
   title,
   onRestore,
   onExpire,
@@ -59,16 +69,16 @@ export function startUndo({
 }) {
   const undoId = `undo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const now = Date.now();
+  const idList = Array.isArray(ids) ? ids.map(String) : (id != null ? [String(id)] : []);
   const item = {
     undoId,
     type,
-    itemId: id,
+    itemId: id != null ? id : null,
+    itemIds: idList,
     title,
     message: message || title,
     startedAt: now,
     expiresAt: now + UNDO_WINDOW_MS,
-    onRestore: null,   // Function haiwezi ku-serialize
-    onExpire: null,
   };
 
   // Hifadhi functions kwenye memory (si localStorage)
@@ -91,37 +101,87 @@ export function startUndo({
 const pendingCallbacks = {};
 const pendingTimers = {};
 
+// Fallback handlers (zinadumu baada ya refresh)
+let _RESTORE_HANDLERS = {};
+
 /**
- * Rejesha item (mtumiaji amebofya "Rejesha").
+ * Sajili restore handlers kwa type. Hizi zinatumika kama `pendingCallbacks`
+ * haipo (mfano, baada ya refresh).
+ *
+ * @param {Record<string, (itemId|itemIds, item) => Promise>} map
  */
-let _RESTORE_HANDLERS = null;
 export function registerRestoreHandlers(map) {
-  _RESTORE_HANDLERS = { ...(_RESTORE_HANDLERS || {}), ...map };
+  _RESTORE_HANDLERS = { ..._RESTORE_HANDLERS, ...map };
 }
 
+export function getPendingCallbacks() {
+  return { ...pendingCallbacks };
+}
+
+/**
+ * Rejesha item (mtumiaji amebofya "Rejesha").
+ *
+ * Tunarudisha:
+ *   { ok: true }                     — imefanikiwa
+ *   { ok: false, error, code }       — imeshindwa
+ *     code: "NOT_FOUND" | "NO_CALLBACK" | "RESTORE_FAILED" | "NO_HANDLER"
+ */
 export async function restoreUndo(undoId) {
   const item = read().find((i) => i.undoId === undoId);
-  if (!item) return { ok: false, error: new Error("Undo haipo") };
-
-  const cb = pendingCallbacks[undoId];
-  if (cb?.onRestore) {
-    try {
-      await cb.onRestore();
-    } catch (err) {
-      console.warn("[undoStore] restore failed:", err);
-      return { ok: false, error: err };
-    }
-  } else if (_RESTORE_HANDLERS?.[item.type]) {
-    try {
-      await _RESTORE_HANDLERS[item.type](item.itemId);
-    } catch (err) {
-      console.warn("[undoStore] handler restore failed:", err);
-      return { ok: false, error: err };
-    }
-  } else {
+  if (!item) {
     return {
       ok: false,
-      error: new Error("Undo callback lost (page was reloaded)"),
+      code: "NOT_FOUND",
+      error: new Error("Undo haipo (au imeisha muda)"),
+    };
+  }
+
+  const cb = pendingCallbacks[undoId];
+
+  // 1. Jaribu callback ya memory kwanza
+  if (cb?.onRestore) {
+    try {
+      const result = await cb.onRestore(item);
+      // Support ya `{ ok: false }` — usiseme "success" ikiwa `ok === false`
+      if (result && result.ok === false) {
+        return {
+          ok: false,
+          code: "RESTORE_FAILED",
+          error: result.error || new Error("Restore failed"),
+        };
+      }
+    } catch (err) {
+      console.warn("[undoStore] restore failed:", err);
+      return { ok: false, code: "RESTORE_FAILED", error: err };
+    }
+  }
+  // 2. Fallback kwa handler ya type (inadumu baada ya refresh)
+  else if (_RESTORE_HANDLERS[item.type]) {
+    try {
+      const result = await _RESTORE_HANDLERS[item.type](
+        item.itemIds?.length > 1 ? item.itemIds : item.itemId,
+        item
+      );
+      if (result && result.ok === false) {
+        return {
+          ok: false,
+          code: "RESTORE_FAILED",
+          error: result.error || new Error("Restore failed"),
+        };
+      }
+    } catch (err) {
+      console.warn("[undoStore] handler restore failed:", err);
+      return { ok: false, code: "RESTORE_FAILED", error: err };
+    }
+  }
+  // 3. Hakuna njia ya kurejesha
+  else {
+    return {
+      ok: false,
+      code: "NO_HANDLER",
+      error: new Error(
+        "Undo callback haipo (page ilirefresh). Jaribu tena kwenye orodha."
+      ),
     };
   }
 
