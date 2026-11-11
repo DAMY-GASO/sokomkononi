@@ -205,7 +205,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
 
   const helpItems = [
     { label: { sw: "Jinsi ya Kununua", en: "How to Buy" }, to: "/jinsi-ya-kununua" },
-    { label: { sw: "Jinsi ya Kuuza", en: "How to Sell" }, to: "/jinsi-ya-kununua#kuuza" },
+    { label: { sw: "Jinsi ya Kuuza", en: "How to Sell" }, to: "/jinsi-ya-kuuza" },
     { label: { sw: "FAQ", en: "FAQ" }, to: "/mawasiliano#faq" },
     { label: { sw: "Wasiliana Nasi", en: "Contact Us" }, to: "/mawasiliano" },
   ];
@@ -247,7 +247,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
             <Link
               to="/"
               onClick={handleLogoClick}
-              className="flex min-w-0 shrink items-center gap-2.5 select-none"
+              className="flex min-w-0 shrink items-center gap-2 overflow-hidden select-none sm:gap-2.5"
             >
               <img
                 src="/logo.webp"
@@ -256,7 +256,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                 height={32}
                 className="h-8 w-8 shrink-0 rounded-full"
               />
-              <span className="whitespace-nowrap text-[15px] font-bold tracking-tight sm:text-[16px]">
+              <span className="truncate whitespace-nowrap text-[15px] font-bold tracking-tight sm:text-[16px]">
                 Soko<span className="text-gold">Mkononi</span>
               </span>
             </Link>
@@ -362,7 +362,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
               <button
                 onClick={handleTheme}
                 aria-label={theme === "dark" ? "Light mode" : "Dark mode"}
-                className="grid h-10 w-10 place-items-center rounded-full text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white"
+                className="hidden h-10 w-10 place-items-center rounded-full text-white/75 transition-colors hover:bg-white/[0.08] hover:text-white sm:grid"
               >
                 {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
               </button>
@@ -467,7 +467,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
               ) : (
                 <Link
                   to="/login"
-                  className="inline-flex h-10 items-center rounded-full bg-gold px-4 text-sm font-semibold text-night keep-light transition-colors hover:bg-flame"
+                  className="inline-flex h-10 items-center rounded-full bg-gold px-3.5 text-sm font-semibold sm:px-4 text-night keep-light transition-colors hover:bg-flame"
                 >
                   {lang === "sw" ? "Ingia" : "Login"}
                 </Link>
@@ -577,6 +577,18 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                 ))}
               </div>
             )}
+            <button
+              onClick={handleTheme}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
+            >
+              <div className="flex items-center gap-2">
+                {theme === "dark" ? <Sun size={16} className="text-white/60" /> : <Moon size={16} className="text-white/60" />}
+                <span>{lang === "sw" ? "Mwonekano" : "Appearance"}</span>
+              </div>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
+                {theme === "dark" ? (lang === "sw" ? "Giza" : "Dark") : (lang === "sw" ? "Mwanga" : "Light")}
+              </span>
+            </button>
             <button
               onClick={() => setMobileSub((v) => (v === "lang" ? null : "lang"))}
               className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"
