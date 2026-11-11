@@ -1,3 +1,13 @@
+// ============================================================
+// DealDetail.jsx
+//
+// Marekebisho:
+//  ✅ MPYA: props `openReserveModal` + `onReserveModalOpened`
+//     — inafungua ReservationModal kwenye mount kama ni true.
+//     Baada ya kufungua, inaita `onReserveModalOpened()` ili
+//     DealRooms iweze ku-reset state.
+//  ✅ Kila kitu kingine kimebaki kama kilivyo.
+// ============================================================
 import React, { useEffect, useRef, useState } from "react";
 import { COLORS, formatTZS, getCategory } from "../shared";
 import DealActionPanels from "./DealActionPanels.jsx";
@@ -36,6 +46,9 @@ export default function DealDetail({
   lang,
   user,
   onShowSuccess,
+  // ✅ MPYA
+  openReserveModal = false,
+  onReserveModalOpened,
 }) {
   const [text, setText] = useState("");
   const [offerOpen, setOfferOpen] = useState(false);
@@ -46,6 +59,20 @@ export default function DealDetail({
   const [attachFile, setAttachFile] = useState(null);
   const [attachPreview, setAttachPreview] = useState(null);
   const attachInputRef = useRef(null);
+
+  // ✅ MPYA: fungua ReservationModal moja kwa moja kama openReserveModal ni true
+  useEffect(() => {
+    if (!openReserveModal) return;
+    // Subiri hadi deal ipakiwe kikamilifu (au angalau sekunde 100)
+    const timer = setTimeout(() => {
+      setReserveModalOpen(true);
+      if (typeof onReserveModalOpened === "function") {
+        onReserveModalOpened();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openReserveModal]);
 
   const clearAttachment = () => {
     if (attachPreview) URL.revokeObjectURL(attachPreview);
@@ -124,8 +151,6 @@ export default function DealDetail({
   const isBuyer = side === "buyer";
   const isSeller = side === "seller";
 
-  // ── MPYA: hali ya lock/cancel ──
-  // Deal iliyoghairiwa haionyeshwi kama "imesimamishwa" (flag inaweza kubaki)
   const isLocked = !!deal.adminLocked && deal.status !== "cancelled";
   const isCancelledByAdmin = !!deal.cancelledByAdmin;
   const canInteract = !isLocked && deal.status !== "cancelled";
@@ -141,8 +166,6 @@ export default function DealDetail({
     );
   const iMadeLastOffer = lastOffer?.sender === "me";
 
-  // ── Notice ya "mmekubaliana" — inakaa ndani ya timeline, chini ya ofa
-  //    iliyokubaliwa, ili ujumbe mpya ufuate chini yake (si juu yake) ──
   const showAcceptedNotice =
     deal.status === "accepted" &&
     !isLocked &&
@@ -232,14 +255,9 @@ export default function DealDetail({
   ];
   const reservationPaid = reservationPaidStatuses.includes(deal.status);
 
-  // Fee ikizimwa, reservation inabaki kama hatua ya BURE (bila malipo,
-  // bila kuchagua tier) ili mtiririko wa deal usikwame.
-  // (`!== false` ili settings zikichelewa kupakia zisibadilishe bango.)
   const reservationSettings = useReservationSettings();
   const reservationTiers = useActiveReservationTiers();
   const reservationEnabled = reservationSettings?.is_enabled !== false;
-  // Muda wa reservation ya bure: tier ya kwanza ikiwepo, vinginevyo masaa 48
-  // (sawa na DEFAULT_RESERVATION_HOURS ya backend — hakuna tier hai).
   const FREE_RESERVATION_FALLBACK_HOURS = 48;
 
   const canReserve =
@@ -311,7 +329,6 @@ export default function DealDetail({
     }
   };
 
-  // Reservation ya BURE (fee imezimwa) — bila modal, bila malipo
   const handleFreeReserve = async () => {
     if (freeReserving) return;
     setFreeReserving(true);
@@ -371,7 +388,6 @@ export default function DealDetail({
 
   return (
     <div className="flex flex-col h-full relative">
-      
       <DealDetailHeader CategoryIcon={CategoryIcon} counterpartyLabel={counterpartyLabel} deal={deal} handleExit={handleExit} isBuyer={isBuyer} isLocked={isLocked} lang={lang} menuOpen={menuOpen} menuRef={menuRef} onBack={onBack} onInspectionResolve={onInspectionResolve} setContactDrawerOpen={setContactDrawerOpen} setMenuOpen={setMenuOpen} setReportOpen={setReportOpen} side={side} status={status} />
       <PaymentStatusStrip deal={deal} side={side} lang={lang} onRefresh={onRefreshDeal} />
       <DealBanners canReserve={canReserve} deal={deal} freeReserving={freeReserving} handleFreeReserve={handleFreeReserve} isBuyer={isBuyer} isLocked={isLocked} lang={lang} navigate={navigate} reservationEnabled={reservationEnabled} reserveModalOpen={reserveModalOpen} setReserveModalOpen={setReserveModalOpen} showReservedBanner={showReservedBanner} />
@@ -379,7 +395,6 @@ export default function DealDetail({
       <DealActionPanels canRespond={canRespond} chatError={chatError} deal={deal} handleOffer={handleOffer} handleReopenClick={handleReopenClick} isBuyer={isBuyer} isCancelledByAdmin={isCancelledByAdmin} isLocked={isLocked} isSeller={isSeller} lang={lang} offerAmount={offerAmount} offerOpen={offerOpen} onInspectionResolve={onInspectionResolve} onProofConfirm={onProofConfirm} onProofReject={onProofReject} onProofSubmit={onProofSubmit} onReopen={onReopen} onRespond={onRespond} reopenInfo={reopenInfo} reopening={reopening} setOfferAmount={setOfferAmount} setOfferOpen={setOfferOpen} side={side} waitingText={waitingText} />
       <DealComposer attachInputRef={attachInputRef} attachPreview={attachPreview} chatError={chatError} clearAttachment={clearAttachment} deal={deal} handleAttachChange={handleAttachChange} handleSend={handleSend} isLocked={isLocked} lang={lang} setChatError={setChatError} setText={setText} text={text} />
       <DealDetailModals buyerEmail={buyerEmail} buyerPhone={buyerPhone} contactDrawerOpen={contactDrawerOpen} deal={deal} handleReportSubmit={handleReportSubmit} handleReserveSuccess={handleReserveSuccess} isBuyer={isBuyer} lang={lang} reportBusy={reportBusy} reportDetails={reportDetails} reportOpen={reportOpen} reportReason={reportReason} reportSuccess={reportSuccess} reserveModalOpen={reserveModalOpen} sellerEmail={sellerEmail} sellerPhone={sellerPhone} setContactDrawerOpen={setContactDrawerOpen} setReportDetails={setReportDetails} setReportOpen={setReportOpen} setReportReason={setReportReason} setReserveModalOpen={setReserveModalOpen} side={side} user={user} />
-
     </div>
   );
 }

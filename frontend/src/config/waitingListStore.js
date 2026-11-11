@@ -1,7 +1,7 @@
 // ============================================================
 // waitingListStore.js — API-only via /api/waiting-list/
 // ============================================================
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { waitingListApi } from "../api/waitingList.js";
 import { getAccessToken } from "../api/client.js";
 
@@ -130,6 +130,16 @@ export function useWaitingListCount() {
 // ============================================================
 export function useWaitingListState() {
   const [state, setState] = useState({ list: read(), loading: true, error: null });
+  // refresh(): inaburudisha na kusasisha error state (retry button + polling).
+  const refresh = useCallback(async () => {
+    const res = await hydrateWaitingListFromApi();
+    setState({
+      list: read(),
+      loading: false,
+      error: res.ok ? null : (res.error?.message || "Failed to load waitlist"),
+    });
+    return res;
+  }, []);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -150,5 +160,5 @@ export function useWaitingListState() {
       window.removeEventListener(EV, sync);
     };
   }, []);
-  return state;
-}
+  return { ...state, refresh };
+}

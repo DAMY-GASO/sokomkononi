@@ -1,5 +1,10 @@
 // ============================================================
 // src/pages/dashboard/components/DealRooms.jsx
+//
+// Marekebisho:
+//  ✅ MPYA: prop `openReserveModalOnMount` — inatumwa kwa DealDetail
+//     wakati `?action=reserve` ipo kwenye URL (kutoka WaitingListPage).
+//  ✅ Kila kitu kingine kimebaki kama kilivyo.
 // ============================================================
 import React, { useEffect, useRef, useState } from "react";
 import { COLORS } from "./shared";
@@ -41,6 +46,8 @@ export default function DealRooms({
   const [transactionIds, setTransactionIds] = useState({});
   const [offlineMode, setOfflineMode] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+  // ✅ MPYA: hali ya kufungua reservation modal moja kwa moja
+  const [openReserveOnMount, setOpenReserveOnMount] = useState(false);
 
   const listingIdParam = searchParams.get("listing");
   const actionParam = searchParams.get("action");
@@ -60,6 +67,8 @@ export default function DealRooms({
     if (targetDeal) {
       setSelectedId(targetDeal.id);
       setMobileShowDetail(true);
+      // ✅ MPYA: fungua reservation modal moja kwa moja
+      setOpenReserveOnMount(true);
     }
   }, [deals, actionParam, listingIdParam]);
 
@@ -71,6 +80,8 @@ export default function DealRooms({
   const handleSelect = (id) => {
     setSelectedId(id);
     setMobileShowDetail(true);
+    // ✅ MPYA: kama mtumiaji anachagua deal nyingine, usifungue modal
+    setOpenReserveOnMount(false);
   };
 
   const [detailFetchedAt, setDetailFetchedAt] = useState({});
@@ -111,8 +122,7 @@ export default function DealRooms({
       });
   }, [selectedDeal?.id]);
 
-  // ── Polling nyepesi: admin akisimamisha/akighairi/akituma ujumbe,
-  //    mtumiaji aone ndani ya sekunde chache bila kurefresh ──
+  // ── Polling nyepesi ──
   useEffect(() => {
     const id = selectedDeal?.id;
     if (!id) return;
@@ -144,8 +154,7 @@ export default function DealRooms({
     return () => clearInterval(timer);
   }, [selectedDeal?.id, selectedDeal?.dealRoomId]);
 
-  // ── Alama ya "imesomwa": inatumwa tu room inapokuwa wazi na inaonekana
-  //    (si orodha tu kwenye simu, si tab iliyofichwa) ──
+  // ── Alama ya "imesomwa" ──
   const markedReadRef = useRef({});
   const selectedRoomId = selectedDeal?.dealRoomId || selectedDeal?.id;
   const latestUnreadIncomingId = (() => {
@@ -185,7 +194,6 @@ export default function DealRooms({
       }
       markedReadRef.current[selectedRoomId] = latestUnreadIncomingId;
       dealsApi.markRead(selectedRoomId).catch(() => {
-        // Ikishindwa, ruhusu jaribio lingine kwenye polling inayofuata
         delete markedReadRef.current[selectedRoomId];
       });
     };
@@ -323,6 +331,9 @@ export default function DealRooms({
               onProofConfirm={handleProofConfirm}
               onProofReject={handleProofReject}
               onShowSuccess={() => setSuccessModalOpen(true)}
+              // ✅ MPYA: pitisha hali ya kufungua modal
+              openReserveModal={openReserveOnMount}
+              onReserveModalOpened={() => setOpenReserveOnMount(false)}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">

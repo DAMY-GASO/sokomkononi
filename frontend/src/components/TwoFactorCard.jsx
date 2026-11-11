@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { Shield, Loader2, CheckCircle2, Copy, AlertTriangle } from "lucide-react";
 import { COLORS } from "../pages/dashboard/components/shared";
 import { securityApi } from "../api/security.js";
+import RecoveryCodesCard from "./RecoveryCodesCard.jsx";
 
 const errMsg = (err, fallback) =>
   err?.data?.detail || err?.message || fallback;
@@ -19,23 +20,33 @@ export default function TwoFactorCard({ lang }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [recovery, setRecovery] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
     (async () => {
       try {
         const s = await securityApi.twoFactorStatus();
         if (!cancelled) setStatus({ enabled: !!s?.enabled });
       } catch (err) {
         if (!cancelled) {
-          setStatus({ enabled: false, unsupported: true });
+          // 404/405 = backend haina 2FA. Kosa lingine (mtandao/500) = jaribu tena,
+          // si "2FA haipatikani" — hilo lingemfanya mtumiaji aamini hawezi kuiwasha.
+          if (err?.status === 404 || err?.status === 405) {
+            setStatus({ enabled: false, unsupported: true });
+          } else {
+            setLoadError(true);
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [reloadKey]);
 
   const handleStartSetup = async () => {
     setBusy(true); setError("");
@@ -82,6 +93,20 @@ export default function TwoFactorCard({ lang }) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-5 text-center">
         <Loader2 size={20} className="animate-spin mx-auto text-muted" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-5 text-center">
+        <p className="text-sm mb-2" style={{ color: COLORS.rust }}>
+          {t("Imeshindwa kupakia hali ya 2FA.", "Couldn't load your 2FA status.")}
+        </p>
+        <button type="button" onClick={() => setReloadKey((k) => k + 1)}
+          className="text-xs font-semibold underline text-secondary">
+          {t("Jaribu tena", "Try again")}
+        </button>
       </div>
     );
   }
@@ -198,16 +223,7 @@ export default function TwoFactorCard({ lang }) {
       {/* Enabled — disable flow */}
       {status?.enabled && (
         <div className="space-y-3">
-          {recovery && recovery.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <p className="text-xs font-bold text-amber-800 mb-1">
-                {t("Hifadhi misimbo hii ya akiba mahali salama:", "Save these recovery codes:")}
-              </p>
-              <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
-                {recovery.map((c, i) => <span key={i}>{c}</span>)}
-              </div>
-            </div>
-          )}
+          <RecoveryCodesCard lang={lang} codes={recovery} onCodes={setRecovery} />
           <p className="text-xs text-secondary">
             {t("Zima 2FA — weka nenosiri + msimbo wa sasa:",
                "Disable 2FA — enter password + current code:")}
@@ -232,4 +248,4 @@ export default function TwoFactorCard({ lang }) {
       )}
     </div>
   );
-}
+}

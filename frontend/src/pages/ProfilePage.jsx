@@ -526,19 +526,23 @@ function SessionsCard({ lang, user }) {
   const [sessions, setSessions] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoadFailed(false);
     (async () => {
       try {
         const data = await securityApi.sessions();
         if (!cancelled) setSessions(Array.isArray(data) ? data : data?.results || []);
       } catch {
-        if (!cancelled) setSessions([]);
+        // Usionyeshe "Hakuna vifaa" ikiwa ni kosa la mtandao/backend — ni uongo
+        if (!cancelled) { setSessions([]); setLoadFailed(true); }
       }
     })();
     return () => { cancelled = true; };
-  }, [user?.id]);
+  }, [user?.id, reloadKey]);
 
   const revoke = async (id) => {
     if (busy) return;
@@ -588,6 +592,19 @@ function SessionsCard({ lang, user }) {
       {sessions === null ? (
         <div className="text-center py-4">
           <Loader2 size={18} className="animate-spin inline text-muted" />
+        </div>
+      ) : loadFailed ? (
+        <div className="text-center py-2">
+          <p className="text-sm mb-2" style={{ color: COLORS.rust }}>
+            {t("Imeshindwa kupakia vifaa vilivyoingia.", "Couldn't load your active sessions.")}
+          </p>
+          <button
+            type="button"
+            onClick={() => { setSessions(null); setReloadKey((k) => k + 1); }}
+            className="text-xs font-semibold underline text-secondary"
+          >
+            {t("Jaribu tena", "Try again")}
+          </button>
         </div>
       ) : sessions.length === 0 ? (
         <p className="text-sm text-secondary text-center py-2">
@@ -639,17 +656,26 @@ function DataExportButton({ lang }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [direct, setDirect] = useState(false); // true = kiungo kimefunguliwa moja kwa moja
   const [error, setError] = useState("");
   const handle = async () => {
-    setBusy(true); setError(""); setDone(false);
+    if (busy) return;
+    setBusy(true); setError(""); setDone(false); setDirect(false);
     try {
       const res = await securityApi.exportData();
       if (res?.url) {
         window.open(res.url, "_blank", "noopener,noreferrer");
+        setDirect(true);
       }
       setDone(true);
     } catch (err) {
-      setError(err?.message || t("Imeshindwa.", "Failed."));
+      setError(
+        err?.status === 404 || err?.status === 405
+          ? t("Huduma ya kupakua data bado haipatikani.", "Data export isn't available yet.")
+          : err?.status === 429
+            ? t("Umeomba mara nyingi. Jaribu tena baadaye.", "Too many requests. Try again later.")
+            : err?.message || t("Imeshindwa.", "Failed.")
+      );
     } finally { setBusy(false); }
   };
   return (
@@ -665,14 +691,17 @@ function DataExportButton({ lang }) {
         style={{ background: COLORS.green, color: "white" }}
         className="w-full py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60">
         {busy ? t("Inaandaa...", "Preparing...") :
-         done ? t("Tayari!", "Ready!") :
+         done ? t("Imeombwa ✓", "Requested ✓") :
                 t("Pakua Data", "Download Data")}
       </button>
       {done && (
         <p className="text-[11px] mt-2 text-center"
            style={{ color: COLORS.green }}>
-          {t("Angalia barua pepe yako kwa kiungo cha kupakua.",
-             "Check your email for a download link.")}
+          {direct
+            ? t("Upakuaji umeanza kwenye dirisha jipya.",
+                "Your download opened in a new window.")
+            : t("Ombi limepokelewa. Angalia barua pepe yako kwa kiungo cha kupakua (inaweza kuchukua dakika chache).",
+                "Request received. Check your email for a download link (it may take a few minutes).")}
         </p>
       )}
       {error && (
@@ -1582,4 +1611,4 @@ export default function ProfilePage() {
       <BottomNav />
     </div>
   );
-}
+}

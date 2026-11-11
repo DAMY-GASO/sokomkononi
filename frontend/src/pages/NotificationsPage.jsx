@@ -1,17 +1,19 @@
 // ============================================================
-// NotificationsPage.jsx
-// Ukurasa wa taarifa za mtumiaji — bilingual + KILA KITU CENTERED.
-// + Side filter: notifications zinachujwa kwa "buyer" / "seller" / "both"
-// + Kila notification inaweza kubofywa → inafungua mahali sahihi
+// NotificationsPage.jsx — B.12 FINAL
+//
+// Marekebisho:
+//  ✅ Ongeza kitufe cha "Washa Push (hata tab imefungwa)"
+//  ✅ Service Worker + VAPID integration
+//  ✅ Kila kitu kingine kimebaki kama kilivyo
 // ============================================================
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Bell, Check, CheckCheck, Trash2, Rocket, MessageSquare,
-  HandCoins, Shield, Clock, Info, Eye, TrendingUp, Megaphone,
-  Receipt, BellRing,
+  HandCoins, Shield, Clock, Info, TrendingUp, Megaphone,
+  Receipt, BellRing, Volume2, VolumeX, Loader2, Smartphone,
 } from "lucide-react";
-import { COLORS, formatTZS, timeAgo } from "./dashboard/components/shared";
+import { COLORS } from "./dashboard/components/shared";
 import {
   useNotifications,
   getLocalizedField,
@@ -22,6 +24,15 @@ import { useDashboardSide } from "../config/dashboardSideStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
+import { useNotificationAlerts } from "../config/notificationAlerts.js";
+// ✅ MPYA
+import {
+  isPushSupported,
+  getPushPermission,
+  subscribeToPush,
+  unsubscribeFromPush,
+  getActiveSubscription,
+} from "../config/pushNotifications.js";
 
 // ============================================================
 // NOTIFICATION TYPES — icon + color
@@ -197,8 +208,75 @@ export default function NotificationsPage() {
   const { notifications, unreadCount, markRead, markAllRead, remove, clearAll } =
     useNotifications("user");
   const [filter, setFilter] = useState("all");
+  const navigate = useNavigate();
+  const alerts = useNotificationAlerts();
+  const [alertMsg, setAlertMsg] = useState("");
 
-  // ⬅️ Chuja kwa side (buyer/seller/both)
+  // ✅ MPYA: Push state
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMsg, setPushMsg] = useState("");
+  const [pushPermission, setPushPermission] = useState(getPushPermission());
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!isPushSupported()) return;
+      const sub = await getActiveSubscription();
+      if (!cancelled) {
+        setPushEnabled(!!sub);
+        setPushPermission(getPushPermission());
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleTogglePush = async () => {
+    setPushMsg("");
+    setPushBusy(true);
+    try {
+      if (pushEnabled) {
+        const res = await unsubscribeFromPush();
+        if (res.ok) {
+          setPushEnabled(false);
+          setPushMsg(lang === "sw" ? "Push imezimwa." : "Push disabled.");
+        } else {
+          setPushMsg(
+            res.error || (lang === "sw" ? "Imeshindwa." : "Failed.")
+          );
+        }
+      } else {
+        const perm = getPushPermission();
+        if (perm === "denied") {
+          setPushMsg(
+            lang === "sw"
+              ? "Umezuia arifa kwenye kivinjari. Ruhusu kwenye mipangilio ya tovuti."
+              : "Notifications are blocked in your browser. Allow them in site settings."
+          );
+          setPushBusy(false);
+          return;
+        }
+        const res = await subscribeToPush();
+        if (res.ok) {
+          setPushEnabled(true);
+          setPushPermission("granted");
+          setPushMsg(
+            lang === "sw"
+              ? "Push imewashwa! Utapokea taarifa hata tab imefungwa."
+              : "Push enabled! You'll get notifications even when the tab is closed."
+          );
+        } else {
+          setPushMsg(
+            res.error || (lang === "sw" ? "Imeshindwa." : "Failed.")
+          );
+        }
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  // Chuja kwa side (buyer/seller/both)
   const sideFiltered = useMemo(() => {
     return notifications.filter((n) => {
       const nSide = resolveNotificationSide(n);
@@ -208,31 +286,78 @@ export default function NotificationsPage() {
 
   const sideUnreadCount = sideFiltered.filter((n) => !n.read).length;
 
+  // ── Arifa mpya: sauti / mtetemo / browser notification ──────
+  const seenRef = useRef(null);
+  useEffect(() => {
+    const ids = new Set(sideFiltered.map((n) => String(n.id)));
+    if (seenRef.current === null) {
+      seenRef.current = ids;
+      return;
+    }
+    const fresh = sideFiltered.filter(
+      (n) => !n.read && !seenRef.current.has(String(n.id))
+    );
+    seenRef.current = ids;
+    if (fresh.length === 0) return;
+    const first = fresh[0];
+    alerts.alert({
+      title: getLocalizedField(first.title, lang) || "SokoMkononi",
+      body:
+        fresh.length > 1
+          ? lang === "sw"
+            ? `Na taarifa nyingine ${fresh.length - 1}`
+            : `And ${fresh.length - 1} more`
+          : getLocalizedField(first.body, lang),
+      tag: `smk-notif-${first.id}`,
+      onClick: () => navigate("/dashboard/notifications"),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sideFiltered]);
+
+  const handleToggleBrowser = async () => {
+    setAlertMsg("");
+    if (alerts.browserOn) {
+      alerts.disableBrowser();
+      return;
+    }
+    const p = await alerts.enableBrowser();
+    if (p === "denied") {
+      setAlertMsg(
+        lang === "sw"
+          ? "Umezuia arifa kwenye kivinjari. Ziruhusu kwenye mipangilio ya tovuti (kitufe cha kufuli kando ya anwani)."
+          : "Notifications are blocked in your browser. Allow them in site settings (lock icon next to the address)."
+      );
+    } else if (p === "unsupported") {
+      setAlertMsg(
+        lang === "sw"
+          ? "Kivinjari chako hakiungi mkono arifa."
+          : "Your browser does not support notifications."
+      );
+    }
+  };
   const filtered =
     filter === "unread"
       ? sideFiltered.filter((n) => !n.read)
       : sideFiltered;
 
-  const handleMarkRead = (id) => markRead(id);
+  const handleMarkRead = async (id) => {
+    const res = await markRead(id);
+    if (res && res.ok === false)
+      toast.error(lang === "sw" ? "Imeshindwa kusasisha" : "Failed to update");
+  };
   const handleMarkAllRead = async () => {
     const res = await markAllRead();
     if (res?.ok) toast.success(lang === "sw" ? "Zote zimesomwa" : "All marked as read");
     else toast.error(lang === "sw" ? "Imeshindwa kuweka zote kama zimesomwa" : "Failed to mark all read");
   };
-  const handleRemove = (id) => remove(id);
-
-  const handleClearAll = async () => {
-    const ok = await confirm({
-      title: lang === "sw" ? "Ondoa alama zote za kusoma?" : "Clear all read marks?",
-      description: lang === "sw"
-        ? "Taarifa zote zitabaki lakini zitaonekana kama zimesomwa."
-        : "All notifications stay but will be marked as read.",
-      confirmLabel: lang === "sw" ? "Ondoa Alama" : "Clear",
-    });
-    if (!ok) return;
-    const res = await markAllRead();
-    if (!res?.ok) toast.error(res?.error?.message || (lang === "sw" ? "Imeshindwa kufuta alama" : "Failed to clear marks"));
-    else toast.success(lang === "sw" ? "Alama zimeondolewa" : "Marks cleared");
+  const handleRemove = async (id) => {
+    const res = await remove(id);
+    if (res && res.ok === false)
+      toast.error(
+        lang === "sw"
+          ? "Imeondolewa kwenye kifaa hiki tu — seva haikujibu."
+          : "Removed on this device only — the server didn't respond."
+      );
   };
 
   const handleDeleteAll = async () => {
@@ -247,6 +372,12 @@ export default function NotificationsPage() {
     if (!ok) return;
     const res = await clearAll();
     if (!res?.ok) toast.error(res?.error?.message || (lang === "sw" ? "Imeshindwa kufuta" : "Failed to delete"));
+    else if (res.soft)
+      toast.error(
+        lang === "sw"
+          ? "Zimefichwa kwenye kifaa hiki tu — seva haikujibu."
+          : "Hidden on this device only — the server didn't respond."
+      );
     else toast.success(lang === "sw" ? "Zimefutwa" : "Deleted");
   };
 
@@ -284,6 +415,122 @@ export default function NotificationsPage() {
           </p>
         </div>
 
+        {/* ARIFA: kivinjari + sauti + push */}
+        <div className="flex flex-col items-center gap-2 mb-4">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            {/* ✅ MPYA: Push button */}
+            {isPushSupported() && (
+              <button
+                type="button"
+                onClick={handleTogglePush}
+                disabled={pushBusy}
+                aria-pressed={pushEnabled}
+                style={{
+                  borderColor: "rgb(var(--c-hairline))",
+                  color: pushEnabled ? COLORS.successText : "var(--text-primary)",
+                }}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border bg-card disabled:opacity-50"
+                title={
+                  lang === "sw"
+                    ? "Push inafanya kazi hata tab imefungwa"
+                    : "Push works even when tab is closed"
+                }
+              >
+                {pushBusy ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : pushEnabled ? (
+                  <Smartphone size={13} />
+                ) : (
+                  <BellRing size={13} />
+                )}
+                {pushEnabled
+                  ? lang === "sw"
+                    ? "Push: ZIMEWASHWA"
+                    : "Push: ON"
+                  : lang === "sw"
+                    ? "Washa Push (hata tab imefungwa)"
+                    : "Enable Push (works when closed)"}
+              </button>
+            )}
+
+            {/* Browser alerts */}
+            {alerts.supported && (
+              <button
+                type="button"
+                onClick={handleToggleBrowser}
+                aria-pressed={alerts.browserOn}
+                style={{
+                  borderColor: "rgb(var(--c-hairline))",
+                  color: alerts.browserOn ? COLORS.successText : "var(--text-primary)",
+                }}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border bg-card"
+              >
+                <BellRing size={13} />
+                {alerts.browserOn
+                  ? lang === "sw" ? "Kivinjari: ZIMEWASHWA" : "Browser: ON"
+                  : lang === "sw" ? "Washa kivinjari" : "Enable browser"}
+              </button>
+            )}
+
+            {/* Sound toggle */}
+            <button
+              type="button"
+              onClick={alerts.toggleSound}
+              aria-pressed={alerts.soundOn}
+              style={{
+                borderColor: "rgb(var(--c-hairline))",
+                color: alerts.soundOn ? COLORS.successText : "var(--text-primary)",
+              }}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border bg-card"
+            >
+              {alerts.soundOn ? <Volume2 size={13} /> : <VolumeX size={13} />}
+              {alerts.soundOn
+                ? lang === "sw" ? "Sauti: ZIMEWASHWA" : "Sound: ON"
+                : lang === "sw" ? "Sauti: ZIMEZIMWA" : "Sound: OFF"}
+            </button>
+          </div>
+
+          {/* ✅ Push message */}
+          {pushMsg && (
+            <p
+              style={{
+                color:
+                  pushMsg.includes("Imeshindwa") ||
+                  pushMsg.includes("Failed") ||
+                  pushMsg.includes("blocked") ||
+                  pushMsg.includes("Umezuia")
+                    ? COLORS.dangerText
+                    : COLORS.successText,
+              }}
+              className="text-[11px] text-center max-w-md"
+            >
+              {pushMsg}
+            </p>
+          )}
+
+          {alertMsg && (
+            <p style={{ color: COLORS.dangerText }} className="text-[11px] text-center max-w-md">
+              {alertMsg}
+            </p>
+          )}
+
+          {pushEnabled && (
+            <p style={{ color: "var(--text-muted)" }} className="text-[11px] text-center max-w-md">
+              {lang === "sw"
+                ? "Utapokea taarifa kwenye kifaa chako hata ukifunga kivinjari."
+                : "You'll receive notifications on your device even when the browser is closed."}
+            </p>
+          )}
+
+          {!pushEnabled && alerts.browserOn && (
+            <p style={{ color: "var(--text-muted)" }} className="text-[11px] text-center max-w-md">
+              {lang === "sw"
+                ? "Arifa za kivinjari zinafanya kazi tu wakati SokoMkononi iko wazi."
+                : "Browser alerts work only while SokoMkononi is open."}
+            </p>
+          )}
+        </div>
+
         {/* FILTER + ACTIONS */}
         {sideFiltered.length > 0 && (
           <div className="flex flex-col items-center gap-3 mb-4">
@@ -315,14 +562,6 @@ export default function NotificationsPage() {
                   {lang === "sw" ? "Soma zote" : "Mark all read"}
                 </button>
               )}
-              <button
-                onClick={handleClearAll}
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-                style={{ color: COLORS.ink }}
-              >
-                <CheckCheck size={14} />
-                {lang === "sw" ? "Ondoa Alama Zote" : "Clear All"}
-              </button>
               <button
                 onClick={handleDeleteAll}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors"

@@ -260,12 +260,15 @@ export default function MyTransactionsPage() {
   // RECEIPT DOWNLOAD — tumia rawId
   // ═══════════════════════════════════════════════════════════
   const handleDownloadReceipt = async (tr) => {
-    setReceiptBusyId(tr.id);
-    try {
-      const backendId = tr.rawId || tr.id;
-      const blob = await downloadFile(
-        `/finance/transactions/${backendId}/receipt/`
-      );
+  setReceiptBusyId(tr.id);
+  setPageError("");
+  try {
+    const backendId = tr.rawId || tr.id;
+    // ✅ MPYA: tuma `type` ili kuepuka collision (ListingFee #5 vs Transaction #5)
+    const typeParam = tr.type ? `?type=${encodeURIComponent(tr.type)}` : "";
+    const blob = await downloadFile(
+      `/finance/transactions/${backendId}/receipt/${typeParam}`
+    );
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = downloadUrl;

@@ -5,8 +5,12 @@
 //  - Countdown inaonekana kwa waiting NA notified entries
 //  - Button "Reserve Sasa" kwa notified entries
 //  - Bilingual (SW/EN)
+//  - Nafasi ikifunguka (status → notified) ukurasa unapiga sauti/mtetemo
+//    na browser notification (kama imewashwa kwenye Taarifa). Taarifa ya
+//    ndani ya app (WAITING_LIST_AVAILABLE) bado inatoka backend.
+//  - Kuondoka kwenye foleni kunauliza uthibitisho + kunaonyesha kosa
 // ============================================================
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Clock3,
@@ -17,6 +21,8 @@ import {
   MapPin,
   ArrowRight,
   LogOut,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import {
   COLORS,
@@ -28,9 +34,11 @@ import {
   useWaitingList,
   useWaitingListState,
   leaveWaitingList as leaveWaitingListStore,
-  hydrateWaitingListFromApi,
 } from "../config/waitingListStore.js";
 import { useLanguage } from "../context/LanguageContext.jsx";
+import { useConfirm } from "../components/ConfirmDialog.jsx";
+import { useToast } from "../components/Toast.jsx";
+import { useNotificationAlerts } from "../config/notificationAlerts.js";
 
 // ============================================================
 // STATUS
@@ -61,7 +69,7 @@ const getWaitingStatus = (lang) => ({
     label: lang === "sw" ? "Imekamilika" : "Fulfilled",
     color: COLORS.green,
     bg: "rgba(47,109,79,0.16)",
-    icon: XCircle,
+    icon: CheckCircle2,
   },
 });
 
@@ -103,7 +111,7 @@ function CountdownBadge({ to, lang }) {
 // ============================================================
 // WAITING LIST ITEM
 // ============================================================
-function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
+function WaitingListItem({ entry, onLeave, onGoToDeals, lang, leaving }) {
   const navigate = useNavigate();
   const category = getCategory(entry.category);
   const Icon = category?.icon;
@@ -232,10 +240,11 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang }) {
         {(entry.status === "waiting" || entry.status === "notified") && (
           <button
             onClick={() => onLeave(entry.id)}
+            disabled={leaving}
             style={{ color: COLORS.rust }}
-            className="flex items-center gap-1 text-[11px] font-semibold mt-2.5"
+            className="flex items-center gap-1 text-[11px] font-semibold mt-2.5 disabled:opacity-50"
           >
-            <LogOut size={11} />{" "}
+            {leaving ? <Loader2 size={11} className="animate-spin" /> : <LogOut size={11} />}{" "}
             {lang === "sw" ? "Ondoka kwenye Foleni" : "Leave Queue"}
           </button>
         )}
@@ -258,19 +267,81 @@ export default function WaitingListPage({
   const loading = storeState.loading && entries.length === 0;
   const loadError = storeState.error;
   const [filter, setFilter] = useState("all");
+  const [leavingId, setLeavingId] = useState(null);
+  const [retrying, setRetrying] = useState(false);
+  const confirm = useConfirm();
+  const toast = useToast();
+  const alerts = useNotificationAlerts();
+
+  // Alert nafasi ikifunguka: linganisha ids za "notified" na mzigo uliopita.
+  const notifiedSeen = useRef(null);
+  useEffect(() => {
+    const ids = new Set(
+      entries.filter((e) => e.status === "notified").map((e) => String(e.id))
+    );
+    if (notifiedSeen.current === null) {
+      notifiedSeen.current = ids;
+      return;
+    }
+    const fresh = entries.filter(
+      (e) => e.status === "notified" && !notifiedSeen.current.has(String(e.id))
+    );
+    notifiedSeen.current = ids;
+    if (fresh.length === 0) return;
+    alerts.alert({
+      title: lang === "sw" ? "Nafasi imefunguka!" : "A slot opened up!",
+      body: fresh[0].property || "",
+      tag: `smk-waiting-${fresh[0].id}`,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries]);
 
   useEffect(() => {
     const iv = setInterval(() => {
-      hydrateWaitingListFromApi().catch(() => {});
+      storeState.refresh().catch(() => {});
     }, 60000);
     return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleLeave = (id) => {
-    if (onLeave) {
-      onLeave(id);
-    } else {
-      leaveWaitingListStore(id);
+  const handleLeave = async (id) => {
+    if (leavingId) return;
+    const ok = await confirm({
+      title: lang === "sw" ? "Ondoka kwenye foleni?" : "Leave the queue?",
+      description:
+        lang === "sw"
+          ? "Utapoteza nafasi yako kwenye foleni. Hatua hii haiwezi kurudishwa."
+          : "You will lose your place in the queue. This can't be undone.",
+      confirmLabel: lang === "sw" ? "Ondoka" : "Leave",
+      danger: true,
+    });
+    if (!ok) return;
+    setLeavingId(id);
+    try {
+      const res = onLeave ? await onLeave(id) : await leaveWaitingListStore(id);
+      if (res && res.ok === false) {
+        throw new Error(res?.error?.message || "failed");
+      }
+      toast.success(lang === "sw" ? "Umeondoka kwenye foleni" : "You left the queue");
+    } catch (err) {
+      toast.error(
+        err?.message && err.message !== "failed"
+          ? err.message
+          : lang === "sw"
+            ? "Imeshindwa kuondoka. Jaribu tena."
+            : "Failed to leave. Try again."
+      );
+    } finally {
+      setLeavingId(null);
+    }
+  };
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      await storeState.refresh();
+    } finally {
+      setRetrying(false);
     }
   };
 
@@ -323,7 +394,8 @@ export default function WaitingListPage({
     );
   }
 
-  if (loadError) {
+  // Kosa la poll ya nyuma lisifiche orodha iliyopo — onyesha skrini ya kosa tu kama hakuna data
+  if (loadError && entries.length === 0) {
     return (
       <div
         style={{ background: COLORS.sand, minHeight: "100%" }}
@@ -351,11 +423,14 @@ export default function WaitingListPage({
           </p>
           <p className="text-xs text-secondary mb-4">{loadError}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={handleRetry}
+            disabled={retrying}
             style={{ background: COLORS.gold, color: COLORS.night }}
-            className="px-4 py-2 rounded-lg text-sm font-semibold"
+            className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60"
           >
-            {lang === "sw" ? "Jaribu tena" : "Try again"}
+            {retrying
+              ? lang === "sw" ? "Inajaribu..." : "Retrying..."
+              : lang === "sw" ? "Jaribu tena" : "Try again"}
           </button>
         </div>
       </div>
@@ -471,6 +546,7 @@ export default function WaitingListPage({
                 entry={e}
                 onLeave={handleLeave}
                 onGoToDeals={onGoToDeals}
+                leaving={leavingId === e.id}
                 lang={lang}
               />
             ))}
@@ -479,4 +555,4 @@ export default function WaitingListPage({
       </div>
     </div>
   );
-}
+}
