@@ -107,7 +107,8 @@ export default function Footer({ selectedLang: propLang }) {
       { to: "/kuhusu", label: t("Kuhusu Sisi", "About Us") },
       { to: "/mawasiliano", label: t("Wasiliana Nasi", "Contact Us") },
       { to: "/jinsi-ya-kununua", label: t("Jinsi Inavyofanya Kazi", "How it works") },
-      { to: "/jinsi-ya-kuuza", label: t("Jinsi ya Kuuza", "How to Sell") },
+      // ✅ FIX: deep-link kwenye sehemu ya kuuza (SEO-safe, scroll inafanya kazi)
+      { to: "/jinsi-ya-kununua#kuuza", label: t("Jinsi ya Kuuza", "How to Sell") },
       { to: "/mali-zote", label: t("Mali Zote", "All Listings") },
     ]},
     { title: t("Kategoria", "Categories"), links: [

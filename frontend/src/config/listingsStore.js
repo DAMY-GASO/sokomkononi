@@ -1362,7 +1362,8 @@ export async function payListingFeeWithFimiPayAsync(
 // CREATE LISTING WITH IMAGES (multipart, single request)
 // Backend: POST /listings/create-with-images/
 // ============================================================
-export async function createListingWithImagesAsync({ payload, images = [] }) {
+// onProgress({ loaded, total, percent }) — upload progress halisi (XHR kwenye api.upload).
+export async function createListingWithImagesAsync({ payload, images = [], onProgress }) {
   if (!payload) {
     return { ok: false, error: new Error("payload is required") };
   }
@@ -1408,7 +1409,7 @@ export async function createListingWithImagesAsync({ payload, images = [] }) {
       }
     }
 
-    const created = await api.upload("/listings/create-with-images/", fd);
+    const created = await listingsApi.createWithImages(fd, onProgress ? { onProgress } : undefined);
     const normalized = normalizeListingFromApi(created, "pending_payment");
     if (!normalized || !normalized.id) {
       throw new Error("Backend haikurudisha listing id (createListingWithImagesAsync)");
@@ -1466,7 +1467,7 @@ export async function updateListingLocationAsync(id, payload) {
 // BULK UPLOAD IMAGES to an existing listing
 // Backend: POST /listings/{id}/images/bulk/
 // ============================================================
-export async function bulkUploadListingImagesAsync(id, files = []) {
+export async function bulkUploadListingImagesAsync(id, files = [], { onProgress } = {}) {
   if (!Array.isArray(files) || files.length === 0) {
     return { ok: false, error: new Error("No files provided") };
   }
@@ -1475,7 +1476,7 @@ export async function bulkUploadListingImagesAsync(id, files = []) {
     for (const f of files) {
       fd.append("images", f.file || f);
     }
-    const raw = await listingsApi.bulkUploadImages(id, fd);
+    const raw = await listingsApi.bulkUploadImages(id, fd, onProgress ? { onProgress } : undefined);
     // Refetch detail so the new image variants land in the store
     await fetchListingDetailAsync(id);
     return { ok: true, data: raw, count: raw?.count ?? files.length };
@@ -1497,11 +1498,11 @@ export async function deleteImagesAndRefresh(id, removedImageIds = []) {
 
 export async function syncListingImagesAsync(
   id,
-  { newFiles = [], removedImageIds = [] } = {}
+  { newFiles = [], removedImageIds = [], onProgress } = {}
 ) {
   try {
     if (newFiles.length) {
-      const r = await bulkUploadListingImagesAsync(id, newFiles);
+      const r = await bulkUploadListingImagesAsync(id, newFiles, { onProgress });
       if (!r.ok) return r;
     }
     if (removedImageIds.length) {

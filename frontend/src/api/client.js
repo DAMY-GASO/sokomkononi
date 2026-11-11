@@ -411,6 +411,147 @@ async function request(path, {
   return data;
 }
 
+// ============================================================
+// UPLOAD YENYE PROGRESS (XMLHttpRequest)
+// `fetch` haiwezi kuripoti upload progress. Njia hii inatumika TU pale
+// `onProgress` inapopitishwa kwenye api.upload; vinginevyo upload inaendelea
+// kutumia fetch kama kawaida.
+// onProgress({ loaded, total, percent }) — percent ni 0-100.
+// Timeout hapa ni "stall timeout": inaanza upya kila byte zinapoendelea
+// kutumwa, kwa hiyo picha nyingi kwenye mtandao polepole hazikatwi
+// mradi data inaendelea kupita.
+// ============================================================
+function buildUploadHeaders(extra = {}) {
+  const accessToken = getAccessToken();
+  const headers = {
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    "X-Requested-With": "XMLHttpRequest",
+    "Accept-Language": getLang(),
+    ...extra,
+  };
+  const csrf = getCsrfToken();
+  if (csrf && !headers["X-CSRFToken"]) headers["X-CSRFToken"] = csrf;
+  return headers; // Content-Type huwekwa na kivinjari (multipart boundary)
+}
+
+function xhrSend(url, { headers, body, onProgress, signal, timeoutMs }) {
+  return new Promise((resolve, reject) => {
+    const abortError = () => {
+      const e = new Error("Aborted");
+      e.name = "AbortError";
+      return e;
+    };
+    if (signal?.aborted) return reject(abortError());
+
+    const xhr = new XMLHttpRequest();
+    let timedOut = false;
+    let timer = null;
+    const armTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        timedOut = true;
+        xhr.abort();
+      }, timeoutMs);
+    };
+    const onAbort = () => xhr.abort();
+    const cleanup = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+
+    xhr.open("POST", url, true);
+    Object.entries(headers || {}).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+    xhr.responseType = "text";
+
+    xhr.upload.onprogress = (e) => {
+      armTimer();
+      if (!onProgress || !e.lengthComputable || !e.total) return;
+      try {
+        onProgress({
+          loaded: e.loaded,
+          total: e.total,
+          percent: Math.min(100, Math.round((e.loaded / e.total) * 100)),
+        });
+      } catch { /* callback ya UI isivunje upload */ }
+    };
+    // Upload ikiisha, seva inachakata (mf. kutengeneza ukubwa wa picha) — anza kuhesabu upya.
+    xhr.upload.onload = armTimer;
+
+    xhr.onload = () => {
+      cleanup();
+      const headersOut = new Headers();
+      xhr
+        .getAllResponseHeaders()
+        .trim()
+        .split(/[\r\n]+/)
+        .filter(Boolean)
+        .forEach((line) => {
+          const i = line.indexOf(":");
+          if (i > 0) {
+            try { headersOut.append(line.slice(0, i).trim(), line.slice(i + 1).trim()); } catch { /* noop */ }
+          }
+        });
+      const noBody = [204, 205, 304].includes(xhr.status);
+      resolve(
+        new Response(noBody ? null : xhr.responseText, { status: xhr.status, headers: headersOut })
+      );
+    };
+    xhr.onerror = () => {
+      cleanup();
+      reject(new ApiError(0, { detail: "Network error. Check your connection." }));
+    };
+    xhr.onabort = () => {
+      cleanup();
+      if (timedOut) reject(new ApiError(408, { detail: "Request timed out. Please try again." }));
+      else reject(abortError());
+    };
+
+    armTimer();
+    xhr.send(body);
+  });
+}
+
+async function uploadWithProgress(path, formData, {
+  onProgress, signal = null, timeoutMs = UPLOAD_TIMEOUT_MS, headers = {}, retry = true,
+} = {}) {
+  const isPublic = isPublicEndpoint(path, "POST");
+  const res = await xhrSend(`${getBaseUrl()}${path}`, {
+    headers: buildUploadHeaders(headers),
+    body: formData,
+    onProgress,
+    signal,
+    timeoutMs,
+  });
+
+  if (res.status === 401 && !isPublic && retry && getRefreshToken()) {
+    try {
+      await refreshAccessToken();
+    } catch (err) {
+      onUnauthorized?.();
+      throw err;
+    }
+    return uploadWithProgress(path, formData, { onProgress, signal, timeoutMs, headers, retry: false });
+  }
+
+  if (res.status === 429) {
+    const retryAfter =
+      Number(res.headers.get("Retry-After")) ||
+      Number(res.headers.get("X-RateLimit-Reset")) ||
+      null;
+    const data = await parseResponse(res);
+    throw new ApiError(429, data, { retryAfter });
+  }
+
+  const data = await parseResponse(res);
+  if (!res.ok) {
+    const hadToken = Boolean(getAccessToken() || getRefreshToken());
+    if (res.status === 401 && !isPublic && hadToken) onUnauthorized?.();
+    throw new ApiError(res.status, data);
+  }
+  return data;
+}
+
 function normalizeBody(body) {
   if (body === undefined || body === null) return undefined;
   if (typeof body === "object" && !Array.isArray(body) && Object.keys(body).length === 0) return undefined;
@@ -460,7 +601,11 @@ export const api = {
   patch:  (path, body, opts) => request(path, { ...opts, method: "PATCH", body: normalizeBody(body) }),
   put:    (path, body, opts) => request(path, { ...opts, method: "PUT", body: normalizeBody(body) }),
   delete: (path, body = {}, opts) => request(path, { ...opts, method: "DELETE", body: normalizeBody(body) }),
-  upload: (path, formData, opts) =>
-    request(path, { ...opts, method: "POST", body: formData, isFormData: true, timeoutMs: UPLOAD_TIMEOUT_MS }),
+  // opts.onProgress({ loaded, total, percent }) → XHR (progress halisi).
+  // Bila onProgress → fetch kama awali.
+  upload: (path, formData, opts = {}) =>
+    opts.onProgress
+      ? uploadWithProgress(path, formData, opts)
+      : request(path, { ...opts, method: "POST", body: formData, isFormData: true, timeoutMs: UPLOAD_TIMEOUT_MS }),
   makeIdempotencyKey,
 };

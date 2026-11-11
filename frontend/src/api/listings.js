@@ -30,16 +30,17 @@ export const listingsApi = {
   create: (payload) => api.post("/listings/", payload),
 
   // ── Multipart: create listing + images in a single request ──
-  createWithImages: (formData) =>
-    api.upload("/listings/create-with-images/", formData),
+  // opts.onProgress({ loaded, total, percent }) → upload progress halisi
+  createWithImages: (formData, opts) =>
+    api.upload("/listings/create-with-images/", formData, opts),
 
   // ── Update only location fields (JSON) ──
   updateLocation: (id, payload) =>
     api.patch(`/listings/${id}/location/`, payload),
 
   // ── Bulk image upload to an existing listing ──
-  bulkUploadImages: (id, formData) =>
-    api.upload(`/listings/${id}/images/bulk/`, formData),
+  bulkUploadImages: (id, formData, opts) =>
+    api.upload(`/listings/${id}/images/bulk/`, formData, opts),
 
   update: (id, patch) => api.patch(`/listings/${id}/`, patch),
 
@@ -65,8 +66,8 @@ export const listingsApi = {
 
   // ----- Images -----
   listImages: (id) => api.get(`/listings/${id}/images/`),
-  uploadImage: (id, formData) =>
-    api.upload(`/listings/${id}/images/`, formData),
+  uploadImage: (id, formData, opts) =>
+    api.upload(`/listings/${id}/images/`, formData, opts),
   updateImage: (listingId, imageId, payload) =>
     api.patch(`/listings/${listingId}/images/${imageId}/`, payload),
   deleteImage: (listingId, imageId) =>

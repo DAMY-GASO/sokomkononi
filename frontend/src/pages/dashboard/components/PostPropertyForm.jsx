@@ -349,6 +349,7 @@ export default function PostPropertyForm({
   const [overIdx, setOverIdx] = useState(null);
   const [pendingDraft, setPendingDraft] = useState(null);
   const [draftSavedAt, setDraftSavedAt] = useState(null);
+  const [duplicateNotice, setDuplicateNotice] = useState(null); // jina la tangazo lililonakiliwa
 
   const [paymentMode, setPaymentMode] = useState("flat");
   const [bundleId, setBundleId] = useState(null);
@@ -543,12 +544,16 @@ export default function PostPropertyForm({
   const saveDraftRef = useRef(saveDraftNow);
   saveDraftRef.current = saveDraftNow;
 
-  // Mount: angalia kama kuna rasimu iliyohifadhiwa
+  // "Nakili" kutoka Mali Zangu: data inakuja kupitia router state
+  const duplicateSrc = !isEdit ? location?.state?.duplicateFrom || null : null;
+  const duplicateAppliedRef = useRef(false);
+
+  // Mount: angalia kama kuna rasimu iliyohifadhiwa (si wakati wa kunakili)
   useEffect(() => {
-    if (isEdit) return;
+    if (isEdit || duplicateSrc) return;
     const d = readDraft(draftStorageKey);
     setPendingDraft(d && draftHasContent(d) ? d : null);
-  }, [draftStorageKey, isEdit]);
+  }, [draftStorageKey, isEdit, duplicateSrc]);
 
   // Hifadhi kila dakika 2, mtumiaji akiondoka kwenye tab, na component ikiondolewa
   useEffect(() => {
@@ -596,6 +601,46 @@ export default function PostPropertyForm({
     setPendingDraft(null);
     setDraftSavedAt(null);
   };
+
+  // Jaza fomu kutoka tangazo lililonakiliwa. Picha HAZINAKILIWI (ni URL za seva,
+  // si File) — mtumiaji anaziongeza tena. Kichwa/bei/mahali vikibaki sawa,
+  // duplicate check itazuia submit hadi abadilishe kimoja.
+  useEffect(() => {
+    if (isEdit || !duplicateSrc || duplicateAppliedRef.current || !categories.length) return;
+    const found = categories.find(
+      (c) => c.key === duplicateSrc.category || c.slug === duplicateSrc.category
+    );
+    if (!found) return;
+    duplicateAppliedRef.current = true;
+
+    const { region, district, area, mode: srcMode, ...rest } = duplicateSrc.attributes || {};
+    const nextLoc = {
+      mkoa: region || duplicateSrc.region || "",
+      wilaya: district || "",
+      eneo: area || "",
+    };
+    skipForwardRef.current = [nextLoc.eneo.trim(), nextLoc.wilaya.trim(), nextLoc.mkoa]
+      .filter(Boolean)
+      .join(", ");
+
+    setCategoryKey(found.key);
+    setCategoryMode(srcMode || null);
+    setLoc(nextLoc);
+    setLat(duplicateSrc.latitude != null ? Number(duplicateSrc.latitude) : null);
+    setLng(duplicateSrc.longitude != null ? Number(duplicateSrc.longitude) : null);
+    setAddressText(duplicateSrc.address_text || "");
+    setBase((b) => ({
+      ...b,
+      title: duplicateSrc.title || "",
+      price: duplicateSrc.price ? String(Math.round(Number(duplicateSrc.price)) || "") : "",
+      description: stripSummary(duplicateSrc.description || ""),
+    }));
+    setExtra(rest);
+    setPendingDraft(null);
+    setDuplicateNotice(duplicateSrc.title || "—");
+    // Ondoa state ili refresh isijaze tena
+    navigate(location.pathname, { replace: true, state: null });
+  }, [categories, duplicateSrc, isEdit]);
 
   const historyDepthRef = useRef(0);
   const ignorePopRef = useRef(0);
@@ -1467,6 +1512,26 @@ export default function PostPropertyForm({
         />
       )}
       <div className="max-w-2xl mx-auto">
+        {!isEdit && duplicateNotice && (
+          <div
+            className="mx-auto mb-4 max-w-xl rounded-2xl border px-4 py-3 text-xs leading-relaxed"
+            style={{
+              background: "rgba(37,99,235,0.08)",
+              borderColor: "rgba(37,99,235,0.3)",
+              color: "#1D4ED8",
+            }}
+          >
+            <p className="font-semibold">
+              {t(`Umenakili: "${duplicateNotice}"`, `Duplicated from: "${duplicateNotice}"`)}
+            </p>
+            <p className="mt-0.5">
+              {t(
+                "Picha hazinakiliwi — ziongeze tena. Badilisha jina, bei au mahali ili kuweka tangazo jipya.",
+                "Photos are not copied — add them again. Change the title, price or location to post a new listing."
+              )}
+            </p>
+          </div>
+        )}
         {!isEdit && pendingDraft && (
           <div
             className="mx-auto mb-4 max-w-xl rounded-2xl border px-4 py-3 flex flex-col gap-3 text-sm"

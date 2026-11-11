@@ -5,9 +5,11 @@ export default function ScrollToHash() {
   const { pathname, hash, key } = useLocation();
 
   useEffect(() => {
-    // Kama hakuna hash, rudi juu
+    // ✅ FIX: Kama hakuna hash, rudi juu HARAKA (auto, si smooth).
+    // "smooth" ilisababisha "jump" isiyo ya lazima kwenye navigation ya kwanza
+    // na iligongana na ScrollToTop ya awali kwenye App.jsx.
     if (!hash) {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: "auto" });
       return;
     }
 

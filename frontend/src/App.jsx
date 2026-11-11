@@ -1,5 +1,5 @@
 import React, { useEffect, Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider, useLanguage } from "./context/LanguageContext.jsx";
 import ScrollToHash from "./components/ScrollToHash.jsx";
 import { ToastProvider } from "./components/Toast.jsx";
@@ -64,13 +64,10 @@ function PageLoader() {
   );
 }
 
-function ScrollToTop() {
-  const { pathname } = useLocation();
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-  return null;
-}
+// ✅ FIX: ScrollToTop IMECONDOLWA kabisa.
+// ScrollToHash (hapa chini) tayari inashughulikia "hakuna hash" kwa
+// window.scrollTo({ top: 0, behavior: "auto" }). Kuwa na wawili
+// kulisababisha mgongano (jump / smooth-repeat).
 
 function BrowseRoute() {
   const { lang } = useLanguage();
@@ -116,7 +113,7 @@ function App() {
           <UndoToast />
           <ConfirmProvider>
             <Router>
-              <ScrollToTop />
+              {/* ✅ FIX: ScrollToTop imeondolewa. ScrollToHash pekee inatosha. */}
               <ScrollToHash />
               
               {/* ✅ SUSPENSE: Inashughulikia loading state ya kurasa zote zilizo lazy */}
@@ -129,7 +126,11 @@ function App() {
                   <Route path="/sheria" element={<TermsPage />} />
                   <Route path="/faragha" element={<PrivacyPage />} />
                   <Route path="/jinsi-ya-kununua" element={<JinsiYaKununuaNaKuuza />} />
-                  <Route path="/jinsi-ya-kuuza" element={<JinsiYaKununuaNaKuuza />} /> 
+                  {/* ✅ FIX: /jinsi-ya-kuuza sasa ni redirect (deep-link friendly, SEO-safe) */}
+                  <Route
+                    path="/jinsi-ya-kuuza"
+                    element={<Navigate to="/jinsi-ya-kununua#kuuza" replace />}
+                  />
 
                   {/* AUTH */}
                   <Route path="/login" element={<LoginPage />} />

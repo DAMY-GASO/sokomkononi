@@ -6,6 +6,7 @@ import {
   PlusCircle, Edit3, Trash2, Pause, Play, CheckCircle2,
   Rocket, TrendingUp, Megaphone, Eye, MapPin, Tag, Search,
   Loader2, AlertCircle, Pencil, Send, Wallet,
+  Copy, CheckSquare, Square, X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -28,6 +29,8 @@ import {
   saveMyListings,
   publishListingAsync,
   fetchMyListingsFromApi,
+  pauseListingAsync,
+  unpauseListingAsync,
 } from "../../../config/listingsStore.js";
 
 // ============================================================
@@ -105,6 +108,13 @@ function isFreeListing(listing) {
   if (raw === null || raw === undefined || raw === "") return false;
   return Number(raw) === 0;
 }
+
+// ── Bulk actions: status zinazostahili kila kitendo ──────────
+const BULK_ELIGIBLE = {
+  pause: (s) => s === "live",
+  resume: (s) => s === "paused",
+  submit: (s) => ["draft", "pending_payment", "needs_edit"].includes(s),
+};
 
 function isUnpaid(listing) {
   if (!listing) return false;
@@ -221,7 +231,8 @@ function ActionBtn({
 // ============================================================
 function ListingCard({
   listing, lang, onRemove, onBoost, onLeading, onAdvertise,
-  onPause, onResume, onMarkSold, onPay, onEdit, onSubmitReview, busy,
+  onPause, onResume, onMarkSold, onPay, onEdit, onSubmitReview, onDuplicate, busy,
+  selectMode = false, selected = false, onToggleSelect,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -300,10 +311,25 @@ function ListingCard({
 
   return (
     <div
-      className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl border-[1.5px] bg-white p-2 shadow-[0_1px_2px_rgba(1,25,87,0.04)] transition-all duration-200 hover:border-gold sm:p-2.5 ${
+      className={`relative w-full min-w-0 max-w-full overflow-hidden rounded-2xl border-[1.5px] bg-white p-2 shadow-[0_1px_2px_rgba(1,25,87,0.04)] transition-all duration-200 hover:border-gold sm:p-2.5 ${
         featured ? "border-gold" : "border-sandline"
-      } ${status === "sold" ? "opacity-80" : ""}`}
+      } ${status === "sold" ? "opacity-80" : ""} ${selected ? "ring-2 ring-night" : ""}`}
     >
+      {selectMode && (
+        <button
+          type="button"
+          onClick={() => onToggleSelect?.(listing.id)}
+          aria-pressed={selected}
+          aria-label={selected ? t("Ondoa uchaguzi", "Deselect") : t("Chagua", "Select")}
+          className="absolute left-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-white/95 shadow"
+        >
+          {selected ? (
+            <CheckSquare size={16} color={COLORS.night} />
+          ) : (
+            <Square size={16} color={COLORS.night} />
+          )}
+        </button>
+      )}
       <div className="flex min-w-0 items-start gap-3">
         {viewable ? (
           <Link
@@ -374,6 +400,23 @@ function ListingCard({
             </span>
             <span>•</span>
             <span>{timeAgo(listing.postedAt, lang)}</span>
+            {Number(listing.inquiries) > 0 && (
+              <>
+                <span>•</span>
+                <span>{t(`${listing.inquiries} maulizo`, `${listing.inquiries} inquiries`)}</span>
+              </>
+            )}
+            {Number(listing.reservationCount) > 0 && (
+              <>
+                <span>•</span>
+                <span>
+                  {t(
+                    `${listing.reservationCount} reservation`,
+                    `${listing.reservationCount} reservations`
+                  )}
+                </span>
+              </>
+            )}
             {featured && (
               <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-semibold text-night">
                 {t("Imeangaziwa", "Featured")}
@@ -532,27 +575,35 @@ function ListingCard({
           disabled={isBusy}
         />
 
+        <ActionBtn
+          icon={Copy}
+          label={t("Nakili", "Duplicate")}
+          color={COLORS.night}
+          onClick={() => onDuplicate?.(listing.id)}
+          disabled={isBusy}
+        />
+
         {isLiveOrReserved && (
           <>
             <ActionBtn
               icon={Rocket}
               label={t("Angaza", "Boost")}
               color={COLORS.goldInk}
-              onClick={() => onBoost(listing.id)}
+              onClick={() => onBoost?.(listing.id)}
               disabled={isBusy}
             />
             <ActionBtn
               icon={TrendingUp}
               label={t("Kipaumbele", "Priority")}
               color={COLORS.green}
-              onClick={() => onLeading(listing.id)}
+              onClick={() => onLeading?.(listing.id)}
               disabled={isBusy}
             />
             <ActionBtn
               icon={Megaphone}
               label={t("Tangaza", "Advertise")}
               color={COLORS.rust}
-              onClick={() => onAdvertise(listing.id)}
+              onClick={() => onAdvertise?.(listing.id)}
               disabled={isBusy}
             />
           </>
@@ -563,7 +614,7 @@ function ListingCard({
             icon={Pause}
             label={t("Simamisha", "Pause")}
             color={COLORS.night}
-            onClick={() => onPause(listing.id)}
+            onClick={() => onPause?.(listing.id)}
             disabled={isBusy}
           />
         )}
@@ -572,7 +623,7 @@ function ListingCard({
             icon={Play}
             label={t("Endelea", "Resume")}
             color={COLORS.green}
-            onClick={() => onResume(listing.id)}
+            onClick={() => onResume?.(listing.id)}
             disabled={isBusy}
           />
         )}
@@ -581,7 +632,7 @@ function ListingCard({
             icon={CheckCircle2}
             label={t("Imeuzwa", "Sold")}
             color={COLORS.green}
-            onClick={() => onMarkSold(listing.id)}
+            onClick={() => onMarkSold?.(listing.id)}
             disabled={isBusy}
           />
         )}
@@ -616,6 +667,7 @@ export default function MyListings({
   onMarkSold,
   onPostNew,
   onEdit,
+  onDuplicate,
 }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
@@ -648,6 +700,16 @@ export default function MyListings({
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [busy, setBusy] = useState({});
+
+  // ── Bulk selection ─────────────────────────────────────────
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(null);
+
+  // Uchaguzi usibaki kwa matangazo yasiyoonekana baada ya kubadili kichujio/utafutaji
+  useEffect(() => {
+    setSelected(new Set());
+  }, [filter, searchQuery]);
 
   const filtered = useMemo(() => {
     let list = [...listings];
@@ -701,7 +763,163 @@ export default function MyListings({
     { key: "sold", label: { sw: "Imeuzwa", en: "Sold" } },
     { key: "paused", label: { sw: "Imesimama", en: "Paused" } },
     { key: "rejected", label: { sw: "Imekataliwa", en: "Rejected" } },
+    { key: "expired", label: { sw: "Imeisha Muda", en: "Expired" } },
   ];
+
+  // ── Bulk: hesabu na utekelezaji ────────────────────────────
+  const selectedListings = useMemo(
+    () => listings.filter((l) => selected.has(String(l.id))),
+    [listings, selected]
+  );
+  const bulkCounts = useMemo(() => {
+    const counts = {};
+    Object.entries(BULK_ELIGIBLE).forEach(([kind, ok]) => {
+      counts[kind] = selectedListings.filter((l) => ok(normalizeStatus(l.status))).length;
+    });
+    return counts;
+  }, [selectedListings]);
+
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((l) => selected.has(String(l.id)));
+
+  const toggleSelect = (id) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const k = String(id);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next;
+    });
+
+  const toggleSelectAll = () =>
+    setSelected(allFilteredSelected ? new Set() : new Set(filtered.map((l) => String(l.id))));
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelected(new Set());
+  };
+
+  const BULK_TEXT = {
+    pause: {
+      title: { sw: "Simamisha matangazo?", en: "Pause listings?" },
+      desc: {
+        sw: "Matangazo yaliyochaguliwa yatasimamishwa na hayataonekana kwa umma hadi uyaendeleze.",
+        en: "The selected listings will be paused and hidden from the public until you resume them.",
+      },
+      ok: { sw: "Simamisha", en: "Pause" },
+      done: { sw: "yamesimamishwa", en: "paused" },
+    },
+    resume: {
+      title: { sw: "Endeleza matangazo?", en: "Resume listings?" },
+      desc: {
+        sw: "Matangazo yaliyosimama yatarudi hewani.",
+        en: "The paused listings will go live again.",
+      },
+      ok: { sw: "Endeleza", en: "Resume" },
+      done: { sw: "yameendelezwa", en: "resumed" },
+    },
+    submit: {
+      title: { sw: "Wasilisha kwa Admin?", en: "Submit for review?" },
+      desc: {
+        sw: "Matangazo yaliyochaguliwa yatatumwa kwa admin kukaguliwa.",
+        en: "The selected listings will be sent to admin for review.",
+      },
+      ok: { sw: "Wasilisha", en: "Submit" },
+      done: { sw: "yamewasilishwa", en: "submitted" },
+    },
+  };
+
+  // Mfuatano (si sambamba): pauseListingAsync/publishListingAsync zinachukua
+  // snapshot ya store nzima na kuirudisha zikishindwa — zikiendeshwa pamoja,
+  // kushindwa kwa moja kungefuta mabadiliko ya mengine yaliyofanikiwa.
+  const runBulk = async (kind) => {
+    if (bulkBusy) return;
+    const items = selectedListings.filter((l) =>
+      BULK_ELIGIBLE[kind](normalizeStatus(l.status))
+    );
+    if (!items.length) return;
+
+    const txt = BULK_TEXT[kind];
+    const ok = await confirm({
+      title: `${txt.title[lang]} (${items.length})`,
+      description: txt.desc[lang],
+      confirmLabel: txt.ok[lang],
+      cancelLabel: t("Ghairi", "Cancel"),
+    });
+    if (!ok) return;
+
+    const fn =
+      kind === "pause"
+        ? pauseListingAsync
+        : kind === "resume"
+        ? unpauseListingAsync
+        : publishListingAsync;
+
+    setBulkBusy(kind);
+    let success = 0;
+    let failed = 0;
+    for (const l of items) {
+      if (String(l.id).startsWith("temp_")) {
+        failed += 1;
+        continue;
+      }
+      let res;
+      try {
+        res = await fn(l.id);
+      } catch (err) {
+        res = { ok: false, error: err };
+      }
+      if (res?.ok) success += 1;
+      else failed += 1;
+    }
+    setBulkBusy(null);
+    setSelected(new Set());
+    fetchMyListingsFromApi({ force: true });
+
+    if (failed === 0) {
+      toast.success(
+        t(`Matangazo ${success} ${txt.done.sw}.`, `${success} listing(s) ${txt.done.en}.`)
+      );
+    } else if (success === 0) {
+      toast.error(
+        t(`Hakuna tangazo lililofanikiwa (${failed} yameshindwa).`, `None succeeded (${failed} failed).`)
+      );
+    } else {
+      toast.error(
+        t(
+          `${success} yamefanikiwa, ${failed} yameshindwa.`,
+          `${success} succeeded, ${failed} failed.`
+        )
+      );
+    }
+  };
+
+  // ── Duplicate: peleka data kwenye fomu ya kuweka mali (create) ──
+  const handleDuplicate = (id) => {
+    const l = listings.find((x) => String(x.id) === String(id));
+    if (!l) return;
+    if (onDuplicate) {
+      onDuplicate(l);
+      return;
+    }
+    navigate("/dashboard/post", {
+      state: {
+        duplicateFrom: {
+          id: l.id,
+          category: categoryToString(l.category),
+          title: l.title || "",
+          price: l.price || 0,
+          location: l.location || "",
+          description: l.description || "",
+          attributes: l.attributes || {},
+          latitude: l.latitude ?? null,
+          longitude: l.longitude ?? null,
+          address_text: l.address_text || "",
+          region: l.region || "",
+        },
+      },
+    });
+  };
 
   const handleMarkSold = (id) => {
     const listing = listings.find((l) => String(l.id) === String(id));
@@ -837,13 +1055,30 @@ export default function MyListings({
             {t(`${listings.length} matangazo`, `${listings.length} listings`)}
           </p>
         </div>
-        <button
-          onClick={onPostNew}
-          className="cta-gradient flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
-        >
-          <PlusCircle size={14} />
-          {t("Weka Mpya", "Post New")}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {listings.length > 0 && (
+            <button
+              type="button"
+              onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+              style={{
+                borderColor: COLORS.sandLine,
+                color: COLORS.night,
+                background: selectMode ? COLORS.sand : "white",
+              }}
+              className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold"
+            >
+              {selectMode ? <X size={14} /> : <CheckSquare size={14} />}
+              {selectMode ? t("Maliza", "Done") : t("Chagua", "Select")}
+            </button>
+          )}
+          <button
+            onClick={onPostNew}
+            className="cta-gradient flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg shrink-0"
+          >
+            <PlusCircle size={14} />
+            {t("Weka Mpya", "Post New")}
+          </button>
+        </div>
       </div>
 
       {listings.length > 0 && (
@@ -888,6 +1123,53 @@ export default function MyListings({
               );
             })}
           </div>
+
+          {selectMode && (
+            <div
+              className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border bg-white px-3 py-2"
+              style={{ borderColor: COLORS.sandLine }}
+            >
+              <span className="text-xs font-semibold text-primary">
+                {t(`${selected.size} zimechaguliwa`, `${selected.size} selected`)}
+              </span>
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                disabled={filtered.length === 0 || !!bulkBusy}
+                className="text-xs font-semibold underline underline-offset-2 text-primary disabled:opacity-50"
+              >
+                {allFilteredSelected
+                  ? t("Ondoa zote", "Clear all")
+                  : t(`Chagua zote (${filtered.length})`, `Select all (${filtered.length})`)}
+              </button>
+              <div className="ml-auto flex flex-wrap gap-1.5">
+                <ActionBtn
+                  icon={bulkBusy === "pause" ? Loader2 : Pause}
+                  spin={bulkBusy === "pause"}
+                  label={`${t("Simamisha", "Pause")} (${bulkCounts.pause})`}
+                  color={COLORS.night}
+                  onClick={() => runBulk("pause")}
+                  disabled={!bulkCounts.pause || !!bulkBusy}
+                />
+                <ActionBtn
+                  icon={bulkBusy === "resume" ? Loader2 : Play}
+                  spin={bulkBusy === "resume"}
+                  label={`${t("Endelea", "Resume")} (${bulkCounts.resume})`}
+                  color={COLORS.green}
+                  onClick={() => runBulk("resume")}
+                  disabled={!bulkCounts.resume || !!bulkBusy}
+                />
+                <ActionBtn
+                  icon={bulkBusy === "submit" ? Loader2 : Send}
+                  spin={bulkBusy === "submit"}
+                  label={`${t("Wasilisha", "Submit")} (${bulkCounts.submit})`}
+                  color={COLORS.rust}
+                  onClick={() => runBulk("submit")}
+                  disabled={!bulkCounts.submit || !!bulkBusy}
+                />
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -935,11 +1217,16 @@ export default function MyListings({
               onBoost={onBoost}
               onLeading={onLeading}
               onAdvertise={onAdvertise}
-              onPause={onPause}
-              onResume={onResume}
+              onPause={onPause ?? pauseListingAsync}
+              onResume={onResume ?? unpauseListingAsync}
+              onMarkSold={handleMarkSold}
               onPay={goToPayment}
               onSubmitReview={handleSubmitReview}
               onEdit={handleEdit}
+              onDuplicate={handleDuplicate}
+              selectMode={selectMode}
+              selected={selected.has(String(l.id))}
+              onToggleSelect={toggleSelect}
               busy={busy[l.id]}
             />
           ))}

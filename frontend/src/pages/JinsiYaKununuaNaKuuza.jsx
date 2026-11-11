@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Lock, ChevronRight, ShoppingBag, Tag } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
@@ -36,25 +36,20 @@ export default function JinsiYaKununuaNaKuuza() {
   const { lang } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
-  useEffect(() => {
-    if (location.hash) {
-      const el = document.querySelector(location.hash);
-      if (el) {
-        const id = setTimeout(() => {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 80);
-        return () => clearTimeout(id);
-      }
-    } else {
-      window.scrollTo({ top: 0 });
-    }
-  }, [location]);
+  // ✅ FIX: useLocation + useEffect ya ndani vimeondolewa kabisa.
+  // ScrollToHash (App.jsx) ndiyo inashughulikia scrolling ya #hash pekee.
+  // Hii inaepusha mgongano wa "wawili wanaoscroll" (jump / race condition).
 
   const handleBuyNow = () => user ? navigate("/dashboard/buyer") : navigate("/register?intent=buy");
   const handleSellNow = () => user ? navigate("/dashboard/post") : navigate("/register?intent=sell");
+
+  // ✅ FIX: scroll helper kwa buttons za hero (badala ya <a href="#...">)
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const buyBefore = [
     t('Bonyeza "Nunua Sasa"', 'Tap "Buy Now"'),
@@ -125,21 +120,24 @@ export default function JinsiYaKununuaNaKuuza() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <a
-              href="#kununua"
+            {/* ✅ FIX: buttons + scrollIntoView badala ya <a href="#..."> */}
+            <button
+              type="button"
+              onClick={() => scrollToSection("kununua")}
               className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#011957]"
               style={{ background: "linear-gradient(135deg, #FEA406 0%, #FD8706 100%)" }}
             >
               <ShoppingBag size={15} />
               {t("Jinsi ya Kununua", "How to Buy")}
-            </a>
-            <a
-              href="#kuuza"
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection("kuuza")}
               className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/[0.08] px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm hover:bg-white/[0.15]"
             >
               <Tag size={15} />
               {t("Jinsi ya Kuuza", "How to Sell")}
-            </a>
+            </button>
           </div>
         </div>
       </section>
@@ -147,7 +145,8 @@ export default function JinsiYaKununuaNaKuuza() {
       {/* ═══════════════════════════════════════════════════════
           BUY
           ═══════════════════════════════════════════════════════ */}
-      <section id="kununua" className="scroll-mt-20 py-16">
+      {/* ✅ FIX: scroll-mt-20 → scroll-mt-28 ili navbar + AnnouncementBar wasifunike kichwa */}
+      <section id="kununua" className="scroll-mt-28 py-16">
         <div className="mx-auto max-w-4xl px-4 text-center">
           <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#A35F00] dark:text-[#FEA406]">
             {t("Kwa Mnunuzi", "For Buyers")}
@@ -197,7 +196,8 @@ export default function JinsiYaKununuaNaKuuza() {
       {/* ═══════════════════════════════════════════════════════
           SELL
           ═══════════════════════════════════════════════════════ */}
-      <section id="kuuza" className="scroll-mt-20 bg-[color:rgb(var(--c-page))] py-16">
+      {/* ✅ FIX: scroll-mt-20 → scroll-mt-28 */}
+      <section id="kuuza" className="scroll-mt-28 bg-[color:rgb(var(--c-page))] py-16">
         <div className="mx-auto max-w-4xl px-4 text-center">
           <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#2F6D4F]">
             {t("Kwa Muuzaji", "For Sellers")}
