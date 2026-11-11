@@ -666,8 +666,50 @@ export default function PropertyDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, property]);
 
+  // ✅ Similar listings kutoka backend: GET /listings/{id}/similar/
+  // Backend ikishindwa/haipo → tunarudi kwenye client-side filter (fallback)
+  const [similarIds, setSimilarIds] = useState(null);
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    setSimilarIds(null);
+    (async () => {
+      try {
+        const res = await api.get(`/listings/${id}/similar/`);
+        const data = res?.data ?? res;
+        const rows = Array.isArray(data) ? data : data?.results || data?.listings || [];
+        const ids = rows
+          .map((r) => (r && typeof r === "object" ? r.id : r))
+          .filter((v) => v !== null && v !== undefined)
+          .map(String);
+        if (!cancelled && ids.length > 0) setSimilarIds(ids);
+      } catch (err) {
+        // 404/endpoint haipo — kimya, fallback inatumika
+        if (!cancelled) console.debug("[PropertyDetail] similar API unavailable:", err?.status || err?.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
   const similarListings = useMemo(() => {
     if (!property) return [];
+
+    if (similarIds && similarIds.length > 0) {
+      const byId = new Map(allListings.map((l) => [String(l.id), l]));
+      const fromApi = similarIds
+        .map((sid) => byId.get(sid))
+        .filter(
+          (l) =>
+            l &&
+            String(l.id) !== String(property.id) &&
+            (l.status === "live" || l.status === "reserved")
+        )
+        .slice(0, 12);
+      if (fromApi.length > 0) return fromApi;
+    }
+
     const candidates = allListings.filter(
       (l) =>
         String(l.id) !== String(property.id) &&
@@ -685,7 +727,7 @@ export default function PropertyDetailPage() {
         return new Date(b.postedAt || 0) - new Date(a.postedAt || 0);
       })
       .slice(0, 12);
-  }, [allListings, property]);
+  }, [allListings, property, similarIds]);
 
   if (!hydrated && !property) {
     return (

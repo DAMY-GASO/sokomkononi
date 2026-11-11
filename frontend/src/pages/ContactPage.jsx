@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   Mail, Phone, MapPin, Send, CheckCircle2, Loader2, AlertTriangle,
@@ -8,8 +8,10 @@ import Navbar from "../components/Navbar.jsx";
 import Footer from "../components/Footer.jsx";
 import BottomNav from "../components/BottomNav.jsx";
 import NewsletterStrip from "../components/NewsletterStrip.jsx";
+import Captcha, { isCaptchaEnabled } from "../components/Captcha.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { api } from "../api/client.js";
+import { useAuth } from "../config/authStore.js";
 import { faqs } from "../config/FaqsData.js";
 import { useContactInfo } from "../config/systemSettingsStore.js";
 
@@ -29,16 +31,40 @@ function WhatsAppIcon({ size = 16, className = "" }) {
   );
 }
 
+// ── Ulinzi dhidi ya spam (bila huduma ya nje) ──────────────
+// 1) Honeypot: sehemu iliyofichwa ambayo binadamu hajazi, bot hujaza
+// 2) Time-trap: fomu iliyotumwa chini ya sekunde 3 ni bot
+// 3) Cooldown: ujumbe mmoja kwa dakika 1 kwa kila kivinjari
+const MIN_FILL_MS = 3000;
+const COOLDOWN_MS = 60_000;
+const COOLDOWN_KEY = "smk_contact_last_sent";
+
+function cooldownLeftMs() {
+  try {
+    const last = Number(localStorage.getItem(COOLDOWN_KEY) || 0);
+    return Math.max(0, COOLDOWN_MS - (Date.now() - last));
+  } catch {
+    return 0;
+  }
+}
+
 export default function ContactPage() {
   const { lang } = useLanguage();
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const [contactInfo] = useContactInfo();
+  const { user } = useAuth();
+  const isGuest = !user;
 
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [openFaq, setOpenFaq] = useState(null);
+  const [honeypot, setHoneypot] = useState("");
+  // Cloudflare Turnstile — inafanya kazi tu kama VITE_TURNSTILE_SITE_ID ipo
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaKey, setCaptchaKey] = useState(0); // badilisha ili kureset widget
+  const mountedAt = useRef(Date.now());
 
   const email = contactInfo?.email || "support@sokomkononi.co.tz";
   const phone = contactInfo?.phone || "+255 743 895 038";
@@ -62,23 +88,68 @@ export default function ContactPage() {
       return;
     }
 
+    // Bot: honeypot imejazwa → jifanye umefanikiwa bila kutuma chochote
+    if (honeypot) {
+      setSent(true);
+      setForm({ name: "", email: "", message: "" });
+      return;
+    }
+    if (Date.now() - mountedAt.current < MIN_FILL_MS) {
+      setError(
+        t(
+          "Tafadhali subiri sekunde chache kisha ujaribu tena.",
+          "Please wait a few seconds and try again."
+        )
+      );
+      return;
+    }
+    const waitMs = cooldownLeftMs();
+    if (waitMs > 0) {
+      const secs = Math.ceil(waitMs / 1000);
+      setError(
+        t(
+          `Umetuma ujumbe hivi punde. Subiri sekunde ${secs} kisha ujaribu tena.`,
+          `You just sent a message. Please wait ${secs}s and try again.`
+        )
+      );
+      return;
+    }
+
+    if (isCaptchaEnabled && !captchaToken) {
+      setError(t("Thibitisha kuwa wewe si roboti.", "Please confirm you are not a robot."));
+      return;
+    }
+
     setBusy(true);
     setError("");
 
     try {
-      // ✅ Tuma kama ticket moja kwa moja
-      await api.post("/tickets/", {
-        subject: t(
-          `Ujumbe kutoka ukurasa wa Mawasiliano — ${form.name.trim()}`,
-          `Message from Contact Page — ${form.name.trim()}`
-        ),
-        description:
-          `Jina / Name: ${form.name.trim()}\n` +
-          `Email: ${form.email.trim()}\n\n` +
-          `${form.message.trim()}`,
-        category: "OTHER",
-        priority: "MEDIUM",
-      });
+      const captchaPart = isCaptchaEnabled ? { captcha_token: captchaToken } : {};
+      if (isGuest) {
+        // /tickets/ inahitaji login (IsAuthenticated) — mgeni anatumia /contact/ ya umma
+        await api.post("/contact/", {
+          name: form.name.trim(),
+          email: form.email.trim(),
+          message: form.message.trim(),
+          ...captchaPart,
+        });
+      } else {
+        // Aliyeingia → ticket moja kwa moja (inafuatiliwa kwenye Safety & Support)
+        await api.post("/tickets/", {
+          subject: t(
+            `Ujumbe kutoka ukurasa wa Mawasiliano — ${form.name.trim()}`,
+            `Message from Contact Page — ${form.name.trim()}`
+          ),
+          description:
+            `Jina / Name: ${form.name.trim()}\n` +
+            `Email: ${form.email.trim()}\n\n` +
+            `${form.message.trim()}`,
+          category: "OTHER",
+          priority: "MEDIUM",
+          ...captchaPart,
+        });
+      }
+      try { localStorage.setItem(COOLDOWN_KEY, String(Date.now())); } catch { /* ignore */ }
       setSent(true);
       setForm({ name: "", email: "", message: "" });
     } catch (err) {
@@ -87,7 +158,13 @@ export default function ContactPage() {
         "Imeshindwa kutuma ujumbe. Jaribu tena.",
         "Couldn't send. Please try again."
       );
-      if (err?.error?.fields) {
+      if (err?.status === 429 || err?.response?.status === 429) {
+        // Rate limiting ya backend — onyesha ujumbe wazi badala ya hitilafu ya jumla
+        errorMsg = t(
+          "Maombi ni mengi sana. Subiri dakika chache kisha ujaribu tena.",
+          "Too many requests. Please wait a few minutes and try again."
+        );
+      } else if (err?.error?.fields) {
         const fieldErrors = err.error.fields;
         const firstField = Object.keys(fieldErrors)[0];
         if (firstField && Array.isArray(fieldErrors[firstField])) {
@@ -102,6 +179,9 @@ export default function ContactPage() {
       }
       setError(errorMsg);
     } finally {
+      // Token ya Turnstile ni ya matumizi mara moja — reset kila baada ya kutuma
+      setCaptchaToken("");
+      setCaptchaKey((k) => k + 1);
       setBusy(false);
     }
   };
@@ -270,16 +350,22 @@ export default function ContactPage() {
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-secondary">
                   {t(
-                    "Asante kwa kuwasiliana nasi. Tutakujibu haraka iwezekanavyo kupitia ukurasa wa Usalama & Msaada.",
-                    "Thanks for reaching out. We'll reply through Safety & Support as soon as possible."
+                    isGuest
+                      ? "Asante kwa kuwasiliana nasi. Tutakujibu haraka iwezekanavyo kupitia barua pepe uliyotoa."
+                      : "Asante kwa kuwasiliana nasi. Tutakujibu haraka iwezekanavyo kupitia ukurasa wa Usalama & Msaada.",
+                    isGuest
+                      ? "Thanks for reaching out. We'll reply to the email you provided as soon as possible."
+                      : "Thanks for reaching out. We'll reply through Safety & Support as soon as possible."
                   )}
                 </p>
-                <Link
-                  to="/dashboard/safety"
-                  className="mt-4 inline-block text-sm font-semibold text-primary hover:underline"
-                >
-                  {t("Nenda kwenye Usalama & Msaada", "Go to Safety & Support")}
-                </Link>
+                {!isGuest && (
+                  <Link
+                    to="/dashboard/safety"
+                    className="mt-4 inline-block text-sm font-semibold text-primary hover:underline"
+                  >
+                    {t("Nenda kwenye Usalama & Msaada", "Go to Safety & Support")}
+                  </Link>
+                )}
                 <div className="mt-4">
                   <button
                     onClick={() => setSent(false)}
@@ -297,13 +383,35 @@ export default function ContactPage() {
                   </h2>
                   <p className="mt-1 text-sm text-secondary">
                     {t(
-                      "Tutakujibu ndani ya saa 24 za kazi — majibu yataonekana kwenye ukurasa wa Usalama & Msaada.",
-                      "We'll reply within 24 business hours — your replies will appear in Safety & Support."
+                      isGuest
+                        ? "Tutakujibu ndani ya saa 24 za kazi kupitia barua pepe yako."
+                        : "Tutakujibu ndani ya saa 24 za kazi — majibu yataonekana kwenye ukurasa wa Usalama & Msaada.",
+                      isGuest
+                        ? "We'll reply within 24 business hours by email."
+                        : "We'll reply within 24 business hours — your replies will appear in Safety & Support."
                     )}
                   </p>
                 </div>
 
                 <form onSubmit={submit} className="space-y-4">
+                  {/* Honeypot — imefichwa kwa binadamu na screen readers */}
+                  <div
+                    aria-hidden="true"
+                    style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}
+                  >
+                    <label>
+                      Website
+                      <input
+                        type="text"
+                        name="website"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={honeypot}
+                        onChange={(e) => setHoneypot(e.target.value)}
+                      />
+                    </label>
+                  </div>
+
                   <label className="block">
                     <span className="mb-1.5 block text-sm font-medium text-primary">
                       {t("Jina", "Name")}
@@ -347,6 +455,12 @@ export default function ContactPage() {
                       {form.message.trim().length}/10 {t("herufi", "characters")}
                     </p>
                   </label>
+
+                  <Captcha
+                    key={captchaKey}
+                    onVerify={setCaptchaToken}
+                    onExpire={() => setCaptchaToken("")}
+                  />
 
                   {error && (
                     <div className="flex items-start gap-2 rounded-lg border border-[#C1502E]/30 bg-[#C1502E]/10 px-3 py-2 text-xs text-[#C1502E]">

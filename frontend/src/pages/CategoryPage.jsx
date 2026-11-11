@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import SearchBar from "../components/ui/SearchBar.jsx";
 import { useLanguage } from "../context/LanguageContext.jsx";
@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Search,
   Home as HomeIcon,
+  MapPin,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -61,6 +62,14 @@ const DEFAULT_RANGES = [
   { label: { sw: "Juu ya TZS 100M", en: "Above TZS 100M" }, min: 100_000_000, max: Infinity },
 ];
 
+const EMPTY_FILTERS = { priceRange: null, verified: false, featured: false, location: "" };
+
+// Maandishi ya eneo la listing (location + region/district/area)
+function locationText(p) {
+  const a = p.attributes && typeof p.attributes === "object" ? p.attributes : {};
+  return [p.location, a.region, a.district, a.area].filter(Boolean).join(" ").toLowerCase();
+}
+
 /* ═══════════════════════════════════════════════════════════
    FILTER SIDEBAR
    ═══════════════════════════════════════════════════════════ */
@@ -73,7 +82,7 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
 
   const handleApply = () => { setFilters(localFilters); onClose(); };
   const handleReset = () => {
-    setLocalFilters({ priceRange: null, verified: false, featured: false });
+    setLocalFilters({ ...EMPTY_FILTERS });
   };
 
   const content = (
@@ -90,6 +99,23 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
         >
           <X size={18} />
         </button>
+      </div>
+
+      <div>
+        <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary">
+          {t(lang, "Eneo", "Location")}
+        </h4>
+        <div className="relative">
+          <MapPin size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            type="text"
+            value={localFilters.location || ""}
+            onChange={(e) => setLocalFilters({ ...localFilters, location: e.target.value })}
+            onKeyDown={(e) => { if (e.key === "Enter") handleApply(); }}
+            placeholder={t(lang, "mf. Dar es Salaam, Arusha", "e.g. Dar es Salaam, Arusha")}
+            className="w-full rounded-lg border border-[color:rgb(var(--c-hairline))] bg-card py-2 pl-8 pr-3 text-sm text-primary outline-none focus:border-[color:rgb(var(--c-gold))]"
+          />
+        </div>
       </div>
 
       <div>
@@ -187,7 +213,7 @@ function FilterSidebar({ category, filters, setFilters, isOpen, onClose, lang })
    ═══════════════════════════════════════════════════════════ */
 export default function CategoryPage() {
   const { slug } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { lang } = useLanguage();
 
   const allCategories = useActiveCategories();
@@ -205,11 +231,28 @@ export default function CategoryPage() {
   const savedIds = useSavedIds();
 
   const [viewMode, setViewMode] = useState("grid");
-  const [sortBy, setSortBy] = useState("newest");
-  const [filters, setFilters] = useState({ priceRange: null, verified: false, featured: false });
+  // ── State ya awali inasomwa kutoka URL (shareable links) ───
+  // ?tafuta=..&sort=..&bei=<index>&verified=1&featured=1&eneo=..&ukurasa=N
+  const [sortBy, setSortBy] = useState(() => {
+    const s = searchParams.get("sort");
+    return ["newest", "price_low", "price_high", "popular"].includes(s) ? s : "newest";
+  });
+  const [filters, setFilters] = useState(() => {
+    const bei = searchParams.get("bei");
+    const idx = bei !== null && bei !== "" ? Number(bei) : NaN;
+    return {
+      priceRange: Number.isInteger(idx) && idx >= 0 ? idx : null,
+      verified: searchParams.get("verified") === "1",
+      featured: searchParams.get("featured") === "1",
+      location: searchParams.get("eneo") || "",
+    };
+  });
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("tafuta") || "");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const n = parseInt(searchParams.get("ukurasa") || "1", 10);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  });
   const ITEMS_PER_PAGE = 9;
 
   const allProperties = useMemo(
@@ -228,6 +271,9 @@ export default function CategoryPage() {
           p.location?.toLowerCase().includes(q)
       );
     }
+
+    const loc = (filters.location || "").trim().toLowerCase();
+    if (loc) result = result.filter((p) => locationText(p).includes(loc));
 
     if (filters.verified) result = result.filter((p) => p.verified);
     if (filters.featured) result = result.filter((p) => isBoostActive(p));
@@ -269,12 +315,39 @@ export default function CategoryPage() {
   }, [allProperties, searchQuery, filters, sortBy, categoryKey]);
 
   const totalPages = Math.ceil(filteredProperties.length / ITEMS_PER_PAGE);
+  // Linda dhidi ya ?ukurasa=99 isiyokuwepo
+  const safePage = Math.min(currentPage, Math.max(1, totalPages));
   const paginatedProperties = filteredProperties.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (safePage - 1) * ITEMS_PER_PAGE,
+    safePage * ITEMS_PER_PAGE
   );
 
-  useEffect(() => { setCurrentPage(1); }, [searchQuery, filters, sortBy, categoryKey]);
+  // Rudi ukurasa 1 pale tu vichujio/utafutaji vinapobadilika
+  // (si wakati wa mount — ili ?ukurasa=N kutoka URL udumu)
+  const filterSig = JSON.stringify([searchQuery, filters, sortBy, categoryKey]);
+  const prevSig = useRef(filterSig);
+  useEffect(() => {
+    if (prevSig.current !== filterSig) {
+      prevSig.current = filterSig;
+      setCurrentPage(1);
+    }
+  }, [filterSig]);
+
+  // Sync state → URL (replace, ili back button isijae historia)
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (searchQuery) next.set("tafuta", searchQuery);
+    if (sortBy !== "newest") next.set("sort", sortBy);
+    if (filters.priceRange !== null) next.set("bei", String(filters.priceRange));
+    if (filters.verified) next.set("verified", "1");
+    if (filters.featured) next.set("featured", "1");
+    if ((filters.location || "").trim()) next.set("eneo", filters.location.trim());
+    if (safePage > 1) next.set("ukurasa", String(safePage));
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, sortBy, filters, safePage]);
 
   const handleToggleSave = (id) => {
     const listing = paginatedProperties.find((l) => l.id === id) || allProperties.find((l) => l.id === id);
@@ -490,7 +563,7 @@ export default function CategoryPage() {
             </div>
 
             {/* Active filter chips */}
-            {(filters.priceRange !== null || filters.verified || filters.featured || searchQuery) && (
+            {(filters.priceRange !== null || filters.verified || filters.featured || (filters.location || "").trim() || searchQuery) && (
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <span className="text-xs text-secondary">
                   {t(lang, "Vichujio vilivyotumika:", "Active filters:")}
@@ -499,6 +572,15 @@ export default function CategoryPage() {
                   <span className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-[#FEA406]">
                     "{searchQuery}"
                     <button onClick={() => setSearchQuery("")} aria-label={t(lang, "Ondoa", "Remove")}>
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {(filters.location || "").trim() && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[color:rgb(var(--c-gold)/0.14)] px-2.5 py-1 text-xs font-medium text-[#A35F00] dark:text-[#FEA406]">
+                    <MapPin size={11} />
+                    {filters.location.trim()}
+                    <button onClick={() => setFilters({ ...filters, location: "" })} aria-label={t(lang, "Ondoa", "Remove")}>
                       <X size={12} />
                     </button>
                   </span>
@@ -521,7 +603,7 @@ export default function CategoryPage() {
                 )}
                 <button
                   onClick={() => {
-                    setFilters({ priceRange: null, verified: false, featured: false });
+                    setFilters({ ...EMPTY_FILTERS });
                     setSearchQuery("");
                   }}
                   className="text-xs font-medium text-[#C1502E] hover:underline"
@@ -563,7 +645,7 @@ export default function CategoryPage() {
                   <div className="mt-8 flex items-center justify-center gap-2">
                     <button
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
+                      disabled={safePage === 1}
                       aria-label={t(lang, "Nyuma", "Previous")}
                       className="grid h-9 w-9 place-items-center rounded-lg border border-[color:rgb(var(--c-hairline))] text-primary transition-colors hover:bg-[color:rgb(var(--c-page))] disabled:opacity-40"
                     >
@@ -575,7 +657,7 @@ export default function CategoryPage() {
                         onClick={() => setCurrentPage(page)}
                         className="grid h-9 w-9 place-items-center rounded-lg text-sm font-medium transition-colors"
                         style={
-                          currentPage === page
+                          safePage === page
                             ? { background: "#FEA406", color: "#011957" }
                             : {
                                 border: "1px solid rgb(var(--c-hairline))",
@@ -588,7 +670,7 @@ export default function CategoryPage() {
                     ))}
                     <button
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
+                      disabled={safePage === totalPages}
                       aria-label={t(lang, "Mbele", "Next")}
                       className="grid h-9 w-9 place-items-center rounded-lg border border-[color:rgb(var(--c-hairline))] text-primary transition-colors hover:bg-[color:rgb(var(--c-page))] disabled:opacity-40"
                     >
@@ -614,7 +696,7 @@ export default function CategoryPage() {
                 </p>
                 <button
                   onClick={() => {
-                    setFilters({ priceRange: null, verified: false, featured: false });
+                    setFilters({ ...EMPTY_FILTERS });
                     setSearchQuery("");
                   }}
                   className="mt-4 rounded-lg px-5 py-2 text-sm font-semibold text-[#011957]"

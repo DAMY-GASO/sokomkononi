@@ -6,6 +6,7 @@ import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
 import PageLoader from "../../components/PageLoader.jsx";
 import Captcha, { isCaptchaEnabled } from "../../components/Captcha.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { getRateLimit, useLockout, lockMessage } from "../../utils/authErrors.js";
 
 const icons = {
   mail: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>),
@@ -53,6 +54,8 @@ export default function LoginPage() {
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaNonce, setCaptchaNonce] = useState(0);
   const [remember, setRemember] = useState(true);
+  // Rate limiting (429): fomu inafungwa na countdown inaonyeshwa
+  const [lockLeft, startLock] = useLockout();
   // Google redirect (Safari/iPhone): onyesha loader badala ya fomu ya login
   // inayoonekana kwa sekunde chache wakati token inathibitishwa.
   const [googleRedirectBusy, setGoogleRedirectBusy] = useState(false);
@@ -106,11 +109,14 @@ export default function LoginPage() {
       setError(tx("Weka nambari.", "Enter the code."));
       return;
     }
+    if (lockLeft > 0) return;
     setError("");
     setLoading(true);
     const res = await verify2faLoginAsync({ codeToken, code, remember });
     setLoading(false);
     if (!res.ok) {
+      const rl = getRateLimit(res.error);
+      if (rl) { startLock(rl.seconds); return; }
       setError(getErrorMessage(res.error, tx("Nambari si sahihi.", "Invalid code.")));
       return;
     }
@@ -129,6 +135,7 @@ export default function LoginPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (lockLeft > 0) return;
 
     if (!form.identifier.trim() || !form.password) {
       setError(t("login_error_required"));
@@ -136,10 +143,8 @@ export default function LoginPage() {
     }
     const v = form.identifier.trim();
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-    const phoneDigits = v.replace(/\D/g, "");
-    const isPhone = phoneDigits.length >= 9 && phoneDigits.length <= 15;
-    if (!isEmail && !isPhone) {
-      setError(tx("Weka barua pepe au namba sahihi.", "Enter a valid email or phone number."));
+    if (!isEmail) {
+      setError(tx("Weka barua pepe sahihi.", "Enter a valid email address."));
       return;
     }
 
@@ -160,12 +165,20 @@ export default function LoginPage() {
       return;
     }
     if (!res.ok) {
-      setError(getErrorMessage(res.error, t("login_error_default")));
+      const rl = getRateLimit(res.error);
+      if (rl) {
+        setError("");
+        startLock(rl.seconds);
+      } else {
+        setError(getErrorMessage(res.error, t("login_error_default")));
+      }
       resetCaptcha();
       return;
     }
     finishLogin();
   }
+
+  const lockMsg = lockLeft > 0 ? lockMessage(lang, lockLeft) : "";
 
   if (googleRedirectBusy) return <PageLoader />;
 
@@ -247,11 +260,11 @@ export default function LoginPage() {
                     }
                   />
 
-                  {error && <p className="text-rust text-body-sm text-center">{error}</p>}
+                  {(lockMsg || error) && <p className="text-rust text-body-sm text-center">{lockMsg || error}</p>}
 
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || lockLeft > 0}
                     className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn disabled:cursor-not-allowed"
                   >
                     {loading ? t("login_submitting") : tx("Thibitisha", "Verify")}
@@ -347,11 +360,11 @@ export default function LoginPage() {
 
                   <Captcha key={captchaNonce} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken("")} />
 
-                  {error && <p className="text-rust text-body-sm">{error}</p>}
+                  {(lockMsg || error) && <p className="text-rust text-body-sm">{lockMsg || error}</p>}
 
                   <button
                     type="submit"
-                    disabled={loading || (isCaptchaEnabled && !captchaToken)}
+                    disabled={loading || lockLeft > 0 || (isCaptchaEnabled && !captchaToken)}
                     className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn disabled:cursor-not-allowed"
                   >
                     {loading ? t("login_submitting") : t("login_submit")}
