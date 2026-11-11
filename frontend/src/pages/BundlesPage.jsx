@@ -1,16 +1,12 @@
 // ============================================================
-// BundlesPage.jsx
-// User anaona na kununua bundles/vifurushi vya huduma.
-// Bilingual kamili + mobile-responsive.
-// Types: listing, reservation, success, package, boost, leading,
-//        ads, premium
+// BundlesPage.jsx — B.10 FINAL
 //
 // Marekebisho:
-//  - TYPE_LABELS.success → "Mafanikio" / "Success"
-//  - Inapokea `role` prop ("seller" | "buyer") kuchuja vifurushi
+//  ✅ Ongeza <ExpiringCreditsBanner /> kabla ya salio
+//  ✅ Kila kitu kingine kimebaki kama kilivyo
 // ============================================================
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   Package,
   ListChecks,
@@ -25,10 +21,16 @@ import {
   Wallet,
   FileText,
   Crown,
+  History,
+  ChevronDown,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
 
 import { COLORS, formatTZS } from "./dashboard/components/shared";
 import PaymentGateway from "./dashboard/components/PaymentGateway";
+// ✅ MPYA
+import ExpiringCreditsBanner from "./dashboard/components/ExpiringCreditsBanner.jsx";
 import { useActiveBundles } from "../config/bundlesStore.js";
 import {
   useUserCredits,
@@ -80,6 +82,16 @@ const TYPE_LABELS = {
   ads: { sw: "Matangazo", en: "Ads" },
   premium: { sw: "Hadhi ya Juu", en: "Premium" },
 };
+
+// Jumla ya salio lililobaki (kwa kulinganisha kabla/baada ya malipo)
+const totalRemaining = (credits) =>
+  credits && typeof credits === "object"
+    ? Object.entries(credits).reduce(
+        (sum, [k, v]) =>
+          k === "services" ? sum : sum + (Number(v?.remaining) || 0),
+        0
+      )
+    : 0;
 
 // Aina zinazomhusu muuzaji (Seller)
 const SELLER_TYPES = ["listing", "boost", "leading", "ads", "premium", "package"];
@@ -183,6 +195,128 @@ function BundleCard({ bundle, lang, onBuy, owned }) {
   );
 }
 
+// ============================================================
+// CREDITS HISTORY — GET /credits/usage/
+// Ikiwa endpoint bado haipo (404/405) tunaeleza wazi badala ya
+// kuonyesha orodha tupu inayodanganya.
+// ============================================================
+function CreditsHistory({ lang }) {
+  const t = (sw, en) => (lang === "sw" ? sw : en);
+  const [open, setOpen] = useState(false);
+  const [state, setState] = useState("idle"); // idle|loading|ready|unavailable|error
+  const [rows, setRows] = useState([]);
+
+  const load = useCallback(async () => {
+    setState("loading");
+    try {
+      const data = await api.get("/credits/usage/");
+      const list = Array.isArray(data) ? data : data?.results || [];
+      setRows(list);
+      setState("ready");
+    } catch (err) {
+      setState(err?.status === 404 || err?.status === 405 ? "unavailable" : "error");
+    }
+  }, []);
+
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next && (state === "idle" || state === "error")) load();
+  };
+
+  const rowLabel = (r) => {
+    const key = r.service || r.credit_type || r.type;
+    const label = CREDIT_LABELS[key];
+    return label ? label[lang] || label.sw : key || t("Huduma", "Service");
+  };
+  const rowDate = (r) => {
+    const d = r.created_at || r.at || r.used_at;
+    const dt = d ? new Date(d) : null;
+    return dt && !Number.isNaN(dt.getTime())
+      ? dt.toLocaleString(lang === "sw" ? "sw-TZ" : "en-US", {
+          day: "2-digit", month: "short", year: "numeric",
+          hour: "2-digit", minute: "2-digit",
+        })
+      : "";
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 mb-5 sm:mb-6 max-w-lg mx-auto">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-2 p-3 sm:p-4"
+      >
+        <span className="flex items-center gap-2 text-xs font-semibold text-secondary">
+          <History size={14} color={COLORS.gold} />
+          {t("Historia ya Matumizi ya Salio", "Credit Usage History")}
+        </span>
+        <ChevronDown
+          size={14}
+          className={`text-muted transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+          {state === "loading" && (
+            <div className="text-center py-3">
+              <Loader2 size={16} className="animate-spin inline text-muted" />
+            </div>
+          )}
+          {state === "unavailable" && (
+            <p className="text-[11px] text-secondary text-center py-2">
+              {t(
+                "Historia ya matumizi bado haipatikani. Itaonekana hapa itakapowashwa.",
+                "Usage history isn't available yet. It will show here once enabled."
+              )}
+            </p>
+          )}
+          {state === "error" && (
+            <div className="text-center py-2">
+              <p className="text-[11px] mb-2" style={{ color: COLORS.rust }}>
+                {t("Imeshindwa kupakia historia.", "Failed to load history.")}
+              </p>
+              <button
+                type="button"
+                onClick={load}
+                className="text-[11px] font-semibold underline text-secondary"
+              >
+                {t("Jaribu tena", "Try again")}
+              </button>
+            </div>
+          )}
+          {state === "ready" && rows.length === 0 && (
+            <p className="text-[11px] text-secondary text-center py-2">
+              {t("Bado hujatumia salio lolote.", "You haven't used any credits yet.")}
+            </p>
+          )}
+          {state === "ready" && rows.length > 0 && (
+            <ul className="flex flex-col divide-y divide-gray-100 max-h-60 overflow-y-auto">
+              {rows.map((r, i) => (
+                <li key={r.id || i} className="flex items-center justify-between gap-2 py-2 text-left">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-primary truncate">
+                      {rowLabel(r)}
+                    </p>
+                    <p className="text-[10px] text-muted truncate">
+                      {[r.description || r.reference, rowDate(r)].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold text-secondary shrink-0">
+                    −{Number(r.amount ?? r.quantity ?? 1)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BundlesPage({ role = "seller" }) {
   const { lang } = useLanguage();
   const { user } = useAuth();
@@ -192,6 +326,8 @@ export default function BundlesPage({ role = "seller" }) {
   const [selectedType, setSelectedType] = useState("all");
   const [payingBundle, setPayingBundle] = useState(null);
   const lastPurchaseIdRef = useRef(null);
+  const creditsBeforeRef = useRef(0);
+  const [notice, setNotice] = useState(null); // {type:"ok"|"pending", text}
 
   const t = (sw, en) => (lang === "sw" ? sw : en);
 
@@ -217,37 +353,54 @@ export default function BundlesPage({ role = "seller" }) {
 
   const handleBuy = (bundle) => {
     if (!user) return;
+    setNotice(null);
+    creditsBeforeRef.current = totalRemaining(userCredits);
     setPayingBundle(bundle);
   };
 
   const handlePaymentSuccess = async () => {
     if (!user || !payingBundle) return;
-    const delays = [0, 2000, 4000, 6000];
+    const delays = [0, 2000, 4000, 6000, 8000];
+    let arrived = false;
     for (const ms of delays) {
       if (ms) await new Promise((r) => setTimeout(r, ms));
       try {
         const r = await hydrateUserCreditsFromApi(user.id);
-        if (r?.ok) {
-          const hasCredits =
-            r.credits && Object.keys(r.credits).some(
-              (k) => k !== "services" && (r.credits[k]?.remaining || 0) > 0
-            );
-          if (hasCredits) break;
+        if (r?.ok && totalRemaining(r.credits) > creditsBeforeRef.current) {
+          arrived = true;
+          break;
         }
       } catch (err) {
         console.warn("[BundlesPage] credit refresh retry failed:", err);
       }
     }
     setPayingBundle(null);
+    setNotice(
+      arrived
+        ? {
+            type: "ok",
+            text: t(
+              "Malipo yamekamilika — salio limeingizwa kwenye akaunti yako.",
+              "Payment complete — credits have been added to your account."
+            ),
+          }
+        : {
+            type: "pending",
+            text: t(
+              "Malipo yamepokelewa lakini salio bado linachakatwa. Litaonekana hivi karibuni — onyesha upya ukurasa baada ya dakika chache.",
+              "Payment received but credits are still processing. They'll appear shortly — refresh the page in a few minutes."
+            ),
+          }
+    );
   };
 
   const allowedCreditKeys = role === "buyer" 
     ? ["reservation", "success"] 
-    : ["listing", "boost", "leading", "ads"];
+    : ["listing", "boost", "leading", "ads", "premium"];
 
   const activeCredits = userCredits
     ? Object.entries(CREDIT_LABELS)
-        .filter(([key]) => allowedCreditKeys.includes(key)) // ⬅️ Filter kuu hapa
+        .filter(([key]) => allowedCreditKeys.includes(key))
         .map(([key, label]) => ({
           key,
           label: label[lang] || label.sw,
@@ -255,6 +408,7 @@ export default function BundlesPage({ role = "seller" }) {
         }))
         .filter((c) => c.remaining > 0)
     : [];
+
   return (
     <div
       style={{
@@ -286,6 +440,9 @@ export default function BundlesPage({ role = "seller" }) {
           </p>
         </div>
 
+        {/* ✅ MPYA: Expiring credits banner */}
+        <ExpiringCreditsBanner userCredits={userCredits} />
+
         {/* CREDITS BALANCE */}
         {activeCredits.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 mb-5 sm:mb-6 max-w-lg mx-auto">
@@ -312,6 +469,35 @@ export default function BundlesPage({ role = "seller" }) {
             </div>
           </div>
         )}
+
+        {/* NOTICE baada ya malipo */}
+        {notice && (
+          <div
+            role="status"
+            className="max-w-lg mx-auto mb-5 rounded-xl border px-3 py-2.5 flex items-start gap-2 text-left"
+            style={{
+              background: notice.type === "ok" ? "rgba(47,109,79,0.1)" : "rgba(254,164,6,0.12)",
+              borderColor: notice.type === "ok" ? "rgba(47,109,79,0.3)" : "rgba(254,164,6,0.4)",
+            }}
+          >
+            <CheckCircle2
+              size={16}
+              color={notice.type === "ok" ? COLORS.green : COLORS.gold}
+              className="shrink-0 mt-0.5"
+            />
+            <p className="text-xs text-primary flex-1">{notice.text}</p>
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+              className="text-[11px] font-semibold text-secondary shrink-0"
+            >
+              {t("Funga", "Dismiss")}
+            </button>
+          </div>
+        )}
+
+        {/* CREDITS HISTORY */}
+        {user && <CreditsHistory lang={lang} />}
 
         {/* TYPE FILTER */}
         <div className="flex justify-start sm:justify-center gap-2 mb-4 sm:mb-5 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
