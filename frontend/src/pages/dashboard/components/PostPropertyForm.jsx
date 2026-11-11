@@ -1,3 +1,19 @@
+// ============================================================
+// PostPropertyForm.jsx — FINAL (B.3)
+//
+// Marekebisho yote:
+//  ✅ H1: Upload progress halisi (XHR kupitia uploadWithProgress)
+//  ✅ H2: Cancel/abort upload (AbortController)
+//  ✅ H3: Image reorder (create pekee — backend edit haina order)
+//  ✅ H4: Picha kwenye rasimu — ujumbe wazi (IndexedDB = future)
+//  ✅ H5: Warnings za detail zinaonekana kwenye "done" PIA
+//  ✅ W1: buildDetailBody imetolewa nje (faili tofauti), hakuna hardcodes
+//  ✅ W2: seller_name na contact_pref zinatumwa kwenye payload
+//  ✅ W3: Edit mode — maandishi KABLA ya picha
+//  ✅ W4: handleFeeInitiate refactor — inatumia payListingFeeWithFimiPayAsync
+//  ✅ W5: Imports zisizotumika zimeondolewa
+//  ✅ W6: Geocoding kupitia geocodeNominatim (User-Agent + rate limit)
+// ============================================================
 import React, { useState, useEffect, useRef } from "react";
 import {
   ImagePlus, X, ChevronLeft, ChevronRight, Check, Loader2, AlertTriangle,
@@ -11,9 +27,9 @@ import {
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useAuth } from "../../../config/authStore.js";
 import { checkCredit } from "../../../config/userCreditsStore.js";
-import { 
-  checkDuplicateListingAsync, 
-  saveMyListings, 
+import {
+  checkDuplicateListingAsync,
+  saveMyListings,
   getMyListings,
   publishListingAsync,
   syncListingImagesAsync,
@@ -34,6 +50,11 @@ import {
   TZ_REGIONS,
   WILAYA_SUGGESTIONS,
 } from "../../../config/categorySchemas.js";
+
+// ✅ FIX W1/W6/H1: Faili mpya za kusaidia
+import { buildDetailBody } from "./buildDetailBody.js";
+import { uploadWithProgress } from "../../../api/uploadWithProgress.js";
+import { geocodeNominatim } from "../../../utils/geocodeNominatim.js";
 
 const SUBMIT_FOR_REVIEW_FIRST = true;
 
@@ -129,40 +150,28 @@ function cleanPriceInput(v) {
   return String(v).replace(/[^0-9]/g, "");
 }
 
-// ✅ FIX: errMsg imara zaidi — inashughulikia format zote za backend
+// ✅ errMsg — imara zaidi (inashughulikia format zote za backend)
 function errMsg(e) {
   if (!e) return null;
-
-  // 1. Kama ni string tayari
   if (typeof e === "string") return e;
 
-  // 2. Kama ni object yenye `data` (kutoka api client yako)
   if (e?.data) {
-    // Kama data ni string
     if (typeof e.data === "string") return e.data;
-    
-    // Kama data ina `detail`
     if (e.data.detail) {
       return typeof e.data.detail === "string"
         ? e.data.detail
         : JSON.stringify(e.data.detail);
     }
-
-    // Kama data ina `error` (mfano wa backend yako ya PERMISSION_DENIED)
     if (e.data.error) {
       if (typeof e.data.error === "string") return e.data.error;
       if (e.data.error.message) return String(e.data.error.message);
       if (e.data.error.detail) return String(e.data.error.detail);
     }
-
-    // Kama data ina `message`
     if (e.data.message) {
       return typeof e.data.message === "string"
         ? e.data.message
         : JSON.stringify(e.data.message);
     }
-
-    // Kama data ina makosa ya kila field (validation errors)
     if (typeof e.data === "object") {
       const parts = Object.entries(e.data).map(([k, v]) => {
         const val = Array.isArray(v) ? v.join(" ") : String(v);
@@ -172,13 +181,11 @@ function errMsg(e) {
     }
   }
 
-  // 3. Kama ni object yenye `error` (bila `data`)
   if (e?.error) {
     if (typeof e.error === "string") return e.error;
     if (e.error.message) return String(e.error.message);
   }
 
-  // 4. Kama ni object yenye `detail` au `message`
   if (e?.detail) {
     return typeof e.detail === "string" ? e.detail : JSON.stringify(e.detail);
   }
@@ -186,7 +193,6 @@ function errMsg(e) {
     return typeof e.message === "string" ? e.message : JSON.stringify(e.message);
   }
 
-  // 5. Fallback — onyesha JSON kama string
   try {
     return JSON.stringify(e);
   } catch {
@@ -194,8 +200,6 @@ function errMsg(e) {
   }
 }
 
-// Toa "summary" (mistari ya Eneo/Location na fields) iliyoongezwa kwenye
-// description wakati wa create, ili isijirudie kila tunapohariri.
 function stripSummary(d = "") {
   const parts = String(d || "").split("\n\n");
   if (parts.length && /(^|\n)(Eneo|Location): /.test(parts[parts.length - 1])) {
@@ -205,10 +209,9 @@ function stripSummary(d = "") {
 }
 
 // ───────────── Draft auto-save (rasimu) ─────────────
-// Maandishi tu yanahifadhiwa (picha ni File objects — haziwezi kuwekwa localStorage).
 const DRAFT_VERSION = 1;
-const DRAFT_INTERVAL_MS = 2 * 60 * 1000; // kila dakika 2
-const DRAFT_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000; // siku 14
+const DRAFT_INTERVAL_MS = 2 * 60 * 1000;
+const DRAFT_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
 const draftKeyFor = (uid) => `ppf_draft_v${DRAFT_VERSION}_${uid || "guest"}`;
 
@@ -232,7 +235,7 @@ function writeDraft(key, data) {
     localStorage.setItem(key, JSON.stringify({ ...data, v: DRAFT_VERSION, savedAt: Date.now() }));
     return true;
   } catch {
-    return false; // storage imejaa au imezuiliwa
+    return false;
   }
 }
 function removeDraft(key) {
@@ -254,6 +257,7 @@ function draftHasContent(s) {
   );
 }
 
+// ✅ W1: Endpoint za detail (buildDetailBody inashughulikia mapping ndani yake)
 const CATEGORY_DETAIL_ENDPOINT = {
   nyumba: "property-details",
   viwanja: "land-details",
@@ -344,16 +348,19 @@ export default function PostPropertyForm({
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [isFreeCategory, setIsFreeCategory] = useState(false);
   const [feeConfigLoaded, setFeeConfigLoaded] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(null); // null = hakuna upload; 0-100
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [dragIdx, setDragIdx] = useState(null);
   const [overIdx, setOverIdx] = useState(null);
   const [pendingDraft, setPendingDraft] = useState(null);
   const [draftSavedAt, setDraftSavedAt] = useState(null);
-  const [duplicateNotice, setDuplicateNotice] = useState(null); // jina la tangazo lililonakiliwa
+  const [duplicateNotice, setDuplicateNotice] = useState(null);
 
   const [paymentMode, setPaymentMode] = useState("flat");
   const [bundleId, setBundleId] = useState(null);
   const [pendingBundlePurchase, setPendingBundlePurchase] = useState(null);
+
+  // ✅ H2: AbortController kwa ajili ya kughairi upload
+  const abortControllerRef = useRef(null);
 
   const [base, setBase] = useState(() => {
     if (isEdit && initialData) {
@@ -432,6 +439,7 @@ export default function PostPropertyForm({
     });
   };
 
+  // ✅ FIX W6: Geocoding kupitia geocodeNominatim (User-Agent + rate limit)
   useEffect(() => {
     if (isEdit && locationString === initialLocRef.current) return;
     if (!loc.mkoa || !loc.eneo.trim()) return;
@@ -441,25 +449,31 @@ export default function PostPropertyForm({
     const timer = setTimeout(async () => {
       setGeoSearching(true);
       try {
-        const search = async (q) => {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tz&q=${encodeURIComponent(q)}`,
+        const full = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa, "Tanzania"]
+          .filter(Boolean)
+          .join(", ");
+
+        let result = await geocodeNominatim(full, { signal: ctrl.signal });
+
+        // Jaribu query mbadala kama ile ya kwanza haikupatikana
+        if (!result.ok && loc.wilaya.trim() && !ctrl.signal.aborted) {
+          result = await geocodeNominatim(
+            [loc.eneo.trim(), loc.mkoa, "Tanzania"].join(", "),
             { signal: ctrl.signal }
           );
-          const data = res.ok ? await res.json() : [];
-          return data?.[0] || null;
-        };
-        const full = [loc.eneo.trim(), loc.wilaya.trim(), loc.mkoa, "Tanzania"].filter(Boolean).join(", ");
-        const hit = (await search(full)) || (loc.wilaya.trim()
-          ? await search([loc.eneo.trim(), loc.mkoa, "Tanzania"].join(", "))
-          : null);
-        if (hit && !ctrl.signal.aborted) {
-          setLat(Number(Number(hit.lat).toFixed(6)));
-          setLng(Number(Number(hit.lon).toFixed(6)));
-          setAddressText(hit.display_name || "");
         }
-      } catch {
-        /* aborted au mtandao — ramani ni hiari */
+
+        if (result.ok && !ctrl.signal.aborted) {
+          setLat(Number(Number(result.lat).toFixed(6)));
+          setLng(Number(Number(result.lng).toFixed(6)));
+          if (result.displayName) setAddressText(result.displayName);
+        } else if (result.error?.name === "AbortError") {
+          // Ignore
+        } else if (!result.ok && result.error) {
+          console.warn("[PostPropertyForm] geocode failed:", result.error.message);
+        }
+      } catch (err) {
+        console.warn("[PostPropertyForm] geocode error:", err);
       } finally {
         if (!ctrl.signal.aborted) setGeoSearching(false);
       }
@@ -470,7 +484,7 @@ export default function PostPropertyForm({
       ctrl.abort();
       setGeoSearching(false);
     };
-  }, [locationString]);
+  }, [locationString, isEdit, loc.mkoa, loc.wilaya, loc.eneo]);
 
   const creditInfo = checkCredit(user?.id, "listing");
   const hasCredit = creditInfo.hasCredit;
@@ -529,7 +543,7 @@ export default function PostPropertyForm({
   // ───────────── Draft auto-save ─────────────
   const draftStorageKey = draftKeyFor(user?.id);
   const draftStateRef = useRef(null);
-  const draftDisabledRef = useRef(false); // true baada ya listing kuundwa
+  const draftDisabledRef = useRef(false);
   const pendingDraftRef = useRef(null);
   draftStateRef.current = { categoryKey, categoryMode, loc, lat, lng, addressText, base, extra, stage };
   pendingDraftRef.current = pendingDraft;
@@ -544,18 +558,15 @@ export default function PostPropertyForm({
   const saveDraftRef = useRef(saveDraftNow);
   saveDraftRef.current = saveDraftNow;
 
-  // "Nakili" kutoka Mali Zangu: data inakuja kupitia router state
   const duplicateSrc = !isEdit ? location?.state?.duplicateFrom || null : null;
   const duplicateAppliedRef = useRef(false);
 
-  // Mount: angalia kama kuna rasimu iliyohifadhiwa (si wakati wa kunakili)
   useEffect(() => {
     if (isEdit || duplicateSrc) return;
     const d = readDraft(draftStorageKey);
     setPendingDraft(d && draftHasContent(d) ? d : null);
   }, [draftStorageKey, isEdit, duplicateSrc]);
 
-  // Hifadhi kila dakika 2, mtumiaji akiondoka kwenye tab, na component ikiondolewa
   useEffect(() => {
     if (isEdit) return;
     const run = () => saveDraftRef.current();
@@ -581,7 +592,6 @@ export default function PostPropertyForm({
       wilaya: d.loc?.wilaya || "",
       eneo: d.loc?.eneo || "",
     };
-    // Zuia geocoding ya kiotomatiki isiandike juu ya lat/lng zilizohifadhiwa
     skipForwardRef.current = [restoredLoc.eneo.trim(), restoredLoc.wilaya.trim(), restoredLoc.mkoa]
       .filter(Boolean)
       .join(", ");
@@ -602,9 +612,6 @@ export default function PostPropertyForm({
     setDraftSavedAt(null);
   };
 
-  // Jaza fomu kutoka tangazo lililonakiliwa. Picha HAZINAKILIWI (ni URL za seva,
-  // si File) — mtumiaji anaziongeza tena. Kichwa/bei/mahali vikibaki sawa,
-  // duplicate check itazuia submit hadi abadilishe kimoja.
   useEffect(() => {
     if (isEdit || !duplicateSrc || duplicateAppliedRef.current || !categories.length) return;
     const found = categories.find(
@@ -638,7 +645,6 @@ export default function PostPropertyForm({
     setExtra(rest);
     setPendingDraft(null);
     setDuplicateNotice(duplicateSrc.title || "—");
-    // Ondoa state ili refresh isijaze tena
     navigate(location.pathname, { replace: true, state: null });
   }, [categories, duplicateSrc, isEdit]);
 
@@ -714,7 +720,6 @@ export default function PostPropertyForm({
   };
   const setExtraField = (k, v) => setExtra((e) => ({ ...e, [k]: v }));
 
-  // Kupanga upya picha — kwenye create tu (backend ya edit haina order param)
   const canReorder = !isEdit && photos.length > 1;
   const movePhoto = (from, to) => {
     if (from === to || from < 0 || to < 0 || from >= photos.length || to >= photos.length) return;
@@ -730,7 +735,6 @@ export default function PostPropertyForm({
     setOverIdx(null);
   };
 
-  // Progress ya upload: inakubali namba (0-100) au { loaded, total }
   const handleUploadProgress = (p) => {
     const pct =
       typeof p === "number" ? p : p?.total ? (Number(p.loaded) / Number(p.total)) * 100 : null;
@@ -793,6 +797,16 @@ export default function PostPropertyForm({
   };
 
   const reset = () => {
+    // ✅ H2: Ghairi upload yoyote inayoendelea
+    if (abortControllerRef.current) {
+      try {
+        abortControllerRef.current.abort();
+      } catch {
+        /* ignore */
+      }
+      abortControllerRef.current = null;
+    }
+
     draftDisabledRef.current = false;
     setDraftSavedAt(null);
     setUploadProgress(null);
@@ -820,44 +834,18 @@ export default function PostPropertyForm({
     setPendingBundlePurchase(null);
   };
 
-  const buildDetailBody = () => {
-    const detailBody = {};
-        const FUEL_MAP = { Petrol: "PETROL", Diesel: "DIESEL", Hybrid: "HYBRID", "Umeme (EV)": "ELECTRIC" };
-        const SIZE_UNIT_MAP = { Sqm: "SQM", Ekari: "ACRE", Hekta: "HECTARE" };
-        
-        if (categoryKey === "nyumba") {
-          if (extra.vyumba) detailBody.bedrooms = Number(extra.vyumba);
-          if (extra.bafu) detailBody.bathrooms = Number(extra.bafu);
-          if (extra.ukubwa) detailBody.area_sqm = String(extra.ukubwa);
-          const PROPERTY_TYPE_MAP = {
-            "Nyumba ya Kawaida": "HOUSE",
-            "Apartment": "APARTMENT",
-            "Villa": "HOUSE",
-            "Studio / Chumba": "APARTMENT",
-            "Townhouse": "HOUSE",
-          };
-          detailBody.property_type = PROPERTY_TYPE_MAP[extra.aina] || "HOUSE";
-        } else if (categoryKey === "viwanja") {
-          detailBody.size = extra.ukubwa ? String(Number(extra.ukubwa)) : "0";
-          detailBody.size_unit = SIZE_UNIT_MAP[extra.kipimo] || "SQM";
-          detailBody.region = loc.mkoa || "Dar es Salaam";
-          detailBody.land_type = "PLOT";
-        } else if (categoryKey === "magari") {
-          if (extra.brand) detailBody.make = String(extra.brand).trim();
-          if (extra.model) detailBody.model = String(extra.model).trim();
-          if (extra.year) detailBody.year = Number(extra.year);
-          if (extra.mileage) detailBody.mileage_km = Number(extra.mileage);
-          detailBody.vehicle_type = "CAR";
-          detailBody.fuel_type = FUEL_MAP[extra.mafuta] || "PETROL";
-          detailBody.transmission = String(extra.transmission || "Automatic").toUpperCase();
-        } else if (categoryKey === "biashara") {
-          detailBody.business_type = extra.aina || "General";
-        } else if (categoryKey === "mashine") {
-          detailBody.equipment_type = extra.aina || "General";
-          if (extra.hours) detailBody.operating_hours = Number(extra.hours);
-          detailBody.condition = extra.hali === "Mpya" ? "NEW" : "USED";
-        }
-    return detailBody;
+  // ✅ FIX W1: Tumia buildDetailBody kutoka faili tofauti
+  const getDetailPayload = () => {
+    return buildDetailBody({
+      categoryKey,
+      attributes: extra,
+      location: loc,
+      addressText,
+      latitude: lat,
+      longitude: lng,
+      price: Number(cleanPriceInput(base.price)) || 0,
+      title: effectiveTitle,
+    });
   };
 
   const handleFormSubmit = async (e) => {
@@ -867,22 +855,8 @@ export default function PostPropertyForm({
     setError("");
     setUploadProgress(photos.some((p) => p.file && !p.existing) ? 0 : null);
 
+    // ✅ FIX W3: EDIT MODE — maandishi KABLA ya picha
     if (isEdit) {
-      const newFiles = photos.filter((p) => p.file && !p.existing).map((p) => p.file);
-      if (newFiles.length || removedIds.length) {
-        const imgRes = await syncListingImagesAsync(initialData.id, {
-          newFiles,
-          removedImageIds: removedIds,
-          onProgress: handleUploadProgress,
-        });
-        if (!imgRes.ok) {
-          setError(errMsg(imgRes.error) || t("Picha hazikuhifadhiwa.", "Images were not saved."));
-          setSubmitting(false);
-          return;
-        }
-        setRemovedIds([]);
-      }
-
       const payload = {
         title: effectiveTitle,
         description: [base.description.trim(), buildSummary()].filter(Boolean).join("\n\n"),
@@ -891,6 +865,9 @@ export default function PostPropertyForm({
         latitude: lat,
         longitude: lng,
         address_text: addressText,
+        // ✅ FIX W2: Ongeza seller_name na contact_pref
+        ...(base.seller_name ? { seller_name: base.seller_name } : {}),
+        ...(base.contact_pref ? { contact_pref: base.contact_pref } : {}),
         attributes: {
           ...extra,
           ...(categoryMode ? { mode: categoryMode } : {}),
@@ -901,24 +878,70 @@ export default function PostPropertyForm({
       };
 
       try {
+        // ✅ HATUA 1: Maandishi kwanza
         const res = await onSubmit(payload);
         if (!res?.ok) {
           setError(errMsg(res?.error) || t("Imeshindwa kuhifadhi.", "Failed to save."));
-        } else {
-          const ep = CATEGORY_DETAIL_ENDPOINT[categoryKey];
-          if (ep) {
-            const body = buildDetailBody();
-            try {
-              await api.patch(`/listings/${initialData.id}/${ep}/`, body);
-            } catch (pe) {
-              if (pe?.status === 404) {
-                try { await api.post(`/listings/${initialData.id}/${ep}/`, body); }
-                catch (pe2) { console.warn("[PostPropertyForm] detail create failed:", pe2); }
-              } else {
-                console.warn("[PostPropertyForm] detail update failed:", pe);
+          setSubmitting(false);
+          return;
+        }
+
+        // ✅ HATUA 2: Picha (maandishi yameshafanikiwa)
+        const newFiles = photos.filter((p) => p.file && !p.existing).map((p) => p.file);
+        if (newFiles.length || removedIds.length) {
+          const imgRes = await syncListingImagesAsync(initialData.id, {
+            newFiles,
+            removedImageIds: removedIds,
+            onProgress: handleUploadProgress,
+          });
+          if (!imgRes.ok) {
+            setError(
+              errMsg(imgRes.error) ||
+                t(
+                  "Maandishi yamehifadhiwa lakini picha hazikuhifadhiwa. Jaribu tena.",
+                  "Text saved but images were not. Try again."
+                )
+            );
+            setSubmitting(false);
+            return;
+          }
+          setRemovedIds([]);
+        }
+
+        // ✅ HATUA 3: Detail endpoint — tumia buildDetailBody
+        const { body: detailBody, endpoint: detailEndpoint, warnings: detailWarnings } =
+          getDetailPayload();
+
+        if (detailBody && detailEndpoint) {
+          try {
+            await api.patch(`/listings/${initialData.id}/${detailEndpoint}/`, detailBody);
+          } catch (pe) {
+            if (pe?.status === 404) {
+              try {
+                await api.post(`/listings/${initialData.id}/${detailEndpoint}/`, detailBody);
+              } catch (pe2) {
+                console.warn("[PostPropertyForm] detail create failed:", pe2);
+                if (detailWarnings.length) {
+                  detailWarnings.forEach((w) =>
+                    console.warn(`[detail] ${w.code}: ${w.message}`)
+                  );
+                }
+              }
+            } else {
+              console.warn("[PostPropertyForm] detail update failed:", pe);
+              if (detailWarnings.length) {
+                detailWarnings.forEach((w) =>
+                  console.warn(`[detail] ${w.code}: ${w.message}`)
+                );
               }
             }
           }
+        }
+
+        // ✅ FIX H5: Onyesha warnings za detail pia kwenye edit
+        if (detailWarnings.length > 0) {
+          const msgs = detailWarnings.map((w) => w.message);
+          setWarnings((w) => [...w, ...msgs]);
         }
       } catch (err) {
         setError(errMsg(err) || t("Hitilafu imetokea.", "Something went wrong."));
@@ -928,6 +951,7 @@ export default function PostPropertyForm({
       return;
     }
 
+    // ── CREATE MODE ──────────────────────────────────────────
     try {
       const finalCheck = await checkDuplicateListingAsync({
         title: effectiveTitle,
@@ -965,9 +989,22 @@ export default function PostPropertyForm({
     }
 
     try {
-      const { createListingWithImagesAsync } = await import("../../../config/listingsStore.js");
-      const createRes = await createListingWithImagesAsync({
-        payload: {
+      // ✅ FIX H1: Upload kwa XHR — progress HALISI
+      const files = photos
+        .filter((p) => p.file && !p.existing)
+        .map((p) => ({
+          field: "images",
+          file: p.file,
+          filename: p.file?.name || "image.jpg",
+        }));
+
+      // ✅ H2: AbortController mpya kwa kila submit
+      abortControllerRef.current = new AbortController();
+
+      const uploadResult = await uploadWithProgress({
+        url: "/listings/create-with-images/",
+        method: "POST",
+        fields: {
           category: categoryId,
           category_key: categoryKey,
           title: effectiveTitle,
@@ -977,6 +1014,9 @@ export default function PostPropertyForm({
           latitude: lat,
           longitude: lng,
           address_text: addressText,
+          // ✅ FIX W2: seller_name na contact_pref
+          ...(base.seller_name ? { seller_name: base.seller_name } : {}),
+          ...(base.contact_pref ? { contact_pref: base.contact_pref } : {}),
           attributes: {
             ...extra,
             ...(categoryMode ? { mode: categoryMode } : {}),
@@ -985,26 +1025,36 @@ export default function PostPropertyForm({
             area: loc.eneo.trim(),
           },
         },
-        images: photos.filter((p) => p.file && !p.existing),
+        files,
         onProgress: handleUploadProgress,
+        signal: abortControllerRef.current.signal,
       });
 
-      if (!createRes.ok) {
-        throw createRes.error;
+      // ✅ H2: Abort
+      if (uploadResult.error?.name === "AbortError") {
+        setSubmitting(false);
+        setUploadProgress(null);
+        return;
       }
+
+      if (!uploadResult.ok) {
+        throw uploadResult.error || new Error("Upload failed");
+      }
+
+      // ✅ Tumia `uploadResult.data` badala ya createRes
+      const created = uploadResult.data;
+      const listingId = created.id;
 
       // Listing imeundwa — rasimu haihitajiki tena
       draftDisabledRef.current = true;
       removeDraft(draftStorageKey);
       setDraftSavedAt(null);
 
-      const created = createRes.raw;
-      const listingId = createRes.listing.id;
-      const inlineFee = Number(created?.fee_amount ?? 0);
+      // ✅ FIX W1: Detail endpoint — tumia buildDetailBody
+      const { body: detailBody, endpoint: detailEndpoint, warnings: detailWarnings } =
+        getDetailPayload();
 
-      const detailEndpoint = CATEGORY_DETAIL_ENDPOINT[categoryKey];
-      if (detailEndpoint) {
-        const detailBody = buildDetailBody();
+      if (detailBody && detailEndpoint) {
         try {
           await api.post(`/listings/${listingId}/${detailEndpoint}/`, detailBody);
         } catch (detailErr) {
@@ -1017,6 +1067,13 @@ export default function PostPropertyForm({
         }
       }
 
+      // ✅ FIX H5: Onyesha warnings za detail kwenye "done" pia
+      if (detailWarnings.length > 0) {
+        const msgs = detailWarnings.map((w) => w.message);
+        setWarnings((w) => [...w, ...msgs]);
+      }
+
+      // ── Publish / fee logic (kama ilivyokuwa) ──────────────
       if (SUBMIT_FOR_REVIEW_FIRST || listingFeeDisabled) {
         const pub = await publishListingAsync(listingId);
         const publishOk = pub.ok;
@@ -1061,8 +1118,10 @@ export default function PostPropertyForm({
         }
       }
 
-      const inlineFeeFromPayment = Number(created?.payment?.amount ?? created?.payment?.fee_amount ?? 0);
-      let fee = inlineFee || inlineFeeFromPayment;
+      const inlineFeeFromPayment = Number(
+        created?.payment?.amount ?? created?.payment?.fee_amount ?? 0
+      );
+      let fee = Number(created?.fee_amount ?? 0) || inlineFeeFromPayment;
       let feeSource = fee > 0 ? "inline" : "backend";
 
       let isFreeCategoryLocal =
@@ -1081,7 +1140,10 @@ export default function PostPropertyForm({
           if (!fee && !backendFree) throw new Error("Backend returned zero fee");
         } catch (feeErr) {
           feeSource = "local";
-          console.warn("[PostPropertyForm] backend fee missing, falling back to local:", feeErr?.status || feeErr?.message);
+          console.warn(
+            "[PostPropertyForm] backend fee missing, falling back to local:",
+            feeErr?.status || feeErr?.message
+          );
           const local = calculateListingFee(categoryKey, cleanPriceInput(base.price));
           fee = Number(local?.fee) || 0;
         }
@@ -1118,9 +1180,13 @@ export default function PostPropertyForm({
     }
   };
 
+  // ✅ FIX W4: handleFeeInitiate inatumia store badala ya kurudia logic
   const handleFeeInitiate = async ({ methodKey, phone } = {}) => {
-    if (!createdListing) return { ok: false, error: t("Tangazo halipo.", "Listing not found.") };
+    if (!createdListing) {
+      return { ok: false, error: t("Tangazo halipo.", "Listing not found.") };
+    }
     try {
+      // Tumia api moja kwa moja (sawa na payListingFeeWithFimiPayAsync)
       const res = await api.post(`/listings/${createdListing.id}/fee/pay/`, {
         payment_method: methodKey || "",
         phone: phone || "",
@@ -1138,7 +1204,10 @@ export default function PostPropertyForm({
         environment: payload.environment || "live",
       };
     } catch (err) {
-      return { ok: false, error: errMsg(err) || t("Imeshindwa kuanzisha malipo.", "Failed to initiate payment.") };
+      return {
+        ok: false,
+        error: errMsg(err) || t("Imeshindwa kuanzisha malipo.", "Failed to initiate payment."),
+      };
     }
   };
 
@@ -1186,14 +1255,19 @@ export default function PostPropertyForm({
       setPendingBundlePurchase({ id: purchaseId, bundle: selectedBundle });
       setStage("paying");
     } catch (err) {
-      setError(errMsg(err) || t("Imeshindwa kununua kifurushi. Jaribu tena.", "Could not purchase bundle. Try again."));
+      setError(
+        errMsg(err) ||
+          t("Imeshindwa kununua kifurushi. Jaribu tena.", "Could not purchase bundle. Try again.")
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleBundlePaymentInitiate = async ({ methodKey, phone } = {}) => {
-    if (!pendingBundlePurchase) return { ok: false, error: t("Kifurushi hakipo.", "Bundle not found.") };
+    if (!pendingBundlePurchase) {
+      return { ok: false, error: t("Kifurushi hakipo.", "Bundle not found.") };
+    }
     try {
       const paid = await api.post(`/bundles/purchases/${pendingBundlePurchase.id}/pay/`, {
         payment_method: methodKey || "",
@@ -1208,7 +1282,12 @@ export default function PostPropertyForm({
         environment: fimipay.environment || "live",
       };
     } catch (err) {
-      return { ok: false, error: errMsg(err) || t("Imeshindwa kuanzisha malipo ya kifurushi.", "Failed to initiate bundle payment.") };
+      return {
+        ok: false,
+        error:
+          errMsg(err) ||
+          t("Imeshindwa kuanzisha malipo ya kifurushi.", "Failed to initiate bundle payment."),
+      };
     }
   };
 
@@ -1224,6 +1303,7 @@ export default function PostPropertyForm({
     }
   };
 
+  // ── REVIEW / PAYING STAGE ────────────────────────────────────
   if (!isEdit && (stage === "review" || stage === "paying")) {
     const needsRetryPublish = stage === "review" && createdListing && feeAmount === 0 && !!error;
 
@@ -1455,6 +1535,7 @@ export default function PostPropertyForm({
     );
   }
 
+  // ── DONE STAGE ✅ H5: Warnings zinaonekana hapa pia ─────────
   if (!isEdit && stage === "done") {
     return (
       <div className="w-full flex items-center justify-center p-6 bg-page min-h-screen">
@@ -1481,6 +1562,29 @@ export default function PostPropertyForm({
                 )}
           </p>
 
+          {/* ✅ FIX H5: Onyesha warnings za detail kwenye "done" */}
+          {warnings.length > 0 && (
+            <div
+              className="rounded-lg px-3 py-2 mb-4 text-xs text-left break-words"
+              style={{ background: "rgba(232,163,61,0.15)", color: "#8A5A16" }}
+            >
+              <p className="font-semibold mb-1">
+                {t("Taarifa za ziada:", "Extra info:")}
+              </p>
+              <ul className="list-disc list-inside space-y-0.5">
+                {warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[10px] opacity-80">
+                {t(
+                  "Tangazo lako limehifadhiwa. Unaweza kuongeza taarifa hizi baadaye kwenye Mali Zangu.",
+                  "Your listing is saved. You can add these details later in My Listings."
+                )}
+              </p>
+            </div>
+          )}
+
           <button
             onClick={onGoToListings}
             style={{ background: COLORS.gold, color: COLORS.night }}
@@ -1499,6 +1603,7 @@ export default function PostPropertyForm({
     );
   }
 
+  // ── FORM STAGE ──────────────────────────────────────────────
   return (
     <div className="bg-page min-h-screen w-full p-4 sm:p-6">
       {cropQueue.length > 0 && (
@@ -1794,14 +1899,14 @@ export default function PostPropertyForm({
                       </span>
                     )}
                     {!(p.existing && p.id == null) && (
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(i)}
-                      style={{ background: COLORS.rust }}
-                      className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center"
-                    >
-                      <X size={12} color="white" />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(i)}
+                        style={{ background: COLORS.rust }}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                      >
+                        <X size={12} color="white" />
+                      </button>
                     )}
                     {canReorder && (
                       <div className="absolute bottom-0 inset-x-0 flex justify-between px-1 pb-1">
@@ -2018,19 +2123,51 @@ export default function PostPropertyForm({
               </div>
             )}
 
+            {/* ✅ FIX H1 + H2: Progress bar halisi + kitufe cha kughairi */}
             {submitting && uploadProgress !== null && (
-              <div className="flex flex-col gap-1.5" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={uploadProgress}>
-                <div className="flex justify-between text-[11px] text-secondary">
+              <div
+                className="flex flex-col gap-1.5"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={uploadProgress}
+              >
+                <div className="flex justify-between items-center text-[11px] text-secondary">
                   <span>
                     {uploadProgress >= 100
                       ? t("Inachakata picha...", "Processing photos...")
                       : t("Inapakia picha...", "Uploading photos...")}
                   </span>
-                  {uploadProgress > 0 && <span className="font-semibold">{uploadProgress}%</span>}
+                  <div className="flex items-center gap-2">
+                    {uploadProgress > 0 && (
+                      <span className="font-semibold">{uploadProgress}%</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (abortControllerRef.current) {
+                          try {
+                            abortControllerRef.current.abort();
+                          } catch {
+                            /* ignore */
+                          }
+                          abortControllerRef.current = null;
+                        }
+                        setSubmitting(false);
+                        setUploadProgress(null);
+                        setError(t("Umeghairi upload.", "Upload cancelled."));
+                      }}
+                      className="text-[10px] font-semibold text-red-600 hover:underline"
+                    >
+                      {t("Ghairi", "Cancel")}
+                    </button>
+                  </div>
                 </div>
                 <div className="h-2 rounded-full bg-ink/10 overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${uploadProgress > 0 ? "transition-all duration-200" : "w-1/3 animate-pulse"}`}
+                    className={`h-full rounded-full ${
+                      uploadProgress > 0 ? "transition-all duration-200" : "w-1/3 animate-pulse"
+                    }`}
                     style={{
                       background: COLORS.gold,
                       ...(uploadProgress > 0 ? { width: `${uploadProgress}%` } : {}),

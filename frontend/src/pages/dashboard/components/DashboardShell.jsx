@@ -5,7 +5,7 @@ import {
   Receipt, LayoutGrid, Clock3, CalendarCheck, Megaphone, Heart, Home,
   Globe, Check, TrendingUp, LogOut, User as UserIcon, Inbox, Shield,
   Package, Tag, ShoppingBag, ShieldCheck, MessageSquarePlus,
-  Plus, Share2, Users, Sun, Moon,
+  Plus, Share2, Users, Sun, Moon, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { COLORS } from "./shared.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
@@ -14,6 +14,10 @@ import MyVerificationsPanel from "./MyVerificationsPanel.jsx";
 import SellerFeedback from "../seller/SellerFeedback.jsx";
 import { useAuth, logoutAsync } from "../../../config/authStore.js";
 import { ADMIN_PATH } from "../../../config/adminPath.js";
+
+// ✅ FIX: Import rolesStore — RBAC inaunganishwa sasa
+import { useRoles, useSubAdminsWithRoles } from "../../../config/rolesStore.js";
+
 import {
   useMyListings,
   getMyListings,
@@ -63,6 +67,104 @@ import {
   useWaitingList,
   leaveWaitingList,
 } from "../../../config/waitingListStore.js";
+
+// ✅ FIX: Sidebar collapse persistence key
+const SIDEBAR_COLLAPSED_KEY = "sokomkononi_sidebar_collapsed_v1";
+
+function readSidebarCollapsed() {
+  try {
+    return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeSidebarCollapsed(v) {
+  try {
+    window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, v ? "1" : "0");
+  } catch { /* ignore */ }
+}
+
+// ✅ FIX: Admin blocked message — constant, inatafsiriwa kwa t() panapotumika
+const ADMIN_BLOCKED_MESSAGE = {
+  title: { sw: "Admin Hana Ruhusa Hapa", en: "Admin Cannot Access Here" },
+  body: {
+    sw: "Admin ana dashboard yake. Kama unataka kuingia dashboard za watumiaji, tafadhali tengeneza account nyingine kama Buyer au Seller.",
+    en: "Admin has their own dashboard. If you want to access user dashboards, please create another account as a Buyer or Seller.",
+  },
+  goAdmin: { sw: "Nenda Dashboard ya Admin", en: "Go to Admin Dashboard" },
+  logout: { sw: "Toka na uingie kama mtumiaji", en: "Log out and sign in as a user" },
+};
+
+// ✅ FIX: RBAC — mapping ya NAV key → PERMISSION key (rolesStore)
+// `null` = daima inaonekana (hakuna kizuizi cha RBAC)
+// Ikiwa NAV key haipo kwenye mapping, default = inaonekana
+const NAV_PERMISSION_MAP = {
+  seller: {
+    overview: null,
+    post: null,
+    listings: null,
+    leads: null,
+    boost: null,
+    leading: null,
+    advertise: null,
+    deals: "deals",
+    notifications: null,
+    transactions: null,
+    bundles: "bundles",
+    verification: "verification",
+    safety: "support",
+    feedback: null,
+  },
+  buyer: {
+    overview: null,
+    browse: null,
+    saved: null,
+    searches: null,
+    deals: "deals",
+    reservations: "deals",
+    notifications: null,
+    waiting: null,
+    transactions: null,
+    bundles: "bundles",
+    verification: "verification",
+    safety: "support",
+    feedback: null,
+  },
+};
+
+// ✅ FIX: Permissions helper — inachuja NAV kulingana na RBAC ya mtumiaji
+function canAccessNavKey(side, key, user, roles, staffList) {
+  // 1. Admin kamili — ruhusu kila kitu (Admin block ipo juu kwa admin property)
+  if (
+    user?.isStaff === true ||
+    user?.is_staff === true ||
+    user?.isSuperuser === true ||
+    user?.is_superuser === true ||
+    user?.role === "Admin" ||
+    user?.role === "admin" ||
+    user?.role === "ADMIN"
+  ) {
+    return true;
+  }
+
+  // 2. Pata role ya RBAC ya mtumiaji (kama yupo kwenye staff list)
+  const me = (staffList || []).find(
+    (s) => s.userId === user?.id || s.userId === user?.pk
+  );
+  if (!me || !me.active) {
+    // Si sub-admin au hajaamilishwa — ruhusu kila kitu
+    return true;
+  }
+
+  // 3. Pata role yake
+  const role = (roles || []).find((r) => r.id === me.roleId);
+  if (!role) return true;
+
+  // 4. Chuja kwa mapping
+  const permKey = NAV_PERMISSION_MAP?.[side]?.[key];
+  if (permKey == null) return true;
+  return (role.permissions || []).includes(permKey);
+}
 
 const SELLER_NAV = [
   { key: "overview", label: { sw: "Muhtasari", en: "Overview" }, icon: LayoutGrid },
@@ -134,9 +236,6 @@ const STATE_TO_URL = {
   },
 };
 
-// Loader inaonyeshwa mara ya kwanza dashboard inapofunguka (baada ya login)
-// hadi data ya msingi ipakie. MIN: epuka mweko wa haraka. MAX: usikwame
-// milele endapo backend imechelewa au imeshindwa.
 const BOOT_LOADER_MIN_MS = 600;
 const BOOT_LOADER_MAX_MS = 8000;
 
@@ -153,6 +252,10 @@ export default function DashboardShell() {
   const { user } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
 
+  // ✅ FIX: RBAC — sasa umeunganishwa kikamilifu
+  const roles = useRoles();
+  const staffList = useSubAdminsWithRoles();
+
   const isAdminUser =
     user?.role === "Admin" ||
     user?.role === "admin" ||
@@ -162,7 +265,17 @@ export default function DashboardShell() {
     user?.isSuperuser === true ||
     user?.is_superuser === true;
 
-  // ── Boot loader: onyesha PageLoader hadi data ya msingi ipakie ──
+  // ✅ FIX: Sidebar collapsible — state imehifadhiwa kwenye localStorage
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
+  const toggleSidebarCollapsed = useCallback(() => {
+    setSidebarCollapsed((v) => {
+      const next = !v;
+      writeSidebarCollapsed(next);
+      return next;
+    });
+  }, []);
+
+  // ── Boot loader ──
   const [bootReady, setBootReady] = useState(false);
 
   useEffect(() => {
@@ -176,8 +289,6 @@ export default function DashboardShell() {
     let minTimer = null;
     const startedAt = Date.now();
 
-    // Ongeza hapa kazi nyingine za msingi za kusubiri (zikishindwa,
-    // allSettled haizuii dashboard kufunguka).
     const bootTasks = [
       () => fetchMyListingsFromApi(),
     ];
@@ -198,7 +309,6 @@ export default function DashboardShell() {
     };
   }, [user?.id, isAdminUser]);
 
-  // Safety net: loader isikwame zaidi ya MAX hata kama request imening'inia.
   useEffect(() => {
     const id = setTimeout(() => setBootReady(true), BOOT_LOADER_MAX_MS);
     return () => clearTimeout(id);
@@ -215,13 +325,13 @@ export default function DashboardShell() {
       ? { side: m.side, activeKey: m.key, editListingId: null, known: true }
       : { side: "seller", activeKey: "overview", editListingId: null, known: false };
   }, [location.pathname]);
-  
+
   const [tickerIndex, setTickerIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
   const avatarButtonRef = useRef(null);
-  
+
   const listings = useMyListings();
   const { unreadCount: unreadNotifCount } = useNotifications("user");
   const announcements = useAnnouncements();
@@ -248,7 +358,15 @@ export default function DashboardShell() {
     };
   }, [editListingId]);
 
-  const nav = side === "seller" ? SELLER_NAV : BUYER_NAV;
+  // ✅ FIX: Chuja nav items kwa RBAC (au zote kama si sub-admin)
+  const baseNav = side === "seller" ? SELLER_NAV : BUYER_NAV;
+  const nav = useMemo(
+    () =>
+      baseNav.filter((item) =>
+        canAccessNavKey(side, item.key, user, roles, staffList)
+      ),
+    [baseNav, side, user, roles, staffList]
+  );
 
   const languages = [
     { code: "sw", native: "Kiswahili" },
@@ -282,7 +400,6 @@ export default function DashboardShell() {
     return () => clearInterval(id);
   }, [announcements.length]);
 
-  // ✅ FIX: Tumia ref kuhakikisha hatufungi menu pale tunabonyeza menyu yenyewe au kitufe cha avatar
   useEffect(() => {
     if (!userMenuOpen) return;
     const handleClickOutside = (event) => {
@@ -407,14 +524,14 @@ export default function DashboardShell() {
     const all = getMyListings();
     const listing = all.find((l) => String(l.id) === String(id));
     if (!listing) return { ok: false, error: new Error("Listing not found") };
-    
+
     const res = await updateListing(id, {
       status: "paid_pending_approval",
       paidAt: new Date().toISOString(),
     });
-    
+
     if (!res.ok) return res;
-    
+
     if (!alreadyPaid && listing) {
       addTransaction({
         type: "listing_fee",
@@ -656,17 +773,17 @@ export default function DashboardShell() {
             <Shield size={28} color={COLORS.rust} />
           </div>
           <h2 className="text-lg font-bold text-primary mb-2">
-            {t("Admin Hana Ruhusa Hapa", "Admin Cannot Access Here")}
+            {t(ADMIN_BLOCKED_MESSAGE.title.sw, ADMIN_BLOCKED_MESSAGE.title.en)}
           </h2>
           <p className="text-sm text-secondary leading-relaxed">
-            {t("Admin ana dashboard yake. Kama unataka kuingia dashboard za watumiaji, tafadhali tengeneza account nyingine kama Buyer au Seller.", "Admin has their own dashboard. If you want to access user dashboards, please create another account as a Buyer or Seller.")}
+            {t(ADMIN_BLOCKED_MESSAGE.body.sw, ADMIN_BLOCKED_MESSAGE.body.en)}
           </p>
           <div className="mt-5 flex flex-col sm:flex-row gap-2 justify-center">
             <button onClick={() => navigate(ADMIN_PATH)} style={{ background: COLORS.night, color: "white" }} className="px-4 py-2.5 rounded-lg text-sm font-semibold">
-              {t("Nenda Dashboard ya Admin", "Go to Admin Dashboard")}
+              {t(ADMIN_BLOCKED_MESSAGE.goAdmin.sw, ADMIN_BLOCKED_MESSAGE.goAdmin.en)}
             </button>
             <button onClick={handleLogout} style={{ borderColor: "rgb(var(--c-hairline))", color: COLORS.ink }} className="px-4 py-2.5 rounded-lg text-sm font-semibold border bg-card">
-              {t("Toka na uingie kama mtumiaji", "Log out and sign in as a user")}
+              {t(ADMIN_BLOCKED_MESSAGE.logout.sw, ADMIN_BLOCKED_MESSAGE.logout.en)}
             </button>
           </div>
         </div>
@@ -686,6 +803,23 @@ export default function DashboardShell() {
           aria-label={t("Fungua menyu", "Open menu")}
         >
           <Menu size={22} />
+        </button>
+
+        <button
+          onClick={toggleSidebarCollapsed}
+          className="hidden md:flex text-white/70 hover:text-white p-1.5 rounded-md hover:bg-white/[0.08] transition-colors"
+          aria-label={
+            sidebarCollapsed
+              ? t("Panua menyu", "Expand menu")
+              : t("Kunja menyu", "Collapse menu")
+          }
+          title={
+            sidebarCollapsed
+              ? t("Panua menyu", "Expand menu")
+              : t("Kunja menyu", "Collapse menu")
+          }
+        >
+          {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
 
         <a href="/" className="text-lg sm:text-xl font-semibold tracking-tight shrink-0 hover:opacity-80 transition-opacity">
@@ -810,7 +944,6 @@ export default function DashboardShell() {
                   </p>
                 </div>
 
-                {/* ✅ Viungo: Wasifu, Alika Marafiki, Shiriki, Toka (bila Dashibodi, Uza, Nunua) */}
                 {[
                   { to: "/wasifu",                 label: t("Wasifu", "Profile"),                Icon: UserIcon },
                   { to: "/alika-marafiki",         label: t("Alika Marafiki", "Invite Friends"), Icon: Users },
@@ -897,43 +1030,63 @@ export default function DashboardShell() {
 
       <div className="flex flex-1 relative">
         <aside
-          className="hidden md:flex w-56 shrink-0 border-r border-[rgb(var(--c-hairline))] flex-col py-4 px-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto overscroll-contain bg-[rgb(var(--c-page))]"
+          className={`hidden md:flex ${
+            sidebarCollapsed ? "w-16" : "w-56"
+          } shrink-0 border-r border-[rgb(var(--c-hairline))] flex-col py-4 ${
+            sidebarCollapsed ? "px-1.5" : "px-3"
+          } gap-1 sticky top-[64px] h-[calc(100vh-64px)] overflow-y-auto overscroll-contain bg-[rgb(var(--c-page))] transition-[width] duration-200`}
         >
           {nav.map(({ key, label, icon: Icon }) => {
             const isActive = key === activeKey;
+            const fullLabel = label[lang] || label.sw;
             return (
               <button
                 key={key}
                 onClick={() => handleNavClick(key)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
+                title={sidebarCollapsed ? fullLabel : undefined}
+                aria-label={fullLabel}
+                className={`relative flex items-center ${
+                  sidebarCollapsed ? "justify-center" : "gap-3"
+                } px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
                   isActive
                     ? "bg-[rgb(var(--c-ink))] text-[rgb(var(--c-page))]"
                     : "text-[rgb(var(--c-ink))] hover:bg-[rgb(var(--c-ink)/0.06)]"
                 }`}
               >
-                <Icon size={17} style={{ color: isActive ? accent : "currentColor" }} />
-                {label[lang] || label.sw}
-                {key === "listings" && listings.length > 0 && (
+                <Icon size={17} style={{ color: isActive ? accent : "currentColor" }} className="shrink-0" />
+                {!sidebarCollapsed && (
+                  <span className="truncate">{fullLabel}</span>
+                )}
+                {!sidebarCollapsed && key === "listings" && listings.length > 0 && (
                   <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-[rgb(var(--c-hairline))]"}`}>
                     {listings.length}
                   </span>
                 )}
-                {key === "leads" && newLeadsCount > 0 && (
+                {!sidebarCollapsed && key === "leads" && newLeadsCount > 0 && (
                   <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-[#C1502E] text-white"}`}>
                     {newLeadsCount}
                   </span>
                 )}
-                {key === "searches" && buyerSearchesCount > 0 && (
+                {!sidebarCollapsed && key === "searches" && buyerSearchesCount > 0 && (
                   <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/20" : "bg-[rgb(var(--c-hairline))]"}`}>
                     {buyerSearchesCount}
                   </span>
                 )}
+                {sidebarCollapsed && key === "leads" && newLeadsCount > 0 && (
+                  <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-[#C1502E]" />
+                )}
               </button>
             );
           })}
-          <a href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-[rgb(var(--c-ink)/0.06)] mt-4 border-t border-[rgb(var(--c-hairline))] pt-4 text-[rgb(var(--c-text-2))]">
-            <Home size={17} />
-            {t("Rudi Nyumbani", "Back to Home")}
+          <a
+            href="/"
+            title={sidebarCollapsed ? t("Rudi Nyumbani", "Back to Home") : undefined}
+            className={`flex items-center ${
+              sidebarCollapsed ? "justify-center" : "gap-3"
+            } px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left hover:bg-[rgb(var(--c-ink)/0.06)] mt-4 border-t border-[rgb(var(--c-hairline))] pt-4 text-[rgb(var(--c-text-2))]`}
+          >
+            <Home size={17} className="shrink-0" />
+            {!sidebarCollapsed && <span className="truncate">{t("Rudi Nyumbani", "Back to Home")}</span>}
           </a>
         </aside>
 

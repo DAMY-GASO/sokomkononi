@@ -1,11 +1,5 @@
 // ============================================================
 // api/payments.js — FimiPay client utilities
-//
-// Spec: https://docs.fimipay.com
-//   - Frontend never talks to FimiPay directly
-//   - Backend holds the secret key; frontend holds the JWT
-//   - payment_method + phone go to the backend /pay/ endpoint
-//   - Poll /payments/order-status/ until a terminal state
 // ============================================================
 import { api } from "./client";
 

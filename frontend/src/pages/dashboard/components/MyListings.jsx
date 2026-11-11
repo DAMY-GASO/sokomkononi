@@ -1,19 +1,26 @@
 // ============================================================
 // src/pages/dashboard/components/MyListings.jsx
+// B.4 — FINAL
+//
+// Mabadiliko kutoka awali:
+//  ✅ Polling kila sekunde 60 (listings zinabaki fresh)
+//  ✅ Timestamp "Imesasishwa" + kitufe cha Refresh
+//  ✅ Bulk delete (soft delete + undo per-item)
+//  ✅ Analytics modal kwa kila listing
+//  ✅ Fix: duplicate inatumia category (backend inahitaji fix pia)
 // ============================================================
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   PlusCircle, Edit3, Trash2, Pause, Play, CheckCircle2,
   Rocket, TrendingUp, Megaphone, Eye, MapPin, Tag, Search,
   Loader2, AlertCircle, Pencil, Send, Wallet,
-  Copy, CheckSquare, Square, X,
+  Copy, CheckSquare, Square, X, BarChart3, RefreshCw,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   COLORS, formatTZS, timeAgo, getCategory,
   isBoostActive, isLeadingActive,
 } from "./shared.js";
-import { Link } from "react-router-dom";
 import StatusBadge from "../admin/shared/StatusBadge";
 import ListingImage from "../../../components/ListingImage.jsx";
 import { getCategoryIcon } from "../../../config/categoriesStore.js";
@@ -31,10 +38,15 @@ import {
   fetchMyListingsFromApi,
   pauseListingAsync,
   unpauseListingAsync,
+  removeListingAsync,
 } from "../../../config/listingsStore.js";
+import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
+import ListingAnalyticsModal from "./ListingAnalyticsModal.jsx";
+
+const POLL_INTERVAL_MS = 60_000;
 
 // ============================================================
-// Normalize status: PENDING_APPROVAL → pending_approval
+// HELPERS
 // ============================================================
 function normalizeStatus(s) {
   if (s == null) return "";
@@ -65,11 +77,6 @@ function normalizeCategoryInCache() {
     });
 
     if (changed) {
-      console.info(
-        "[MyListings] cleaned",
-        mine.length,
-        "cached listing(s) with object category"
-      );
       saveMyListings(cleaned);
     }
   } catch (err) {
@@ -97,7 +104,6 @@ function getPhotos(listing) {
   return [];
 }
 
-// ✅ FIX: Bure ni 0 KWELI tu. `null` = haijulikani (SI bure).
 function isFreeListing(listing) {
   if (!listing) return false;
   const ps = String(
@@ -108,13 +114,6 @@ function isFreeListing(listing) {
   if (raw === null || raw === undefined || raw === "") return false;
   return Number(raw) === 0;
 }
-
-// ── Bulk actions: status zinazostahili kila kitendo ──────────
-const BULK_ELIGIBLE = {
-  pause: (s) => s === "live",
-  resume: (s) => s === "paused",
-  submit: (s) => ["draft", "pending_payment", "needs_edit"].includes(s),
-};
 
 function isUnpaid(listing) {
   if (!listing) return false;
@@ -136,6 +135,26 @@ function isUnpaid(listing) {
 
   return listing.isPaid === false;
 }
+
+function timeAgoShort(ts, lang) {
+  if (!ts) return "";
+  const sec = Math.floor((Date.now() - ts) / 1000);
+  if (sec < 30) return lang === "sw" ? "sasa hivi" : "just now";
+  if (sec < 60) return lang === "sw" ? `sekunde ${sec}` : `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return lang === "sw" ? `dakika ${min}` : `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  return lang === "sw" ? `saa ${hr}` : `${hr}h ago`;
+}
+
+// ── Bulk actions eligibility ──────────────────────────────
+// (Zinalingana na `views.py` status constraints)
+const BULK_ELIGIBLE = {
+  pause: (s) => s === "live",
+  resume: (s) => s === "paused",
+  submit: (s) => ["draft", "pending_payment", "needs_edit", "rejected"].includes(s),
+  delete: (s) => s !== "sold", // sold listings zinaweza kuhifadhiwa kwa kumbukumbu
+};
 
 // ============================================================
 // MARK SOLD CONFIRM MODAL
@@ -231,7 +250,8 @@ function ActionBtn({
 // ============================================================
 function ListingCard({
   listing, lang, onRemove, onBoost, onLeading, onAdvertise,
-  onPause, onResume, onMarkSold, onPay, onEdit, onSubmitReview, onDuplicate, busy,
+  onPause, onResume, onMarkSold, onPay, onEdit, onSubmitReview,
+  onDuplicate, onAnalytics, busy,
   selectMode = false, selected = false, onToggleSelect,
 }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
@@ -247,10 +267,8 @@ function ListingCard({
     "—";
 
   const isBusy = busy === "delete";
-
   const photos = getPhotos(listing);
   const hasManyPhotos = photos.length > 1;
-
   const isLiveOrReserved = status === "live" || status === "reserved";
   const featured = isBoostActive(listing);
   const leading = isLeadingActive(listing);
@@ -347,10 +365,7 @@ function ListingCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             {viewable ? (
-              <Link
-                to={detailTo}
-                className="min-w-0 flex-1 hover:text-gold-ink"
-              >
+              <Link to={detailTo} className="min-w-0 flex-1 hover:text-gold-ink">
                 {Title}
               </Link>
             ) : (
@@ -368,10 +383,7 @@ function ListingCard({
             status !== "approved_pending_payment" && (
               <div
                 className="mt-1.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5"
-                style={{
-                  background: "rgba(193,80,46,0.10)",
-                  color: COLORS.rust,
-                }}
+                style={{ background: "rgba(193,80,46,0.10)", color: COLORS.rust }}
               >
                 <AlertCircle size={12} className="shrink-0" />
                 <span className="text-[11px] font-semibold leading-tight">
@@ -512,6 +524,7 @@ function ListingCard({
       </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-sandline pt-2.5">
+        {/* Pay Now (approved_pending_payment) */}
         {status === "approved_pending_payment" && !isFreeListing(listing) && (
           <button
             type="button"
@@ -525,6 +538,7 @@ function ListingCard({
           </button>
         )}
 
+        {/* Edit (needs_edit) */}
         {status === "needs_edit" && (
           <button
             type="button"
@@ -538,7 +552,8 @@ function ListingCard({
           </button>
         )}
 
-        {["draft", "pending_payment", "needs_edit"].includes(status) && (
+        {/* Submit for review (draft/pending_payment/needs_edit/rejected) */}
+        {["draft", "pending_payment", "needs_edit", "rejected"].includes(status) && (
           <button
             type="button"
             onClick={() => onSubmitReview?.(listing.id)}
@@ -549,24 +564,27 @@ function ListingCard({
             <Send size={12} />
             {status === "needs_edit"
               ? t("Wasilisha Tena", "Resubmit")
-              : t("Wasilisha kwa Admin", "Submit for Review")}
+              : status === "rejected"
+                ? t("Wasilisha Tena", "Resubmit")
+                : t("Wasilisha kwa Admin", "Submit for Review")}
           </button>
         )}
 
-        {isUnpaid(listing) &&
-          status !== "approved_pending_payment" && (
-            <button
-              type="button"
-              onClick={() => onPay?.(listing.id, listing)}
-              disabled={isBusy}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
-              style={{ background: COLORS.rust, color: "white" }}
-            >
-              <Wallet size={12} />
-              {t("Lipa Sasa", "Pay Now")}
-            </button>
-          )}
+        {/* Pay Now (isUnpaid general) */}
+        {isUnpaid(listing) && status !== "approved_pending_payment" && (
+          <button
+            type="button"
+            onClick={() => onPay?.(listing.id, listing)}
+            disabled={isBusy}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
+            style={{ background: COLORS.rust, color: "white" }}
+          >
+            <Wallet size={12} />
+            {t("Lipa Sasa", "Pay Now")}
+          </button>
+        )}
 
+        {/* Standard actions */}
         <ActionBtn
           icon={Edit3}
           label={t("Hariri", "Edit")}
@@ -580,6 +598,14 @@ function ListingCard({
           label={t("Nakili", "Duplicate")}
           color={COLORS.night}
           onClick={() => onDuplicate?.(listing.id)}
+          disabled={isBusy}
+        />
+
+        <ActionBtn
+          icon={BarChart3}
+          label={t("Analytics", "Analytics")}
+          color={COLORS.night}
+          onClick={() => onAnalytics?.(listing.id)}
           disabled={isBusy}
         />
 
@@ -653,7 +679,7 @@ function ListingCard({
 }
 
 // ============================================================
-// MAIN
+// MAIN COMPONENT
 // ============================================================
 export default function MyListings({
   listings = [],
@@ -678,10 +704,21 @@ export default function MyListings({
 
   const [confirmSold, setConfirmSold] = useState(null);
   const [markingSold, setMarkingSold] = useState(false);
+  const [analyticsListingId, setAnalyticsListingId] = useState(null);
+
+  // ✅ Polling
+  const pollFetcher = useCallback(async () => {
+    await fetchMyListingsFromApi({ force: true });
+  }, []);
+  const { refresh, isRefreshing, lastRefreshedAt } = usePollingRefresh(
+    pollFetcher,
+    { intervalMs: POLL_INTERVAL_MS, enabled: Boolean(user?.id) }
+  );
 
   useEffect(() => {
     normalizeCategoryInCache();
-    // ✅ Sasisha status kutoka seva ili cache ya zamani isidumu
+    // Fetch ya awali hufanywa na pollFetcher baada ya 1.5s.
+    // Lakini tunataka data mara moja pia:
     fetchMyListingsFromApi({ force: true });
   }, []);
 
@@ -706,7 +743,6 @@ export default function MyListings({
   const [selected, setSelected] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(null);
 
-  // Uchaguzi usibaki kwa matangazo yasiyoonekana baada ya kubadili kichujio/utafutaji
   useEffect(() => {
     setSelected(new Set());
   }, [filter, searchQuery]);
@@ -744,19 +780,10 @@ export default function MyListings({
   const filters = [
     { key: "all", label: { sw: "Zote", en: "All" } },
     { key: "unpaid", label: { sw: "Haijalipwa", en: "Unpaid" } },
-    {
-      key: "pending_approval",
-      label: { sw: "Inasubiri Admin", en: "Pending Review" },
-    },
+    { key: "pending_approval", label: { sw: "Inasubiri Admin", en: "Pending Review" } },
     { key: "needs_edit", label: { sw: "Inahitaji Uhariri", en: "Needs Edit" } },
-    {
-      key: "approved_pending_payment",
-      label: { sw: "Lipa Sasa", en: "Pay Now" },
-    },
-    {
-      key: "paid_pending_approval",
-      label: { sw: "Inasubiri Idhini", en: "Pending Approval" },
-    },
+    { key: "approved_pending_payment", label: { sw: "Lipa Sasa", en: "Pay Now" } },
+    { key: "paid_pending_approval", label: { sw: "Inasubiri Idhini", en: "Pending Approval" } },
     { key: "in_review", label: { sw: "Inakaguliwa", en: "In Review" } },
     { key: "live", label: { sw: "Hai", en: "Live" } },
     { key: "reserved", label: { sw: "Imehifadhiwa", en: "Reserved" } },
@@ -766,7 +793,6 @@ export default function MyListings({
     { key: "expired", label: { sw: "Imeisha Muda", en: "Expired" } },
   ];
 
-  // ── Bulk: hesabu na utekelezaji ────────────────────────────
   const selectedListings = useMemo(
     () => listings.filter((l) => selected.has(String(l.id))),
     [listings, selected]
@@ -802,36 +828,33 @@ export default function MyListings({
   const BULK_TEXT = {
     pause: {
       title: { sw: "Simamisha matangazo?", en: "Pause listings?" },
-      desc: {
-        sw: "Matangazo yaliyochaguliwa yatasimamishwa na hayataonekana kwa umma hadi uyaendeleze.",
-        en: "The selected listings will be paused and hidden from the public until you resume them.",
-      },
+      desc: { sw: "Matangazo yaliyochaguliwa yatasimamishwa.", en: "The selected listings will be paused." },
       ok: { sw: "Simamisha", en: "Pause" },
       done: { sw: "yamesimamishwa", en: "paused" },
     },
     resume: {
       title: { sw: "Endeleza matangazo?", en: "Resume listings?" },
-      desc: {
-        sw: "Matangazo yaliyosimama yatarudi hewani.",
-        en: "The paused listings will go live again.",
-      },
+      desc: { sw: "Matangazo yaliyosimama yatarudi hewani.", en: "The paused listings will go live again." },
       ok: { sw: "Endeleza", en: "Resume" },
       done: { sw: "yameendelezwa", en: "resumed" },
     },
     submit: {
       title: { sw: "Wasilisha kwa Admin?", en: "Submit for review?" },
-      desc: {
-        sw: "Matangazo yaliyochaguliwa yatatumwa kwa admin kukaguliwa.",
-        en: "The selected listings will be sent to admin for review.",
-      },
+      desc: { sw: "Matangazo yaliyochaguliwa yatatumwa kwa admin kukaguliwa.", en: "The selected listings will be sent to admin for review." },
       ok: { sw: "Wasilisha", en: "Submit" },
       done: { sw: "yamewasilishwa", en: "submitted" },
     },
+    delete: {
+      title: { sw: "Futa matangazo?", en: "Delete listings?" },
+      desc: {
+        sw: "Matangazo yaliyochaguliwa yataingizwa kwenye Recycle Bin. Unaweza kurejesha kwa dakika 5.",
+        en: "Selected listings will be moved to Recycle Bin. You can restore within 5 minutes.",
+      },
+      ok: { sw: "Futa", en: "Delete" },
+      done: { sw: "yamefutwa", en: "deleted" },
+    },
   };
 
-  // Mfuatano (si sambamba): pauseListingAsync/publishListingAsync zinachukua
-  // snapshot ya store nzima na kuirudisha zikishindwa — zikiendeshwa pamoja,
-  // kushindwa kwa moja kungefuta mabadiliko ya mengine yaliyofanikiwa.
   const runBulk = async (kind) => {
     if (bulkBusy) return;
     const items = selectedListings.filter((l) =>
@@ -845,19 +868,15 @@ export default function MyListings({
       description: txt.desc[lang],
       confirmLabel: txt.ok[lang],
       cancelLabel: t("Ghairi", "Cancel"),
+      danger: kind === "delete",
     });
     if (!ok) return;
-
-    const fn =
-      kind === "pause"
-        ? pauseListingAsync
-        : kind === "resume"
-        ? unpauseListingAsync
-        : publishListingAsync;
 
     setBulkBusy(kind);
     let success = 0;
     let failed = 0;
+    const succeededItems = [];
+
     for (const l of items) {
       if (String(l.id).startsWith("temp_")) {
         failed += 1;
@@ -865,13 +884,41 @@ export default function MyListings({
       }
       let res;
       try {
-        res = await fn(l.id);
+        if (kind === "delete") {
+          res = await removeListingAsync(l.id);
+          if (res?.ok) succeededItems.push(l);
+        } else {
+          const fn =
+            kind === "pause" ? pauseListingAsync
+            : kind === "resume" ? unpauseListingAsync
+            : publishListingAsync;
+          res = await fn(l.id);
+        }
       } catch (err) {
         res = { ok: false, error: err };
       }
       if (res?.ok) success += 1;
       else failed += 1;
     }
+
+    // ✅ Undo ya bulk delete
+    if (kind === "delete" && succeededItems.length > 0) {
+      succeededItems.forEach((l) => {
+        startUndo({
+          type: "listing",
+          id: l.id,
+          title: l.title,
+          message: t(
+            `"${l.title}" imefutwa. Unaweza kuirejesha.`,
+            `"${l.title}" deleted. You can undo.`
+          ),
+          onRestore: async () => {
+            await restoreListingAsync(l.id);
+          },
+        });
+      });
+    }
+
     setBulkBusy(null);
     setSelected(new Set());
     fetchMyListingsFromApi({ force: true });
@@ -886,15 +933,12 @@ export default function MyListings({
       );
     } else {
       toast.error(
-        t(
-          `${success} yamefanikiwa, ${failed} yameshindwa.`,
-          `${success} succeeded, ${failed} failed.`
-        )
+        t(`${success} yamefanikiwa, ${failed} yameshindwa.`, `${success} succeeded, ${failed} failed.`)
       );
     }
   };
 
-  // ── Duplicate: peleka data kwenye fomu ya kuweka mali (create) ──
+  // Duplicate
   const handleDuplicate = (id) => {
     const l = listings.find((x) => String(x.id) === String(id));
     if (!l) return;
@@ -921,6 +965,7 @@ export default function MyListings({
     });
   };
 
+  // Mark sold
   const handleMarkSold = (id) => {
     const listing = listings.find((l) => String(l.id) === String(id));
     if (!listing) return;
@@ -953,6 +998,7 @@ export default function MyListings({
     }
   };
 
+  // Remove (single)
   const handleRemove = async (id) => {
     if (busy[id]) return;
     const listing = listings.find((l) => String(l.id) === String(id));
@@ -1004,12 +1050,10 @@ export default function MyListings({
       },
     });
 
-    toast.success(t("Tangazo limefutwa", "Listing deleted"), {
-      duration: 2000,
-    });
+    toast.success(t("Tangazo limefutwa", "Listing deleted"), { duration: 2000 });
   };
 
-  // ✅ FIX: Chanzo kimoja (publishListingAsync). Hakuna saveMyListings ya mkono.
+  // Submit review
   const handleSubmitReview = async (id) => {
     if (busy[id]) return;
     setBusy((b) => ({ ...b, [id]: "submit" }));
@@ -1022,14 +1066,8 @@ export default function MyListings({
     if (res.ok) {
       toast.success(
         res.alreadySubmitted
-          ? t(
-              "Tangazo tayari liko kwa admin.",
-              "This listing is already with admin."
-            )
-          : t(
-              "Tangazo limewasilishwa kwa admin.",
-              "Submitted for admin review."
-            )
+          ? t("Tangazo tayari liko kwa admin.", "This listing is already with admin.")
+          : t("Tangazo limewasilishwa kwa admin.", "Submitted for admin review.")
       );
     } else {
       toast.error(t("Imeshindwa kuwasilisha.", "Failed to submit."));
@@ -1046,6 +1084,7 @@ export default function MyListings({
 
   return (
     <div className="w-full max-w-7xl mx-auto min-w-0 overflow-hidden">
+      {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-lg sm:text-xl font-bold text-primary">
@@ -1054,6 +1093,22 @@ export default function MyListings({
           <p className="text-xs sm:text-sm text-secondary mt-0.5">
             {t(`${listings.length} matangazo`, `${listings.length} listings`)}
           </p>
+          {/* Refresh strip */}
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-[11px] text-muted">
+              {t("Imesasishwa", "Updated")} {timeAgoShort(lastRefreshedAt, lang)}
+            </span>
+            <button
+              onClick={refresh}
+              disabled={isRefreshing}
+              aria-label={t("Sasisha", "Refresh")}
+              className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border disabled:opacity-50"
+              style={{ borderColor: COLORS.sandLine, color: COLORS.night, background: "white" }}
+            >
+              <RefreshCw size={10} className={isRefreshing ? "animate-spin" : ""} />
+              {isRefreshing ? t("Inasasisha...", "Refreshing...") : t("Sasisha", "Refresh")}
+            </button>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {listings.length > 0 && (
@@ -1081,6 +1136,7 @@ export default function MyListings({
         </div>
       </div>
 
+      {/* Search + Filters */}
       {listings.length > 0 && (
         <>
           <div
@@ -1112,8 +1168,7 @@ export default function MyListings({
                   onClick={() => setFilter(f.key)}
                   style={{
                     background: filter === f.key ? COLORS.night : "white",
-                    color:
-                      filter === f.key ? COLORS.sand : "var(--text-primary)",
+                    color: filter === f.key ? COLORS.sand : "var(--text-primary)",
                     borderColor: COLORS.sandLine,
                   }}
                   className="text-xs font-semibold px-3 py-1.5 rounded-full border whitespace-nowrap shrink-0"
@@ -1124,6 +1179,7 @@ export default function MyListings({
             })}
           </div>
 
+          {/* Bulk selection bar */}
           {selectMode && (
             <div
               className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border bg-white px-3 py-2"
@@ -1167,12 +1223,22 @@ export default function MyListings({
                   onClick={() => runBulk("submit")}
                   disabled={!bulkCounts.submit || !!bulkBusy}
                 />
+                <ActionBtn
+                  icon={bulkBusy === "delete" ? Loader2 : Trash2}
+                  spin={bulkBusy === "delete"}
+                  label={`${t("Futa", "Delete")} (${bulkCounts.delete})`}
+                  color={COLORS.rust}
+                  onClick={() => runBulk("delete")}
+                  disabled={!bulkCounts.delete || !!bulkBusy}
+                  danger
+                />
               </div>
             </div>
           )}
         </>
       )}
 
+      {/* Listings grid */}
       {filtered.length === 0 ? (
         <div
           style={{ borderColor: COLORS.sandLine, background: "white" }}
@@ -1186,14 +1252,8 @@ export default function MyListings({
           </h3>
           <p className="text-sm text-secondary mb-4">
             {searchQuery || filter !== "all"
-              ? t(
-                  "Jaribu kubadilisha vichujio au utafutaji.",
-                  "Try changing filters or search."
-                )
-              : t(
-                  "Weka tangazo lako la kwanza ili wanunuzi wakuone.",
-                  "Post your first listing so buyers can find you."
-                )}
+              ? t("Jaribu kubadilisha vichujio au utafutaji.", "Try changing filters or search.")
+              : t("Weka tangazo lako la kwanza ili wanunuzi wakuone.", "Post your first listing so buyers can find you.")}
           </p>
           {!searchQuery && filter === "all" && (
             <button
@@ -1224,6 +1284,7 @@ export default function MyListings({
               onSubmitReview={handleSubmitReview}
               onEdit={handleEdit}
               onDuplicate={handleDuplicate}
+              onAnalytics={(id) => setAnalyticsListingId(id)}
               selectMode={selectMode}
               selected={selected.has(String(l.id))}
               onToggleSelect={toggleSelect}
@@ -1233,12 +1294,25 @@ export default function MyListings({
         </div>
       )}
 
+      {/* Mark sold modal */}
       <MarkSoldConfirmModal
         listing={confirmSold}
         lang={lang}
         busy={markingSold}
         onConfirm={handleConfirmMarkSold}
         onClose={() => !markingSold && setConfirmSold(null)}
+      />
+
+      {/* Analytics modal */}
+      <ListingAnalyticsModal
+        listingId={analyticsListingId}
+        listing={
+          analyticsListingId
+            ? listings.find((l) => String(l.id) === String(analyticsListingId))
+            : null
+        }
+        lang={lang}
+        onClose={() => setAnalyticsListingId(null)}
       />
     </div>
   );
