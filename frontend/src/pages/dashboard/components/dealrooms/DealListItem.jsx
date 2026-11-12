@@ -4,10 +4,7 @@ import { FALLBACK_DEAL_STATUS, getDealStatus } from "./dealStatus.js";
 import { Lock } from "lucide-react";
 import { getCategoryIcon } from "../../../../config/categoriesStore.js";
 
-// ============================================================
-// DEAL LIST ITEM
-// ============================================================
-export default function DealListItem({ deal, active, onSelect, lang }) {
+export default function DealListItem({ deal, active, onSelect, lang, unreadCount = 0 }) {
   const category = getCategory(deal.category);
   const Icon = getCategoryIcon(category?.iconKey);
   const status =
@@ -22,7 +19,7 @@ export default function DealListItem({ deal, active, onSelect, lang }) {
         background: active ? "white" : "transparent",
         borderColor: COLORS.sandLine,
       }}
-      className="w-full shrink-0 flex items-start gap-3 p-3 rounded-xl border text-left"
+      className="w-full shrink-0 flex items-start gap-3 p-3 rounded-xl border text-left relative"
     >
       <div
         style={{ background: COLORS.night }}
@@ -69,6 +66,13 @@ export default function DealListItem({ deal, active, onSelect, lang }) {
           </span>
         )}
       </div>
+
+      {/* ✅ MPYA: badge ya ujumbe ambao haujasomwa */}
+      {unreadCount > 0 && (
+        <span className="absolute top-2 right-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold shadow">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
     </button>
   );
 }

@@ -9,6 +9,7 @@
 //  ✅ MPYA: WebSocketStatusBadge — inaonyesha hali ya muunganisho.
 //  ✅ MPYA: broadcast payload inatumiwa moja kwa moja kwa message/offer;
 //     `deal_update` pekee inaita `fetchDealDetailAsync`.
+//  ✅ MPYA: unread count kwa kila chumba + browser notification.
 // ============================================================
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { COLORS } from "./shared";
@@ -59,6 +60,12 @@ export default function DealRooms({
   const [typingByRoom, setTypingByRoom] = useState({});
   const typingTimeoutRef = useRef({});
 
+  // ── Unread + notifications ──
+  const [unreadByRoom, setUnreadByRoom] = useState({});
+  const notificationPermissionRef = useRef(
+    typeof Notification !== "undefined" ? Notification.permission : "default",
+  );
+
   const listingIdParam = searchParams.get("listing");
   const actionParam = searchParams.get("action");
 
@@ -90,6 +97,8 @@ export default function DealRooms({
     setSelectedId(id);
     setMobileShowDetail(true);
     setOpenReserveOnMount(false);
+    // ✅ futa unread kwa chumba hiki
+    setUnreadByRoom((prev) => ({ ...prev, [id]: 0 }));
   };
 
   const [detailFetchedAt, setDetailFetchedAt] = useState({});
@@ -156,13 +165,11 @@ export default function DealRooms({
       ) {
         const p = data.payload;
         if (!p || p.sender_id === user?.id) {
-          // Ujumbe wetu wenyewe — tayari umeongezwa kwa optimistic update
           return;
         }
 
         updateDealInStore(dealId, (prev) => {
           const list = prev.messages || [];
-          // Epuka duplicate (kama fetch ilishaleta)
           if (list.some((m) => String(m.id) === String(p.id))) {
             return prev;
           }
@@ -187,10 +194,34 @@ export default function DealRooms({
             ],
           };
         });
+
+        // ✅ ongeza unread kama si chumba active
+        if (String(roomId) !== String(wsRoomId)) {
+          setUnreadByRoom((prev) => ({
+            ...prev,
+            [roomId]: (prev[roomId] || 0) + 1,
+          }));
+        }
+
+        // ✅ browser notification kama ruhusa imetolewa
+        if (
+          notificationPermissionRef.current === "granted" &&
+          String(roomId) !== String(wsRoomId)
+        ) {
+          try {
+            new Notification(p.sender_name || "Ujumbe mpya", {
+              body: p.text?.slice(0, 120) || "📎 Picha",
+              icon: "/logo.webp",
+              tag: `deal-${roomId}`,
+            });
+          } catch (err) {
+            console.warn("[notify] browser notification failed:", err);
+          }
+        }
         return;
       }
 
-      // ── deal_update — fetch kamili (ina mabadiliko mengi) ──
+      // ── deal_update — fetch kamili ──
       if (data.type === "deal_update") {
         fetchDealDetailAsync(roomId)
           .then((res) => {
@@ -255,6 +286,8 @@ export default function DealRooms({
       dealsApi.markRead(selectedRoomId).catch(() => {
         delete markedReadRef.current[selectedRoomId];
       });
+      // ✅ futa unread kwa chumba hiki
+      setUnreadByRoom((prev) => ({ ...prev, [selectedRoomId]: 0 }));
     };
 
     send();
@@ -367,6 +400,7 @@ export default function DealRooms({
               active={d.id === selectedDeal?.id}
               onSelect={handleSelect}
               lang={lang}
+              unreadCount={unreadByRoom[d.id] || 0}
             />
           ))}
         </div>

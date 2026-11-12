@@ -5,6 +5,8 @@
 //  ✅ MPYA: `registerRestoreHandlers` inasajiliwa kabla ya Router
 //     ili undo ya listings ifanye kazi HATA baada ya refresh
 //     (memory callbacks zinapotea, lakini handler inabaki).
+//  ✅ MPYA: `usePushSubscription` inasajili push subscription mara moja
+//     mtumiaji akiingia (kwa browser notifications + push).
 //  ✅ Kila kitu kingine kimebaki kama kilivyo.
 // ============================================================
 import React, { useEffect, Suspense, lazy } from "react";
@@ -17,6 +19,8 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { AttributionProvider } from "./context/AttributionContext.jsx";
 
 import { installUnauthorizedHandler } from "./config/authStore.js";
+import { useAuth } from "./config/authStore.js";
+import { usePushSubscription } from "./hooks/usePushSubscription.js";
 import UndoToast from "./components/UndoToast.jsx";
 import { ADMIN_PATH, ADMIN_LOGIN_PATH } from "./config/adminPath.js";
 
@@ -26,8 +30,6 @@ import { hydrateListingsFromApi, sweepGhostListings } from "./config/listingsSto
 import { hydrateReservationFromApi } from "./config/feePolicy.js";
 
 // ✅ MPYA: Sajili ya restore handlers kwa undo
-// Hii inaruhusu undo ya listings kufanya kazi HATA baada ya refresh
-// (memory callbacks zinapotea, lakini handler hii inabaki kwenye code).
 import { registerRestoreHandlers } from "./config/undoStore.js";
 import { restoreListingAsync } from "./config/listingsStore.js";
 
@@ -76,6 +78,7 @@ function PageLoader() {
   );
 }
 
+// ── Boot handlers (nje ya component ili zijisajili mara moja) ──
 registerRestoreHandlers({
   listing: async (itemOrIds) => {
     const ids = Array.isArray(itemOrIds)
@@ -121,6 +124,13 @@ function BrowseRoute() {
   );
 }
 
+// ⚠️ Component ndogo ili `useAuth()` iwe ndani ya providers zote
+function PushBootstrap() {
+  const { user } = useAuth();
+  usePushSubscription(user?.id);
+  return null;
+}
+
 function App() {
   useEffect(() => {
     if (typeof window !== "undefined" && !window.__SMK_LANG__) {
@@ -152,6 +162,7 @@ function App() {
         <ToastProvider>
           <UndoToast />
           <ConfirmProvider>
+            <PushBootstrap />
             <Router>
               <ScrollToHash />
               <Suspense fallback={<PageLoader />}>
