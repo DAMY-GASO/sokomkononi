@@ -453,6 +453,15 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                         <Share2 size={15} className="text-white/55" />
                         {lang === "sw" ? "Shiriki SokoMkononi" : "Share SokoMkononi"}
                       </button>
+                      <button
+                        onClick={handleTheme}
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-white/85 transition-colors hover:bg-white/[0.06] hover:text-white"
+                      >
+                        {theme === "dark" ? <Sun size={15} className="text-white/55" /> : <Moon size={15} className="text-white/55" />}
+                        {theme === "dark"
+                          ? (lang === "sw" ? "Hali ya Mwanga" : "Light mode")
+                          : (lang === "sw" ? "Hali ya Giza" : "Dark mode")}
+                      </button>
                       <div className="my-1 border-t border-white/10" />
                       <button
                         onClick={handleLogout}
@@ -492,6 +501,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
           "fixed left-0 top-0 z-50 h-full w-72 max-w-[82%] bg-night transition-transform duration-300 ease-out lg:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
+        style={{ height: "100dvh" }}
       >
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-4">

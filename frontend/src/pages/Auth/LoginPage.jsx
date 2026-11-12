@@ -188,21 +188,21 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
       <div className="w-full max-w-md md:max-w-none my-8 md:my-0 bg-white rounded-2xl md:rounded-none shadow-xl md:shadow-none overflow-hidden grid grid-cols-1 md:grid-cols-2 md:min-h-screen">
         <div className="dark-surface flex relative bg-night text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
-          <div className="relative z-10 w-full flex items-center justify-between gap-2">
+          <div className="relative z-10 grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2">
             <button
               type="button"
               onClick={() => navigate("/")}
               aria-label={lang === "sw" ? "Rudi nyumbani" : "Back to home"}
-              className="flex items-center gap-1.5 text-white/60 hover:text-white text-xs sm:text-sm font-medium transition-colors rounded-full px-2 sm:px-3 py-1.5 hover:bg-white/[0.08]"
+              className="flex items-center gap-1.5 justify-self-start text-white/60 hover:text-white text-xs sm:text-sm font-medium transition-colors rounded-full px-2 sm:px-3 py-1.5 hover:bg-white/[0.08]"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-              <span>{lang === "sw" ? "Nyumbani" : "Home"}</span>
+              <span className="hidden sm:inline">{lang === "sw" ? "Nyumbani" : "Home"}</span>
             </button>
-            <Link to="/" className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
+            <Link to="/" className="flex items-center gap-2 justify-self-center">
               <img src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full" />
-              <span className="font-bold tracking-tight">SokoMkononi</span>
+              <span className="whitespace-nowrap font-bold tracking-tight">SokoMkononi</span>
             </Link>
-            <span className="w-16 sm:w-20" aria-hidden="true" />
+            <span aria-hidden="true" />
           </div>
 
           <div className="relative z-10 max-w-sm mx-auto text-center py-8 md:py-0">

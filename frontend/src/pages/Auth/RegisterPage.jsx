@@ -5,7 +5,6 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import SocialAuthButtons from "../../components/SocialAuthButtons.jsx";
 import PasswordStrengthMeter from "../../components/PasswordStrengthMeter.jsx";
 import Captcha, { isCaptchaEnabled } from "../../components/Captcha.jsx";
-import { getRateLimit, useLockout, lockMessage } from "../../utils/authErrors.js";
 
 const icons = {
   user: (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a7 7 0 0 1 14 0v1" /></svg>),
@@ -88,8 +87,6 @@ export default function RegisterPage() {
   const cooldownRef = useRef(null);
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaNonce, setCaptchaNonce] = useState(0);
-  // Rate limiting (429): fomu inafungwa na countdown inaonyeshwa
-  const [lockLeft, startLock] = useLockout();
 
   // Token ya Turnstile inatumika mara moja tu: anzisha widget upya.
   function resetCaptcha() {
@@ -153,7 +150,6 @@ export default function RegisterPage() {
 
   async function handleRegister(e) {
     e.preventDefault();
-    if (lockLeft > 0) return;
     const validationError = validateForm();
     if (validationError) { setError(validationError); return; }
     setError("");
@@ -170,13 +166,7 @@ export default function RegisterPage() {
     setLoading(false);
 
     if (!res.ok) {
-      const rl = getRateLimit(res.error);
-      if (rl) {
-        setError("");
-        startLock(rl.seconds);
-      } else {
-        setError(extractError(res.error, t("register_error_default")));
-      }
+      setError(extractError(res.error, t("register_error_default")));
       resetCaptcha();
       return;
     }
@@ -186,7 +176,6 @@ export default function RegisterPage() {
 
   async function handleVerifyOtp(e) {
     e.preventDefault();
-    if (lockLeft > 0) return;
     if (!otp.trim() || otp.trim().length < 4) {
       setError(t("register_error_otp_required"));
       return;
@@ -200,8 +189,6 @@ export default function RegisterPage() {
     });
     setLoading(false);
     if (!res.ok) {
-      const rl = getRateLimit(res.error);
-      if (rl) { setError(""); startLock(rl.seconds); return; }
       setError(extractError(res.error, t("register_error_otp_invalid")));
       return;
     }
@@ -209,21 +196,17 @@ export default function RegisterPage() {
   }
 
   async function handleResend() {
-    if (resendCooldown > 0 || loading || lockLeft > 0) return;
+    if (resendCooldown > 0 || loading) return;
     setError("");
     setLoading(true);
     const res = await resendRegistrationOtpAsync(form.email);
     setLoading(false);
     if (!res.ok) {
-      const rl = getRateLimit(res.error);
-      if (rl) { setError(""); startLock(rl.seconds); return; }
       setError(extractError(res.error, t("register_error_default")));
       return;
     }
     startResendCooldown();
   }
-
-  const lockMsg = lockLeft > 0 ? lockMessage(lang, lockLeft) : "";
 
   return (
     <div className="min-h-screen bg-gray-100 md:bg-white flex items-center justify-center p-4 sm:p-6 md:p-0">
@@ -231,7 +214,7 @@ export default function RegisterPage() {
         <div className="dark-surface flex relative bg-night text-white flex-col justify-between p-8 md:p-10 lg:p-14 overflow-hidden">
           <Link to="/" className="flex items-center justify-center gap-2 relative z-10 w-full">
             <img src="/logo.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full" />
-            <span className="font-bold tracking-tight">SokoMkononi</span>
+            <span className="whitespace-nowrap font-bold tracking-tight">SokoMkononi</span>
           </Link>
 
           <div className="relative z-10 max-w-sm mx-auto text-center py-8 md:py-0">
@@ -283,10 +266,10 @@ export default function RegisterPage() {
 
                   <Captcha key={captchaNonce} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken("")} />
 
-                  {(lockMsg || error) && <p className="text-rust text-body-sm">{lockMsg || error}</p>}
+                  {error && <p className="text-rust text-body-sm">{error}</p>}
 
                   <button
-                    disabled={loading || lockLeft > 0 || !agreedToTerms || (isCaptchaEnabled && !captchaToken)}
+                    disabled={loading || !agreedToTerms || (isCaptchaEnabled && !captchaToken)}
                     className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn disabled:cursor-not-allowed"
                   >
                     {loading ? t("register_sending_otp") : t("register_continue")}
@@ -322,10 +305,10 @@ export default function RegisterPage() {
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                   />
-                  {(lockMsg || error) && <p className="text-rust text-body-sm">{lockMsg || error}</p>}
+                  {error && <p className="text-rust text-body-sm">{error}</p>}
                   <button
-                    disabled={loading || lockLeft > 0}
-                    className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn disabled:cursor-not-allowed"
+                    disabled={loading}
+                    className="w-full cta-gradient py-2.5 rounded-lg font-semibold text-btn"
                   >
                     {loading ? t("register_verifying") : t("register_verify_submit")}
                   </button>
@@ -335,7 +318,7 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={handleResend}
-                    disabled={resendCooldown > 0 || loading || lockLeft > 0}
+                    disabled={resendCooldown > 0 || loading}
                     className="text-royal font-semibold disabled:text-muted disabled:cursor-not-allowed"
                   >
                     {resendCooldown > 0

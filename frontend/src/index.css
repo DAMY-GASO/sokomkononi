@@ -210,7 +210,8 @@ html.dark .btn-secondary:hover:not(:disabled) { background: rgb(var(--c-royal-li
 html.dark .input:focus, html.dark .textarea:focus, html.dark .select:focus { border-color: rgb(var(--c-gold)); box-shadow: 0 0 0 3px rgb(var(--c-gold) / .22); }
 .input:disabled, .textarea:disabled, .select:disabled { opacity: .6; cursor: not-allowed; }
 .input, .textarea, .select { font-size: 16px; }
-@media (min-width: 641px) { .input, .textarea, .select { font-size: 15px; } }
+/* 15px ni kwa kipanya tu — iOS Safari hu-zoom ukurasa input ikiwa <16px (pia landscape > 640px) */
+@media (min-width: 641px) and (hover: hover) and (pointer: fine) { .input, .textarea, .select { font-size: 15px; } }
 
 /* Fields zote (hata zisizo na class) zinasomeka */
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
@@ -271,8 +272,8 @@ html.dark .badge-night { background: rgb(var(--c-night-soft)); border-color: rgb
 /* === Surfaces === */
 .surface-night { background: radial-gradient(1200px 600px at 20% 0%, rgb(var(--c-night-soft) / 1) 0%, transparent 60%), radial-gradient(900px 500px at 100% 100%, rgb(0 98 253 / 0.28) 0%, transparent 55%), linear-gradient(180deg, #011957 0%, #010F3A 100%); }
 .surface-night p, .surface-night li { color: rgb(var(--c-text-2)); }
-.surface-glass { background: rgba(255,255,255,0.06); backdrop-filter: blur(12px) saturate(1.3); border: 1px solid rgba(255,255,255,0.12); }
-.surface-glass-light { background: rgb(var(--c-card) / 0.92); backdrop-filter: blur(12px); border: 1px solid rgb(var(--c-hairline)); }
+.surface-glass { background: rgba(255,255,255,0.06); -webkit-backdrop-filter: blur(12px) saturate(1.3); backdrop-filter: blur(12px) saturate(1.3); border: 1px solid rgba(255,255,255,0.12); }
+.surface-glass-light { background: rgb(var(--c-card) / 0.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border: 1px solid rgb(var(--c-hairline)); }
 .hover-lift { transition: transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s cubic-bezier(.16,1,.3,1), border-color .25s ease; }
 .hover-lift:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: rgb(var(--c-gold) / .35); }
 .divider { height: 1px; background: rgb(var(--c-hairline)); border: 0; margin: 0; }
@@ -462,7 +463,7 @@ h1, h2, h3, h4, h5, h6, p, span, a, button, label, td, th { overflow-wrap: break
 @media (min-width: 1024px) { .navbar-search-desktop { display: block !important; } }
 
 @media (max-width: 640px) {
-  button, a[role="button"], [type="submit"], [type="button"] { min-height: 40px; }
+  .btn, [type="submit"] { min-height: 40px; }
   input, textarea, select { font-size: 16px !important; }
   .mobile-modal { align-items: flex-end !important; padding: 0 !important; }
   .mobile-modal > * { border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; max-height: 92dvh !important; width: 100% !important; overflow-y: auto; }
@@ -794,26 +795,6 @@ h1, h2, h3, h4, h5, h6,
 button,
 a {
   overflow-wrap: break-word;
-  word-break: break-word;
-}
-
-/* 4. Vitufe visivunjike kwenye simu — wawe na urefu wa kutosha */
-@media (max-width: 640px) {
-  button,
-  [role="button"],
-  a[role="button"] {
-    min-height: 40px;
-    white-space: normal; /* Ruhusu kuvunja kwa maneno marefu */
-  }
-}
-
-/* 5. Safari ina tatizo na input fields — hakikisha font-size ni 16px ili isizoom */
-@media (max-width: 640px) {
-  input,
-  textarea,
-  select {
-    font-size: 16px !important;
-  }
 }
 
 /* 6. Safari modal/overlay — hakikisha haiscroll background */
@@ -838,3 +819,21 @@ body.modal-open {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+/* ============================================================
+   iOS SAFARI — ongezeko (Novemba 2026)
+   ============================================================ */
+
+/* 100vh kwenye Safari inajumuisha eneo la address bar → maudhui ya chini yanafichwa.
+   dvh = urefu halisi unaoonekana; vh inabaki fallback kwa browsers za zamani. */
+.min-h-screen { min-height: 100vh; min-height: 100dvh; }
+.h-screen     { height: 100vh;     height: 100dvh; }
+
+/* Footer isifichwe nyuma ya BottomNav (fixed) kwenye simu */
+@media (max-width: 767px) {
+  footer.bg-night-deep { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Zuia double-tap zoom na kuchelewa kwa tap kwenye vitufe na viungo */
+a, button, [role="button"], input, select, textarea, label { touch-action: manipulation; }
+a, button { -webkit-tap-highlight-color: transparent; }
