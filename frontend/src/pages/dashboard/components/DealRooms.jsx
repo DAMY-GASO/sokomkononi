@@ -4,13 +4,18 @@
 // Marekebisho:
 //  ✅ MPYA: prop `openReserveModalOnMount` — inatumwa kwa DealDetail
 //     wakati `?action=reserve` ipo kwenye URL (kutoka WaitingListPage).
-//  ✅ Kila kitu kingine kimebaki kama kilivyo.
+//  ✅ MPYA: WebSocket client kwa updates za papo hapo (badala ya polling).
+//  ✅ MPYA: typing indicator — inaonyesha "mtumiaji anaandika…".
+//  ✅ MPYA: WebSocketStatusBadge — inaonyesha hali ya muunganisho.
+//  ✅ MPYA: broadcast payload inatumiwa moja kwa moja kwa message/offer;
+//     `deal_update` pekee inaita `fetchDealDetailAsync`.
 // ============================================================
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { COLORS } from "./shared";
 import DealDetail from "./dealrooms/DealDetail.jsx";
 import DealListItem from "./dealrooms/DealListItem.jsx";
 import ReservationSuccessModal from "./dealrooms/ReservationSuccessModal.jsx";
+import WebSocketStatusBadge from "./dealrooms/WebSocketStatusBadge.jsx";
 import { dealsApi } from "../../../api/deals.js";
 import {
   fetchDealDetailAsync,
@@ -20,6 +25,7 @@ import {
 import { mergeServerDeal } from "./dealrooms/messageHelpers.js";
 import { useAuth } from "../../../config/authStore.js";
 import { useDealHelpers } from "./dealrooms/useDealHelpers.js";
+import { useDealWebSocket } from "./dealrooms/useDealWebSocket.js";
 import { useInspectionActions } from "./dealrooms/useInspectionActions.js";
 import { useLanguage } from "../../../context/LanguageContext.jsx";
 import { useMessageActions } from "./dealrooms/useMessageActions.js";
@@ -46,8 +52,12 @@ export default function DealRooms({
   const [transactionIds, setTransactionIds] = useState({});
   const [offlineMode, setOfflineMode] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
-  // ✅ MPYA: hali ya kufungua reservation modal moja kwa moja
   const [openReserveOnMount, setOpenReserveOnMount] = useState(false);
+
+  // ── WebSocket state ──
+  const token = localStorage.getItem("sokomkononi_access");
+  const [typingByRoom, setTypingByRoom] = useState({});
+  const typingTimeoutRef = useRef({});
 
   const listingIdParam = searchParams.get("listing");
   const actionParam = searchParams.get("action");
@@ -67,7 +77,6 @@ export default function DealRooms({
     if (targetDeal) {
       setSelectedId(targetDeal.id);
       setMobileShowDetail(true);
-      // ✅ MPYA: fungua reservation modal moja kwa moja
       setOpenReserveOnMount(true);
     }
   }, [deals, actionParam, listingIdParam]);
@@ -80,14 +89,11 @@ export default function DealRooms({
   const handleSelect = (id) => {
     setSelectedId(id);
     setMobileShowDetail(true);
-    // ✅ MPYA: kama mtumiaji anachagua deal nyingine, usifungue modal
     setOpenReserveOnMount(false);
   };
 
   const [detailFetchedAt, setDetailFetchedAt] = useState({});
   const [detailError, setDetailError] = useState({});
-  // Idadi ya ujumbe unaotumwa sasa hivi — polling inasubiri ili isifute
-  // ujumbe wa muda (optimistic) kabla seva haijajibu.
   const sendingRef = useRef(0);
 
   useEffect(() => {
@@ -122,37 +128,90 @@ export default function DealRooms({
       });
   }, [selectedDeal?.id]);
 
-  // ── Polling nyepesi ──
-  useEffect(() => {
-    const id = selectedDeal?.id;
-    if (!id) return;
-    const roomId = selectedDeal.dealRoomId || id;
+  // ── WebSocket incoming ──
+  const handleIncomingWs = useCallback(
+    (data) => {
+      const roomId =
+        data.room_id ?? selectedDeal?.dealRoomId ?? selectedDeal?.id;
+      if (!roomId) return;
 
-    const timer = setInterval(() => {
-      if (
-        typeof document !== "undefined" &&
-        document.visibilityState === "hidden"
-      ) {
+      // ── Typing ──
+      if (data.type === "typing") {
+        setTypingByRoom((prev) => ({ ...prev, [roomId]: data }));
+        clearTimeout(typingTimeoutRef.current[roomId]);
+        typingTimeoutRef.current[roomId] = setTimeout(() => {
+          setTypingByRoom((prev) => ({ ...prev, [roomId]: null }));
+        }, 3000);
         return;
       }
-      if (sendingRef.current > 0) return;
-      fetchDealDetailAsync(roomId)
-        .then((res) => {
-          if (res?.error?.status === 404) {
-            clearInterval(timer);
-            return;
-          }
-          if (res?.ok && res.deal && sendingRef.current === 0) {
-            updateDealInStore(id, (prev) => mergeServerDeal(prev, res.deal));
-          }
-        })
-        .catch(() => {
-          /* noop */
-        });
-    }, 15000);
 
-    return () => clearInterval(timer);
-  }, [selectedDeal?.id, selectedDeal?.dealRoomId]);
+      const dealId = selectedDeal?.id;
+      if (!dealId) return;
+
+      // ── Message / Offer mpya — ongeza moja kwa moja kwenye store ──
+      if (
+        data.type === "message" ||
+        data.type === "offer" ||
+        data.type === "offer_update"
+      ) {
+        const p = data.payload;
+        if (!p || p.sender_id === user?.id) {
+          // Ujumbe wetu wenyewe — tayari umeongezwa kwa optimistic update
+          return;
+        }
+
+        updateDealInStore(dealId, (prev) => {
+          const list = prev.messages || [];
+          // Epuka duplicate (kama fetch ilishaleta)
+          if (list.some((m) => String(m.id) === String(p.id))) {
+            return prev;
+          }
+          return {
+            ...prev,
+            messages: [
+              ...list,
+              {
+                id: p.id,
+                sender: "them",
+                text: p.text || "",
+                imageUrl: p.attachment_url || null,
+                offerAmount: p.offer_amount
+                  ? parseFloat(p.offer_amount)
+                  : null,
+                kind: p.kind || "USER",
+                at: p.created_at,
+                sendStatus: "sent",
+                system_code: p.system_code,
+                system_data: p.system_data,
+              },
+            ],
+          };
+        });
+        return;
+      }
+
+      // ── deal_update — fetch kamili (ina mabadiliko mengi) ──
+      if (data.type === "deal_update") {
+        fetchDealDetailAsync(roomId)
+          .then((res) => {
+            if (res?.ok && res.deal && sendingRef.current === 0) {
+              updateDealInStore(dealId, (prev) =>
+                mergeServerDeal(prev, res.deal),
+              );
+            }
+          })
+          .catch(() => {});
+      }
+    },
+    [selectedDeal?.id, selectedDeal?.dealRoomId, user?.id],
+  );
+
+  const wsRoomId = selectedDeal?.dealRoomId || selectedDeal?.id || null;
+  const { status: wsStatus, sendTyping } = useDealWebSocket({
+    roomId: wsRoomId,
+    token,
+    onIncoming: handleIncomingWs,
+  });
 
   // ── Alama ya "imesomwa" ──
   const markedReadRef = useRef({});
@@ -274,6 +333,11 @@ export default function DealRooms({
               ? "Negotiate moja kwa moja na wauzaji wa mali unazovutiwa nazo."
               : "Negotiate directly with sellers of properties you're interested in."}
         </p>
+        {selectedDeal && (
+          <div className="flex items-center gap-2 justify-center mt-2">
+            <WebSocketStatusBadge status={wsStatus} />
+          </div>
+        )}
         {offlineMode && (
           <p
             style={{ color: COLORS.rust }}
@@ -331,9 +395,10 @@ export default function DealRooms({
               onProofConfirm={handleProofConfirm}
               onProofReject={handleProofReject}
               onShowSuccess={() => setSuccessModalOpen(true)}
-              // ✅ MPYA: pitisha hali ya kufungua modal
               openReserveModal={openReserveOnMount}
               onReserveModalOpened={() => setOpenReserveOnMount(false)}
+              typing={typingByRoom[wsRoomId]}
+              onTyping={sendTyping}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">

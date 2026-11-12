@@ -2,12 +2,21 @@ import React from "react";
 import { COLORS } from "../shared";
 import MessageMeta from "./MessageMeta.jsx";
 import OfferBubble from "./OfferBubble.jsx";
+import TypingIndicator from "./TypingIndicator.jsx";
 import { formatDayLabel, getMessageText, isSameDay } from "./messageHelpers.js";
 
-export default function DealMessageList({ acceptedAnchorExists, acceptedAnchorId, acceptedNotice, deal, lang, onRetryMessage }) {
+export default function DealMessageList({
+  acceptedAnchorExists,
+  acceptedAnchorId,
+  acceptedNotice,
+  deal,
+  lang,
+  onRetryMessage,
+  typing,
+}) {
   return (
     <>
-{/* Messages */}
+      {/* Messages */}
       <div
         className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-2.5"
         style={{ background: COLORS.sand }}
@@ -18,11 +27,11 @@ export default function DealMessageList({ acceptedAnchorExists, acceptedAnchorId
           const showDaySeparator =
             !!m.at && (!prevMsg || !isSameDay(prevMsg.at, m.at));
           const mine = m.sender === "me";
-          // ── MPYA: admin bubble — chunguza `kind` pia ──
           const isAdminMessage =
             m.sender === "admin" || m.kind === "ADMIN";
           const isSystemMessage =
             m.sender === "system" || m.kind === "SYSTEM";
+
           const bubble = isSystemMessage ? (
             <div key={m.id} className="flex justify-center my-1">
               <div className="border border-[color:rgb(var(--c-hairline))] bg-card text-primary rounded-xl px-3.5 py-2 max-w-[90%] text-body-sm text-center font-medium">
@@ -92,6 +101,7 @@ export default function DealMessageList({ acceptedAnchorExists, acceptedAnchorId
               </div>
             </div>
           );
+
           return (
             <React.Fragment key={m.id}>
               {showDaySeparator && (
@@ -117,6 +127,12 @@ export default function DealMessageList({ acceptedAnchorExists, acceptedAnchorId
 
         {/* Fallback: ofa iliyokubaliwa haipo kwenye orodha — weka mwishoni */}
         {!acceptedAnchorExists && acceptedNotice}
+
+        {/* Typing indicator — chini ya ujumbe wote */}
+        <TypingIndicator
+          active={!!typing?.is_typing}
+          name={typing?.user_name}
+        />
       </div>
     </>
   );

@@ -1,11 +1,47 @@
-import React from "react";
+import React, { useRef } from "react";
 import { COLORS } from "../shared";
 import { Lock, Paperclip, Send, X } from "lucide-react";
 
-export default function DealComposer({ attachInputRef, attachPreview, chatError, clearAttachment, deal, handleAttachChange, handleSend, isLocked, lang, setChatError, setText, text }) {
+export default function DealComposer({
+  attachInputRef,
+  attachPreview,
+  chatError,
+  clearAttachment,
+  deal,
+  handleAttachChange,
+  handleSend,
+  isLocked,
+  lang,
+  onTyping,
+  setChatError,
+  setText,
+  text,
+}) {
+  const typingTimer = useRef(null);
+
+  const handleChange = (e) => {
+    setText(e.target.value);
+    if (chatError) setChatError("");
+
+    // Typing ping — debounce 1.5s
+    if (onTyping) {
+      onTyping(true);
+      clearTimeout(typingTimer.current);
+      typingTimer.current = setTimeout(() => onTyping(false), 1500);
+    }
+  };
+
+  const handleSendWithTyping = () => {
+    if (onTyping) {
+      onTyping(false);
+      clearTimeout(typingTimer.current);
+    }
+    handleSend();
+  };
+
   return (
     <>
-{/* Composer — kuzimwa kama locked au cancelled */}
+      {/* Composer — kuzimwa kama locked au cancelled */}
       {deal.status !== "declined" &&
         deal.status !== "cancelled" &&
         !isLocked && (
@@ -34,52 +70,53 @@ export default function DealComposer({ attachInputRef, attachPreview, chatError,
               </div>
             )}
             <div className="flex items-center gap-2">
-            <input
-              ref={attachInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAttachChange}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => attachInputRef.current?.click()}
-              style={{ color: COLORS.night, borderColor: COLORS.sandLine }}
-              className="w-10 h-10 rounded-full border flex items-center justify-center shrink-0"
-              aria-label={lang === "sw" ? "Ambatanisha picha" : "Attach image"}
-            >
-              <Paperclip size={16} />
-            </button>
-            <input
-              style={{
-                background: COLORS.sand,
-                borderColor: COLORS.sandLine,
-                color: COLORS.night,
-              }}
-              className="flex-1 rounded-full border px-4 py-2.5 text-sm outline-none"
-              placeholder={
-                lang === "sw" ? "Andika ujumbe..." : "Type a message..."
-              }
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                if (chatError) setChatError("");
-              }}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            />
-            <button
-              onClick={handleSend}
-              style={{ background: COLORS.gold, color: COLORS.night }}
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              aria-label="Send"
-            >
-              <Send size={16} />
-            </button>
+              <input
+                ref={attachInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAttachChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => attachInputRef.current?.click()}
+                style={{ color: COLORS.night, borderColor: COLORS.sandLine }}
+                className="w-10 h-10 rounded-full border flex items-center justify-center shrink-0"
+                aria-label={
+                  lang === "sw" ? "Ambatanisha picha" : "Attach image"
+                }
+              >
+                <Paperclip size={16} />
+              </button>
+              <input
+                style={{
+                  background: COLORS.sand,
+                  borderColor: COLORS.sandLine,
+                  color: COLORS.night,
+                }}
+                className="flex-1 rounded-full border px-4 py-2.5 text-sm outline-none"
+                placeholder={
+                  lang === "sw" ? "Andika ujumbe..." : "Type a message..."
+                }
+                value={text}
+                onChange={handleChange}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && handleSendWithTyping()
+                }
+              />
+              <button
+                onClick={handleSendWithTyping}
+                style={{ background: COLORS.gold, color: COLORS.night }}
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                aria-label="Send"
+              >
+                <Send size={16} />
+              </button>
             </div>
           </div>
         )}
 
-      {/* ── MPYA: badala ya composer kama locked ── */}
+      {/* Composer badala yake kama locked */}
       {isLocked && deal.status !== "cancelled" && (
         <div
           style={{

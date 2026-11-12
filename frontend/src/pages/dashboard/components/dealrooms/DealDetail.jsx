@@ -6,6 +6,8 @@
 //     — inafungua ReservationModal kwenye mount kama ni true.
 //     Baada ya kufungua, inaita `onReserveModalOpened()` ili
 //     DealRooms iweze ku-reset state.
+//  ✅ MPYA: props `typing` + `onTyping` — typing indicator na
+//     typing ping kwa WebSocket.
 //  ✅ Kila kitu kingine kimebaki kama kilivyo.
 // ============================================================
 import React, { useEffect, useRef, useState } from "react";
@@ -22,7 +24,10 @@ import { cleanMoneyInput } from "./paymentInputHelpers.js";
 import { dealsApi } from "../../../../api/deals.js";
 import { explainApiError } from "../../../../api/apiErrors.js";
 import { getCategoryIcon } from "../../../../config/categoriesStore.js";
-import { useActiveReservationTiers, useReservationSettings } from "../../../../config/feePolicy.js";
+import {
+  useActiveReservationTiers,
+  useReservationSettings,
+} from "../../../../config/feePolicy.js";
 import { useNavigate } from "react-router-dom";
 
 // ============================================================
@@ -49,6 +54,8 @@ export default function DealDetail({
   // ✅ MPYA
   openReserveModal = false,
   onReserveModalOpened,
+  typing = null,
+  onTyping = null,
 }) {
   const [text, setText] = useState("");
   const [offerOpen, setOfferOpen] = useState(false);
@@ -63,7 +70,6 @@ export default function DealDetail({
   // ✅ MPYA: fungua ReservationModal moja kwa moja kama openReserveModal ni true
   useEffect(() => {
     if (!openReserveModal) return;
-    // Subiri hadi deal ipakiwe kikamilifu (au angalau sekunde 100)
     const timer = setTimeout(() => {
       setReserveModalOpen(true);
       if (typeof onReserveModalOpened === "function") {
@@ -86,7 +92,7 @@ export default function DealDetail({
     if (!f) return;
     if (!f.type.startsWith("image/")) {
       setChatError(
-        lang === "sw" ? "Chagua picha pekee." : "Please choose an image."
+        lang === "sw" ? "Chagua picha pekee." : "Please choose an image.",
       );
       return;
     }
@@ -94,7 +100,7 @@ export default function DealDetail({
       setChatError(
         lang === "sw"
           ? "Picha ni kubwa mno (kiwango ni MB 8)."
-          : "Image is too large (max 8 MB)."
+          : "Image is too large (max 8 MB).",
       );
       return;
     }
@@ -161,8 +167,8 @@ export default function DealDetail({
       (m) =>
         m.offerAmount &&
         !["declined", "rejected", "cancelled"].includes(
-          String(m.status || "").toLowerCase()
-        )
+          String(m.status || "").toLowerCase(),
+        ),
     );
   const iMadeLastOffer = lastOffer?.sender === "me";
 
@@ -175,7 +181,7 @@ export default function DealDetail({
   const acceptedAnchorExists =
     acceptedAnchorId != null &&
     (deal.messages || []).some(
-      (m) => String(m.id) === String(acceptedAnchorId)
+      (m) => String(m.id) === String(acceptedAnchorId),
     );
 
   const acceptedNotice = showAcceptedNotice ? (
@@ -193,17 +199,17 @@ export default function DealDetail({
         {isSeller
           ? lang === "sw"
             ? `Mmekubaliana kwenye ${formatTZS(
-                deal.currentOffer
+                deal.currentOffer,
               )}. Mnunuzi ataendelea na hatua inayofuata.`
             : `You agreed at ${formatTZS(
-                deal.currentOffer
+                deal.currentOffer,
               )}. The buyer will proceed with the next step.`
           : lang === "sw"
             ? `Mmekubaliana bei ya ${formatTZS(
-                deal.currentOffer
+                deal.currentOffer,
               )}. Endelea kuwasiliana na muuzaji hapa.`
             : `You've agreed at ${formatTZS(
-                deal.currentOffer
+                deal.currentOffer,
               )}. Continue chatting with the seller here.`}
       </div>
     </div>
@@ -217,18 +223,18 @@ export default function DealDetail({
   const waitingText = iMadeLastOffer
     ? lang === "sw"
       ? `Ofa yako ya ${formatTZS(
-          deal.currentOffer
+          deal.currentOffer,
         )} imetumwa — unasubiri upande wa pili ukubali au ukatae.`
       : `Your offer of ${formatTZS(
-          deal.currentOffer
+          deal.currentOffer,
         )} was sent — waiting for the other party to accept or decline.`
     : deal.currentOffer > 0
       ? lang === "sw"
         ? `Ofa ya ${formatTZS(
-            deal.currentOffer
+            deal.currentOffer,
           )} imepokelewa — unaweza kukubali au kukataa.`
         : `Offer of ${formatTZS(
-            deal.currentOffer
+            deal.currentOffer,
           )} received — you can accept or decline.`
       : lang === "sw"
         ? "Hakuna ofa bado — toa ofa yako ya kwanza."
@@ -307,7 +313,7 @@ export default function DealDetail({
             lang === "sw"
               ? "Imeshindwa kufufua mazungumzo."
               : "Could not reopen the conversation.",
-        })
+        }),
       );
     }
     setReopening(false);
@@ -379,7 +385,7 @@ export default function DealDetail({
         err?.message ||
           (lang === "sw"
             ? "Imeshindwa kutuma ripoti. Jaribu tena."
-            : "Failed to send report. Try again.")
+            : "Failed to send report. Try again."),
       );
     } finally {
       setReportBusy(false);
@@ -388,13 +394,119 @@ export default function DealDetail({
 
   return (
     <div className="flex flex-col h-full relative">
-      <DealDetailHeader CategoryIcon={CategoryIcon} counterpartyLabel={counterpartyLabel} deal={deal} handleExit={handleExit} isBuyer={isBuyer} isLocked={isLocked} lang={lang} menuOpen={menuOpen} menuRef={menuRef} onBack={onBack} onInspectionResolve={onInspectionResolve} setContactDrawerOpen={setContactDrawerOpen} setMenuOpen={setMenuOpen} setReportOpen={setReportOpen} side={side} status={status} />
-      <PaymentStatusStrip deal={deal} side={side} lang={lang} onRefresh={onRefreshDeal} />
-      <DealBanners canReserve={canReserve} deal={deal} freeReserving={freeReserving} handleFreeReserve={handleFreeReserve} isBuyer={isBuyer} isLocked={isLocked} lang={lang} navigate={navigate} reservationEnabled={reservationEnabled} reserveModalOpen={reserveModalOpen} setReserveModalOpen={setReserveModalOpen} showReservedBanner={showReservedBanner} />
-      <DealMessageList acceptedAnchorExists={acceptedAnchorExists} acceptedAnchorId={acceptedAnchorId} acceptedNotice={acceptedNotice} deal={deal} lang={lang} onRetryMessage={onRetryMessage} />
-      <DealActionPanels canRespond={canRespond} chatError={chatError} deal={deal} handleOffer={handleOffer} handleReopenClick={handleReopenClick} isBuyer={isBuyer} isCancelledByAdmin={isCancelledByAdmin} isLocked={isLocked} isSeller={isSeller} lang={lang} offerAmount={offerAmount} offerOpen={offerOpen} onInspectionResolve={onInspectionResolve} onProofConfirm={onProofConfirm} onProofReject={onProofReject} onProofSubmit={onProofSubmit} onReopen={onReopen} onRespond={onRespond} reopenInfo={reopenInfo} reopening={reopening} setOfferAmount={setOfferAmount} setOfferOpen={setOfferOpen} side={side} waitingText={waitingText} />
-      <DealComposer attachInputRef={attachInputRef} attachPreview={attachPreview} chatError={chatError} clearAttachment={clearAttachment} deal={deal} handleAttachChange={handleAttachChange} handleSend={handleSend} isLocked={isLocked} lang={lang} setChatError={setChatError} setText={setText} text={text} />
-      <DealDetailModals buyerEmail={buyerEmail} buyerPhone={buyerPhone} contactDrawerOpen={contactDrawerOpen} deal={deal} handleReportSubmit={handleReportSubmit} handleReserveSuccess={handleReserveSuccess} isBuyer={isBuyer} lang={lang} reportBusy={reportBusy} reportDetails={reportDetails} reportOpen={reportOpen} reportReason={reportReason} reportSuccess={reportSuccess} reserveModalOpen={reserveModalOpen} sellerEmail={sellerEmail} sellerPhone={sellerPhone} setContactDrawerOpen={setContactDrawerOpen} setReportDetails={setReportDetails} setReportOpen={setReportOpen} setReportReason={setReportReason} setReserveModalOpen={setReserveModalOpen} side={side} user={user} />
+      <DealDetailHeader
+        CategoryIcon={CategoryIcon}
+        counterpartyLabel={counterpartyLabel}
+        deal={deal}
+        handleExit={handleExit}
+        isBuyer={isBuyer}
+        isLocked={isLocked}
+        lang={lang}
+        menuOpen={menuOpen}
+        menuRef={menuRef}
+        onBack={onBack}
+        onInspectionResolve={onInspectionResolve}
+        setContactDrawerOpen={setContactDrawerOpen}
+        setMenuOpen={setMenuOpen}
+        setReportOpen={setReportOpen}
+        side={side}
+        status={status}
+      />
+      <PaymentStatusStrip
+        deal={deal}
+        side={side}
+        lang={lang}
+        onRefresh={onRefreshDeal}
+      />
+      <DealBanners
+        canReserve={canReserve}
+        deal={deal}
+        freeReserving={freeReserving}
+        handleFreeReserve={handleFreeReserve}
+        isBuyer={isBuyer}
+        isLocked={isLocked}
+        lang={lang}
+        navigate={navigate}
+        reservationEnabled={reservationEnabled}
+        reserveModalOpen={reserveModalOpen}
+        setReserveModalOpen={setReserveModalOpen}
+        showReservedBanner={showReservedBanner}
+      />
+      <DealMessageList
+        acceptedAnchorExists={acceptedAnchorExists}
+        acceptedAnchorId={acceptedAnchorId}
+        acceptedNotice={acceptedNotice}
+        deal={deal}
+        lang={lang}
+        onRetryMessage={onRetryMessage}
+        typing={typing}
+      />
+      <DealActionPanels
+        canRespond={canRespond}
+        chatError={chatError}
+        deal={deal}
+        handleOffer={handleOffer}
+        handleReopenClick={handleReopenClick}
+        isBuyer={isBuyer}
+        isCancelledByAdmin={isCancelledByAdmin}
+        isLocked={isLocked}
+        isSeller={isSeller}
+        lang={lang}
+        offerAmount={offerAmount}
+        offerOpen={offerOpen}
+        onInspectionResolve={onInspectionResolve}
+        onProofConfirm={onProofConfirm}
+        onProofReject={onProofReject}
+        onProofSubmit={onProofSubmit}
+        onReopen={onReopen}
+        onRespond={onRespond}
+        reopenInfo={reopenInfo}
+        reopening={reopening}
+        setOfferAmount={setOfferAmount}
+        setOfferOpen={setOfferOpen}
+        side={side}
+        waitingText={waitingText}
+      />
+      <DealComposer
+        attachInputRef={attachInputRef}
+        attachPreview={attachPreview}
+        chatError={chatError}
+        clearAttachment={clearAttachment}
+        deal={deal}
+        handleAttachChange={handleAttachChange}
+        handleSend={handleSend}
+        isLocked={isLocked}
+        lang={lang}
+        onTyping={onTyping}
+        setChatError={setChatError}
+        setText={setText}
+        text={text}
+      />
+      <DealDetailModals
+        buyerEmail={buyerEmail}
+        buyerPhone={buyerPhone}
+        contactDrawerOpen={contactDrawerOpen}
+        deal={deal}
+        handleReportSubmit={handleReportSubmit}
+        handleReserveSuccess={handleReserveSuccess}
+        isBuyer={isBuyer}
+        lang={lang}
+        reportBusy={reportBusy}
+        reportDetails={reportDetails}
+        reportOpen={reportOpen}
+        reportReason={reportReason}
+        reportSuccess={reportSuccess}
+        reserveModalOpen={reserveModalOpen}
+        sellerEmail={sellerEmail}
+        sellerPhone={sellerPhone}
+        setContactDrawerOpen={setContactDrawerOpen}
+        setReportDetails={setReportDetails}
+        setReportOpen={setReportOpen}
+        setReportReason={setReportReason}
+        setReserveModalOpen={setReserveModalOpen}
+        side={side}
+        user={user}
+      />
     </div>
   );
 }
