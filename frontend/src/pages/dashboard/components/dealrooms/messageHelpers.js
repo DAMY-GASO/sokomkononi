@@ -13,8 +13,8 @@ function getSystemText(m, lang) {
   switch (m.systemCode) {
     case "RESERVATION_PAID":
       return t(
-        `Reservation imelipwa. Mali imehifadhiwa${d.expires_at ? ` hadi ${fmtDT(d.expires_at, lang)}` : ""}. Mnunuzi yuko kwenye kipindi cha ukaguzi.`,
-        `Reservation paid. The property is held${d.expires_at ? ` until ${fmtDT(d.expires_at, lang)}` : ""}. The buyer is in the inspection period.`
+        `Mali imehifadhiwa${d.expires_at ? ` hadi ${fmtDT(d.expires_at, lang)}` : ""}. Mnunuzi yuko kwenye kipindi cha ukaguzi.`,
+        `The property is held${d.expires_at ? ` until ${fmtDT(d.expires_at, lang)}` : ""}. The buyer is in the inspection period.`
       );
     case "INSPECTION_PASSED":
       return t(

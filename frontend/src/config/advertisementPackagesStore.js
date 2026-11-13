@@ -1,11 +1,33 @@
 // src/config/advertisementPackagesStore.js
 // ============================================================
+// ✅ FIX #11 (race): hydrate ya zamani HAIANDIKI juu ya mabadiliko mapya.
+//    hydrateGuard inazuia tu cache ya matokeo; write() hutokea ndani ya
+//    _hydrate... kabla guard haijaona generation. mutationVersion +
+//    pendingMutations: kama mutation ilianza/iliisha wakati GET ilikuwa
+//    njiani, GET hiyo inaachwa.
+// ============================================================
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { guarded } from "./hydrateGuard.js";
 
 const KEY = "sokomkononi_advertisement_packages_v1";
 const EV = "sokomkononi:advertisement-packages-updated";
+const BASE = "/advertisement-fees/packages/";
+
+// ── Mutation tracking (FIX #11) ──────────────────────────────
+let mutationVersion = 0;
+let pendingMutations = 0;
+
+async function tracked(fn) {
+  pendingMutations += 1;
+  mutationVersion += 1;
+  try {
+    return await fn();
+  } finally {
+    mutationVersion += 1;
+    pendingMutations -= 1;
+  }
+}
 
 // ============================================================
 // LOCAL STORAGE
@@ -55,13 +77,18 @@ export function getAdvertisementPackages() {
 }
 
 // ============================================================
-// HYDRATE — deduped via guarded()
-// ✅ FIX #7: guarded() inatoa dedupe, TTL, forceRefresh,
-//            na race protection (kutoka fix #1).
+// HYDRATE — deduped via guarded() + stale-write protection
 // ============================================================
 async function _hydrateAdvertisementPackagesFromApi() {
+  const versionAtStart = mutationVersion;
   try {
-    const d = await api.get("/advertisement-fees/packages/?page_size=200");
+    const d = await api.get(`${BASE}?page_size=200`);
+
+    if (pendingMutations > 0 || mutationVersion !== versionAtStart) {
+      console.info("[advertisementPackagesStore] stale hydrate ignored (mutation during fetch)");
+      return { ok: true, skipped: true };
+    }
+
     const list = Array.isArray(d) ? d : d?.results || [];
     write(list.map(norm).filter(Boolean));
     return { ok: true, count: list.length };
@@ -76,81 +103,77 @@ export const hydrateAdvertisementPackagesFromApi = guarded(
 );
 
 // ============================================================
-// ADD — ongeza advertisement package mpya
-// ✅ FIX #4: `created` inafafanuliwa kabla ya kutumika.
+// ADD
 // ============================================================
-export async function addAdvertisementPackageAsync({
-  name,
-  hours,
-  price,
-  ordering,
-}) {
-  const cleanName = (name || "").trim();
-  if (!cleanName) {
-    return { ok: false, error: new Error("Name required") };
-  }
-  const cleanHours = Number(hours) || 24;
-  const cleanPrice = Number(price) || 0;
-  if (cleanPrice < 0) {
-    return { ok: false, error: new Error("Price must be >= 0") };
-  }
-
-  try {
-    const raw = await api.post("/advertisement-fees/packages/", {
-      name: cleanName,
-      duration_hours: cleanHours,
-      price: cleanPrice,
-      is_active: true,
-      ordering: Number(ordering) || 0,
-    });
-
-    // ✅ FIX #4: `created` inafafanuliwa hapa
-    const created = norm(raw);
-
-    if (!created) {
-      // Backend imerudisha payload isiyo sahihi — hydrate ili tupate data halisi.
-      try {
-        await hydrateAdvertisementPackagesFromApi.forceRefresh();
-      } catch {
-        /* ignore */
-      }
-      return {
-        ok: false,
-        error: new Error("Backend returned invalid package payload"),
-      };
+export function addAdvertisementPackageAsync({ name, hours, price, ordering }) {
+  return tracked(async () => {
+    const cleanName = (name || "").trim();
+    if (!cleanName) {
+      return { ok: false, error: new Error("Name required") };
+    }
+    const cleanHours = Number(hours) || 24;
+    const cleanPrice = Number(price) || 0;
+    if (cleanPrice < 0) {
+      return { ok: false, error: new Error("Price must be >= 0") };
     }
 
-    write([...read(), created]);
-    return { ok: true, package: created };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+    try {
+      const raw = await api.post(BASE, {
+        name: cleanName,
+        duration_hours: cleanHours,
+        price: cleanPrice,
+        is_active: true,
+        ordering: Number(ordering) || 0,
+      });
+
+      const created = norm(raw);
+
+      if (!created) {
+        try {
+          await hydrateAdvertisementPackagesFromApi.forceRefresh();
+        } catch {
+          /* ignore */
+        }
+        return {
+          ok: false,
+          error: new Error("Backend returned invalid package payload"),
+        };
+      }
+
+      write([...read(), created]);
+      return { ok: true, package: created };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  });
 }
 
 // ============================================================
 // UPDATE — generic updater
 // ============================================================
-export async function updateAdvertisementPackageAsync(id, patch) {
-  try {
-    const body = {};
-    if (patch.name != null) body.name = patch.name;
-    if (patch.hours != null) body.duration_hours = Number(patch.hours);
-    if (patch.price != null) body.price = Number(patch.price);
-    if (patch.ordering != null) body.ordering = Number(patch.ordering);
-    if (patch.isActive != null) body.is_active = patch.isActive;
-    const raw = await api.patch(`/advertisement-fees/packages/${id}/`, body);
-    const updated = norm(raw);
-    if (updated) {
-      write(read().map((p) => (p.id === id ? updated : p)));
+export function updateAdvertisementPackageAsync(id, patch) {
+  return tracked(async () => {
+    try {
+      const body = {};
+      if (patch.name != null) body.name = patch.name;
+      if (patch.hours != null) body.duration_hours = Number(patch.hours);
+      if (patch.price != null) body.price = Number(patch.price);
+      if (patch.ordering != null) body.ordering = Number(patch.ordering);
+      if (patch.isActive != null) body.is_active = patch.isActive;
+      const raw = await api.patch(`${BASE}${id}/`, body);
+      const updated = norm(raw);
+      if (updated) {
+        write(read().map((p) => (p.id === id ? updated : p)));
+      }
+      return { ok: true, package: updated };
+    } catch (err) {
+      return { ok: false, error: err };
     }
-    return { ok: true, package: updated };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+  });
 }
 
 // ============================================================
-// RENAME — badilisha jina la advertisement package
+// RENAME
 // ============================================================
 export async function renameAdvertisementPackageAsync(id, name) {
   const clean = (name || "").trim();
@@ -159,37 +182,41 @@ export async function renameAdvertisementPackageAsync(id, name) {
 }
 
 // ============================================================
-// REMOVE — futa advertisement package
+// REMOVE
 // ============================================================
-export async function removeAdvertisementPackageAsync(id) {
-  try {
-    await api.delete(`/advertisement-fees/packages/${id}/`);
-    write(read().filter((p) => p.id !== id));
-    return { ok: true };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+export function removeAdvertisementPackageAsync(id) {
+  return tracked(async () => {
+    try {
+      await api.delete(`${BASE}${id}/`);
+      write(read().filter((p) => p.id !== id));
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  });
 }
 
 // ============================================================
-// TOGGLE — washa/zima advertisement package
+// TOGGLE — washa/zima (server-side flip kupitia /toggle/)
 // ============================================================
-export async function toggleAdvertisementPackageAsync(id) {
-  try {
-    const raw = await api.post(`/advertisement-fees/packages/${id}/toggle/`, {});
-    const current = read().find((p) => p.id === id);
-    if (!current) {
-      return { ok: false, error: new Error("Package not found in cache") };
+export function toggleAdvertisementPackageAsync(id) {
+  return tracked(async () => {
+    try {
+      const raw = await api.post(`${BASE}${id}/toggle/`, {});
+      const current = read().find((p) => p.id === id);
+      if (!current) {
+        return { ok: false, error: new Error("Package not found in cache") };
+      }
+      const updated = {
+        ...current,
+        isActive: raw?.is_active ?? !current.isActive,
+      };
+      write(read().map((p) => (p.id === id ? updated : p)));
+      return { ok: true, isActive: updated.isActive };
+    } catch (err) {
+      return { ok: false, error: err };
     }
-    const updated = {
-      ...current,
-      isActive: raw?.is_active ?? !current.isActive,
-    };
-    write(read().map((p) => (p.id === id ? updated : p)));
-    return { ok: true, isActive: updated.isActive };
-  } catch (err) {
-    return { ok: false, error: err };
-  }
+  });
 }
 
 // ============================================================
