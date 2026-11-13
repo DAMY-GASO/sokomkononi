@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell, Menu, X, Heart, MessageSquare, User as UserIcon, Share2,
   Plus, ChevronRight, Globe, Sun, Moon, LogOut, LayoutGrid, Package,
-  Users,
+  Users, LayoutDashboard,
 } from "lucide-react";
 
 import { useLanguage } from "../context/LanguageContext.jsx";
@@ -77,6 +77,10 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
   const { user } = useAuth();
   const { lang, setLang } = useLanguage();
   const { registerTap: registerLogoTap } = useAttribution();
+  const dashboardSide = useDashboardSide();
+  // Rudi kwenye dashboard upande aliokuwemo mtumiaji (mnunuzi / muuzaji)
+  const dashboardTo = dashboardSide === "buyer" ? "/dashboard/buyer" : "/dashboard/overview";
+  const dashboardLabel = lang === "sw" ? "Dashibodi" : "Dashboard";
 
   const [openMenu, setOpenMenu] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -402,6 +406,17 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
 
               <NotificationBell />
 
+              {/* Rudi Dashibodi (mtumiaji aliyeingia) */}
+              {user && (
+                <Link
+                  to={dashboardTo}
+                  className="hidden h-10 items-center gap-1.5 rounded-full bg-gold px-3.5 text-sm font-semibold text-night keep-light transition-colors hover:bg-flame sm:inline-flex"
+                >
+                  <LayoutDashboard size={15} />
+                  {dashboardLabel}
+                </Link>
+              )}
+
               {/* User / Login */}
               {user ? (
                 <div className="relative">
@@ -434,6 +449,7 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
                         </p>
                       </div>
                       {[
+                        { to: dashboardTo,        label: dashboardLabel,                                  Icon: LayoutDashboard },
                         { to: "/wasifu",           label: lang === "sw" ? "Wasifu" : "Profile",            Icon: UserIcon },
                         { to: "/alika-marafiki",   label: lang === "sw" ? "Alika Marafiki" : "Invite Friends", Icon: Users },
                       ].map(({ to, label, Icon }) => (
@@ -518,6 +534,15 @@ export default function Navbar({ categories = [], trustLinks = [] }) {
             </button>
           </div>
           <nav className="flex-1 overflow-y-auto px-3 py-3">
+            {user && (
+              <Link
+                to={dashboardTo}
+                className="mb-2 flex items-center gap-2 rounded-lg bg-gold px-3 py-3 text-[15px] font-semibold text-night keep-light"
+              >
+                <LayoutDashboard size={16} />
+                {dashboardLabel}
+              </Link>
+            )}
             <Link
               to="/"
               className="flex items-center rounded-lg px-3 py-3 text-[15px] font-medium text-white/85 hover:bg-white/[0.06] hover:text-white"

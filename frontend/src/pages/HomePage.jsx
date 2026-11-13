@@ -137,6 +137,26 @@ export default function HomePage() {
     mergeListingsFromApi({ is_boosted: true, page_size: 24, ordering: "-created_at" });
   }, []);
 
+  // Chunguza mara moja kama kuna mali zaidi kwenye seva. Kama hakuna,
+  // kitufe cha "Ona Zaidi" hakionyeshwi (hakuna cha kupakia).
+  useEffect(() => {
+    let cancelled = false;
+    mergeListingsFromApi({
+      page: 1,
+      page_size: NEW_API_PAGE_SIZE,
+      ordering: "-created_at",
+    })
+      .then((res) => {
+        if (!cancelled && res?.ok && res.hasNext === false) {
+          setApiExhausted(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleBuyNow = () => { if (user) navigate("/dashboard/buyer"); else navigate("/register?intent=buy"); };
   const handleSellNow = () => { if (user) navigate("/dashboard/post"); else navigate("/register?intent=sell"); };
   const handleSearch = (q) => { const trimmed = String(q || "").trim(); navigate(trimmed ? `/tafuta?tafuta=${encodeURIComponent(trimmed)}` : "/tafuta"); };
