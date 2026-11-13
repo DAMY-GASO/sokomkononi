@@ -344,7 +344,7 @@ export default function PostPropertyForm({
   const [feeAmount, setFeeAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [warnings, setWarnings] = useState([]);
+  const [, setWarnings] = useState([]);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [isFreeCategory, setIsFreeCategory] = useState(false);
   const [feeConfigLoaded, setFeeConfigLoaded] = useState(false);
@@ -938,11 +938,7 @@ export default function PostPropertyForm({
           }
         }
 
-        // ✅ FIX H5: Onyesha warnings za detail pia kwenye edit
-        if (detailWarnings.length > 0) {
-          const msgs = detailWarnings.map((w) => w.message);
-          setWarnings((w) => [...w, ...msgs]);
-        }
+        // Warnings za detail zinaandikwa kwenye console tu (hazionyeshwi kwa mtumiaji)
       } catch (err) {
         setError(errMsg(err) || t("Hitilafu imetokea.", "Something went wrong."));
       } finally {
@@ -1059,18 +1055,13 @@ export default function PostPropertyForm({
           await api.post(`/listings/${listingId}/${detailEndpoint}/`, detailBody);
         } catch (detailErr) {
           console.warn("[PostPropertyForm] detail submit failed:", detailErr);
-          const msg = t(
-            "Taarifa za ziada hazikuhifadhiwa — unaweza kuziongeza baadaye kwenye Mali Zangu.",
-            "Extra details were not saved — you can add them later from My Listings."
-          );
-          setWarnings((w) => (w.includes(msg) ? w : [...w, msg]));
         }
       }
 
-      // ✅ FIX H5: Onyesha warnings za detail kwenye "done" pia
       if (detailWarnings.length > 0) {
-        const msgs = detailWarnings.map((w) => w.message);
-        setWarnings((w) => [...w, ...msgs]);
+        detailWarnings.forEach((w) =>
+          console.warn(`[detail] ${w.code}: ${w.message}`)
+        );
       }
 
       // ── Publish / fee logic (kama ilivyokuwa) ──────────────
@@ -1349,17 +1340,6 @@ export default function PostPropertyForm({
                 </div>
               )}
 
-              {warnings.length > 0 && (
-                <div
-                  className="rounded-lg px-3 py-2 mb-3 text-xs text-left break-words"
-                  style={{ background: "rgba(232,163,61,0.15)", color: "#8A5A16" }}
-                >
-                  {warnings.map((w, i) => (
-                    <p key={i}>⚠️ {w}</p>
-                  ))}
-                </div>
-              )}
-
               {needsRetryPublish && (
                 <button
                   onClick={handleRetryPublish}
@@ -1561,29 +1541,6 @@ export default function PostPropertyForm({
                   "An admin will review your listing. If approved, you'll be notified to pay the listing fee in 'My Listings'."
                 )}
           </p>
-
-          {/* ✅ FIX H5: Onyesha warnings za detail kwenye "done" */}
-          {warnings.length > 0 && (
-            <div
-              className="rounded-lg px-3 py-2 mb-4 text-xs text-left break-words"
-              style={{ background: "rgba(232,163,61,0.15)", color: "#8A5A16" }}
-            >
-              <p className="font-semibold mb-1">
-                {t("Taarifa za ziada:", "Extra info:")}
-              </p>
-              <ul className="list-disc list-inside space-y-0.5">
-                {warnings.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-              <p className="mt-2 text-[10px] opacity-80">
-                {t(
-                  "Tangazo lako limehifadhiwa. Unaweza kuongeza taarifa hizi baadaye kwenye Mali Zangu.",
-                  "Your listing is saved. You can add these details later in My Listings."
-                )}
-              </p>
-            </div>
-          )}
 
           <button
             onClick={onGoToListings}
