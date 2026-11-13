@@ -43,6 +43,13 @@ function getLang() {
   return v === "en" ? "en" : "sw";
 }
 
+// ✅ Ujumbe safi kwa 413 (body kubwa mno) — hautegemei HTML ya nginx/proxy
+function tooLargeMessage() {
+  return getLang() === "sw"
+    ? "Picha ni kubwa mno kwa jumla. Punguza idadi au ukubwa wa picha, kisha jaribu tena."
+    : "The files are too large. Reduce the number or size of photos and try again.";
+}
+
 // ============================================================
 // CSRF TOKEN
 // ============================================================
@@ -174,6 +181,8 @@ export class ApiError extends Error {
     const firstDetail =
       Array.isArray(env?.details) && typeof env.details[0] === "string" ? env.details[0] : null;
     const msg =
+      // ✅ 413: ujumbe safi, bila kujali server/proxy imerudisha nini
+      (status === 413 && tooLargeMessage()) ||
       firstField ||
       firstDetail ||
       (typeof env?.message === "string" && env.message) ||
@@ -249,6 +258,12 @@ async function parseResponse(res) {
   }
   if (ct.includes("text/html")) {
     const html = await res.text();
+
+    // ✅ 413 kutoka nginx/proxy — usionyeshe HTML wala <title> ghafi
+    if (res.status === 413) {
+      return { detail: tooLargeMessage(), htmlLength: html.length };
+    }
+
     let detail = `Server returned HTML (${res.status})`;
     if (/DisallowedHost/i.test(html)) {
       detail = "Backend rejected the request: DisallowedHost. Add this domain to Django ALLOWED_HOSTS.";

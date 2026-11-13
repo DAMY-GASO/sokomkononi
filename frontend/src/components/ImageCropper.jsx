@@ -17,7 +17,8 @@ export default function ImageCropper({
   file,
   lang = "sw",
   outputSize = 1080,
-  maxBytes = 2 * 1024 * 1024,
+  // ✅ 600KB kwa picha — picha 8 ≈ 5MB kwa jumla (haraka kwenye mtandao wa simu)
+  maxBytes = 600 * 1024,
   onConfirm,
   onCancel,
 }) {
@@ -208,7 +209,7 @@ export default function ImageCropper({
 
       // Punguza quality hadi ukubwa uwe chini ya kikomo
       let blob = null;
-      for (const q of [0.9, 0.82, 0.74, 0.66, 0.58, 0.5]) {
+      for (const q of [0.85, 0.78, 0.7, 0.62, 0.55, 0.48]) {
         // eslint-disable-next-line no-await-in-loop
         blob = await canvasToBlob(canvas, q);
         if (blob && blob.size <= maxBytes) break;
