@@ -20,7 +20,9 @@ export const securityApi = {
   // ── Active sessions ─────────────────────────────────────
   sessions: () => api.get("/auth/sessions/"),
   revokeSession: (id) => api.delete(`/auth/sessions/${id}/`),
-  revokeAllOtherSessions: () => api.post("/auth/sessions/revoke-others/", {}),
+  // `refresh` = refresh token ya kifaa cha sasa (backend inasoma jti ili isikitoe).
+  revokeAllOtherSessions: ({ refresh } = {}) =>
+    api.post("/auth/sessions/revoke-others/", refresh ? { refresh } : {}),
 
   // ── Data privacy ────────────────────────────────────────
   exportData: () => api.post("/auth/me/data-export/", {}),

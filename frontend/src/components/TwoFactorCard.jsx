@@ -30,7 +30,7 @@ export default function TwoFactorCard({ lang }) {
     (async () => {
       try {
         const s = await securityApi.twoFactorStatus();
-        if (!cancelled) setStatus({ enabled: !!s?.enabled });
+        if (!cancelled) setStatus({ enabled: !!s?.enabled, remaining: s?.recovery_codes_remaining ?? null });
       } catch (err) {
         if (!cancelled) {
           // 404/405 = backend haina 2FA. Kosa lingine (mtandao/500) = jaribu tena,
@@ -65,7 +65,7 @@ export default function TwoFactorCard({ lang }) {
       const r = await securityApi.twoFactorVerify({ code: code.trim() });
       // Recovery codes zinakuja moja kwa moja kwenye jibu la verify
       setRecovery(r?.recovery_codes || []);
-      setStatus({ enabled: true });
+      setStatus({ enabled: true, remaining: (r?.recovery_codes || []).length });
       setSetup(null);
       setCode("");
     } catch (err) {
@@ -223,7 +223,15 @@ export default function TwoFactorCard({ lang }) {
       {/* Enabled — disable flow */}
       {status?.enabled && (
         <div className="space-y-3">
-          <RecoveryCodesCard lang={lang} codes={recovery} onCodes={setRecovery} />
+          <RecoveryCodesCard
+            lang={lang}
+            codes={recovery}
+            remaining={status?.remaining ?? null}
+            onCodes={(list) => {
+              setRecovery(list);
+              if (list) setStatus((s) => ({ ...s, remaining: list.length }));
+            }}
+          />
           <p className="text-xs text-secondary">
             {t("Zima 2FA — weka nenosiri + msimbo wa sasa:",
                "Disable 2FA — enter password + current code:")}
@@ -248,4 +256,4 @@ export default function TwoFactorCard({ lang }) {
       )}
     </div>
   );
-}
+}

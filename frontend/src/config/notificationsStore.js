@@ -304,9 +304,11 @@ export async function clearNotificationsAsync(audience) {
     )
     .forEach((n) => markDeleted(n.id));
 
+  let serverFailed = false;
   try {
     await notificationsApi.hardRemoveAll({ audience: target });
   } catch (err) {
+    serverFailed = true;
   }
 
   const remaining = read().filter((n) => {
@@ -315,7 +317,8 @@ export async function clearNotificationsAsync(audience) {
     return n.audience !== target;
   });
   write(remaining);
-  return { ok: true };
+  // soft: zimefichwa kwenye kifaa hiki lakini seva haikujibu
+  return { ok: true, soft: serverFailed };
 }
 
 export async function notifyAdminAboutDeletion(listing) {
@@ -364,16 +367,42 @@ function _dedupedHydrate() {
   return _notificationsHydratePromise;
 }
 
+// ── Polling ya pamoja (kila hook instance haianzishi timer yake) ──
+// Taarifa mpya zilikuwa zinaingia tu ukifungua/ukirefresh ukurasa.
+const POLL_MS = 60000;
+let _pollSubs = 0;
+let _pollTimer = null;
+const _onVisible = () => {
+  if (document.visibilityState === "visible") _dedupedHydrate();
+};
+function startPolling() {
+  if (typeof window === "undefined") return;
+  _pollSubs += 1;
+  if (_pollSubs > 1) return;
+  // Hatuangalii visibility hapa ili browser alerts ziweze kufika tab ikiwa background
+  _pollTimer = setInterval(() => _dedupedHydrate(), POLL_MS);
+  document.addEventListener("visibilitychange", _onVisible);
+}
+function stopPolling() {
+  _pollSubs = Math.max(0, _pollSubs - 1);
+  if (_pollSubs > 0) return;
+  clearInterval(_pollTimer);
+  _pollTimer = null;
+  document.removeEventListener("visibilitychange", _onVisible);
+}
+
 export function useNotifications(audience, enabled = true) {
   const [all, setAll] = useState(() => read());
 
   useEffect(() => {
     if (!enabled) return undefined;
     _dedupedHydrate();
+    startPolling();
     const sync = () => setAll(read());
     window.addEventListener("storage", sync);
     window.addEventListener(EV, sync);
     return () => {
+      stopPolling();
       window.removeEventListener("storage", sync);
       window.removeEventListener(EV, sync);
     };

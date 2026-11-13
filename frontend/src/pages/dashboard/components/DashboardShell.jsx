@@ -34,6 +34,7 @@ import {
 } from "../../../config/listingsStore.js";
 import { useAnnouncements, hydrateAnnouncementsFromApi } from "../../../config/announcementsStore.js";
 import { useNotifications } from "../../../config/notificationsStore.js";
+import { useNewNotificationAlerts } from "../../../config/notificationAlerts.js";
 import { setDashboardSide } from "../../../config/dashboardSideStore.js";
 import { URL_TO_STATE } from "../../../config/dashboardRoutes.js";
 import { addTransaction } from "../../../config/transactionsStore.js";
@@ -334,6 +335,8 @@ export default function DashboardShell() {
 
   const listings = useMyListings();
   const { unreadCount: unreadNotifCount } = useNotifications("user");
+  // Sauti/mtetemo/browser alert taarifa mpya ikiingia (kwenye kila ukurasa)
+  useNewNotificationAlerts({ side, lang });
   const announcements = useAnnouncements();
   const waitingList = useWaitingList();
   const newLeadsCount = useNewLeadsCount();

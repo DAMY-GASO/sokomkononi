@@ -67,19 +67,23 @@ export function checkCredit(userId, service, amount = 1) {
   };
 }
 
-// Backend: /credits/consume/ is documented as admin-gated. If your backend
-// exposes a user-scoped self-consume endpoint, set VITE_CREDITS_CONSUME_PATH.
+// Backend: POST /credits/consume/ ni user-scoped (IsAuthenticated) na inatumia
+// credits za mtumiaji aliyeingia. Mbadala: /credits/me/consume/. Unaweza kubadilisha
+// kwa VITE_CREDITS_CONSUME_PATH.
 const CONSUME_PATH =
   (typeof import.meta !== "undefined" &&
     import.meta.env &&
     import.meta.env.VITE_CREDITS_CONSUME_PATH) ||
   "/credits/consume/";
 
-export async function consumeCreditAsync(userId, service, amount = 1) {
+// reference (hiari): maelezo mafupi yanayoonekana kwenye "Historia ya Matumizi"
+// (backend inaihifadhi kwenye CreditUsage), mfano "transactions_report".
+export async function consumeCreditAsync(userId, service, amount = 1, reference = "") {
   try {
     const res = await api.post(CONSUME_PATH, {
       service_key: service,
       amount,
+      ...(reference ? { reference } : {}),
     });
     await hydrateUserCreditsFromApi(userId);
     const fresh = getCreditBalance(userId, service);

@@ -6,7 +6,7 @@
 //  ✅ Service Worker + VAPID integration
 //  ✅ Kila kitu kingine kimebaki kama kilivyo
 // ============================================================
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Bell, Check, CheckCheck, Trash2, Rocket, MessageSquare,
@@ -208,7 +208,6 @@ export default function NotificationsPage() {
   const { notifications, unreadCount, markRead, markAllRead, remove, clearAll } =
     useNotifications("user");
   const [filter, setFilter] = useState("all");
-  const navigate = useNavigate();
   const alerts = useNotificationAlerts();
   const [alertMsg, setAlertMsg] = useState("");
 
@@ -285,34 +284,6 @@ export default function NotificationsPage() {
   }, [notifications, side]);
 
   const sideUnreadCount = sideFiltered.filter((n) => !n.read).length;
-
-  // ── Arifa mpya: sauti / mtetemo / browser notification ──────
-  const seenRef = useRef(null);
-  useEffect(() => {
-    const ids = new Set(sideFiltered.map((n) => String(n.id)));
-    if (seenRef.current === null) {
-      seenRef.current = ids;
-      return;
-    }
-    const fresh = sideFiltered.filter(
-      (n) => !n.read && !seenRef.current.has(String(n.id))
-    );
-    seenRef.current = ids;
-    if (fresh.length === 0) return;
-    const first = fresh[0];
-    alerts.alert({
-      title: getLocalizedField(first.title, lang) || "SokoMkononi",
-      body:
-        fresh.length > 1
-          ? lang === "sw"
-            ? `Na taarifa nyingine ${fresh.length - 1}`
-            : `And ${fresh.length - 1} more`
-          : getLocalizedField(first.body, lang),
-      tag: `smk-notif-${first.id}`,
-      onClick: () => navigate("/dashboard/notifications"),
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sideFiltered]);
 
   const handleToggleBrowser = async () => {
     setAlertMsg("");

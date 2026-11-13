@@ -32,6 +32,7 @@ import {
 
 import PageLoader from "../components/PageLoader.jsx";
 import { securityApi } from "../api/security.js";
+import { getRefreshToken } from "../api/client.js";
 import TwoFactorCard from "../components/TwoFactorCard.jsx";
 import {
   fetchNotificationPrefs,
@@ -559,7 +560,7 @@ function SessionsCard({ lang, user }) {
     if (busy) return;
     setBusy(true); setError("");
     try {
-      await securityApi.revokeAllOtherSessions();
+      await securityApi.revokeAllOtherSessions({ refresh: getRefreshToken() });
       const data = await securityApi.sessions();
       setSessions(Array.isArray(data) ? data : data?.results || []);
     } catch (err) {
@@ -1611,4 +1612,4 @@ export default function ProfilePage() {
       <BottomNav />
     </div>
   );
-}
+}

@@ -23,7 +23,7 @@ const normalizeCodes = (res) => {
   return raw.map((c) => (typeof c === "string" ? c : c?.code)).filter(Boolean);
 };
 
-export default function RecoveryCodesCard({ lang, codes, onCodes }) {
+export default function RecoveryCodesCard({ lang, codes, onCodes, remaining = null }) {
   const t = (sw, en) => (lang === "sw" ? sw : en);
   const confirm = useConfirm();
   const [code, setCode] = useState("");
@@ -140,6 +140,13 @@ export default function RecoveryCodesCard({ lang, codes, onCodes }) {
         </>
       ) : (
         <>
+          {remaining != null && (
+            <p className="text-[11px] font-semibold mb-1.5"
+               style={{ color: remaining <= 2 ? COLORS.rust : "var(--text-secondary)" }}>
+              {t(`Codes zilizobaki: ${remaining}`, `Codes remaining: ${remaining}`)}
+              {remaining <= 2 ? t(" — tengeneza mpya.", " — generate new ones.") : ""}
+            </p>
+          )}
           <p className="text-[11px] text-secondary mb-2">
             {t("Zimepotea au zimeisha? Tengeneza mpya kwa kuweka msimbo wa sasa wa authenticator. Za zamani zitaacha kufanya kazi.",
                "Lost or used them up? Generate new ones with your current authenticator code. Old ones stop working.")}

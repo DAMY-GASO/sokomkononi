@@ -5,12 +5,12 @@
 //  - Countdown inaonekana kwa waiting NA notified entries
 //  - Button "Reserve Sasa" kwa notified entries
 //  - Bilingual (SW/EN)
-//  - Nafasi ikifunguka (status → notified) ukurasa unapiga sauti/mtetemo
-//    na browser notification (kama imewashwa kwenye Taarifa). Taarifa ya
-//    ndani ya app (WAITING_LIST_AVAILABLE) bado inatoka backend.
+//  - "Reserve Sasa" inaita POST /waiting-list/{id}/claim/ moja kwa moja
+//    (hapo awali ilipeleka tu kwenye route ya deals). Nafasi ikifunguka,
+//    alert inatoka DashboardShell kupitia notification ya backend.
 //  - Kuondoka kwenye foleni kunauliza uthibitisho + kunaonyesha kosa
 // ============================================================
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Clock3,
@@ -38,7 +38,7 @@ import {
 import { useLanguage } from "../context/LanguageContext.jsx";
 import { useConfirm } from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
-import { useNotificationAlerts } from "../config/notificationAlerts.js";
+import { api } from "../api/client.js";
 
 // ============================================================
 // STATUS
@@ -111,8 +111,7 @@ function CountdownBadge({ to, lang }) {
 // ============================================================
 // WAITING LIST ITEM
 // ============================================================
-function WaitingListItem({ entry, onLeave, onGoToDeals, lang, leaving }) {
-  const navigate = useNavigate();
+function WaitingListItem({ entry, onLeave, onClaim, lang, leaving, claiming }) {
   const category = getCategory(entry.category);
   const Icon = category?.icon;
   const status =
@@ -120,17 +119,7 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang, leaving }) {
     getWaitingStatus(lang).waiting;
   const StatusIcon = status.icon;
 
-  const handleReserveNow = () => {
-    const listingId = entry.listingId;
-    if (listingId) {
-      navigate(
-        `/dashboard/buyer/deals?listing=${listingId}&action=reserve`
-      );
-      return;
-    }
-    if (onGoToDeals) onGoToDeals();
-    else navigate("/dashboard/buyer/deals");
-  };
+  const handleReserveNow = () => onClaim(entry);
 
   // ✅ Muda uliobaki wa reservation (kwa waiting na notified)
   const hasCountdown = entry.reservationExpiresAt && 
@@ -228,11 +217,12 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang, leaving }) {
             </span>
             <button
               onClick={handleReserveNow}
+              disabled={claiming}
               style={{ background: COLORS.green, color: "white" }}
-              className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
+              className="flex items-center gap-1 text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0 disabled:opacity-60"
             >
               {lang === "sw" ? "Reserve Sasa" : "Reserve Now"}
-              <ArrowRight size={12} />
+              {claiming ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
             </button>
           </div>
         )}
@@ -259,7 +249,6 @@ function WaitingListItem({ entry, onLeave, onGoToDeals, lang, leaving }) {
 export default function WaitingListPage({
   entries: entriesProp,
   onLeave,
-  onGoToDeals,
 }) {
   const { lang } = useLanguage();
   const storeState = useWaitingListState();
@@ -267,34 +256,12 @@ export default function WaitingListPage({
   const loading = storeState.loading && entries.length === 0;
   const loadError = storeState.error;
   const [filter, setFilter] = useState("all");
+  const navigate = useNavigate();
   const [leavingId, setLeavingId] = useState(null);
+  const [claimingId, setClaimingId] = useState(null);
   const [retrying, setRetrying] = useState(false);
   const confirm = useConfirm();
   const toast = useToast();
-  const alerts = useNotificationAlerts();
-
-  // Alert nafasi ikifunguka: linganisha ids za "notified" na mzigo uliopita.
-  const notifiedSeen = useRef(null);
-  useEffect(() => {
-    const ids = new Set(
-      entries.filter((e) => e.status === "notified").map((e) => String(e.id))
-    );
-    if (notifiedSeen.current === null) {
-      notifiedSeen.current = ids;
-      return;
-    }
-    const fresh = entries.filter(
-      (e) => e.status === "notified" && !notifiedSeen.current.has(String(e.id))
-    );
-    notifiedSeen.current = ids;
-    if (fresh.length === 0) return;
-    alerts.alert({
-      title: lang === "sw" ? "Nafasi imefunguka!" : "A slot opened up!",
-      body: fresh[0].property || "",
-      tag: `smk-waiting-${fresh[0].id}`,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entries]);
 
   useEffect(() => {
     const iv = setInterval(() => {
@@ -333,6 +300,37 @@ export default function WaitingListPage({
       );
     } finally {
       setLeavingId(null);
+    }
+  };
+
+  const handleClaim = async (entry) => {
+    if (claimingId) return;
+    setClaimingId(entry.id);
+    try {
+      await api.post(`/waiting-list/${entry.id}/claim/`, {});
+      toast.success(
+        lang === "sw"
+          ? "Reservation imeanzishwa. Kamilisha kwenye Reservations."
+          : "Reservation started. Complete it under Reservations."
+      );
+      storeState.refresh().catch(() => {});
+      navigate("/dashboard/buyer/reservations");
+    } catch (err) {
+      // ApiError tayari imetoa ujumbe (hata jibu likiwa kwenye envelope) na `code`.
+      const errCode = err?.code || err?.data?.code || err?.data?.error?.code;
+      const msg =
+        err?.message ||
+        (lang === "sw" ? "Imeshindwa kuchukua nafasi." : "Couldn't claim the slot.");
+      toast.error(msg);
+      if (errCode === "deal_room_required" && entry.listingId) {
+        // Hakuna Deal Room na muuzaji — mpeleke kwenye tangazo aanzishe mazungumzo
+        navigate(`/mali/${entry.listingId}`);
+      } else if (err?.status === 409) {
+        // Nafasi imepita / tangazo halipo — onyesha hali ya sasa
+        storeState.refresh().catch(() => {});
+      }
+    } finally {
+      setClaimingId(null);
     }
   };
 
@@ -545,7 +543,8 @@ export default function WaitingListPage({
                 key={e.id}
                 entry={e}
                 onLeave={handleLeave}
-                onGoToDeals={onGoToDeals}
+                onClaim={handleClaim}
+                claiming={claimingId === e.id}
                 leaving={leavingId === e.id}
                 lang={lang}
               />
@@ -555,4 +554,4 @@ export default function WaitingListPage({
       </div>
     </div>
   );
-}
+}

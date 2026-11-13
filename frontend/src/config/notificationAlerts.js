@@ -6,7 +6,13 @@
 // background). Push ya kweli ukiwa umefunga kivinjari inahitaji
 // VAPID + Service Worker + backend (haipo hapa — tazama ripoti).
 // ============================================================
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  useNotifications,
+  getLocalizedField,
+  resolveNotificationSide,
+} from "./notificationsStore.js";
 
 const KEY_PUSH = "smk_alerts_browser";
 const KEY_SOUND = "smk_alerts_sound";
@@ -19,12 +25,15 @@ const readFlag = (key, fallback) => {
     return fallback;
   }
 };
+const PREFS_EVENT = "smk:alerts-prefs";
 const writeFlag = (key, val) => {
   try {
     localStorage.setItem(key, val ? "1" : "0");
   } catch {
     /* noop */
   }
+  // Hook instances nyingine (Shell vs ukurasa wa Taarifa) zisome mapendeleo mapya
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(PREFS_EVENT));
 };
 
 export const browserAlertsSupported = () =>
@@ -32,6 +41,19 @@ export const browserAlertsSupported = () =>
 
 export const getPermission = () =>
   browserAlertsSupported() ? Notification.permission : "unsupported";
+
+// Kama Web Push (Service Worker) imewashwa, SW yenyewe inaonyesha notification —
+// tusionyeshe ya pili kutoka ukurasa (ingekuwa mbili kwa taarifa moja).
+async function hasPushSubscription() {
+  try {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return false;
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg || !reg.pushManager) return false;
+    return Boolean(await reg.pushManager.getSubscription());
+  } catch {
+    return false;
+  }
+}
 
 let audioCtx = null;
 function beep() {
@@ -62,14 +84,23 @@ export function useNotificationAlerts() {
   const [permission, setPermission] = useState(getPermission());
 
   useEffect(() => {
-    setPermission(getPermission());
+    const sync = () => {
+      setBrowserOn(readFlag(KEY_PUSH, false));
+      setSoundOn(readFlag(KEY_SOUND, true));
+      setPermission(getPermission());
+    };
+    sync();
+    window.addEventListener(PREFS_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(PREFS_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
 
   const toggleSound = useCallback(() => {
-    setSoundOn((prev) => {
-      writeFlag(KEY_SOUND, !prev);
-      return !prev;
-    });
+    writeFlag(KEY_SOUND, !readFlag(KEY_SOUND, true));
+    setSoundOn(readFlag(KEY_SOUND, true));
   }, []);
 
   // Inarudisha "granted" | "denied" | "default" | "unsupported"
@@ -112,19 +143,22 @@ export function useNotificationAlerts() {
         typeof document !== "undefined" &&
         document.visibilityState !== "visible"
       ) {
-        try {
-          const n = new Notification(title || "SokoMkononi", {
-            body: body || "",
-            tag: tag || undefined,
-          });
-          n.onclick = () => {
-            window.focus();
-            if (onClick) onClick();
-            n.close();
-          };
-        } catch {
-          /* noop */
-        }
+        hasPushSubscription().then((pushActive) => {
+          if (pushActive) return;
+          try {
+            const n = new Notification(title || "SokoMkononi", {
+              body: body || "",
+              tag: tag || undefined,
+            });
+            n.onclick = () => {
+              window.focus();
+              if (onClick) onClick();
+              n.close();
+            };
+          } catch {
+            /* noop */
+          }
+        });
       }
     },
     [soundOn, browserOn]
@@ -140,4 +174,46 @@ export function useNotificationAlerts() {
     toggleSound,
     alert,
   };
+}
+
+/**
+ * Weka MARA MOJA kwenye DashboardShell — arifa mpya (sauti/mtetemo/browser)
+ * zinafanya kazi kwenye kila ukurasa wa dashboard, si ukurasa wa Taarifa tu.
+ * Taarifa ya WAITING_LIST_AVAILABLE inatoka backend kama notification,
+ * kwa hiyo nafasi ikifunguka inafyatua alert hii pia.
+ */
+export function useNewNotificationAlerts({ side, lang }) {
+  const navigate = useNavigate();
+  const alerts = useNotificationAlerts();
+  const { notifications } = useNotifications("user");
+  const alertRef = useRef(alerts.alert);
+  alertRef.current = alerts.alert;
+  const seen = useRef(null); // ids ZOTE zilizoonekana (si za side moja tu)
+
+  useEffect(() => {
+    const ids = new Set(notifications.map((n) => String(n.id)));
+    if (seen.current === null) {
+      seen.current = ids; // mzigo wa kwanza si "mpya"
+      return;
+    }
+    const fresh = notifications.filter((n) => {
+      if (n.read || seen.current.has(String(n.id))) return false;
+      const s = resolveNotificationSide(n);
+      return s === "both" || s === side;
+    });
+    seen.current = ids;
+    if (fresh.length === 0) return;
+    const first = fresh[0];
+    alertRef.current({
+      title: getLocalizedField(first.title, lang) || "SokoMkononi",
+      body:
+        fresh.length > 1
+          ? lang === "sw"
+            ? `Na taarifa nyingine ${fresh.length - 1}`
+            : `And ${fresh.length - 1} more`
+          : getLocalizedField(first.body, lang),
+      tag: `smk-notif-${first.id}`,
+      onClick: () => navigate("/dashboard/notifications"),
+    });
+  }, [notifications, side, lang, navigate]);
 }

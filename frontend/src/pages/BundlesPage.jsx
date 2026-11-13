@@ -225,7 +225,7 @@ function CreditsHistory({ lang }) {
   };
 
   const rowLabel = (r) => {
-    const key = r.service || r.credit_type || r.type;
+    const key = r.service_key || r.service || r.credit_type || r.type;
     const label = CREDIT_LABELS[key];
     return label ? label[lang] || label.sw : key || t("Huduma", "Service");
   };
@@ -301,7 +301,15 @@ function CreditsHistory({ lang }) {
                       {rowLabel(r)}
                     </p>
                     <p className="text-[10px] text-muted truncate">
-                      {[r.description || r.reference, rowDate(r)].filter(Boolean).join(" · ")}
+                      {[
+                        r.reference || r.description,
+                        rowDate(r),
+                        r.balance_after != null
+                          ? t(`Baki ${r.balance_after}`, `Left ${r.balance_after}`)
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                   </div>
                   <span className="text-xs font-bold text-secondary shrink-0">
