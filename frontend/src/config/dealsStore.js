@@ -496,7 +496,27 @@ async function _hydrateDealsImpl(currentUserId, role = "") {
     const normalized = rawList
       .map((raw) => normalizeDealFromApi(raw, _dealsUserId))
       .filter(Boolean);
-    saveDeals(normalized);
+    // Orodha (list endpoint) haina `messages` — usifute ujumbe zilizopakiwa
+    // na detail. Chukua metadata mpya kutoka orodha, weka messages zilizopo.
+    const existingById = new Map(
+      getDeals().map((d) => [String(d.id), d])
+    );
+    const merged = normalized.map((d) => {
+      const old = existingById.get(String(d.id));
+      if (!old) return d;
+      const oldMsgs = Array.isArray(old.messages) ? old.messages : [];
+      const newMsgs = Array.isArray(d.messages) ? d.messages : [];
+      if (newMsgs.length >= oldMsgs.length) return d;
+      const ids = new Set(oldMsgs.map((m) => String(m.id)));
+      const extra = newMsgs.filter((m) => !ids.has(String(m.id)));
+      return {
+        ...d,
+        messages: [...oldMsgs, ...extra].sort(
+          (a, b) => new Date(a.at || 0) - new Date(b.at || 0)
+        ),
+      };
+    });
+    saveDeals(merged);
     return {
       source: "api",
       count: normalized.length,

@@ -137,6 +137,29 @@ export default function DealRooms({
       });
   }, [selectedDeal?.id]);
 
+  // Kinga: kama room iliyochaguliwa haina ujumbe (mf. store ilifutwa na
+  // refresh ya orodha), pakia detail tena — mara 3 tu kuzuia loop.
+  const emptyRetryRef = useRef({});
+  useEffect(() => {
+    const id = selectedDeal?.id;
+    if (!id) return;
+    if ((selectedDeal.messages || []).length > 0) {
+      emptyRetryRef.current[id] = 0;
+      return;
+    }
+    if (detailError[id] === "not_found") return;
+    const tries = emptyRetryRef.current[id] || 0;
+    if (tries >= 3) return;
+    emptyRetryRef.current[id] = tries + 1;
+    fetchDealDetailAsync(selectedDeal.dealRoomId || id)
+      .then((res) => {
+        if (res?.ok && res.deal) {
+          updateDealInStore(id, (prev) => mergeServerDeal(prev, res.deal));
+        }
+      })
+      .catch(() => {});
+  }, [selectedDeal?.id, selectedDeal?.messages?.length]);
+
   // ── WebSocket incoming ──
   const handleIncomingWs = useCallback(
     (data) => {
