@@ -72,6 +72,23 @@ function statusOf(l) {
   return s === "in_review" ? "pending_approval" : s;
 }
 
+// ============================================================
+// Reservation imeisha muda → mali inaonekana LIVE (bila badge ya Reserved).
+// Backend inatuma `time_left_seconds` (sekunde zilizobaki, 0 = imeisha) kwa
+// listings zenye status RESERVED. Ni snapshot ya wakati data ilipopakiwa
+// (`_fetchedAt`), kwa hiyo tunahesabu upya kwa kutumia `now`.
+// Hii ni fallback ya kuonyesha tu; backend (Celery) ndiyo inabadilisha DB.
+// ============================================================
+function isReservationExpired(l, now) {
+  if (normalizeStatus(l?.status) !== "reserved") return false;
+  const raw = l?.time_left_seconds ?? l?.timeLeftSeconds;
+  if (raw == null || raw === "") return false; // hakuna kipimo cha muda
+  const secs = Number(raw);
+  if (Number.isNaN(secs)) return false;
+  const fetchedAt = l?._fetchedAt || now;
+  return secs - (now - fetchedAt) / 1000 <= 0;
+}
+
 // Statuses zote zinazopakiwa mara moja ili tabs ziwe na counts sahihi
 const ALL_STATUS_FETCH = [
   "PENDING_APPROVAL",
@@ -103,6 +120,9 @@ export default function ModerationSection() {
   const [imageListing, setImageListing] = useState(null);
   const [decided, setDecided] = useState({});
   const [showScrollLeft, setShowScrollLeft] = useState(false);
+  // Saa ya sasa (inasasishwa kila sekunde 30) — kuficha badge ya Reserved
+  // mara reservation inapoisha muda.
+  const [now, setNow] = useState(() => Date.now());
   // ── Bulk moderation ──
   const [selected, setSelected] = useState({}); // { [id]: true }
   const [bulkModal, setBulkModal] = useState(null); // { type, reason }
@@ -175,6 +195,12 @@ export default function ModerationSection() {
     setSelected({});
   }, [statusFilter]);
 
+  // Timer: hesabu upya reservations zilizoisha kila sekunde 30
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -224,7 +250,11 @@ export default function ModerationSection() {
           const next = { ...prev };
           fetched.forEach((l) => {
             if (!l || l.id == null) return;
-            next[String(l.id)] = { ...(prev[String(l.id)] || {}), ...l };
+            next[String(l.id)] = {
+              ...(prev[String(l.id)] || {}),
+              ...l,
+              _fetchedAt: Date.now(),
+            };
           });
           return next;
         });
@@ -261,7 +291,13 @@ export default function ModerationSection() {
           const next = { ...prev };
           fetched.forEach((l) => {
             if (!l || l.id == null) return;
-            next[String(l.id)] = { ...l, ...(prev[String(l.id)] || {}) };
+            const old = prev[String(l.id)];
+            next[String(l.id)] = {
+              ...l,
+              ...(old || {}),
+              // weka muda wa kupakia mara moja tu, ulingane na data iliyobaki
+              _fetchedAt: old?._fetchedAt ?? Date.now(),
+            };
           });
           return next;
         });
@@ -290,10 +326,13 @@ export default function ModerationSection() {
       if (!cur) return;
       map.set(id, { ...cur, status });
     });
-    return Array.from(map.values()).filter(
-      (l) => statusOf(l) !== "deleted"
-    );
-  }, [queue, history, decided]);
+    return Array.from(map.values())
+      // Reservation imeisha → LIVE (tab, badge na vitufe vyote vinafuata)
+      .map((l) =>
+        isReservationExpired(l, now) ? { ...l, status: "LIVE" } : l
+      )
+      .filter((l) => statusOf(l) !== "deleted");
+  }, [queue, history, decided, now]);
 
   const filtered = useMemo(() => {
     const list =
