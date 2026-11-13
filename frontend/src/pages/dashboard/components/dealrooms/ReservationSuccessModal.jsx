@@ -19,7 +19,7 @@ export default function ReservationSuccessModal({ open, onClose, onContinueDeal,
           <Check color="white" size={32} />
         </div>
         <h3 className="text-lg font-bold text-primary mb-2">
-          {t("Reservation Yamekamilika!", "Reservation Complete!")}
+          {t("Reservation imekamilika!", "Reservation Complete!")}
         </h3>
         <p className="text-sm text-secondary mb-5 leading-relaxed">
           {t(
